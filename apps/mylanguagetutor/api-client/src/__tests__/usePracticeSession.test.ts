@@ -139,6 +139,27 @@ describe("usePracticeSession", () => {
     expect(streamTurn.mock.calls[1][0].text).toBe("hola");
   });
 
+  it("a stream that went quiet keeps the words so far and offers retry, like a dropped connection", async () => {
+    streamTurn.mockImplementationOnce(async ({ onEvent }) => {
+      onEvent({ type: "reply.delta", text: "¡Hola! Bien" });
+      throw new TurnRequestError(0, "connection_lost");
+    });
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+
+    expect(result.current.failure).toMatchObject({ code: "connection_lost", text: "hola", retryable: true });
+    expect(result.current.failure?.entryKey).toBe(result.current.entries[0].key);
+    expect(result.current.entries[0]).toMatchObject({ replyText: "¡Hola! Bien", status: "failed" });
+
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(result.current.entries).toHaveLength(1);
+    expect(streamTurn.mock.calls[1][0].text).toBe("hola");
+  });
+
   it("a mid-stream tutor error keeps the partial reply and offers retry", async () => {
     streamTurn.mockImplementation(
       emitting([

@@ -4,6 +4,8 @@
 // loads only when the package checks itself.
 declare class AbortSignal {
   readonly aborted: boolean;
+  addEventListener(type: "abort", listener: () => void, options?: { once?: boolean }): void;
+  removeEventListener(type: "abort", listener: () => void): void;
 }
 declare class AbortController {
   readonly signal: AbortSignal;
@@ -12,3 +14,5 @@ declare class AbortController {
 declare class TextDecoder {
   decode(input?: Uint8Array, options?: { stream?: boolean }): string;
 }
+declare function setTimeout(callback: () => void, ms: number): number;
+declare function clearTimeout(id: number): void;

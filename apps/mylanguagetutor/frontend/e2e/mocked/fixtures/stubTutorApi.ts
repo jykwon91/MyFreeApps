@@ -62,6 +62,8 @@ export async function stubTutorApi(
     turnsSent += 1;
     const script = scripts.shift() ?? completeTurn({ reply: DEFAULT_REPLY });
     if (script.kind === "refusal") return route.fulfill(json({ detail: script.detail }, script.status));
+    // Left unhandled, the request stays open with nothing on it until the page gives up on it.
+    if (script.kind === "unanswered") return;
     const seq = (savedTurns.get(sessionId) ?? 0) + 1;
     savedTurns.set(sessionId, seq);
     const failed = script.events.some(({ event, data }) => event === "done" && data.status === "failed");

@@ -3,7 +3,8 @@
  * or cuts them off (app/api/turns.py): a session that couldn't start, a tutor
  * that fails mid-reply, a stream cut after the reply, the daily cap, an ended
  * session, the tutor switched off, the burst limiter, a turn already in flight,
- * a session deleted elsewhere, and a rejected token. Transient failures offer
+ * a session deleted elsewhere, a rejected token, and a turn the server never
+ * answers. Transient failures offer
  * Try again, which sends exactly what the learner said; blocks say why and stop
  * further turns; a rejected token signs the learner out.
  */
@@ -22,7 +23,9 @@ import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_CO
 import { LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING } from "./constants/practiceText";
 import { CORRECTIONS_MISSING, REPLY_CUT_OFF, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { CREATE_SESSION } from "./constants/stubbedEndpoints";
+import { TURN_RESPONSE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
 import {
+  CONNECTION_LOST_COPY,
   RATE_LIMITED_COPY,
   SESSION_CREATE_FAILED_COPY,
   SESSION_NOT_FOUND_COPY,
@@ -34,7 +37,7 @@ import { GREETINGS } from "./fixtures/catalogFixtures";
 import { sessionIdAt } from "./fixtures/fixtureIds";
 import { openPractice, sendTyped } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
-import { completeTurn, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn } from "./fixtures/turnEvents";
+import { completeTurn, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
 import { TUTOR_OFF } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
@@ -95,6 +98,25 @@ test("a tutor that fails before any reply shows no reply, and Try again sends th
     [sessionIdAt(1), { text: LEARNER_GREETING }],
     [sessionIdAt(1), { text: LEARNER_GREETING }],
   ]);
+});
+
+test("a turn the server never answers says the connection dropped, and Try again sends the same words", async ({ page }) => {
+  await page.clock.install();
+  const api = await signedInTutor(page, { turns: [unansweredTurn(), completeTurn({ reply: TUTOR_GREETING })] });
+
+  await openPractice(page, GREETINGS.title);
+  await sendTyped(page, LEARNER_GREETING);
+  await expect(page.getByRole("button", { name: /Sending/ })).toBeDisabled();
+
+  await page.clock.runFor(TURN_RESPONSE_TIMEOUT_MS);
+  await expect(page.getByRole("alert")).toContainText(CONNECTION_LOST_COPY);
+  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
+
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
+  expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
 });
 
 test("a failure the tutor says not to retry offers only Dismiss", async ({ page }) => {

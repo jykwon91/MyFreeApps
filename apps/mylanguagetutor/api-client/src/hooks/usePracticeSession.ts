@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { createSentenceChunker } from "../utils/sentenceChunker";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "../utils/turnRefusal";
+import { isConnectionLost } from "../utils/isConnectionLost";
 import { MAX_TURN_CHARS } from "../constants/turnLimits";
 import {
   CONNECTION_LOST,
@@ -183,9 +184,10 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
           await streamTurn({ sessionId: id, text, onEvent, signal: controller.signal });
         } catch (err) {
           // Unmounting abandons the turn. An interrupted one ends like a dropped connection, and
-          // one given up on after its reply ends complete without its corrections.
+          // one given up on after its reply ends complete without its corrections. A connection that
+          // went quiet also ends like a dropped one, keeping what arrived.
           if (controller.signal.aborted && !wasInterrupted() && gaveUp.current !== controller) return;
-          if (!controller.signal.aborted && !outcome.replyDone) {
+          if (!controller.signal.aborted && !outcome.replyDone && !isConnectionLost(err)) {
             removeEntry(key);
             handleRefusal(err, text);
             return;

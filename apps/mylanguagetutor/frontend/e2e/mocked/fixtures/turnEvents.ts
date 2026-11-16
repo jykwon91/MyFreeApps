@@ -8,6 +8,7 @@ import type { CompleteTurnOptions } from "../types/CompleteTurnOptions";
 import type { SseEvent } from "../types/SseEvent";
 import type { TurnRefusal } from "../types/TurnRefusal";
 import type { TurnStream } from "../types/TurnStream";
+import type { UnansweredTurn } from "../types/UnansweredTurn";
 
 const DEFAULT_REMAINING = 0.8;
 
@@ -73,4 +74,9 @@ export function cutAfterReply(reply: string): TurnStream {
 /** A turn refused before the stream opens. */
 export function refusedTurn(status: number, detail: string): TurnRefusal {
   return { kind: "refusal", status, detail };
+}
+
+/** A turn the server never answers, leaving the connection open and silent. */
+export function unansweredTurn(): UnansweredTurn {
+  return { kind: "unanswered" };
 }
