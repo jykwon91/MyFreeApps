@@ -8,3 +8,7 @@ export const COOK_TIMER_MIN_SECONDS = 5;
 export const COOK_TIMER_CONFIRM_MS = 4000;
 export const COOK_TIMER_CONFIRM_SCREEN_READER_MS = 10000;
 export const COOK_TIMER_CHANNEL_ID = "cook-timers";
+/** Recipes saved for cooking without a connection: the most recently opened, one copy each. */
+export const COOK_COPY_LIMIT = 10;
+export const COOK_COPY_DIRECTORY = "cook-copies";
+export const COOK_COPY_OFFLINE_MESSAGE = "You're offline, so this is the copy saved on this phone. It may be out of date.";

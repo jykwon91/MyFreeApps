@@ -4,6 +4,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
+import { clearCookCopies } from "../features/cook/cookCopies";
 import cookSessions, { sessionsCleared } from "../features/cook/cookSessionsSlice";
 import cookTimers, { timersCleared } from "../features/cook/cookTimersSlice";
 import discovery, { discoveryCleared } from "../features/discovery/discoverySlice";
@@ -35,9 +36,11 @@ export const store = makeStore();
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 
 // What one account leaves on the phone that the next shouldn't see: a timer's alert names the
-// recipe, and a data export on the way to the share sheet is the whole account.
+// recipe, a data export on the way to the share sheet is the whole account, and recipes saved for
+// cooking offline are theirs too.
 onAccountLeft(session, () => {
   clearDataExportFiles();
+  clearCookCopies();
   store.dispatch(timersCleared());
   store.dispatch(sessionsCleared());
   store.dispatch(discoveryCleared());

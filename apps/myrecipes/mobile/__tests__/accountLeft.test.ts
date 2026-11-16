@@ -1,4 +1,6 @@
+import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import * as Notifications from "expo-notifications";
+import { saveCookCopy } from "../src/features/cook/cookCopies";
 import { sessionOpened } from "../src/features/cook/cookSessionsSlice";
 import { timerStarted } from "../src/features/cook/cookTimersSlice";
 import { store } from "../src/lib/store";
@@ -8,6 +10,8 @@ jest.mock("expo-notifications", () => ({
   cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
   dismissAllNotificationsAsync: jest.fn(() => Promise.resolve()),
 }));
+
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
 jest.mock("../src/lib/session", () => {
   let state = { status: "signedIn", email: "a@example.com", sessionId: "s" };
@@ -44,4 +48,25 @@ it("clears what someone was cooking when they sign out", () => {
   expect(store.getState().cookTimers.items).toEqual([]);
   expect(store.getState().cookSessions).toEqual({});
   expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
+});
+
+it("deletes the recipes saved for cooking offline when someone signs out", () => {
+  resetFakeFiles();
+  moveTo({ status: "signedIn", email: "a@example.com", sessionId: "s" });
+  saveCookCopy("r", "Soup", { id: "v", ingredients: [], steps: [] } as never);
+  expect(fakeFiles()).toHaveLength(1);
+
+  moveTo({ status: "signedOut", endedByServer: false, lastEmail: "a@example.com" });
+
+  expect(fakeFiles()).toEqual([]);
+});
+
+it("deletes them when the account is deleted", () => {
+  resetFakeFiles();
+  moveTo({ status: "signedIn", email: "a@example.com", sessionId: "s" });
+  saveCookCopy("r", "Soup", { id: "v", ingredients: [], steps: [] } as never);
+
+  moveTo({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "confirmed" });
+
+  expect(fakeFiles()).toEqual([]);
 });
