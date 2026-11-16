@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { BarChart, type barDataItem } from "react-native-gifted-charts";
 import {
-  CHART_LABEL_ROW_HEIGHT,
   CHART_LEGEND_SWATCH,
   CHART_SECTIONS,
-  CHART_Y_AXIS_WIDTH,
 } from "../constants/groupedBarChart";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { GroupedBarChartProps } from "../types/GroupedBarChartProps";
+import { labelRowHeight, visibleLabelIndexes, yAxisWidth } from "../utils/chartTextFit";
 import { groupedBarLayout } from "../utils/groupedBarLayout";
 
 /**
@@ -22,7 +21,11 @@ import { groupedBarLayout } from "../utils/groupedBarLayout";
 export default function GroupedBarChart({ series, groups, height, accessibilityLabel, formatValue, testID }: GroupedBarChartProps) {
   const { colors, spacing, fontSize } = useTheme();
   const [width, setWidth] = useState(0);
-  const plotWidth = Math.max(width - CHART_Y_AXIS_WIDTH, 0);
+  const { fontScale } = useWindowDimensions();
+  const maxValue = Math.max(0, ...groups.flatMap((group) => group.values));
+  const axisWidth = yAxisWidth(formatValue ? formatValue(maxValue) : String(Math.round(maxValue)), fontSize.xs, fontScale);
+  const plotWidth = Math.max(width - axisWidth, 0);
+  const shownLabels = visibleLabelIndexes(groups.map((group) => group.label), plotWidth / Math.max(groups.length, 1), fontSize.xs, fontScale);
   const layout = groupedBarLayout(plotWidth, groups.length, series.length);
 
   const data: barDataItem[] = groups.flatMap((group) =>
@@ -62,15 +65,15 @@ export default function GroupedBarChart({ series, groups, height, accessibilityL
               width={plotWidth}
               xAxisColor={colors.border}
               xAxisLabelsHeight={0}
-              yAxisLabelWidth={CHART_Y_AXIS_WIDTH}
+              yAxisLabelWidth={axisWidth}
               yAxisTextStyle={{ fontSize: fontSize.xs, color: colors.mutedForeground }}
               yAxisThickness={0}
             />
           ) : null}
         </View>
-        <View style={{ height: CHART_LABEL_ROW_HEIGHT }} />
-        <View style={[StyleSheet.absoluteFill, { left: CHART_Y_AXIS_WIDTH, flexDirection: "row" }]}>
-          {groups.map((group) => (
+        <View testID={testID && `${testID}-label-row`} style={{ minHeight: labelRowHeight(fontSize.xs, fontScale) }} />
+        <View testID={testID && `${testID}-labels`} style={[StyleSheet.absoluteFill, { left: axisWidth, flexDirection: "row" }]}>
+          {groups.map((group, index) => (
             <Pressable
               accessibilityLabel={group.accessibilityLabel}
               accessibilityRole={group.onPress ? "button" : "text"}
@@ -79,9 +82,11 @@ export default function GroupedBarChart({ series, groups, height, accessibilityL
               onPress={group.onPress}
               style={{ flex: 1, minHeight: MIN_TOUCH_TARGET, alignItems: "center", justifyContent: "flex-end" }}
             >
-              <Text numberOfLines={1} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
-                {group.label}
-              </Text>
+              {shownLabels.has(index) ? (
+                <Text numberOfLines={1} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
+                  {group.label}
+                </Text>
+              ) : null}
             </Pressable>
           ))}
         </View>
