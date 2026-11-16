@@ -33,9 +33,10 @@ routes:
     not_on_mobile: Done on the website. Sign-in links there ("Forgot your password? Reset it on the website").
   /login:
     screen: sign-in
-  # The website embeds its resume upload here; on the phone the upload, with its read status, is on the
-  # Resume screen (/resume), where an uploaded resume gets used. The parsed-fields panel and the
-  # original-file download stay on the website.
+  # The website embeds its resume upload here; on the phone the upload is on the Resume screen
+  # (/resume), where an uploaded resume gets used: each upload's read status, time and size, its
+  # parsed results (opened from Show parsed results, with the unsourced-figures warning), and
+  # Download original, which opens the file's signed link in the browser.
   /profile:
     screen: (app)/(tabs)/profile
   /register:

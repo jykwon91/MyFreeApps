@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Download, FileText, Loader2 } from "lucide-react";
-import { Badge, formatFileSize } from "@platform/ui";
+import { Badge } from "@platform/ui";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 import type { ResumeUploadJobStatus } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job-status";
 import { RESUME_JOB_STATUS_LABELS } from "@myjobhunter/api-client/constants/resumeJobStatusLabels";
+import { resumeJobMeta } from "@myjobhunter/api-client/utils/resumeJobMeta";
+import { resumeJobParsedResults } from "@myjobhunter/api-client/utils/resumeJobParsedResults";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
 
 export interface ResumeJobRowProps {
@@ -23,24 +25,15 @@ const STATUS_COLORS: Record<ResumeUploadJobStatus, BadgeColor> = {
   cancelled: "gray",
 };
 
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 type ResumeJobRowMode =
   | { kind: "complete"; parsedFields: NonNullable<ResumeUploadJob["result_parsed_fields"]> }
   | { kind: "failed"; errorMessage: string }
   | { kind: "in-progress" };
 
 function useResumeJobMode(job: ResumeUploadJob): ResumeJobRowMode {
-  if (job.status === "complete" && job.result_parsed_fields) {
-    return { kind: "complete", parsedFields: job.result_parsed_fields };
+  const parsedFields = resumeJobParsedResults(job);
+  if (parsedFields) {
+    return { kind: "complete", parsedFields };
   }
   if (job.status === "failed" && job.error_message) {
     return { kind: "failed", errorMessage: job.error_message };
@@ -62,11 +55,7 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{job.file_filename ?? "resume"}</p>
-          <p className="text-xs text-muted-foreground">
-            {formatTimestamp(job.created_at)}
-            {/* file_size_bytes is number | null; 0 bytes is a meaningful distinct value — keep !== null */}
-            {job.file_size_bytes !== null ? ` · ${formatFileSize(job.file_size_bytes)}` : ""}
-          </p>
+          <p className="text-xs text-muted-foreground">{resumeJobMeta(job)}</p>
           {mode.kind === "failed" ? (
             <p className="text-xs text-destructive mt-0.5 truncate">{mode.errorMessage}</p>
           ) : null}

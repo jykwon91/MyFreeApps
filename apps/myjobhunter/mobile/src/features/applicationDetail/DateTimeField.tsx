@@ -1,6 +1,6 @@
 import { dateToLocalDateTime } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { formatDateTime } from "../../lib/formatDateTime";
+import { formatDateTime } from "@myjobhunter/api-client/utils/formatDateTime";
 import type { DateTimeFieldProps } from "../../types/DateTimeFieldProps";
 import PickerField from "../../components/forms/PickerField";
 
