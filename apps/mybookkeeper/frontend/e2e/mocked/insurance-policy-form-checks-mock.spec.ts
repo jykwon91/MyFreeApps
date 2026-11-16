@@ -57,7 +57,7 @@ test.describe("Add insurance policy — checks before saving", () => {
     const writes = await stubInsuranceApi(page);
     await openAddDialog(page);
 
-    await page.getByTestId("insurance-premium-input").fill("0.001");
+    await page.getByTestId("insurance-premium-input").fill("0");
     await page.getByTestId("insurance-premium-frequency-select").selectOption("monthly");
     await page.getByTestId("insurance-policy-save-button").click();
 
@@ -65,6 +65,12 @@ test.describe("Add insurance policy — checks before saving", () => {
     await expect(problem).toBeVisible();
     await expect(problem).toContainText("above 0");
     await expect(page.getByTestId("insurance-premium-input")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByTestId("add-insurance-policy-dialog")).toBeVisible();
+
+    // A fraction of a cent is refused as it was typed, never rounded to a different premium.
+    await page.getByTestId("insurance-premium-input").fill("0.001");
+    await page.getByTestId("insurance-policy-save-button").click();
+    await expect(problem).toContainText("plain amount");
     await expect(page.getByTestId("add-insurance-policy-dialog")).toBeVisible();
     expect(writes, "an invalid form must not reach the server").toEqual([]);
 
