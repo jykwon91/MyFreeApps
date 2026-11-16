@@ -1,5 +1,6 @@
 import { localToday } from "@platform/core/utils/localToday";
 import { baseApi } from "@platform/core/store/baseApi";
+import { UTILITY_OFFERS_TIMEOUT_MS } from "../constants/utilityOffers";
 import type { UtilityOfferSearchResponse } from "../types/utility/utility-offer-search-response";
 
 /**
@@ -23,6 +24,7 @@ export const utilityOffersApi = baseApi.enhanceEndpoints({
     >({
       query: (args) => ({
         url: "/utility-plans/offers",
+        timeout: UTILITY_OFFERS_TIMEOUT_MS,
         params: {
           today: localToday(),
           ...(args?.minTermMonths ? { min_term_months: args.minTermMonths } : {}),

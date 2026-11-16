@@ -1,3 +1,4 @@
+import { EXPORT_REQUEST_TIMEOUT_MS, UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { WelcomeManualCreateRequest } from "../types/welcome-manual/welcome-manual-create-request";
 import type { WelcomeManualEmailRequest } from "../types/welcome-manual/welcome-manual-email-request";
@@ -76,6 +77,7 @@ export const welcomeManualsApi = baseApi.enhanceEndpoints({
         url: `/welcome-manuals/${manualId}/email`,
         method: "POST",
         data,
+        timeout: EXPORT_REQUEST_TIMEOUT_MS,
       }),
       invalidatesTags: [{ type: "WelcomeManualSend", id: "LIST" }],
     }),
@@ -164,6 +166,7 @@ export const welcomeManualsApi = baseApi.enhanceEndpoints({
         url: `/welcome-manuals/${manualId}/sections/${sectionId}/images`,
         method: "POST",
         data: form,
+        timeout: UPLOAD_REQUEST_TIMEOUT_MS,
       }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "WelcomeManual", id: arg.manualId },

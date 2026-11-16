@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { MORTGAGE_UPLOAD_TIMEOUT_MS } from "../constants/mortgageUpload";
 import type { Mortgage } from "../types/mortgage/mortgage";
@@ -81,7 +82,7 @@ export const mortgagesApi = baseApi.enhanceEndpoints({
      * replaced. It invalidates nothing since no row changed.
      */
     extractMortgage: builder.mutation<MortgageDraft, { document_id: string }>({
-      query: (data) => ({ url: "/mortgages/extract", method: "POST", data }),
+      query: (data) => ({ url: "/mortgages/extract", method: "POST", data, timeout: MODEL_REQUEST_TIMEOUT_MS }),
     }),
 
     /**

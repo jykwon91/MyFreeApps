@@ -1,3 +1,4 @@
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { RECEIPTS_PENDING_TAG as PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { PendingReceiptListArgs } from "../types/lease/pending-receipt-list-args";
@@ -26,7 +27,7 @@ export const rentReceiptsApi = baseApi.enhanceEndpoints({
     >({
       query: ({ transaction_id, data }) => {
         const body: SendReceiptRequest = { ...data, today: localToday() };
-        return { url: `/rent-receipts/${transaction_id}/send`, method: "POST", data: body };
+        return { url: `/rent-receipts/${transaction_id}/send`, method: "POST", data: body, timeout: EXPORT_REQUEST_TIMEOUT_MS };
       },
       invalidatesTags: (_result, _err, { transaction_id }) => [
         PENDING_TAG,

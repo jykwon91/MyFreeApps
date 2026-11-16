@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/shared/lib/api";
 import { useSendReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
@@ -51,7 +52,7 @@ export default function SendReceiptDialog({ receipt, onClose }: SendReceiptDialo
       // a blob: URL we control.
       const res = await api.get(
         receiptPreviewPath(receipt.transaction_id, { periodStart, periodEnd, paymentMethod }),
-        { responseType: "blob" },
+        { responseType: "blob", timeout: EXPORT_REQUEST_TIMEOUT_MS },
       );
       const blobUrl = URL.createObjectURL(res.data as Blob);
       setPreviewUrl(blobUrl);

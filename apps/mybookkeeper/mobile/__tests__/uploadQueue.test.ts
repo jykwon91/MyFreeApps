@@ -3,8 +3,8 @@ import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { waitFor } from "@testing-library/react-native";
-import type { AxiosAdapter, AxiosProgressEvent } from "axios";
-import { UPLOAD_TIMEOUT_MS } from "../src/constants/capture";
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
+import { AxiosError, type AxiosAdapter, type AxiosProgressEvent } from "axios";
 import { drainUploadQueue } from "../src/features/capture/drainUploadQueue";
 import { addToQueue, clearUploadQueue, pendingUploads } from "../src/features/capture/uploadQueueFiles";
 import { uploadForm } from "../src/features/capture/uploadForm";
@@ -309,14 +309,16 @@ describe("upload queue", () => {
   });
 
   it("gives up on a connection that never answers", async () => {
-    jest.useFakeTimers();
     addFile("w1", "a.jpg");
-    const adapter: AxiosAdapter = () => new Promise(() => {});
+    const timeouts: (number | undefined)[] = [];
+    // What the phone's request does once its timeout runs out with no answer.
+    const adapter: AxiosAdapter = (config) => {
+      timeouts.push(config.timeout);
+      return Promise.reject(new AxiosError(`timeout of ${config.timeout}ms exceeded`, AxiosError.ECONNABORTED, config));
+    };
     api.defaults.adapter = adapter;
-    const draining = drain();
-    await jest.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
-    await draining;
-    jest.useRealTimers();
+    await drain();
+    expect(timeouts).toEqual([UPLOAD_REQUEST_TIMEOUT_MS]);
     expect(waiting()).toEqual(["a.jpg"]);
     expect(uploads().phase).toBe("unreachable");
   });

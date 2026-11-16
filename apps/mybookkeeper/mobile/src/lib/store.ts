@@ -1,3 +1,4 @@
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
@@ -19,6 +20,7 @@ assertSecureApiUrl(API_BASE_URL);
 // Requests throw until the platform is configured, and nothing sends one without the store.
 configurePlatform({
   baseURL: API_BASE_URL,
+  requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
   tokenStore: session.tokenStore,
   orgStore: { get: () => store.getState().workspace.activeId },
   isOnLogin: () => false,

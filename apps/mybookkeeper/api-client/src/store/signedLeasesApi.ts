@@ -1,3 +1,5 @@
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
+import { LEASE_RENDER_TIMEOUT_MS } from "../constants/leaseRender";
 import { baseApi } from "@platform/core/store/baseApi";
 import { patchCacheAfterSuccess } from "@platform/core/store/patchCacheAfterSuccess";
 import type { ExtendLeaseRequest } from "../types/lease/extend-lease-request";
@@ -171,7 +173,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
     }),
 
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({
-      query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST", data: { today: localToday() } }),
+      query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST", data: { today: localToday() }, timeout: LEASE_RENDER_TIMEOUT_MS }),
       // Until the refetch lands the lease would still look like a draft, and a second tap makes a second set of files.
       onQueryStarted: (id, { dispatch, queryFulfilled }) =>
         patchCacheAfterSuccess(queryFulfilled, (data) => {
@@ -238,6 +240,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         url: `/signed-leases/${leaseId}/attachments`,
         method: "POST",
         data: form,
+        timeout: UPLOAD_REQUEST_TIMEOUT_MS,
       }),
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
@@ -258,7 +261,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
     }),
 
     importSignedLease: builder.mutation<SignedLeaseDetail, FormData>({
-      query: (form) => ({ url: "/signed-leases/import", method: "POST", data: form }),
+      query: (form) => ({ url: "/signed-leases/import", method: "POST", data: form, timeout: UPLOAD_REQUEST_TIMEOUT_MS }),
       invalidatesTags: tagsAfterNewLease,
     }),
 
@@ -287,6 +290,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       query: ({ leaseId, templateIds, values }) => ({
         url: `/signed-leases/${leaseId}/templates`,
         method: "POST",
+        timeout: LEASE_RENDER_TIMEOUT_MS,
         data: {
           template_ids: templateIds,
           today: localToday(),

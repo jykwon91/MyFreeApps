@@ -1,3 +1,4 @@
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { Document } from "../types/document/document";
 import type { DocumentCreateRequest } from "../types/document/document-create-request";
@@ -61,7 +62,7 @@ const documentsApi = baseApi
 
       // The caller fills the form with fillDocumentUploadForm: a browser appends a File, a phone a { uri, name, type }.
       uploadDocument: build.mutation<Document, FormData>({
-        query: (form) => ({ url: "/documents/upload", method: "POST", data: form }),
+        query: (form) => ({ url: "/documents/upload", method: "POST", data: form, timeout: UPLOAD_REQUEST_TIMEOUT_MS }),
         // A job_description document fills its application's empty JD, so that application's detail is stale too.
         invalidatesTags: (result) => [{ type: DOCUMENTS_TAG, id: "LIST" }, ...applicationDetailTags(result?.application_id)],
       }),

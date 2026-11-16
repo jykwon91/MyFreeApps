@@ -1,3 +1,4 @@
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/shared/lib/api";
 
 export interface DocumentBlob {
@@ -14,6 +15,7 @@ export interface DocumentBlob {
 export async function fetchDocumentBlob(documentId: string): Promise<DocumentBlob> {
   const response = await api.get(`/documents/${documentId}/download`, {
     responseType: "blob",
+    timeout: EXPORT_REQUEST_TIMEOUT_MS,
   });
   const blob: Blob = response.data;
   return {

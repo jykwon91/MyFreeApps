@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { RecipeDetailResponse } from "../types/recipe/recipe";
 import type { VersionResponse, VersionSummary } from "../types/recipe/version";
@@ -80,7 +81,7 @@ export const recipesApi = apiWithTags.injectEndpoints({
     // draft. Saving goes through createRecipe, so this persists nothing and
     // invalidates no cache tags. The body is multipart FormData.
     extractRecipeFromPhoto: build.mutation<RecipeExtractionDraft, FormData>({
-      query: (data) => ({ url: "/recipes/extract", method: "POST", data }),
+      query: (data) => ({ url: "/recipes/extract", method: "POST", data, timeout: MODEL_REQUEST_TIMEOUT_MS }),
     }),
     updateRecipe: build.mutation<
       RecipeDetailResponse,

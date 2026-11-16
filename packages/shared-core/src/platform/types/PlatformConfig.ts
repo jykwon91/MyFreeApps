@@ -5,6 +5,12 @@ import type { TokenStore } from "./TokenStore";
 /** Everything this package needs from the platform it runs on. */
 export interface PlatformConfig {
   baseURL: string;
+  /**
+   * Milliseconds any request may take when it names no timeout of its own. Leave it out
+   * for no limit. A phone sets it: it has no limit of its own, so a dead connection would
+   * otherwise leave a screen loading forever.
+   */
+  requestTimeoutMs?: number;
   tokenStore: TokenStore;
   orgStore: OrgStore;
   /** True while the login screen is showing, so a 401 there doesn't sign out. */

@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { Application } from "../types/application";
 import type { ApplicationDetail } from "../types/application-detail";
@@ -271,6 +272,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
         url: "/applications/parse-jd",
         method: "POST",
         data: body,
+        timeout: MODEL_REQUEST_TIMEOUT_MS,
       }),
     }),
 
@@ -295,6 +297,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
         url: "/applications/extract-from-url",
         method: "POST",
         data: body,
+        timeout: MODEL_REQUEST_TIMEOUT_MS,
       }),
     }),
   }),

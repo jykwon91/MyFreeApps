@@ -1,3 +1,4 @@
+import { DELETE_ACCOUNT_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "./baseApi";
 
 interface DeleteAccountRequest {
@@ -9,7 +10,7 @@ interface DeleteAccountRequest {
 const accountApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     deleteAccount: build.mutation<void, DeleteAccountRequest>({
-      query: (data) => ({ url: "/users/me", method: "DELETE", data }),
+      query: (data) => ({ url: "/users/me", method: "DELETE", data, timeout: DELETE_ACCOUNT_TIMEOUT_MS }),
     }),
   }),
 });

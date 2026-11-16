@@ -9,6 +9,7 @@
  * /applications page picks up the new row immediately when the user
  * navigates there.
  */
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { COMPANIES_LIST_ID, COMPANIES_TAG } from "../constants/companiesTags";
 import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
@@ -31,6 +32,7 @@ const jobAnalysisApi = baseApi
           url: "/jobs/analyze",
           method: "POST",
           data: body,
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
         }),
         invalidatesTags: [{ type: JOB_ANALYSIS_TAG, id: "LIST" }],
       }),

@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICATIONS_TAG } from "../constants/applicationsTag";
 import { COMPANIES_LIST_ID, COMPANIES_TAG } from "../constants/companiesTags";
@@ -73,6 +74,7 @@ const companiesApi = baseApi
           url: `/companies/${companyId}/research`,
           method: "POST",
           data: {},
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
         }),
         invalidatesTags: (_result, _err, companyId) => [
           { type: COMPANY_RESEARCH_TAG, id: companyId },

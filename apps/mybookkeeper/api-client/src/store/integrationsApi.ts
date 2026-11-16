@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { GMAIL_SYNC_TIMEOUT_MS } from "../constants/gmailSync";
 import { SYNC_INVALIDATED_TAGS } from "../constants/emailDerivedTags";
 import type { EmailQueueItem } from "../types/integration/email-queue-item";
 import type { Integration } from "../types/integration/integration";
@@ -20,7 +21,7 @@ export const integrationsApi = baseApi.enhanceEndpoints({
       invalidatesTags: ["Integration"],
     }),
     syncGmail: builder.mutation<{ status: string; count?: number }, void>({
-      query: () => ({ url: "/integrations/gmail/sync", method: "POST" }),
+      query: () => ({ url: "/integrations/gmail/sync", method: "POST", timeout: GMAIL_SYNC_TIMEOUT_MS }),
       invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
     getSyncLogs: builder.query<SyncLog[], void>({

@@ -1,3 +1,4 @@
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { EDUCATION_TAG, SKILLS_TAG, WORK_HISTORY_TAG } from "../constants/profileTags";
 import { newlyCompletedResumeJobs } from "../utils/newlyCompletedResumeJobs";
@@ -18,6 +19,7 @@ export const resumesApi = baseApi
           url: "/resumes",
           method: "POST",
           data: formData,
+          timeout: UPLOAD_REQUEST_TIMEOUT_MS,
         }),
         invalidatesTags: [{ type: RESUME_JOBS_TAG, id: "LIST" }],
       }),

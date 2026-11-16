@@ -18,8 +18,10 @@ async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosRes
   return api.request(config);
 }
 
-onPlatformConfigured(({ baseURL }) => {
+// A request may name a longer timeout of its own: uploads and model calls do.
+onPlatformConfigured(({ baseURL, requestTimeoutMs }) => {
   api.defaults.baseURL = baseURL;
+  api.defaults.timeout = requestTimeoutMs ?? 0;
 });
 
 // The stores must not throw: a read that throws would fail every request

@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@platform/core/lib/api";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -61,5 +62,16 @@ describe("the recipe endpoints", () => {
     await store.dispatch(discoveryApi.endpoints.searchWebRecipes.initiate("ramen"));
     expect(lastRequest().url).toBe("/discovery/search");
     expect(JSON.parse(String(lastRequest().data))).toEqual({ query: "ramen" });
+  });
+
+  it("waits for the model on a discovery search, a recipe read and a photo import", async () => {
+    await store.dispatch(discoveryApi.endpoints.searchWebRecipes.initiate("ramen"));
+    await store.dispatch(discoveryApi.endpoints.readWebRecipe.initiate({ url: "https://example.com/r" }));
+    await store.dispatch(recipesApi.endpoints.extractRecipeFromPhoto.initiate(new FormData()));
+    expect(seen.map((request) => [request.url, request.timeout])).toEqual([
+      ["/discovery/search", MODEL_REQUEST_TIMEOUT_MS],
+      ["/discovery/detail", MODEL_REQUEST_TIMEOUT_MS],
+      ["/recipes/extract", MODEL_REQUEST_TIMEOUT_MS],
+    ]);
   });
 });

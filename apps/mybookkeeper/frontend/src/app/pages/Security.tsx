@@ -5,6 +5,7 @@ import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
 import { useDismissable } from "@/shared/hooks/useDismissable";
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/shared/lib/api";
 
 export default function Security() {
@@ -15,7 +16,7 @@ export default function Security() {
   async function handleExport() {
     setIsExporting(true);
     try {
-      const response = await api.get("/users/me/export", { responseType: "blob" });
+      const response = await api.get("/users/me/export", { responseType: "blob", timeout: EXPORT_REQUEST_TIMEOUT_MS });
       const blob = new Blob([response.data as BlobPart], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

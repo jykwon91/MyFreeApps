@@ -1,3 +1,4 @@
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
@@ -99,6 +100,7 @@ export const transactionsApi = baseApi.enhanceEndpoints({
         url: "/imports/bank-csv",
         method: "POST",
         data: form,
+        timeout: UPLOAD_REQUEST_TIMEOUT_MS,
         params: propertyId ? { property_id: propertyId } : undefined,
       }),
       // New rows change the list, the review count and every total built from them.
