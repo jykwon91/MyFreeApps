@@ -1,12 +1,12 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { LINK_MESSAGES, ToastProvider } from "@platform/mobile";
+import { ToastProvider } from "@platform/mobile";
 import { SessionContext } from "@platform/mobile/src/auth/SessionContext";
 import { act, fireEvent, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { AppState, Linking, Text } from "react-native";
+import { AppState, Text } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
+import { WORKSPACE_MESSAGES as MESSAGES } from "../src/constants/workspace";
 import { MEMBERS_MESSAGES } from "../src/constants/members";
 import { uploadFilesQueued, uploadPhaseChanged, uploadRejected } from "../src/features/capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "../src/features/workspace/savedWorkspace";
@@ -17,6 +17,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
+jest.mock("expo-router", () => ({ router: { navigate: jest.fn() } }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
 const WORKSPACE = { id: "w1", name: "Mine", org_role: "owner" };
@@ -160,13 +161,28 @@ describe("WorkspaceGate", () => {
     expect(screen.getByText("Sign out")).toBeTruthy();
   });
 
-  it("opens the website from there, and says so when the phone can't", async () => {
-    const open = jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
-    api.defaults.adapter = respondWith(200, []);
+  it("lets someone with no workspace create their first, opens it and remembers it", async () => {
+    signedInAs("me@example.com");
+    const created = { id: "w9", name: "First Place", org_role: "owner" };
+    let workspaces: unknown[] = [];
+    const posted: unknown[] = [];
+    api.defaults.adapter = (config) => {
+      if (config.url === "/organizations" && config.method === "post") {
+        posted.push(JSON.parse(config.data as string));
+        workspaces = [created];
+        return respondWith(201, created)(config);
+      }
+      return respondWith(200, workspaces)(config);
+    };
     await renderGate();
-    await fireEvent.press(await screen.findByRole("button", { name: "Open the website" }));
-    expect(open).toHaveBeenCalledWith(`${WEB_BASE_URL}/`);
-    expect(await screen.findByText(LINK_MESSAGES.couldntOpen)).toBeTruthy();
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.createFirst }));
+    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.name}, required`), "First Place");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.create }));
+
+    expect(await screen.findByText("Inside")).toBeTruthy();
+    expect(posted).toEqual([{ name: "First Place" }]);
+    expect(store.getState().workspace.activeId).toBe("w9");
+    await waitFor(() => expect(readSavedWorkspace()?.id).toBe("w9"));
   });
 
   it("keeps someone signed in while offline, and recovers", async () => {
