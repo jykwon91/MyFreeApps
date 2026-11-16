@@ -33,6 +33,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="delete-account" options={{ title: "Delete account", headerBackTitle: "Settings" }} />
             <Stack.Screen name="sign-in" options={{ presentation: "modal", title: "" }} />
+            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
           </Stack>
           <AccountNotice />
         </ToastProvider>

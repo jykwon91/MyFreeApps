@@ -34,6 +34,7 @@ export { default as HeaderKeyboardAvoidingView } from "./components/HeaderKeyboa
 export { default as KeyboardAwareScroll } from "./components/KeyboardAwareScroll";
 export { default as LoadingButton } from "./components/LoadingButton";
 export { default as ListSeparator } from "./components/ListSeparator";
+export { default as NotFoundScreen } from "./components/NotFoundScreen";
 export { default as LoadMoreFooter } from "./components/LoadMoreFooter";
 export { default as MoreMenuGroups } from "./components/MoreMenuGroups";
 export { default as MoreRow } from "./components/MoreRow";
@@ -101,6 +102,7 @@ export type { ChipButtonProps } from "./types/ChipButtonProps";
 export type { ChipProps } from "./types/ChipProps";
 export type { ChipTone } from "./types/ChipTone";
 export type { ComingToAppScreenProps } from "./types/ComingToAppScreenProps";
+export type { NotFoundScreenProps } from "./types/NotFoundScreenProps";
 export type { DataExportSource } from "./types/DataExportSource";
 export type { Dismissal } from "./types/Dismissal";
 export type { DisplayNameSource } from "./types/DisplayNameSource";
