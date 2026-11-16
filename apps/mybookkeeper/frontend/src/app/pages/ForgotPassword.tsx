@@ -1,22 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { LoadingButton, TurnstileWidget } from "@platform/ui";
+import { LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("");
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
+  const turnstile = useTurnstileToken();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +23,7 @@ export default function ForgotPassword() {
 
     try {
       await api.post("/auth/forgot-password", { email: email.trim() }, {
-        headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+        headers: turnstile.token ? { "X-Turnstile-Token": turnstile.token } : {},
       });
     } catch {
       // Always show success to prevent email enumeration
@@ -81,13 +73,14 @@ export default function ForgotPassword() {
               disabled={isLoading}
             />
           </div>
-          <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+          <TurnstileWidget {...turnstile.widgetProps} />
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
           <LoadingButton
             type="submit"
             isLoading={isLoading}
             loadingText="Sending..."
             className="w-full"
+            disabled={!turnstile.isReady}
           >
             Send reset link
           </LoadingButton>

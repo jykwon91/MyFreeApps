@@ -13,7 +13,6 @@ import {
   VEHICLE_COUNT_ERRORS,
 } from "./public-inquiry-constants";
 
-export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 export const MIN_WHY_THIS_ROOM_CHARS = 30;
 export const MAX_FREE_TEXT_CHARS = 2000;
 export const MIN_PHONE_DIGITS = 7;

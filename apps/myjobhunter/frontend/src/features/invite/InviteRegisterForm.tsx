@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   LoadingButton,
   TurnstileWidget,
+  useTurnstileToken,
   extractErrorMessage,
 } from "@platform/ui";
 import { register } from "@/lib/auth";
@@ -32,16 +33,9 @@ export default function InviteRegisterForm({
   onRegistered,
 }: InviteRegisterFormProps) {
   const [password, setPassword] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstile = useTurnstileToken();
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
 
   const passwordMeetsMin = password.length >= MIN_PASSWORD_LENGTH;
 
@@ -50,9 +44,10 @@ export default function InviteRegisterForm({
     setErrorMessage("");
     setIsSubmitting(true);
     try {
-      await register(email, password, turnstileToken);
+      await register(email, password, turnstile.token);
       onRegistered();
     } catch (err) {
+      turnstile.reset();
       setErrorMessage(extractErrorMessage(err));
       setIsSubmitting(false);
     }
@@ -111,10 +106,7 @@ export default function InviteRegisterForm({
         </p>
       </div>
 
-      <TurnstileWidget
-        onVerify={handleTurnstileVerify}
-        onExpire={handleTurnstileExpire}
-      />
+      <TurnstileWidget {...turnstile.widgetProps} />
 
       {errorMessage ? (
         <p className="text-destructive text-sm" role="alert">
@@ -126,7 +118,7 @@ export default function InviteRegisterForm({
         type="submit"
         isLoading={isSubmitting}
         loadingText="Creating account..."
-        disabled={isSubmitting || !passwordMeetsMin}
+        disabled={isSubmitting || !passwordMeetsMin || !turnstile.isReady}
         className="w-full"
       >
         Create account

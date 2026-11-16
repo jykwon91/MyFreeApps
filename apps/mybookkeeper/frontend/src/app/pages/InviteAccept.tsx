@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, signOut } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@platform/ui";
-import { LoadingButton, TurnstileWidget } from "@platform/ui";
+import { LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import InviteAcceptStatus from "@/shared/components/invite/InviteAcceptStatus";
 import { useAcceptInvite } from "@/shared/hooks/useAcceptInvite";
@@ -34,10 +34,7 @@ export default function InviteAccept() {
   const [name, setName] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regError, setRegError] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("");
-
-  const handleTurnstileVerify = useCallback((t: string) => setTurnstileToken(t), []);
-  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
+  const turnstile = useTurnstileToken();
 
   const { user } = useCurrentUser();
   const authedEmail = user?.email ?? null;
@@ -86,11 +83,12 @@ export default function InviteAccept() {
         password: regPassword,
         name: name.trim() || null,
       }, {
-        headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+        headers: turnstile.token ? { "X-Turnstile-Token": turnstile.token } : {},
       });
       await login(inviteInfo.email, regPassword);
       await accept();
     } catch (err) {
+      turnstile.reset();
       setRegError(extractErrorMessage(err));
       setIsSubmitting(false);
     }
@@ -264,9 +262,9 @@ export default function InviteAccept() {
               disabled={isSubmitting}
             />
           </div>
-          <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+          <TurnstileWidget {...turnstile.widgetProps} />
           {regError ? <p className="text-destructive text-sm">{regError}</p> : null}
-          <LoadingButton type="submit" isLoading={isSubmitting} loadingText="Creating account..." className="w-full">
+          <LoadingButton type="submit" isLoading={isSubmitting} loadingText="Creating account..." disabled={!turnstile.isReady} className="w-full">
             Create account &amp; join {inviteInfo.org_name}
           </LoadingButton>
         </form>

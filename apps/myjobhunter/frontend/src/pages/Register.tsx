@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import {
   AuthPageFooter,
@@ -6,6 +6,7 @@ import {
   LoadingButton,
   PasswordPair,
   TurnstileWidget,
+  useTurnstileToken,
 } from "@platform/ui";
 import { Briefcase } from "lucide-react";
 import { register } from "@/lib/auth";
@@ -56,16 +57,8 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstile = useTurnstileToken();
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  const handleTurnstileVerify = useCallback((value: string) => {
-    setTurnstileToken(value);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
 
   if (isLoading) {
     return <CenteredCard title="Checking your invite…" />;
@@ -117,7 +110,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
 
     setIsSubmitting(true);
     try {
-      await register(invite!.email, password, turnstileToken);
+      await register(invite!.email, password, turnstile.token);
       try {
         sessionStorage.setItem(INVITE_TOKEN_STORAGE_KEY, token);
       } catch {
@@ -125,6 +118,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
       }
       setRegistered(true);
     } catch (err) {
+      turnstile.reset();
       setSubmitError(describeAuthError(err));
     } finally {
       setIsSubmitting(false);
@@ -179,10 +173,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
               confirmPassword={confirmPassword}
               onConfirmPasswordChange={setConfirmPassword}
             />
-            <TurnstileWidget
-              onVerify={handleTurnstileVerify}
-              onExpire={handleTurnstileExpire}
-            />
+            <TurnstileWidget {...turnstile.widgetProps} />
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -205,6 +196,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
               disabled={
                 isSubmitting ||
                 !termsAccepted ||
+                !turnstile.isReady ||
                 password.length < 12 ||
                 password !== confirmPassword
               }

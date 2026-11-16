@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LoadingButton, TurnstileWidget } from "@platform/ui";
+import { LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
 import { ChefHat } from "lucide-react";
 import { CenteredCard } from "@/components/CenteredCard";
 import { forgotPassword } from "@/lib/auth";
@@ -9,22 +9,14 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
+  const turnstile = useTurnstileToken();
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!email.trim()) return;
     setIsLoading(true);
     try {
-      await forgotPassword(email.trim(), turnstileToken);
+      await forgotPassword(email.trim(), turnstile.token);
     } catch {
       // Swallow — anti-enumeration. UI always shows "check your inbox".
     }
@@ -73,16 +65,13 @@ export default function ForgotPassword() {
                 autoComplete="email"
               />
             </div>
-            <TurnstileWidget
-              onVerify={handleTurnstileVerify}
-              onExpire={handleTurnstileExpire}
-            />
+            <TurnstileWidget {...turnstile.widgetProps} />
             <LoadingButton
               type="submit"
               isLoading={isLoading}
               loadingText="Sending..."
               className="w-full"
-              disabled={isLoading || !email.trim()}
+              disabled={isLoading || !email.trim() || !turnstile.isReady}
             >
               Send reset link
             </LoadingButton>

@@ -89,8 +89,7 @@ export default function PublicInquiryForm() {
             turnstileError={flow.turnstileError}
             update={flow.update}
             markTouched={flow.markTouched}
-            onTurnstileVerify={flow.handleTurnstileVerify}
-            onTurnstileExpire={flow.handleTurnstileExpire}
+            turnstileWidgetProps={flow.turnstileWidgetProps}
             onSubmit={(e) => flow.handleSubmit(e, listing)}
           />
         </div>

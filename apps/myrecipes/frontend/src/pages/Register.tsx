@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ChefHat } from "lucide-react";
 import {
@@ -6,6 +6,7 @@ import {
   describeAuthError,
   LoadingButton,
   TurnstileWidget,
+  useTurnstileToken,
   useIsAuthenticated,
 } from "@platform/ui";
 import { register } from "@/lib/auth";
@@ -34,16 +35,8 @@ export default function Register() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstile = useTurnstileToken();
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -66,9 +59,10 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      await register(email.trim(), password, displayName, turnstileToken);
+      await register(email.trim(), password, displayName, turnstile.token);
       setRegistered(true);
     } catch (err) {
+      turnstile.reset();
       setError(describeAuthError(err));
     } finally {
       setIsLoading(false);
@@ -158,10 +152,7 @@ export default function Register() {
                 At least {MIN_PASSWORD_LENGTH} characters.
               </p>
             </div>
-            <TurnstileWidget
-              onVerify={handleTurnstileVerify}
-              onExpire={handleTurnstileExpire}
-            />
+            <TurnstileWidget {...turnstile.widgetProps} />
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -187,6 +178,7 @@ export default function Register() {
               disabled={
                 isLoading ||
                 !termsAccepted ||
+                !turnstile.isReady ||
                 !email ||
                 password.length < MIN_PASSWORD_LENGTH
               }

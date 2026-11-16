@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@platform/ui";
+import { extractErrorMessage, useTurnstileToken } from "@platform/ui";
+import type { TurnstileWidgetBindings } from "@platform/ui";
 import { localToday } from "@platform/core/utils/localToday";
 import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
@@ -8,7 +9,6 @@ import type { PublicInquiryRequest } from "@/shared/types/inquiry/public-inquiry
 import type { FieldErrors, FormState, TouchedFields, ValidatedField } from "./public-inquiry-types";
 import {
   INITIAL_FORM,
-  TURNSTILE_SITE_KEY,
   focusFirstInvalid,
   validateForm,
 } from "./public-inquiry-helpers";
@@ -20,7 +20,6 @@ export interface PublicInquiryFlowState {
   submitError: string;
   touched: TouchedFields;
   attemptedSubmit: boolean;
-  turnstileToken: string;
   turnstileError: string;
   turnstileRequired: boolean;
   errors: FieldErrors;
@@ -28,8 +27,7 @@ export interface PublicInquiryFlowState {
   errorCount: number;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   markTouched: (key: ValidatedField) => void;
-  handleTurnstileVerify: (token: string) => void;
-  handleTurnstileExpire: () => void;
+  turnstileWidgetProps: TurnstileWidgetBindings;
   handleSubmit: (e: React.FormEvent, listing: PublicListing) => Promise<void>;
 }
 
@@ -40,11 +38,15 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
   const [submitError, setSubmitError] = useState("");
   const [touched, setTouched] = useState<TouchedFields>({});
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [turnstileError, setTurnstileError] = useState("");
+  const turnstile = useTurnstileToken();
+  const [captchaPromptShown, setCaptchaPromptShown] = useState(false);
   const [formLoadedAt] = useState<number>(() => Date.now());
 
-  const turnstileRequired = TURNSTILE_SITE_KEY.length > 0;
+  const turnstileRequired = turnstile.required;
+  const turnstileToken = turnstile.token;
+  const resetTurnstile = turnstile.reset;
+  const turnstileError =
+    captchaPromptShown && !turnstile.isReady ? "Please complete the captcha to continue." : "";
 
   const errors = useMemo(() => validateForm(form), [form]);
 
@@ -69,15 +71,6 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
     setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   }, []);
 
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-    setTurnstileError("");
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
-
   const handleSubmit = useCallback(
     async (e: React.FormEvent, listing: PublicListing) => {
       e.preventDefault();
@@ -85,11 +78,7 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
       setSubmitError("");
 
       const turnstileMissing = turnstileRequired && !turnstileToken;
-      if (turnstileMissing) {
-        setTurnstileError("Please complete the captcha to continue.");
-      } else {
-        setTurnstileError("");
-      }
+      setCaptchaPromptShown(turnstileMissing);
 
       const currentErrors = validateForm(form);
       const hasFieldErrors = Object.keys(currentErrors).length > 0;
@@ -130,6 +119,8 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
         await api.post("/inquiries/public", body);
         setSubmitted(true);
       } catch (err) {
+        // The server may have spent the single-use token; get a fresh one for the retry.
+        resetTurnstile();
         setSubmitError(
           extractErrorMessage(err) || "Something went wrong, please try again.",
         );
@@ -137,7 +128,7 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
         setSubmitting(false);
       }
     },
-    [form, formLoadedAt, turnstileRequired, turnstileToken],
+    [form, formLoadedAt, turnstileRequired, turnstileToken, resetTurnstile],
   );
 
   return {
@@ -147,7 +138,6 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
     submitError,
     touched,
     attemptedSubmit,
-    turnstileToken,
     turnstileError,
     turnstileRequired,
     errors,
@@ -155,8 +145,7 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
     errorCount,
     update,
     markTouched,
-    handleTurnstileVerify,
-    handleTurnstileExpire,
+    turnstileWidgetProps: turnstile.widgetProps,
     handleSubmit,
   };
 }

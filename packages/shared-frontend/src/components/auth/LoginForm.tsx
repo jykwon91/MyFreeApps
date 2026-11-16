@@ -19,6 +19,11 @@ export interface LoginFormProps {
    * passing it doesn't change the form layout when the widget renders nothing.
    */
   registerCaptchaSlot?: ReactNode;
+  /**
+   * False while the captcha in `registerCaptchaSlot` holds no fresh token
+   * (`useTurnstileToken().isReady`); keeps Create Account disabled. Defaults to true.
+   */
+  registerCaptchaReady?: boolean;
 }
 
 const DEFAULT_TRUST_COPY =
@@ -34,6 +39,7 @@ export default function LoginForm({
   trustCopy = DEFAULT_TRUST_COPY,
   passwordMinLength = 12,
   registerCaptchaSlot,
+  registerCaptchaReady = true,
 }: LoginFormProps) {
   const [tab, setTab] = useState<TabId>(defaultTab);
   const [email, setEmail] = useState("");
@@ -214,7 +220,7 @@ export default function LoginForm({
               variant="primary"
               isLoading={isLoading}
               loadingText="Creating account..."
-              disabled={isLoading || !passwordMeetsMin}
+              disabled={isLoading || !passwordMeetsMin || !registerCaptchaReady}
               className="w-full"
             >
               Create Account
