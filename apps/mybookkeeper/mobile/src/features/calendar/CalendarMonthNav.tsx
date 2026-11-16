@@ -6,6 +6,8 @@ import { shiftMonth } from "../../lib/localDate";
 import { monthName, monthTitle } from "./calendarDisplay";
 import CalendarMonthArrow from "./CalendarMonthArrow";
 
+const MONTH_TITLE_MIN_WIDTH = 120;
+
 interface CalendarMonthNavProps {
   month: string;
   isThisMonth: boolean;
@@ -20,16 +22,16 @@ export default function CalendarMonthNav({ month, isThisMonth, onChange, onToday
   const next = shiftMonth(month, 1);
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+    <View testID="calendar-month-nav" style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
       <CalendarMonthArrow label={`Previous month, ${monthName(previous)}`} onPress={() => onChange(previous)} symbol="‹" />
       <Pressable
         accessibilityHint={FILTER_MESSAGES.jumpHint}
         accessibilityLabel={monthTitle(month)}
         accessibilityRole="button"
         onPress={onJump}
-        style={{ flex: 1, minHeight: MIN_TOUCH_TARGET, alignItems: "center", justifyContent: "center" }}
+        style={{ flexGrow: 1, flexShrink: 1, flexBasis: MONTH_TITLE_MIN_WIDTH, minHeight: MIN_TOUCH_TARGET, alignItems: "center", justifyContent: "center" }}
       >
-        <Text adjustsFontSizeToFit numberOfLines={1} style={{ textAlign: "center", fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+        <Text style={{ flexShrink: 1, textAlign: "center", fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {monthTitle(month)} ▾
         </Text>
       </Pressable>

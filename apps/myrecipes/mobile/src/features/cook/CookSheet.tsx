@@ -39,7 +39,7 @@ export default function CookSheet({
         >
           <Text
             accessibilityRole="header"
-            style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}
+            style={{ flex: 1, flexShrink: 1, color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}
           >
             {title}
           </Text>
