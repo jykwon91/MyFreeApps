@@ -29,8 +29,9 @@ export default function DungeonQuestsAddonCard() {
       <div className="space-y-3 pt-2">
         <p>
           Type <code>/mgadq</code> to list the dungeons with quests for your faction and class, and how many you still need to
-          pick up. Open one for each quest line in order, who gives each quest and where, ticked from the quests the game says
-          you&apos;ve done. It also reminds you in chat when you enter a dungeon with quests you haven&apos;t picked up.
+          pick up. Open one for each quest line in order, ticked from the quests the game says you&apos;ve done, with what to do
+          next: who to get it from and where, what to kill or collect, or who to turn it in to. Pin puts a map pin on the next
+          quest giver. It also reminds you in chat when you enter a dungeon with quests you haven&apos;t picked up.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>

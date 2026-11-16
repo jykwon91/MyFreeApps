@@ -6,6 +6,9 @@
  * (colour codes and icons stripped, icons as [done] / [log] / [todo]), "row: ..." for each dungeon
  * in the list, and "hidden" / "shown" for the window. `clear()` empties `out`; `clickRow(n)` and
  * `clickBack()` click the list and the back button. `C_QuestLog = nil` leaves the older globals.
+ * Map pins: `C_Map.SetUserWaypoint` prints "waypoint: <map> <x> <y>" (0-1), map 9999 can't take one,
+ * `C_Map = nil` is a client without them; `shownPins()` prints "pins: 1,3" (the lines with a Pin
+ * button), `clickPin(n)` clicks line n's.
  */
 export const WOW_DUNGEON_QUEST_STUBS = `
 out = {}
@@ -40,6 +43,12 @@ function GetQuestLogTitle(i)
   return "Quest", 1, nil, false, false, q.complete and 1 or nil, 0, q.id
 end
 function IsQuestFlaggedCompleted(id) return completed[id] == true end
+UiMapPoint = { CreateFromCoordinates = function(map, x, y) return { map = map, x = x, y = y } end }
+C_Map = {
+  SetUserWaypoint = function(p) out[#out + 1] = string.format("waypoint: %d %.3f %.3f", p.map, p.x, p.y) end,
+  CanSetUserWaypointOnMap = function(map) return map ~= 9999 end,
+}
+C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) out[#out + 1] = "supertrack: " .. tostring(on) end }
 
 local function plain(s)
   s = s:gsub("|TInterface\\\\RaidFrame\\\\ReadyCheck%-Ready:14|t", "[done]")
@@ -90,7 +99,7 @@ local function newObject(kind, name, parent)
   setmetatable(o, { __index = function(_, k) if k == "TitleText" then return nil end return methods[k] or function() end end })
   frames[#frames + 1] = o
   if name then named[name] = o end
-  if kind == "Button" and parent and parent.parent and parent.parent.kind == "ScrollFrame" then rows[#rows + 1] = o end
+  if kind == "Button" and not name and parent and parent.parent and parent.parent.kind == "ScrollFrame" then rows[#rows + 1] = o end
   return o
 end
 function CreateFrame(kind, name, parent) return newObject(kind, name, parent) end
@@ -107,6 +116,16 @@ function clickRow(n)
   for _, r in ipairs(rows) do if r.shownFlag then shownRows[#shownRows + 1] = r end end
   shownRows[n].scripts.OnClick(shownRows[n])
 end
+-- The Pin buttons on screen, top to bottom, as "line n" numbers; clickPin(n) clicks line n's.
+function shownPins()
+  local list = {}
+  for i = 1, 50 do
+    local b = named["MGADungeonQuestsPin" .. i]
+    if b and b.shownFlag then list[#list + 1] = i end
+  end
+  out[#out + 1] = "pins: " .. table.concat(list, ",")
+end
+function clickPin(n) named["MGADungeonQuestsPin" .. n].scripts.OnClick() end
 function clickBack()
   for _, f in ipairs(frames) do
     if f.kind == "Button" and f.parent == named.MGADungeonQuestsFrame then f.scripts.OnClick(f) end

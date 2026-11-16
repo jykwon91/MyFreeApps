@@ -6,6 +6,7 @@ import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
 import { dungeonQuestsAddonDataLua } from "@/games/wow-forever/lib/dungeonQuestsAddon/dungeonQuestsAddonDataLua";
 import { dungeonQuestsAddonZip } from "@/games/wow-forever/lib/dungeonQuestsAddon/dungeonQuestsAddonZip";
+import { loadDungeonQuestsAddonDetails } from "@/games/wow-forever/lib/dungeonQuestsAddon/loadDungeonQuestsAddonDetails";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DUNGEON_QUEST_STUBS } from "@/test/addonLua/wowDungeonQuestStubs.lua";
 
@@ -17,12 +18,12 @@ MGADungeonQuestsData = {
     key = "the-deadmines", instanceId = 36, name = "The Deadmines", levelMin = 17, levelMax = 21, aliases = {"VC", "DM"},
     alliance = {
       {titles = {"The Defias Brotherhood"}, steps = {
-        {id = 1, title = "Step One", level = 14, minLevel = 9, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)"},
-        {id = 2, title = "Step Two", level = 15, minLevel = 9, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)"},
-        {id = 3, title = "The Defias Brotherhood", level = 22, minLevel = 14, dungeon = true, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)"},
+        {id = 1, title = "Step One", level = 14, minLevel = 9, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)", map = 1436, x = 56.3, y = 47.5, objectives = {"Collect 4 Gold Pickup Schedule"}, turnIn = "Gryan Stoutmantle"},
+        {id = 2, title = "Step Two", level = 15, minLevel = 9, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)", map = 1436, x = 56.3, y = 47.5},
+        {id = 3, title = "The Defias Brotherhood", level = 22, minLevel = 14, dungeon = true, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)", map = 1436, x = 56.3, y = 47.5, objectives = {"Kill Edwin VanCleef"}, turnIn = "Gryan Stoutmantle"},
       }},
       {titles = {"Collecting Memories"}, steps = {
-        {id = 10, title = "Collecting Memories", level = 18, minLevel = 14, dungeon = true, giver = "Wilder Thistlenettle", where = "Stormwind City 65.1, 21.3"},
+        {id = 10, title = "Collecting Memories", level = 18, minLevel = 14, dungeon = true, giver = "Wilder Thistlenettle", where = "Stormwind City 65.1, 21.3", map = 9999, x = 65.1, y = 21.3, objectives = {"Collect 4 Miners' Union Card"}, turnIn = "Wilder Thistlenettle"},
       }},
       {titles = {"Warrior Only"}, classes = {"warrior"}, steps = {
         {id = 20, title = "Warrior Only", level = 20, minLevel = 15, dungeon = true},
@@ -62,7 +63,8 @@ const window = (lines: string[]) => lines.filter((l) => l.startsWith("window: ")
 describe("MGA Dungeon Quests addon files", () => {
   it("Data.lua is the dungeon pages' quest lines (npx vitest run -u rewrites it)", async () => {
     const data = await loadDungeons();
-    await expect(dungeonQuestsAddonDataLua(data.dungeons)).toMatchFileSnapshot("../../addon/MGADungeonQuests/Data.lua");
+    const details = await loadDungeonQuestsAddonDetails(data.dungeons);
+    await expect(dungeonQuestsAddonDataLua(data.dungeons, details)).toMatchFileSnapshot("../../addon/MGADungeonQuests/Data.lua");
   }, 60_000);
 
   it("the real Data.lua loads and has Deadmines' Alliance lines with givers and where", () => {
@@ -100,27 +102,27 @@ describe("MGA Dungeon Quests checklist", () => {
     const shown = window(run('slash("deadmines")'));
     expect(shown).toEqual([
       "The Deadmines  levels 17-21",
-      "",
       "1. The Defias Brotherhood  0 of 3 done",
+      'Next: Get "Step One" from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill).',
       "[todo] Step One (14)",
       "      from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill)",
       "[todo] Step Two (15)",
       "      from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill)",
       "[todo] The Defias Brotherhood (22)  (done in the dungeon)",
       "      from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill)",
-      "",
       "2. Collecting Memories  0 of 1 done",
+      'Next: Get "Collecting Memories" from Wilder Thistlenettle, Stormwind City 65.1, 21.3.',
       "[todo] Collecting Memories (18)  (done in the dungeon)",
       "      from Wilder Thistlenettle, Stormwind City 65.1, 21.3",
-      "",
       "Quest lines are Classic's; Forever may differ. Quests you turn in tick when the game records them.",
     ]);
   });
 
   it("ticks what the game says you've done, and a done step ticks the ones before it", () => {
     const shown = window(run('slash("deadmines")', "completed[2] = true"));
-    expect(shown.slice(2, 6)).toEqual([
+    expect(shown.slice(1, 6)).toEqual([
       "1. The Defias Brotherhood  2 of 3 done",
+      'Next: Get "The Defias Brotherhood" from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill).',
       "[done] Step One",
       "[done] Step Two",
       "[todo] The Defias Brotherhood (22)  (done in the dungeon)",
@@ -137,11 +139,42 @@ describe("MGA Dungeon Quests checklist", () => {
     const inLog = window(run('slash("deadmines")', "questLog = { { id = 1 } }"));
     expect(inLog).toContain("[log] Step One (14)  in your quest log");
     const laterInLog = window(run('slash("deadmines")', "questLog = { { id = 2 } }"));
-    expect(laterInLog.slice(2, 5)).toEqual([
+    expect(laterInLog.slice(1, 5)).toEqual([
       "1. The Defias Brotherhood  1 of 3 done",
+      'Next: Finish "Step Two" (its goals are in your quest log). Then turn it in.',
       "[done] Step One",
       "[log] Step Two (15)  in your quest log",
     ]);
+  });
+
+  it("says what to do next: get it, finish its objectives, turn it in, or wait for a level", () => {
+    const next = (setup: string, query = "deadmines") => window(run(`slash("${query}")`, setup)).filter((l) => l.startsWith("Next: "));
+    expect(next("questLog = { { id = 1 } }")[0]).toBe(
+      'Next: Finish "Step One": Collect 4 Gold Pickup Schedule. Then turn it in to Gryan Stoutmantle.',
+    );
+    expect(next("questLog = { { id = 1, complete = true } }")[0]).toBe('Next: Turn in "Step One" to Gryan Stoutmantle.');
+    expect(next("completed[2] = true; questLog = { { id = 3 } }")[0]).toBe(
+      'Next: Finish "The Defias Brotherhood" in the dungeon: Kill Edwin VanCleef. Then turn it in to Gryan Stoutmantle.',
+    );
+    expect(next("", "wailing")).toEqual(['Next: At level 25, get "Deep Quest" from the item A Book.']);
+    expect(next('player.class = "WARRIOR"')).toContain("Next: Get \"Warrior Only\". Who gives it isn't in our data.");
+    expect(next("completed[3] = true; completed[10] = true")).toEqual([]);
+  });
+
+  it("a Pin button beside a quest to pick up puts a map pin on its giver", () => {
+    expect(run('slash("deadmines"); shownPins()')).toContain("pins: 1,2");
+    expect(run('slash("deadmines"); shownPins()', "questLog = { { id = 1 } }")).toContain("pins: 2");
+    expect(run('slash("deadmines"); shownPins()', "C_Map = nil")).toContain("pins: ");
+    const pinned = run('slash("deadmines"); clear(); clickPin(1)');
+    expect(pinned).toEqual([
+      "waypoint: 1436 0.563 0.475",
+      "supertrack: true",
+      "chat: MGA Dungeon Quests: map pin on Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill). Open your map (M) to see it.",
+    ]);
+    expect(run('slash("deadmines"); clear(); clickPin(2)')).toEqual([
+      "chat: MGA Dungeon Quests: the map can't take a pin there. Wilder Thistlenettle is at Stormwind City 65.1, 21.3.",
+    ]);
+    expect(run('slash("deadmines"); slash("list"); shownPins()')).toContain("pins: ");
   });
 
   it("a warrior gets the warrior's line; the Horde get theirs", () => {

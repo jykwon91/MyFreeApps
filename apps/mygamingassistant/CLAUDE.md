@@ -1934,6 +1934,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (a done step ticks the steps before it, never another dungeon quest) plus one the site
   can't see: a quest in your log ticks the steps before it. Entering a dungeon prints a chat
   reminder of quests not picked up (`/mgadq remind off`, saved in `MGADungeonQuestsSettings`).
+  Each line's "Next:" (`M.NextText`) says get it (giver, where, level), finish it (objectives)
+  or turn it in (to whom); every step's objectives + `turnIn` come from the quest pages' data
+  (`loadDungeonQuestsAddonDetails` -> `lib/quests/loadQuestDetail.ts`, shared with the quest page).
+  A Pin button sets a World Map waypoint on the next giver (`C_Map.SetUserWaypoint` +
+  `C_SuperTrack`, feature-checked; `map` = the giver's uiMapId, never inside a dungeon).
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.

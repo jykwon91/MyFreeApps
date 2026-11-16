@@ -152,30 +152,74 @@ local function stepLines(step, state, level, isNext)
   return out
 end
 
--- The checklist for one dungeon, as the window's lines.
-function M.ChecklistLines(dungeon)
+-- What to do next for a step: get it (from whom, where, at what level), finish it (its objectives), or
+-- turn it in (to whom). state = nil (not picked up), true (in your log) or "complete".
+function M.NextText(step, state, level)
+  local title = '"' .. step.title .. '"'
+  local turnIn = step.turnIn and (" to " .. step.turnIn) or ""
+  if state == "complete" then return "Turn in " .. title .. turnIn .. "." end
+  if state then
+    local todo = step.objectives and (": " .. table.concat(step.objectives, ", ")) or " (its goals are in your quest log)"
+    local inside = step.dungeon and " in the dungeon" or ""
+    return "Finish " .. title .. inside .. todo .. ". Then turn it in" .. turnIn .. "."
+  end
+  local when = step.minLevel > level and ("At level " .. step.minLevel .. ", get ") or "Get "
+  if not step.giver then return when .. title .. ". Who gives it isn't in our data." end
+  return when .. title .. " " .. giverText(step) .. "."
+end
+
+-- A step's giver can be pinned on the World Map: we know where, and the client has user waypoints.
+function M.CanPin(step)
+  return step.map ~= nil and C_Map ~= nil and C_Map.SetUserWaypoint ~= nil
+    and UiMapPoint ~= nil and UiMapPoint.CreateFromCoordinates ~= nil
+end
+
+-- Puts a World Map pin (and the on-screen arrow, where the client has one) on a step's giver.
+function M.Pin(step)
+  if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(step.map) then
+    say("the map can't take a pin there. " .. step.giver .. " is at " .. step.where .. ".")
+    return
+  end
+  C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(step.map, step.x / 100, step.y / 100))
+  if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then C_SuperTrack.SetSuperTrackedUserWaypoint(true) end
+  say("map pin on " .. step.giver .. ", " .. step.where .. ". Open your map (M) to see it.")
+end
+
+-- One quest line's block: its heading and "Next:" line (top), the steps (body), and the step to pin.
+local function lineBlock(n, line, inLog, level)
+  local done = M.DoneSteps(line, inLog)
+  local doneCount, nextIndex = 0, nil
+  for i in ipairs(line.steps) do
+    if done[i] then doneCount = doneCount + 1 elseif not nextIndex then nextIndex = i end
+  end
+  local status = nextIndex and (doneCount .. " of " .. #line.steps .. " done") or (GREEN .. "all done|r")
+  local top = WHITE .. n .. ". " .. table.concat(line.titles, " / ") .. "|r  " .. GREY .. status .. "|r"
+  local pin = nil
+  if nextIndex then
+    local step = line.steps[nextIndex]
+    local state = inLog[step.id]
+    top = top .. "\n" .. GOLD .. "Next:|r " .. M.NextText(step, state, level)
+    if not state and M.CanPin(step) then pin = step end
+  end
+  local body = {}
+  for i, step in ipairs(line.steps) do
+    local state = done[i] and "done" or inLog[step.id]
+    for _, text in ipairs(stepLines(step, state, level, i == nextIndex)) do body[#body + 1] = text end
+  end
+  return { top = top, body = table.concat(body, "\n"), pin = pin }
+end
+
+-- The checklist for one dungeon: its title, a block per quest line, and a footnote.
+function M.Checklist(dungeon)
   local inLog, level = M.QuestsInLog(), UnitLevel("player") or 1
-  local out = { GOLD .. dungeon.name .. "|r  " .. GREY .. levels(dungeon) .. "|r", "" }
+  local out = { title = GOLD .. dungeon.name .. "|r  " .. GREY .. levels(dungeon) .. "|r", blocks = {} }
   local lines = M.LinesFor(dungeon)
   if #lines == 0 then
-    out[#out + 1] = "No quests to pick up for this dungeon for your faction and class."
+    out.footer = "No quests to pick up for this dungeon for your faction and class."
     return out
   end
-  for n, line in ipairs(lines) do
-    local done = M.DoneSteps(line, inLog)
-    local doneCount, nextIndex = 0, nil
-    for i in ipairs(line.steps) do
-      if done[i] then doneCount = doneCount + 1 elseif not nextIndex then nextIndex = i end
-    end
-    local status = nextIndex and (doneCount .. " of " .. #line.steps .. " done") or (GREEN .. "all done|r")
-    out[#out + 1] = WHITE .. n .. ". " .. table.concat(line.titles, " / ") .. "|r  " .. GREY .. status .. "|r"
-    for i, step in ipairs(line.steps) do
-      local state = done[i] and "done" or inLog[step.id]
-      for _, text in ipairs(stepLines(step, state, level, i == nextIndex)) do out[#out + 1] = text end
-    end
-    out[#out + 1] = ""
-  end
-  out[#out + 1] = GREY .. "Quest lines are Classic's; Forever may differ. Quests you turn in tick when the game records them.|r"
+  for n, line in ipairs(lines) do out.blocks[n] = lineBlock(n, line, inLog, level) end
+  out.footer = GREY .. "Quest lines are Classic's; Forever may differ. Quests you turn in tick when the game records them.|r"
   return out
 end
 
@@ -223,8 +267,10 @@ end
 
 -- The window ---------------------------------------------------------------------------------
 
-local frame, scroll, child, text, back, rowButtons = nil, nil, nil, nil, nil, {}
+local frame, scroll, child, back, rowButtons = nil, nil, nil, nil, {}
+local texts, pins = {}, {} -- pooled font strings and Pin buttons for the checklist
 local shown = nil -- the dungeon on screen; nil = the list
+local PIN_WIDTH, GAP = 64, 6
 
 local function newFrame()
   local ok, f = pcall(CreateFrame, "Frame", "MGADungeonQuestsFrame", UIParent, "BasicFrameTemplateWithInset")
@@ -258,13 +304,32 @@ local function newFrame()
   child = CreateFrame("Frame", nil, scroll)
   child:SetSize(TEXT_WIDTH, 10)
   scroll:SetScrollChild(child)
-
-  text = child:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  text:SetPoint("TOPLEFT", 4, -4)
-  text:SetWidth(TEXT_WIDTH - 8)
-  text:SetJustifyH("LEFT")
-  text:SetSpacing(3)
   return f
+end
+
+-- The i-th pooled font string, placed at y and width wide.
+local function textAt(i, y, width)
+  local t = texts[i]
+  if not t then
+    t = child:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    t:SetJustifyH("LEFT")
+    t:SetSpacing(3)
+    texts[i] = t
+  end
+  t:ClearAllPoints()
+  t:SetPoint("TOPLEFT", 4, y)
+  t:SetWidth(width)
+  t:Show()
+  return t
+end
+
+local function pinButton(i)
+  if pins[i] then return pins[i] end
+  local b = CreateFrame("Button", "MGADungeonQuestsPin" .. i, child, "UIPanelButtonTemplate")
+  b:SetSize(PIN_WIDTH, 22)
+  b:SetText("Pin")
+  pins[i] = b
+  return b
 end
 
 local function rowButton(i)
@@ -281,24 +346,55 @@ local function rowButton(i)
   return b
 end
 
-local function render()
+local function hideAll()
   for _, b in ipairs(rowButtons) do b:Hide() end
+  for _, t in ipairs(texts) do t:Hide() end
+  for _, b in ipairs(pins) do b:Hide() end
+end
+
+-- Stacks the checklist's title, each line's heading + "Next:" (a Pin button beside it) and its steps.
+local function renderChecklist(list)
+  local full = TEXT_WIDTH - 8
+  local y, used = -4, 0
+  local function put(text, width)
+    used = used + 1
+    local t = textAt(used, y, width or full)
+    t:SetText(text)
+    y = y - t:GetStringHeight() - GAP
+  end
+  put(list.title)
+  for n, block in ipairs(list.blocks) do
+    y = y - GAP
+    local topY = y
+    put(block.top, block.pin and (full - PIN_WIDTH - GAP) or full)
+    if block.pin then
+      local b, step = pinButton(n), block.pin
+      b:ClearAllPoints()
+      b:SetPoint("TOPRIGHT", child, "TOPRIGHT", -4, topY)
+      b:SetScript("OnClick", function() M.Pin(step) end)
+      b:Show()
+    end
+    put(block.body)
+  end
+  y = y - GAP
+  put(list.footer)
+  child:SetHeight(-y + 8)
+end
+
+local function render()
+  hideAll()
   if shown then
     back:Show()
-    text:SetText(table.concat(M.ChecklistLines(shown), "\n"))
-    text:Show()
-    child:SetHeight(text:GetStringHeight() + 12)
+    renderChecklist(M.Checklist(shown))
     return
   end
   back:Hide()
   local rows = M.ListRows()
   if #rows == 0 then
-    text:SetText("No dungeon quests for your faction.")
-    text:Show()
+    textAt(1, -4, TEXT_WIDTH - 8):SetText("No dungeon quests for your faction.")
     child:SetHeight(40)
     return
   end
-  text:Hide()
   for i, row in ipairs(rows) do
     local b = rowButton(i)
     b.label:SetText(row.text)
