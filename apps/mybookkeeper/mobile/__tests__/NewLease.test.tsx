@@ -355,6 +355,31 @@ describe("what goes in the lease", () => {
     expect(screen.queryByRole("button", { name: MESSAGES.reset })).toBeNull();
   });
 
+  it("puts back what it pulled, and where it came from, once I confirm the reset", async () => {
+    startServer();
+    await openDetails();
+    await screen.findByText("From their application");
+    expect(screen.queryByRole("button", { name: MESSAGES.reset })).toBeNull();
+    await fireEvent.changeText(screen.getByDisplayValue("Dana Reed"), "Mine");
+    expect(screen.getByText("Edited by you")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.reset }));
+    await act(async () => pressInAlert(MESSAGES.resetConfirm));
+    expect(screen.getByDisplayValue("Dana Reed")).toBeTruthy();
+    expect(screen.getByText("From their application")).toBeTruthy();
+    expect(screen.queryByText("Edited by you")).toBeNull();
+  });
+
+  it("keeps my edits when I back out of the reset", async () => {
+    startServer();
+    await openDetails();
+    await fireEvent.changeText(await screen.findByDisplayValue("Dana Reed"), "Mine");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.reset }));
+    await act(async () => pressInAlert(MESSAGES.keepEdits));
+    expect(screen.getByDisplayValue("Mine")).toBeTruthy();
+    expect(screen.getByText("Edited by you")).toBeTruthy();
+    expect(screen.getByRole("button", { name: MESSAGES.reset })).toBeTruthy();
+  });
+
   it("points at what's missing and sends nothing", async () => {
     const server = startServer();
     await openDetails();
