@@ -1,9 +1,12 @@
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { OptionSheet } from "@platform/mobile";
+import { router } from "expo-router";
 import { TENANT_PICKER_LIMIT, TENANT_PICKER_MESSAGES as MESSAGES } from "../../constants/tenantPicker";
 import type { TenantChoice } from "../../types/TenantChoice";
 import { useTodayIso } from "../../lib/useTodayIso";
+import SheetEmptyAction from "../shell/SheetEmptyAction";
+import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 
 interface TenantPickerSheetProps {
   isOpen: boolean;
@@ -21,14 +24,21 @@ export default function TenantPickerSheet({ isOpen, description, onClose, onClos
   const { currentData, error } = useGetTenantsQuery({ limit: TENANT_PICKER_LIMIT, include_ended: true, today });
   const tenants = currentData?.items ?? [];
   const options = buildTenantOptions(tenants, today).map((option) => ({ value: option.id, label: option.label }));
+  const { closeThen, handleClosed } = useAfterSheetCloses(onClose, onClosed);
 
   return (
     <OptionSheet
       description={currentData?.has_more ? `${description} ${MESSAGES.more}` : description}
-      emptyText={currentData ? MESSAGES.none : error ? MESSAGES.failed : MESSAGES.loading}
+      emptyContent={
+        currentData ? (
+          // Applicants is a tab, so this goes back to it rather than stacking a second copy of the tabs.
+          <SheetEmptyAction actionLabel={MESSAGES.seeApplicants} message={MESSAGES.none} onPress={() => closeThen(() => router.navigate("/people?section=applicants"))} />
+        ) : undefined
+      }
+      emptyText={error ? MESSAGES.failed : MESSAGES.loading}
       isOpen={isOpen}
       onClose={onClose}
-      onClosed={onClosed}
+      onClosed={handleClosed}
       onSelect={(id) => onPick({ id, name: tenants.find((tenant) => tenant.id === id)?.legal_name ?? MESSAGES.thisTenant })}
       options={options}
       title={MESSAGES.title}

@@ -8,11 +8,13 @@ export const RECEIPTS_SKELETON_ROWS = ["a", "b", "c"];
 /** The first option in the payment method sheet. The send endpoint takes it as no method. */
 export const NO_PAYMENT_METHOD = "";
 
-/** Appended to a reason whose fix is only on the website. */
+/** Appended to a Gmail problem: connecting Gmail needs a browser, so it's only on the website. */
 export const FIX_ON_WEBSITE = "You can do that on the website.";
 
-/** Fixes that need the website. The rest can be done on the phone, or by someone else. */
-export const BLOCKERS_FIXED_ON_WEBSITE: ReadonlySet<ReceiptSendBlocker> = new Set(["tenant_no_email"]);
+/** Appended to a reason the phone can fix, saying where. */
+export const BLOCKER_FIX_ON_PHONE: Readonly<Partial<Record<ReceiptSendBlocker, string>>> = {
+  tenant_no_email: "Add it on their page, under Private details.",
+};
 
 export const RECEIPTS_MESSAGES = {
   loading: "Loading your rent receipts",
@@ -41,6 +43,7 @@ export const RECEIPTS_MESSAGES = {
   dismissed: "Dismissed. The payment is still in your transactions.",
   checkingWithGmail: "I'm still checking with Gmail whether an earlier send went out. Sending again is safe: I won't email it twice.",
   openPaymentReview: "Open Payment Review",
+  addTheirEmail: "Add their email",
   openWebsite: "Open the website",
   opensBrowser: LINK_MESSAGES.opensBrowser,
   rentPeriod: "Rent period",

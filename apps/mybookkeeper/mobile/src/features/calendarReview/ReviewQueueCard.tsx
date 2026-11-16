@@ -5,9 +5,12 @@ import {
 } from "@mybookkeeper/api-client/store/calendarApi";
 import type { ReviewQueueItem } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
 import { LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { REVIEW_MESSAGES } from "../../constants/calendarReview";
+import SheetEmptyAction from "../shell/SheetEmptyAction";
+import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { addFailure, dismissFailure, ignoreFailure } from "./reviewQueueFailures";
 import { reviewItemChannel, reviewItemDetails, reviewItemListingKey, reviewItemSubject, reviewQueueSpokenLabel } from "./reviewQueueDisplay";
 
@@ -21,6 +24,7 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
   const { colors, spacing, fontSize, radius } = useTheme();
   const { showToast } = useToast();
   const [isChoosing, setIsChoosing] = useState(false);
+  const listingSheet = useAfterSheetCloses(() => setIsChoosing(false));
   const [resolve, { isLoading: isAdding }] = useResolveQueueItemMutation();
   const [ignore, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
   const [dismiss, { isLoading: isDismissing }] = useDismissQueueItemMutation();
@@ -96,9 +100,16 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
           </LoadingButton>
           <OptionSheet
             description={`Which listing does this ${reviewItemChannel(item)} booking belong to?`}
-            emptyText={REVIEW_MESSAGES.noListings}
+            emptyContent={
+              <SheetEmptyAction
+                actionLabel={REVIEW_MESSAGES.addListing}
+                message={REVIEW_MESSAGES.noListings}
+                onPress={() => listingSheet.closeThen(() => router.push("/listings/new"))}
+              />
+            }
             isOpen={isChoosing}
             onClose={() => setIsChoosing(false)}
+            onClosed={listingSheet.handleClosed}
             onSelect={(listingId) => void add(listingId)}
             options={[...listings]}
             title={REVIEW_MESSAGES.chooseListing}

@@ -37,7 +37,7 @@ export default function ReceiptRow({ receipt, canWrite, canSend }: ReceiptRowPro
       {otherGmail ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{`${receiptSentFromOtherGmailMessage(otherGmail)} ${FIX_ON_WEBSITE}`}</Text>
       ) : null}
-      {blocker ? <ReceiptBlockerNote blocker={blocker} /> : null}
+      {blocker ? <ReceiptBlockerNote blocker={blocker} receipt={receipt} /> : null}
       {canWrite ? (
         <View style={{ gap: spacing.sm }}>
           {/* Sending again would email it from the connected account, which may make a second copy. */}

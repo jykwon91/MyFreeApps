@@ -64,6 +64,7 @@ async function openAt(path: string): Promise<void> {
       "leases/[id]/index": LeasePage,
       "leases/[id]/add-document/index": Pick,
       "leases/[id]/add-document/details": Values,
+      "lease-templates/new": () => <Text>new-template-screen</Text>,
     },
     { initialUrl: "/" },
   );
@@ -175,10 +176,14 @@ describe("picking which templates to make documents from", () => {
     expect(screen.getByRole("button", { name: "Continue with 1 template" })).toBeTruthy();
   });
 
-  it("says so when there are no templates", async () => {
+  it("says so when there are no templates, and opens New template", async () => {
     startLeaseWritesServer({ templates: [] });
     await openAt(addDocumentPath("l1"));
     expect(await screen.findByText(MESSAGES.noTemplatesHeading)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addTemplate }));
+    expect(await screen.findByText("new-template-screen")).toBeTruthy();
+    expect(screen).toHavePathname("/lease-templates/new");
   });
 
   it("doesn't call a failed load an empty list, and tries again", async () => {

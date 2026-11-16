@@ -9,6 +9,7 @@ import TransactionDetailScreen from "../src/features/transactions/TransactionDet
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { APPROVAL_PROPERTY_MESSAGES } from "../src/constants/transactionApproval";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 
 const mockPush = jest.fn();
@@ -22,6 +23,15 @@ jest.mock("expo-router", () => ({
   },
 }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
+// iOS says a sheet has finished closing through onDismiss, which a test has to call itself.
+const mockModal: { onDismiss?: () => void } = {};
+jest.mock("react-native/Libraries/Modal/Modal", () => ({
+  __esModule: true,
+  default: ({ visible, onDismiss, children }: { visible: boolean; onDismiss?: () => void; children: unknown }) => {
+    if (onDismiss) mockModal.onDismiss = onDismiss;
+    return visible ? children : null;
+  },
+}));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -145,6 +155,20 @@ describe("TransactionDetailScreen", () => {
     await fireEvent.press(await screen.findByRole("radio", { name: "Oak Street" }));
     expect(await screen.findByText("Approved.")).toBeTruthy();
     expect(lastPatch(server)).toEqual({ status: "approved", property_id: "p1" });
+  });
+
+  it("with no properties yet, opens New property once the sheet has closed, and approves nothing", async () => {
+    const server = startTransactionServer([aTransaction({ status: "pending", property_id: null })], []);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Approve" }));
+    expect(await screen.findByText(APPROVAL_PROPERTY_MESSAGES.none)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: APPROVAL_PROPERTY_MESSAGES.addProperty }));
+    expect(screen.queryByText(APPROVAL_PROPERTY_MESSAGES.title)).toBeNull();
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => mockModal.onDismiss?.());
+    expect(mockPush).toHaveBeenCalledWith("/properties/new");
+    expect(server.requests.filter((request) => request.method === "patch")).toEqual([]);
   });
 
   it("moves to the next one in review and says how many are left", async () => {

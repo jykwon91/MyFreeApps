@@ -1,15 +1,11 @@
+import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/receipt-send-blocker";
 import { Banner } from "@platform/mobile";
 import { router } from "expo-router";
-import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
-import { blockerMessage } from "./receiptDisplay";
+import { blockerAction, blockerMessage } from "./receiptDisplay";
 
-/** Why this receipt can't go. An unlinked payment is fixed in Payment Review, which is on the phone. */
-export default function ReceiptBlockerBanner({ blocker }: { blocker: ReceiptSendBlocker }) {
-  return (
-    <Banner
-      actions={blocker === "not_attributed" ? [{ label: MESSAGES.openPaymentReview, onPress: () => router.push("/payment-review") }] : []}
-      message={blockerMessage(blocker)}
-    />
-  );
+/** Why this receipt can't go, with the way to fix it on the phone when there is one. */
+export default function ReceiptBlockerBanner({ blocker, receipt }: { blocker: ReceiptSendBlocker; receipt: PendingReceipt }) {
+  const action = blockerAction(blocker, receipt);
+  return <Banner actions={action ? [{ label: action.label, onPress: () => router.push(action.href) }] : []} message={blockerMessage(blocker)} />;
 }

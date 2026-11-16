@@ -7,6 +7,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
@@ -20,7 +21,7 @@ import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
-jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), navigate: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
 
 const mockModal: { onDismiss?: () => void } = {};
@@ -94,6 +95,8 @@ interface Server {
   queueStatus?: number;
   dead?: boolean;
   tenantsFail?: boolean;
+  noTenants?: boolean;
+  noProperties?: boolean;
   queueReads: number;
   tenantReads: number;
   propertyReads: number;
@@ -117,6 +120,7 @@ function serve(queue: AttributionReviewQueueResponse): Server {
     if (url === "/applicants/tenants") {
       server.tenantReads += 1;
       if (server.tenantsFail) return respond(500, {});
+      if (server.noTenants) return respond(200, { items: [], total: 0, has_more: false });
       return respond(200, {
         items: [
           { id: "a1", legal_name: "Jane Smith", tenant_ended_at: null, contract_end: "2099-01-01" },
@@ -129,6 +133,7 @@ function serve(queue: AttributionReviewQueueResponse): Server {
     }
     if (url === "/properties") {
       server.propertyReads += 1;
+      if (server.noProperties) return respond(200, []);
       return respond(200, [
         { id: "p1", name: "Sunset Villa", is_active: true },
         { id: "p2", name: "Oak Cottage", is_active: true },
@@ -188,6 +193,8 @@ beforeEach(() => {
   jest.mocked(useCanWrite).mockReturnValue(true);
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
   mockModal.onDismiss = undefined;
+  jest.mocked(router.push).mockClear();
+  jest.mocked(router.navigate).mockClear();
 });
 
 afterEach(() => {
@@ -456,6 +463,42 @@ describe("picking someone else", () => {
 
     expect(screen.getByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
     expect(screen.queryByText(TENANT_PICKER_MESSAGES.none)).toBeNull();
+  });
+
+  it("with no tenants yet, says how someone becomes one and goes to Applicants once the sheet has closed", async () => {
+    const server = serve(aQueue([aRow()]));
+    server.noTenants = true;
+    await showScreen();
+
+    await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
+    await settle();
+    expect(screen.getByText(TENANT_PICKER_MESSAGES.none)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: TENANT_PICKER_MESSAGES.seeApplicants }));
+    expect(screen.queryByText(TENANT_PICKER_MESSAGES.title)).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
+    await finishClosing();
+
+    expect(router.navigate).toHaveBeenCalledWith("/people?section=applicants");
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(server.sent).toEqual([]);
+  });
+
+  it("with no properties yet, opens New property once the sheet has closed", async () => {
+    const server = serve(aQueue([aPayout({ proposed_property_id: null, proposed_property: null })]));
+    server.noProperties = true;
+    await showScreen();
+
+    await fireEvent.press(screen.getByText(MESSAGES.chooseProperty));
+    await settle();
+    expect(screen.getByText(MESSAGES.noProperties)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addProperty }));
+    expect(router.push).not.toHaveBeenCalled();
+    await finishClosing();
+
+    expect(router.push).toHaveBeenCalledWith("/properties/new");
+    expect(server.sent).toEqual([]);
   });
 
   it("books a picked property without asking, and leaves out inactive ones", async () => {

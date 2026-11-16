@@ -53,7 +53,7 @@ export default function SendReceiptForm({ receipt, gmailState, isSending, isPrev
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" ref={scroller} testID="send-receipt-form">
       {/* The readiness banner already says it when a refused send turns out to be one of these. */}
       {failure && failure !== readiness ? <Banner message={failure} /> : null}
-      {blocker ? <ReceiptBlockerBanner blocker={blocker} /> : <ReceiptGmailBanner state={gmailState} />}
+      {blocker ? <ReceiptBlockerBanner blocker={blocker} receipt={receipt} /> : <ReceiptGmailBanner state={gmailState} />}
       <ReceiptSummary receipt={receipt} />
 
       <View pointerEvents={isSending ? "none" : "auto"} style={{ gap: spacing.md }}>

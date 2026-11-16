@@ -2,11 +2,9 @@ import { useGetSignedLeasesQuery } from "@mybookkeeper/api-client/store/signedLe
 import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text } from "react-native";
-import { LEASE_MESSAGES, noLeaseFor } from "../../constants/leases";
+import { LEASE_MESSAGES, MOST_LEASES_ONE_PERSON_HAS, noLeaseFor } from "../../constants/leases";
 import InquirySection from "../inquiries/InquirySection";
 import LeaseRow from "./LeaseRow";
-
-const MOST_LEASES_ONE_PERSON_HAS = 100;
 
 interface TenantLeasesProps {
   applicantId: string;

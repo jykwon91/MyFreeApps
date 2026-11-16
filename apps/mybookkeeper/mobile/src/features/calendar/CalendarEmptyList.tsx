@@ -1,8 +1,9 @@
-import { EmptyState, useOpenWebsite } from "@platform/mobile";
-import { WEB_BASE_URL } from "../../constants/api";
+import { EmptyState } from "@platform/mobile";
+import { router } from "expo-router";
 import { CALENDAR_MESSAGES } from "../../constants/calendar";
 import { FILTER_MESSAGES } from "../../constants/calendarFilters";
 import { emptyMonthHeading } from "./calendarDisplay";
+import { useCanWrite } from "../workspace/useCanWrite";
 import CalendarSkeleton from "./CalendarSkeleton";
 
 interface CalendarEmptyListProps {
@@ -16,7 +17,7 @@ interface CalendarEmptyListProps {
 }
 
 export default function CalendarEmptyList({ isLoading, hasFailed, hasNoListings, hasFilters, month, onRetry, onClearFilters }: CalendarEmptyListProps) {
-  const openWebsite = useOpenWebsite();
+  const canWrite = useCanWrite();
   if (isLoading) return <CalendarSkeleton />;
   if (hasFailed) {
     return (
@@ -39,8 +40,8 @@ export default function CalendarEmptyList({ isLoading, hasFailed, hasNoListings,
   if (hasNoListings) {
     return (
       <EmptyState
-        action={{ label: CALENDAR_MESSAGES.openWebsite, onPress: () => openWebsite(WEB_BASE_URL, "/listings") }}
-        body={CALENDAR_MESSAGES.noListingsBody}
+        action={canWrite ? { label: CALENDAR_MESSAGES.addListing, onPress: () => router.push("/listings/new") } : undefined}
+        body={canWrite ? CALENDAR_MESSAGES.noListingsBody : CALENDAR_MESSAGES.noListingsViewOnlyBody}
         heading={CALENDAR_MESSAGES.noListingsHeading}
       />
     );

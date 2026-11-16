@@ -7,6 +7,9 @@ import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DUPLICATES_LINK } from "../../constants/duplicates";
+import { APPROVAL_PROPERTY_MESSAGES } from "../../constants/transactionApproval";
+import SheetEmptyAction from "../shell/SheetEmptyAction";
+import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { selectableProperties } from "./transactionEditValues";
 import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
@@ -26,6 +29,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
   const { approve, goToNext, isAdvancing, isApproving, queueRow, waitingCount } = useApproveTransaction(id, reviewQueue);
   const [deleteTransaction, { isLoading: isDeleting }] = useDeleteTransactionMutation();
   const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
+  const propertySheet = useAfterSheetCloses(() => setIsPropertySheetOpen(false));
   const { refreshControl } = useRefresh(refetch, error);
 
   // currentData, never data: moving to the next one must not show the last one's numbers.
@@ -182,22 +186,26 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
       ) : null}
 
       <OptionSheet
-        description="I need a property before I can approve this."
-        emptyText={
-          propertiesFailed
-            ? "I couldn't load your properties. Close this and try again."
-            : propertiesLoading
-              ? "I'm still loading your properties."
-              : "You don't have any properties yet. You can add one on the website."
+        description={APPROVAL_PROPERTY_MESSAGES.description}
+        emptyContent={
+          propertiesFailed || propertiesLoading ? undefined : (
+            <SheetEmptyAction
+              actionLabel={APPROVAL_PROPERTY_MESSAGES.addProperty}
+              message={APPROVAL_PROPERTY_MESSAGES.none}
+              onPress={() => propertySheet.closeThen(() => router.push("/properties/new"))}
+            />
+          )
         }
+        emptyText={propertiesFailed ? APPROVAL_PROPERTY_MESSAGES.failed : APPROVAL_PROPERTY_MESSAGES.loading}
         isOpen={isPropertySheetOpen}
         onClose={() => setIsPropertySheetOpen(false)}
+        onClosed={propertySheet.handleClosed}
         onSelect={(propertyId) => {
           setIsPropertySheetOpen(false);
           void approve(propertyId);
         }}
         options={propertyOptions}
-        title="Which property is this for?"
+        title={APPROVAL_PROPERTY_MESSAGES.title}
         value={null}
       />
     </View>

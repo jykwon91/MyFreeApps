@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { aRentLedger } from "./aRentLedger";
@@ -50,6 +51,8 @@ export interface FakeApplicantServer {
   uploadFailure: number | null;
   revealFailure: number | null;
   tenantListFailure: number | null;
+  /** What /signed-leases lists, newest first. */
+  leases: SignedLeaseSummary[];
 }
 
 export const SAMPLE_PROVIDER = {
@@ -83,7 +86,7 @@ export function formValue(form: unknown, field: string): string | undefined {
 }
 
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
-  const server: FakeApplicantServer = { tenantListFailure: null, applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
+  const server: FakeApplicantServer = { tenantListFailure: null, leases: [], applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
   const adapter: AxiosAdapter = (request) => {
     const config = withTransactionListQuery(request);
     const respond = (data: unknown, status = 200) => {
@@ -115,7 +118,7 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
       row?.screening_results.push(result);
       return respond(result, 201);
     }
-    if (config.url === "/signed-leases") return respond({ items: [], total: 0, has_more: false });
+    if (config.url === "/signed-leases") return respond({ items: server.leases, total: server.leases.length, has_more: false });
     if (config.url === "/transactions") return respond([]);
     if (config.url?.startsWith("/rent-ledger/tenants/")) return respond(aRentLedger());
     if (config.url?.endsWith("/preview") && config.url.startsWith("/rent-reminders/")) return respond(null);

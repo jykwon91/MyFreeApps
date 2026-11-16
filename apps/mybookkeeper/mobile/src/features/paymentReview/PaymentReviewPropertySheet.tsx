@@ -1,6 +1,9 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { OptionSheet } from "@platform/mobile";
+import { router } from "expo-router";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
+import SheetEmptyAction from "../shell/SheetEmptyAction";
+import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { selectableProperties } from "../transactions/transactionEditValues";
 
 interface PaymentReviewPropertySheetProps {
@@ -14,14 +17,20 @@ interface PaymentReviewPropertySheetProps {
 export default function PaymentReviewPropertySheet({ isOpen, description, onClose, onClosed, onPick }: PaymentReviewPropertySheetProps) {
   const { currentData, error } = useGetPropertiesQuery();
   const properties = selectableProperties(currentData ?? [], null);
+  const { closeThen, handleClosed } = useAfterSheetCloses(onClose, onClosed);
 
   return (
     <OptionSheet
       description={description}
-      emptyText={currentData ? MESSAGES.noProperties : error ? MESSAGES.propertiesFailed : MESSAGES.propertiesLoading}
+      emptyContent={
+        currentData ? (
+          <SheetEmptyAction actionLabel={MESSAGES.addProperty} message={MESSAGES.noProperties} onPress={() => closeThen(() => router.push("/properties/new"))} />
+        ) : undefined
+      }
+      emptyText={error ? MESSAGES.propertiesFailed : MESSAGES.propertiesLoading}
       isOpen={isOpen}
       onClose={onClose}
-      onClosed={onClosed}
+      onClosed={handleClosed}
       onSelect={(id) => onPick({ id, name: properties.find((property) => property.id === id)?.name ?? MESSAGES.thisProperty })}
       options={properties.map((property) => ({ value: property.id, label: property.name }))}
       title={MESSAGES.propertySheetTitle}
