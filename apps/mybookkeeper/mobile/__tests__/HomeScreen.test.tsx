@@ -272,6 +272,20 @@ describe("HomeScreen", () => {
     expect(screen.getByRole("button", { name: "1 document needs a look" })).toBeTruthy();
   });
 
+  it("refreshes every query the Waiting card reads on a pull", async () => {
+    startTransactionServer([]);
+    await renderScreen();
+    await screen.findByText("You're all caught up.");
+    const asked: string[] = [];
+    const previous = api.defaults.adapter as (config: { url?: string }) => Promise<unknown>;
+    api.defaults.adapter = ((config: { url?: string }) => {
+      asked.push(config.url ?? "");
+      return previous(config);
+    }) as typeof api.defaults.adapter;
+    await pull();
+    expect(asked).toEqual(expect.arrayContaining(["/transactions/duplicates", "/transactions/attribution-review-queue", "/integrations"]));
+  });
+
   it("says so when a pull fails, and keeps what it last loaded", async () => {
     const server = startTransactionServer([]);
     server.summary = { revenue: 1, expenses: 0, profit: 1, by_property: [] };

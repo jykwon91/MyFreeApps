@@ -34,6 +34,8 @@ import PropertyTotals from "./PropertyTotals";
 import WaitingCard from "./WaitingCard";
 import WhereItWent from "./WhereItWent";
 import WhereItWentSkeleton from "./WhereItWentSkeleton";
+import { HomeRefreshContext } from "./HomeRefreshContext";
+import { useHomeRefreshRegistry } from "./useHomeRefreshRegistry";
 
 export default function HomeScreen() {
   const { spacing } = useTheme();
@@ -43,7 +45,8 @@ export default function HomeScreen() {
   // Not kept between visits, as on the web Dashboard.
   const [propertyIds, setPropertyIds] = useState<string[]>([]);
   const [categories, setCategories] = useState<Set<string>>(() => new Set(ALL_SUMMARY_CATEGORIES));
-  const { data: properties = [] } = useGetPropertiesQuery();
+  const propertiesQuery = useGetPropertiesQuery();
+  const properties = propertiesQuery.data ?? [];
   const isFilteringCategories = isCategoryFilterActive(categories);
   const isFiltered = propertyIds.length > 0 || isFilteringCategories;
   const summaryParams = useMemo(() => {
@@ -81,22 +84,11 @@ export default function HomeScreen() {
   const insurancePremiums = useGetInsurancePremiumComparisonQuery();
   const alerts = [renewals, utilityRates, insurancePremiums];
 
+  // The cards (waiting, alerts) register their own queries, so a card gaining a query can't be left out of a pull.
+  const { register, refetchCards } = useHomeRefreshRegistry();
   const { refreshControl } = useRefresh(
-    () =>
-      Promise.all([
-        summary.refetch(),
-        years.refetch(),
-        reviewCount.refetch(),
-        documents.refetch(),
-        canWrite ? receipts.refetch() : undefined,
-        ...alerts.map((alert) => alert.refetch()),
-      ]),
-    summary.error ??
-      years.error ??
-      reviewCount.error ??
-      documents.error ??
-      (canWrite ? receipts.error : undefined) ??
-      alerts.find((alert) => alert.error)?.error,
+    () => Promise.all([summary.refetch(), years.refetch(), reviewCount.refetch(), documents.refetch(), propertiesQuery.refetch(), refetchCards()]),
+    summary.error ?? years.error ?? reviewCount.error ?? documents.error ?? (canWrite ? receipts.error : undefined) ?? alerts.find((alert) => alert.error)?.error,
   );
 
   const hasNothingYet = years.data?.length === 0 && reviewCount.data?.count === 0 && documents.data?.length === 0;
@@ -108,6 +100,7 @@ export default function HomeScreen() {
     alerts.some((alert) => alert.isError && alert.data);
 
   return (
+    <HomeRefreshContext.Provider value={register}>
     <ScrollView
       contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
       refreshControl={refreshControl}
@@ -167,5 +160,6 @@ export default function HomeScreen() {
         </>
       )}
     </ScrollView>
+    </HomeRefreshContext.Provider>
   );
 }
