@@ -9,6 +9,7 @@ import DungeonNotFound from "@/games/wow-forever/components/dungeons/DungeonNotF
 import DungeonPageSkeleton from "@/games/wow-forever/components/dungeons/DungeonPageSkeleton";
 import ForeverDungeonBosses from "@/games/wow-forever/components/dungeons/ForeverDungeonBosses";
 import ForeverDungeonQuests from "@/games/wow-forever/components/dungeons/foreverQuests/ForeverDungeonQuests";
+import DungeonBeforeYouGo from "@/games/wow-forever/components/dungeons/beforeYouGo/DungeonBeforeYouGo";
 import DungeonQuests from "@/games/wow-forever/components/dungeons/quests/DungeonQuests";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
@@ -50,6 +51,7 @@ export default function WowDungeonPage() {
           />
           <DungeonWhen dungeon={dungeon} />
           <DungeonLocation dungeon={dungeon} />
+          {dungeon.newInForever ? null : <DungeonBeforeYouGo dungeon={dungeon} zones={state.data.zones} />}
           {dungeon.newInForever ? <ForeverDungeonQuests dungeon={dungeon} /> : <DungeonQuests dungeon={dungeon} />}
           {dungeon.bosses.length === 0 ? <EmptyStateNote message={DUNGEON_LOOT_EMPTY.noBosses} /> : null}
           {dungeon.newInForever && dungeon.bosses.length > 0 ? <ForeverDungeonBosses bosses={dungeon.bosses} /> : null}

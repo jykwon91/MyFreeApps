@@ -636,6 +636,28 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     `hooks/useScrollToHash.ts` scrolls to it once the data has loaded) with its
     drops: icon, `ItemNameLink` (hover tooltip → item page), slot/type and
     drop chance (Classic data). Raids are left out.
+  - **Before you go** (`components/dungeons/beforeYouGo/DungeonBeforeYouGo`,
+    after "Where it is", Classic data badge; not on Forever's own dungeons):
+    the operator's "easy way to see what quest prereqs I need". One card per
+    line (`lib/dungeons/questLines.ts`, your faction): the quests before a
+    dungeon quest in order, then the quest, each with giver, zone · sub-zone ·
+    coords, Directions and a link to its quest page. A dungeon quest another
+    line passes through is a step ("Dungeon quest" chip) of that line, never a
+    line of its own; quests with exactly the same quests before them share one
+    line (Red Silk Bandanas · The Defias Brotherhood). Chain steps' givers come
+    from `DungeonQuest.pickupSteps` (decoded from the same rows as `chain`;
+    `QuestPageResult` omits it). **Progress:** a tick box per step, saved in
+    this browser under `QUESTS_DONE_STORAGE_KEY` (quest ids, one list for every
+    page, `hooks/useQuestsDone.ts`); ticking a step ticks the ones before it,
+    unticking unticks the ones after, and a line's dungeon quests at the end
+    are side by side (`lib/dungeons/questLineProgress.ts`). Each card says
+    "Not started — step 1 of N …", "Next: step K of N · <quest> from <giver>
+    in <zone>" (that row highlighted, `aria-current="step"`) or "All done".
+    **World Map:** `continentPickupLinks` (`lib/dungeons/questPickupsMapLinks.ts`)
+    builds the World Map's own `#view=` share link on the continent map with
+    each giver out in the world marked once (zone % → world → continent %),
+    one at the top for every line and one per card; capped at
+    `MAX_MARKS_PER_MAP`.
   - **Quests** (`components/dungeons/quests/DungeonQuests`, after "Where it
     is"; `Dungeon.quests`, decoded by `lib/dungeons/decodeDungeonQuests.ts`):
     the quests for your faction (the World Map's saved faction, a "Quests for"
@@ -657,6 +679,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     `quest_places.py`). Repeats (same title, givers by name, objectives,
     rewards) and quests another listed quest leads on from are dropped.
     Rewards are only items in `items.json`.
+    Sharing: a shareable quest with quests before it says "Shareable only if
+    they've done the N quests before it" and lists them when opened
+    (`questSharingText`) — sharing alone doesn't get a party member the quest.
 - Built in the browser from files the World Map already ships
   (`classicDungeons.json`, `classicInteriors.json`, `zones.json`,
   `travel.json` — decoded with the World Map's own `decodeZone` /

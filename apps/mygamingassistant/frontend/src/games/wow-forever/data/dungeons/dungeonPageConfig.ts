@@ -38,6 +38,10 @@ export const FOREVER_DUNGEON_UNKNOWN = {
   facts: ["lowest_level_to_enter", "entrance_door", "keys_or_attunement", "boss_loot"],
 } as const;
 
+/** Quest lines, and steps in each, the dungeon page's skeleton draws in its "Before you go" section. */
+export const DUNGEON_SKELETON_QUEST_LINES = 2;
+export const DUNGEON_SKELETON_LINE_STEPS = 3;
+
 /** Quest rows the dungeon page's skeleton draws in its Quests section. */
 export const DUNGEON_SKELETON_QUESTS = 4;
 
@@ -68,7 +72,13 @@ export const QUEST_CHAIN_AFTER_SHOWN = 3;
 
 /** Whether a quest can be shared: the row's badge, and the sentence an opened quest gives. */
 export const QUEST_SHARING_COPY = {
-  shareable: { badge: "Shareable", detail: "Share it from your quest log with party members who meet its level and have done the quests before it." },
+  shareable: { badge: "Shareable", detail: "Share it from your quest log with party members who meet its level." },
+  /** A shareable quest with quests before it: party members can only take it once they've done those. */
+  afterChain: {
+    badge: (count: number) => `Shareable only if they've done the ${count === 1 ? "quest" : `${count} quests`} before it`,
+    detail: (titles: string) =>
+      `Share it from your quest log, but a party member can only accept it once they've done the quests before it (${titles}) and meet its level. Anyone who hasn't has to do those first.`,
+  },
   notShareable: { badge: "Can't share", detail: "Everyone in your group has to get it themselves, from its quest giver or the item that starts it." },
 } as const;
 
@@ -76,3 +86,26 @@ export const QUEST_SHARING_COPY = {
 export const QUEST_GIVER_MAP_SCALE = 2;
 /** The id of the one mark a quest giver's World Map link carries. */
 export const QUEST_GIVER_MARK_ID = "quest-giver";
+
+/** The dungeon page's "Before you go" list: each dungeon quest's line, the quests before it included. */
+export const BEFORE_YOU_GO_COPY = {
+  heading: "Before you go",
+  intro: "Each dungeon quest and the quests you need to do first, in order, with who gives them and where.",
+  showAll: (count: number, mapName: string) =>
+    `Show ${count === 1 ? "the quest giver" : `all ${count} quest givers`} in ${mapName} on the World Map`,
+  showLine: (count: number, mapName: string) =>
+    `Show ${count === 1 ? "its quest giver" : `its ${count} quest givers`} in ${mapName} on the World Map`,
+  steps: (count: number) => `${count} quests`,
+  classOnly: (classes: string) => `${classes} only`,
+  noGiver: "Who gives it isn't in our data",
+  dungeonQuest: "Dungeon quest",
+  itemStarts: "an item starts it",
+  ticksHint: "Tick each quest as you finish it to see where you are. Ticks are saved in this browser and show on every dungeon page.",
+  doneLabel: (step: number, title: string) => `Step ${step}, ${title}: done`,
+  notStarted: "Not started —",
+  next: "Next:",
+  allDone: "All done",
+  stepOf: (step: number, of: number) => `step ${step} of ${of}`,
+  from: (giver: string, zone: string | null) => (zone ? ` from ${giver} in ${zone}` : ` from ${giver}`),
+  clear: "Clear my ticks for this dungeon",
+} as const;

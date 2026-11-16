@@ -14,6 +14,7 @@ import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQue
 import type { LootItemInfo } from "@/games/wow-forever/types/dungeons/lootItemInfo";
 import type { QuestChainStep } from "@/games/wow-forever/types/dungeons/questChainStep";
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
+import type { QuestPickupStep } from "@/games/wow-forever/types/dungeons/questPickupStep";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import type { QuestReward } from "@/games/wow-forever/types/dungeons/questReward";
 import type { QuestDataRow } from "@/games/wow-forever/types/quests/questDataRow";
@@ -87,6 +88,22 @@ export function decodeDungeonQuests(
     return seenStep(classic, seen(id), seenCol);
   };
 
+  const pickupStep = (id: number, instanceId: number): QuestPickupStep | null => {
+    const row = doc.quests[String(id)];
+    const step = chainStep(id);
+    if (!row || !step) return null;
+    const s = seen(id);
+    const [giver] = givers(row[col.givers], instanceId);
+    return {
+      id,
+      title: step.title,
+      level: step.level,
+      minLevel: Number(s ? s[seenCol.minLevel] : row[col.minLevel]),
+      side: side(row[col.side]),
+      giver: giver ?? null,
+    };
+  };
+
   const quest = (id: number, instanceId: number): DungeonQuest[] => {
     const row = doc.quests[String(id)];
     if (!row) return [];
@@ -101,6 +118,7 @@ export function decodeDungeonQuests(
         classes: classIds(row[col.classes]),
         givers: givers(row[col.givers], instanceId),
         chain: chainSteps(row[col.chain], chainStep),
+        pickupSteps: chainSteps(row[col.chain], (stepId) => pickupStep(stepId, instanceId)),
         after: chainSteps(row[col.after], chainStep),
         ...questSharing(s ? s[seenCol.shareable] : null, row[col.shareable]),
         objectives: objectives(s ? s[seenCol.objectives] : row[col.objectives], instanceId),
