@@ -29,7 +29,7 @@ export default function AdminInvites() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted min-h-[44px]"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm border border-input rounded-md hover:bg-muted min-h-[44px]"
         >
           <Plus size={14} />
           Invite someone

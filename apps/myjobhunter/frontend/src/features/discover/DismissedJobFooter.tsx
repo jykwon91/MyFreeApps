@@ -49,7 +49,7 @@ export default function DismissedJobFooter({ job }: DismissedJobFooterProps) {
             href={postingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded hover:bg-muted min-h-[44px] sm:min-h-[32px]"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-input rounded hover:bg-muted min-h-[44px] sm:min-h-[32px]"
           >
             <ExternalLink className="w-4 h-4" />
             Open

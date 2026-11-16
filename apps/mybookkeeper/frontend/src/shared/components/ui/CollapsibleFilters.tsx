@@ -31,7 +31,7 @@ export default function CollapsibleFilters({ activeCount, breakpoint, children }
         aria-label={filtersToggleLabel(activeCount)}
         className={cn(
           classes.toggle,
-          "inline-flex items-center gap-1.5 min-h-[44px] px-3 text-sm font-medium border rounded-md bg-background hover:bg-muted transition-colors",
+          "inline-flex items-center gap-1.5 min-h-[44px] px-3 text-sm font-medium border border-input rounded-md bg-background hover:bg-muted transition-colors",
         )}
       >
         <Filter size={14} aria-hidden />

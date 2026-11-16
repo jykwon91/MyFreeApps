@@ -198,7 +198,7 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
           type="button"
           onClick={() => void handleArchive()}
           disabled={updating}
-          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md hover:bg-muted disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs border border-input rounded-md hover:bg-muted disabled:opacity-50"
         >
           <Archive size={12} />
           {application.archived ? "Restore" : "Archive"}
@@ -216,7 +216,7 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
 
         <Link
           to={`/applications/${application.id}`}
-          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md hover:bg-muted ml-auto"
+          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs border border-input rounded-md hover:bg-muted ml-auto"
         >
           <ExternalLinkIcon size={12} />
           Open in full page

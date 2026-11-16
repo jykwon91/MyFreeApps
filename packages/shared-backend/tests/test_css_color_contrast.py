@@ -12,6 +12,9 @@ index.css and checks, per theme:
   --destructive. Dark mode can't satisfy both with near-white button text, so its --destructive
   is a light red with dark --destructive-foreground.
 
+- --input (the border of inputs, selects, textareas, checkboxes and outline buttons) against each of
+  those surfaces at the WCAG 1.4.11 non-text 3:1 minimum.
+
 Every token a theme declares must have a role below, so a new colour can't skip the check.
 Every channel is rounded to 8 bits first, so each pairing is measured as a browser paints it.
 Apps are discovered from apps/*/app.yaml and each must have frontend/src/index.css (every app
@@ -60,8 +63,13 @@ _FILL_LABELS = (("primary-foreground", "primary"), ("destructive-foreground", "d
 # Text tokens also drawn over their own 10% tint (`text-primary bg-primary/10`).
 _TINTED_TEXT = ("primary", "destructive")
 # Borders, focus rings and sizes: never text, never under text.
-_NON_TEXT_TOKENS = frozenset({"border", "input", "ring", "radius"})
-_COLOR_TOKENS = frozenset(_TEXT_SURFACES) | frozenset(_TEXT_TOKENS) | {
+_NON_TEXT_TOKENS = frozenset({"border", "ring", "radius"})
+# WCAG 2.x 1.4.11 minimum contrast for the boundary of a form control or outline button.
+WCAG_NON_TEXT_CONTRAST = 3.0
+# --input draws the border of inputs, selects, textareas, checkboxes and outline buttons, which
+# can sit on any of the surfaces text does. (--border stays light: decorative card/divider edges.)
+_CONTROL_BORDER = "input"
+_COLOR_TOKENS = frozenset(_TEXT_SURFACES) | frozenset(_TEXT_TOKENS) | {_CONTROL_BORDER} | {
     token for pair in _FILL_LABELS for token in pair
 }
 # (theme, text, surface) pairs an app is known to fail, so the rest of its matrix stays checked.
@@ -75,6 +83,12 @@ _KNOWN_FAILURES: dict[str, frozenset[tuple[str, str, str]]] = {
         ("light", "muted-foreground", "secondary"),
         ("dark", "primary", "muted"),
         ("dark", "primary", "secondary"),
+        # ...and the pre-fix --input (~1.2:1 light, ~1.4:1 dark) the other apps raised to slate-500.
+        *(
+            (theme, _CONTROL_BORDER, surface)
+            for theme in ("light", "dark")
+            for surface in ("background", "card", "muted", "secondary")
+        ),
     }),
 }
 _THEME_SELECTORS = {"light": ":root", "dark": ".dark"}
@@ -111,6 +125,18 @@ def _text_surface_ratios(name: str, theme: str) -> dict[tuple[str, str, str], fl
     }
 
 
+def _control_border_ratios(name: str, theme: str) -> dict[tuple[str, str, str], float]:
+    colors = _rgb_tokens(CSS_FILES[name], _THEME_SELECTORS[theme])
+    return {
+        (theme, _CONTROL_BORDER, surface): contrast_ratio(colors[_CONTROL_BORDER], colors[surface])
+        for surface in _TEXT_SURFACES
+    }
+
+
+def _required_contrast(pair: tuple[str, str, str]) -> float:
+    return WCAG_NON_TEXT_CONTRAST if pair[1] == _CONTROL_BORDER else WCAG_AA_TEXT_CONTRAST
+
+
 @pytest.mark.parametrize("theme", sorted(_THEME_SELECTORS))
 @pytest.mark.parametrize("name", sorted(CSS_FILES))
 def test_every_token_has_a_role(name: str, theme: str) -> None:
@@ -140,9 +166,11 @@ def test_text_on_every_surface_meets_aa(name: str, theme: str) -> None:
 @pytest.mark.parametrize("name", sorted(_KNOWN_FAILURES))
 def test_known_failures_still_fail(name: str) -> None:
     ratios = {
-        pair: r for theme in _THEME_SELECTORS for pair, r in _text_surface_ratios(name, theme).items()
+        pair: r
+        for theme in _THEME_SELECTORS
+        for pair, r in {**_text_surface_ratios(name, theme), **_control_border_ratios(name, theme)}.items()
     }
-    fixed = sorted(pair for pair in _KNOWN_FAILURES[name] if ratios[pair] >= WCAG_AA_TEXT_CONTRAST)
+    fixed = sorted(pair for pair in _KNOWN_FAILURES[name] if ratios[pair] >= _required_contrast(pair))
     assert not fixed, f"{name} now passes {fixed}: remove them from _KNOWN_FAILURES"
 
 
@@ -160,6 +188,22 @@ def test_fills_and_tints_meet_aa(name: str, theme: str) -> None:
     assert not failing, (
         f"{name} ({theme}): pairings below WCAG AA ({WCAG_AA_TEXT_CONTRAST}:1): {failing}. "
         f"Adjust the token in {CSS_FILES[name]}"
+    )
+
+
+@pytest.mark.parametrize("theme", sorted(_THEME_SELECTORS))
+@pytest.mark.parametrize("name", sorted(CSS_FILES))
+def test_control_border_meets_non_text_contrast(name: str, theme: str) -> None:
+    known = _KNOWN_FAILURES.get(name, frozenset())
+    failing = {
+        surface: round(r, 2)
+        for (_, _, surface), r in _control_border_ratios(name, theme).items()
+        if r < WCAG_NON_TEXT_CONTRAST and (theme, _CONTROL_BORDER, surface) not in known
+    }
+    assert not failing, (
+        f"{name} ({theme}): --input (form-control and outline-button border) below WCAG 1.4.11 "
+        f"({WCAG_NON_TEXT_CONTRAST}:1) on {failing}. Darken (light) or lighten (dark) --input in "
+        f"{CSS_FILES[name]}"
     )
 
 

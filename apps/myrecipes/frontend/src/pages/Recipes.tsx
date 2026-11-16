@@ -139,14 +139,14 @@ export default function Recipes() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={goToDiscover}
-            className="inline-flex items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
           >
             <Compass className="w-4 h-4" />
             Discover
           </button>
           <button
             onClick={goToImport}
-            className="inline-flex items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
           >
             <Camera className="w-4 h-4" />
             Import from photo

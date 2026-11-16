@@ -31,7 +31,7 @@ export default function DismissReasonPopover({
             type="button"
             onClick={() => onDismiss(r.value)}
             disabled={isLoading}
-            className="px-2 py-1 text-xs border rounded hover:bg-muted"
+            className="px-2 py-1 text-xs border border-input rounded hover:bg-muted"
           >
             {r.label}
           </button>

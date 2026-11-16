@@ -164,7 +164,7 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                 type="button"
                 onClick={close}
                 disabled={isLoading}
-                className="min-h-[44px] px-4 py-2 text-sm border rounded-md hover:bg-muted disabled:opacity-50"
+                className="min-h-[44px] px-4 py-2 text-sm border border-input rounded-md hover:bg-muted disabled:opacity-50"
               >
                 {MESSAGES.cancel}
               </button>

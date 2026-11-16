@@ -39,7 +39,7 @@ export default function CalendarSourceFilter({ selectedSources, onChange }: Cale
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
-          className="flex items-center gap-2 h-9 px-3 border rounded-md text-sm bg-background hover:bg-muted transition-colors min-w-[140px] justify-between"
+          className="flex items-center gap-2 h-9 px-3 border border-input rounded-md text-sm bg-background hover:bg-muted transition-colors min-w-[140px] justify-between"
           aria-label="Filter by source"
           data-testid="source-filter-trigger"
         >

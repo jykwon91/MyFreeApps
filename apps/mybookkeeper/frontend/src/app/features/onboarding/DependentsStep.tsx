@@ -28,7 +28,7 @@ export default function DependentsStep({ value, onChange }: DependentsStepProps)
             onClick={decrement}
             disabled={value <= MIN}
             aria-label="Decrease"
-            className="flex h-11 w-11 items-center justify-center rounded-full border text-xl font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-input text-xl font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             −
           </button>
@@ -38,7 +38,7 @@ export default function DependentsStep({ value, onChange }: DependentsStepProps)
             onClick={increment}
             disabled={value >= MAX}
             aria-label="Increase"
-            className="flex h-11 w-11 items-center justify-center rounded-full border text-xl font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-input text-xl font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             +
           </button>

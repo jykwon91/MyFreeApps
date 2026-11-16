@@ -171,7 +171,7 @@ export default function ScreeningAnswerDialog({
 
             <div className="flex justify-end gap-2 pt-2">
               <Dialog.Close asChild>
-                <button type="button" className="px-4 py-2 text-sm border rounded-md hover:bg-muted">
+                <button type="button" className="px-4 py-2 text-sm border border-input rounded-md hover:bg-muted">
                   Cancel
                 </button>
               </Dialog.Close>

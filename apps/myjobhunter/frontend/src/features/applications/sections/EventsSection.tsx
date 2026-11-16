@@ -47,7 +47,7 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
         <button
           type="button"
           onClick={() => setCreateDialogOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md hover:bg-muted"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-input rounded-md hover:bg-muted"
         >
           <Plus size={12} />
           Log event

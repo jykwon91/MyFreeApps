@@ -47,7 +47,7 @@ export default function ContactsManager({ applicationId, contacts }: ContactsMan
         <button
           type="button"
           onClick={() => setIsAdding(true)}
-          className="inline-flex items-center gap-1.5 min-h-[44px] px-3 text-xs border rounded-md hover:bg-muted"
+          className="inline-flex items-center gap-1.5 min-h-[44px] px-3 text-xs border border-input rounded-md hover:bg-muted"
         >
           <Plus size={12} aria-hidden="true" />
           {MESSAGES.add}

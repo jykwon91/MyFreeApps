@@ -142,7 +142,7 @@ export default function InquiryDetailBody({
                 <Link
                   to={`/applicants/${inquiry.linked_applicant_id}`}
                   data-testid="inquiry-view-applicant-link"
-                  className="inline-flex items-center font-medium border rounded-md px-4 py-2 text-sm min-h-[44px] hover:bg-muted"
+                  className="inline-flex items-center font-medium border border-input rounded-md px-4 py-2 text-sm min-h-[44px] hover:bg-muted"
                 >
                   <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
                   View applicant

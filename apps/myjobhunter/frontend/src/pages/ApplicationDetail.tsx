@@ -148,7 +148,7 @@ export default function ApplicationDetail() {
             type="button"
             onClick={() => void handleArchive()}
             disabled={updating}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-input rounded-md hover:bg-muted disabled:opacity-50"
           >
             <Archive size={14} />
             {app.archived ? "Restore" : "Archive"}
