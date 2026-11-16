@@ -227,3 +227,66 @@ async def test_delete_topping(auth_client: AsyncClient):
 
     after = await auth_client.get("/menu/toppings")
     assert after.json() == []
+
+
+# ---------------------------------------------------------------------------
+# Price precision + blank/null handling (Numeric(10, 2) must never round silently)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["12.345", "", "abc", "100000000.00"])
+async def test_create_pizza_invalid_price_422(auth_client: AsyncClient, bad: str):
+    resp = await auth_client.post("/menu/pizzas", json=_pizza_payload(price=bad))
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+async def test_create_pizza_missing_price_422(auth_client: AsyncClient):
+    payload = _pizza_payload()
+    del payload["price"]
+    resp = await auth_client.post("/menu/pizzas", json=payload)
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_pizza_two_decimal_and_zero_prices_ok(auth_client: AsyncClient):
+    resp = await auth_client.post("/menu/pizzas", json=_pizza_payload(price="12.35"))
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["price"] == "12.35"
+    free = await auth_client.post(
+        "/menu/pizzas", json=_pizza_payload(name="Free", price="0"),
+    )
+    assert free.status_code == 201, free.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["12.345", "", "-0.01", None])
+async def test_patch_pizza_invalid_price_422(auth_client: AsyncClient, bad):
+    pid = (await auth_client.post("/menu/pizzas", json=_pizza_payload())).json()["id"]
+    resp = await auth_client.patch(f"/menu/pizzas/{pid}", json={"price": bad})
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+async def test_patch_without_price_leaves_price_unchanged(auth_client: AsyncClient):
+    pid = (await auth_client.post("/menu/pizzas", json=_pizza_payload())).json()["id"]
+    resp = await auth_client.patch(f"/menu/pizzas/{pid}", json={"active": False})
+    assert resp.status_code == 200
+    assert float(resp.json()["price"]) == 17.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["0.125", "", "abc"])
+async def test_create_topping_invalid_price_delta_422(auth_client: AsyncClient, bad: str):
+    resp = await auth_client.post(
+        "/menu/toppings", json=_topping_payload(price_delta=bad),
+    )
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["0.125", "", None])
+async def test_patch_topping_invalid_price_delta_422(auth_client: AsyncClient, bad):
+    tid = (await auth_client.post("/menu/toppings", json=_topping_payload())).json()["id"]
+    resp = await auth_client.patch(f"/menu/toppings/{tid}", json={"price_delta": bad})
+    assert resp.status_code == 422, resp.text

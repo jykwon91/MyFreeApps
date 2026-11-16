@@ -4,6 +4,8 @@ import { Check, X } from "lucide-react";
 import { useUpdateToppingMutation } from "@/store/menuApi";
 import type { ToppingTypeUpdateBody } from "@/types/menu/menu";
 import type { ToppingRowEditorProps } from "@/types/menu/ToppingRowEditorProps";
+import { validateMenuPrice } from "@/utils/validateMenuPrice";
+import MenuPriceField from "./MenuPriceField";
 
 /** Mounted only while editing, so its draft always starts from the current topping. */
 export default function ToppingRowEditor({ topping, onClose }: ToppingRowEditorProps) {
@@ -12,6 +14,8 @@ export default function ToppingRowEditor({ topping, onClose }: ToppingRowEditorP
     name: topping.name,
     price_delta: topping.price_delta,
   });
+
+  const priceError = validateMenuPrice(draft.price_delta);
 
   const save = async () => {
     try {
@@ -39,25 +43,18 @@ export default function ToppingRowEditor({ topping, onClose }: ToppingRowEditorP
           />
         )}
       </FormField>
-      <FormField label="Price delta">
-        {(field) => (
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={draft.price_delta ?? "0.00"}
-            onChange={(e) => setDraft({ ...draft, price_delta: e.target.value })}
-            className="w-full px-3 py-2 rounded border bg-background"
-            {...field}
-          />
-        )}
-      </FormField>
+      <MenuPriceField
+        label="Price delta"
+        value={draft.price_delta ?? ""}
+        onChange={(price_delta) => setDraft({ ...draft, price_delta })}
+        error={priceError}
+      />
       <div className="flex gap-2">
         <LoadingButton
           size="sm"
           isLoading={isSaving}
           onClick={save}
-          disabled={!draft.name?.trim()}
+          disabled={!draft.name?.trim() || priceError !== null}
           aria-label="Save"
         >
           <Check className="h-4 w-4" />

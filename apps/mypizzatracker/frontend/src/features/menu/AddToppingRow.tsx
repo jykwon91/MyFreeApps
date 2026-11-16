@@ -5,6 +5,8 @@ import {
 } from "@/store/menuApi";
 import type { ToppingTypeCreateBody } from "@/types/menu/menu";
 import type { AddToppingRowProps } from "@/types/menu/AddToppingRowProps";
+import { validateMenuPrice } from "@/utils/validateMenuPrice";
+import MenuPriceField from "./MenuPriceField";
 
 export default function AddToppingRow({ onDone }: AddToppingRowProps) {
   const [body, setBody] = useState<ToppingTypeCreateBody>({
@@ -12,6 +14,7 @@ export default function AddToppingRow({ onDone }: AddToppingRowProps) {
     price_delta: "0.00",
   });
   const [createTopping, { isLoading }] = useCreateToppingMutation();
+  const priceError = validateMenuPrice(body.price_delta);
 
   const submit = async () => {
     try {
@@ -37,27 +40,18 @@ export default function AddToppingRow({ onDone }: AddToppingRowProps) {
           />
         )}
       </FormField>
-      <FormField label="Price delta">
-        {(field) => (
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={body.price_delta ?? "0.00"}
-            onChange={(e) =>
-              setBody({ ...body, price_delta: e.target.value })
-            }
-            className="w-full px-3 py-2 rounded border bg-background"
-            {...field}
-          />
-        )}
-      </FormField>
+      <MenuPriceField
+        label="Price delta"
+        value={body.price_delta ?? ""}
+        onChange={(price_delta) => setBody({ ...body, price_delta })}
+        error={priceError}
+      />
       <LoadingButton
         size="sm"
         isLoading={isLoading}
         loadingText="Adding..."
         onClick={submit}
-        disabled={!body.name.trim()}
+        disabled={!body.name.trim() || priceError !== null}
       >
         Add
       </LoadingButton>
