@@ -2,7 +2,9 @@ import type { DecimalSeparator } from "@platform/core/types/text/decimal-separat
 import type { InsurancePolicyDetail } from "../types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 import type { InsurancePremiumFrequency } from "../types/insurance/insurance-premium-frequency";
+import { WIND_HAIL_MAX_DECIMALS } from "../constants/insurancePolicyFieldLimits";
 import { moneyTextToCents } from "./moneyTextToCents";
+import { normalizeDecimalText } from "./normalizeDecimalText";
 
 /**
  * Conversion between the insurance-policy form's text state and the API shape.
@@ -77,7 +79,8 @@ export function toPolicyPayload(values: InsurancePolicyFormValues, decimalSepara
     ...premiumPair(values, decimalSeparator),
     fees_and_taxes_cents: moneyTextToCents(values.feesAndTaxesDollars, decimalSeparator) ?? null,
     deductible_cents: moneyTextToCents(values.deductibleDollars, decimalSeparator) ?? null,
-    wind_hail_deductible_pct: textOrNull(values.windHailPct),
+    // Blank, or text the form check already refused, is no percentage rather than a guessed one.
+    wind_hail_deductible_pct: normalizeDecimalText(values.windHailPct, decimalSeparator, WIND_HAIL_MAX_DECIMALS) || null,
     notes: textOrNull(values.notes),
   };
 }

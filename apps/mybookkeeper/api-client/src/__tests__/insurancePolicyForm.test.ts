@@ -159,6 +159,26 @@ describe("toPolicyPayload", () => {
   });
 });
 
+describe("toPolicyPayload wind/hail percentage on a comma keypad", () => {
+  const send = (windHailPct: string) =>
+    toPolicyPayload({ ...EMPTY_POLICY_FORM, policyName: "Policy", windHailPct }, ",").wind_hail_deductible_pct;
+
+  it("sends the percentage the form checked, with a \".\" decimal point", () => {
+    expect(send("2,5")).toBe("2.5");
+    expect(send(" 2,50 ")).toBe("2.50");
+    expect(send("2,500")).toBe("2.50");
+  });
+
+  it("still sends a prefilled \".\" percentage unchanged", () => {
+    expect(send("2.00")).toBe("2.00");
+  });
+
+  it("sends nothing for blank or unreadable text rather than a guess", () => {
+    expect(send("")).toBeNull();
+    expect(send("2,5,0")).toBeNull();
+  });
+});
+
 describe("toPolicyPayload on a comma keypad", () => {
   it("sends exactly the cents that were checked, however the amounts were typed", () => {
     const payload = toPolicyPayload(

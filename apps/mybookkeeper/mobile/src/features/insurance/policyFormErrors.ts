@@ -1,4 +1,4 @@
-import { INSURANCE_POLICY_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/insurancePolicyProblemMessages";
+import { insurancePolicyProblemMessages } from "@mybookkeeper/api-client/constants/insurancePolicyProblemMessages";
 import type { InsurancePolicyFormProblems } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-problems";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
@@ -6,11 +6,12 @@ import { insurancePolicyFormProblems } from "@mybookkeeper/api-client/utils/insu
 import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 
-function messagesFor(problems: InsurancePolicyFormProblems): PolicyFormErrors {
+function messagesFor(problems: InsurancePolicyFormProblems, decimalSeparator: DecimalSeparator): PolicyFormErrors {
+  const messages = insurancePolicyProblemMessages(decimalSeparator);
   const errors: PolicyFormErrors = {};
   for (const field of Object.keys(problems) as (keyof InsurancePolicyFormProblems)[]) {
     const problem = problems[field];
-    if (problem) errors[field] = INSURANCE_POLICY_PROBLEM_MESSAGES[problem];
+    if (problem) errors[field] = messages[problem];
   }
   return errors;
 }
@@ -22,7 +23,7 @@ function messagesFor(problems: InsurancePolicyFormProblems): PolicyFormErrors {
  * asks for on its own, is added here. Pass null for the property when it can't change (edit).
  */
 export function policyFormErrors(values: InsurancePolicyFormValues, propertyId: string | null, decimalSeparator: DecimalSeparator): PolicyFormErrors {
-  const errors = messagesFor(insurancePolicyFormProblems(values, decimalSeparator));
+  const errors = messagesFor(insurancePolicyFormProblems(values, decimalSeparator), decimalSeparator);
   if (propertyId !== null && propertyId === "") errors.propertyId = POLICY_FORM_MESSAGES.propertyRequired;
   return errors;
 }

@@ -16,8 +16,10 @@ export const UTILITY_PLAN_FORM_PROBLEMS = {
   notPositive: "Speeds and data caps must be more than zero.",
   notDollars: (decimalSeparator: DecimalSeparator) => `Enter a dollar amount, like 150${decimalSeparator}00.`,
   negativeDollars: "A dollar amount can't be negative.",
-  notRate: `Enter a rate in cents, like 11.5, with at most ${UTILITY_PLAN_RATE_MAX_DECIMALS} decimal places.`,
-  rateTooHigh: `A rate is in cents and can't be more than ${UTILITY_PLAN_RATE_MAX_CENTS}. Did you enter dollars?`,
+  notRate: (decimalSeparator: DecimalSeparator) =>
+    `Enter a rate in cents, like 11${decimalSeparator}5, with at most ${UTILITY_PLAN_RATE_MAX_DECIMALS} decimal places.`,
+  rateTooHigh: (decimalSeparator: DecimalSeparator) =>
+    `A rate is in cents and can't be more than ${String(UTILITY_PLAN_RATE_MAX_CENTS).replace(".", decimalSeparator)}. Did you enter dollars?`,
   speedTooHigh: `A speed can't be more than ${UTILITY_PLAN_MBPS_MAX.toLocaleString("en-US")} Mbps.`,
   endBeforeStart: "The term can't end before the service starts.",
   notWholeNumber: "Enter a whole number, like 12.",

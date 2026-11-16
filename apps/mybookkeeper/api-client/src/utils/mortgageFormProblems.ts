@@ -2,11 +2,13 @@ import type { DecimalSeparator } from "@platform/core/types/text/decimal-separat
 import type { MortgageFormProblem } from "../types/mortgage/mortgage-form-problem";
 import type { MortgageFormProblems } from "../types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "../types/mortgage/mortgage-form-values";
+import {
+  MORTGAGE_MAX_RATE_PCT,
+  MORTGAGE_MAX_TERM_MONTHS,
+  MORTGAGE_RATE_MAX_DECIMALS,
+} from "../constants/mortgageFieldLimits";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
-
-/** The rate must sit strictly between these, as the server requires. */
-const MAX_RATE_PCT = 25;
-const MAX_TERM_MONTHS = 600;
+import { normalizeDecimalText } from "./normalizeDecimalText";
 
 type MoneyField =
   | "balanceDollars"
@@ -26,6 +28,14 @@ function parsed(value: string): number | null {
   if (trimmed === "") return null;
   const number = Number(trimmed);
   return Number.isFinite(number) ? number : Number.NaN;
+}
+
+/** Read as `toMortgagePayload` reads it, so the rate checked is the one sent. Unreadable text is no rate in range. */
+function rateProblem(text: string, decimalSeparator: DecimalSeparator): MortgageFormProblem | undefined {
+  const rate = normalizeDecimalText(text, decimalSeparator);
+  if (rate === "") return undefined;
+  if (rate === undefined || !(Number(rate) > 0 && Number(rate) < MORTGAGE_MAX_RATE_PCT)) return "rate_out_of_range";
+  return normalizeDecimalText(text, decimalSeparator, MORTGAGE_RATE_MAX_DECIMALS) === undefined ? "rate_decimals" : undefined;
 }
 
 /** Blank is fine; otherwise the amount must be readable and pass `isAllowed` (cents). */
@@ -53,8 +63,8 @@ export function mortgageFormProblems(values: MortgageFormValues, decimalSeparato
 
   if (values.rateType === "") problems.rateType = "rate_type_required";
 
-  const rate = parsed(values.interestRate);
-  if (rate !== null && !(rate > 0 && rate < MAX_RATE_PCT)) problems.interestRate = "rate_out_of_range";
+  const rate = rateProblem(values.interestRate, decimalSeparator);
+  if (rate) problems.interestRate = rate;
 
   for (const field of MONEY_FIELDS) {
     const problem = moneyProblem(values[field], decimalSeparator, (cents) => cents >= 0, "not_a_number");
@@ -65,7 +75,7 @@ export function mortgageFormProblems(values: MortgageFormValues, decimalSeparato
   if (original) problems.originalPrincipalDollars = original;
 
   const term = parsed(values.termMonths);
-  if (term !== null && !(term > 0 && term <= MAX_TERM_MONTHS)) problems.termMonths = "term_out_of_range";
+  if (term !== null && !(term > 0 && term <= MORTGAGE_MAX_TERM_MONTHS)) problems.termMonths = "term_out_of_range";
 
   // A balance is only true as of a date, so the server takes both or neither.
   const hasBalance = values.balanceDollars.trim() !== "";

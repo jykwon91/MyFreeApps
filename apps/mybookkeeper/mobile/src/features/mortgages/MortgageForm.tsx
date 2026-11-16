@@ -70,6 +70,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
         </>
       )}
       <MortgageFormFields
+        decimalSeparator={decimalSeparator}
         isBusy={isBusy || isLeaving}
         onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
         problems={hasTried ? problems : {}}

@@ -1,7 +1,8 @@
-import { INSURANCE_POLICY_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/insurancePolicyProblemMessages";
+import { insurancePolicyProblemMessages } from "@mybookkeeper/api-client/constants/insurancePolicyProblemMessages";
 import type { InsurancePolicyFormProblems } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-problems";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import FieldProblem from "@/shared/components/FieldProblem";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { fieldProblemId } from "@/shared/utils/field-problem-aria";
 
 export interface InsuranceFieldProblemProps {
@@ -15,7 +16,7 @@ export default function InsuranceFieldProblem({ problems, field }: InsuranceFiel
   return (
     <FieldProblem
       id={fieldProblemId("insurance", field)}
-      message={problem && INSURANCE_POLICY_PROBLEM_MESSAGES[problem]}
+      message={problem && insurancePolicyProblemMessages(NUMBER_INPUT_DECIMAL_SEPARATOR)[problem]}
     />
   );
 }

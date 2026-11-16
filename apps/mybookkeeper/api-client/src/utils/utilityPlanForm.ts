@@ -12,6 +12,7 @@ import type { UtilityPlanFormProblems } from "../types/utility/utility-plan-form
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
+import { normalizeDecimalText } from "./normalizeDecimalText";
 
 /**
  * Conversions between a utility plan and the form that edits it.
@@ -117,6 +118,8 @@ export function toUtilityPlanFields(
   decimalSeparator: DecimalSeparator,
 ): UtilityPlanFieldsPayload {
   const cents = (text: string): number | null => moneyTextToCents(text, decimalSeparator) ?? null;
+  // Blank, or text the form check already refused, is no rate rather than a guessed one.
+  const rate = (text: string): string | null => rateText(text, decimalSeparator) || null;
   return {
     service_type: values.serviceType,
     rate_type: values.rateType,
@@ -124,9 +127,9 @@ export function toUtilityPlanFields(
     plan_name: optionalText(values.planName),
     account_number: optionalText(values.accountNumber),
     // Rates stay strings end-to-end so 5.3509 survives intact.
-    energy_charge_cents_per_kwh: optionalText(values.energyCharge),
-    tdu_charge_cents_per_kwh: optionalText(values.tduCharge),
-    avg_price_cents_per_kwh_at_1000: optionalText(values.avgPrice),
+    energy_charge_cents_per_kwh: rate(values.energyCharge),
+    tdu_charge_cents_per_kwh: rate(values.tduCharge),
+    avg_price_cents_per_kwh_at_1000: rate(values.avgPrice),
     monthly_base_charge_cents: cents(values.monthlyBase),
     term_months: toInt(values.termMonths),
     service_start_date: values.serviceStartDate || null,
@@ -162,18 +165,18 @@ const POSITIVE_ONLY_FIELDS = ["downloadMbps", "uploadMbps", "dataCapGb"] as cons
 
 const SPEED_FIELDS = ["downloadMbps", "uploadMbps"] as const;
 
-const DECIMAL = /^\d+(\.\d+)?$/;
 const WHOLE = /^\d+$/;
 
-/** A filled field the payload would silently turn into null, wiping what was stored. */
-function isUnreadableDecimal(value: string): boolean {
-  const text = value.trim();
-  return text !== "" && !DECIMAL.test(text);
+/** A rate in cents as the payload sends it and the form checks it: "" when blank, undefined when unreadable. */
+function rateText(value: string, decimalSeparator: DecimalSeparator): string | undefined {
+  return normalizeDecimalText(value, decimalSeparator, UTILITY_PLAN_RATE_MAX_DECIMALS);
 }
 
-function hasTooManyDecimals(value: string): boolean {
-  const decimals = value.trim().split(".")[1];
-  return decimals !== undefined && decimals.length > UTILITY_PLAN_RATE_MAX_DECIMALS;
+/** A filled rate field the payload would silently turn into null, wiping what was stored. */
+function rateProblem(value: string, decimalSeparator: DecimalSeparator): string | undefined {
+  const rate = rateText(value, decimalSeparator);
+  if (rate === undefined) return UTILITY_PLAN_FORM_PROBLEMS.notRate(decimalSeparator);
+  return Number(rate) > UTILITY_PLAN_RATE_MAX_CENTS ? UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh(decimalSeparator) : undefined;
 }
 
 /** A filled dollar field the payload would silently turn into null, wiping what was stored. */
@@ -202,8 +205,8 @@ export function utilityPlanFormProblems(
   const problems: UtilityPlanFormProblems = {};
   if (!values.providerName.trim()) problems.providerName = UTILITY_PLAN_FORM_PROBLEMS.providerRequired;
   for (const field of RATE_FIELDS) {
-    if (isUnreadableDecimal(values[field]) || hasTooManyDecimals(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notRate;
-    else if (Number(values[field]) > UTILITY_PLAN_RATE_MAX_CENTS) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh;
+    const problem = rateProblem(values[field], decimalSeparator);
+    if (problem) problems[field] = problem;
   }
   for (const field of DOLLAR_FIELDS) {
     const problem = dollarsProblem(values[field], decimalSeparator);

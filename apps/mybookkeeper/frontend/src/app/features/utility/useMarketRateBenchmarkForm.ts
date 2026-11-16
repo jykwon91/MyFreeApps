@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
 import { localToday } from "@platform/core/utils/localToday";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,
@@ -46,7 +47,7 @@ export function useMarketRateBenchmarkForm({
   const [remove, { isLoading: isRemoving }] = useDeleteMarketRateBenchmarkMutation();
 
   const [hasTried, setHasTried] = useState(false);
-  const allProblems = marketRateFormProblems(serviceType, { figure, source, observedOn, notes }, localToday());
+  const allProblems = marketRateFormProblems(serviceType, { figure, source, observedOn, notes }, localToday(), NUMBER_INPUT_DECIMAL_SEPARATOR);
   // Shown only once the operator has tried to save, so typing a rate isn't met with an error on the first digit.
   const problems = hasTried ? allProblems : {};
   const isBusy = isSaving || isRemoving;
@@ -61,7 +62,7 @@ export function useMarketRateBenchmarkForm({
     try {
       await upsert({
         serviceType,
-        data: toMarketRateUpsert(serviceType, { figure, source, observedOn, notes }),
+        data: toMarketRateUpsert(serviceType, { figure, source, observedOn, notes }, NUMBER_INPUT_DECIMAL_SEPARATOR),
       }).unwrap();
       showSuccess("Market rate saved.");
       onSaved();

@@ -89,6 +89,23 @@ describe("adding a policy", () => {
     });
   });
 
+  it("reads a wind and hail percentage typed with a comma on a comma keypad, and gives comma examples when refusing one", async () => {
+    mockDecimalSeparator = ",";
+    const server = startInsuranceServer({ policies: [] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fillAdd();
+    const windHail = screen.getByLabelText("Wind and hail deductible (% of coverage)");
+    await fireEvent.changeText(windHail, "2,555");
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+    expect(await screen.findByText("Use at most two decimal places, like 2,5.")).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+    await fireEvent.changeText(windHail, "2,5");
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(lastInsuranceWrite(server)).toMatchObject({ body: { wind_hail_deductible_pct: "2.5" } });
+  });
+
   it("won't guess at 1,250 on a comma keypad, and says a negative amount is negative", async () => {
     mockDecimalSeparator = ",";
     const server = startInsuranceServer({ policies: [] });

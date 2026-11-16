@@ -1,7 +1,8 @@
-import { MORTGAGE_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/mortgageProblemMessages";
+import { mortgageProblemMessages } from "@mybookkeeper/api-client/constants/mortgageProblemMessages";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { FormField, OptionRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
@@ -19,12 +20,15 @@ interface MortgageFormFieldsProps {
   /** Only shown once the person has tried to save, so a half-typed form isn't scolded. */
   problems: MortgageFormProblems;
   isBusy: boolean;
+  /** The phone's decimal mark, so example rates in problems read the way the keypad types. */
+  decimalSeparator: DecimalSeparator;
 }
 
 /** Ordered by what the comparison needs: the rate first, then the money, then record-keeping. */
-export default function MortgageFormFields({ values, onChange, problems, isBusy }: MortgageFormFieldsProps) {
+export default function MortgageFormFields({ values, onChange, problems, isBusy, decimalSeparator }: MortgageFormFieldsProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const problemText = (field: keyof MortgageFormValues) => (problems[field] ? MORTGAGE_PROBLEM_MESSAGES[problems[field]] : undefined);
+  const messages = mortgageProblemMessages(decimalSeparator);
+  const problemText = (field: keyof MortgageFormValues) => (problems[field] ? messages[problems[field]] : undefined);
   const today = new Date();
 
   return (

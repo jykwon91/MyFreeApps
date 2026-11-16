@@ -54,7 +54,22 @@ describe("mortgageFormProblems", () => {
     expect(mortgageFormProblems({ ...FIXED, monthlyEscrowDollars: "-5,50" }, ",").monthlyEscrowDollars).toBe("negative_amount");
   });
 
-  it("still refuses a decimal comma in the rate, which is not money", () => {
-    expect(mortgageFormProblems({ ...FIXED, interestRate: "7,125" }, ",").interestRate).toBe("rate_out_of_range");
+  it("reads the rate in the phone's decimal mark, and the \".\" a saved loan is prefilled with", () => {
+    for (const good of ["7,125", " 7,125 ", "0,001", "24,999", "7.125", "2.990"]) {
+      expect(mortgageFormProblems({ ...FIXED, interestRate: good }, ",").interestRate).toBeUndefined();
+    }
+    for (const bad of ["25,0", "0,000", "-7,125", "7,1,25", "7.125,5"]) {
+      expect(mortgageFormProblems({ ...FIXED, interestRate: bad }, ",").interestRate).toBe("rate_out_of_range");
+    }
+  });
+
+  it("never reads a comma as the decimal mark on a \".\" phone, where it groups thousands", () => {
+    expect(mortgageFormProblems({ ...FIXED, interestRate: "7,125" }, ".").interestRate).toBe("rate_out_of_range");
+  });
+
+  it("refuses a rate finer than the three decimals the server keeps, rather than letting it be rounded", () => {
+    expect(mortgageFormProblems({ ...FIXED, interestRate: "7.1255" }, ".").interestRate).toBe("rate_decimals");
+    expect(mortgageFormProblems({ ...FIXED, interestRate: "7,1255" }, ",").interestRate).toBe("rate_decimals");
+    expect(mortgageFormProblems({ ...FIXED, interestRate: "7.1250" }, ".").interestRate).toBeUndefined();
   });
 });

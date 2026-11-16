@@ -15,6 +15,9 @@ import { store } from "../src/lib/store";
 import { aBenchmark } from "../test-support/aMarketRateBenchmark";
 import { startUtilityServer, writesTo } from "../test-support/utilityPlansServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockPreventRemove = { active: false };
@@ -36,6 +39,7 @@ beforeEach(() => {
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
   mockPreventRemove.active = false;
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -104,7 +108,7 @@ describe("MarketRateFormScreen", () => {
   });
 
   it.each([
-    ["1000", BENCHMARK_FORM_PROBLEMS.rateTooHigh],
+    ["1000", BENCHMARK_FORM_PROBLEMS.rateTooHigh(".")],
     ["11.12345", BENCHMARK_FORM_PROBLEMS.rateTooPrecise],
   ])("points at a rate of %s and sends nothing", async (figure, message) => {
     const server = startUtilityServer();
@@ -134,6 +138,21 @@ describe("MarketRateFormScreen", () => {
     expect(JSON.parse(String(put.data))).toMatchObject({ rate_cents_per_kwh: "11.25", source: "Power to Choose", notes: null });
     expect(JSON.parse(String(put.data))).not.toHaveProperty("monthly_cents");
     expect(await screen.findByText(MARKET_RATE_MESSAGES.saved)).toBeTruthy();
+  });
+
+  it("saves a metered rate typed with a decimal comma as the rate that was typed", async () => {
+    mockDecimalSeparator = ",";
+    const server = startUtilityServer();
+    await show(<MarketRateFormScreen serviceType="electricity" />);
+    const figure = await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`));
+    await fireEvent.changeText(figure, "1000,5");
+    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateTooHigh(","))).toBeTruthy();
+    expect(writesTo(server, "put")).toHaveLength(0);
+    await fireEvent.changeText(figure, "11,25");
+    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writesTo(server, "put")[0].data))).toMatchObject({ rate_cents_per_kwh: "11.25" });
   });
 
   it("saves internet as whole cents a month", async () => {
