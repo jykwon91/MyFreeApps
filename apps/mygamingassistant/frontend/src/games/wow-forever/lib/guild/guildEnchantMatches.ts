@@ -1,18 +1,27 @@
 /**
  * Finds enchant opportunities: member A knows an enchant for a slot that member
- * B wears unenchanted.
+ * B wears unenchanted, and the enchant adds something B's class uses.
  *
- * Deduplication: for each (beneficiary_slug, blizzard_slot) pair, only the
- * crafter with the highest Enchanting skill is returned — there is no value in
- * listing every enchanter who knows the same recipe for the same slot.
+ * Each enchant is valued with B's stat weights (their spec's, else their
+ * class's leveling weights): +7 Strength is worth nothing to a Warlock, so it
+ * is never suggested to one. For each (beneficiary_slug, blizzard_slot) only the
+ * enchant worth most to B is returned; between crafters of the same enchant,
+ * the highest Enchanting skill wins.
  */
 import { enchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
 import { ENCHANTING_SKILL_LINE_ID, ENCHANT_SLOT_TARGETS } from "@/games/wow-forever/data/guild/guildHelpConfig";
+import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
 import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessions";
-import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
+import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
+import { enchantValue } from "@/games/wow-forever/lib/guild/enchantValue";
+import { guildHelpWeights } from "@/games/wow-forever/lib/guild/guildHelpWeights";
+import type { ClientItem } from "@/games/wow-forever/types/clientItem";
+import type { CraftingFile } from "@/games/wow-forever/types/crafting";
+import type { BestEnchant } from "@/games/wow-forever/types/guild/bestEnchant";
 import type { GuildHelpEquippedItem } from "@/games/wow-forever/types/guild/guildHelpEquippedItem";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
 import type { GuildMatch, GuildMatchBeneficiary, GuildMatchCrafter } from "@/games/wow-forever/types/guild/guildMatch";
+import type { ScoredEnchant } from "@/games/wow-forever/types/guild/scoredEnchant";
 
 /** Check whether a worn item's slot + inventory_type matches an enchant slot target. */
 function itemMatchesEnchantSlot(item: GuildHelpEquippedItem, enchantSlotName: string): boolean {
@@ -45,110 +54,100 @@ function beneficiaryFor(member: GuildHelpMember): GuildMatchBeneficiary {
   return { slug: member.slug, name: member.name, surname: member.surname, class_name: member.class_name, level: member.level };
 }
 
-/**
- * Whether a new crafter+recipe combination beats the current best for a slot.
- *
- * Priority (highest first):
- * 1. Higher crafter Enchanting skill (better enchanters generally know better enchants)
- * 2. For equal skill, alphabetically-first crafter slug (deterministic tie-break between crafters)
- * 3. Same crafter, higher recipe `grey` value (grey = max skill-up level ≈ recipe power)
- * 4. Same crafter, same grey: higher spell id (stable tie-break between recipes)
- */
-function isBetterEnchant(
-  recipe: CraftRecipe,
-  crafterSkill: number,
-  crafterSlug: string,
-  existing: GuildMatch,
-  existingGrey: number,
-): boolean {
-  if (crafterSkill !== existing.crafter.skill) return crafterSkill > existing.crafter.skill;
-  if (crafterSlug !== existing.crafter.slug) return crafterSlug < existing.crafter.slug;
-  // Same crafter — pick the more powerful enchant.
-  if (recipe.grey !== existingGrey) return recipe.grey > existingGrey;
-  return recipe.spell > (existing.proposed.spell ?? 0);
+/** Whether (value, crafter skill, crafter slug, spell) beats the best so far: value first, then skill, then a stable order. */
+function isBetter(value: number, skill: number, slug: string, spell: number, best: BestEnchant): boolean {
+  if (value !== best.value) return value > best.value;
+  if (skill !== best.match.crafter.skill) return skill > best.match.crafter.skill;
+  if (slug !== best.match.crafter.slug) return slug < best.match.crafter.slug;
+  return spell > (best.match.proposed.spell ?? 0);
 }
 
 /**
  * Compute all enchant matches from the members' stored sheets and the
- * Enchanting crafting file.
- *
- * Returns one match per (beneficiary_slug, blizzard_slot):
- * - Across crafters: the one with the highest Enchanting skill wins (ties broken by slug).
- * - Within one crafter who knows multiple enchants for the same slot: the one with the
- *   highest `grey` value wins (grey ≈ recipe power level; ties broken by spell id descending).
+ * Enchanting crafting file. `itemsById` gives worn weapons' speed, so flat
+ * weapon damage can be weighed as DPS.
  */
 export function computeEnchantMatches(
   members: readonly GuildHelpMember[],
   enchantingFile: Pick<CraftingFile, "recipes">,
+  itemsById: ReadonlyMap<number, ClientItem>,
 ): GuildMatch[] {
-  // Build a spell → recipe map for Enchanting enchant recipes only.
-  const enchantBySpell = new Map<number, CraftRecipe>();
+  // Spell → enchant recipe, only for enchants whose effect a stat weight can score.
+  const enchantBySpell = new Map<number, ScoredEnchant>();
   for (const recipe of enchantingFile.recipes) {
-    if (recipe.enchant) enchantBySpell.set(recipe.spell, recipe);
+    if (!recipe.enchant) continue;
+    const effect = enchantEffect(recipe.effect ?? null);
+    if (effect) enchantBySpell.set(recipe.spell, { recipe, effect });
   }
   if (enchantBySpell.size === 0) return [];
 
-  // Key: "beneficiary_slug|blizzard_slot" → best match so far.
-  const best = new Map<string, GuildMatch>();
-  // Parallel map: same key → grey value of the winning recipe (for same-crafter comparisons).
-  const bestGrey = new Map<string, number>();
+  const weightsCache = new Map<string, StatWeights | null>();
+  const weightsFor = (member: GuildHelpMember) => {
+    if (!weightsCache.has(member.slug)) weightsCache.set(member.slug, guildHelpWeights(member));
+    return weightsCache.get(member.slug) ?? null;
+  };
+
+  // Key: "beneficiary_slug|blizzard_slot" → best match so far and its value to the beneficiary.
+  const best = new Map<string, BestEnchant>();
 
   for (const crafter of members) {
     const crafterEnch = crafter.professions.find((p) => p.profession_id === ENCHANTING_SKILL_LINE_ID);
     if (!crafterEnch) continue;
 
-    // The spells this crafter knows that are enchant recipes.
-    const knownEnchants: CraftRecipe[] = [];
+    const knownEnchants: ScoredEnchant[] = [];
     for (const abilityId of crafter.recipe_ability_ids) {
       const spell = recipeSpell(abilityId);
       if (spell === null) continue;
-      const recipe = enchantBySpell.get(spell);
-      if (recipe) knownEnchants.push(recipe);
+      const enchant = enchantBySpell.get(spell);
+      if (enchant) knownEnchants.push(enchant);
     }
     if (knownEnchants.length === 0) continue;
 
     for (const beneficiary of members) {
       if (beneficiary.slug === crafter.slug) continue;
+      const weights = weightsFor(beneficiary);
+      if (!weights) continue;
 
       for (const item of beneficiary.equipped) {
         if (item.enchantments.length > 0) continue; // already enchanted
+        const weaponSpeed = itemsById.get(item.item_id)?.weapon?.speed ?? null;
 
-        for (const recipe of knownEnchants) {
+        for (const { recipe, effect } of knownEnchants) {
           const slot = enchantSlot(recipe.name);
-          if (!slot) continue;
-          if (!itemMatchesEnchantSlot(item, slot)) continue;
+          if (!slot || !itemMatchesEnchantSlot(item, slot)) continue;
+          const value = enchantValue(effect, weights, weaponSpeed);
+          if (value <= 0) continue; // nothing this class uses
 
           const key = `${beneficiary.slug}|${item.slot}`;
           const existing = best.get(key);
-
-          if (existing && !isBetterEnchant(recipe, crafterEnch.skill, crafter.slug, existing, bestGrey.get(key) ?? -1)) {
-            continue;
-          }
+          if (existing && !isBetter(value, crafterEnch.skill, crafter.slug, recipe.spell, existing)) continue;
 
           const matchCrafter = crafterFor(crafter, ENCHANTING_SKILL_LINE_ID);
           if (!matchCrafter) continue;
 
           best.set(key, {
-            type: "enchant",
-            crafter: matchCrafter,
-            beneficiary: beneficiaryFor(beneficiary),
-            slot: { blizzard_slot: item.slot, slot_label: slot },
-            worn: { item_id: item.item_id, name: item.name, item_level: item.item_level },
-            proposed: {
-              spell: recipe.spell,
-              name: recipe.name,
-              item_id: null,
-              item_level: null,
-              reagents: recipe.reagents,
-              effect: recipe.effect ?? null,
+            value,
+            match: {
+              type: "enchant",
+              crafter: matchCrafter,
+              beneficiary: beneficiaryFor(beneficiary),
+              slot: { blizzard_slot: item.slot, slot_label: slot },
+              worn: { item_id: item.item_id, name: item.name, item_level: item.item_level },
+              proposed: {
+                spell: recipe.spell,
+                name: recipe.name,
+                item_id: null,
+                item_level: null,
+                reagents: recipe.reagents,
+                effect: recipe.effect ?? null,
+              },
+              upgrade_pct: null,
             },
-            upgrade_pct: null,
           });
-          bestGrey.set(key, recipe.grey);
         }
       }
     }
   }
 
-  return [...best.values()];
+  return [...best.values()].map((b) => b.match);
 }

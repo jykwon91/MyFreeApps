@@ -1479,8 +1479,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   ids and profession skill rows. The frontend computes two kinds of match entirely
   client-side (scoring + crafting data are TypeScript; not ported to Python):
   **enchant matches** (`lib/guild/guildEnchantMatches.ts`) — a crafter knows an
-  Enchanting recipe for a slot the beneficiary wears unenchanted, deduped to the
-  highest-skill enchanter per (beneficiary, slot);
+  Enchanting recipe for a slot the beneficiary wears unenchanted AND it adds
+  something the beneficiary's class uses: the tooltip text is read into stats
+  (`lib/guild/enchantEffect.ts` — procs, gathering, speed and slayer enchants
+  are left out) and valued with their weights (`guildHelpWeights`: spec Level 60
+  weights from talents, else class leveling weights; flat weapon damage as DPS
+  on the worn weapon's speed, `enchantValue.ts`). Value 0 → never suggested
+  (the operator, a Warlock, was offered +7 Strength gloves, 2026-11-16). Deduped
+  to the enchant worth most per (beneficiary, slot), then the highest-skill
+  enchanter;
   **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
   that creates an item scoring ≥ `UPGRADE_THRESHOLD_PCT` (2%) better than what
   the beneficiary wears, using `LEVELING_SPEC_ID` weights for all members, deduped

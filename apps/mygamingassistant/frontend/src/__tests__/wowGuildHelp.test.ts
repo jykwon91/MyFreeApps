@@ -17,6 +17,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
+import enchantingFile from "@/games/wow-forever/data/professions/crafting/enchanting.json";
+import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
 import { resolveHelpSpecId, TALENT_TREE_SPEC_ID } from "@/games/wow-forever/lib/guild/guildHelpSpec";
@@ -66,7 +68,10 @@ function wristItem(opts: { enchantments?: string[]; inventory_type?: string } = 
   };
 }
 
-function enchantRecipe(spell: number, name: string): CraftRecipe {
+/** No item list: weapon speeds unknown. */
+const NO_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
+
+function enchantRecipe(spell: number, name: string, effect = "Permanently enchant bracers to give +1 Stamina."): CraftRecipe {
   return {
     spell,
     name,
@@ -75,6 +80,7 @@ function enchantRecipe(spell: number, name: string): CraftRecipe {
     reagents: [{ id: 2840, name: "Strange Dust", count: 1 }],
     enchant: true,
     learn: { source: "trainer" },
+    effect,
   };
 }
 
@@ -97,7 +103,7 @@ describe("computeEnchantMatches", () => {
     const beneficiary = makeMember("beneficiary", {
       equipped: [wristItem({ enchantments: [] })],
     });
-    const matches = computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER);
+    const matches = computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS);
     expect(matches).toHaveLength(1);
     const m = matches[0];
     expect(m.type).toBe("enchant");
@@ -115,7 +121,7 @@ describe("computeEnchantMatches", () => {
     const beneficiary = makeMember("beneficiary", {
       equipped: [wristItem({ enchantments: ["Enchant Bracer - Minor Stamina"] })],
     });
-    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER)).toHaveLength(0);
+    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
   it("does not match crafter to themselves", () => {
@@ -124,7 +130,7 @@ describe("computeEnchantMatches", () => {
       professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
       equipped: [wristItem()],
     });
-    expect(computeEnchantMatches([member], ENCHANTING_FILE_BRACER)).toHaveLength(0);
+    expect(computeEnchantMatches([member], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
   it("deduplicates to the highest-skill enchanter per (beneficiary, slot)", () => {
@@ -139,7 +145,7 @@ describe("computeEnchantMatches", () => {
     const beneficiary = makeMember("beneficiary", {
       equipped: [wristItem()],
     });
-    const matches = computeEnchantMatches([lowSkill, highSkill, beneficiary], ENCHANTING_FILE_BRACER);
+    const matches = computeEnchantMatches([lowSkill, highSkill, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS);
     expect(matches).toHaveLength(1);
     expect(matches[0].crafter.slug).toBe("high-skill");
     expect(matches[0].crafter.skill).toBe(200);
@@ -151,7 +157,7 @@ describe("computeEnchantMatches", () => {
       professions: [{ profession_id: PROFESSION_SKILL_LINES.tailoring, name: "Tailoring", skill: 300, max_skill: 300 }],
     });
     const beneficiary = makeMember("beneficiary", { equipped: [wristItem()] });
-    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER)).toHaveLength(0);
+    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
   it("crafter knows the ability but not the enchant recipe → no match", () => {
@@ -161,11 +167,11 @@ describe("computeEnchantMatches", () => {
       professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
     });
     const beneficiary = makeMember("beneficiary", { equipped: [wristItem()] });
-    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER)).toHaveLength(0);
+    expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
   it("empty member list returns no matches", () => {
-    expect(computeEnchantMatches([], ENCHANTING_FILE_BRACER)).toHaveLength(0);
+    expect(computeEnchantMatches([], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 });
 
@@ -388,30 +394,133 @@ describe("computeGearMatches", () => {
 // resolveHelpSpecId
 // ---------------------------------------------------------------------------
 
+describe("enchantEffect", () => {
+  it("reads one stat in each tooltip wording", () => {
+    expect(enchantEffect("Permanently enchant gloves to grant +7 Strength.")).toEqual({ stats: { strength: 7 }, armor: 0, weaponDamage: 0 });
+    expect(enchantEffect("Permanently enchant a bracer so it increases the wearer's Intellect by 3.")?.stats).toEqual({ intellect: 3 });
+    expect(enchantEffect("Permanently enchant a Two-Handed Melee Weapon to add 9 to Spirit.")?.stats).toEqual({ spirit: 9 });
+    expect(enchantEffect("Permanently enchant bracers so that the defense skill of the wearer is increased by 3.")?.stats).toEqual({ defense: 3 });
+  });
+
+  it("reads all stats, spell power, resistances, armor and weapon damage", () => {
+    expect(enchantEffect("Permanently enchant a piece of chest armor to grant +3 to all stats.")?.stats).toEqual({
+      strength: 3, agility: 3, stamina: 3, intellect: 3, spirit: 3,
+    });
+    expect(enchantEffect("Permanently enchant bracers so they increase the wearer's healing spells by up to 24 and damage spells by up to 8.")?.stats)
+      .toEqual({ healing: 24, spell_damage: 8 });
+    expect(enchantEffect("Permanently enchant a cloak so that it increases resistance to fire by 7.")?.stats).toEqual({ fire_resistance: 7 });
+    expect(enchantEffect("Permanently enchant a cloak to give 70 additional armor.")).toEqual({ stats: {}, armor: 70, weaponDamage: 0 });
+    expect(enchantEffect("Permanently enchant a Melee Weapon to do 2 additional points of damage.")).toEqual({ stats: {}, armor: 0, weaponDamage: 2 });
+  });
+
+  it("reads spell power, school damage, healing and mana regen in each wording", () => {
+    expect(enchantEffect("Permanently enchant gloves to increase shadow damage by up to 20.")?.stats).toEqual({ shadow_spell_damage: 20 });
+    expect(enchantEffect("Permanently enchant a two-handed melee weapon to increase damage and healing by up to 55.")?.stats).toEqual({ spell_power: 55 });
+    expect(enchantEffect("Permanently enchant a Melee Weapon to add up to 30 damage to spells.")?.stats).toEqual({ spell_damage: 30 });
+    expect(enchantEffect("Permanently enchant bracers to increase healing by up to 16 and damage by up to 6.")?.stats).toEqual({ healing: 16, spell_damage: 6 });
+    expect(enchantEffect("Permanently enchant a weapon to grant up to 15 additional frost damage when casting frost spells.")?.stats).toEqual({ frost_spell_damage: 15 });
+    expect(enchantEffect("Permanently enchant bracers to restore 4 mana every 5 seconds.")?.stats).toEqual({ mp5: 4 });
+    expect(enchantEffect("Permanently enchant a cloak to give 12 Fire Resistance.")?.stats).toEqual({ fire_resistance: 12 });
+    expect(enchantEffect("Permanently enchant a cloak to give a 1% chance to dodge.")?.stats).toEqual({ dodge_pct: 1 });
+  });
+
+  it.each([
+    "Permanently enchant gloves to grant +2 fishing skill.",
+    "Permanently enchant boots to increase movement speed by 8%.",
+    "Permanently enchant a Melee Weapon to do 6 additional points of damage to Beasts.",
+    "Enchant a piece of chest armor so it has a 5% chance per hit of giving you 25 points of damage absorption.",
+    "Permanently enchant a melee weapon to often strike for 40 additional fire damage.",
+  ])("leaves out what a stat weight can't score: %s", (text) => {
+    expect(enchantEffect(text)).toBeNull();
+  });
+});
+
+describe("enchantEffect over every enchant", () => {
+  // Locks the parser against the real data: each of these is a proc, gathering, speed, stealth,
+  // threat or slayer enchant; every other enchant must read into something a stat weight scores.
+  const UNSCORED_NAMES = new Set([
+    "Boots - Minor Speed", "Boots - Speed", "Chest - Absorption", "Chest - Lesser Absorption", "Chest - Minor Absorption",
+    "Cloak - Stealth", "Cloak - Subtlety", "Gloves - Advanced Herbalism", "Gloves - Advanced Mining", "Gloves - Advanced Skinning",
+    "Gloves - Fishing", "Gloves - Herbalism", "Gloves - Lotus Claw", "Gloves - Mining", "Gloves - Minor Haste",
+    "Gloves - Riding Skill", "Gloves - Skinning", "Gloves - Threat", "Weapon - Crusader", "Weapon - Demonslaying",
+    "Weapon - Fiery Weapon", "Weapon - Icy Chill", "Weapon - Insight", "Weapon - Lesser Beastslayer",
+    "Weapon - Lesser Elemental Slayer", "Weapon - Lifestealing", "Weapon - Minor Beastslayer", "Weapon - Recovery",
+    "Weapon - Revelation", "Weapon - Unholy Weapon",
+  ]);
+  const enchants = (enchantingFile as { recipes: CraftRecipe[] }).recipes.filter((r) => r.enchant);
+
+  it.each(enchants.map((r) => [r.name.replace(/^Enchant /, ""), r.effect ?? null] as const))("%s", (name, effect) => {
+    expect(enchantEffect(effect) === null).toBe(UNSCORED_NAMES.has(name));
+  });
+});
+
+describe("computeEnchantMatches values the enchant for the wearer's class", () => {
+  // ability 7668 → 13887 "Enchant Gloves - Strength"; 7456 → 13536 "Bracer - Lesser Strength";
+  // 7500 → 13622 "Bracer - Lesser Intellect"; 7426 → 13503 "Weapon - Lesser Striking".
+  const FILE: Pick<CraftingFile, "recipes"> = {
+    recipes: [
+      enchantRecipe(13887, "Enchant Gloves - Strength", "Permanently enchant gloves to grant +7 Strength."),
+      enchantRecipe(13536, "Enchant Bracer - Lesser Strength", "Permanently enchant a bracer so it increases the wearer's Strength by 4."),
+      enchantRecipe(13622, "Enchant Bracer - Lesser Intellect", "Permanently enchant a bracer so it increases the wearer's Intellect by 3."),
+      enchantRecipe(13503, "Enchant Weapon - Lesser Striking", "Permanently enchant a Melee Weapon to do 2 additional points of damage."),
+    ],
+  };
+  const enchanter = makeMember("feranova", {
+    recipe_ability_ids: [7668, 7456, 7500, 7426],
+    professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 225, max_skill: 225 }],
+  });
+  const gloves = { slot: "HANDS", item_id: 3001, name: "Prisoner Handwraps", item_level: 44, inventory_type: "HAND", enchantments: [] };
+  const sword = { slot: "MAIN_HAND", item_id: 3002, name: "Sword", item_level: 30, inventory_type: "WEAPON", enchantments: [] };
+
+  it("never offers +7 Strength gloves to a Warlock, but does to a Warrior", () => {
+    const warlock = makeMember("jason", { class_name: "Warlock", level: 45, equipped: [gloves] });
+    const warrior = makeMember("tank", { class_name: "Warrior", level: 45, equipped: [gloves] });
+    const matches = computeEnchantMatches([enchanter, warlock, warrior], FILE, NO_ITEMS);
+    expect(matches.map((m) => [m.beneficiary.slug, m.proposed.name])).toEqual([["tank", "Enchant Gloves - Strength"]]);
+  });
+
+  it("picks the bracer enchant each class uses: Intellect for a Warlock, Strength for a Warrior", () => {
+    const wrist = wristItem();
+    const warlock = makeMember("jason", { class_name: "Warlock", equipped: [wrist] });
+    const warrior = makeMember("tank", { class_name: "Warrior", equipped: [wrist] });
+    const byMember = new Map(computeEnchantMatches([enchanter, warlock, warrior], FILE, NO_ITEMS).map((m) => [m.beneficiary.slug, m.proposed.name]));
+    expect(byMember.get("jason")).toBe("Enchant Bracer - Lesser Intellect");
+    expect(byMember.get("tank")).toBe("Enchant Bracer - Lesser Strength");
+  });
+
+  it("weighs weapon damage only when the weapon's speed is known", () => {
+    const warrior = makeMember("tank", { class_name: "Warrior", equipped: [sword] });
+    expect(computeEnchantMatches([enchanter, warrior], FILE, NO_ITEMS)).toHaveLength(0);
+    const swordItem = { id: 3002, weapon: { minDamage: 20, maxDamage: 40, speed: 2.5 } } as ClientItem;
+    const matches = computeEnchantMatches([enchanter, warrior], FILE, new Map([[3002, swordItem]]));
+    expect(matches.map((m) => m.proposed.name)).toEqual(["Enchant Weapon - Lesser Striking"]);
+  });
+});
+
 describe("enchant slot restrictions", () => {
   const enchanter = () => makeMember("crafter", {
     recipe_ability_ids: [4289],
     professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
   });
-  const weaponFile: Pick<CraftingFile, "recipes"> = { recipes: [enchantRecipe(7418, "Enchant Weapon - Minor Beastslayer")] };
+  const weaponFile: Pick<CraftingFile, "recipes"> = { recipes: [enchantRecipe(7418, "Enchant Weapon - Minor Stamina", "Permanently enchant a Melee Weapon to add 3 to Stamina.")] };
   const wearing = (slot: string, inventory_type: string) => makeMember("beneficiary", {
     equipped: [{ slot, item_id: 2001, name: "Thing", item_level: 10, inventory_type, enchantments: [] }],
   });
 
   it("a one-hand weapon enchant matches a one-handed main hand", () => {
-    expect(computeEnchantMatches([enchanter(), wearing("MAIN_HAND", "WEAPON")], weaponFile)).toHaveLength(1);
+    expect(computeEnchantMatches([enchanter(), wearing("MAIN_HAND", "WEAPON")], weaponFile, NO_ITEMS)).toHaveLength(1);
   });
 
   it.each([["MAIN_HAND", "TWOHWEAPON"], ["OFF_HAND", "SHIELD"], ["OFF_HAND", "HOLDABLE"]])(
     "a one-hand weapon enchant never matches %s %s",
     (slot, type) => {
-      expect(computeEnchantMatches([enchanter(), wearing(slot, type)], weaponFile)).toHaveLength(0);
+      expect(computeEnchantMatches([enchanter(), wearing(slot, type)], weaponFile, NO_ITEMS)).toHaveLength(0);
     },
   );
 
   it("never matches rings or trinkets", () => {
-    expect(computeEnchantMatches([enchanter(), wearing("FINGER_1", "FINGER")], weaponFile)).toHaveLength(0);
-    expect(computeEnchantMatches([enchanter(), wearing("TRINKET_1", "TRINKET")], weaponFile)).toHaveLength(0);
+    expect(computeEnchantMatches([enchanter(), wearing("FINGER_1", "FINGER")], weaponFile, NO_ITEMS)).toHaveLength(0);
+    expect(computeEnchantMatches([enchanter(), wearing("TRINKET_1", "TRINKET")], weaponFile, NO_ITEMS)).toHaveLength(0);
   });
 });
 
@@ -617,57 +726,31 @@ describe("computeGearMatches weapon slot handling", () => {
 // ---------------------------------------------------------------------------
 
 describe("computeEnchantMatches best-pick dedup (single crafter, multiple enchants for same slot)", () => {
-  function twoEnchantFile(greyA: number, greyB: number): Pick<CraftingFile, "recipes"> {
+  const STAMINA = (n: number) => `Permanently enchant bracers to give +${n} Stamina.`;
+  function twoEnchantFile(effectA: string, effectB: string): Pick<CraftingFile, "recipes"> {
     return {
       recipes: [
-        { spell: 7418, name: "Enchant Bracer - Inferior Stamina", yellow: 0, grey: greyA,
-          reagents: [{ id: 2840, name: "Strange Dust", count: 1 }], enchant: true,
-          learn: { source: "trainer" } },
-        { spell: 7428, name: "Enchant Bracer - Minor Deflect", yellow: 0, grey: greyB,
-          reagents: [{ id: 2840, name: "Strange Dust", count: 1 }], enchant: true,
-          learn: { source: "trainer" } },
+        { ...enchantRecipe(7418, "Enchant Bracer - Inferior Stamina", effectA), grey: 200 },
+        { ...enchantRecipe(7428, "Enchant Bracer - Minor Deflect", effectB), grey: 100 },
       ],
     };
   }
+  const crafter = () => makeMember("crafter", {
+    recipe_ability_ids: [4289, 4293],
+    professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+  });
+  const beneficiary = () => makeMember("beneficiary", { equipped: [wristItem({ enchantments: [] })] });
 
-  it("picks the enchant with the higher grey value when one crafter knows two bracer enchants", () => {
-    const crafter = makeMember("crafter", {
-      recipe_ability_ids: [4289, 4293],
-      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
-    });
-    const beneficiary = makeMember("beneficiary", {
-      equipped: [wristItem({ enchantments: [] })],
-    });
-    // spell 7418 grey=100 vs spell 7428 grey=200 -- 7428 wins.
-    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(100, 200));
+  it("picks the enchant worth more to the wearer, not the one with the higher grey skill", () => {
+    // 7418 has grey 200 but +1 Stamina; 7428 has grey 100 but +3 Stamina -- 7428 wins.
+    const matches = computeEnchantMatches([crafter(), beneficiary()], twoEnchantFile(STAMINA(1), STAMINA(3)), NO_ITEMS);
     expect(matches).toHaveLength(1);
     expect(matches[0].proposed.spell).toBe(7428);
   });
 
-  it("when grey values are equal, the higher spell id wins as a stable tiebreaker", () => {
-    const crafter = makeMember("crafter", {
-      recipe_ability_ids: [4289, 4293],
-      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
-    });
-    const beneficiary = makeMember("beneficiary", {
-      equipped: [wristItem({ enchantments: [] })],
-    });
-    // Both grey=50 -- spell 7428 > 7418 wins.
-    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(50, 50));
+  it("when both are worth the same, the higher spell id wins as a stable tiebreaker", () => {
+    const matches = computeEnchantMatches([crafter(), beneficiary()], twoEnchantFile(STAMINA(2), STAMINA(2)), NO_ITEMS);
     expect(matches).toHaveLength(1);
     expect(matches[0].proposed.spell).toBe(7428);
-  });
-
-  it("still deduplicates to one match per (beneficiary, slot) with best-pick logic", () => {
-    const crafter = makeMember("crafter", {
-      recipe_ability_ids: [4289, 4293],
-      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
-    });
-    const beneficiary = makeMember("beneficiary", {
-      equipped: [wristItem({ enchantments: [] })],
-    });
-    // Two enchants for same slot -- always exactly one result.
-    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(50, 150));
-    expect(matches).toHaveLength(1);
   });
 });
