@@ -110,6 +110,30 @@ jest.mock("react-native-pager-view", () => {
   };
 });
 
+const mockRenders = { stepPage: 0, ingredientList: 0 };
+
+jest.mock("../src/features/cook/CookStepPage", () => {
+  const Actual = jest.requireActual("../src/features/cook/CookStepPage").default;
+  return {
+    __esModule: true,
+    default: function CountedCookStepPage(props: object) {
+      mockRenders.stepPage += 1;
+      return <Actual {...props} />;
+    },
+  };
+});
+
+jest.mock("../src/features/cook/CookIngredientList", () => {
+  const Actual = jest.requireActual("../src/features/cook/CookIngredientList").default;
+  return {
+    __esModule: true,
+    default: function CountedCookIngredientList(props: object) {
+      mockRenders.ingredientList += 1;
+      return <Actual {...props} />;
+    },
+  };
+});
+
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
 jest.mock("../src/lib/session", () => ({
@@ -796,6 +820,38 @@ describe("CookScreen", () => {
 
       expect(announce).not.toHaveBeenCalledWith("Step 1, 10 min timer is done");
       expect(store.getState().cookTimers.items).toHaveLength(1);
+    });
+
+    it("ticks only the timer displays each second, leaving the pages alone", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      await openTimed();
+      await startTen();
+      await press("Next");
+      await act(async () => {});
+      const before = { ...mockRenders };
+
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 2_000);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+      expect(screen.getByText("9:58 left", { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.getByText("Step 1 timer: 9:58")).toBeTruthy();
+
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 3_000);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+      expect(screen.getByText("Step 1 timer: 9:57")).toBeTruthy();
+      expect(mockRenders).toEqual(before);
+
+      // Done while its step's page is out of view, said once over later ticks.
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 600_000);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+      expect(screen.getByText("Step 1 timer: done")).toBeTruthy();
+      expect(announce.mock.calls.filter(([message]) => message === "Step 1, 10 min timer is done")).toHaveLength(1);
+      expect(mockRenders).toEqual(before);
     });
 
     it("doesn't repeat the news about a timer already done when reopening", async () => {

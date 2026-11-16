@@ -3,18 +3,18 @@ import { useEffect } from "react";
 import { AccessibilityInfo, Text, View } from "react-native";
 import type { CookTimer } from "../../types/CookTimer";
 import CookBarButton from "./CookBarButton";
+import { useCookNow } from "./useCookNow";
 
 /** Says plainly when a running timer can't alert someone on time, or at all. */
 export default function CookTimerAlertNote({
-  now,
   onAllowExact,
   timers,
 }: {
-  now: number;
   onAllowExact: () => void;
   timers: CookTimer[];
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const now = useCookNow();
   const running = timers.filter((timer) => timer.endsAt > now);
   const isOff = running.some((timer) => timer.alert === "off");
   const hasFailed = running.some((timer) => timer.alert === "failed");

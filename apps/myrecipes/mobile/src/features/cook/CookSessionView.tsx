@@ -6,7 +6,6 @@ import { AccessibilityInfo, ScrollView, Text, View } from "react-native";
 import PagerView from "react-native-pager-view";
 import { useDispatch, useSelector } from "react-redux";
 import { COOK_LABEL_MAX_SCALE, COOK_TARGET_HEIGHT } from "../../constants/cook";
-import { useTicker } from "../../hooks/useTicker";
 import type { RootState } from "../../lib/store";
 import { buildCookPages } from "../../utils/buildCookPages";
 import { cookTimerId } from "../../utils/cookTimerId";
@@ -19,10 +18,10 @@ import CookIngredientsSheet from "./CookIngredientsSheet";
 import CookStepPage from "./CookStepPage";
 import CookTimerAlertNote from "./CookTimerAlertNote";
 import CookTimerButton from "./CookTimerButton";
+import CookTimerClock from "./CookTimerClock";
 import CookTimersBar from "./CookTimersBar";
 import CookTimersSheet from "./CookTimersSheet";
 import { useCookTimers } from "./useCookTimers";
-import { useTimerDoneAnnouncement } from "./useTimerDoneAnnouncement";
 import { ingredientToggled, pageChanged, sessionFinished, sessionOpened } from "./cookSessionsSlice";
 
 export default function CookSessionView({
@@ -65,8 +64,6 @@ export default function CookSessionView({
   useAnnouncement(cookPageAnnouncement(page));
 
   const { allowExactAlerts, remove, start, timers } = useCookTimers(recipeId);
-  const now = useTicker(timers.length > 0 ? Math.max(...timers.map((timer) => timer.endsAt)) : null);
-  useTimerDoneAnnouncement(timers, now);
 
   function goTo(index: number): void {
     if (index < 0 || index > lastPage) return;
@@ -96,144 +93,144 @@ export default function CookSessionView({
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <CookBarButton accessibilityLabel="Exit cooking" label="✕" onPress={onExit} />
-        <Text
-          accessibilityRole="header"
-          maxFontSizeMultiplier={COOK_LABEL_MAX_SCALE}
-          style={{ flex: 1, flexShrink: 1, textAlign: "center", color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
+    <CookTimerClock timers={timers}>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <CookBarButton accessibilityLabel="Exit cooking" label="✕" onPress={onExit} />
+          <Text
+            accessibilityRole="header"
+            maxFontSizeMultiplier={COOK_LABEL_MAX_SCALE}
+            style={{ flex: 1, flexShrink: 1, textAlign: "center", color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
+          >
+            {cookPageTitle(page)}
+          </Text>
+          {ingredientCount > 0 && page.kind !== "ingredients" ? (
+            <CookBarButton
+              accessibilityLabel={`Ingredients, ${checked.length} of ${ingredientCount} checked`}
+              label={`${checked.length}/${ingredientCount}`}
+              onPress={() => setIsSheetOpen(true)}
+            />
+          ) : (
+            <View style={{ minWidth: COOK_TARGET_HEIGHT }} />
+          )}
+        </View>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ height: 4, backgroundColor: colors.muted }}
         >
-          {cookPageTitle(page)}
-        </Text>
-        {ingredientCount > 0 && page.kind !== "ingredients" ? (
-          <CookBarButton
-            accessibilityLabel={`Ingredients, ${checked.length} of ${ingredientCount} checked`}
-            label={`${checked.length}/${ingredientCount}`}
-            onPress={() => setIsSheetOpen(true)}
+          <View
+            style={{
+              height: 4,
+              width: `${lastPage === 0 ? 100 : (pageIndex / lastPage) * 100}%`,
+              backgroundColor: colors.foreground,
+            }}
+            testID="cook-progress"
           />
-        ) : (
-          <View style={{ minWidth: COOK_TARGET_HEIGHT }} />
-        )}
-      </View>
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={{ height: 4, backgroundColor: colors.muted }}
-      >
+        </View>
+        <CookTimersBar onPress={() => setIsTimersSheetOpen(true)} timers={timers} />
+        <CookTimerAlertNote onAllowExact={() => void allowExactAlerts()} timers={timers} />
+        <PagerView
+          initialPage={initialPage}
+          onPageSelected={({ nativeEvent: { position } }) => {
+            // Both platforms also report the opening page, which isn't a change.
+            if (position === pageIndex) return;
+            setPageIndex(position);
+            dispatch(pageChanged({ ...target, pageIndex: position, now: Date.now() }));
+          }}
+          overdrag={false}
+          ref={pager}
+          style={{ flex: 1 }}
+          testID="cook-pager"
+        >
+          {pages.map((item, index) => {
+            const isCurrent = index === pageIndex;
+            return (
+              <View
+                accessibilityElementsHidden={!isCurrent}
+                collapsable={false}
+                importantForAccessibility={isCurrent ? "auto" : "no-hide-descendants"}
+                key={item.kind === "step" ? item.id : item.kind}
+                style={{ flex: 1 }}
+                testID={`cook-page-${index}`}
+              >
+                {item.kind === "ingredients" ? (
+                  <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}>
+                    <Text style={{ color: colors.foreground, fontSize: fontSize.xl, fontWeight: "700" }}>{title}</Text>
+                    <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
+                      Your screen stays on while you cook.
+                    </Text>
+                    <CookIngredientList
+                      checked={checked}
+                      ingredients={version.ingredients}
+                      onToggle={toggleIngredient}
+                    />
+                  </ScrollView>
+                ) : item.kind === "step" ? (
+                  <CookStepPage
+                    areTapZonesEnabled={isScreenReaderOn === false && isCurrent}
+                    instruction={item.instruction}
+                    onBack={() => goTo(index - 1)}
+                    onNext={() => goTo(index + 1)}
+                  >
+                    {item.timers.map(({ seconds }) => {
+                      const id = cookTimerId(item.id, seconds);
+                      return (
+                        <CookTimerButton
+                          key={id}
+                          onRemove={removeTimer}
+                          onStart={() => startTimer({ id, recipeId, recipeTitle: title, stepNumber: item.number, seconds })}
+                          seconds={seconds}
+                          timer={timers.find((running) => running.id === id)}
+                        />
+                      );
+                    })}
+                  </CookStepPage>
+                ) : (
+                  <View style={{ flex: 1, padding: spacing.lg, gap: spacing.sm }}>
+                    <Text style={{ color: colors.foreground, fontSize: fontSize.xl, fontWeight: "700" }}>
+                      That's everything.
+                    </Text>
+                    <Text style={{ color: colors.mutedForeground, fontSize: fontSize.md }}>Enjoy your {title}.</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </PagerView>
         <View
           style={{
-            height: 4,
-            width: `${lastPage === 0 ? 100 : (pageIndex / lastPage) * 100}%`,
-            backgroundColor: colors.foreground,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
           }}
-          testID="cook-progress"
-        />
+        >
+          <CookBarButton disabled={pageIndex === 0} label="Back" onPress={() => goTo(pageIndex - 1)} />
+          <CookBarButton
+            isPrimary
+            label={cookNextLabel(page, pages[pageIndex + 1])}
+            onPress={page.kind === "done" ? finish : () => goTo(pageIndex + 1)}
+          />
+        </View>
+        {isTimersSheetOpen ? (
+          <CookTimersSheet
+            isAnimated={isAnimated}
+            onClose={() => setIsTimersSheetOpen(false)}
+            onRemove={removeTimer}
+            timers={timers}
+          />
+        ) : null}
+        {isSheetOpen ? (
+          <CookIngredientsSheet
+            checked={checked}
+            ingredients={version.ingredients}
+            isAnimated={isAnimated}
+            onClose={() => setIsSheetOpen(false)}
+            onToggle={toggleIngredient}
+          />
+        ) : null}
       </View>
-      <CookTimersBar now={now} onPress={() => setIsTimersSheetOpen(true)} timers={timers} />
-      <CookTimerAlertNote now={now} onAllowExact={() => void allowExactAlerts()} timers={timers} />
-      <PagerView
-        initialPage={initialPage}
-        onPageSelected={({ nativeEvent: { position } }) => {
-          // Both platforms also report the opening page, which isn't a change.
-          if (position === pageIndex) return;
-          setPageIndex(position);
-          dispatch(pageChanged({ ...target, pageIndex: position, now: Date.now() }));
-        }}
-        overdrag={false}
-        ref={pager}
-        style={{ flex: 1 }}
-        testID="cook-pager"
-      >
-        {pages.map((item, index) => {
-          const isCurrent = index === pageIndex;
-          return (
-            <View
-              accessibilityElementsHidden={!isCurrent}
-              collapsable={false}
-              importantForAccessibility={isCurrent ? "auto" : "no-hide-descendants"}
-              key={item.kind === "step" ? item.id : item.kind}
-              style={{ flex: 1 }}
-              testID={`cook-page-${index}`}
-            >
-              {item.kind === "ingredients" ? (
-                <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}>
-                  <Text style={{ color: colors.foreground, fontSize: fontSize.xl, fontWeight: "700" }}>{title}</Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
-                    Your screen stays on while you cook.
-                  </Text>
-                  <CookIngredientList
-                    checked={checked}
-                    ingredients={version.ingredients}
-                    onToggle={toggleIngredient}
-                  />
-                </ScrollView>
-              ) : item.kind === "step" ? (
-                <CookStepPage
-                  areTapZonesEnabled={isScreenReaderOn === false && isCurrent}
-                  instruction={item.instruction}
-                  onBack={() => goTo(index - 1)}
-                  onNext={() => goTo(index + 1)}
-                >
-                  {item.timers.map(({ seconds }) => {
-                    const id = cookTimerId(item.id, seconds);
-                    return (
-                      <CookTimerButton
-                        key={id}
-                        now={now}
-                        onRemove={removeTimer}
-                        onStart={() => startTimer({ id, recipeId, recipeTitle: title, stepNumber: item.number, seconds })}
-                        seconds={seconds}
-                        timer={timers.find((running) => running.id === id)}
-                      />
-                    );
-                  })}
-                </CookStepPage>
-              ) : (
-                <View style={{ flex: 1, padding: spacing.lg, gap: spacing.sm }}>
-                  <Text style={{ color: colors.foreground, fontSize: fontSize.xl, fontWeight: "700" }}>
-                    That's everything.
-                  </Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: fontSize.md }}>Enjoy your {title}.</Text>
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </PagerView>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          paddingHorizontal: spacing.sm,
-          paddingVertical: spacing.xs,
-        }}
-      >
-        <CookBarButton disabled={pageIndex === 0} label="Back" onPress={() => goTo(pageIndex - 1)} />
-        <CookBarButton
-          isPrimary
-          label={cookNextLabel(page, pages[pageIndex + 1])}
-          onPress={page.kind === "done" ? finish : () => goTo(pageIndex + 1)}
-        />
-      </View>
-      {isTimersSheetOpen ? (
-        <CookTimersSheet
-          isAnimated={isAnimated}
-          now={now}
-          onClose={() => setIsTimersSheetOpen(false)}
-          onRemove={removeTimer}
-          timers={timers}
-        />
-      ) : null}
-      {isSheetOpen ? (
-        <CookIngredientsSheet
-          checked={checked}
-          ingredients={version.ingredients}
-          isAnimated={isAnimated}
-          onClose={() => setIsSheetOpen(false)}
-          onToggle={toggleIngredient}
-        />
-      ) : null}
-    </View>
+    </CookTimerClock>
   );
 }
