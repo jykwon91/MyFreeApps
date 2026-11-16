@@ -1,10 +1,9 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WEB_BASE_URL } from "../../constants/api";
 import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { continueWithTemplates, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
@@ -16,7 +15,6 @@ import TemplatePickerRow from "./TemplatePickerRow";
 export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
-  const openWebsite = useOpenWebsite();
   const [picked, setPicked] = useState<string[]>(flow.templateIds);
   const { currentData, error, isFetching, refetch } = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
   const { refresh, refreshControl } = useRefresh(refetch, error);
@@ -33,7 +31,7 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadTemplates} />
     ) : (
       <EmptyState
-        action={{ label: MESSAGES.openWebsite, onPress: () => openWebsite(WEB_BASE_URL, "/lease-templates") }}
+        action={{ label: MESSAGES.addTemplate, onPress: () => router.push("/lease-templates/new") }}
         body={MESSAGES.noTemplatesBody}
         heading={MESSAGES.noTemplatesHeading}
       />

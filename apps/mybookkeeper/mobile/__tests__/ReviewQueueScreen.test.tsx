@@ -21,9 +21,13 @@ jest.mock("expo-router", () => ({
 }));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
+const mockModal: { onDismiss?: () => void } = {};
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
   __esModule: true,
-  default: ({ visible, children }: { visible: boolean; children: unknown }) => (visible ? children : null),
+  default: ({ visible, onDismiss, children }: { visible: boolean; onDismiss?: () => void; children: unknown }) => {
+    if (onDismiss) mockModal.onDismiss = onDismiss;
+    return visible ? children : null;
+  },
 }));
 
 const originalAdapter = api.defaults.adapter;
@@ -219,11 +223,15 @@ describe("the review queue", () => {
     expect(server.requests.some((request) => request.url === "/listings")).toBe(false);
   });
 
-  it("says when there are no listings to add a booking to", async () => {
+  it("says when there are no listings to add a booking to, and opens New listing once the sheet has closed", async () => {
     startCalendarServer({ queue: [aQueueItem()], listings: [] });
     await renderQueue();
     await fireEvent.press(await screen.findByRole("button", { name: "Add booking" }));
-    expect(screen.getByText("You have no listings yet. Add one on the website first.")).toBeTruthy();
+    expect(screen.getByText("You have no listings yet. Add one, then come back to add this booking.")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "New listing" }));
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => mockModal.onDismiss?.());
+    expect(mockPush).toHaveBeenCalledWith("/listings/new");
   });
 });
 

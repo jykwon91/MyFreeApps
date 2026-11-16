@@ -4,13 +4,13 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
 import PeopleScreen from "../src/features/people/PeopleScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { aLease } from "../test-support/aLease";
 import { anApplicant, startApplicantServer } from "../test-support/applicantsServer";
 
 const mockParams: { section?: string; tenancy?: string; stage?: string } = {};
@@ -38,6 +38,11 @@ const originalAdapter = api.defaults.adapter;
 const FUTURE = "2099-03-01";
 const PAST = "2020-03-01";
 const END_BODY = "I'll move them to Ended. This doesn't message them or change their lease, and you can restart it later.";
+
+/** A lease as the list of leases sends it. */
+function aListedLease(overrides: Parameters<typeof aLease>[0] = {}) {
+  return { ...aLease(overrides), template_ids: [] };
+}
 
 function aTenant(overrides: Parameters<typeof anApplicant>[0] = {}) {
   return anApplicant({ stage: "lease_signed", contract_end: FUTURE, ...overrides });
@@ -316,16 +321,45 @@ describe("tenants", () => {
   });
 
   describe("an expired lease", () => {
-    it("says what brings them back and offers neither end nor restart", async () => {
+    it("says what brings them back, offers neither end nor restart, and starts a new lease on the phone", async () => {
       startApplicantServer([aTenant({ contract_end: PAST })]);
-      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
       await renderDetail();
       expect(await screen.findByText("Lease expired")).toBeTruthy();
       expect(screen.getByText("Lease ended Mar 1")).toBeTruthy();
       expect(screen.queryByRole("button", { name: "End tenancy" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Restart tenancy" })).toBeNull();
-      await fireEvent.press(screen.getByRole("button", { name: "Add or extend a lease on the website" }));
-      expect(openURL).toHaveBeenCalledWith(expect.stringContaining("/tenants/a1"));
+      expect(screen.queryByText(/website/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Extend lease" })).toBeNull();
+      await fireEvent.press(await screen.findByRole("button", { name: "New lease" }));
+      expect(mockPush).toHaveBeenCalledWith("/leases/new?applicant_id=a1");
+    });
+
+    it("offers to extend a lease still in effect, or a new lease that follows it", async () => {
+      const server = startApplicantServer([aTenant({ contract_end: PAST })]);
+      server.leases = [aListedLease({ id: "l9", status: "signed", ends_on: PAST })];
+      await renderDetail();
+      await fireEvent.press(await screen.findByRole("button", { name: "New lease" }));
+      expect(mockPush).toHaveBeenCalledWith("/leases/new?applicant_id=a1&parent_lease_id=l9");
+      await fireEvent.press(screen.getByRole("button", { name: "Extend lease" }));
+      expect(await screen.findByText("New end date")).toBeTruthy();
+    });
+
+    it("follows an ended lease with a new one, and offers no extension", async () => {
+      const server = startApplicantServer([aTenant({ contract_end: PAST })]);
+      server.leases = [aListedLease({ id: "l9", status: "ended", ends_on: PAST })];
+      await renderDetail();
+      await fireEvent.press(await screen.findByRole("button", { name: "New lease" }));
+      expect(mockPush).toHaveBeenCalledWith("/leases/new?applicant_id=a1&parent_lease_id=l9");
+      expect(screen.queryByRole("button", { name: "Extend lease" })).toBeNull();
+    });
+
+    it("opens the new lease already under way instead of starting another", async () => {
+      const server = startApplicantServer([aTenant({ contract_end: PAST })]);
+      server.leases = [aListedLease({ id: "l10", status: "draft" }), aListedLease({ id: "l9", status: "ended", ends_on: PAST })];
+      await renderDetail();
+      await fireEvent.press(await screen.findByRole("button", { name: "Open the new lease" }));
+      expect(mockPush).toHaveBeenCalledWith("/leases/l10");
+      expect(screen.queryByRole("button", { name: "New lease" })).toBeNull();
     });
 
     it("still doesn't offer restart when it was also ended by hand, and shows why", async () => {

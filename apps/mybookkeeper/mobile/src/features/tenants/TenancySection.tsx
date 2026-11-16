@@ -1,28 +1,31 @@
 import { useEndTenancyMutation, useRestartTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useGetSignedLeasesQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
-import { Chip, LoadingButton, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
+import { Chip, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { MOST_LEASES_ONE_PERSON_HAS } from "../../constants/leases";
 import { endedToast, restartedToast, TENANT_MESSAGES } from "../../constants/tenants";
 import InquirySection from "../inquiries/InquirySection";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import EndTenancySheet from "./EndTenancySheet";
+import ExpiredTenancyActions from "./ExpiredTenancyActions";
 import { tenancyLine, tenancyStateLabel } from "./tenantDisplay";
 
 export default function TenancySection({ applicant }: { applicant: ApplicantDetailResponse }) {
   const { colors, fontSize } = useTheme();
   const { showToast } = useToast();
   const canWrite = useCanWrite();
-  const openWebsite = useOpenWebsite();
   const [endTenancy] = useEndTenancyMutation();
   const [restartTenancy, { isLoading: isRestarting }] = useRestartTenancyMutation();
   const [isEndOpen, setIsEndOpen] = useState(false);
   const isRestartingNow = useRef(false);
 
   const state = tenancyState(applicant);
+  // The same list as the Leases section below, so it's one request.
+  const { currentData: leases } = useGetSignedLeasesQuery({ applicant_id: applicant.id, limit: MOST_LEASES_ONE_PERSON_HAS }, { skip: state !== "expired" });
   const name = applicant.legal_name ?? TENANT_MESSAGES.unnamed;
   const line = tenancyLine(applicant);
   const reason = state === "active" ? null : applicant.tenant_ended_reason?.trim();
@@ -74,11 +77,8 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
           {TENANT_MESSAGES.restart}
         </LoadingButton>
       ) : null}
-      {canWrite && state === "expired" ? (
-        <LoadingButton onPress={() => openWebsite(WEB_BASE_URL, `/tenants/${applicant.id}`)} variant="secondary">
-          {TENANT_MESSAGES.openLeases}
-        </LoadingButton>
-      ) : null}
+      {/* Until the leases load there's no telling which way back fits; the Leases section offers a retry. */}
+      {canWrite && state === "expired" && leases ? <ExpiredTenancyActions applicantId={applicant.id} leases={leases.items} tenantName={applicant.legal_name} /> : null}
       {canWrite ? <EndTenancySheet isOpen={isEndOpen} name={name} onClose={() => setIsEndOpen(false)} onEnd={end} /> : null}
     </InquirySection>
   );

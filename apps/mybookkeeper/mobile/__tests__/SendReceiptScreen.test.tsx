@@ -14,7 +14,7 @@ import * as Sharing from "expo-sharing";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import SendReceiptScreen from "../src/features/receipts/SendReceiptScreen";
 import { useSendReceipt } from "../src/features/receipts/useSendReceipt";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
@@ -431,9 +431,11 @@ describe("when the send is refused", () => {
     };
     await sendWith(server, { status: 422, detail: "This tenant has no email on file." });
 
-    expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${BLOCKER_FIX_ON_PHONE.tenant_no_email}`)).toBeTruthy();
     expect(screen.queryByText("This tenant has no email on file.")).toBeNull();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addTheirEmail }));
+    expect(router.push).toHaveBeenCalledWith("/applicants/a1");
   });
 
   it("reloads on a 422 and explains it by Gmail when that's why", async () => {

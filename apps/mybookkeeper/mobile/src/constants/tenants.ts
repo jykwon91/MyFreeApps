@@ -34,7 +34,7 @@ export const TENANT_MESSAGES = {
   noConnection: "I couldn't reach the server. Check your connection and try again.",
   changed: "That tenancy changed since you opened it. I've refreshed it.",
   expiredBody: "If they're staying, a new or extended lease will bring them back.",
-  openLeases: "Add or extend a lease on the website",
+  openLeaseInProgress: "Open the new lease",
 } as const;
 
 export function endTitle(name: string): string {

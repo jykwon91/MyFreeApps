@@ -122,6 +122,9 @@ export const LEASE_PHOTO_NAME = "lease-photo.jpg";
 
 export const EXTENSION_NOTE_MAX_LENGTH = 2000;
 
+/** Enough to list every lease one person has had. */
+export const MOST_LEASES_ONE_PERSON_HAS = 100;
+
 export function addedFile(name: string): string {
   return `Added ${name}.`;
 }

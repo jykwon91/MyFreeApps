@@ -9,7 +9,7 @@ import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
-import { FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import {
   blockerMessage,
   dismissActionLabel,
@@ -182,12 +182,15 @@ describe("what the list shows", () => {
     expect(router.push).toHaveBeenCalledWith("/receipts/tx1");
   });
 
-  it("says why a blocked receipt can't go, and turns its Send off", async () => {
-    startReceiptServer([aReceipt({ send_blocker: "tenant_no_email" })]);
+  it("says why a blocked receipt can't go, turns its Send off, and opens the tenant to add their email", async () => {
+    startReceiptServer([aReceipt({ send_blocker: "tenant_no_email", applicant_id: "a7" })]);
     await showScreen();
 
-    expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${BLOCKER_FIX_ON_PHONE.tenant_no_email}`)).toBeTruthy();
+    expect(screen.queryByText(new RegExp(FIX_ON_WEBSITE))).toBeNull();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addTheirEmail }));
+    expect(router.push).toHaveBeenCalledWith("/applicants/a7");
   });
 
   it("offers Payment Review for a payment that isn't linked to a tenant", async () => {
@@ -352,8 +355,9 @@ describe("display helpers", () => {
     expect(periodLabel("2025-12-15", "2026-01-14")).toBe("Dec 15, 2025 – Jan 14, 2026");
   });
 
-  it("adds where to fix it only when the fix is on the website", () => {
-    expect(blockerMessage("tenant_no_email")).toContain(FIX_ON_WEBSITE);
+  it("says where on the phone to fix a blocker, and sends only Gmail to the website", () => {
+    expect(blockerMessage("tenant_no_email")).toContain(BLOCKER_FIX_ON_PHONE.tenant_no_email);
+    expect(blockerMessage("tenant_no_email")).not.toContain(FIX_ON_WEBSITE);
     expect(blockerMessage("not_attributed")).toBe(RECEIPT_SEND_BLOCKER_MESSAGES.not_attributed);
     expect(blockerMessage("no_lease")).toBe(RECEIPT_SEND_BLOCKER_MESSAGES.no_lease);
     expect(gmailMessage("ready")).toBeNull();

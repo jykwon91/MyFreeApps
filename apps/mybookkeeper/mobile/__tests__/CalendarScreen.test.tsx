@@ -20,6 +20,7 @@ import CalendarScreen from "../src/features/calendar/CalendarScreen";
 import { useOpenAtSection } from "../src/features/calendar/useOpenAtSection";
 import { CALENDAR_OPEN_RETRY_LIMIT, CALENDAR_OPEN_RETRY_MS } from "../src/constants/calendar";
 import { monthOf, shiftMonth } from "../src/lib/localDate";
+import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -68,11 +69,12 @@ interface Server {
   properties: { id: string; name: string }[];
   listingsTotal: number;
   reviewCount: number;
+  role: string;
   requests: AxiosRequestConfig[];
 }
 
 function startServer(overrides: Partial<Server> = {}): Server {
-  const server: Server = { events: [], properties: [], listingsTotal: 1, reviewCount: 0, requests: [], ...overrides };
+  const server: Server = { events: [], properties: [], listingsTotal: 1, reviewCount: 0, role: "owner", requests: [], ...overrides };
   const adapter: AxiosAdapter = async (config) => {
     const respond = (data: unknown, status = 200) => {
       if (status >= 400) return Promise.reject({ response: { status, data }, config, isAxiosError: true });
@@ -84,6 +86,7 @@ function startServer(overrides: Partial<Server> = {}): Server {
     }
     if (config.url === "/calendar/review-queue/count") return respond(server.reviewCount);
     if (config.url === "/properties") return respond(server.properties);
+    if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
     if (config.url === "/listings") return respond({ items: [], total: server.listingsTotal, has_more: false });
     return respond({ detail: "not found" }, 404);
   };
@@ -112,6 +115,8 @@ const THIS_MONTH = monthOf(new Date());
 beforeEach(() => {
   mockPush.mockClear();
   store.dispatch(baseApi.util.resetApiState());
+  // Most of these run with no workspace open, so nothing is offered that needs edit access.
+  store.dispatch(workspaceChosen(null));
 });
 
 afterEach(() => {
@@ -261,10 +266,22 @@ describe("CalendarScreen", () => {
     await screen.findByText("Maple Room");
   });
 
-  it("says there are no listings only when the month is empty too", async () => {
+  it("says there are no listings only when the month is empty too, and opens New listing", async () => {
+    store.dispatch(workspaceChosen("w1"));
     startServer({ listingsTotal: 0 });
     await renderScreen();
     await screen.findByText("I don't see any listings yet.");
+    expect(screen.queryByText(/website/)).toBeNull();
+    await fireEvent.press(await screen.findByRole("button", { name: "New listing" }));
+    expect(mockPush).toHaveBeenCalledWith("/listings/new");
+  });
+
+  it("offers a viewer no way to add a listing", async () => {
+    store.dispatch(workspaceChosen("w1"));
+    startServer({ listingsTotal: 0, role: "viewer" });
+    await renderScreen();
+    await screen.findByText("Once someone with edit access adds one, I'll show its bookings here.");
+    expect(screen.queryByRole("button", { name: "New listing" })).toBeNull();
   });
 
   it("shows bookings rather than the no listings message when there are any", async () => {

@@ -6,8 +6,9 @@ import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/re
 import { inferPaymentMethod } from "@mybookkeeper/api-client/utils/inferPaymentMethod";
 import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { BLOCKERS_FIXED_ON_WEBSITE, FIX_ON_WEBSITE, NO_PAYMENT_METHOD, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, NO_PAYMENT_METHOD, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { dateFromIso, fullDateLabel } from "../../lib/localDate";
+import type { ReceiptBlockerAction } from "../../types/ReceiptBlockerAction";
 import { shortDate, spokenDate, spokenMoney } from "../transactions/transactionDisplay";
 
 export function rowName(receipt: PendingReceipt): string {
@@ -52,7 +53,15 @@ export function moreWaitingLine(count: number): string {
 
 export function blockerMessage(blocker: ReceiptSendBlocker): string {
   const reason = RECEIPT_SEND_BLOCKER_MESSAGES[blocker];
-  return BLOCKERS_FIXED_ON_WEBSITE.has(blocker) ? `${reason} ${FIX_ON_WEBSITE}` : reason;
+  const fix = BLOCKER_FIX_ON_PHONE[blocker];
+  return fix ? `${reason} ${fix}` : reason;
+}
+
+/** Where on the phone a blocker is fixed, when it is. */
+export function blockerAction(blocker: ReceiptSendBlocker, receipt: PendingReceipt): ReceiptBlockerAction | null {
+  if (blocker === "not_attributed") return { label: MESSAGES.openPaymentReview, href: "/payment-review" };
+  if (blocker === "tenant_no_email") return { label: MESSAGES.addTheirEmail, href: `/applicants/${receipt.applicant_id}` };
+  return null;
 }
 
 /** Null when Gmail can send. */
