@@ -6,7 +6,7 @@ import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import { HeaderKeyboardAvoidingView, PinnedBar, useAnnouncement, useTheme } from "@platform/mobile";
-import { type ComponentRef, useRef, useState } from "react";
+import { type ComponentRef, useCallback, useRef, useState } from "react";
 import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput } from "react-native";
 import { CORRECTIONS_GRACE_MS } from "../../constants/conversation";
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
@@ -93,10 +93,14 @@ export default function Conversation({ language, scenario, level }: Conversation
     onActivity();
   };
 
-  const tryRetry = () => {
-    if (voice.mode === "voice") voice.startListening();
+  const { mode, startListening } = voice;
+  const tryRetry = useCallback(() => {
+    if (mode === "voice") startListening();
     else input.current?.focus();
-  };
+  }, [mode, startListening]);
+
+  const { speakAll } = synthesis;
+  const replay = useCallback((text: string, slow: boolean) => speakAll(text, replayRate(slow)), [speakAll]);
 
   return (
     <HeaderKeyboardAvoidingView>
@@ -121,7 +125,7 @@ export default function Conversation({ language, scenario, level }: Conversation
             canReplay={voice.canReplay}
             entries={session.entries}
             languageName={language.display_name}
-            onReplay={(text, slow) => synthesis.speakAll(text, replayRate(slow))}
+            onReplay={replay}
             onSkipRetry={session.dismissRetryPrompt}
             onTryRetry={tryRetry}
             waiting={session.requestPhase === "waiting"}

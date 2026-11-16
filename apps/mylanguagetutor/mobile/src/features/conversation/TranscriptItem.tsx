@@ -1,5 +1,6 @@
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { useTheme } from "@platform/mobile";
+import { memo } from "react";
 import { Text, View } from "react-native";
 import type { TranscriptItemProps } from "../../types/TranscriptItemProps";
 import CorrectionList from "./CorrectionList";
@@ -8,7 +9,7 @@ import RetryPrompt from "./RetryPrompt";
 import TutorBubble from "./TutorBubble";
 
 /** One exchange: what the learner wrote, the tutor's reply, then any corrections. */
-export default function TranscriptItem({ entry, languageName, showRetryPrompt, busy, canReplay, onReplay, onTryRetry, onSkipRetry }: TranscriptItemProps) {
+function TranscriptItem({ entry, languageName, showRetryPrompt, busy, canReplay, onReplay, onTryRetry, onSkipRetry }: TranscriptItemProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.sm }}>
@@ -33,3 +34,5 @@ export default function TranscriptItem({ entry, languageName, showRetryPrompt, b
     </View>
   );
 }
+
+export default memo(TranscriptItem);
