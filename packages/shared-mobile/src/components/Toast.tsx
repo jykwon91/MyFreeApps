@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
-import { TOAST_DEFAULT_DURATION_MS } from "../constants/toast";
+import { TOAST_DEFAULT_DURATION_MS, TOAST_SCREEN_READER_DURATION_MS } from "../constants/toast";
 import { useAnnouncement } from "../hooks/useAnnouncement";
+import { useScreenReaderEnabled } from "../hooks/useScreenReaderEnabled";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { ToastProps } from "../types/ToastProps";
@@ -25,6 +26,12 @@ export default function Toast({
     latestOnDismiss.current = onDismiss;
   }, [onDismiss]);
 
+  // Swiping to a toast's button takes a screen-reader user longer than the default
+  // duration (WCAG 2.2.1). A toast with an action stays until dismissed; a plain one lasts longer.
+  const screenReaderOn = useScreenReaderEnabled() === true;
+  const staysUntilDismissed = screenReaderOn && action !== undefined;
+  const effectiveDurationMs = screenReaderOn ? Math.max(durationMs, TOAST_SCREEN_READER_DURATION_MS) : durationMs;
+
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isDismissed = useRef(false);
 
@@ -37,9 +44,10 @@ export default function Toast({
 
   useEffect(() => {
     isDismissed.current = false;
-    timer.current = setTimeout(dismiss, durationMs);
+    if (staysUntilDismissed) return undefined;
+    timer.current = setTimeout(dismiss, effectiveDurationMs);
     return () => clearTimeout(timer.current);
-  }, [dismiss, durationMs, message]);
+  }, [dismiss, effectiveDurationMs, staysUntilDismissed, message]);
 
   useAnnouncement(message);
 
