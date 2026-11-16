@@ -27,7 +27,7 @@ export default function PickerField({ label, valueLabel, onPress, hint, disabled
           paddingHorizontal: spacing.md,
           borderWidth: 1,
           borderRadius: radius.md,
-          borderColor: colors.input,
+          borderColor: colors.inputBorder,
           backgroundColor: pressed ? colors.muted : colors.background,
           opacity: disabled ? 0.5 : 1,
         })}

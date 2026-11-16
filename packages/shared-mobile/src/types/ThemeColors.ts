@@ -10,6 +10,8 @@ export interface ThemeColors {
   mutedForeground: string;
   border: string;
   input: string;
+  /** Outline of an interactive control (field, picker, outline button, selected segment): 3:1 on background, card and muted. `border` and `input` are decorative edges. */
+  inputBorder: string;
   destructive: string;
   destructiveForeground: string;
   /** For text and borders on `background` or `card`. `destructive` is a button fill. */

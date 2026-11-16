@@ -44,7 +44,7 @@ export default function FormField({
               paddingRight: trailing ? MIN_TOUCH_TARGET + spacing.md : spacing.md,
               borderWidth: 1,
               borderRadius: radius.md,
-              borderColor: error ? colors.destructiveText : colors.input,
+              borderColor: error ? colors.destructiveText : colors.inputBorder,
               color: colors.foreground,
               fontSize: fontSize.md,
             },

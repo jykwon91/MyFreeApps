@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import SegmentedControl from "../components/SegmentedControl";
+import { lightColors } from "../theme/colors";
 import { SEGMENT_ROLE } from "../constants/segmentRole";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
@@ -54,5 +55,15 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("radio", { name: "Two" }).props.accessibilityState).toEqual({ checked: true, disabled: false });
     expect(screen.getByRole("radio", { name: "One", checked: false })).toBeTruthy();
     expect(screen.queryByRole("tab")).toBeNull();
+  });
+
+  it("outlines only the selected segment, so it shows without relying on text weight", async () => {
+    await setup();
+    const selected = StyleSheet.flatten(screen.getByRole("tab", { name: "One" }).props.style);
+    const other = StyleSheet.flatten(screen.getByRole("tab", { name: "Two" }).props.style);
+
+    expect(selected.borderColor).toBe(lightColors.inputBorder);
+    expect(other.borderColor).toBe("transparent");
+    expect(other.borderWidth).toBe(selected.borderWidth);
   });
 });

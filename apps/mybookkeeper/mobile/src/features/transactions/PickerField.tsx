@@ -11,7 +11,7 @@ export default function PickerField({ label, value, hint, onPress, disabled = fa
           minHeight: MIN_TOUCH_TARGET,
           padding: spacing.md,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: colors.inputBorder,
           borderRadius: radius.md,
           fontSize: fontSize.md,
           color: colors.foreground,

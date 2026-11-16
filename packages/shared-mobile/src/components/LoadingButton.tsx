@@ -67,7 +67,7 @@ export default function LoadingButton({
           borderRadius: radius.md,
           backgroundColor: buttonBackground(variant, colors),
           borderWidth: variant === "secondary" ? 1 : 0,
-          borderColor: colors.border,
+          borderColor: colors.inputBorder,
           // Busy stays at full opacity so the "Saving..." label remains readable.
           opacity: isBusy ? 1 : isDisabled ? DISABLED_OPACITY : pressed ? PRESSED_OPACITY : 1,
         },

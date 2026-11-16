@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import SearchField from "../components/SearchField";
+import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
 const LABEL = "Search recipes by title";
@@ -79,5 +80,12 @@ describe("SearchField", () => {
     );
     expect(screen.getByLabelText(LABEL).props.editable).toBe(false);
     expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+  });
+
+  it("outlines the field in a colour that can be seen against the background", async () => {
+    const { view } = setup("");
+    await view;
+
+    expect(StyleSheet.flatten(screen.getByLabelText(LABEL).parent?.props.style).borderColor).toBe(lightColors.inputBorder);
   });
 });

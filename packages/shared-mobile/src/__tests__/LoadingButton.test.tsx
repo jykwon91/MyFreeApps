@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import LoadingButton from "../components/LoadingButton";
+import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { DISABLED_OPACITY } from "../constants/loadingButton";
 
@@ -271,5 +272,12 @@ describe("LoadingButton accessible name while loading", () => {
       </LoadingButton>,
     );
     expect(screen.getByRole("button", { name: "Remove photo 3" })).toBeTruthy();
+  });
+
+  it("outlines the secondary button in a colour that can be seen against the background", async () => {
+    await render(<LoadingButton onPress={jest.fn()} variant="secondary">Save</LoadingButton>);
+
+    const style = StyleSheet.flatten(screen.getByRole("button", { name: "Save" }).props.style);
+    expect(style.borderColor).toBe(lightColors.inputBorder);
   });
 });

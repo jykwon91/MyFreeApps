@@ -38,6 +38,8 @@ export default function SegmentedControl<Value extends string>({
               alignItems: "center",
               justifyContent: "center",
               borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: isSelected ? colors.inputBorder : "transparent",
               backgroundColor: isSelected ? colors.card : "transparent",
               opacity: disabled ? DISABLED_OPACITY : 1,
             }}
