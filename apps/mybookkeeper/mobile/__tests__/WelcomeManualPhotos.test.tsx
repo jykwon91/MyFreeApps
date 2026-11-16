@@ -177,6 +177,8 @@ describe("adding photos", () => {
     await screen.findByText("photo-2.jpg");
     const thumbnails = screen.getAllByTestId("held-file-thumbnail");
     expect(thumbnails).toHaveLength(2);
+    // Downsampled to the 40 px box, not decoded at camera resolution.
+    expect(thumbnails.every((thumbnail) => thumbnail.props.resizeMethod === "resize")).toBe(true);
     expect(thumbnails.map((thumbnail) => (thumbnail.props.source as { uri: string }).uri)).toEqual(heldFiles());
   });
 
@@ -490,6 +492,7 @@ describe("reordering photos", () => {
     await open();
     await fireEvent.press(await screen.findByRole("button", { name: PHOTO.reorder }));
     expect(screen.getAllByTestId("reorder-thumbnail").map((thumbnail) => (thumbnail.props.source as { uri: string }).uri)).toEqual(["https://files.example/i1.jpg", "https://files.example/i1.jpg"]);
+    expect(screen.getAllByTestId("reorder-thumbnail").every((thumbnail) => thumbnail.props.resizeMethod === "resize")).toBe(true);
     expect(screen.getAllByText("The router").length).toBeGreaterThan(1);
     expect(screen.getByText(unnamedPhotoLabel(2))).toBeTruthy();
     await fireEvent.press(button(moveUpLabel(unnamedPhotoLabel(2))));

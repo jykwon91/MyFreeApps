@@ -1,5 +1,5 @@
-import { type FileForUpload, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Image, Text, View } from "react-native";
+import { type FileForUpload, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, useTheme } from "@platform/mobile";
+import { Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE, removeHeldFileLabel, UPLOAD_MESSAGES } from "../../constants/uploads";
 
 interface HeldFilesListProps {
@@ -23,7 +23,7 @@ export default function HeldFilesList({ files, isDisabled, onRemove, emptyText, 
       {files.map((file, index) => (
         <View key={file.uri} style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: MIN_TOUCH_TARGET }}>
           {showThumbnails ? (
-            <Image
+            <Thumbnail
               accessibilityIgnoresInvertColors
               source={{ uri: file.uri }}
               testID="held-file-thumbnail"

@@ -1,9 +1,9 @@
 import type { WelcomeManualItemWords } from "../../types/WelcomeManualItemWords";
 import type { WelcomeManualReorderItem } from "../../types/WelcomeManualReorderItem";
 import { moveItem, sameOrder } from "@mybookkeeper/api-client/utils/welcomeManualReorder";
-import { FormSheet, FormSheetCancelButton, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
+import { FormSheet, FormSheetCancelButton, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE } from "../../constants/uploads";
 import { WELCOME_MANUAL_REORDER_MESSAGES as MESSAGES, moveDownLabel, moveUpLabel } from "../../constants/welcomeManualForms";
 import { useWrite } from "../../lib/useWrite";
@@ -53,7 +53,7 @@ export default function WelcomeManualReorderSheet({ title, words, items, reorder
         return (
           <View key={id} style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: MIN_TOUCH_TARGET }}>
             {row && row.thumbnailUri !== undefined ? (
-              <Image
+              <Thumbnail
                 accessibilityIgnoresInvertColors
                 source={row.thumbnailUri ? { uri: row.thumbnailUri } : undefined}
                 testID="reorder-thumbnail"
