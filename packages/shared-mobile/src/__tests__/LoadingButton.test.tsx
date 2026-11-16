@@ -233,3 +233,43 @@ describe("LoadingButton", () => {
     },
   );
 });
+
+describe("LoadingButton accessible name while loading", () => {
+  it("combines the static label with the loading text", async () => {
+    await render(
+      <LoadingButton accessibilityLabel="Remove photo 3" isLoading loadingText="Removing..." onPress={jest.fn()}>
+        Remove
+      </LoadingButton>,
+    );
+    expect(screen.getByRole("button", { name: "Remove photo 3, Removing..." })).toBeTruthy();
+    expect(screen.getByRole("button").props.accessibilityState).toMatchObject({ busy: true });
+  });
+
+  it("uses the loading text when there is no static label", async () => {
+    await render(
+      <LoadingButton isLoading loadingText="Saving..." onPress={jest.fn()}>
+        Save
+      </LoadingButton>,
+    );
+    expect(screen.getByRole("button", { name: "Saving..." })).toBeTruthy();
+    expect(screen.getByRole("button").props.accessibilityLabel).toBeUndefined();
+  });
+
+  it("keeps the static label when there is no loading text", async () => {
+    await render(
+      <LoadingButton accessibilityLabel="Remove photo 3" isLoading onPress={jest.fn()}>
+        Remove
+      </LoadingButton>,
+    );
+    expect(screen.getByRole("button", { name: "Remove photo 3" })).toBeTruthy();
+  });
+
+  it("keeps the static label when not loading", async () => {
+    await render(
+      <LoadingButton accessibilityLabel="Remove photo 3" loadingText="Removing..." onPress={jest.fn()}>
+        Remove
+      </LoadingButton>,
+    );
+    expect(screen.getByRole("button", { name: "Remove photo 3" })).toBeTruthy();
+  });
+});

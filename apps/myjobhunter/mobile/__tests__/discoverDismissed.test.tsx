@@ -126,7 +126,7 @@ describe("the Dismissed tab", () => {
     await fireEvent.press(await screen.findByRole("button", { name: restoreLabel }));
 
     expect(await screen.findByText(JOB.restoring)).toBeTruthy();
-    expect(screen.getByRole("button", { name: restoreLabel })).toBeDisabled();
+    expect(screen.getByRole("button", { name: `${restoreLabel}, ${JOB.restoring}` })).toBeDisabled();
     await act(async () => answer({ status: 204 }));
 
     expect(await screen.findByText(ACTIONS.restored)).toBeTruthy();
@@ -156,7 +156,7 @@ describe("the Dismissed tab", () => {
     expect(await screen.findByText(ACTIONS.restored)).toBeTruthy();
     // The card is still on screen while the list refetches; a second tap would 404, so Restore stays off.
     expect(screen.getByTestId("discovered-job-j-newer")).toBeTruthy();
-    expect(screen.getByRole("button", { name: restoreLabel })).toBeDisabled();
+    expect(screen.getByRole("button", { name: `${restoreLabel}, ${JOB.restoring}` })).toBeDisabled();
 
     await act(async () => releaseRefetch(discoverPage([], { state: "dismissed", offset: 0, limit: 50 })));
     await waitFor(() => expect(screen.queryByTestId("discovered-job-j-newer")).toBeNull());

@@ -296,10 +296,10 @@ describe("removing a file", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Remove notice.pdf" }));
     holdWrites();
     await act(async () => pressInAlert("Remove"));
-    expect(screen.getByRole("button", { name: "Remove notice.pdf" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Remove notice.pdf, Removing…" })).toBeDisabled();
     expect(screen.getByText("Removing…")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change the type of notice.pdf" })).toBeDisabled();
-    await fireEvent.press(screen.getByRole("button", { name: "Remove notice.pdf" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Remove notice.pdf, Removing…" }));
     expect(alert).toHaveBeenCalledTimes(1);
     expect(server.requests.filter((request) => request.method === "delete")).toHaveLength(0);
   });

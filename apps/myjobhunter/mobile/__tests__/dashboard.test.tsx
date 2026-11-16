@@ -421,7 +421,7 @@ it("moves a card to another stage at once, with a spinner on its Move button unt
   // The card moves before the server answers.
   expect(screen.getByRole("button", { name: "Offer, 1 application" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Applied, 1 application" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Move Staff Engineer, Stripe" }).props.accessibilityState).toEqual(expect.objectContaining({ busy: true }));
+  expect(screen.getByRole("button", { name: `Move Staff Engineer, Stripe, ${DETAIL.moving}` }).props.accessibilityState).toEqual(expect.objectContaining({ busy: true }));
   expect(screen.getByText(DETAIL.moving)).toBeTruthy();
 
   // The server has it in Offer from now on, so reloading the board after the move keeps it there.

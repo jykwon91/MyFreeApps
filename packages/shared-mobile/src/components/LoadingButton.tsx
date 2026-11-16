@@ -6,6 +6,7 @@ import { useTheme } from "../theme/useTheme";
 import type { LoadingButtonProps } from "../types/LoadingButtonProps";
 import { buttonBackground, buttonForeground } from "../utils/buttonColors";
 import { isPromise } from "../utils/isPromise";
+import { loadingAccessibilityLabel } from "../utils/loadingAccessibilityLabel";
 
 export default function LoadingButton({
   children,
@@ -16,6 +17,7 @@ export default function LoadingButton({
   disabled = false,
   style,
   accessibilityState,
+  accessibilityLabel,
   ...props
 }: LoadingButtonProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -50,6 +52,7 @@ export default function LoadingButton({
     <Pressable
       {...props}
       accessibilityRole="button"
+      accessibilityLabel={loadingAccessibilityLabel(accessibilityLabel, loadingText, isBusy)}
       accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: isBusy }}
       disabled={isDisabled}
       onPress={handlePress}

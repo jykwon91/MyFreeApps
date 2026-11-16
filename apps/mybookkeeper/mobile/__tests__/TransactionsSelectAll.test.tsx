@@ -110,7 +110,7 @@ describe("selecting every matching transaction", () => {
     await renderScreen();
     await startSelectingAll();
     expect(screen.getByText("Selecting…")).toBeTruthy();
-    expect(screen.getByRole("button", { name: SELECT_ALL }).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByRole("button", { name: `${SELECT_ALL}, Selecting…` }).props.accessibilityState).toMatchObject({ disabled: true });
     await act(async () => release());
     expect(await screen.findByText("5 selected")).toBeTruthy();
   });
