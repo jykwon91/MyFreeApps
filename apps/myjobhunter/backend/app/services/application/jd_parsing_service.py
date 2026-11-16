@@ -20,6 +20,7 @@ from typing import Literal
 
 import anthropic
 
+from app.core.currency_code import normalize_currency_code
 from app.services.extraction import claude_service
 from app.services.extraction.prompts.jd_parsing_prompt import JD_PARSING_PROMPT
 
@@ -173,8 +174,9 @@ def _normalise(raw: dict) -> JdParseResult:
     salary_max = _float_or_none(raw.get("salary_max"))
 
     raw_currency = _str_or_none(raw.get("salary_currency"))
-    # Accept any non-empty string up to 3 chars; the frontend displays it verbatim.
-    salary_currency = raw_currency[:3].upper() if raw_currency else None
+    salary_currency = normalize_currency_code(raw_currency)
+    if raw_currency and salary_currency is None:
+        logger.warning("jd_parse: dropping salary_currency that is not an ISO 4217 code")
 
     raw_period = _str_or_none(raw.get("salary_period"))
     salary_period = _SALARY_PERIOD_MAP.get(raw_period or "", None)
