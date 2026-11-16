@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Ref } from "react";
 import { useForm } from "react-hook-form";
+import type { FieldErrors } from "react-hook-form";
 import { X, Trash2 } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -16,6 +17,7 @@ import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
+import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 
 export interface TransactionPanelProps {
   transaction: Transaction;
@@ -76,7 +78,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
 
   const defaults = useMemo(() => buildDefaults(transaction), [transaction]);
 
-  const { register, handleSubmit, watch, setValue, formState: { dirtyFields, isDirty } } = useForm<TransactionFormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { dirtyFields, isDirty, errors } } = useForm<TransactionFormValues>({
     defaultValues: defaults,
   });
 
@@ -87,25 +89,27 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
     }
   }
 
-  async function save(data: TransactionFormValues, extra: Record<string, unknown> = {}): Promise<boolean> {
+  /** Null once saved; otherwise what went wrong, already shown as a toast. */
+  async function save(data: TransactionFormValues, extra: Record<string, unknown> = {}): Promise<string | null> {
     const payload = { ...buildPayload(data, dirtyFields), ...extra };
-    if (Object.keys(payload).length === 0) return true;
+    if (Object.keys(payload).length === 0) return null;
     try {
       const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
       notifyVendorLearned(result as unknown as Record<string, unknown>, data);
-      return true;
-    } catch {
-      showError(MSG.couldntSave);
-      return false;
+      return null;
+    } catch (err) {
+      const message = rejectedWriteDetail(err, MSG.couldntSave);
+      showError(message);
+      return message;
     }
   }
 
   async function onSave(data: TransactionFormValues) {
-    if (await save(data)) onClose();
+    if (await save(data) === null) onClose();
   }
 
   async function onApproveAndSave(data: TransactionFormValues) {
-    if (await save(data, { status: "approved" })) onClose();
+    if (await save(data, { status: "approved" }) === null) onClose();
   }
 
   function requestClose(afterClose: () => void) {
@@ -147,13 +151,19 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   }
 
   async function onSaveAndClose(data: TransactionFormValues) {
-    if (await save(data)) {
+    const failure = await save(data);
+    if (failure === null) {
       const afterClose = pendingClose;
       setPendingClose(null);
       afterClose?.();
     } else {
-      setUnsavedSaveError(MSG.couldntSave);
+      setUnsavedSaveError(failure);
     }
+  }
+
+  // The field's own message sits behind the prompt, so the prompt repeats it.
+  function onSaveAndCloseInvalid(invalid: FieldErrors<TransactionFormValues>) {
+    setUnsavedSaveError(invalid.amount?.message ?? MSG.fixFieldsFirst);
   }
 
   function handleSaveAndClose() {
@@ -161,7 +171,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
     closeInFlight.current = true;
     setIsSavingAndClosing(true);
     setUnsavedSaveError(null);
-    void handleSubmit(onSaveAndClose)().finally(() => {
+    void handleSubmit(onSaveAndClose, onSaveAndCloseInvalid)().finally(() => {
       closeInFlight.current = false;
       setIsSavingAndClosing(false);
     });
@@ -211,6 +221,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         watch={watch}
         setValue={setValue}
         dirtyFields={dirtyFields}
+        errors={errors}
         onSubmit={handleSubmit(onSave)}
         dupOther={dupOther}
         onKeepDuplicate={onKeepDuplicate}

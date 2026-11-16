@@ -17,7 +17,9 @@ import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import { ASSIGN_VENDOR_LIST_ARGS } from "@mybookkeeper/api-client/constants/assignVendorList";
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
+import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import SourcePreviewBody from "./SourcePreviewBody";
+import TransactionFieldError from "./TransactionFieldError";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -40,6 +42,7 @@ export default function TransactionForm({
   watch,
   setValue,
   dirtyFields,
+  errors,
   onSubmit,
   dupOther,
   onKeepDuplicate,
@@ -237,17 +240,22 @@ export default function TransactionForm({
 
       <FormField label="Amount" dirty={!!dirtyFields.amount}>
         {(field) => (
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-            <input
-              type="number"
-              {...register("amount")}
-              className={`${fieldClass("amount")} pl-7`}
-              step="0.01"
-              min="0.01"
-              {...field}
-            />
-          </div>
+          <>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+              <input
+                type="number"
+                {...register("amount", TRANSACTION_AMOUNT_RULES)}
+                className={`${fieldClass("amount")} pl-7`}
+                step="0.01"
+                min="0.01"
+                aria-invalid={errors?.amount ? true : undefined}
+                aria-describedby={errors?.amount ? `${field.id}-error` : undefined}
+                {...field}
+              />
+            </div>
+            <TransactionFieldError id={`${field.id}-error`} message={errors?.amount?.message} />
+          </>
         )}
       </FormField>
 

@@ -3,13 +3,17 @@ import re
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import get_args
+from typing import ClassVar, get_args
 
 import pytest
 from pydantic import ValidationError
 
 from app.models.transactions.transaction import Transaction
-from app.schemas.transactions.transaction import TransactionCategory, TransactionCreate, TransactionUpdate
+from app.schemas.transactions.transaction import (
+    TransactionCategory,
+    TransactionCreate,
+    TransactionUpdate,
+)
 
 
 class TestTransactionCreateValidation:
@@ -126,9 +130,8 @@ class TestTransactionUpdateVendorId:
 
     def test_null_on_a_required_column_is_dropped(self) -> None:
         # These columns are NOT NULL: a null must not reach the database.
-        txn = TransactionUpdate(
-            amount=None, category=None, status=None, transaction_date=None,
-        )
+        # (A null amount is refused outright — see TestTransactionAmountValidation.)
+        txn = TransactionUpdate(category=None, status=None, transaction_date=None)
         assert txn.to_update_dict() == {}
 
 
@@ -173,19 +176,19 @@ class TestMeteredUsageValidation:
     def test_accepts_zero_usage(self) -> None:
         # A vacant month legitimately bills 0 against the base charge.
         txn = TransactionCreate(**self._valid_payload(
-            usage_quantity=Decimal("0"), usage_unit="kwh",
+            usage_quantity=Decimal(0), usage_unit="kwh",
         ))
-        assert txn.usage_quantity == Decimal("0")
+        assert txn.usage_quantity == Decimal(0)
 
     def test_accepts_kgal(self) -> None:
         txn = TransactionCreate(**self._valid_payload(
-            usage_quantity=Decimal("12"), usage_unit="kgal",
+            usage_quantity=Decimal(12), usage_unit="kgal",
         ))
         assert txn.usage_unit == "kgal"
 
     def test_rejects_quantity_without_unit(self) -> None:
         with pytest.raises(ValidationError):
-            TransactionCreate(**self._valid_payload(usage_quantity=Decimal("1042")))
+            TransactionCreate(**self._valid_payload(usage_quantity=Decimal(1042)))
 
     def test_rejects_unit_without_quantity(self) -> None:
         with pytest.raises(ValidationError):
@@ -194,13 +197,13 @@ class TestMeteredUsageValidation:
     def test_rejects_unknown_unit(self) -> None:
         with pytest.raises(ValidationError):
             TransactionCreate(**self._valid_payload(
-                usage_quantity=Decimal("1"), usage_unit="widgets",
+                usage_quantity=Decimal(1), usage_unit="widgets",
             ))
 
     def test_rejects_negative_quantity(self) -> None:
         with pytest.raises(ValidationError):
             TransactionCreate(**self._valid_payload(
-                usage_quantity=Decimal("-5"), usage_unit="kwh",
+                usage_quantity=Decimal(-5), usage_unit="kwh",
             ))
 
     def test_rejects_inverted_service_period(self) -> None:
@@ -212,15 +215,64 @@ class TestMeteredUsageValidation:
 
     def test_update_rejects_half_a_pair(self) -> None:
         with pytest.raises(ValidationError):
-            TransactionUpdate(usage_quantity=Decimal("1042"))
+            TransactionUpdate(usage_quantity=Decimal(1042))
 
     def test_update_accepts_both_halves(self) -> None:
-        txn = TransactionUpdate(usage_quantity=Decimal("1042"), usage_unit="kwh")
+        txn = TransactionUpdate(usage_quantity=Decimal(1042), usage_unit="kwh")
         payload = txn.to_update_dict()
-        assert payload["usage_quantity"] == Decimal("1042")
+        assert payload["usage_quantity"] == Decimal(1042)
         assert payload["usage_unit"] == "kwh"
 
     def test_update_untouched_usage_is_omitted(self) -> None:
         payload = TransactionUpdate(status="approved").to_update_dict()
         assert "usage_quantity" not in payload
         assert "usage_unit" not in payload
+
+
+class TestTransactionAmountValidation:
+    """The amount column is Numeric(12, 2) with CHECK (amount > 0)."""
+
+    _CREATE: ClassVar[dict[str, object]] = {
+        "transaction_date": date(2025, 6, 1),
+        "transaction_type": "expense",
+        "category": "maintenance",
+    }
+
+    @pytest.mark.parametrize("amount", ["0.01", "84.2", "84.20", "9999999999.99", 12])
+    def test_create_accepts_dollars_and_cents(self, amount: object) -> None:
+        txn = TransactionCreate(**self._CREATE, amount=amount)
+        assert txn.amount == Decimal(str(amount))
+
+    @pytest.mark.parametrize(
+        ("amount", "message"),
+        [
+            ("0", "Enter an amount above $0."),
+            ("0.00", "Enter an amount above $0."),
+            ("-5", "Enter an amount above $0."),
+            ("12.345", "Use dollars and cents, like 84.20."),
+            (12.345, "Use dollars and cents, like 84.20."),
+            ("10000000000.00", "That amount is too large."),
+        ],
+    )
+    def test_create_rejects_what_the_column_would_refuse_or_round(self, amount: object, message: str) -> None:
+        with pytest.raises(ValidationError, match=re.escape(message)):
+            TransactionCreate(**self._CREATE, amount=amount)
+
+    def test_create_requires_an_amount(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._CREATE)
+
+    @pytest.mark.parametrize("amount", ["0", "-5", "12.345", "10000000000.00"])
+    def test_update_rejects_the_same_amounts(self, amount: str) -> None:
+        with pytest.raises(ValidationError):
+            TransactionUpdate(amount=amount)
+
+    def test_update_rejects_a_cleared_amount(self) -> None:
+        with pytest.raises(ValidationError, match=re.escape("Enter an amount above $0.")):
+            TransactionUpdate(amount=None)
+
+    def test_update_without_an_amount_leaves_it_alone(self) -> None:
+        assert "amount" not in TransactionUpdate(vendor="Acme").to_update_dict()
+
+    def test_update_keeps_a_valid_amount(self) -> None:
+        assert TransactionUpdate(amount="84.20").to_update_dict()["amount"] == Decimal("84.20")

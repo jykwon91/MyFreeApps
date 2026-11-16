@@ -3,7 +3,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
+
+from app.core.transaction_amount_constants import AMOUNT_NOT_POSITIVE
+from app.schemas.transactions.transaction_amount import validate_transaction_amount
 
 
 def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
@@ -144,6 +147,11 @@ class TransactionCreate(BaseModel):
 
     _check_usage = model_validator(mode="after")(_reject_half_a_usage_pair)
 
+    @field_validator("amount")
+    @classmethod
+    def _check_amount(cls, v: Decimal) -> Decimal:
+        return validate_transaction_amount(v)
+
 
 class ScheduleELineItem(BaseModel):
     property_id: uuid.UUID | None
@@ -187,6 +195,19 @@ class TransactionUpdate(BaseModel):
     status: TransactionStatus | None = None
 
     _check_usage = model_validator(mode="after")(_reject_half_a_usage_pair)
+
+    @field_validator("amount")
+    @classmethod
+    def _check_amount(cls, v: Decimal | None) -> Decimal | None:
+        return None if v is None else validate_transaction_amount(v)
+
+    @model_validator(mode="after")
+    def _reject_cleared_amount(self) -> "TransactionUpdate":
+        # An explicit null would be dropped by to_update_dict, so the save
+        # would succeed with the old amount and no word to the user.
+        if "amount" in self.model_fields_set and self.amount is None:
+            raise ValueError(AMOUNT_NOT_POSITIVE)
+        return self
 
     def to_update_dict(self) -> dict[str, object]:
         """Return the patch payload for the service layer.
