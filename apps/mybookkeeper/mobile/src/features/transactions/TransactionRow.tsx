@@ -1,9 +1,10 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { memo } from "react";
 import { Pressable, Text } from "react-native";
 import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
 
-export default function TransactionRow({
+function TransactionRow({
   transaction,
   propertyName,
   onPress,
@@ -12,9 +13,10 @@ export default function TransactionRow({
 }: {
   transaction: Transaction;
   propertyName: string | null;
-  onPress: () => void;
+  /** Handed the transaction so one handler serves every row and the row can stay memoized. */
+  onPress: (transaction: Transaction) => void;
   /** Starts picking several, from this one. Not offered to someone who can't change anything. */
-  onLongPress?: () => void;
+  onLongPress?: (transaction: Transaction) => void;
   /** Set while picking several: the row then ticks on and off instead of opening. */
   isSelected?: boolean;
 }) {
@@ -31,8 +33,8 @@ export default function TransactionRow({
       accessibilityHint={onLongPress && !isPicking ? "Press and hold to select several" : undefined}
       accessibilityRole={isPicking ? "checkbox" : "button"}
       accessibilityState={isPicking ? { checked: isSelected } : undefined}
-      onLongPress={isPicking ? undefined : onLongPress}
-      onPress={onPress}
+      onLongPress={isPicking || !onLongPress ? undefined : () => onLongPress(transaction)}
+      onPress={() => onPress(transaction)}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,
         gap: spacing.xs,
@@ -72,3 +74,5 @@ export default function TransactionRow({
     </Pressable>
   );
 }
+
+export default memo(TransactionRow);
