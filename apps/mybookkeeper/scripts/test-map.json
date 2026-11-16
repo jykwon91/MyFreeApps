@@ -1717,7 +1717,8 @@
         "test_frontend_errors.py",
         "test_health_dashboard.py",
         "test_sql_in_list.py",
-        "test_system_event_types.py"
+        "test_system_event_types.py",
+        "test_cost_thresholds_schema.py"
       ],
       "frontend_tests": [
         "frontendErrorReporting.test.ts",
@@ -1990,7 +1991,8 @@
         "test_vendor_normalization.py",
         "test_metered_usage_extraction.py",
         "test_cleanup_seed_routes.py",
-        "test_tax_return_staleness.py"
+        "test_tax_return_staleness.py",
+        "test_reported_amount.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
