@@ -5,6 +5,8 @@ import {
 } from "@/store/menuApi";
 import type { PizzaTypeCreateBody } from "@/types/menu/menu";
 import type { AddPizzaRowProps } from "@/types/menu/AddPizzaRowProps";
+import { validateMenuPrice } from "@/utils/validateMenuPrice";
+import MenuPriceField from "./MenuPriceField";
 
 export default function AddPizzaRow({ onDone }: AddPizzaRowProps) {
   const [body, setBody] = useState<PizzaTypeCreateBody>({
@@ -13,6 +15,7 @@ export default function AddPizzaRow({ onDone }: AddPizzaRowProps) {
     description: "",
   });
   const [createPizza, { isLoading }] = useCreatePizzaMutation();
+  const priceError = validateMenuPrice(body.price);
 
   const submit = async () => {
     try {
@@ -41,19 +44,13 @@ export default function AddPizzaRow({ onDone }: AddPizzaRowProps) {
           />
         )}
       </FormField>
-      <FormField label="Price" required>
-        {(field) => (
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={body.price}
-            onChange={(e) => setBody({ ...body, price: e.target.value })}
-            className="w-full px-3 py-2 rounded border bg-background"
-            {...field}
-          />
-        )}
-      </FormField>
+      <MenuPriceField
+        label="Price"
+        required
+        value={body.price}
+        onChange={(price) => setBody({ ...body, price })}
+        error={priceError}
+      />
       <FormField label="Description">
         {(field) => (
           <input
@@ -71,7 +68,7 @@ export default function AddPizzaRow({ onDone }: AddPizzaRowProps) {
         isLoading={isLoading}
         loadingText="Adding..."
         onClick={submit}
-        disabled={!body.name.trim() || Number(body.price) < 0}
+        disabled={!body.name.trim() || priceError !== null}
       >
         Add
       </LoadingButton>

@@ -119,6 +119,32 @@ test("edits a pizza's price and 86es another", async ({ page }) => {
   ]);
 });
 
+test("a blank, negative or over-precise price can't be added or saved, and sends nothing", async ({ page }) => {
+  const writes = await stubMenuApi(page);
+
+  await page.goto("/menu");
+  const pizzas = section(page, "Pizzas");
+  await pizzas.getByRole("button", { name: "Add pizza" }).click();
+  await pizzas.getByLabel("Name").fill("Calabrese");
+  const add = pizzas.getByRole("button", { name: "Add", exact: true });
+  for (const [bad, message] of [["", "Enter a price"], ["-1", "Price can't be negative"], ["12.345", "Use at most 2 decimal places"]]) {
+    await pizzas.getByLabel("Price").fill(bad);
+    await expect(add).toBeDisabled();
+    await expect(pizzas.getByRole("alert")).toHaveText(message);
+  }
+  await pizzas.getByLabel("Price").fill("12.35");
+  await expect(add).toBeEnabled();
+
+  const toppings = section(page, "Toppings");
+  const topping = toppings.getByRole("listitem").first();
+  await topping.getByRole("button", { name: "Edit" }).click();
+  await topping.getByLabel("Price delta").fill("0.125");
+  await expect(topping.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(topping.getByRole("alert")).toHaveText("Use at most 2 decimal places");
+
+  expect(writes).toEqual([]);
+});
+
 test("a pizza or topping name of only spaces can't be saved", async ({ page }) => {
   const writes = await stubMenuApi(page);
 

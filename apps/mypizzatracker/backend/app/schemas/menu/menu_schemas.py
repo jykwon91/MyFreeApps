@@ -11,7 +11,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.menu.menu_price import MenuPrice
 from app.schemas.text_fields.pizza_description import PizzaDescription
 from app.schemas.text_fields.required_name import RequiredName
 
@@ -22,16 +24,24 @@ from app.schemas.text_fields.required_name import RequiredName
 
 class PizzaTypeCreate(BaseModel):
     name: RequiredName
-    price: Decimal = Field(..., ge=0)
+    price: MenuPrice
     description: Optional[PizzaDescription] = None
     active: bool = True
 
 
 class PizzaTypeUpdate(BaseModel):
     name: Optional[RequiredName] = None
-    price: Optional[Decimal] = Field(None, ge=0)
+    price: Optional[MenuPrice] = None
     description: Optional[PizzaDescription] = None
     active: Optional[bool] = None
+
+    @field_validator("price")
+    @classmethod
+    def _price_not_null(cls, value: Decimal | None) -> Decimal | None:
+        """Omit the field to leave it unchanged; an explicit null would NULL a NOT NULL column."""
+        if value is None:
+            raise ValueError("must not be null")
+        return value
 
 
 class PizzaTypeRead(BaseModel):
@@ -52,14 +62,22 @@ class PizzaTypeRead(BaseModel):
 
 class ToppingTypeCreate(BaseModel):
     name: RequiredName
-    price_delta: Decimal = Field(default=Decimal("0.00"), ge=0)
+    price_delta: MenuPrice = Decimal("0.00")
     active: bool = True
 
 
 class ToppingTypeUpdate(BaseModel):
     name: Optional[RequiredName] = None
-    price_delta: Optional[Decimal] = Field(None, ge=0)
+    price_delta: Optional[MenuPrice] = None
     active: Optional[bool] = None
+
+    @field_validator("price_delta")
+    @classmethod
+    def _price_not_null(cls, value: Decimal | None) -> Decimal | None:
+        """Omit the field to leave it unchanged; an explicit null would NULL a NOT NULL column."""
+        if value is None:
+            raise ValueError("must not be null")
+        return value
 
 
 class ToppingTypeRead(BaseModel):
