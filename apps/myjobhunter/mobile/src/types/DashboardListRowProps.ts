@@ -7,7 +7,8 @@ export interface DashboardListRowProps {
   row: DashboardRow;
   now: number;
   movingIds: ReadonlySet<string>;
-  onToggleClosed: () => void;
+  /** Handed whether the stage is open now, so one handler serves it and the row can stay memoized. */
+  onToggleClosed: (isOpen: boolean) => void;
   onToggleLane: (lane: KanbanLane) => void;
   onOpen: (item: KanbanItem) => void;
   onMove: (item: KanbanItem, column: KanbanColumn) => void;

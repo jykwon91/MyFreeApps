@@ -1,10 +1,11 @@
 import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { memo } from "react";
 import { Pressable, Text } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import type { ApplicationRowProps } from "../../types/ApplicationRowProps";
 import { applicationDetails, applicationRowLabel, companyName, fitText, statusLabel, statusTone } from "./applicationDisplay";
 
-export default function ApplicationRow({ application, onPress }: ApplicationRowProps) {
+function ApplicationRow({ application, onPress }: ApplicationRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const isLargeText = useLargeText();
   const fit = fitText(application);
@@ -16,7 +17,7 @@ export default function ApplicationRow({ application, onPress }: ApplicationRowP
       accessibilityHint={APPLICATION_MESSAGES.opensApplication}
       accessibilityLabel={applicationRowLabel(application)}
       accessibilityRole="link"
-      onPress={onPress}
+      onPress={() => onPress(application)}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,
         gap: spacing.xs,
@@ -40,3 +41,5 @@ export default function ApplicationRow({ application, onPress }: ApplicationRowP
     </Pressable>
   );
 }
+
+export default memo(ApplicationRow);

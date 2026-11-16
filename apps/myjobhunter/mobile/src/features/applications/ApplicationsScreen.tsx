@@ -1,7 +1,8 @@
 import { useApplicationsPages } from "@myjobhunter/api-client/hooks/useApplicationsPages";
+import type { Application } from "@myjobhunter/api-client/types/application";
 import { EmptyState, OptionSheet, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, View } from "react-native";
 import { APPLICATION_SORT_OPTIONS, APPLICATION_SORTS, DEFAULT_APPLICATION_SORT } from "../../constants/applicationSorts";
 import { APPLICATION_MESSAGES as MESSAGES, LOAD_MORE_THRESHOLD } from "../../constants/applications";
@@ -22,6 +23,9 @@ export default function ApplicationsScreen() {
   const isLoadingList = list.isLoading || list.isSorting;
   const rows = isLoadingList ? [] : list.applications;
   const hasLoaded = !isLoadingList && list.loadError === undefined;
+
+  const openApplication = useCallback((application: Application) => router.push(`/applications/${application.id}`), []);
+  const renderApplication = useCallback(({ item }: { item: Application }) => <ApplicationRow application={item} onPress={openApplication} />, [openApplication]);
 
   const addApplication = () => router.push("/applications/new");
 
@@ -62,7 +66,7 @@ export default function ApplicationsScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={LOAD_MORE_THRESHOLD}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <ApplicationRow application={item} onPress={() => router.push(`/applications/${item.id}`)} />}
+        renderItem={renderApplication}
         testID="applications-list"
       />
       <OptionSheet
