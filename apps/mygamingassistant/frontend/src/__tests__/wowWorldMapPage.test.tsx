@@ -66,10 +66,18 @@ describe("WoW Forever World Map page", () => {
   });
 
   it("theater mode makes the same map bigger on the same page, and Esc puts it back", async () => {
+    // jsdom has no scrollIntoView; record who asks.
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    try {
     renderPage();
     const viewer = await screen.findByTestId("zone-map", {}, { timeout: 4000 });
 
     await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
+    // Entering brings the bigger map into view.
+    await waitFor(() => expect(scrolled.map((el) => el.id)).toContain("wm-map-panel"));
     // The same map, not a copy in an overlay: the page around it stays usable.
     expect(screen.getByTestId("zone-map")).toBe(viewer);
     expect(viewer.closest("section")).toHaveAttribute("data-full-size");
@@ -90,6 +98,9 @@ describe("WoW Forever World Map page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
     await userEvent.click(screen.getByRole("button", { name: "Exit theater mode" }));
     expect(viewer.closest("section")).not.toHaveAttribute("data-full-size");
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
   });
 
   it("shows directions for a result and a typed position moves you", async () => {
