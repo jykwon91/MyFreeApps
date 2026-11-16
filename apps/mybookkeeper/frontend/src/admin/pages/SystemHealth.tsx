@@ -33,6 +33,7 @@ export default function SystemHealth() {
 
   const { data: summary, isLoading: summaryLoading } = useGetHealthSummaryQuery(undefined, {
     pollingInterval: 30000,
+    skipPollingIfUnfocused: true,
   });
 
   const eventsParams = {
@@ -41,6 +42,7 @@ export default function SystemHealth() {
   };
   const eventsQuery = useGetHealthEventsQuery(eventsParams, {
     pollingInterval: 30000,
+    skipPollingIfUnfocused: true,
   });
   const eventsData = currentListData(eventsQuery, false);
   const events = eventsData ?? [];

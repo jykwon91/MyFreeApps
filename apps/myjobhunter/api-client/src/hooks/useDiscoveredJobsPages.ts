@@ -9,7 +9,7 @@ import type { DiscoveredJobsPagesState } from "../types/discovery/discovered-job
  * the first page, which every refetch reloads.
  */
 export function useDiscoveredJobsPages(filter: DiscoveredJobsFilter, pollingInterval: number): DiscoveredJobsPagesState {
-  const query = useListDiscoveredJobsPagesInfiniteQuery(filter, { pollingInterval, refetchOnFocus: true });
+  const query = useListDiscoveredJobsPagesInfiniteQuery(filter, { pollingInterval, skipPollingIfUnfocused: true, refetchOnFocus: true });
   const { items, ...pages } = useInfinitePages(query);
   const firstPage = (query.currentData ?? query.data)?.pages[0];
   return { ...pages, jobs: items, scoredCount: firstPage?.scored_count ?? null, totalCount: firstPage?.total_count ?? null };

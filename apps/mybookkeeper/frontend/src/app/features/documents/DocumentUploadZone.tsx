@@ -133,12 +133,14 @@ export default function DocumentUploadZone() {
   // --- Poll batch status for zip uploads ---
   const { currentData: batchStatus } = useGetBatchStatusQuery(upload?.batchId ?? "", {
     pollingInterval: upload?.status === FILE_STATUSES.PROCESSING && upload.batchId ? 3000 : 0,
+    skipPollingIfUnfocused: true,
     skip: !upload?.batchId || upload.status !== FILE_STATUSES.PROCESSING,
   });
 
   // --- Poll single doc status for non-zip uploads ---
   const { currentData: singleStatus } = useGetSingleUploadStatusQuery(upload?.documentId ?? "", {
     pollingInterval: upload?.status === FILE_STATUSES.PROCESSING && !upload.batchId ? 3000 : 0,
+    skipPollingIfUnfocused: true,
     skip: !upload?.documentId || !!upload.batchId || upload.status !== FILE_STATUSES.PROCESSING,
   });
 

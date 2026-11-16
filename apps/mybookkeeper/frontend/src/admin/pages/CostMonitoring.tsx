@@ -26,6 +26,7 @@ export default function CostMonitoring() {
   const [showSettings, setShowSettings] = useState(false);
   const { data: summary, isLoading: summaryLoading, isError: summaryError } = useGetCostSummaryQuery(undefined, {
     pollingInterval: 30000,
+    skipPollingIfUnfocused: true,
   });
   const { data: thresholds } = useGetCostThresholdsQuery();
   const { data: timeline, isError: timelineError } = useGetCostTimelineQuery({ days: 30 });

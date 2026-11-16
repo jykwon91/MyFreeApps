@@ -28,6 +28,7 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
   // refresh; RTK Query stops the timer on unmount.
   const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
     pollingInterval: RESUME_JOBS_POLL_INTERVAL_MS,
+    skipPollingIfUnfocused: true,
   });
 
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();

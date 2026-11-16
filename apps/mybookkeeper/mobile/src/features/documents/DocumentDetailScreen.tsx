@@ -25,7 +25,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const { data: known } = useGetDocumentQuery(id);
   const { pollingInterval, gaveUp } = useProcessingPoll(known ? isBeingRead(known) : false);
-  const { data: document, error, isLoading, refetch } = useGetDocumentQuery(id, { pollingInterval });
+  const { data: document, error, isLoading, refetch } = useGetDocumentQuery(id, { pollingInterval, skipPollingIfUnfocused: true });
   const { refreshControl } = useRefresh(refetch, error);
   useAnnouncement(document ? (documentStatusLine(document) ?? undefined) : undefined);
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();

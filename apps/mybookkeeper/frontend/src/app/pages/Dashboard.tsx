@@ -55,6 +55,7 @@ export default function Dashboard() {
   const isAdmin = user?.role === "admin";
   const { data: healthSummary } = useGetHealthSummaryQuery(undefined, {
     pollingInterval: 60000,
+    skipPollingIfUnfocused: true,
     skip: !isAdmin,
   });
 

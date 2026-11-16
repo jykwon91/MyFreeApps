@@ -47,7 +47,7 @@ export default function Documents() {
 
   const { data: documents = [], isLoading } = useGetDocumentsQuery(
     { excludeProcessing: true },
-    { pollingInterval: isExtracting || reExtractPolling ? 5000 : 0 },
+    { pollingInterval: isExtracting || reExtractPolling ? 5000 : 0, skipPollingIfUnfocused: true },
   );
 
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();

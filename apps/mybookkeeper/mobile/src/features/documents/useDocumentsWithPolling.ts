@@ -18,7 +18,7 @@ export function useDocumentsWithPolling() {
   const { data: known } = useGetDocumentsQuery(ALL_DOCUMENTS);
   const beingRead = known?.filter(isBeingRead).length ?? 0;
   const poll = useProcessingPoll(beingRead > 0);
-  const query = useGetDocumentsQuery(ALL_DOCUMENTS, { pollingInterval: poll.pollingInterval });
+  const query = useGetDocumentsQuery(ALL_DOCUMENTS, { pollingInterval: poll.pollingInterval, skipPollingIfUnfocused: true });
 
   const lastBeingRead = useRef(beingRead);
   useEffect(() => {

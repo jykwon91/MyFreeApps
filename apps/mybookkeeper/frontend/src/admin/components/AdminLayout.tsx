@@ -27,6 +27,7 @@ export default function AdminLayout() {
   const { user } = useCurrentUser();
   const { data: healthSummary } = useGetHealthSummaryQuery(undefined, {
     pollingInterval: 30000,
+    skipPollingIfUnfocused: true,
   });
 
   return (
