@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RentReminderFormValues } from "../types/rent/rent-reminder-form-values";
 import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import {
+  amountOverrideProblem,
   canSaveReminder,
   isAmountOverrideValid,
   isDaysBeforeValid,
@@ -91,24 +92,42 @@ describe("rent reminder form helpers", () => {
   });
 
   it("allows a blank or positive fixed amount", () => {
-    expect(isAmountOverrideValid("")).toBe(true);
-    expect(isAmountOverrideValid("10")).toBe(true);
-    expect(isAmountOverrideValid("0")).toBe(false);
-    expect(isAmountOverrideValid("x")).toBe(false);
+    expect(isAmountOverrideValid("", ".")).toBe(true);
+    expect(isAmountOverrideValid("  ", ".")).toBe(true);
+    expect(isAmountOverrideValid("10", ".")).toBe(true);
+    expect(isAmountOverrideValid("0", ".")).toBe(false);
+    expect(isAmountOverrideValid("x", ".")).toBe(false);
+  });
+
+  it("reads a fixed amount the way the phone types it", () => {
+    expect(isAmountOverrideValid("1250,50", ",")).toBe(true);
+    expect(isAmountOverrideValid("1250,50", ".")).toBe(true);
+    expect(isAmountOverrideValid("$1,250", ".")).toBe(true);
+    expect(isAmountOverrideValid("$1.250,50", ",")).toBe(true);
+  });
+
+  it("refuses a fixed amount that is not dollars and cents, and says why", () => {
+    for (const text of ["1e3", "0x10", "12.345", "-5", "Infinity"]) {
+      expect(isAmountOverrideValid(text, ".")).toBe(false);
+    }
+    expect(amountOverrideProblem("12,345", ",")).toBe("Use dollars and cents, like 84,20.");
+    expect(amountOverrideProblem("1e3", ".")).toBe("Use dollars and cents, like 84.20.");
+    expect(amountOverrideProblem("0", ".")).toBe("Enter an amount above $0.");
+    expect(amountOverrideProblem("", ".")).toBeUndefined();
   });
 
   it("needs a channel, a good lead time, a good hour and a good amount to save", () => {
     const good: RentReminderFormValues = reminderFormValues(null, true);
-    expect(canSaveReminder(good)).toBe(true);
-    expect(canSaveReminder({ ...good, emailEnabled: false })).toBe(false);
-    expect(canSaveReminder({ ...good, smsEnabled: true, emailEnabled: false })).toBe(true);
-    expect(canSaveReminder({ ...good, sendTime: "21:00" })).toBe(false);
-    expect(canSaveReminder({ ...good, sendDaysBefore: "9" })).toBe(false);
-    expect(canSaveReminder({ ...good, amountOverride: "-1" })).toBe(false);
+    expect(canSaveReminder(good, ".")).toBe(true);
+    expect(canSaveReminder({ ...good, emailEnabled: false }, ".")).toBe(false);
+    expect(canSaveReminder({ ...good, smsEnabled: true, emailEnabled: false }, ".")).toBe(true);
+    expect(canSaveReminder({ ...good, sendTime: "21:00" }, ".")).toBe(false);
+    expect(canSaveReminder({ ...good, sendDaysBefore: "9" }, ".")).toBe(false);
+    expect(canSaveReminder({ ...good, amountOverride: "-1" }, ".")).toBe(false);
   });
 
   it("builds the whole plan for the server", () => {
-    expect(reminderPlanRequest({ ...reminderFormValues(null, true), paymentInstructions: "  Zelle  " }, null)).toEqual({
+    expect(reminderPlanRequest({ ...reminderFormValues(null, true), paymentInstructions: "  Zelle  " }, null, ".")).toEqual({
       frequency: "weekly",
       due_weekday: 6,
       send_days_before: 1,
@@ -122,8 +141,15 @@ describe("rent reminder form helpers", () => {
     });
   });
 
+  it("sends the amount that was checked, not the typed text", () => {
+    const values = { ...reminderFormValues(null, true), amountOverride: "1250,50" };
+    expect(reminderPlanRequest(values, null, ",").amount_override).toBe("1250.50");
+    expect(reminderPlanRequest({ ...values, amountOverride: "$1,250" }, null, ".").amount_override).toBe("1250");
+    expect(reminderPlanRequest({ ...values, amountOverride: "  " }, null, ",").amount_override).toBeNull();
+  });
+
   it("drops the weekday for a monthly plan and keeps a saved plan's time zone", () => {
-    const request = reminderPlanRequest(reminderFormValues(PLAN, true), PLAN);
+    const request = reminderPlanRequest(reminderFormValues(PLAN, true), PLAN, ".");
     expect(request).toMatchObject({ frequency: "monthly", due_weekday: null, timezone: "America/Denver", amount_override: "900.00", is_active: false });
   });
 });

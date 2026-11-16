@@ -15,6 +15,9 @@ import { aRentLedger, aRentSchedule } from "../test-support/aRentLedger";
 import { aReminderOverview, aReminderPlan } from "../test-support/aRentReminder";
 import { startRentWritesServer, type RentWritesServer } from "../test-support/rentWritesServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -61,6 +64,7 @@ beforeEach(async () => {
   await session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
+  mockDecimalSeparator = ".";
   jest.clearAllMocks();
   jest.restoreAllMocks();
 });
@@ -114,6 +118,29 @@ describe("setting reminders up", () => {
       },
     ]);
     expect(screen.queryByRole("header", { name: S.titleNew })).toBeNull();
+  });
+
+  it("reads a fixed amount typed with the phone's decimal comma and sends it as dollars and cents", async () => {
+    mockDecimalSeparator = ",";
+    const server = await start(NO_PLAN);
+    await openSheet(S.titleNew, S.setUp);
+    await fireEvent.changeText(field(S.fixedAmount), "1250,50");
+
+    expect(screen.queryByText(/^Use dollars and cents/)).toBeNull();
+    await save(S.saveNew);
+
+    expect(await screen.findByText(S.savedNew)).toBeTruthy();
+    expect(server.writes[0].body).toMatchObject({ amount_override: "1250.50" });
+  });
+
+  it("says why a fixed amount can't be read, with the phone's separator", async () => {
+    mockDecimalSeparator = ",";
+    await start(NO_PLAN);
+    await openSheet(S.titleNew, S.setUp);
+    await fireEvent.changeText(field(S.fixedAmount), "1e3");
+
+    expect(screen.getByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
   it("monthly sends no weekday and resets days before to its own default", async () => {
@@ -192,7 +219,7 @@ describe("setting reminders up", () => {
 
     await fireEvent.changeText(field(S.fixedAmount), "0");
 
-    expect(screen.getByText(S.fixedAmountInvalid)).toBeTruthy();
+    expect(screen.getByText("Enter an amount above $0.")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
