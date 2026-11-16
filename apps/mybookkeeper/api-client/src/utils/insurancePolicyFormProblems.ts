@@ -6,11 +6,12 @@ import {
   WIND_HAIL_MAX_DECIMALS,
   WIND_HAIL_MAX_PCT,
 } from "../constants/insurancePolicyFieldLimits";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { InsurancePolicyFormProblem } from "../types/insurance/insurance-policy-form-problem";
 import type { InsurancePolicyFormProblems } from "../types/insurance/insurance-policy-form-problems";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
-import { dollarsToCents } from "./dollarsToCents";
 import { isPremiumBilledMissing } from "./insurancePolicyForm";
+import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
 
 type MoneyField = "coverageDollars" | "feesAndTaxesDollars" | "deductibleDollars";
 
@@ -19,10 +20,15 @@ const NON_NEGATIVE_MONEY_FIELDS: readonly MoneyField[] = ["coverageDollars", "fe
 const PLAIN_DECIMAL = /^-?(\d+\.?\d*|\.\d+)$/;
 
 /** Checked on the cents that would be sent, since that is what the server sees. */
-function moneyProblem(text: string, isOk: (cents: number) => boolean, failure: InsurancePolicyFormProblem): InsurancePolicyFormProblem | null {
-  if (text.trim() === "") return null;
-  const cents = dollarsToCents(text);
-  if (cents === null) return "not_a_number";
+function moneyProblem(
+  text: string,
+  decimalSeparator: DecimalSeparator,
+  isOk: (cents: number) => boolean,
+  failure: InsurancePolicyFormProblem,
+): InsurancePolicyFormProblem | null {
+  const cents = moneyTextToCents(text, decimalSeparator);
+  if (cents === null) return null;
+  if (cents === undefined) return isNegativeMoneyText(text, decimalSeparator) ? failure : "not_a_number";
   return isOk(cents) ? null : failure;
 }
 
@@ -44,7 +50,7 @@ function windHailProblem(text: string): InsurancePolicyFormProblem | null {
  * surely as a premium of 0. Blank is never a problem except for the name: every
  * other field is optional and a blank is sent as null, not 0.
  */
-export function insurancePolicyFormProblems(values: InsurancePolicyFormValues): InsurancePolicyFormProblems {
+export function insurancePolicyFormProblems(values: InsurancePolicyFormValues, decimalSeparator: DecimalSeparator): InsurancePolicyFormProblems {
   const problems: InsurancePolicyFormProblems = {};
 
   const name = values.policyName.trim();
@@ -55,13 +61,13 @@ export function insurancePolicyFormProblems(values: InsurancePolicyFormValues): 
   if (values.notes.trim().length > POLICY_NOTES_MAX) problems.notes = "too_long";
 
   for (const field of NON_NEGATIVE_MONEY_FIELDS) {
-    const problem = moneyProblem(values[field], (cents) => cents >= 0, "negative");
+    const problem = moneyProblem(values[field], decimalSeparator, (cents) => cents >= 0, "negative");
     if (problem) problems[field] = problem;
   }
 
-  const premium = moneyProblem(values.premiumDollars, (cents) => cents > 0, "must_be_positive");
+  const premium = moneyProblem(values.premiumDollars, decimalSeparator, (cents) => cents > 0, "must_be_positive");
   if (premium) problems.premiumDollars = premium;
-  else if (isPremiumBilledMissing(values)) problems.premiumFrequency = "billed_required";
+  else if (isPremiumBilledMissing(values, decimalSeparator)) problems.premiumFrequency = "billed_required";
 
   const windHail = windHailProblem(values.windHailPct);
   if (windHail) problems.windHailPct = windHail;

@@ -7,6 +7,9 @@ import { aPolicyDetail, aProperty, lastInsuranceWrite, startInsuranceServer } fr
 import { POLICY_FORM_MESSAGES } from "../src/constants/insuranceForm";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockPreventRemove = { active: false, callback: null as null | ((event: { repeat: () => void }) => void) };
@@ -31,6 +34,7 @@ const originalAdapter = api.defaults.adapter;
 beforeEach(() => {
   resetInsuranceStore();
   jest.clearAllMocks();
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -65,6 +69,37 @@ describe("adding a policy", () => {
       body: { property_id: "pr1", policy_name: "Landlord policy", carrier: "Acme", premium_cents: 11200, premium_frequency: "monthly" },
     });
     expect(await screen.findByText("Policy added.")).toBeTruthy();
+  });
+
+  it("reads amounts typed with a comma on a comma keypad and sends the same dollars and cents", async () => {
+    mockDecimalSeparator = ",";
+    const server = startInsuranceServer({ policies: [] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fillAdd();
+    await fireEvent.changeText(screen.getByLabelText("Premium (USD)"), "1250,50");
+    await fireEvent.changeText(screen.getByLabelText("Coverage amount (USD)"), "$250.000,25");
+    await fireEvent.changeText(screen.getByLabelText("Deductible (USD)"), "2 500");
+    await fireEvent.press(screen.getByLabelText("Billed, Not set"));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Monthly" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(lastInsuranceWrite(server)).toMatchObject({
+      body: { premium_cents: 125050, coverage_amount_cents: 25000025, deductible_cents: 250000, premium_frequency: "monthly" },
+    });
+  });
+
+  it("won't guess at 1,250 on a comma keypad, and says a negative amount is negative", async () => {
+    mockDecimalSeparator = ",";
+    const server = startInsuranceServer({ policies: [] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fillAdd();
+    await fireEvent.changeText(screen.getByLabelText("Coverage amount (USD)"), "1,250");
+    await fireEvent.changeText(screen.getByLabelText("Deductible (USD)"), "-5,50");
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+    expect(await screen.findByText("Use a plain amount like 1240, or leave it blank.")).toBeTruthy();
+    expect(screen.getByText("Enter an amount of zero or more.")).toBeTruthy();
+    expect(lastInsuranceWrite(server)).toBeNull();
   });
 
   it("points at what is missing instead of sending", async () => {

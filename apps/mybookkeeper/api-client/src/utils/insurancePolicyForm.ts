@@ -1,7 +1,8 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { InsurancePolicyDetail } from "../types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 import type { InsurancePremiumFrequency } from "../types/insurance/insurance-premium-frequency";
-import { dollarsToCents } from "./dollarsToCents";
+import { moneyTextToCents } from "./moneyTextToCents";
 
 /**
  * Conversion between the insurance-policy form's text state and the API shape.
@@ -38,9 +39,9 @@ function textOrNull(value: string): string | null {
  * phone can't disagree. A monthly premium read as annual understates the yearly
  * cost by 12x, so the form must be stopped and the person asked, never guessed for.
  */
-export function isPremiumBilledMissing(values: InsurancePolicyFormValues): boolean {
-  const cents = dollarsToCents(values.premiumDollars);
-  return cents !== null && cents > 0 && values.premiumFrequency === "";
+export function isPremiumBilledMissing(values: InsurancePolicyFormValues, decimalSeparator: DecimalSeparator): boolean {
+  const cents = moneyTextToCents(values.premiumDollars, decimalSeparator);
+  return typeof cents === "number" && cents > 0 && values.premiumFrequency === "";
 }
 
 /**
@@ -50,12 +51,12 @@ export function isPremiumBilledMissing(values: InsurancePolicyFormValues): boole
  * dropped, since there is no premium to bill. An amount with no frequency never
  * reaches here: ``isPremiumBilledMissing`` stops the form first.
  */
-function premiumPair(values: InsurancePolicyFormValues): {
+function premiumPair(values: InsurancePolicyFormValues, decimalSeparator: DecimalSeparator): {
   premium_cents: number | null;
   premium_frequency: InsurancePremiumFrequency | null;
 } {
-  const cents = dollarsToCents(values.premiumDollars);
-  if (cents === null || cents <= 0 || values.premiumFrequency === "") {
+  const cents = moneyTextToCents(values.premiumDollars, decimalSeparator);
+  if (typeof cents !== "number" || cents <= 0 || values.premiumFrequency === "") {
     return { premium_cents: null, premium_frequency: null };
   }
   return {
@@ -65,17 +66,17 @@ function premiumPair(values: InsurancePolicyFormValues): {
 }
 
 /** Form state → the field set both POST and PATCH accept. */
-export function toPolicyPayload(values: InsurancePolicyFormValues) {
+export function toPolicyPayload(values: InsurancePolicyFormValues, decimalSeparator: DecimalSeparator) {
   return {
     policy_name: values.policyName.trim(),
     carrier: textOrNull(values.carrier),
     policy_number: textOrNull(values.policyNumber),
     effective_date: values.effectiveDate || null,
     expiration_date: values.expirationDate || null,
-    coverage_amount_cents: dollarsToCents(values.coverageDollars),
-    ...premiumPair(values),
-    fees_and_taxes_cents: dollarsToCents(values.feesAndTaxesDollars),
-    deductible_cents: dollarsToCents(values.deductibleDollars),
+    coverage_amount_cents: moneyTextToCents(values.coverageDollars, decimalSeparator) ?? null,
+    ...premiumPair(values, decimalSeparator),
+    fees_and_taxes_cents: moneyTextToCents(values.feesAndTaxesDollars, decimalSeparator) ?? null,
+    deductible_cents: moneyTextToCents(values.deductibleDollars, decimalSeparator) ?? null,
     wind_hail_deductible_pct: textOrNull(values.windHailPct),
     notes: textOrNull(values.notes),
   };

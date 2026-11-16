@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
 import { benchmarkFormPayload, benchmarkFormProblems, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
@@ -41,9 +42,9 @@ export function useInsuranceBenchmarkForm({
   const [hasTried, setHasTried] = useState(false);
   const values = { premium, coverage, regionLabel, source, observedOn, notes };
   const today = localToday();
-  const payload = benchmarkFormPayload(values, today);
+  const payload = benchmarkFormPayload(values, today, NUMBER_INPUT_DECIMAL_SEPARATOR);
   // Shown only once the operator has tried to save, so typing a figure isn't met with an error on the first digit.
-  const problems = hasTried ? benchmarkFormProblems(values, today) : {};
+  const problems = hasTried ? benchmarkFormProblems(values, today, NUMBER_INPUT_DECIMAL_SEPARATOR) : {};
   const isBusy = isSaving || isRemoving;
   const canSubmit = premium.trim() !== "" && coverage.trim() !== "" && observedOn !== "" && !isBusy;
   const canRemove = Boolean(existing) && !isBusy;

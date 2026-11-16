@@ -41,7 +41,7 @@ const POLICY: InsurancePolicyDetail = {
 
 describe("toPolicyPayload", () => {
   it("posts nulls for every optional field left blank", () => {
-    const payload = toPolicyPayload({ ...EMPTY_POLICY_FORM, policyName: "Policy" });
+    const payload = toPolicyPayload({ ...EMPTY_POLICY_FORM, policyName: "Policy" }, ".");
     expect(payload).toEqual({
       policy_name: "Policy",
       carrier: null,
@@ -64,7 +64,7 @@ describe("toPolicyPayload", () => {
       policyName: "Policy",
       premiumDollars: "112",
       premiumFrequency: "monthly",
-    });
+    }, ".");
     expect(payload.premium_cents).toBe(11200);
     expect(payload.premium_frequency).toBe("monthly");
   });
@@ -76,7 +76,7 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "Policy",
       premiumFrequency: "annual",
-    });
+    }, ".");
     expect(payload.premium_cents).toBeNull();
     expect(payload.premium_frequency).toBeNull();
   });
@@ -86,7 +86,7 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "Policy",
       premiumDollars: "1240",
-    });
+    }, ".");
     expect(payload.premium_cents).toBeNull();
     expect(payload.premium_frequency).toBeNull();
   });
@@ -97,7 +97,7 @@ describe("toPolicyPayload", () => {
       policyName: "Policy",
       premiumDollars: "0",
       premiumFrequency: "annual",
-    });
+    }, ".");
     expect(payload.premium_cents).toBeNull();
     expect(payload.premium_frequency).toBeNull();
   });
@@ -112,7 +112,7 @@ describe("toPolicyPayload", () => {
       premiumDollars: "2591",
       premiumFrequency: "annual",
       feesAndTaxesDollars: "394.17",
-    });
+    }, ".");
 
     expect(payload.premium_cents).toBe(259100);
     expect(payload.fees_and_taxes_cents).toBe(39417);
@@ -125,7 +125,7 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "Policy",
       feesAndTaxesDollars: "0",
-    });
+    }, ".");
 
     expect(payload.fees_and_taxes_cents).toBe(0);
   });
@@ -135,7 +135,7 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "Policy",
       deductibleDollars: "0",
-    });
+    }, ".");
     expect(payload.deductible_cents).toBe(0);
   });
 
@@ -144,7 +144,7 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "  Policy  ",
       carrier: "  State Farm  ",
-    });
+    }, ".");
     expect(payload.policy_name).toBe("Policy");
     expect(payload.carrier).toBe("State Farm");
   });
@@ -154,8 +154,35 @@ describe("toPolicyPayload", () => {
       ...EMPTY_POLICY_FORM,
       policyName: "Policy",
       windHailPct: "2",
-    });
+    }, ".");
     expect(payload.wind_hail_deductible_pct).toBe("2");
+  });
+});
+
+describe("toPolicyPayload on a comma keypad", () => {
+  it("sends exactly the cents that were checked, however the amounts were typed", () => {
+    const payload = toPolicyPayload(
+      {
+        ...EMPTY_POLICY_FORM,
+        policyName: "Policy",
+        premiumDollars: "1250,50",
+        premiumFrequency: "annual",
+        coverageDollars: "$250.000,25",
+        feesAndTaxesDollars: "1.234",
+        deductibleDollars: "2 500",
+      },
+      ",",
+    );
+    expect(payload).toMatchObject({ premium_cents: 125050, coverage_amount_cents: 25000025, fees_and_taxes_cents: 123400, deductible_cents: 250000 });
+  });
+
+  it("sends the same cents for the same dollars on a dot keypad", () => {
+    const payload = toPolicyPayload({ ...EMPTY_POLICY_FORM, policyName: "Policy", premiumDollars: "1,250.50", premiumFrequency: "annual" }, ".");
+    expect(payload.premium_cents).toBe(125050);
+  });
+
+  it("round-trips the form's own dollars text on a comma keypad", () => {
+    expect(toPolicyPayload(policyToFormValues({ ...POLICY, premium_cents: 125055 }), ",").premium_cents).toBe(125055);
   });
 });
 
@@ -199,7 +226,7 @@ describe("policyToFormValues", () => {
   });
 
   it("round-trips a policy through the form back to the same payload", () => {
-    const payload = toPolicyPayload(policyToFormValues(POLICY));
+    const payload = toPolicyPayload(policyToFormValues(POLICY), ".");
     expect(payload.premium_cents).toBe(POLICY.premium_cents);
     expect(payload.premium_frequency).toBe(POLICY.premium_frequency);
     expect(payload.deductible_cents).toBe(POLICY.deductible_cents);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { insurancePolicyFormProblems } from "@mybookkeeper/api-client/utils/insurancePolicyFormProblems";
 import type { InsurancePolicyFormProblems } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-problems";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
@@ -13,7 +14,7 @@ export interface InsurancePolicyFormCheck {
 /** The same checks the phone runs, so a bad figure is caught here rather than as a failed save. */
 export function useInsurancePolicyFormCheck(values: InsurancePolicyFormValues): InsurancePolicyFormCheck {
   const [hasTried, setHasTried] = useState(false);
-  const found = insurancePolicyFormProblems(values);
+  const found = insurancePolicyFormProblems(values, NUMBER_INPUT_DECIMAL_SEPARATOR);
   return {
     problems: hasTried ? found : {},
     passes: () => {
