@@ -129,7 +129,7 @@ describe("exporting transactions from the Money tab", () => {
     await openSheet();
     await fireEvent.press(screen.getByRole("radio", { name: "CSV spreadsheet" }));
     expect(await screen.findByText("Exporting…")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Export the transactions shown" }).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByRole("button", { name: "Export the transactions shown, Exporting…" }).props.accessibilityState).toMatchObject({ disabled: true });
     await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(1));
     expect(fakeDownloads()).toHaveLength(1);
   });
