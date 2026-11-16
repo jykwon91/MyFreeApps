@@ -6,4 +6,6 @@ export interface UploadsState {
   /** Files the server turned down, which won't be tried again. */
   rejections: string[];
   files: UploadFileProgress[];
+  /** Why the server will never take these files from this person, while the phase is "blocked". */
+  blockedReason: string | null;
 }

@@ -7,7 +7,7 @@ import type { UploadFileStatusChange } from "../../types/UploadFileStatusChange"
 import type { UploadPhase } from "../../types/UploadPhase";
 import type { UploadsState } from "../../types/UploadsState";
 
-const initialState: UploadsState = { phase: "idle", rejections: [], files: [] };
+const initialState: UploadsState = { phase: "idle", rejections: [], files: [], blockedReason: null };
 
 function isFinished(status: UploadFileStatus): boolean {
   return status === "done" || status === "failed" || status === "cancelled";
@@ -24,6 +24,9 @@ const uploadsSlice = createSlice({
   reducers: {
     uploadPhaseChanged(state, { payload }: PayloadAction<UploadPhase>) {
       state.phase = payload;
+    },
+    uploadBlocked(state, { payload: reason }: PayloadAction<string>) {
+      state.blockedReason = reason;
     },
     uploadRejected(state, { payload }: PayloadAction<string>) {
       state.rejections.push(payload);
@@ -72,6 +75,7 @@ const uploadsSlice = createSlice({
     },
     uploadStatusDismissed(state) {
       state.rejections = [];
+      state.blockedReason = null;
       if (state.phase === "sending") {
         state.files = state.files.filter((file) => !isFinished(file.status));
       } else {
@@ -90,6 +94,7 @@ export const {
   uploadBatchCancelled,
   uploadBatchRead,
   uploadBatchStarted,
+  uploadBlocked,
   uploadDrainEnded,
   uploadFileChanged,
   uploadFileProgressed,

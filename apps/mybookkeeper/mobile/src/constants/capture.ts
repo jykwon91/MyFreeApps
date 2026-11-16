@@ -10,8 +10,13 @@ export const UPLOAD_QUEUE_DIRECTORY = "upload-queue";
 export const NETWORK_FAILURES_BEFORE_STOP = 2;
 export const SENT_MESSAGE_MS = 5000;
 export const REQUEST_TOO_LARGE_STATUS = 413;
+export const BAD_REQUEST_STATUS = 400;
+export const UNAUTHORIZED_STATUS = 401;
+export const FORBIDDEN_STATUS = 403;
+export const NOT_FOUND_STATUS = 404;
+export const CONFLICT_STATUS = 409;
 /** The statuses that mean this file is the problem. Others say nothing about it, so it's kept. */
-export const FILE_REJECTED_STATUSES: readonly number[] = [REQUEST_TOO_LARGE_STATUS, 415, 422];
+export const FILE_REJECTED_STATUSES: readonly number[] = [BAD_REQUEST_STATUS, REQUEST_TOO_LARGE_STATUS, 415, 422, CONFLICT_STATUS];
 export const LIMIT_REACHED_STATUS = 429;
 export const SERVER_ERROR_STATUS = 500;
 export const UPLOAD_PROGRESS_BAR_HEIGHT = 4;
@@ -19,6 +24,15 @@ export const UPLOAD_COMPLETE_PERCENT = 100;
 /** Every byte is out, and the server has yet to answer. */
 export const UPLOAD_PROCESSING_LABEL = "Processing…";
 export const UPLOAD_REFUSED_REASON = "The server wouldn't take it.";
+/** Why nothing can be sent from here, as opposed to the server being out of reach. These won't change on a retry. */
+export const UPLOAD_BLOCKED_REASONS = {
+  viewOnly: "You have view-only access in this workspace, so I can't add documents.",
+  demo: "Demo workspaces can't add documents.",
+  workspaceGone: "I can't find this workspace anymore, so I can't add documents to it.",
+} as const;
+export const SIGN_IN_AGAIN_MESSAGE = "Your session has ended. Your files are saved here, and I'll send them once you sign in again.";
+export const REMOVE_BLOCKED_FILES_LABEL = "Remove them";
+export const KEEP_BLOCKED_FILES_LABEL = "Keep them";
 /** How often a zip being read is checked on, the same as on the web. */
 export const BATCH_STATUS_POLL_MS = 3000;
 export const CANCEL_BATCH_LABEL = "Cancel";

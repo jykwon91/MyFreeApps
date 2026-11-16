@@ -3,11 +3,11 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { SENT_MESSAGE_MS } from "../../constants/capture";
+import { KEEP_BLOCKED_FILES_LABEL, REMOVE_BLOCKED_FILES_LABEL, SENT_MESSAGE_MS, SIGN_IN_AGAIN_MESSAGE } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { waitingFilesMessage } from "../aiPermission/waitingFilesMessage";
 import { drainUploadQueue } from "./drainUploadQueue";
-import { pendingUploads } from "./uploadQueueFiles";
+import { discardPendingUploads, pendingUploads } from "./uploadQueueFiles";
 import UploadFileRow from "./UploadFileRow";
 import { uploadSentSettled, uploadStatusDismissed } from "./uploadsSlice";
 
@@ -15,7 +15,7 @@ import { uploadSentSettled, uploadStatusDismissed } from "./uploadsSlice";
 export default function UploadStatus() {
   const { colors, spacing, fontSize } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
-  const { phase, rejections, files } = useSelector((state: RootState) => state.uploads);
+  const { phase, rejections, files, blockedReason } = useSelector((state: RootState) => state.uploads);
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
 
   // A zip read or cancelled after the "got it" message has gone is cleared the same way, a moment later.
@@ -27,6 +27,10 @@ export default function UploadStatus() {
   }, [dispatch, phase, hasSettledFiles]);
 
   const dismiss = { label: "OK", onPress: () => dispatch(uploadStatusDismissed()) };
+  const removeBlocked = () => {
+    if (workspaceId) discardPendingUploads(workspaceId);
+    dispatch(uploadStatusDismissed());
+  };
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -40,6 +44,16 @@ export default function UploadStatus() {
           message="I couldn't send that. It's saved here, and I'll try again when you come back. Want me to try now?"
         />
       ) : null}
+      {phase === "blocked" && blockedReason ? (
+        <Banner
+          actions={[
+            { label: REMOVE_BLOCKED_FILES_LABEL, onPress: removeBlocked },
+            { label: KEEP_BLOCKED_FILES_LABEL, onPress: () => dispatch(uploadStatusDismissed()) },
+          ]}
+          message={blockedReason}
+        />
+      ) : null}
+      {phase === "signedOut" ? <Banner actions={[dismiss]} message={SIGN_IN_AGAIN_MESSAGE} /> : null}
       {phase === "waitingForPermission" && workspaceId ? (
         <Banner
           actions={[{ label: "Review", onPress: () => router.push("/ai-permission") }]}

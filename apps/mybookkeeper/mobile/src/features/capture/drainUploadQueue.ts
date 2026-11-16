@@ -7,17 +7,20 @@ import {
   LIMIT_REACHED_STATUS,
   NETWORK_FAILURES_BEFORE_STOP,
   SERVER_ERROR_STATUS,
+  UNAUTHORIZED_STATUS,
 } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
 import type { PendingUpload } from "../../types/PendingUpload";
 import type { UploadPhase } from "../../types/UploadPhase";
 import { hasAiPermission } from "../aiPermission/aiPermission";
+import { blockedUploadReason } from "./blockedUploadReason";
 import { failedLast } from "./failedLast";
 import { rejectionMessage } from "./rejectionMessage";
 import { uploadForm } from "./uploadForm";
 import { pendingUploads, removeFromQueue } from "./uploadQueueFiles";
 import {
   uploadBatchStarted,
+  uploadBlocked,
   uploadDrainEnded,
   uploadFileChanged,
   uploadFileProgressed,
@@ -106,9 +109,15 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
       failedEarlier.add(next.uri);
       networkFailuresInARow += 1;
       if (networkFailuresInARow >= NETWORK_FAILURES_BEFORE_STOP) return "unreachable";
+    } else if (status === UNAUTHORIZED_STATUS) {
+      // The session was refused even after renewing: it's the same for every file, and the files stay for after sign-in.
+      return "signedOut";
     } else {
-      // Answered, but not about this file (signed out, not allowed): the same for every file.
-      return "unreachable";
+      // Answered, but not about this file: the same for every file, so none is tried.
+      const reason = blockedUploadReason(error);
+      if (reason === null) return "unreachable";
+      dispatch(uploadBlocked(reason));
+      return "blocked";
     }
   }
   return "idle";

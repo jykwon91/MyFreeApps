@@ -49,6 +49,11 @@ export function removeFromQueue(upload: PendingUpload): void {
   discardFile(upload.uri);
 }
 
+/** For files the server will never take from this person: they're taken off the phone. */
+export function discardPendingUploads(workspaceId: string): void {
+  pendingUploads(workspaceId).forEach(removeFromQueue);
+}
+
 /** Also for the camera's and the pickers' own copies, which still hold the photo's location. */
 export function clearUploadQueue(): void {
   const root = queueRoot();

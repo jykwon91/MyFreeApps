@@ -153,7 +153,7 @@ describe("upload queue", () => {
     await drain();
     expect(server.sent).toHaveLength(1);
     expect(waiting()).toHaveLength(2);
-    expect(uploads().phase).toBe("unreachable");
+    expect(uploads().phase).toBe("blocked");
   });
 
   it("doesn't let one file the server fails on hold up the rest", async () => {
