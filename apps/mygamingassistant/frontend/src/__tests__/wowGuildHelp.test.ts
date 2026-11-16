@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import enchantingFile from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
+import { mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
 import { resolveHelpSpecId, TALENT_TREE_SPEC_ID } from "@/games/wow-forever/lib/guild/guildHelpSpec";
@@ -71,7 +72,7 @@ function wristItem(opts: { enchantments?: string[]; inventory_type?: string } = 
 /** No item list: weapon speeds unknown. */
 const NO_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
 
-function enchantRecipe(spell: number, name: string, effect = "Permanently enchant bracers to give +1 Stamina."): CraftRecipe {
+function enchantRecipe(spell: number, name: string, effect = "Permanently enchant bracers to give +5 Stamina."): CraftRecipe {
   return {
     spell,
     name,
@@ -463,10 +464,11 @@ describe("computeEnchantMatches values the enchant for the wearer's class", () =
       enchantRecipe(13536, "Enchant Bracer - Lesser Strength", "Permanently enchant a bracer so it increases the wearer's Strength by 4."),
       enchantRecipe(13622, "Enchant Bracer - Lesser Intellect", "Permanently enchant a bracer so it increases the wearer's Intellect by 3."),
       enchantRecipe(13503, "Enchant Weapon - Lesser Striking", "Permanently enchant a Melee Weapon to do 2 additional points of damage."),
+      enchantRecipe(13815, "Enchant Gloves - Agility", "Permanently enchant gloves to grant +7 Agility."),
     ],
   };
   const enchanter = makeMember("feranova", {
-    recipe_ability_ids: [7668, 7456, 7500, 7426],
+    recipe_ability_ids: [7668, 7456, 7500, 7426, 7659],
     professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 225, max_skill: 225 }],
   });
   const gloves = { slot: "HANDS", item_id: 3001, name: "Prisoner Handwraps", item_level: 44, inventory_type: "HAND", enchantments: [] };
@@ -477,6 +479,21 @@ describe("computeEnchantMatches values the enchant for the wearer's class", () =
     const warrior = makeMember("tank", { class_name: "Warrior", level: 45, equipped: [gloves] });
     const matches = computeEnchantMatches([enchanter, warlock, warrior], FILE, NO_ITEMS);
     expect(matches.map((m) => [m.beneficiary.slug, m.proposed.name])).toEqual([["tank", "Enchant Gloves - Strength"]]);
+  });
+
+  it("drops an enchant worth only a token to the wearer: no +7 Agility gloves for an Affliction Warlock", () => {
+    // Spec weights give every Warlock spec 0.05 Agility, so +7 Agility is 0.35 — under one main-stat point.
+    const warlock = makeMember("jason", { class_name: "Warlock", level: 45, equipped: [gloves], talents: [{ tree_id: 355, points: 21 }] });
+    const rogue = makeMember("stab", { class_name: "Rogue", level: 45, equipped: [gloves] });
+    const matches = computeEnchantMatches([enchanter, warlock, rogue], FILE, NO_ITEMS);
+    expect(matches.map((m) => [m.beneficiary.slug, m.proposed.name])).toEqual([["stab", "Enchant Gloves - Agility"]]);
+  });
+
+  it("the floor is one point of the wearer's best main stat, however their weights are scaled", () => {
+    const w = (stats: Record<string, number>) => ({ stats, meleeWeaponDps: 0, rangedWeaponDps: 0, armor: 0.02 });
+    expect(mainStatPoint(w({ agility: 0.05, spell_power: 1, spell_hit_pct: 9.6 }))).toBe(1);
+    expect(mainStatPoint(w({ intellect: 0.38, healing: 0.3 }))).toBe(0.38);
+    expect(mainStatPoint(w({}))).toBe(0);
   });
 
   it("picks the bracer enchant each class uses: Intellect for a Warlock, Strength for a Warrior", () => {

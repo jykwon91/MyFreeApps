@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Help each other: no token enchants",
+    "summary": "Help each other now offers an enchant only when it's worth at least about a point of the wearer's main stat, so casters aren't offered +7 Agility gloves.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Before you go ticks what you've done",
     "summary": "With your character picked on the character page, a dungeon's Before you go list now ticks every quest you've completed, from Battle.net, and works out where you are from it. Battle.net updates after you log out, so tick a quest you just finished yourself in the meantime.",
     "to": "/wow-forever/dungeons"

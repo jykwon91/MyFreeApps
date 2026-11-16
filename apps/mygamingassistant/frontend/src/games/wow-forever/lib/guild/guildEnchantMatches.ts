@@ -15,6 +15,7 @@ import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessi
 import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
 import { enchantValue } from "@/games/wow-forever/lib/guild/enchantValue";
 import { guildHelpWeights } from "@/games/wow-forever/lib/guild/guildHelpWeights";
+import { mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { BestEnchant } from "@/games/wow-forever/types/guild/bestEnchant";
@@ -107,6 +108,7 @@ export function computeEnchantMatches(
       if (beneficiary.slug === crafter.slug) continue;
       const weights = weightsFor(beneficiary);
       if (!weights) continue;
+      const floor = mainStatPoint(weights);
 
       for (const item of beneficiary.equipped) {
         if (item.enchantments.length > 0) continue; // already enchanted
@@ -116,7 +118,7 @@ export function computeEnchantMatches(
           const slot = enchantSlot(recipe.name);
           if (!slot || !itemMatchesEnchantSlot(item, slot)) continue;
           const value = enchantValue(effect, weights, weaponSpeed);
-          if (value <= 0) continue; // nothing this class uses
+          if (value <= 0 || value < floor) continue; // under one point of their main stat
 
           const key = `${beneficiary.slug}|${item.slot}`;
           const existing = best.get(key);
