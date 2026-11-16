@@ -1,4 +1,5 @@
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
@@ -7,10 +8,12 @@ import { router } from "expo-router";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { ALL_STAGES_OPTION, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
+import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
 import { INQUIRY_CREATE_MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
+import { INTEGRATIONS_LINK } from "../../constants/home";
 import { uniqueById } from "../../lib/uniqueById";
 import type { InquiryView } from "../../types/InquiryView";
+import { gmailConnection, gmailIntegration } from "../integrations/gmailConnection";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useCanWrite } from "../workspace/useCanWrite";
 import InquiriesSkeleton, { InquirySkeletonRow } from "./InquiriesSkeleton";
@@ -57,6 +60,9 @@ export default function InquiriesScreen({
     [listingsData],
   );
 
+  const { currentData: integrations } = useGetIntegrationsQuery();
+  const connection = gmailConnection(gmailIntegration(integrations));
+
   const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
 
   async function loadMore(): Promise<void> {
@@ -69,6 +75,18 @@ export default function InquiriesScreen({
     if (error) return <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your inquiries." />;
     if (stage) {
       return <EmptyState action={{ label: "Clear filter", onPress: () => onStageChange(null) }} body="No inquiries are at that stage here." heading="Nothing matches that" />;
+    }
+    const inboxIsEmpty = view === "inbox" || view === "all";
+    if (inboxIsEmpty && integrations && connection !== "connected") {
+      if (!canWrite) return <EmptyState body={INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY} heading={INQUIRY_EMPTY_WORDS[view].heading} />;
+      const words = INQUIRY_EMPTY_GMAIL_WORDS[connection];
+      return (
+        <EmptyState
+          action={{ label: words.action, onPress: () => router.push(INTEGRATIONS_LINK) }}
+          body={words.body}
+          heading={INQUIRY_EMPTY_WORDS[view].heading}
+        />
+      );
     }
     return <EmptyState body={INQUIRY_EMPTY_WORDS[view].body} heading={INQUIRY_EMPTY_WORDS[view].heading} />;
   }

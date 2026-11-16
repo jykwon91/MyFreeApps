@@ -31,6 +31,21 @@ export const INQUIRY_EMPTY_WORDS: Record<InquiryView, { heading: string; body: s
   all: { heading: "No inquiries yet", body: "When someone asks about a room, it'll show up here." },
 };
 
+/** Shown in place of the plain empty copy when Gmail isn't linked, since that's how inquiries normally arrive. */
+export const INQUIRY_EMPTY_GMAIL_WORDS: Record<"none" | "reauth", { body: string; action: string }> = {
+  none: {
+    body: "Inquiries come in through your Gmail. Connect it and they'll show up here. You can also add one yourself from the button above.",
+    action: "Connect Gmail",
+  },
+  reauth: {
+    body: "Inquiries come in through your Gmail, but it needs you to sign in again. You can also add one yourself from the button above.",
+    action: "Fix Gmail",
+  },
+};
+
+/** For view-only members, who can't connect Gmail or add inquiries: no action, just who to ask. */
+export const INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY = "Inquiries arrive through the workspace's Gmail connection. Ask an owner to connect it.";
+
 export const MAX_NEW_INQUIRY_BADGE = 99;
 
 export const INQUIRY_REPLY_VIEW_ONLY_BODY = "Ask the workspace owner if you need to reply.";
