@@ -4,6 +4,9 @@ import datetime as _dt
 
 GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR = "Gmail connection expired — please disconnect and reconnect"
 GMAIL_AUTH_EXPIRED_API_DETAIL = "Gmail connection expired, please reconnect"
+# 424 Failed Dependency, never 401: the app session is fine, Gmail is what failed, and
+# clients treat any 401 as "sign in again".
+GMAIL_AUTH_EXPIRED_API_STATUS = 424
 GMAIL_LABEL_NOT_FOUND_MESSAGE = (
     "I couldn't find a Gmail label called \"{label}\", so I didn't sync anything. "
     "Check the spelling, or clear the label to sync every email."

@@ -87,6 +87,14 @@ describe("sync now", () => {
     await screen.findByText(/couldn't find the Gmail label/);
   });
 
+  it("points to the website when Gmail needs reconnecting", async () => {
+    startIntegrationsServer({ failures: { write: { status: 424 } } });
+    await renderScreen(<IntegrationsScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.syncNow }));
+    await confirm();
+    await screen.findByText(/If Gmail needs reconnecting, that's done from the website/);
+  });
+
   it("says when the server can't be reached", async () => {
     startIntegrationsServer({ failures: { write: "offline" } });
     await renderScreen(<IntegrationsScreen />);

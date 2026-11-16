@@ -123,8 +123,8 @@ async def test_discover_raises_gmail_auth_expired_on_refresh_error() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sync_route_returns_401_on_gmail_auth_expired() -> None:
-    """POST /integrations/gmail/sync returns 401 when discovery raises GmailAuthExpiredError."""
+async def test_sync_route_returns_424_on_gmail_auth_expired() -> None:
+    """POST /integrations/gmail/sync returns 424 (never 401, which means a bad app session) when discovery raises GmailAuthExpiredError."""
     from fastapi import HTTPException
 
     ctx = _make_ctx()
@@ -144,7 +144,7 @@ async def test_sync_route_returns_401_on_gmail_auth_expired() -> None:
         with pytest.raises(HTTPException) as exc_info:
             await sync_gmail(ctx=ctx)
 
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 424
     assert exc_info.value.detail == GMAIL_AUTH_EXPIRED_API_DETAIL
 
 
