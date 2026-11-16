@@ -7,6 +7,7 @@ export type MortgageFormProblem =
   | "rate_type_required"
   | "rate_out_of_range"
   | "not_a_number"
+  | "negative_amount"
   | "must_be_positive"
   | "term_out_of_range"
   | "needs_statement_date"

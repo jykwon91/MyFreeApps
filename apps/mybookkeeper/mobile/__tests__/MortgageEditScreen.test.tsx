@@ -13,6 +13,9 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockPreventRemove = { active: false };
@@ -85,6 +88,7 @@ beforeEach(() => {
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
   mockPreventRemove.active = false;
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -111,6 +115,30 @@ describe("editing a mortgage", () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(JSON.parse(String(writes(requests)[0].data))).toMatchObject({ interest_rate: "6.5" });
     expect(await screen.findByText(MESSAGES.updated)).toBeTruthy();
+  });
+
+  it("saves a decimal-comma amount as the cents that were typed", async () => {
+    mockDecimalSeparator = ",";
+    const requests = startServer();
+    await show(<MortgageEditScreen id="m1" />);
+    await fireEvent.changeText(await screen.findByLabelText(MESSAGES.monthlyEscrow), "1250,50");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writes(requests)[0].data))).toMatchObject({ monthly_escrow_cents: 125050 });
+  });
+
+  it("reads a pasted $1,250.50 on a dot phone and refuses a negative with its own wording", async () => {
+    const requests = startServer();
+    await show(<MortgageEditScreen id="m1" />);
+    const escrow = await screen.findByLabelText(MESSAGES.monthlyEscrow);
+    await fireEvent.changeText(escrow, "-5");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    expect(await screen.findByText(/can't be negative/)).toBeTruthy();
+    expect(writes(requests)).toHaveLength(0);
+    await fireEvent.changeText(escrow, "$1,250.50");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writes(requests)[0].data))).toMatchObject({ monthly_escrow_cents: 125050 });
   });
 
   it("points at a rate the server would refuse, without sending it", async () => {

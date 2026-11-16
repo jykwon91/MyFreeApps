@@ -2,6 +2,7 @@ import { useCreateMortgageMutation, useUpdateMortgageMutation } from "@mybookkee
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { toMortgagePayload } from "@mybookkeeper/api-client/utils/mortgageForm";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES } from "../../constants/mortgageForm";
@@ -12,6 +13,8 @@ import { leaveToMortgages } from "./mortgageNavigation";
 interface SaveTarget {
   values: MortgageFormValues;
   propertyId: string;
+  /** The one the phone's keypad types, which the dollar fields were read with. */
+  decimalSeparator: DecimalSeparator;
   /** Set when the form was filled from a statement, so the loan cites it. */
   sourceDocumentId: string | null;
 }
@@ -29,14 +32,14 @@ export function useSaveMortgage(original: Mortgage | null) {
     if (isLeaving) leaveToMortgages();
   }, [isLeaving]);
 
-  async function save({ values, propertyId, sourceDocumentId }: SaveTarget): Promise<void> {
+  async function save({ values, propertyId, decimalSeparator, sourceDocumentId }: SaveTarget): Promise<void> {
     const landed = await submit(
       () =>
         original
-          ? updateMortgage({ mortgageId: original.id, data: toMortgagePayload(values) }).unwrap()
+          ? updateMortgage({ mortgageId: original.id, data: toMortgagePayload(values, decimalSeparator) }).unwrap()
           : createMortgage({
               property_id: propertyId,
-              ...toMortgagePayload(values),
+              ...toMortgagePayload(values, decimalSeparator),
               ...(sourceDocumentId ? { source_document_id: sourceDocumentId } : {}),
             }).unwrap(),
       (error) => mortgageWriteFailure(error, original ? "update" : "create"),

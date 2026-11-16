@@ -4,7 +4,8 @@ import type { MortgageFormProblem } from "../types/mortgage/mortgage-form-proble
 export const MORTGAGE_PROBLEM_MESSAGES: Record<MortgageFormProblem, string> = {
   rate_type_required: "Pick whether the rate is fixed or adjustable.",
   rate_out_of_range: "Use a rate above 0 and below 25, like 7.125.",
-  not_a_number: "Use a plain amount like 1995.82, or leave it blank.",
+  not_a_number: "Use dollars and cents, or leave it blank.",
+  negative_amount: "An amount can't be negative. Leave it blank if you don't know it.",
   must_be_positive: "Use an amount above 0, or leave it blank.",
   term_out_of_range: "Use a number of months from 1 to 600, or leave it blank.",
   needs_statement_date: "A balance is only true as of a date. Pick the statement date too.",

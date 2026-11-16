@@ -10,6 +10,7 @@ describe("MORTGAGE_PROBLEM_MESSAGES", () => {
       "must_be_positive",
       "needs_balance",
       "needs_statement_date",
+      "negative_amount",
       "not_a_number",
       "rate_out_of_range",
       "rate_type_required",

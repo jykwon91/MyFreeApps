@@ -1,3 +1,4 @@
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { useState } from "react";
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
@@ -13,7 +14,7 @@ export interface MortgageFormCheck {
 /** The same checks the phone runs, so a bad figure is caught here rather than as a failed save. */
 export function useMortgageFormCheck(values: MortgageFormValues): MortgageFormCheck {
   const [hasTried, setHasTried] = useState(false);
-  const found = mortgageFormProblems(values);
+  const found = mortgageFormProblems(values, NUMBER_INPUT_DECIMAL_SEPARATOR);
   return {
     problems: hasTried ? found : {},
     passes: () => {
