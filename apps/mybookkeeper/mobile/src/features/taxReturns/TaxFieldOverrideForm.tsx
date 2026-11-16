@@ -3,7 +3,7 @@ import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/F
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
 import { TAX_FIELD_LIMITS } from "@mybookkeeper/api-client/constants/taxFieldLimits";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { TAX_FIELD_NUMERIC_KEYBOARD, TAX_FIELD_OVERRIDE_ACTION, TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES, TAX_FIELD_OVERRIDE_YES_NO } from "../../constants/taxFieldOverride";
@@ -16,6 +16,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
   const [initial] = useState(() => taxFieldEditText(field));
   const [text, setText] = useState(initial);
   const [reason, setReason] = useState("");
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [problems, setProblems] = useState<FieldOverrideProblems>({});
   const { save, isBusy, isLeaving, failure } = useOverrideTaxField(returnId);
   const [action, setAction] = useState<TaxFieldOverrideAction | null>(null);
@@ -27,10 +28,10 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
 
   /** `clear` sends "no value" on purpose; otherwise a blank number is unreadable, never silently empty. */
   function submit(clear: boolean): void {
-    const found = taxFieldOverrideProblems(field.type, clear ? "" : text, reason, clear);
+    const found = taxFieldOverrideProblems(field.type, clear ? "" : text, reason, clear, decimalSeparator);
     setProblems(found);
     if (Object.keys(found).length > 0) return;
-    const override = parseTaxFieldOverride(field.type, clear ? "" : text, clear);
+    const override = parseTaxFieldOverride(field.type, clear ? "" : text, clear, decimalSeparator);
     if (!override) return;
     setAction(clear ? TAX_FIELD_OVERRIDE_ACTION.clear : TAX_FIELD_OVERRIDE_ACTION.save);
     void save({ fieldId: field.id, reason, ...override });

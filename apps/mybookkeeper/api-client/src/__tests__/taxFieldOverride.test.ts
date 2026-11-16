@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { overrideFieldBody, parseTaxFieldOverride, taxFieldEditText, taxFieldOverrideProblems } from "../utils/taxFieldOverride";
+import { TAX_FIELD_OVERRIDE_PROBLEMS } from "../constants/taxFieldOverride";
 import { isMaskedTaxValue } from "../utils/isMaskedTaxValue";
 
 const num = (value: number | null) => ({ field_type: "numeric", value });
@@ -18,43 +19,69 @@ describe("parseTaxFieldOverride", () => {
     ["(500)", -500],
     ["1 250", 1250],
   ])("reads %s as a number", (text, value) => {
-    expect(parseTaxFieldOverride("numeric", text, false)).toEqual(num(value));
+    expect(parseTaxFieldOverride("numeric", text, false, ".")).toEqual(num(value));
   });
 
   it.each(["abc", "12abc", "1e3", "1,2", "--4", "$", ".", "1.2.3", "(5", "5)", "-(5)"])("rejects %s instead of sending null", (text) => {
-    expect(parseTaxFieldOverride("numeric", text, true)).toBeNull();
+    expect(parseTaxFieldOverride("numeric", text, true, ".")).toBeNull();
   });
 
   it("only treats a blank number as clearing when that was meant", () => {
-    expect(parseTaxFieldOverride("numeric", " ", false)).toBeNull();
-    expect(parseTaxFieldOverride("numeric", " ", true)).toEqual(num(null));
+    expect(parseTaxFieldOverride("numeric", " ", false, ".")).toBeNull();
+    expect(parseTaxFieldOverride("numeric", " ", true, ".")).toEqual(num(null));
   });
 
   it("reads booleans and text", () => {
-    expect(parseTaxFieldOverride("boolean", "True", false)).toEqual({ field_type: "boolean", value: true });
-    expect(parseTaxFieldOverride("boolean", "1", false)).toEqual({ field_type: "boolean", value: true });
-    expect(parseTaxFieldOverride("boolean", "false", false)).toEqual({ field_type: "boolean", value: false });
-    expect(parseTaxFieldOverride("text", "  Acme ", false)).toEqual({ field_type: "text", value: "Acme" });
-    expect(parseTaxFieldOverride("text", "", false)).toBeNull();
-    expect(parseTaxFieldOverride("text", "", true)).toEqual({ field_type: "text", value: null });
+    expect(parseTaxFieldOverride("boolean", "True", false, ".")).toEqual({ field_type: "boolean", value: true });
+    expect(parseTaxFieldOverride("boolean", "1", false, ".")).toEqual({ field_type: "boolean", value: true });
+    expect(parseTaxFieldOverride("boolean", "false", false, ".")).toEqual({ field_type: "boolean", value: false });
+    expect(parseTaxFieldOverride("text", "  Acme ", false, ".")).toEqual({ field_type: "text", value: "Acme" });
+    expect(parseTaxFieldOverride("text", "", false, ".")).toBeNull();
+    expect(parseTaxFieldOverride("text", "", true, ".")).toEqual({ field_type: "text", value: null });
   });
 
   it("keeps within the server's limits: 12 digits with 2 decimals, 500 characters", () => {
-    expect(parseTaxFieldOverride("numeric", "9999999999.99", false)).toEqual(num(9999999999.99));
-    expect(parseTaxFieldOverride("numeric", "10000000000", false)).toBeNull();
-    expect(parseTaxFieldOverride("numeric", "1.234", false)).toBeNull();
-    expect(parseTaxFieldOverride("text", "a".repeat(500), false)).toEqual({ field_type: "text", value: "a".repeat(500) });
-    expect(parseTaxFieldOverride("text", "a".repeat(501), false)).toBeNull();
-    expect(taxFieldOverrideProblems("text", "a".repeat(501), "why", false).number).toMatch(/500/);
+    expect(parseTaxFieldOverride("numeric", "9999999999.99", false, ".")).toEqual(num(9999999999.99));
+    expect(parseTaxFieldOverride("numeric", "10000000000", false, ".")).toBeNull();
+    expect(parseTaxFieldOverride("numeric", "1.234", false, ".")).toBeNull();
+    expect(parseTaxFieldOverride("text", "a".repeat(500), false, ".")).toEqual({ field_type: "text", value: "a".repeat(500) });
+    expect(parseTaxFieldOverride("text", "a".repeat(501), false, ".")).toBeNull();
+    expect(taxFieldOverrideProblems("text", "a".repeat(501), "why", false, ".").number).toMatch(/500/);
   });
 
   it("sends null for a blank yes or no only when clearing was meant", () => {
-    expect(parseTaxFieldOverride("boolean", " ", true)).toEqual({ field_type: "boolean", value: null });
-    expect(parseTaxFieldOverride("boolean", " ", false)).toEqual({ field_type: "boolean", value: false });
+    expect(parseTaxFieldOverride("boolean", " ", true, ".")).toEqual({ field_type: "boolean", value: null });
+    expect(parseTaxFieldOverride("boolean", " ", false, ".")).toEqual({ field_type: "boolean", value: false });
   });
 
   it("refuses a hidden value in a text field", () => {
-    expect(parseTaxFieldOverride("text", "***1234", false)).toBeNull();
+    expect(parseTaxFieldOverride("text", "***1234", false, ".")).toBeNull();
+  });
+});
+
+describe("parseTaxFieldOverride on a decimal-comma device", () => {
+  it.each([
+    ["1250,50", 1250.5],
+    ["1.250,50", 1250.5],
+    ["-1.250,50", -1250.5],
+    ["(1.250,50)", -1250.5],
+    ["$1.250,50", 1250.5],
+    ["12,", 12],
+    [",5", 0.5],
+    ["1 250", 1250],
+    ["1.250", 1250],
+  ])("reads %s as a number", (text, value) => {
+    expect(parseTaxFieldOverride("numeric", text, false, ",")).toEqual(num(value));
+  });
+
+  it.each(["1,234", "1,2,3", "1250.5", "1,250.50", "12345678901,00", "1,234,5", "abc"])("rejects %s", (text) => {
+    expect(parseTaxFieldOverride("numeric", text, false, ",")).toBeNull();
+  });
+
+  it("shows the example with the device's own separator", () => {
+    expect(taxFieldOverrideProblems("numeric", "x", "Typo", false, ",").number).toBe(TAX_FIELD_OVERRIDE_PROBLEMS.number(","));
+    expect(TAX_FIELD_OVERRIDE_PROBLEMS.number(",")).toMatch(/1250,50/);
+    expect(TAX_FIELD_OVERRIDE_PROBLEMS.number(".")).toMatch(/1250\.50/);
   });
 });
 
@@ -69,13 +96,13 @@ describe("isMaskedTaxValue", () => {
 
 describe("taxFieldOverrideProblems", () => {
   it("points at an unreadable number and a missing reason separately", () => {
-    expect(Object.keys(taxFieldOverrideProblems("numeric", "x", "", false)).sort()).toEqual(["number", "reason"]);
-    expect(Object.keys(taxFieldOverrideProblems("numeric", "5", " ", false))).toEqual(["reason"]);
-    expect(taxFieldOverrideProblems("numeric", "5", "Typo on the form", false)).toEqual({});
+    expect(Object.keys(taxFieldOverrideProblems("numeric", "x", "", false, ".")).sort()).toEqual(["number", "reason"]);
+    expect(Object.keys(taxFieldOverrideProblems("numeric", "5", " ", false, "."))).toEqual(["reason"]);
+    expect(taxFieldOverrideProblems("numeric", "5", "Typo on the form", false, ".")).toEqual({});
   });
 
   it("says a hidden value can't be saved", () => {
-    expect(taxFieldOverrideProblems("text", "***1234", "Typo", false).number).toMatch(/hidden/);
+    expect(taxFieldOverrideProblems("text", "***1234", "Typo", false, ".").number).toMatch(/hidden/);
   });
 });
 
