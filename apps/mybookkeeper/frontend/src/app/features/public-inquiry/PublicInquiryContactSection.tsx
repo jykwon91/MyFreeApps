@@ -7,6 +7,12 @@ import {
   rentEstimate,
 } from "./public-inquiry-helpers";
 import { localToday } from "@platform/core/utils/localToday";
+import {
+  MAX_OCCUPANTS,
+  MAX_VEHICLES,
+  MIN_OCCUPANTS,
+  MIN_VEHICLES,
+} from "./public-inquiry-constants";
 import PublicInquiryField from "./PublicInquiryField";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 
@@ -145,8 +151,8 @@ export default function PublicInquiryContactSection({
             id="occupants"
             type="number"
             required
-            min={1}
-            max={10}
+            min={MIN_OCCUPANTS}
+            max={MAX_OCCUPANTS}
             value={form.occupantCount}
             onChange={(e) => update("occupantCount", e.target.value)}
             onBlur={() => markTouched("occupantCount")}
@@ -159,15 +165,25 @@ export default function PublicInquiryContactSection({
           />
         </PublicInquiryField>
 
-        <PublicInquiryField label="Vehicles" htmlFor="vehicles" hint="One assigned spot.">
+        <PublicInquiryField
+          label="Vehicles"
+          htmlFor="vehicles"
+          hint="One assigned spot."
+          error={visibleErrors.vehicleCount}
+        >
           <input
             id="vehicles"
             type="number"
-            min={0}
-            max={10}
+            min={MIN_VEHICLES}
+            max={MAX_VEHICLES}
             value={form.vehicleCount}
             onChange={(e) => update("vehicleCount", e.target.value)}
-            className={inputClasses(false)}
+            onBlur={() => markTouched("vehicleCount")}
+            aria-invalid={!!visibleErrors.vehicleCount}
+            aria-describedby={
+              visibleErrors.vehicleCount ? "vehicles-error" : undefined
+            }
+            className={inputClasses(!!visibleErrors.vehicleCount)}
             data-testid="public-inquiry-vehicles"
           />
         </PublicInquiryField>

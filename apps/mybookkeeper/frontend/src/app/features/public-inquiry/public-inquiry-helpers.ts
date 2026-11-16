@@ -3,6 +3,15 @@ import { localToday } from "@platform/core/utils/localToday";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import { US_STATE_CODES } from "@/shared/types/inquiry/us-state";
 import { DEFAULT_COUNTRY_CODE } from "@/shared/types/inquiry/country";
+import { wholeCountError } from "@/shared/utils/whole-count";
+import {
+  MAX_OCCUPANTS,
+  MAX_VEHICLES,
+  MIN_OCCUPANTS,
+  MIN_VEHICLES,
+  OCCUPANT_COUNT_ERRORS,
+  VEHICLE_COUNT_ERRORS,
+} from "./public-inquiry-constants";
 
 export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 export const MIN_WHY_THIS_ROOM_CHARS = 30;
@@ -39,6 +48,7 @@ export const FIELD_FOCUS_TARGETS: { key: ValidatedField; id: string }[] = [
   { key: "moveInDate", id: "move-in" },
   { key: "moveOutDate", id: "move-out" },
   { key: "occupantCount", id: "occupants" },
+  { key: "vehicleCount", id: "vehicles" },
   { key: "hasPets", id: "has-pets-no" },
   { key: "currentCity", id: "city" },
   { key: "currentCountry", id: "country" },
@@ -110,12 +120,21 @@ export function validateForm(state: FormState): FieldErrors {
     errors.moveOutDate = "Move-out must be after move-in.";
   }
 
-  const occupants = Number.parseInt(state.occupantCount, 10);
-  if (!Number.isFinite(occupants) || occupants < 1) {
-    errors.occupantCount = "Please enter at least 1 occupant.";
-  } else if (occupants > 10) {
-    errors.occupantCount = "Maximum is 10 occupants.";
-  }
+  const occupantError = wholeCountError(
+    state.occupantCount,
+    MIN_OCCUPANTS,
+    MAX_OCCUPANTS,
+    OCCUPANT_COUNT_ERRORS,
+  );
+  if (occupantError) errors.occupantCount = occupantError;
+
+  const vehicleError = wholeCountError(
+    state.vehicleCount,
+    MIN_VEHICLES,
+    MAX_VEHICLES,
+    VEHICLE_COUNT_ERRORS,
+  );
+  if (vehicleError) errors.vehicleCount = vehicleError;
 
   if (state.hasPets === "") {
     errors.hasPets = "Please tell us if you have pets.";

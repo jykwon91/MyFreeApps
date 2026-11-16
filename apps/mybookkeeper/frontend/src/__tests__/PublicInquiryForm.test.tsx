@@ -342,3 +342,57 @@ describe("PublicInquiryForm — submit", () => {
     );
   });
 });
+
+describe("PublicInquiryForm — occupant and vehicle counts", () => {
+  async function fillCounts(
+    user: ReturnType<typeof userEvent.setup>,
+    occupants: string,
+    vehicles: string,
+  ) {
+    await fillValidForm(user);
+    const occupantsInput = screen.getByTestId("public-inquiry-occupants");
+    await user.clear(occupantsInput);
+    if (occupants) await user.type(occupantsInput, occupants);
+    const vehiclesInput = screen.getByTestId("public-inquiry-vehicles");
+    await user.clear(vehiclesInput);
+    if (vehicles) await user.type(vehiclesInput, vehicles);
+    await user.click(screen.getByTestId("public-inquiry-submit"));
+  }
+
+  it.each([
+    ["2.5", "0", "public-inquiry-occupants-error", /whole number/],
+    ["0", "0", "public-inquiry-occupants-error", /at least 1/],
+    ["11", "0", "public-inquiry-occupants-error", /Maximum is 10/],
+    ["", "0", "public-inquiry-occupants-error", /enter the number of occupants/],
+    ["1", "1.5", "public-inquiry-vehicles-error", /whole number/],
+    ["1", "-1", "public-inquiry-vehicles-error", /negative/],
+    ["1", "11", "public-inquiry-vehicles-error", /Maximum is 10/],
+    ["1", "", "public-inquiry-vehicles-error", /or 0/],
+  ])("occupants %j / vehicles %j shows a field error and does not POST", async (occupants, vehicles, testId, message) => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+
+    await fillCounts(user, occupants, vehicles);
+
+    expect(await screen.findByTestId(testId)).toHaveTextContent(message);
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("sends whole-number counts once they are valid", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { status: "received" } });
+    const user = userEvent.setup();
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+
+    await fillCounts(user, "3", "2");
+
+    expect(await screen.findByText(/Thanks!/)).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith(
+      "/inquiries/public",
+      expect.objectContaining({ occupant_count: 3, vehicle_count: 2 }),
+    );
+  });
+});

@@ -108,13 +108,13 @@ export function usePublicInquiryFlow(): PublicInquiryFlowState {
         today: localToday(),
         move_in_date: form.moveInDate,
         move_out_date: form.moveOutDate,
-        occupant_count: Number.parseInt(form.occupantCount, 10),
+        occupant_count: Number(form.occupantCount),
         has_pets: form.hasPets === "yes",
         pets_description:
           form.hasPets === "yes" && form.petsDescription.trim()
             ? form.petsDescription.trim()
             : null,
-        vehicle_count: Number.parseInt(form.vehicleCount || "0", 10),
+        vehicle_count: Number(form.vehicleCount),
         current_city: form.currentCity.trim(),
         current_country: form.currentCountry,
         current_region: form.currentRegion.trim(),
