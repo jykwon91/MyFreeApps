@@ -54,10 +54,9 @@ export default function FormField({
         {trailing ? <View style={{ position: "absolute", right: 0 }}>{trailing}</View> : null}
       </View>
       {error ? (
-        // The input's hint already carries the error, so screen readers skip this copy of it.
+        // Plain text, not an alert: the error is announced once by useFieldErrorAnnouncement, and is in the
+        // input's hint. This copy stays reachable by swiping for anyone who has hints turned off.
         <Text
-          importantForAccessibility="no"
-          accessibilityElementsHidden
           style={{ color: colors.destructiveText, fontSize: fontSize.xs }}
         >
           {error}

@@ -66,7 +66,7 @@ describe("FormField", () => {
     expect(screen.getByLabelText("Email").props.accessibilityHint).toBe("We never share it.");
   });
 
-  it("replaces the hint with the error, which a screen reader finds once, on the input", async () => {
+  it("replaces the hint with the error, and keeps the shown error reachable as plain text, not an alert", async () => {
     await render(<FormField error="Enter a valid email." hint="We never share it." label="Email" />);
 
     const input = screen.getByLabelText("Email");
@@ -74,10 +74,9 @@ describe("FormField", () => {
     expect(StyleSheet.flatten(input.props.style).borderColor).toBe(lightColors.destructiveText);
     expect(screen.queryByText("We never share it.", { includeHiddenElements: true })).toBeNull();
 
-    // Still shown, but not a second stop for the screen reader, and not an alert of its own.
-    const shown = screen.getByText("Enter a valid email.", { includeHiddenElements: true });
+    // Reachable by swiping for anyone with hints off, but not an alert of its own: it's announced once elsewhere.
+    const shown = screen.getByText("Enter a valid email.");
     expect(StyleSheet.flatten(shown.props.style).color).toBe(lightColors.destructiveText);
-    expect(screen.queryByText("Enter a valid email.")).toBeNull();
     expect(screen.queryByRole("alert", { includeHiddenElements: true })).toBeNull();
   });
 
