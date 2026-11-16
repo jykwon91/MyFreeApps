@@ -1,11 +1,12 @@
 import { useTheme } from "@platform/mobile";
+import { memo } from "react";
 import { View } from "react-native";
 import type { TranscriptProps } from "../../types/TranscriptProps";
 import TranscriptItem from "./TranscriptItem";
 import TypingDots from "./TypingDots";
 
-/** The conversation so far. */
-export default function Transcript({ entries, languageName, waiting, busy, canReplay, onReplay, onTryRetry, onSkipRetry }: TranscriptProps) {
+/** The conversation so far. Memoized: the live speech text changes several times a second and must not redraw it. */
+function Transcript({ entries, languageName, waiting, busy, canReplay, onReplay, onTryRetry, onSkipRetry }: TranscriptProps) {
   const { spacing } = useTheme();
   const last = entries[entries.length - 1];
   return (
@@ -27,3 +28,5 @@ export default function Transcript({ entries, languageName, waiting, busy, canRe
     </View>
   );
 }
+
+export default memo(Transcript);
