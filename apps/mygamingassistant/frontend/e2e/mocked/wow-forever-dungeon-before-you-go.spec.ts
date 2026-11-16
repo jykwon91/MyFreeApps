@@ -11,6 +11,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { QUESTS_DONE_STORAGE_KEY } from "../../src/games/wow-forever/data/dungeons/questProgressConfig";
+import { PLAYER_SETTINGS_STORAGE_KEY } from "../../src/games/wow-forever/hooks/usePlayerSettings";
 
 const DEADMINES = "/wow-forever/dungeons/deadmines";
 const DEFIAS_BROTHERHOOD = 166;
@@ -79,9 +80,9 @@ test("ticking a step ticks the ones before it, says what's next, and survives a 
   await step(defiasLine(page), 8).getByRole("checkbox").check();
   await expect(defiasLine(page).getByTestId("quest-line-status")).toHaveText("All done");
 
-  await section(page).getByRole("button", { name: "Clear my ticks for this dungeon" }).click();
+  await section(page).getByRole("button", { name: "Clear my manual ticks for this dungeon" }).click();
   await expect(defiasLine(page).getByRole("checkbox", { checked: true })).toHaveCount(0);
-  await expect(section(page).getByRole("button", { name: "Clear my ticks for this dungeon" })).toHaveCount(0);
+  await expect(section(page).getByRole("button", { name: "Clear my manual ticks for this dungeon" })).toHaveCount(0);
 });
 
 test("the World Map link marks every quest giver on the continent", async ({ page }) => {
@@ -116,4 +117,99 @@ test("the skeleton has a Before you go block while the data loads, then the real
   gate.release();
   await expect(page.getByTestId("dungeon-before-you-go-skeleton")).toHaveCount(0);
   await expect(defiasLine(page)).toBeVisible();
+});
+
+const COMPLETED_QUESTS = /\/api\/wow\/characters\/jason-kwon\/quests\/completed$/;
+
+/** Saves Jason Kwon as the character MGA's pages use (before the page loads). */
+async function useCharacter(page: Page): Promise<void> {
+  await page.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [PLAYER_SETTINGS_STORAGE_KEY, JSON.stringify({ faction: "A", classId: "warlock", zoneId: null, level: 20, position: null, characterSlug: "jason-kwon" })],
+  );
+}
+
+/** The Defias line's quest ids, read from the page (no character saved yet). */
+async function defiasIds(page: Page): Promise<number[]> {
+  await page.goto(DEADMINES);
+  const rows = defiasLine(page).getByTestId("pickup-row");
+  await expect(rows).toHaveCount(8);
+  return (await rows.evaluateAll((els) => els.map((el) => Number(el.getAttribute("data-quest-id")))));
+}
+
+test("without a character the ticks hint stays and a link offers to pick one", async ({ page }) => {
+  await page.goto(DEADMINES);
+  const line = section(page).getByTestId("battlenet-quests");
+  await expect(line).toHaveAttribute("data-state", "none");
+  await expect(line).toContainText("Ticks are saved in this browser");
+  await expect(line.getByRole("link", { name: "Pick your character to tick the quests you've done automatically" })).toHaveAttribute(
+    "href", "/wow-forever/character",
+  );
+});
+
+test("quests the character completed on Battle.net are ticked, stay ticked, and set where you are", async ({ page }) => {
+  const ids = await defiasIds(page);
+  await useCharacter(page);
+  // Battle.net lists step 5 but not the steps before it.
+  await page.route(COMPLETED_QUESTS, (route) => route.fulfill({ json: { quest_ids: [ids[4], 999999] } }));
+  await page.reload();
+  const line = defiasLine(page);
+  await expect(section(page).getByTestId("battlenet-quests")).toContainText(
+    "Quests Jason Kwon completed are ticked from Battle.net. It updates after you log out",
+  );
+  await expect(step(line, 5)).toHaveAttribute("data-source", "battlenet");
+  await expect(step(line, 5).getByRole("checkbox")).toBeChecked();
+  await expect(step(line, 5).getByRole("checkbox")).toHaveAttribute("aria-disabled", "true");
+  await expect(step(line, 5)).toContainText("Battle.net");
+  await expect(step(line, 4).getByRole("checkbox")).not.toBeChecked();
+  await expect(line.getByTestId("quest-line-status")).toContainText("Next: step 6 of 8");
+  await expect(section(page).getByRole("button", { name: "Clear my manual ticks for this dungeon" })).toHaveCount(0);
+
+  // It can't be unticked here.
+  // aria-disabled reads as disabled to Playwright, so force the click a person can still make.
+  await step(line, 5).getByRole("checkbox").click({ force: true });
+  await expect(step(line, 5).getByRole("checkbox")).toBeChecked();
+
+  // A manual tick still works; clearing undoes only it.
+  await step(line, 2).getByRole("checkbox").check();
+  await expect(step(line, 1).getByRole("checkbox")).toBeChecked();
+  await section(page).getByRole("button", { name: "Clear my manual ticks for this dungeon" }).click();
+  await expect(step(line, 1).getByRole("checkbox")).not.toBeChecked();
+  await expect(step(line, 5).getByRole("checkbox")).toBeChecked();
+  await expect(section(page).getByRole("heading", { name: "Before you go" })).toBeFocused();
+});
+
+test("a character Battle.net doesn't know, or Battle.net failing, still leaves the ticks working", async ({ page }) => {
+  await useCharacter(page);
+  let status = 404;
+  await page.route(COMPLETED_QUESTS, (route) => route.fulfill({ status, json: { detail: "character_not_found" } }));
+  await page.goto(DEADMINES);
+  const line = section(page).getByTestId("battlenet-quests");
+  await expect(line).toContainText("We can't find Jason Kwon on Battle.net.");
+  await expect(line.getByRole("link", { name: "Change character" })).toBeVisible();
+
+  status = 502;
+  await page.reload();
+  await expect(line).toContainText("Couldn't check Battle.net for quests you've done. You can still tick them yourself.");
+  await step(defiasLine(page), 1).getByRole("checkbox").check();
+  await expect(step(defiasLine(page), 1).getByRole("checkbox")).toBeChecked();
+  status = 200;
+  await page.unroute(COMPLETED_QUESTS);
+  await page.route(COMPLETED_QUESTS, (route) => route.fulfill({ json: { quest_ids: [] } }));
+  await line.getByRole("button", { name: "Try again" }).click();
+  await expect(line).toHaveAttribute("data-state", "ready");
+});
+
+test("the Battle.net line shows a placeholder while it loads", async ({ page }) => {
+  await useCharacter(page);
+  const gate = createGate();
+  await page.route(COMPLETED_QUESTS, async (route) => {
+    await gate.wait;
+    await route.fulfill({ json: { quest_ids: [] } });
+  });
+  await page.goto(DEADMINES);
+  const line = section(page).getByTestId("battlenet-quests");
+  await expect(line).toHaveAttribute("data-state", "loading");
+  gate.release();
+  await expect(line).toHaveAttribute("data-state", "ready");
 });

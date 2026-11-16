@@ -2,6 +2,7 @@
 
 GET /wow/characters/{slug}             — the character sheet (gear with rolled stats)
 GET /wow/characters/{slug}/render.png  — Blizzard's render, cropped to the character
+GET /wow/characters/{slug}/quests/completed — the quest ids it has turned in (dungeon checklists)
 
 ``slug`` is ``first-surname`` (Forever characters have no realm). Blizzard's
 Profile API is read with MGA's client-credentials token — no player login —
@@ -23,6 +24,7 @@ from platform_shared.core.request_utils import get_client_ip
 
 from app.core.rate_limit import RateLimiter, check_with_retry_after
 from app.core.wow_character import CHARACTER_CACHE_SECONDS, CHARACTER_RATE_LIMIT, CHARACTER_RATE_WINDOW_SECONDS
+from app.schemas.wow.character.character_completed_quests import CharacterCompletedQuests
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.character import character_lookup_service
 from app.services.wow.character.character_lookup_error import CharacterLookupError
@@ -36,6 +38,10 @@ character_limiter = RateLimiter(max_attempts=CHARACTER_RATE_LIMIT, window_second
 # Its own budget: an uncached render is the sheet's Blizzard calls plus a download
 # and a crop, so unlimited it would bypass the sheet's limit.
 character_render_limiter = RateLimiter(
+    max_attempts=CHARACTER_RATE_LIMIT, window_seconds=CHARACTER_RATE_WINDOW_SECONDS,
+)
+# Its own budget too: every dungeon page asks for it, so it mustn't eat the sheet's.
+character_quests_limiter = RateLimiter(
     max_attempts=CHARACTER_RATE_LIMIT, window_seconds=CHARACTER_RATE_WINDOW_SECONDS,
 )
 
@@ -82,3 +88,15 @@ async def get_character_render(slug: str, request: Request) -> Response:
     if png is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=CHARACTER_RENDER_NOT_FOUND)
     return Response(content=png, media_type="image/png", headers={"Cache-Control": _CACHE_CONTROL})
+
+
+@router.get("/{slug}/quests/completed", response_model=CharacterCompletedQuests)
+async def get_completed_quests(slug: str, request: Request, response: Response) -> CharacterCompletedQuests:
+    slug = _slug_or_400(slug)
+    check_with_retry_after(character_quests_limiter, f"wow-character-quests:{get_client_ip(request)}")
+    try:
+        quests = await character_lookup_service.get_completed_quests(slug)
+    except CharacterLookupError as exc:
+        raise _upstream_error(slug, exc) from exc
+    response.headers["Cache-Control"] = _CACHE_CONTROL
+    return quests

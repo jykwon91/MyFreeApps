@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Before you go ticks what you've done",
+    "summary": "With your character picked on the character page, a dungeon's Before you go list now ticks every quest you've completed, from Battle.net, and works out where you are from it. Battle.net updates after you log out, so tick a quest you just finished yourself in the meantime.",
+    "to": "/wow-forever/dungeons"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Trainers: what you know and can learn",
     "summary": "With your character picked, each rank's recipe list on the Trainers page now marks every recipe Known, Can learn or Needs <skill>, from your character's own profession skill and recipes, and says how many you can learn.",
     "to": "/wow-forever/trainers"
