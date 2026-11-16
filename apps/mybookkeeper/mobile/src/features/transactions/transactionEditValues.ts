@@ -4,9 +4,9 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { isAllowedTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
+import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
 
-const MONEY_PATTERN = /^\d+(\.\d{1,2})?$/;
 const YEAR_PATTERN = /^\d{4}$/;
 
 export function toEditValues(transaction: Transaction): TransactionEditValues {
@@ -53,12 +53,6 @@ export function taxYearError(values: TransactionEditValues, original: Transactio
   if (year === String(original.tax_year)) return undefined;
   if (YEAR_PATTERN.test(year) && isAllowedTaxYear(Number(year))) return undefined;
   return `Use a year from ${MIN_TAX_RETURN_YEAR} to ${MAX_TAX_RETURN_YEAR}.`;
-}
-
-export function moneyInputError(amount: string): string | undefined {
-  if (amount === "" || Number(amount) === 0) return "Enter an amount above $0.";
-  if (!MONEY_PATTERN.test(amount)) return "Use dollars and cents, like 84.20.";
-  return undefined;
 }
 
 /** Only what changed: editing one field must not rewrite the others, or teach a rule by accident. */

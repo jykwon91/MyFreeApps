@@ -7,7 +7,7 @@ import { formatCurrency } from "@platform/core/utils/currency";
 import { MAX_REPORTED_AMOUNT, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
 import { spokenMoney } from "../transactions/transactionDisplay";
-import { moneyInputError } from "../transactions/transactionEditValues";
+import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 
 const STATUS_WORDS: Record<ReconciliationSourceStatus, string> = {
   unmatched: MESSAGES.notMatched,

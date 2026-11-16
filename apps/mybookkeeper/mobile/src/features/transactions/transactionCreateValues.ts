@@ -4,7 +4,7 @@ import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transaction
 import { isoFromDate } from "../../lib/localDate";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
-import { moneyInputError } from "./transactionEditValues";
+import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { taxYearOf } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 
 /** What the website opens its form with: today, an expense, maintenance. */

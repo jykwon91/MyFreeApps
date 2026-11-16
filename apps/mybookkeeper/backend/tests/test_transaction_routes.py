@@ -4,7 +4,7 @@ Uses FastAPI TestClient with dependency overrides for auth and org context.
 """
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -21,15 +21,17 @@ from app.core.permissions import current_org_member
 from app.core.transaction_bulk_constants import MAX_BULK_TRANSACTION_IDS
 from app.main import app
 from app.models.organization.organization import Organization
-from app.models.system.audit_log import AuditLog
 from app.models.properties.property import Property, PropertyType
+from app.models.system.audit_log import AuditLog
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
 from app.models.vendors.vendor import Vendor
 from app.repositories import transaction_repo
-from app.repositories.transactions.transaction_bulk_repo import live_transactions_for_update_stmt
 from app.repositories.classification import classification_rule_repo
+from app.repositories.transactions.transaction_bulk_repo import (
+    live_transactions_for_update_stmt,
+)
 
 
 @pytest_asyncio.fixture()
@@ -212,7 +214,7 @@ class TestToReview:
         await _seed_transaction(db, org, owner, status="approved")
         await _seed_transaction(db, org, owner, status="duplicate")
         deleted = await _seed_transaction(db, org, owner, status="pending")
-        deleted.deleted_at = datetime.now(timezone.utc)
+        deleted.deleted_at = datetime.now(UTC)
         await db.commit()
 
         rows = (await client.get("/transactions", params={"to_review": True})).json()
@@ -267,6 +269,27 @@ class TestCreateTransaction:
         assert data["is_manual"] is True
         assert data["amount"] == "150.00"
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("amount", "message"),
+        [
+            ("12.345", "Use dollars and cents, like 84.20."),
+            ("0", "Enter an amount above $0."),
+            ("-5", "Enter an amount above $0."),
+        ],
+    )
+    async def test_rejects_an_amount_the_column_would_round_or_refuse(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, amount: str, message: str,
+    ) -> None:
+        resp = await client.post("/transactions", json={**_CREATE_BODY, "amount": amount})
+
+        assert resp.status_code == 422
+        assert [e["msg"] for e in resp.json()["detail"]] == [f"Value error, {message}"]
+        stored = (await db.execute(
+            select(Transaction).where(Transaction.organization_id == org.id)
+        )).scalars().all()
+        assert stored == []
+
 
 class TestGetTransaction:
     @pytest.mark.asyncio
@@ -296,6 +319,28 @@ class TestUpdateTransaction:
         )
         assert resp.status_code == 200
         assert resp.json()["vendor"] == "Updated Vendor"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            ({"amount": "12.345", "status": "approved"}, "Use dollars and cents, like 84.20."),
+            ({"amount": None, "status": "approved"}, "Enter an amount above $0."),
+            ({"amount": "0"}, "Enter an amount above $0."),
+        ],
+    )
+    async def test_rejects_a_bad_amount_and_changes_nothing(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+        body: dict[str, object], message: str,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner)
+
+        resp = await client.patch(f"/transactions/{txn.id}", json=body)
+
+        assert resp.status_code == 422
+        assert [e["msg"] for e in resp.json()["detail"]] == [f"Value error, {message}"]
+        await db.refresh(txn)
+        assert (txn.amount, txn.status) == (Decimal("100.00"), "pending")
 
     @pytest.mark.asyncio
     async def test_returns_404_for_missing(self, client: AsyncClient) -> None:

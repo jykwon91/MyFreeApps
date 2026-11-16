@@ -7,6 +7,7 @@ export const TRANSACTION_EDIT_MESSAGES = {
   saveAndClose: "Save & close",
   saving: "Saving...",
   couldntSave: "I couldn't save your changes. Mind trying again?",
+  fixFieldsFirst: "Fix the highlighted fields, then save again.",
   couldntDelete: "I couldn't delete that transaction. Mind trying again?",
   openingSource: "Opening the source document...",
   couldntOpenSource: "I couldn't open the source document. Mind trying again?",

@@ -9,6 +9,10 @@ import type { TransactionFormValues } from "@/shared/types/transaction/transacti
 import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
+import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
+import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
+import TransactionFieldError from "@/app/features/transactions/TransactionFieldError";
 
 export interface ManualEntryFormProps {
   properties: readonly Property[];
@@ -40,8 +44,10 @@ function buildDefaults(): TransactionFormValues {
 export default function ManualEntryForm({ properties, onClose, onSuccess, onError }: ManualEntryFormProps) {
   const [createTransaction, { isLoading }] = useCreateTransactionMutation();
 
-  const { register, handleSubmit, watch, setValue } = useForm<TransactionFormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormValues>({
     defaultValues: buildDefaults(),
+    // A bad amount is named as soon as the field is left, not only once Create is pressed.
+    mode: "onTouched",
   });
 
   const transactionType = watch("transaction_type");
@@ -50,7 +56,7 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
   const category = watch("category");
 
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
-  const isValid = amount && parseFloat(amount) > 0 && transactionDate && category;
+  const isValid = moneyInputError(amount) === undefined && transactionDate && category;
 
   async function onSubmit(data: TransactionFormValues) {
     try {
@@ -70,8 +76,8 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
       } as Partial<Transaction>).unwrap();
 
       onSuccess();
-    } catch {
-      onError?.("Failed to create transaction");
+    } catch (err) {
+      onError?.(rejectedWriteDetail(err, "Failed to create transaction"));
     }
   }
 
@@ -122,19 +128,24 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
 
         <FormField label="Amount" required>
           {(field) => (
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-              <input
-                type="number"
-                {...register("amount")}
-                className="w-full border rounded-md pl-7 pr-3 py-2 text-sm"
-                placeholder="0.00"
-                step="0.01"
-                min="0.01"
-                required
-                {...field}
-              />
-            </div>
+            <>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+                <input
+                  type="number"
+                  {...register("amount", TRANSACTION_AMOUNT_RULES)}
+                  className="w-full border rounded-md pl-7 pr-3 py-2 text-sm"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  aria-invalid={errors.amount ? true : undefined}
+                  aria-describedby={errors.amount ? `${field.id}-error` : undefined}
+                  {...field}
+                />
+              </div>
+              <TransactionFieldError id={`${field.id}-error`} message={errors.amount?.message} />
+            </>
           )}
         </FormField>
 
