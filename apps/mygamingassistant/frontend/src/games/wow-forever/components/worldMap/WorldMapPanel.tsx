@@ -17,7 +17,7 @@ import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionCon
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { RARES_STATUS } from "@/games/wow-forever/data/rares/raresConfig";
 import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
-import { THEATER_SECTION_MAX_WIDTH } from "@/games/wow-forever/data/worldMap/mapTheaterLayout";
+import { THEATER_PANEL_MAX_WIDTH } from "@/games/wow-forever/data/worldMap/mapTheaterLayout";
 import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
 import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
 import { useRares } from "@/games/wow-forever/hooks/useRares";
@@ -174,14 +174,10 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
     <section
       aria-labelledby="wm-map"
       data-full-size={theaterMode || undefined}
-      className={theaterMode ? "mx-auto space-y-3 px-3 py-2" : "space-y-3"}
-      style={theaterMode ? { maxWidth: THEATER_SECTION_MAX_WIDTH } : undefined}
+      className="mx-auto space-y-3"
+      style={theaterMode ? { maxWidth: THEATER_PANEL_MAX_WIDTH } : undefined}
     >
-      {/* Theater mode: accessible heading only; normal mode: visible heading + Share + zone jumps. */}
-      {theaterMode ? (
-        <h2 id="wm-map" className="sr-only">Map: {map.name}</h2>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="wm-map" className="text-lg font-semibold">
             Map: {map.name}
           </h2>
@@ -205,7 +201,6 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
             </div>
           )}
         </div>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <MapBreadcrumb path={mapPath(data, map.id)} onOpen={onOpen} />
         <div className="flex flex-wrap items-center gap-2">

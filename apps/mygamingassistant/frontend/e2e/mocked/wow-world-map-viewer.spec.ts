@@ -244,18 +244,18 @@ test("a profession trainer's Show on map lands on that trainer's marker", async 
   expectInside(await boxOf(destination), await boxOf(page.getByTestId("zone-map")));
 });
 
-test("Theater mode fills the window, keeps zooming, and Esc puts it back", async ({ page }) => {
+test("Theater mode makes the map bigger and brings it into view, keeps zooming, and Esc puts it back", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openElwynn(page);
   const before = await boxOf(page.getByTestId("zone-map"));
 
   await page.getByRole("button", { name: "Theater mode" }).click();
   const full = await boxOf(page.getByTestId("zone-map"));
-  // Bigger, all on screen, and as tall as the window allows (less its edge labels and the hover line).
-  expect(full.width).toBeGreaterThan(before.width * 1.3);
+  // Much bigger, scrolled into view and all on screen (less the panel's heading rows, edge labels and hover line).
+  expect(full.width).toBeGreaterThan(before.width * 1.5);
   expect(full.y).toBeGreaterThanOrEqual(0);
   expect(full.y + full.height).toBeLessThanOrEqual(900);
-  expect(full.height).toBeGreaterThan(900 * 0.75);
+  expect(full.height).toBeGreaterThan(900 * 0.6);
   await expectZoom(page, "Elwynn Forest", 1);
   await expectNoHorizontalOverflow(page);
 
@@ -319,13 +319,12 @@ test("theater mode keeps the zoom and pan you had, both ways", async ({ page }) 
   expect(after.y).toBeCloseTo(before.y, 1);
 });
 
-test("theater mode covers the whole window and fits a short, wide one without scrolling", async ({ page }) => {
+test("theater mode stays on the page and fits a short, wide window without scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 700 });
   await openElwynn(page);
   await page.getByRole("button", { name: "Theater mode" }).click();
-  const overlay = await boxOf(page.getByTestId("theater-overlay"));
-  expect(overlay.height).toBeCloseTo(700, 0);
-  expect(overlay.width).toBeCloseTo(1600, 0);
+  await expect(page.getByTestId("theater-overlay")).toHaveCount(0);
+  await expect(page.locator("#wm-map-panel section[data-full-size]")).toBeVisible();
   const map = await boxOf(page.getByTestId("zone-map"));
   expect(map.y).toBeGreaterThanOrEqual(0);
   expect(map.y + map.height).toBeLessThanOrEqual(700);

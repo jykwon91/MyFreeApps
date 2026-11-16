@@ -4,7 +4,7 @@ import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import { FULL_VIEW } from "@/games/wow-forever/worldMap/mapViewport";
 
 /**
- * Keeps the player's zoom + pan across the map being remounted (theater mode swaps the panel):
+ * Keeps the player's zoom + pan across the map panel changing size (theater mode) or being remounted:
  * `track` follows every view change, `carry` pins the latest one as a pending restore for the new map,
  * which the canvas applies once it's up and then `clear`s.
  */

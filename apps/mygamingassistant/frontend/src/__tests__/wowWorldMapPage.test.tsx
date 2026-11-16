@@ -65,35 +65,31 @@ describe("WoW Forever World Map page", () => {
     expect(stored).toMatchObject({ faction: "A", classId: "warlock", zoneId: 1429 });
   });
 
-  it("theater mode fills the window with the map and Esc puts it back", async () => {
+  it("theater mode makes the same map bigger on the same page, and Esc puts it back", async () => {
     renderPage();
     const viewer = await screen.findByTestId("zone-map", {}, { timeout: 4000 });
-    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
-    const overlay = screen.getByTestId("theater-overlay");
-    const theaterViewer = within(overlay).getByTestId("zone-map");
-    expect(theaterViewer.closest("section")).toHaveAttribute("data-full-size");
-    expect(document.body.style.overflow).toBe("hidden");
-    // The page under the overlay can't be tabbed to or clicked; the planner inside it still works.
-    expect(screen.getByLabelText("Class").closest("[inert]")).not.toBeNull();
-    expect(within(overlay).getByRole("region", { name: "Route planner" }).closest("[inert]")).toBeNull();
-    expect(theaterViewer.closest("[inert]")).toBeNull();
-    expect(viewer).not.toBeInTheDocument();
-
-    // Esc on the map itself leaves theater mode before it would zoom out.
-    fireEvent.keyDown(theaterViewer, { key: "Escape" });
+    // The same map, not a copy in an overlay: the page around it stays usable.
+    expect(screen.getByTestId("zone-map")).toBe(viewer);
+    expect(viewer.closest("section")).toHaveAttribute("data-full-size");
     expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");
-    expect(screen.getByLabelText("Class").closest("[inert]")).toBeNull();
+    expect(document.querySelector("[inert]")).toBeNull();
+    expect(screen.getByLabelText("Class")).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: /^Map: / })).toBeVisible();
+
+    // Esc on the map itself leaves theater mode before it would zoom out.
+    fireEvent.keyDown(viewer, { key: "Escape" });
+    expect(viewer.closest("section")).not.toHaveAttribute("data-full-size");
 
     // Esc anywhere else does too, and so does the button.
     await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
     fireEvent.keyDown(screen.getByRole("button", { name: "Exit theater mode" }), { key: "Escape" });
-    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
+    expect(viewer.closest("section")).not.toHaveAttribute("data-full-size");
     await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
     await userEvent.click(screen.getByRole("button", { name: "Exit theater mode" }));
-    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
+    expect(viewer.closest("section")).not.toHaveAttribute("data-full-size");
   });
 
   it("shows directions for a result and a typed position moves you", async () => {

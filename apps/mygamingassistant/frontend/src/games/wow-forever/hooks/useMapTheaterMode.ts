@@ -1,18 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { THEATER_MODE_STORAGE_KEY } from "@/games/wow-forever/data/worldMap/mapTheaterMode";
-
-/** Everything on the page outside `el` (siblings of it and of each ancestor), which theater mode makes inert. */
-function pageAround(el: HTMLElement): HTMLElement[] {
-  const around: HTMLElement[] = [];
-  for (let node: HTMLElement | null = el; node && node !== document.body; node = node.parentElement) {
-    for (const sibling of Array.from(node.parentElement?.children ?? [])) {
-      if (sibling !== node && sibling instanceof HTMLElement && !sibling.hasAttribute("inert")) {
-        around.push(sibling);
-      }
-    }
-  }
-  return around;
-}
 
 function readStoredActive(): boolean {
   try {
@@ -31,19 +18,16 @@ function writeStoredActive(value: boolean): void {
 }
 
 /**
- * Theater mode for the World Map: fills the viewport with the map overlay, hiding
- * the app chrome (sidebar, header, bottom nav) via `inert` and locking body scroll.
- *
- * Owned at the page level so the RoutePlanner, MapSearchResults, and WorldMapPanel
- * can all be included inside the fixed overlay, keeping every map control accessible.
+ * Theater mode for the World Map: the same page, with the map about three times bigger
+ * (the page widens and the map column takes most of it). Remembered per device.
  *
  * `escapeTaken` prevents theater exit when MapCanvas is using Esc for its own chain
  * (placing a mark, a pick in progress, or a result selected).
  *
  * `beforeChange` runs synchronously, in the event handler, right before the mode flips (by the
- * button or by Esc) — while the outgoing map is still mounted — so the page can note the view to carry over.
+ * button or by Esc), so the page can note the view to keep across the resize.
  */
-export function useMapTheaterMode(frameRef: RefObject<HTMLElement | null>, escapeTaken: boolean, beforeChange?: () => void) {
+export function useMapTheaterMode(escapeTaken: boolean, beforeChange?: () => void) {
   const [active, setActive] = useState(readStoredActive);
   const beforeChangeRef = useRef(beforeChange);
   useEffect(() => {
@@ -62,19 +46,6 @@ export function useMapTheaterMode(frameRef: RefObject<HTMLElement | null>, escap
   useEffect(() => {
     writeStoredActive(active);
   }, [active]);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-    if (!active || !frame) return;
-    const around = pageAround(frame);
-    for (const el of around) el.setAttribute("inert", "");
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      for (const el of around) el.removeAttribute("inert");
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [active, frameRef]);
 
   useEffect(() => {
     if (!active) return;

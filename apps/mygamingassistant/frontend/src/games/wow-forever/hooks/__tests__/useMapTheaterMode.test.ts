@@ -18,46 +18,41 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// ── helpers ─────────────────────────────────────────────────────────────────
-function makeRef(el: HTMLElement | null = null) {
-  return { current: el };
-}
-
 // ── tests ────────────────────────────────────────────────────────────────────
 describe("useMapTheaterMode", () => {
   it("initialises inactive when nothing is stored", () => {
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     expect(result.current.active).toBe(false);
   });
 
   it("initialises active when localStorage holds 'true'", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     expect(result.current.active).toBe(true);
   });
 
   it("toggle flips from inactive → active", () => {
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => result.current.toggle());
     expect(result.current.active).toBe(true);
   });
 
   it("toggle flips from active → inactive", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => result.current.toggle());
     expect(result.current.active).toBe(false);
   });
 
   it("exit always sets active to false", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => result.current.exit());
     expect(result.current.active).toBe(false);
   });
 
   it("persists active state to localStorage on toggle", () => {
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => result.current.toggle());
     expect(lsSetItem).toHaveBeenCalledWith(THEATER_MODE_STORAGE_KEY, "true");
     act(() => result.current.toggle());
@@ -66,7 +61,7 @@ describe("useMapTheaterMode", () => {
 
   it("Esc exits theater when escapeTaken is false", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
@@ -75,7 +70,7 @@ describe("useMapTheaterMode", () => {
 
   it("Esc does NOT exit theater when escapeTaken is true", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), true));
+    const { result } = renderHook(() => useMapTheaterMode(true));
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
@@ -84,7 +79,7 @@ describe("useMapTheaterMode", () => {
 
   it("Esc does NOT exit when the event was already prevented", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => {
       const e = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
       e.preventDefault();
@@ -95,56 +90,32 @@ describe("useMapTheaterMode", () => {
 
   it("non-Escape keys do not exit theater", () => {
     store[THEATER_MODE_STORAGE_KEY] = "true";
-    const { result } = renderHook(() => useMapTheaterMode(makeRef(), false));
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
     });
     expect(result.current.active).toBe(true);
   });
 
-  it("inerts surrounding elements when active and frame is set", () => {
-    // Build a minimal DOM: body → outer → [frame, sibling]
-    const outer = document.createElement("div");
-    const frame = document.createElement("div");
-    const sibling = document.createElement("div");
-    outer.appendChild(frame);
-    outer.appendChild(sibling);
-    document.body.appendChild(outer);
-
-    const ref = makeRef(frame);
-    const { result } = renderHook(() => useMapTheaterMode(ref, false));
-
-    act(() => result.current.toggle());
-    expect(sibling.hasAttribute("inert")).toBe(true);
-
-    act(() => result.current.toggle());
-    expect(sibling.hasAttribute("inert")).toBe(false);
-
-    document.body.removeChild(outer);
-  });
-
-  it("locks body scroll when active, restores on exit", () => {
+  it("leaves the rest of the page usable: nothing inert, the page still scrolls", () => {
     document.body.style.overflow = "";
-    const frame = document.createElement("div");
-    document.body.appendChild(frame);
+    const sibling = document.createElement("div");
+    document.body.appendChild(sibling);
 
-    const ref = makeRef(frame);
-    const { result } = renderHook(() => useMapTheaterMode(ref, false));
-
+    const { result } = renderHook(() => useMapTheaterMode(false));
     act(() => result.current.toggle());
-    expect(document.body.style.overflow).toBe("hidden");
-
-    act(() => result.current.exit());
+    expect(result.current.active).toBe(true);
+    expect(sibling.hasAttribute("inert")).toBe(false);
     expect(document.body.style.overflow).toBe("");
 
-    document.body.removeChild(frame);
+    document.body.removeChild(sibling);
   });
 });
 
 describe("useMapTheaterMode beforeChange", () => {
   it("runs before every flip: toggle, exit and Esc — but not for a blocked Esc", () => {
     const before = vi.fn();
-    const { result, rerender } = renderHook(({ taken }) => useMapTheaterMode(makeRef(), taken, before), {
+    const { result, rerender } = renderHook(({ taken }) => useMapTheaterMode(taken, before), {
       initialProps: { taken: false },
     });
     act(() => result.current.toggle());
