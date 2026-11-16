@@ -5,7 +5,7 @@
  * Try again recovers; the loading skeleton lines up with the loaded list.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { DAILY_LIMIT_COPY, LEARNER_TIME_ZONE } from "./constants/blockCopy";
+import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE } from "./constants/blockCopy";
 import { LESSONS_LOAD_FAILED } from "./constants/onboardingCopy";
 import { GET_PROFILE, LIST_SCENARIOS } from "./constants/stubbedEndpoints";
 import { PHONE_VIEWPORT, TABLET_VIEWPORT } from "./constants/viewports";
@@ -28,20 +28,26 @@ test("lists the scenarios in path order for the learner's language, and opens th
     await expect(cards.nth(index)).toContainText(scenario.goal);
   }
   expect(api.reads).toContain("/scenarios?language=es");
-  await expect(page.getByText(DAILY_LIMIT_COPY)).toHaveCount(0);
+  await expect(page.getByText(/You've used today's practice time/)).toHaveCount(0);
 
   await page.getByRole("link", { name: /At the café/ }).click();
   await expect(page).toHaveURL(/\/practice\?scenario=cafe$/);
   await expect(page.getByRole("heading", { name: "At the café" })).toBeVisible();
 });
 
-test("a learner at today's cap is told before they pick a scenario", async ({ page }) => {
-  await signedInTutor(page, { usage: CAP_REACHED });
+for (const [label, now, copy] of [
+  ["before", BEFORE_RESET, DAILY_LIMIT_COPY],
+  ["after", AFTER_RESET, DAILY_LIMIT_AFTER_RESET_COPY],
+] as const) {
+  test(`a learner at today's cap (${label} the day's reset hour) is told before they pick a scenario`, async ({ page }) => {
+    await page.clock.setFixedTime(now);
+    await signedInTutor(page, { usage: CAP_REACHED });
 
-  await page.goto("/scenarios");
-  await expect(page.getByText(DAILY_LIMIT_COPY)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
-});
+    await page.goto("/scenarios");
+    await expect(page.getByText(copy, { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
+  });
+}
 
 for (const failing of [LIST_SCENARIOS, GET_PROFILE]) {
   test(`a failed load (${failing}) says so instead of an empty path, and Try again recovers`, async ({ page }) => {
