@@ -1,6 +1,6 @@
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Pressable, Text } from "react-native";
 import { applicantName, applicantRowDetails, applicantRowLabel, applicantStageLabel, promotedAgo } from "./applicantDisplay";
 
 export default function ApplicantRow({
@@ -13,6 +13,7 @@ export default function ApplicantRow({
   onPress: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   const details = applicantRowDetails(applicant);
 
   return (
@@ -30,14 +31,12 @@ export default function ApplicantRow({
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-          {applicantName(applicant.legal_name)}
-        </Text>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{promotedAgo(applicant.created_at)}</Text>
-      </View>
+      <ListRowTitle
+        aside={<Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{promotedAgo(applicant.created_at)}</Text>}
+        title={applicantName(applicant.legal_name)}
+      />
       {details ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
         </Text>
       ) : null}

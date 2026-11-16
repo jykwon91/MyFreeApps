@@ -1,6 +1,6 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Pressable, Text } from "react-native";
 import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
 
 export default function TransactionRow({
@@ -20,6 +20,7 @@ export default function TransactionRow({
 }) {
   const isPicking = isSelected !== undefined;
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   const details = [shortDate(transaction.transaction_date), categoryLabel(transaction.category), propertyName]
     .filter(Boolean)
     .join(" · ");
@@ -42,27 +43,29 @@ export default function TransactionRow({
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        {isPicking ? (
-          <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.md, color: isSelected ? colors.primary : colors.mutedForeground }}>
-            {isSelected ? "☑" : "☐"}
+      <ListRowTitle
+        aside={
+          <Text
+            style={{
+              fontSize: fontSize.md,
+              fontWeight: "600",
+              fontVariant: ["tabular-nums"],
+              color: isMoneyIn(transaction) ? colors.positiveText : colors.foreground,
+            }}
+          >
+            {displayAmount(transaction)}
           </Text>
-        ) : null}
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-          {transactionName(transaction)}
-        </Text>
-        <Text
-          style={{
-            fontSize: fontSize.md,
-            fontWeight: "600",
-            fontVariant: ["tabular-nums"],
-            color: isMoneyIn(transaction) ? colors.positiveText : colors.foreground,
-          }}
-        >
-          {displayAmount(transaction)}
-        </Text>
-      </View>
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        }
+        leading={
+          isPicking ? (
+            <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.md, color: isSelected ? colors.primary : colors.mutedForeground }}>
+              {isSelected ? "☑" : "☐"}
+            </Text>
+          ) : null
+        }
+        title={transactionName(transaction)}
+      />
+      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {details}
       </Text>
       {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
