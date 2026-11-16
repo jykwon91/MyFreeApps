@@ -9,7 +9,7 @@ import { includesDeposits, noPaymentsFrom, PAYMENTS_SHOWN_AT_FIRST, showAllPayme
 import InquirySection from "../inquiries/InquirySection";
 import { rentNotesByPayment } from "../rent/rentDisplay";
 import TenantPaymentRow from "./TenantPaymentRow";
-import { tenantPaymentTotals } from "./tenantPaymentTotals";
+import { tenantPaymentTotals } from "@mybookkeeper/api-client/utils/tenantPaymentTotals";
 
 export default function TenantPayments({ applicantId, name }: { applicantId: string; name: string }) {
   const { colors, spacing, fontSize } = useTheme();
