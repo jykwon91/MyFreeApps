@@ -1507,8 +1507,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/guild/enchantEffect.ts` — procs, gathering, speed and slayer enchants
   are left out) and valued with their weights (`guildHelpWeights`: spec Level 60
   weights from talents, else class leveling weights; flat weapon damage as DPS
-  on the worn weapon's speed, `enchantValue.ts`). Value 0 → never suggested
-  (the operator, a Warlock, was offered +7 Strength gloves, 2026-11-16). Deduped
+  on the worn weapon's speed, `enchantValue.ts`). Worth under
+  one point of the wearer's best main stat (`mainStatPoint`, `MAIN_STATS`) → never suggested (the operator,
+  a Warlock, was offered +7 Strength gloves, then +7 Agility — spec weights give
+  casters a token 0.05 Agility — 2026-11-16). Deduped
   to the enchant worth most per (beneficiary, slot), then the highest-skill
   enchanter;
   **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
