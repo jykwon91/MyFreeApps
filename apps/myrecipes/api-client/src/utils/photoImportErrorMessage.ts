@@ -1,8 +1,11 @@
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { PHOTO_IMPORT_MAX_MEGABYTES } from "../constants/photoImport";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { requestErrorStatus } from "./requestErrorStatus";
 
 /** What to tell the user when reading a recipe from a photo fails. */
 export function photoImportErrorMessage(error: unknown): string {
+  if (isNoResponse(error)) return CONNECTION_MESSAGES.photoImport;
   switch (requestErrorStatus(error)) {
     case 413:
       return `That photo is too large (max ${PHOTO_IMPORT_MAX_MEGABYTES} MB). Try a smaller or compressed version.`;

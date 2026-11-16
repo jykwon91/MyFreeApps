@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { DIFF_CHANGE_DISPLAY, VERSION_COPY } from "../constants/versions";
 import type { DiffResponse } from "../types/recipe/diff";
 import { diffErrorMessage } from "../utils/diffErrorMessage";
@@ -101,8 +102,12 @@ describe("diffErrorMessage", () => {
 
   it("falls back to the general message otherwise", () => {
     expect(diffErrorMessage({ status: 500 })).toBe(VERSION_COPY.loadFailedBody);
-    expect(diffErrorMessage({ status: "FETCH_ERROR" })).toBe(VERSION_COPY.loadFailedBody);
     expect(diffErrorMessage(undefined)).toBe(VERSION_COPY.loadFailedBody);
+  });
+
+  it("says the server can't be reached when no answer came back", () => {
+    expect(diffErrorMessage({ status: "FETCH_ERROR" })).toBe(CONNECTION_MESSAGES.diff);
+    expect(diffErrorMessage({ status: undefined })).toBe(CONNECTION_MESSAGES.diff);
   });
 });
 

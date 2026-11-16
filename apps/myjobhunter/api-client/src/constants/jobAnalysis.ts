@@ -11,6 +11,9 @@ export const JOB_ANALYSIS_FALLBACKS = {
   verdict: "Analyzed",
 } as const;
 
+/** What to say when reading a posting or scoring a job got no answer at all: not the link's or the AI's fault. */
+export const JOB_ANALYSIS_NO_CONNECTION = "I can't reach the server. Check your connection and try again.";
+
 /** Why an analysis of pasted text failed, when the request reached the server. */
 export const JOB_ANALYSIS_ERRORS = {
   aiFailed: "The AI couldn't score this job right now. Try again in a moment.",

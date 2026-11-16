@@ -40,6 +40,12 @@ export const RESUME_MESSAGES = {
   emptyFile: "That file is empty. Choose a file with something in it.",
   couldntPick: "I couldn't open your files. Want to try again?",
   couldntUpload: "I couldn't upload that file. Want to try again?",
+  couldntReachServer: "I couldn't reach the server. Check your connection and try again.",
+  notUploaded: (name: string) => `"${name}" hasn't uploaded yet.`,
+  retryUpload: "Retry upload",
+  retryUploadOf: (name: string) => `Retry uploading ${name}`,
+  discardUpload: "Discard",
+  discardUploadOf: (name: string) => `Discard ${name}`,
   couldntStart: "I couldn't start a session. Try again.",
   // Loading the session
   couldntLoadSession: "I couldn't load that session",

@@ -1,8 +1,11 @@
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { VERSION_COPY } from "../constants/versions";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { requestErrorStatus } from "./requestErrorStatus";
 
 /** What to tell the user when a comparison of two versions can't be loaded. */
 export function diffErrorMessage(error: unknown): string {
+  if (isNoResponse(error)) return CONNECTION_MESSAGES.diff;
   switch (requestErrorStatus(error)) {
     // `against` isn't a version of this recipe.
     case 400:

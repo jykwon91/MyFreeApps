@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { photoImportErrorMessage } from "../utils/photoImportErrorMessage";
 import { requestErrorStatus } from "../utils/requestErrorStatus";
 
@@ -10,7 +11,12 @@ describe("photoImportErrorMessage", () => {
     expect(photoImportErrorMessage({ status: 429 })).toMatch(/Give it a few minutes/);
     expect(photoImportErrorMessage({ status: 503 })).toBe("Photo import isn't available right now.");
     expect(photoImportErrorMessage({ status: 500 })).toBe("Something went wrong — please try again.");
-    expect(photoImportErrorMessage(new Error("Network Error"))).toBe("Something went wrong — please try again.");
+    expect(photoImportErrorMessage(new Error("boom"))).toBe("Something went wrong — please try again.");
+  });
+
+  it("says the server can't be reached when no answer came back", () => {
+    expect(photoImportErrorMessage({ status: undefined })).toBe(CONNECTION_MESSAGES.photoImport);
+    expect(photoImportErrorMessage({ status: "FETCH_ERROR" })).toBe(CONNECTION_MESSAGES.photoImport);
   });
 });
 

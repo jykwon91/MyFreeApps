@@ -238,6 +238,48 @@ describe("uploading a resume on Resume", () => {
     await waitFor(() => expect(uploadsSent(sent)).toHaveLength(2));
   });
 
+  it("says the server can't be reached, keeps the file, and sends the same one again on Retry without picking it again", async () => {
+    let calls = 0;
+    const { sent } = serveUploads([], {
+      "POST /resumes": (): FakeReply => {
+        calls += 1;
+        if (calls === 1) throw new Error("Network Error");
+        return { status: 201, data: QUEUED };
+      },
+    });
+    await openResume();
+
+    pick({ name: "ada.pdf", mimeType: PDF, size: 2048 });
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.uploadResume }));
+
+    expect(await screen.findByText(MESSAGES.couldntReachServer)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntUpload)).toBeNull();
+    expect(screen.getByText(MESSAGES.notUploaded("ada.pdf"))).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.retryUploadOf("ada.pdf") }));
+
+    await waitFor(() => expect(uploadsSent(sent)).toHaveLength(2));
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(1);
+    expect(uploadsSent(sent)[1].data).toEqual(uploadsSent(sent)[0].data);
+    await waitFor(() => expect(screen.queryByTestId("resume-unsent")).toBeNull());
+  });
+
+  it("lets go of a file that didn't reach the server when it's discarded, and keeps nothing after a server refusal", async () => {
+    serveUploads([], { "POST /resumes": (): FakeReply => { throw new Error("Network Error"); } });
+    await openResume();
+
+    pick({ name: "ada.pdf", mimeType: PDF, size: 2048 });
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.uploadResume }));
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.discardUploadOf("ada.pdf") }));
+    expect(screen.queryByTestId("resume-unsent")).toBeNull();
+
+    serveUploads([], { "POST /resumes": (): FakeReply => ({ status: 500, data: {} }) });
+    pick({ name: "ada.pdf", mimeType: PDF, size: 2048 });
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.uploadResume }));
+    expect(await screen.findByText(MESSAGES.couldntUpload)).toBeTruthy();
+    expect(screen.queryByTestId("resume-unsent")).toBeNull();
+  });
+
   it("says so when the files couldn't be opened, and does nothing when the picker is closed", async () => {
     const { sent } = serveUploads([]);
     await openResume();

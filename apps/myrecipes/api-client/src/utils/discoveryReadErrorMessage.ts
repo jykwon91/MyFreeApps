@@ -1,7 +1,10 @@
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { requestErrorStatus } from "./requestErrorStatus";
 
 /** What to tell the user when opening one discovered recipe fails. */
 export function discoveryReadErrorMessage(error: unknown): string {
+  if (isNoResponse(error)) return CONNECTION_MESSAGES.discoveryRead;
   switch (requestErrorStatus(error)) {
     case 422:
       return "We couldn't read a recipe off that page. Open the original to see it.";
