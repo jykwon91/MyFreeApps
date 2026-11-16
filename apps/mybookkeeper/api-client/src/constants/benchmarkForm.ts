@@ -13,8 +13,6 @@ export const INSURANCE_BENCHMARK_REGION_MAX_LENGTH = 120;
 export const MARKET_RATE_MAX_CENTS_PER_KWH = 999.9999;
 export const MARKET_RATE_MAX_DECIMALS = 4;
 
-/** Money is typed in dollars and stored in whole cents, so a third decimal place has no meaning. */
-export const BENCHMARK_MONEY_MAX_DECIMALS = 2;
 export const INSURANCE_BENCHMARK_MAX_ANNUAL_PREMIUM_DOLLARS = 10_000_000;
 export const INSURANCE_BENCHMARK_MAX_COVERAGE_DOLLARS = 1_000_000_000;
 
@@ -25,7 +23,7 @@ export const BENCHMARK_FORM_PROBLEMS = {
   rateTooPrecise: `Use at most ${MARKET_RATE_MAX_DECIMALS} decimal places.`,
   monthlyRequired: "Enter the monthly price as a number above zero.",
   monthlyTooLarge: "That amount is too large.",
-  moneyTooPrecise: "Use dollars and cents, like 1200.50.",
+  moneyTooPrecise: (decimalSeparator: DecimalSeparator) => `Use dollars and cents, like 1200${decimalSeparator}50.`,
   premiumRequired: "Enter the yearly premium as a number above zero.",
   premiumTooHigh: `A premium over $${INSURANCE_BENCHMARK_MAX_ANNUAL_PREMIUM_DOLLARS.toLocaleString("en-US")} a year looks like a typo.`,
   coverageRequired: "Enter the dwelling coverage as a number above zero.",
