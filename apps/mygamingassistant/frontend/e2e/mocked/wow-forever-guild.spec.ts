@@ -1042,6 +1042,30 @@ test("help tab: shows enchant matches, type chips filter, member picker filters,
   await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
 });
 
+test("help tab: an upgrade you can make yourself says so, with no guild mate", async ({ page }) => {
+  await stubAll(page);
+  await page.route(HELP_PATTERN, (route) => json(route, {
+    members: [{
+      slug: "tailor",
+      name: "Tailor",
+      surname: "",
+      class_name: "Mage",
+      level: 20,
+      // Sash of Sorrow (+1 Intellect) vs Novice Arcanist's Sash, which they can sew themselves.
+      equipped: [{ slot: "WAIST", item_id: 263402, name: "Sash of Sorrow", item_level: 11, inventory_type: "WAIST", enchantments: [] }],
+      recipe_ability_ids: [55423], // → spell 1257368 "Novice Arcanist's Sash"
+      professions: [{ profession_id: 197, name: "Tailoring", skill: 100, max_skill: 300 }],
+    }],
+  }));
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+
+  const card = page.getByTestId("guild-match-card");
+  await expect(card).toHaveCount(1, { timeout: 10_000 });
+  await expect(card.getByTestId("guild-match-self")).toContainText("can make this themselves");
+  await expect(card).toContainText("Novice Arcanist's Sash");
+  await expect(card.getByRole("link", { name: "Tailor" })).toHaveCount(1);
+});
+
 test("help tab: member picker filters to that member's matches, kept in URL", async ({ page }) => {
   await stubHelp(page);
   await page.goto("/wow-forever/topdeadcenter?tab=help");

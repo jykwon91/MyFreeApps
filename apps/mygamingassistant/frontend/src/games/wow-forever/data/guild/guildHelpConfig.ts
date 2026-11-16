@@ -24,6 +24,9 @@ export const MAIN_STATS: readonly StatKey[] = ["strength", "agility", "stamina",
 /** No item list (it failed to load): weapon speeds are unknown, so flat weapon damage isn't weighed. */
 export const NO_HELP_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
 
+/** On a Help each other card where the member can make it with their own profession. */
+export const GUILD_HELP_SELF_MADE = "can make this themselves";
+
 /** Blizzard's SkillLine id for Enchanting (the crafter must have this profession). */
 export const ENCHANTING_SKILL_LINE_ID: number = PROFESSION_SKILL_LINES.enchanting;
 

@@ -1511,12 +1511,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   one point of the wearer's best main stat (`mainStatPoint`, `MAIN_STATS`) → never suggested (the operator,
   a Warlock, was offered +7 Strength gloves, then +7 Agility — spec weights give
   casters a token 0.05 Agility — 2026-11-16). Deduped
-  to the enchant worth most per (beneficiary, slot), then the highest-skill
-  enchanter;
+  to the enchant worth most per (beneficiary, slot), then the wearer enchanting
+  it themselves, then the highest-skill enchanter;
   **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
   that creates an item scoring ≥ `UPGRADE_THRESHOLD_PCT` (2%) better than what
   the beneficiary wears, using `LEVELING_SPEC_ID` weights for all members, deduped
-  to the best upgrade per (beneficiary, slot). Both use `recipeSpell()` to map
+  to the best upgrade per (beneficiary, slot). A member's own recipes count
+  for their own gear ("can make this themselves" on the card); on an equal
+  upgrade, making it yourself beats asking a guild mate (operator, 2026-11-16).
+  Both use `recipeSpell()` to map
   the SkillLineAbility id from the sheet to the crafting JSON's spell id.
   Filter chips (All / Enchants / Gear upgrades) and a member picker use `?help_type=`
   / `?help_for=` URL params. AH prices show per-reagent and total estimated cost.

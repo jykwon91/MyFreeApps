@@ -8,7 +8,9 @@
  * per (classId, specId) pair and cached across all beneficiaries.
  *
  * Deduplication: for each (beneficiary_slug, blizzard_slot), only the best
- * upgrade is returned (highest score improvement).
+ * upgrade is returned (highest score improvement); on a tie, one the member can
+ * make themselves wins, then the crafter's slug (alphabetical). A member's own
+ * recipes count for their own gear.
  */
 import { blizzardSlotLabel } from "@/games/wow-forever/lib/guild/blizzardSlotLabel";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
@@ -101,6 +103,19 @@ function beneficiaryFor(member: GuildHelpMember): GuildMatchBeneficiary {
   return { slug: member.slug, name: member.name, surname: member.surname, class_name: member.class_name, level: member.level };
 }
 
+/**
+ * Whether a new upgrade replaces the best so far: a bigger upgrade; on a tie, one the member can make
+ * themselves; then the alphabetically first crafter, so the pick never depends on roster order.
+ */
+function beatsExisting(pct: number, crafterSlug: string, beneficiarySlug: string, existing: GuildMatch): boolean {
+  const existingPct = existing.upgrade_pct ?? 0;
+  if (pct !== existingPct) return pct > existingPct;
+  const selfMade = crafterSlug === beneficiarySlug;
+  const existingSelfMade = existing.crafter.slug === existing.beneficiary.slug;
+  if (selfMade !== existingSelfMade) return selfMade;
+  return crafterSlug < existing.crafter.slug;
+}
+
 /** Upgrade percent: how much better the crafted item is vs the worn one (> 0 means better). */
 function upgradePct(craftedScore: number, wornScore: number): number {
   if (wornScore <= 0) return craftedScore > 0 ? PERCENT : 0;
@@ -173,8 +188,6 @@ export function computeGearMatches(
     if (knownGear.length === 0) continue;
 
     for (const beneficiary of members) {
-      if (beneficiary.slug === crafter.slug) continue;
-
       const scoreItem = scorerFor(beneficiary);
       const beneficiaryClassId = beneficiary.class_name ? characterClassId(beneficiary.class_name) : null;
       if (!scoreItem || !beneficiaryClassId) continue; // unknown class — skip scoring
@@ -216,7 +229,7 @@ export function computeGearMatches(
 
           const key = `${beneficiary.slug}|${blizzardSlot}`;
           const existing = best.get(key);
-          if (existing && (existing.upgrade_pct ?? 0) >= pct) continue;
+          if (existing && !beatsExisting(pct, crafter.slug, beneficiary.slug, existing)) continue;
 
           const matchCrafter = crafterFor(crafter, professionId);
           if (!matchCrafter) continue;

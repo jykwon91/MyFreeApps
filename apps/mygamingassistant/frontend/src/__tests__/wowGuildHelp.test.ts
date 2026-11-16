@@ -125,13 +125,39 @@ describe("computeEnchantMatches", () => {
     expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
-  it("does not match crafter to themselves", () => {
+  it("an enchanter can enchant their own gear", () => {
     const member = makeMember("member", {
       recipe_ability_ids: [4289],
       professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
       equipped: [wristItem()],
     });
-    expect(computeEnchantMatches([member], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
+    const matches = computeEnchantMatches([member], ENCHANTING_FILE_BRACER, NO_ITEMS);
+    expect(matches.map((m) => [m.crafter.slug, m.beneficiary.slug])).toEqual([["member", "member"]]);
+  });
+
+  it("a guild mate's better enchant still beats the one you can make", () => {
+    // ability 4289 → 7418 (+5 Stamina, fixture); 7510 → 13648 "Bracer - Stamina" (+9).
+    const file: Pick<CraftingFile, "recipes"> = {
+      recipes: [
+        enchantRecipe(7418, "Enchant Bracer - Inferior Stamina"),
+        enchantRecipe(13648, "Enchant Bracer - Stamina", "Permanently enchant bracers to give +9 Stamina."),
+      ],
+    };
+    const enchanting = [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 200, max_skill: 300 }];
+    const self = makeMember("me", { recipe_ability_ids: [4289], professions: enchanting, equipped: [wristItem()] });
+    const mate = makeMember("mate", { recipe_ability_ids: [7510], professions: enchanting });
+    const matches = computeEnchantMatches([self, mate], file, NO_ITEMS);
+    expect(matches.map((m) => [m.crafter.slug, m.proposed.name])).toEqual([["mate", "Enchant Bracer - Stamina"]]);
+  });
+
+  it("you enchanting it yourself wins over a higher-skill guild mate", () => {
+    const enchanting = (skill: number) => [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill, max_skill: 300 }];
+    const self = makeMember("me", { recipe_ability_ids: [4289], professions: enchanting(100), equipped: [wristItem()] });
+    const mate = makeMember("aaa-mate", { recipe_ability_ids: [4289], professions: enchanting(300) });
+    for (const roster of [[self, mate], [mate, self]]) {
+      const matches = computeEnchantMatches(roster, ENCHANTING_FILE_BRACER, NO_ITEMS);
+      expect(matches.map((m) => m.crafter.slug)).toEqual(["me"]);
+    }
   });
 
   it("deduplicates to the highest-skill enchanter per (beneficiary, slot)", () => {
@@ -271,7 +297,7 @@ describe("computeGearMatches", () => {
     expect(m.proposed.item_id).toBe(253885);
   });
 
-  it("does not match crafter to themselves", () => {
+  it("counts a member's own recipes for their own gear", () => {
     const member = makeMember("member", {
       class_name: "Mage",
       recipe_ability_ids: [55423],
@@ -282,7 +308,42 @@ describe("computeGearMatches", () => {
     });
     const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
     const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
-    expect(computeGearMatches([member], craftingFiles, itemList)).toHaveLength(0);
+    const matches = computeGearMatches([member], craftingFiles, itemList);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].crafter.slug).toBe("member");
+    expect(matches[0].beneficiary.slug).toBe("member");
+  });
+
+  it("prefers making it yourself when a guild mate can make the same upgrade", () => {
+    const tailor = (slug: string, equipped: GuildHelpMember["equipped"] = []) => makeMember(slug, {
+      class_name: "Mage",
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+      equipped,
+    });
+    const worn = [{ slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] }];
+    const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+    const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
+    const pairs = (members: GuildHelpMember[]) =>
+      computeGearMatches(members, craftingFiles, itemList).map((m) => [m.crafter.slug, m.beneficiary.slug]);
+    // Whichever comes first in the roster, the member makes it themselves.
+    expect(pairs([tailor("aaa"), tailor("zed", worn)])).toEqual([["zed", "zed"]]);
+    expect(pairs([tailor("zed", worn), tailor("aaa")])).toEqual([["zed", "zed"]]);
+  });
+
+  it("two guild mates offering the same upgrade: the alphabetically first, whatever the roster order", () => {
+    const worn = [{ slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] }];
+    const tailor = (slug: string) => makeMember(slug, {
+      class_name: "Mage",
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const needy = makeMember("needy", { class_name: "Mage", equipped: worn });
+    const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+    const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
+    for (const roster of [[tailor("bob"), tailor("amy"), needy], [tailor("amy"), tailor("bob"), needy]]) {
+      expect(computeGearMatches(roster, craftingFiles, itemList).map((m) => m.crafter.slug)).toEqual(["amy"]);
+    }
   });
 
   it("skips crafted items not in the item list", () => {

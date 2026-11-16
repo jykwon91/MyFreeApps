@@ -55,9 +55,14 @@ function beneficiaryFor(member: GuildHelpMember): GuildMatchBeneficiary {
   return { slug: member.slug, name: member.name, surname: member.surname, class_name: member.class_name, level: member.level };
 }
 
-/** Whether (value, crafter skill, crafter slug, spell) beats the best so far: value first, then skill, then a stable order. */
-function isBetter(value: number, skill: number, slug: string, spell: number, best: BestEnchant): boolean {
+/**
+ * Whether (value, crafter skill, crafter slug, spell) beats the best so far: value first, then the wearer
+ * enchanting it themselves, then skill, then a stable order.
+ */
+function isBetter(value: number, skill: number, slug: string, spell: number, beneficiarySlug: string, best: BestEnchant): boolean {
   if (value !== best.value) return value > best.value;
+  const selfMade = slug === beneficiarySlug;
+  if (selfMade !== (best.match.crafter.slug === beneficiarySlug)) return selfMade;
   if (skill !== best.match.crafter.skill) return skill > best.match.crafter.skill;
   if (slug !== best.match.crafter.slug) return slug < best.match.crafter.slug;
   return spell > (best.match.proposed.spell ?? 0);
@@ -105,7 +110,6 @@ export function computeEnchantMatches(
     if (knownEnchants.length === 0) continue;
 
     for (const beneficiary of members) {
-      if (beneficiary.slug === crafter.slug) continue;
       const weights = weightsFor(beneficiary);
       if (!weights) continue;
       const floor = mainStatPoint(weights);
@@ -122,7 +126,7 @@ export function computeEnchantMatches(
 
           const key = `${beneficiary.slug}|${item.slot}`;
           const existing = best.get(key);
-          if (existing && !isBetter(value, crafterEnch.skill, crafter.slug, recipe.spell, existing)) continue;
+          if (existing && !isBetter(value, crafterEnch.skill, crafter.slug, recipe.spell, beneficiary.slug, existing)) continue;
 
           const matchCrafter = crafterFor(crafter, ENCHANTING_SKILL_LINE_ID);
           if (!matchCrafter) continue;
