@@ -4,16 +4,15 @@ import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage
 import { applyMortgageDraftToForm } from "@mybookkeeper/api-client/utils/mortgageDraft";
 import { EMPTY_MORTGAGE_FORM, mortgageToFormValues } from "@mybookkeeper/api-client/utils/mortgageForm";
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
-import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Alert } from "react-native";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
 import TransactionFact from "../transactions/TransactionFact";
 import MortgageFormFields from "./MortgageFormFields";
-import { sameFormValues } from "../../lib/sameFormValues";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { useMortgageReaders } from "./useMortgageReaders";
 import { useSaveMortgage } from "./useSaveMortgage";
 
@@ -36,10 +35,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isBusy) return;
-    Alert.alert(MESSAGES.discardTitle, MESSAGES.discardBody, [
-      { text: MESSAGES.keepEditing, style: "cancel" },
-      { text: MESSAGES.discard, style: "destructive", onPress: leave },
-    ]);
+    confirmDiscard(leave, MESSAGES);
   });
 
   function submit(): void {

@@ -380,7 +380,6 @@
         "mobile/src/types/QueueItemActions.ts",
         "mobile/src/types/FunnelRow.ts",
         "mobile/src/lib/askOnce.ts",
-        "mobile/src/lib/confirmDiscard.ts",
         "mobile/src/features/home/WaitingCard.tsx",
         "mobile/test-support/integrationsServer.ts",
         "mobile/test-support/FakeIntegrationsServer.ts",

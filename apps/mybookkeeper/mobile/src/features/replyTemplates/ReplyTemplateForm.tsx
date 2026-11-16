@@ -1,7 +1,7 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, confirmDiscard, FormField, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import {
   messageCounter,
   REPLY_TEMPLATE_BODY_COUNTER_FROM,
@@ -42,10 +42,7 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isBusy) return;
-    Alert.alert(MESSAGES.discardTitle, MESSAGES.discardBody, [
-      { text: MESSAGES.keepEditing, style: "cancel" },
-      { text: MESSAGES.discard, style: "destructive", onPress: leave },
-    ]);
+    confirmDiscard(leave, MESSAGES);
   });
 
   function edit(field: keyof ReplyTemplateFormValues, text: string): void {

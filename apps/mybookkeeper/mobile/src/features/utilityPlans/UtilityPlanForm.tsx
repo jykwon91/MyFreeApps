@@ -14,7 +14,7 @@ import {
   UTILITY_PLAN_PROPERTY_MESSAGES,
   UTILITY_PLAN_READER_MESSAGES,
 } from "../../constants/utilityPlanForm";
-import { sameFormValues } from "../../lib/sameFormValues";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import type { UtilityPlanFieldChange } from "../../types/UtilityPlanFieldChange";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";

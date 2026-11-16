@@ -1,7 +1,7 @@
 import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text } from "react-native";
 import { endTitle, TENANT_MESSAGES } from "../../constants/tenants";
 
 export default function EndTenancySheet({
@@ -16,14 +16,13 @@ export default function EndTenancySheet({
   /** The problem to show here, or null if the sheet can close. */
   onEnd: (reason: string | null) => Promise<string | null>;
 }) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { colors, fontSize } = useTheme();
   const [reason, setReason] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
   const [isEnding, setIsEnding] = useState(false);
   const isSubmitting = useRef(false);
 
   function close(): void {
-    if (isEnding) return;
     setReason("");
     setFailure(null);
     onClose();
@@ -46,32 +45,22 @@ export default function EndTenancySheet({
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {endTitle(name)}
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{TENANT_MESSAGES.endBody}</Text>
-          {failure ? <Banner message={failure} /> : null}
-          <FormField
-            editable={!isEnding}
-            hint={`${reason.length}/${TENANCY_END_REASON_MAX_LENGTH}`}
-            inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
-            label={TENANT_MESSAGES.reason}
-            maxLength={TENANCY_END_REASON_MAX_LENGTH}
-            multiline
-            onChangeText={setReason}
-            value={reason}
-          />
-          <LoadingButton isLoading={isEnding} loadingText={TENANT_MESSAGES.ending} onPress={() => void submit()} variant="destructive">
-            {TENANT_MESSAGES.end}
-          </LoadingButton>
-          <LoadingButton disabled={isEnding} onPress={close} variant="ghost">
-            {TENANT_MESSAGES.cancel}
-          </LoadingButton>
-        </KeyboardAwareScroll>
-      </View>
-    </Modal>
+    <FormSheet failure={failure} hasUnsavedChanges={reason.trim() !== ""} isBusy={isEnding} isOpen={isOpen} onRequestClose={close} title={endTitle(name)}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{TENANT_MESSAGES.endBody}</Text>
+      <FormField
+        editable={!isEnding}
+        hint={`${reason.length}/${TENANCY_END_REASON_MAX_LENGTH}`}
+        inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
+        label={TENANT_MESSAGES.reason}
+        maxLength={TENANCY_END_REASON_MAX_LENGTH}
+        multiline
+        onChangeText={setReason}
+        value={reason}
+      />
+      <LoadingButton isLoading={isEnding} loadingText={TENANT_MESSAGES.ending} onPress={() => void submit()} variant="destructive">
+        {TENANT_MESSAGES.end}
+      </LoadingButton>
+      <FormSheetCancelButton>{TENANT_MESSAGES.cancel}</FormSheetCancelButton>
+    </FormSheet>
   );
 }

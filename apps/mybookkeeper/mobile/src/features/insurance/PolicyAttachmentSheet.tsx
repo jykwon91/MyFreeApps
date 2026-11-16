@@ -2,13 +2,12 @@ import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/
 import { useUploadInsurancePolicyAttachmentMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { INSURANCE_ATTACHMENT_KIND_LABELS, INSURANCE_ATTACHMENT_KINDS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
 import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
-import { Banner, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { DEFAULT_ATTACHMENT_KIND, POLICY_ATTACHMENT_MESSAGES, POLICY_PHOTO_NAME, POLICY_PHOTO_NO_SELECTION_LIMIT, POLICY_READER_MESSAGES, policyPhotoName } from "../../constants/insuranceForm";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import type { PhotoPreparing } from "../../types/PhotoPreparing";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import HeldFilesList from "../uploads/HeldFilesList";
 import { useHeldFiles } from "../uploads/useHeldFiles";
@@ -37,7 +36,7 @@ export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId:
 
   function close(): void {
     if (isUploading || isPicking) return;
-    if (files.length > 0) confirmDiscard(onClose);
+    if (files.length > 0) confirmDiscard(onClose, UPLOAD_MESSAGES);
     else onClose();
   }
 

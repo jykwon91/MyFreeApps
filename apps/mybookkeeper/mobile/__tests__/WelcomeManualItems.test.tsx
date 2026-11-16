@@ -1,7 +1,7 @@
 import api from "@platform/core/lib/api";
+import { DISCARD_MESSAGES } from "@platform/mobile";
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
-import { UPLOAD_MESSAGES } from "../src/constants/uploads";
 import {
   DELETE_PLACE_BODY, WELCOME_MANUAL_FIELD_MESSAGES as FIELD, WELCOME_MANUAL_PLACE_MESSAGES as PLACE, WELCOME_MANUAL_REORDER_MESSAGES as REORDER,
   WELCOME_MANUAL_ROOM_MESSAGES as ROOM, cuisineSuggestionLabel, deletePlaceTitle, deleteRoomTitle, moveDownLabel,
@@ -366,7 +366,7 @@ describe("where to eat", () => {
     await fireEvent.press(await screen.findByRole("button", { name: PLACE.add }));
     await fireEvent.changeText(screen.getByLabelText("Name, required"), "Noodle");
     await fireEvent.press(button(PLACE.cancel));
-    expect(alertSpy.mock.calls.at(-1)?.[0]).toBe(UPLOAD_MESSAGES.discardTitle);
+    expect(alertSpy.mock.calls.at(-1)?.[0]).toBe(DISCARD_MESSAGES.discardTitle);
     expect(screen.getByLabelText("Name, required").props.value).toBe("Noodle");
   });
 

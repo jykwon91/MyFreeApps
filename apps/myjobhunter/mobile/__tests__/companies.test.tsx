@@ -7,11 +7,12 @@ import {
 import { COMPANY_FORM_PROBLEMS as PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { baseApi } from "@platform/core/store/baseApi";
-import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
+import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { screen } from "expo-router/testing-library";
-import { Linking } from "react-native";
+import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { COMPANY_MESSAGES as MESSAGES } from "../src/constants/companies";
 import { COMPANY_SORT_KEYS, COMPANY_SORTS, DEFAULT_COMPANY_SORT } from "../src/constants/companySorts";
@@ -102,6 +103,8 @@ function saveButton() {
   return buttons[buttons.length - 1];
 }
 
+const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+
 async function openAddSheet(): Promise<void> {
   await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.add }));
   expect(await screen.findByRole("header", { name: MESSAGES.addTitle })).toBeTruthy();
@@ -111,6 +114,7 @@ beforeEach(() => {
   storedItems.clear();
   storeSession();
   openURL.mockClear();
+  alert.mockClear();
   store.dispatch(baseApi.util.resetApiState());
 });
 
@@ -388,13 +392,15 @@ describe("adding a company", () => {
     expect(screen.getByText(MESSAGES.domainHint)).toBeTruthy();
   });
 
-  it("closes on Cancel without sending, and opens empty the next time", async () => {
+  it("asks before Cancel throws away what was typed, closes without sending on Discard, and opens empty the next time", async () => {
     const sent = serveCompanies([ACME]);
     await showScreen();
     await openAddSheet();
 
     await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+    await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
     await waitFor(() => expect(screen.queryByRole("header", { name: MESSAGES.addTitle })).toBeNull());
     expect(posts(sent)).toEqual([]);
 

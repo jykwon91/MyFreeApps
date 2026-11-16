@@ -49,6 +49,8 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
   const [values, setValues] = useState<SavedSearchFormValues>(() =>
     source ? savedSearchFormValues(source, isSourceKind(source.source) ? source.source : "jsearch") : EMPTY_SAVED_SEARCH_FORM_VALUES,
   );
+  // What the sheet opened with, moved along by the profile prefill so filling it in isn't an unsaved change.
+  const [baseline, setBaseline] = useState(values);
   const [drafts, setDrafts] = useState<ChipDrafts>({});
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -71,7 +73,11 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
     setValues((current) => ({ ...current, jsearch: { ...current.jsearch, ...patch } }));
   }
 
-  const prefill = useDiscoveryDefaultsPrefill(!source && values.source === "jsearch", updateJSearch);
+  const prefill = useDiscoveryDefaultsPrefill(!source && values.source === "jsearch", (patch) => {
+    updateJSearch(patch);
+    setBaseline((current) => ({ ...current, jsearch: { ...current.jsearch, ...patch } }));
+  });
+  const hasUnsavedChanges = JSON.stringify(values) !== JSON.stringify(baseline) || Object.values(drafts).some((draft) => draft.trim() !== "") || saveAsDefaults;
 
   async function create(form: SavedSearchFormValues): Promise<void> {
     try {
@@ -125,7 +131,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isBusy ? undefined : onClose())} title={source ? MESSAGES.editTitle : MESSAGES.newTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={hasUnsavedChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={source ? MESSAGES.editTitle : MESSAGES.newTitle}>
       <Text style={mutedText}>{description}</Text>
       <FormField
         counter={characterCounter(values.name.trim(), SAVED_SEARCH_NAME_MAX_LENGTH)}
@@ -202,7 +208,6 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isBusy}
-        onCancel={onClose}
         onSubmit={submit}
         submitLabel={source ? MESSAGES.saveChanges : MESSAGES.create}
         submittingLabel={source ? MESSAGES.saving : MESSAGES.creating}

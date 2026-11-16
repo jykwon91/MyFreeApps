@@ -1,7 +1,7 @@
 import { SECTION_IMAGE_PICKER_MIME, WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { useUploadSectionImagesMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { validateSectionImages } from "@mybookkeeper/api-client/utils/welcomeManualImageValidation";
-import { filePart, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { filePart, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { UPLOAD_MESSAGES, preparingProgress } from "../../constants/uploads";
@@ -10,7 +10,6 @@ import { useWrite } from "../../lib/useWrite";
 import type { WelcomeManualPhotoUploadSheetProps } from "../../types/WelcomeManualPhotoUploadSheetProps";
 import HeldFilesList from "../uploads/HeldFilesList";
 import { chooseHeldFile } from "../uploads/pickHeldFile";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { useHeldFiles } from "../uploads/useHeldFiles";
 import { useHeldPhotoPicker } from "../uploads/useHeldPhotoPicker";
 import { uploadFailure } from "./welcomeManualFailure";
@@ -37,12 +36,6 @@ export default function WelcomeManualPhotoUploadSheet({ manualId, sectionId, exi
   const locked = write.isBusy;
   const isBusy = held.isPicking || picker.isBusy;
   const cannotAdd = locked || isBusy || room <= 0;
-
-  function close(): void {
-    if (locked) return;
-    if (held.files.length > 0) confirmDiscard(onClose);
-    else onClose();
-  }
 
   async function chooseFile(): Promise<void> {
     await held.pick(async () => {
@@ -72,7 +65,7 @@ export default function WelcomeManualPhotoUploadSheet({ manualId, sectionId, exi
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={MESSAGES.uploadTitle}>
+    <FormSheet discardCopy={UPLOAD_MESSAGES} failure={failure} hasUnsavedChanges={held.files.length > 0} isBusy={locked} isOpen onRequestClose={onClose} title={MESSAGES.uploadTitle}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{room > 0 ? photosLeftLabel(room) : MESSAGES.atLimit}</Text>
       <LoadingButton disabled={cannotAdd} isLoading={picker.preparing !== null} loadingText={picker.preparing ? preparingProgress(picker.preparing.done, picker.preparing.total) : undefined} onPress={() => void picker.add("library")} variant="secondary">
         {UPLOAD_MESSAGES.photoLibrary}
@@ -87,9 +80,9 @@ export default function WelcomeManualPhotoUploadSheet({ manualId, sectionId, exi
       <LoadingButton disabled={locked || isBusy} isLoading={locked} loadingText={MESSAGES.uploading} onPress={() => void upload()}>
         {MESSAGES.upload}
       </LoadingButton>
-      <LoadingButton disabled={locked} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

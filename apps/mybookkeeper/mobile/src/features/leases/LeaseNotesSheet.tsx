@@ -1,10 +1,9 @@
 import { useUpdateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { FormField, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 
 const NOTES_MIN_HEIGHT = 144;
 const COPY = saveFailureCopy("lease", "leases", false);
@@ -24,12 +23,6 @@ export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesS
   const [text, setText] = useState(notes);
   const isDirty = text.trim() !== notes.trim();
 
-  function close(): void {
-    if (write.isBusy) return;
-    if (isDirty) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     if (!isDirty) {
       onClose();
@@ -42,7 +35,7 @@ export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesS
   }
 
   return (
-    <FormSheet failure={write.failure ? COPY[write.failure] : null} isOpen onRequestClose={close} title={MESSAGES.notesTitle}>
+    <FormSheet failure={write.failure ? COPY[write.failure] : null} hasUnsavedChanges={isDirty} isBusy={write.isBusy} isOpen onRequestClose={onClose} title={MESSAGES.notesTitle}>
       <FormField
         editable={!write.isBusy}
         inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
@@ -55,9 +48,9 @@ export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesS
       <LoadingButton isLoading={write.isBusy} loadingText={MESSAGES.savingNotes} onPress={() => void save()}>
         {MESSAGES.saveNotes}
       </LoadingButton>
-      <LoadingButton disabled={write.isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.cancelNotes}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

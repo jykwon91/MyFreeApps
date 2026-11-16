@@ -1,6 +1,6 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
@@ -48,10 +48,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   const isBusy = isLoading || isFindingNewer;
   useConfirmLeave((isDirty || isBusy) && !leaveTo, (leave) => {
     if (isSubmitting.current) return;
-    Alert.alert(MESSAGES.discardTitle, MESSAGES.discardBody, [
-      { text: MESSAGES.keepEditing, style: "cancel" },
-      { text: MESSAGES.discard, style: "destructive", onPress: leave },
-    ]);
+    confirmDiscard(leave, MESSAGES);
   });
 
   // Leaving has to wait a render, or the guard above still refuses it.

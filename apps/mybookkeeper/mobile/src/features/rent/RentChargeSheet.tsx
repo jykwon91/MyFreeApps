@@ -2,13 +2,12 @@ import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "@mybookkeeper/
 import { useCreateRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import type { RentChargeType } from "@mybookkeeper/api-client/types/rent/rent-charge-type";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
-import { deviceDecimalSeparator, FormField, FormSheet, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { RENT_DESCRIPTION_MAX_LENGTH, RENT_MANAGE_MESSAGES } from "../../constants/rentManage";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { rentAmountProblem } from "./rentAmountProblem";
 import { rentWriteFailure } from "./rentWriteFailure";
 
@@ -28,12 +27,6 @@ export default function RentChargeSheet({ applicantId, onClose }: { applicantId:
   const canSave = dueDate !== null && amount !== "" && amountProblem === undefined;
   const hasChanges = amount !== "" || dueDate !== null || description !== "" || kind !== "late_fee";
 
-  function close(): void {
-    if (isBusy) return;
-    if (hasChanges) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     if (!dueDate || !canSave || !sentAmount) return;
     const landed = await submit(
@@ -46,7 +39,7 @@ export default function RentChargeSheet({ applicantId, onClose }: { applicantId:
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={RENT_MANAGE_MESSAGES.chargeTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={hasChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={RENT_MANAGE_MESSAGES.chargeTitle}>
       <FormField editable={!isBusy} error={amountProblem} keyboardType="decimal-pad" label={RENT_MANAGE_MESSAGES.chargeAmount} onChangeText={setAmount} required value={amount} />
       <OptionalDateField label={RENT_MANAGE_MESSAGES.chargeDue} onChange={setDueDate} required startsAt={new Date()} value={dueDate} />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{RENT_MANAGE_MESSAGES.chargeDueHint}</Text>
@@ -78,9 +71,9 @@ export default function RentChargeSheet({ applicantId, onClose }: { applicantId:
       <LoadingButton disabled={!canSave} isLoading={isBusy} loadingText={RENT_MANAGE_MESSAGES.adding} onPress={() => void save()}>
         {RENT_MANAGE_MESSAGES.addCharge}
       </LoadingButton>
-      <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {RENT_MANAGE_MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

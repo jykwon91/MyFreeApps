@@ -1,8 +1,8 @@
 import { APPLICANT_STAGE_NOTE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/applicantStageNote";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text } from "react-native";
 import { applicantStageLabel } from "./applicantDisplay";
 
 export default function ApplicantStageSheet({
@@ -18,7 +18,7 @@ export default function ApplicantStageSheet({
   onMove: (stage: ApplicantStage, note: string) => Promise<string | null>;
   stage: ApplicantStage | null;
 }) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { colors, fontSize } = useTheme();
   const [note, setNote] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
   // Covers the re-read after a failure too, when a second tap could otherwise slip in.
@@ -26,7 +26,6 @@ export default function ApplicantStageSheet({
   const isSubmitting = useRef(false);
 
   function close(): void {
-    if (isMoving) return;
     setNote("");
     setFailure(null);
     onClose();
@@ -48,35 +47,31 @@ export default function ApplicantStageSheet({
     onClose();
   }
 
+  const stageLabel = stage ? applicantStageLabel(stage) : "";
+
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        {stage ? (
-          <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-            <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-              {`Move to ${applicantStageLabel(stage)}?`}
-            </Text>
-            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{name}</Text>
-            {failure ? <Banner message={failure} /> : null}
-            <FormField
-              editable={!isMoving}
-              hint={`${note.length}/${APPLICANT_STAGE_NOTE_MAX_LENGTH}`}
-              inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
-              label="Note (optional)"
-              maxLength={APPLICANT_STAGE_NOTE_MAX_LENGTH}
-              multiline
-              onChangeText={setNote}
-              value={note}
-            />
-            <LoadingButton isLoading={isMoving} loadingText="Moving…" onPress={() => void submit(stage)}>
-              {`Move to ${applicantStageLabel(stage)}`}
-            </LoadingButton>
-            <LoadingButton disabled={isMoving} onPress={close} variant="ghost">
-              Cancel
-            </LoadingButton>
-          </KeyboardAwareScroll>
-        ) : null}
-      </View>
-    </Modal>
+    <FormSheet failure={failure} hasUnsavedChanges={note.trim() !== ""} isBusy={isMoving} isOpen={isOpen && stage !== null} onRequestClose={close} title={`Move to ${stageLabel}?`}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{name}</Text>
+      <FormField
+        editable={!isMoving}
+        hint={`${note.length}/${APPLICANT_STAGE_NOTE_MAX_LENGTH}`}
+        inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
+        label="Note (optional)"
+        maxLength={APPLICANT_STAGE_NOTE_MAX_LENGTH}
+        multiline
+        onChangeText={setNote}
+        value={note}
+      />
+      <LoadingButton
+        isLoading={isMoving}
+        loadingText="Moving…"
+        onPress={() => {
+          if (stage) void submit(stage);
+        }}
+      >
+        {`Move to ${stageLabel}`}
+      </LoadingButton>
+      <FormSheetCancelButton>Cancel</FormSheetCancelButton>
+    </FormSheet>
   );
 }

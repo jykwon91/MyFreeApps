@@ -6,6 +6,7 @@ import { companyCreateRequest } from "@myjobhunter/api-client/utils/companyCreat
 import { companyFormCounters } from "@myjobhunter/api-client/utils/companyFormCounters";
 import { companyFormProblems } from "@myjobhunter/api-client/utils/companyFormProblems";
 import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
@@ -51,7 +52,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_COMPANY_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <FormField
         autoCapitalize="words"
         autoFocus
@@ -98,7 +99,6 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={MESSAGES.save}
         submittingLabel={MESSAGES.saving}

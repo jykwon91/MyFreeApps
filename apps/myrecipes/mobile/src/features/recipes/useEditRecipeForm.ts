@@ -5,6 +5,7 @@ import type { RecipeMetaValues } from "@myrecipes/api-client/types/recipe/recipe
 import { buildRecipeUpdateRequest } from "@myrecipes/api-client/utils/buildRecipeUpdateRequest";
 import { recipeMetaProblems } from "@myrecipes/api-client/utils/recipeMetaProblems";
 import { recipeMetaValues } from "@myrecipes/api-client/utils/recipeMetaValues";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { useToast } from "@platform/mobile";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -19,10 +20,12 @@ export function useEditRecipeForm(recipe: RecipeDetailResponse, onSaved: () => v
   const { showToast } = useToast();
   const dispatch = useDispatch<AppStore["dispatch"]>();
   const [updateRecipe, { isLoading: isSaving }] = useUpdateRecipeMutation();
-  const [values, setValues] = useState(() => recipeMetaValues(recipe));
+  const [initial] = useState(() => recipeMetaValues(recipe));
+  const [values, setValues] = useState(initial);
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
+  const isDirty = !sameFormValues(values, initial);
   const problems = recipeMetaProblems(values, { lengthsOnly: !hasTried });
 
   function edit(field: keyof RecipeMetaValues, text: string): void {
@@ -44,5 +47,5 @@ export function useEditRecipeForm(recipe: RecipeDetailResponse, onSaved: () => v
     }
   }
 
-  return { values, problems, failure, isSaving, edit, save };
+  return { values, problems, failure, isSaving, isDirty, edit, save };
 }

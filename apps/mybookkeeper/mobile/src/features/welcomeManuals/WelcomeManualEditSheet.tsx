@@ -1,7 +1,6 @@
-import { FormSheet, LoadingButton } from "@platform/mobile";
+import { FormSheet, FormSheetCancelButton, LoadingButton } from "@platform/mobile";
 import { useRef, type ReactNode } from "react";
 import { askOnce } from "../../lib/askOnce";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 
 interface WelcomeManualEditSheetProps {
   title: string;
@@ -25,14 +24,8 @@ interface WelcomeManualEditSheetProps {
 export default function WelcomeManualEditSheet({ title, failure, isBusy, isSaving, isDeleting, isDirty, isNew, labels, confirmDelete, onSave, onDelete, onClose, children }: WelcomeManualEditSheetProps) {
   const asking = useRef(false);
 
-  function close(): void {
-    if (isBusy) return;
-    if (isDirty) confirmDiscard(onClose);
-    else onClose();
-  }
-
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={title}>
+    <FormSheet failure={failure} hasUnsavedChanges={isDirty} isBusy={isBusy} isOpen onRequestClose={onClose} title={title}>
       {children}
       <LoadingButton disabled={isBusy} isLoading={isSaving} loadingText={isNew ? labels.adding : labels.saving} onPress={onSave}>
         {isNew ? labels.add : labels.save}
@@ -48,9 +41,9 @@ export default function WelcomeManualEditSheet({ title, failure, isBusy, isSavin
           {labels.delete}
         </LoadingButton>
       ) : null}
-      <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {labels.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

@@ -13,8 +13,10 @@ import SheetButtons from "../../components/forms/SheetButtons";
 export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
   const { showToast } = useToast();
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
-  const [seniority, setSeniority] = useState<Seniority | "">(isSeniority(profile.seniority) ? profile.seniority : "");
-  const [summary, setSummary] = useState(profile.summary ?? "");
+  const savedSeniority = isSeniority(profile.seniority) ? profile.seniority : "";
+  const savedSummary = profile.summary ?? "";
+  const [seniority, setSeniority] = useState<Seniority | "">(savedSeniority);
+  const [summary, setSummary] = useState(savedSummary);
   const [failure, setFailure] = useState<string | null>(null);
 
   async function save(): Promise<void> {
@@ -29,7 +31,7 @@ export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.aboutSheetTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={seniority !== savedSeniority || summary !== savedSummary} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.aboutSheetTitle}>
       <ChoiceGroup<Seniority | ""> disabled={isLoading} label={MESSAGES.seniorityLabel} onChange={setSeniority} options={SENIORITY_CHOICES} value={seniority} />
       <FormField
         editable={!isLoading}
@@ -42,7 +44,6 @@ export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={MESSAGES.saveChanges}
         submittingLabel={MESSAGES.saving}

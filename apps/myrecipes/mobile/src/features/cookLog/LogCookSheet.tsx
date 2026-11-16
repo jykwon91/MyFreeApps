@@ -1,6 +1,6 @@
 import { COOK_LOG_MESSAGES as SHARED, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, FormSheet, LoadingButton, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COOK_LOG_PHONE_MESSAGES as MESSAGES } from "../../constants/cookLog";
 import { MULTILINE_MIN_HEIGHT } from "../../constants/newRecipe";
@@ -13,12 +13,8 @@ export default function LogCookSheet({ recipeId, versionId, versionNumber, onClo
   const { colors, spacing, fontSize } = useTheme();
   const form = useLogCookForm(recipeId, versionId, onClose);
 
-  function close(): void {
-    if (!form.isSaving) onClose();
-  }
-
   return (
-    <FormSheet failure={form.failure} isOpen onRequestClose={close} title={SHARED.logTitle}>
+    <FormSheet failure={form.failure} hasUnsavedChanges={form.isDirty} isBusy={form.isSaving} isOpen onRequestClose={onClose} title={SHARED.logTitle}>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{SHARED.logIntro(versionNumber)}</Text>
       <View style={{ gap: spacing.xs }}>
         <Text style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "500" }}>{SHARED.ratingLabel}</Text>
@@ -39,9 +35,7 @@ export default function LogCookSheet({ recipeId, versionId, versionNumber, onClo
       <LoadingButton isLoading={form.isSaving} loadingText={MESSAGES.saving} onPress={form.save}>
         {SHARED.save}
       </LoadingButton>
-      <LoadingButton disabled={form.isSaving} onPress={close} variant="ghost">
-        {MESSAGES.cancel}
-      </LoadingButton>
+      <FormSheetCancelButton>{MESSAGES.cancel}</FormSheetCancelButton>
     </FormSheet>
   );
 }

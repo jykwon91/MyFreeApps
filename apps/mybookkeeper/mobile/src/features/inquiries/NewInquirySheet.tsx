@@ -11,11 +11,10 @@ import {
   inquiryFormToCreateRequest,
   needsExternalInquiryId,
 } from "@mybookkeeper/api-client/utils/inquiryForm";
-import { FormField, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
-import { confirmDiscard } from "../../lib/confirmDiscard";
 import { dateFromIso } from "../../lib/localDate";
 import type { NewInquirySheetProps } from "../../types/NewInquirySheetProps";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -45,12 +44,6 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     setValues((current) => ({ ...current, ...change }));
   }
 
-  function close(): void {
-    if (isBusy) return;
-    if (isDirty) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     if (isBusy) return;
     if (Object.keys(inquiryFormProblems(values)).length > 0) {
@@ -68,7 +61,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
   }
 
   return (
-    <FormSheet failure={failure ?? (hasProblems ? MESSAGES.fixFields : null)} isOpen onRequestClose={close} title={LABELS.title}>
+    <FormSheet failure={failure ?? (hasProblems ? MESSAGES.fixFields : null)} hasUnsavedChanges={isDirty} isBusy={isBusy} isOpen onRequestClose={onClose} title={LABELS.title}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LABELS.intro}</Text>
       <View pointerEvents={isBusy ? "none" : "auto"} style={{ gap: spacing.md }}>
         <InquiryChoiceGroup<InquirySource> choices={SOURCE_CHOICES} disabled={isBusy} label={LABELS.source} onSelect={(source) => update({ source })} value={values.source} />
@@ -153,9 +146,9 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
       <LoadingButton isLoading={isBusy} loadingText={MESSAGES.saving} onPress={() => void save()}>
         {MESSAGES.save}
       </LoadingButton>
-      <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }
