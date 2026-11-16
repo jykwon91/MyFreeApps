@@ -125,13 +125,39 @@ describe("computeEnchantMatches", () => {
     expect(computeEnchantMatches([crafter, beneficiary], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
   });
 
-  it("does not match crafter to themselves", () => {
+  it("an enchanter can enchant their own gear", () => {
     const member = makeMember("member", {
       recipe_ability_ids: [4289],
       professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
       equipped: [wristItem()],
     });
-    expect(computeEnchantMatches([member], ENCHANTING_FILE_BRACER, NO_ITEMS)).toHaveLength(0);
+    const matches = computeEnchantMatches([member], ENCHANTING_FILE_BRACER, NO_ITEMS);
+    expect(matches.map((m) => [m.crafter.slug, m.beneficiary.slug])).toEqual([["member", "member"]]);
+  });
+
+  it("a guild mate's better enchant still beats the one you can make", () => {
+    // ability 4289 → 7418 (+5 Stamina, fixture); 7510 → 13648 "Bracer - Stamina" (+9).
+    const file: Pick<CraftingFile, "recipes"> = {
+      recipes: [
+        enchantRecipe(7418, "Enchant Bracer - Inferior Stamina"),
+        enchantRecipe(13648, "Enchant Bracer - Stamina", "Permanently enchant bracers to give +9 Stamina."),
+      ],
+    };
+    const enchanting = [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 200, max_skill: 300 }];
+    const self = makeMember("me", { recipe_ability_ids: [4289], professions: enchanting, equipped: [wristItem()] });
+    const mate = makeMember("mate", { recipe_ability_ids: [7510], professions: enchanting });
+    const matches = computeEnchantMatches([self, mate], file, NO_ITEMS);
+    expect(matches.map((m) => [m.crafter.slug, m.proposed.name])).toEqual([["mate", "Enchant Bracer - Stamina"]]);
+  });
+
+  it("you enchanting it yourself wins over a higher-skill guild mate", () => {
+    const enchanting = (skill: number) => [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill, max_skill: 300 }];
+    const self = makeMember("me", { recipe_ability_ids: [4289], professions: enchanting(100), equipped: [wristItem()] });
+    const mate = makeMember("aaa-mate", { recipe_ability_ids: [4289], professions: enchanting(300) });
+    for (const roster of [[self, mate], [mate, self]]) {
+      const matches = computeEnchantMatches(roster, ENCHANTING_FILE_BRACER, NO_ITEMS);
+      expect(matches.map((m) => m.crafter.slug)).toEqual(["me"]);
+    }
   });
 
   it("deduplicates to the highest-skill enchanter per (beneficiary, slot)", () => {
