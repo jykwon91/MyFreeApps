@@ -45,7 +45,7 @@
     --muted-foreground: 215.4 16.3% 45%;
     --destructive: 0 73.7% 41.8%;
     --destructive-foreground: 210 40% 98%;
-    --input: 214.3 31.8% 91.4%;
+    --input: 215.4 16.3% 46.9%;
     --ring: 221.2 83.2% 51%;
     --radius: 0.5rem;
   }
@@ -64,12 +64,20 @@
     --muted-foreground: 215 20.2% 65.1%;
     --destructive: 0 90.6% 70.8%;
     --destructive-foreground: 222.2 84% 4.9%;
-    --input: 217.2 32.6% 17.5%;
+    --input: 215.4 16.3% 46.9%;
     --ring: 217.2 91.2% 59.8%;
   }
 
   * {
     border-color: hsl(var(--border));
+  }
+
+  /* WCAG 1.4.11: form-control boundaries need 3:1, which the decorative --border
+     (cards, dividers) deliberately doesn't give. Explicit border-* utilities still win. */
+  input,
+  select,
+  textarea {
+    border-color: hsl(var(--input));
   }
 
   body {

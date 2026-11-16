@@ -190,7 +190,7 @@ export default function UtilityTrends() {
           <button
             type="button"
             onClick={handleClearFilters}
-            className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+            className="px-4 py-2 text-sm font-medium border border-input rounded-md hover:bg-muted transition-colors"
           >
             Reset date range
           </button>

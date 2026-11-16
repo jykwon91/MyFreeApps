@@ -124,7 +124,7 @@ export default function CreateDemoDialog({
               <button
                 type="button"
                 onClick={() => handleOpenChange(false)}
-                className="px-3 py-1.5 text-sm font-medium rounded-md border hover:bg-muted transition-colors min-h-[36px]"
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors min-h-[36px]"
                 disabled={isLoading}
               >
                 Cancel

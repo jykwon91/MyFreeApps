@@ -79,7 +79,7 @@ export default function MonthYearJumper({ fromIso, onJump }: MonthYearJumperProp
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="h-9 px-3 inline-flex items-center gap-1 border rounded-md text-sm font-medium hover:bg-muted transition-colors"
+        className="h-9 px-3 inline-flex items-center gap-1 border border-input rounded-md text-sm font-medium hover:bg-muted transition-colors"
         data-testid="calendar-month-jumper"
         aria-expanded={open}
         aria-haspopup="dialog"

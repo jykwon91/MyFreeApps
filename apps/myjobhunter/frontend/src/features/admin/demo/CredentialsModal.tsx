@@ -108,7 +108,7 @@ export default function CredentialsModal({
           <div className="flex justify-end gap-2 mt-6">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-sm font-medium rounded-md border hover:bg-muted transition-colors min-h-[36px]"
+              className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors min-h-[36px]"
             >
               Close
             </button>

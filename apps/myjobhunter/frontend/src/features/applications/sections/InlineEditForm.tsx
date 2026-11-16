@@ -86,7 +86,7 @@ export default function InlineEditForm({
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="px-3 py-2 text-sm border rounded-md hover:bg-muted disabled:opacity-50"
+          className="px-3 py-2 text-sm border border-input rounded-md hover:bg-muted disabled:opacity-50"
         >
           Cancel
         </button>

@@ -19,7 +19,7 @@ export default function Button({ variant = "primary", size = "md", className, ..
         // Buttons in a flex row shrink before they wrap without this.
         "inline-flex items-center justify-center font-medium whitespace-nowrap disabled:opacity-50",
         variant === "primary" && "bg-primary text-primary-foreground hover:opacity-90",
-        variant === "secondary" && "border hover:bg-muted",
+        variant === "secondary" && "border border-input hover:bg-muted",
         variant === "ghost" && "text-muted-foreground hover:underline px-2",
         variant === "destructive" && "text-destructive hover:underline",
         variant === "link" && "text-primary hover:underline",

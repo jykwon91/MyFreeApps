@@ -45,7 +45,7 @@ export default function AnalysisActions({
         <button
           type="button"
           onClick={onViewApplications}
-          className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
         >
           View applications
         </button>
@@ -69,7 +69,7 @@ export default function AnalysisActions({
         <button
           type="button"
           onClick={onAnalyzeAnother}
-          className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
         >
           Analyze another
         </button>

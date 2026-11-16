@@ -101,7 +101,7 @@ export default function AnalyticsFilters({
         <button
           type="button"
           onClick={onClear}
-          className="flex items-center gap-1.5 h-9 px-3 text-sm text-muted-foreground hover:text-foreground border rounded-md hover:bg-muted transition-colors"
+          className="flex items-center gap-1.5 h-9 px-3 text-sm text-muted-foreground hover:text-foreground border border-input rounded-md hover:bg-muted transition-colors"
           aria-label="Clear all filters"
         >
           <X size={14} />

@@ -30,7 +30,7 @@ export default function CalendarMonthNav({
         type="button"
         onClick={() => onChange(addMonths(monthStartIso, -1))}
         title="Previous month"
-        className="flex h-9 w-9 items-center justify-center rounded-md border transition-colors hover:bg-muted"
+        className="flex h-9 w-9 items-center justify-center rounded-md border border-input transition-colors hover:bg-muted"
         aria-label="Previous month"
         data-testid="calendar-month-prev"
       >
@@ -43,7 +43,7 @@ export default function CalendarMonthNav({
         type="button"
         onClick={() => onChange(addMonths(monthStartIso, 1))}
         title="Next month"
-        className="flex h-9 w-9 items-center justify-center rounded-md border transition-colors hover:bg-muted"
+        className="flex h-9 w-9 items-center justify-center rounded-md border border-input transition-colors hover:bg-muted"
         aria-label="Next month"
         data-testid="calendar-month-next"
       >
@@ -54,7 +54,7 @@ export default function CalendarMonthNav({
         type="button"
         onClick={onToday}
         title="Jump back to this month"
-        className="ml-2 h-9 rounded-md border px-3 text-sm transition-colors hover:bg-muted"
+        className="ml-2 h-9 rounded-md border border-input px-3 text-sm transition-colors hover:bg-muted"
         data-testid="calendar-month-today"
       >
         Today

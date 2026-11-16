@@ -86,7 +86,7 @@ export default function LoginForm({
           <button
             type="button"
             onClick={onGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 border rounded-md px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors min-h-[44px]"
+            className="w-full flex items-center justify-center gap-3 border border-input rounded-md px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors min-h-[44px]"
           >
             {/* Google "G" SVG */}
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

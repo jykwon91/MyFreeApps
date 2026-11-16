@@ -64,7 +64,7 @@ export default function CalendarWindowNav({
         type="button"
         onClick={handlePrev}
         title={`Previous ${stepDays} days`}
-        className="h-9 w-9 flex items-center justify-center border rounded-md hover:bg-muted transition-colors"
+        className="h-9 w-9 flex items-center justify-center border border-input rounded-md hover:bg-muted transition-colors"
         aria-label={`Previous ${stepDays} days`}
         data-testid="calendar-prev"
       >
@@ -77,7 +77,7 @@ export default function CalendarWindowNav({
         type="button"
         onClick={handleNext}
         title={`Next ${stepDays} days`}
-        className="h-9 w-9 flex items-center justify-center border rounded-md hover:bg-muted transition-colors"
+        className="h-9 w-9 flex items-center justify-center border border-input rounded-md hover:bg-muted transition-colors"
         aria-label={`Next ${stepDays} days`}
         data-testid="calendar-next"
       >
@@ -100,7 +100,7 @@ export default function CalendarWindowNav({
               className={
                 active
                   ? "h-9 px-2.5 text-xs rounded-md bg-primary text-primary-foreground transition-colors"
-                  : "h-9 px-2.5 text-xs border rounded-md hover:bg-muted transition-colors"
+                  : "h-9 px-2.5 text-xs border border-input rounded-md hover:bg-muted transition-colors"
               }
               aria-pressed={active}
               data-testid={`calendar-window-preset-${days}`}
@@ -115,7 +115,7 @@ export default function CalendarWindowNav({
         type="button"
         onClick={onToday}
         title="Jump back to today's date"
-        className="h-9 px-3 ml-2 border rounded-md text-sm hover:bg-muted transition-colors"
+        className="h-9 px-3 ml-2 border border-input rounded-md text-sm hover:bg-muted transition-colors"
         data-testid="calendar-today"
       >
         Jump to today

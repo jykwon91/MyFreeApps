@@ -215,7 +215,7 @@ export default function TwoFactorSetup() {
                 setStep(TOTP_STEP.STATUS);
                 setError("");
               }}
-              className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors min-h-[44px]"
+              className="px-4 py-2 text-sm border border-input rounded-md hover:bg-muted transition-colors min-h-[44px]"
             >
               Cancel
             </button>
@@ -295,7 +295,7 @@ export default function TwoFactorSetup() {
                 setStep(TOTP_STEP.STATUS);
                 setError("");
               }}
-              className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors min-h-[44px]"
+              className="px-4 py-2 text-sm border border-input rounded-md hover:bg-muted transition-colors min-h-[44px]"
             >
               Cancel
             </button>
