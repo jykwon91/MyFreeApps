@@ -210,3 +210,27 @@ class TestListRouteOrderAndTaxFilter:
 
         assert listed == ["Large", "Small"]
         assert [row[1] for row in rows] == listed
+
+
+class TestListFilteredVendorSearch:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("vendor_filter", "expected"),
+        [
+            ("_", ["Snake_Case Supply"]),
+            ("%", ["50% Off Depot"]),
+            ("50%", ["50% Off Depot"]),
+            ("acme", ["ACME Hardware"]),
+        ],
+    )
+    async def test_vendor_filter_matches_wildcards_literally(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        vendor_filter: str, expected: list[str],
+    ) -> None:
+        for vendor in ["Snake_Case Supply", "50% Off Depot", "500 Hardware", "ACME Hardware"]:
+            await transaction_repo.create(db, _make_transaction(test_org.id, test_user.id, vendor=vendor))
+        await db.commit()
+
+        rows = await transaction_repo.list_filtered(db, test_org.id, vendor=vendor_filter)
+
+        assert sorted(t.vendor for t in rows) == expected

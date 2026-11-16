@@ -78,7 +78,7 @@ async def list_by_user(
     """
     stmt = select(Company).where(Company.user_id == user_id)
     if name_search is not None and name_search.strip():
-        stmt = stmt.where(Company.name.ilike(f"%{name_search.strip()}%"))
+        stmt = stmt.where(Company.name.icontains(name_search.strip(), autoescape=True))
     stmt = stmt.order_by(Company.name.asc())
     result = await db.execute(stmt)
     return list(result.scalars().all())

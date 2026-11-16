@@ -102,6 +102,28 @@ class TestReadRecipes:
         assert body[0]["is_owner"] is True
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("search", "expected"),
+        [
+            ("_", {"Snake_Case Stew"}),
+            ("%", {"50% Off Pie"}),
+            ("50%", {"50% Off Pie"}),
+        ],
+    )
+    async def test_title_search_matches_wildcards_literally(
+        self, user_factory, as_user, search: str, expected: set[str],
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for title in ["Snake_Case Stew", "50% Off Pie", "500 Calorie Cake", "Plain Bread"]:
+                await authed.post("/recipes", json=_recipe_payload(title=title))
+            resp = await authed.get("/recipes", params={"owner": "me", "search": search})
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert {item["title"] for item in body["items"]} == expected
+        assert body["total"] == len(expected)
+
+    @pytest.mark.asyncio
     async def test_owner_me_does_not_leak_other_users(self, user_factory, as_user) -> None:
         owner = await user_factory()
         attacker = await user_factory()

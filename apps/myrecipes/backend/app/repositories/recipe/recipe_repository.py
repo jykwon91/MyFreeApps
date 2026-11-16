@@ -59,7 +59,7 @@ def _library_conditions(search: str | None) -> list[ColumnElement[bool]]:
     """Not deleted, and the optional title search: the filters every list page and its count share."""
     conditions: list[ColumnElement[bool]] = [Recipe.deleted_at.is_(None)]
     if search is not None and search.strip():
-        conditions.append(Recipe.title.ilike(f"%{search.strip()}%"))
+        conditions.append(Recipe.title.icontains(search.strip(), autoescape=True))
     return conditions
 
 

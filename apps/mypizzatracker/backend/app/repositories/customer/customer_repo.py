@@ -109,7 +109,7 @@ async def list_customers_with_stats(
 
     if search and search.strip():
         digits = re.sub(r"\D+", "", search)
-        clauses = [Customer.name.ilike(f"%{search.strip()}%")]
+        clauses = [Customer.name.icontains(search.strip(), autoescape=True)]
         if digits:
             clauses.append(Customer.phone.like(f"%{digits}%"))
         stmt = stmt.where(or_(*clauses))
