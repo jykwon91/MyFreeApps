@@ -108,6 +108,7 @@ export const BEFORE_YOU_GO_COPY = {
   battleNetLoading: "Checking Battle.net for quests you've done",
   battleNetError: "Couldn't check Battle.net for quests you've done. You can still tick them yourself.",
   changeCharacter: "Change character",
+  addon: "See these quests in game with the MGA Dungeon Quests addon",
   battleNetChip: "Battle.net",
   doneLabel: (step: number, title: string) => `Step ${step}, ${title}: done`,
   battleNetDoneLabel: (step: number, title: string) => `Step ${step}, ${title}: done on Battle.net, can't be unticked here`,

@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: MGA Dungeon Quests
+## Notes: Every quest to pick up for a dungeon's quests, in order, with who gives each and where — ticked with the quests you've done. Same list as MyGamingAssistant's "Before you go". /mgadq opens it.
+## Author: MyGamingAssistant
+## Version: 1.0.0
+## SavedVariables: MGADungeonQuestsSettings
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+
+Data.lua
+MGADungeonQuests.lua
