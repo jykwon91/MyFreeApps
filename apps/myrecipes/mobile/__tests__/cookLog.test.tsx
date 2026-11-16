@@ -253,6 +253,24 @@ describe("logging a cook", () => {
     await post.answer(reply(201, NEWER));
   });
 
+  it("logs one cook for a quick double tap", async () => {
+    const post = held();
+    await show({ "POST /recipes/r1/versions/v2/cooks": post.route });
+    await openLog();
+    const save = saveButton();
+    // Two touches are two events: work queued by the first runs before the second lands, but the
+    // sheet hasn't re-rendered, so it still looks idle. Only a guard held until the save answers stops it.
+    await act(async () => {
+      save.props.onClick();
+      await Promise.resolve();
+      save.props.onClick();
+    });
+
+    expect(posts()).toHaveLength(1);
+    await post.answer(reply(201, NEWER));
+    expect(posts()).toHaveLength(1);
+  });
+
   it("says notes are too long as they're typed, and won't save them", async () => {
     const long = "n".repeat(COOK_NOTES_MAX_LENGTH + 1);
     await show({ "POST /recipes/r1/versions/v2/cooks": () => reply(201, NEWER) });
