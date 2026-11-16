@@ -37,7 +37,7 @@ export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, isD
           {LEASE_MESSAGES.open}
         </LoadingButton>
       ) : (
-        <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{LEASE_MESSAGES.fileMissing}</Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{LEASE_MESSAGES.fileMissing}</Text>
       )}
       {canWrite && file.is_locked ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_RECORD_FILE_LOCKED_NOTE}</Text>

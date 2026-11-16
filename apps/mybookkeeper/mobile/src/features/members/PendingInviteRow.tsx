@@ -21,7 +21,7 @@ export default function PendingInviteRow({ invite, now, busyLabel, isHeld, onCan
       <View style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{invite.email}</Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{inviteStatusLine(invite, now)}</Text>
-        {invite.email_sent ? null : <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{MESSAGES.emailDidntSend}</Text>}
+        {invite.email_sent ? null : <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{MESSAGES.emailDidntSend}</Text>}
       </View>
       <LoadingButton disabled={isHeld} onPress={onInviteAgain} variant="secondary">
         {MESSAGES.inviteAgain}

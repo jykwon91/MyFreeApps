@@ -46,7 +46,7 @@ export default function CalendarAttachmentRow({ file, canWrite, isOpening, isOpe
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{formatFileSize(file.size_bytes)}</Text>
       </View>
       {file.is_available === false ? (
-        <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{EVENT_MESSAGES.fileMissing}</Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{EVENT_MESSAGES.fileMissing}</Text>
       ) : (
         <LoadingButton
           accessibilityLabel={`${EVENT_MESSAGES.open} ${file.filename}`}

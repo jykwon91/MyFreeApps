@@ -30,7 +30,7 @@ export default function LeaseTemplateFileRow({ file, isOpening, isDisabled, onOp
           {LEASE_TEMPLATE_MESSAGES.open}
         </LoadingButton>
       ) : (
-        <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>
+        <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
           {file.is_available ? LEASE_TEMPLATE_MESSAGES.noFileLink : LEASE_TEMPLATE_MESSAGES.fileMissing}
         </Text>
       )}

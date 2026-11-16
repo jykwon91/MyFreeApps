@@ -145,7 +145,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
             }}
             value={picked && picked > endsOn ? picked : endsOn}
           />
-          {picked !== null && !isLater ? <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{pickDateAfter(longEnd)}</Text> : null}
+          {picked !== null && !isLater ? <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{pickDateAfter(longEnd)}</Text> : null}
 
           <FormField
             editable={!isBusy}

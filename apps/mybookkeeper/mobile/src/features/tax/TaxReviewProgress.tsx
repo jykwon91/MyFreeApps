@@ -9,7 +9,7 @@ export default function TaxReviewProgress({ form }: { form: Pick<FormCompletenes
   const { colors, spacing, fontSize, radius } = useTheme();
   const percent = completenessPercent(form);
   const tone = completenessTone(percent);
-  const fill = tone === "complete" ? colors.primary : tone === "partial" ? colors.mutedForeground : colors.destructive;
+  const fill = tone === "complete" ? colors.primary : tone === "partial" ? colors.mutedForeground : colors.destructiveText;
   return (
     <View style={{ gap: spacing.xs }}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>

@@ -24,7 +24,7 @@ export default function PolicyFileRow({ file, isOpening, isRemoving, isDisabled,
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{INSURANCE_ATTACHMENT_KIND_LABELS[file.kind]}</Text>
       </View>
       {file.is_available === false ? (
-        <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{INSURANCE_MESSAGES.fileMissing}</Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{INSURANCE_MESSAGES.fileMissing}</Text>
       ) : (
         <LoadingButton
           accessibilityLabel={`${INSURANCE_MESSAGES.open} ${file.filename}`}
