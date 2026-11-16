@@ -10,7 +10,8 @@ import {
 } from "../constants/utilityPlanForm";
 import type { UtilityPlanFormProblems } from "../types/utility/utility-plan-form-problems";
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
-import { dollarsToCents } from "./dollarsToCents";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
 
 /**
  * Conversions between a utility plan and the form that edits it.
@@ -113,7 +114,9 @@ export function toUtilityPlanFormValues(plan: UtilityPlanDetail): UtilityPlanFor
 /** The fields both requests share, as the API wants them. */
 export function toUtilityPlanFields(
   values: UtilityPlanFormValues,
+  decimalSeparator: DecimalSeparator,
 ): UtilityPlanFieldsPayload {
+  const cents = (text: string): number | null => moneyTextToCents(text, decimalSeparator) ?? null;
   return {
     service_type: values.serviceType,
     rate_type: values.rateType,
@@ -124,19 +127,19 @@ export function toUtilityPlanFields(
     energy_charge_cents_per_kwh: optionalText(values.energyCharge),
     tdu_charge_cents_per_kwh: optionalText(values.tduCharge),
     avg_price_cents_per_kwh_at_1000: optionalText(values.avgPrice),
-    monthly_base_charge_cents: dollarsToCents(values.monthlyBase),
+    monthly_base_charge_cents: cents(values.monthlyBase),
     term_months: toInt(values.termMonths),
     service_start_date: values.serviceStartDate || null,
     term_end_date: values.termEndDate || null,
-    early_termination_fee_cents: dollarsToCents(values.etf),
+    early_termination_fee_cents: cents(values.etf),
     has_bill_credit: values.hasBillCredit,
     bill_credit_amount_cents: values.hasBillCredit
-      ? dollarsToCents(values.billCreditAmount)
+      ? cents(values.billCreditAmount)
       : null,
     bill_credit_threshold_kwh: values.hasBillCredit
       ? toInt(values.billCreditThreshold)
       : null,
-    min_usage_fee_cents: dollarsToCents(values.minUsageFee),
+    min_usage_fee_cents: cents(values.minUsageFee),
     min_usage_threshold_kwh: toInt(values.minUsageThreshold),
     // Sent whatever the service type is, unlike the bill-credit pair above.
     // That pair MUST be dropped when its toggle is off or the row violates
@@ -144,8 +147,8 @@ export function toUtilityPlanFields(
     // so gating them on the service type would silently erase an internet
     // plan's speeds the moment someone corrected its service to electricity.
     // The inputs are hidden for services they don't describe, not cleared.
-    post_promo_monthly_cents: dollarsToCents(values.postPromoMonthly),
-    equipment_fee_monthly_cents: dollarsToCents(values.equipmentFeeMonthly),
+    post_promo_monthly_cents: cents(values.postPromoMonthly),
+    equipment_fee_monthly_cents: cents(values.equipmentFeeMonthly),
     download_mbps: toInt(values.downloadMbps),
     upload_mbps: toInt(values.uploadMbps),
     data_cap_gb: toInt(values.dataCapGb),
@@ -173,6 +176,14 @@ function hasTooManyDecimals(value: string): boolean {
   return decimals !== undefined && decimals.length > UTILITY_PLAN_RATE_MAX_DECIMALS;
 }
 
+/** A filled dollar field the payload would silently turn into null, wiping what was stored. */
+function dollarsProblem(value: string, decimalSeparator: DecimalSeparator): string | undefined {
+  if (moneyTextToCents(value, decimalSeparator) !== undefined) return undefined;
+  return isNegativeMoneyText(value, decimalSeparator)
+    ? UTILITY_PLAN_FORM_PROBLEMS.negativeDollars
+    : UTILITY_PLAN_FORM_PROBLEMS.notDollars(decimalSeparator);
+}
+
 function isUnreadableWhole(value: string): boolean {
   const text = value.trim();
   return text !== "" && !WHOLE.test(text);
@@ -184,7 +195,10 @@ function isUnreadableWhole(value: string): boolean {
  * round trip. A filled field that can't be read as a number is a problem, not a
  * blank: the payload would otherwise send null and wipe the stored value.
  */
-export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityPlanFormProblems {
+export function utilityPlanFormProblems(
+  values: UtilityPlanFormValues,
+  decimalSeparator: DecimalSeparator,
+): UtilityPlanFormProblems {
   const problems: UtilityPlanFormProblems = {};
   if (!values.providerName.trim()) problems.providerName = UTILITY_PLAN_FORM_PROBLEMS.providerRequired;
   for (const field of RATE_FIELDS) {
@@ -192,7 +206,8 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
     else if (Number(values[field]) > UTILITY_PLAN_RATE_MAX_CENTS) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh;
   }
   for (const field of DOLLAR_FIELDS) {
-    if (isUnreadableDecimal(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notDollars;
+    const problem = dollarsProblem(values[field], decimalSeparator);
+    if (problem) problems[field] = problem;
   }
   if (isUnreadableWhole(values.termMonths)) {
     problems.termMonths = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
@@ -203,7 +218,10 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
   // The credit pair is dropped from the payload when its toggle is off, so only a claimed credit is checked.
   if (values.hasBillCredit) {
     if (values.billCreditAmount.trim() === "") problems.billCreditAmount = UTILITY_PLAN_FORM_PROBLEMS.billCreditIncomplete;
-    else if (isUnreadableDecimal(values.billCreditAmount)) problems.billCreditAmount = UTILITY_PLAN_FORM_PROBLEMS.notDollars;
+    else {
+      const problem = dollarsProblem(values.billCreditAmount, decimalSeparator);
+      if (problem) problems.billCreditAmount = problem;
+    }
     if (values.billCreditThreshold.trim() === "") problems.billCreditThreshold = UTILITY_PLAN_FORM_PROBLEMS.billCreditIncomplete;
     else if (isUnreadableWhole(values.billCreditThreshold)) problems.billCreditThreshold = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
   }

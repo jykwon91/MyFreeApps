@@ -5,7 +5,7 @@ import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeepe
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
 import { EMPTY_UTILITY_PLAN_FORM, toUtilityPlanFormValues, utilityPlanFormProblems } from "@mybookkeeper/api-client/utils/utilityPlanForm";
-import { Banner, KeyboardAwareScroll, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import {
@@ -31,6 +31,7 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
   const { spacing } = useTheme();
   const saved = original ? toUtilityPlanFormValues(original) : EMPTY_UTILITY_PLAN_FORM;
   const [values, setValues] = useState<UtilityPlanFormValues>(saved);
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<UtilityPlanDraft | null>(null);
   const [hasTried, setHasTried] = useState(false);
@@ -38,7 +39,7 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
   const readers = useUtilityPlanReaders();
   const { save, isBusy, isLeaving, failure } = useSaveUtilityPlan(original);
 
-  const problems = utilityPlanFormProblems(values);
+  const problems = utilityPlanFormProblems(values, decimalSeparator);
   const needsProperty = !original && propertyId === "";
   const isDirty = !sameFormValues(values, saved) || propertyId !== "";
   const locked = isBusy || isLeaving;
@@ -50,7 +51,7 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
   function submit(): void {
     setHasTried(true);
     if (needsProperty || Object.keys(problems).length > 0) return;
-    void save({ values, propertyId, sourceDocumentId: draft?.source_document_id ?? null });
+    void save({ values, decimalSeparator, propertyId, sourceDocumentId: draft?.source_document_id ?? null });
   }
 
   return (

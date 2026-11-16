@@ -2,6 +2,7 @@ import { useCreateUtilityPlanMutation, useUpdateUtilityPlanMutation } from "@myb
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import type { UtilityPlanFormValues } from "@mybookkeeper/api-client/types/utility/utility-plan-form-values";
 import { toUtilityPlanFields } from "@mybookkeeper/api-client/utils/utilityPlanForm";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { UTILITY_PLAN_FORM_MESSAGES as MESSAGES } from "../../constants/utilityPlanForm";
 import { useWrite } from "../../lib/useWrite";
@@ -9,6 +10,7 @@ import { saveFailureCopy } from "../../lib/writeFailureCopy";
 
 interface SaveTarget {
   values: UtilityPlanFormValues;
+  decimalSeparator: DecimalSeparator;
   propertyId: string;
   /** Set when the form was filled from a document, so the plan cites it. */
   sourceDocumentId: string | null;
@@ -26,8 +28,8 @@ export function useSaveUtilityPlan(original: UtilityPlanDetail | null) {
   // On an add the 404 is the property, not the plan.
   const failureCopy = isNew ? { ...copy, gone: MESSAGES.goneProperty } : copy;
 
-  async function save({ values, propertyId, sourceDocumentId }: SaveTarget): Promise<void> {
-    const fields = toUtilityPlanFields(values);
+  async function save({ values, decimalSeparator, propertyId, sourceDocumentId }: SaveTarget): Promise<void> {
+    const fields = toUtilityPlanFields(values, decimalSeparator);
     const result = await write.run(
       () =>
         original
