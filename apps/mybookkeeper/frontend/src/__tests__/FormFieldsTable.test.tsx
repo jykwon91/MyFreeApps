@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FormFieldsTable from "@/app/features/tax/FormFieldsTable";
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { TAX_FIELD_OVERRIDE_PROBLEMS } from "@mybookkeeper/api-client/constants/taxFieldOverride";
 
 vi.mock("@/app/features/documents/DocumentViewer", () => ({ default: () => null }));
@@ -52,7 +53,7 @@ describe("FormFieldsTable", () => {
     await userEvent.type(input, "1e3");
     await userEvent.type(screen.getByPlaceholderText("Reason for override..."), "Typo");
     await userEvent.click(screen.getByText("Save"));
-    expect(screen.getByText(TAX_FIELD_OVERRIDE_PROBLEMS.number)).toBeInTheDocument();
+    expect(screen.getByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(NUMBER_INPUT_DECIMAL_SEPARATOR))).toBeInTheDocument();
     expect(onOverride).not.toHaveBeenCalled();
   });
 

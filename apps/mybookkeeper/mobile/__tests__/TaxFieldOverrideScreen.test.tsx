@@ -11,6 +11,9 @@ import { store } from "../src/lib/store";
 import { aTaxField, aTaxForm, aTaxInstance } from "../test-support/aTaxForm";
 import { startTaxServer, type TaxAnswer, type TaxCall, writesOnly } from "../test-support/taxReturnsServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockPreventRemove = { active: false };
 jest.mock("expo-router", () => ({
@@ -46,6 +49,7 @@ beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   jest.clearAllMocks();
   mockPreventRemove.active = false;
+  mockDecimalSeparator = ".";
   jest.mocked(useIsAdmin).mockReturnValue(true);
 });
 
@@ -125,6 +129,28 @@ describe("TaxFieldOverrideScreen", () => {
     expect(writesOnly(server.calls)[0].data).toEqual({ value_numeric: expected, override_reason: "Net loss" });
   });
 
+  it.each([["1250,50", 1250.5], ["1.250,50", 1250.5], ["(1.250,50)", -1250.5]])("saves %p as %p on a decimal-comma phone", async (text, expected) => {
+    mockDecimalSeparator = ",";
+    const server = serve();
+    await show();
+    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
+    await fireEvent.changeText(reason(), "Per the statement");
+    await fireEvent.press(save());
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(writesOnly(server.calls)[0].data).toEqual({ value_numeric: expected, override_reason: "Per the statement" });
+  });
+
+  it("refuses an ambiguous 1,234 on a decimal-comma phone and shows the comma example", async () => {
+    mockDecimalSeparator = ",";
+    const server = serve();
+    await show();
+    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), "1,234");
+    await fireEvent.changeText(reason(), "Because");
+    await fireEvent.press(save());
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(","))).toBeTruthy();
+    expect(writesOnly(server.calls)).toHaveLength(0);
+  });
+
   it("uses a keyboard with a minus key for numbers", async () => {
     serve();
     await show();
@@ -163,7 +189,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
     await fireEvent.changeText(reason(), "Because");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator))).toBeTruthy();
     expect(screen.queryByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason)).toBeNull();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
@@ -241,7 +267,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
     await fireEvent.changeText(reason(), "Because");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator))).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 
