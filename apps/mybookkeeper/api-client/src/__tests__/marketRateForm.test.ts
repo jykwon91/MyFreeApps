@@ -89,9 +89,19 @@ describe("marketRateFormProblems", () => {
 
   it("asks internet for dollars and cents above zero", () => {
     expect(problems("internet", { figure: "0" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
-    expect(problems("internet", { figure: "69.999" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise);
+    expect(problems("internet", { figure: "69.999" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise("."));
+    expect(problems("internet", { figure: "69,999" }, ",").figure).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise(","));
+    expect(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise(",")).toContain("1200,50");
     expect(problems("internet", { figure: "1e20" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
     expect(problems("internet", { figure: "99999999999999999999" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyTooLarge);
+  });
+
+  it("reads an internet price a decimal-comma phone types or a pasted dollar amount", () => {
+    expect(problems("internet", { figure: "49,99" }, ",")).toEqual({});
+    expect(problems("internet", { figure: "$49.99" }, ".")).toEqual({});
+    expect(problems("internet", { figure: "$1.249,99" }, ",")).toEqual({});
+    expect(problems("internet", { figure: "-5" }, ",").figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
+    expect(problems("internet", { figure: "" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
   });
 
   it("does not apply the per-kWh ceiling to a monthly price", () => {
@@ -128,6 +138,11 @@ describe("toMarketRateUpsert", () => {
 
   it("sends internet as whole cents, and no per-kWh rate", () => {
     expect(toMarketRateUpsert("internet", { ...values, figure: "69.99" }, ".")).toEqual({ monthly_cents: 6999, source: "Power to Choose", observed_on: "2026-01-05", notes: null });
+  });
+
+  it("sends a decimal-comma or dollar-signed internet price as the cents the form checked", () => {
+    expect(toMarketRateUpsert("internet", { ...values, figure: " 49,99 " }, ",")).toMatchObject({ monthly_cents: 4999 });
+    expect(toMarketRateUpsert("internet", { ...values, figure: "$49.99" }, ".")).toMatchObject({ monthly_cents: 4999 });
   });
 
   it("turns blank text into null so an untouched field is absent", () => {

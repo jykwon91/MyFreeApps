@@ -4,7 +4,6 @@ import {
   BENCHMARK_SOURCE_MAX_LENGTH,
   MARKET_RATE_MAX_CENTS_PER_KWH,
   MARKET_RATE_MAX_DECIMALS,
-  BENCHMARK_MONEY_MAX_DECIMALS,
 } from "../constants/benchmarkForm";
 import { NO_RATE, PER_MONTH_SUFFIX } from "../constants/rateDisplay";
 import type { MarketRateBenchmark } from "../types/utility/market-rate-benchmark";
@@ -12,9 +11,11 @@ import type { MarketRateBenchmarkUpsertRequest } from "../types/utility/market-r
 import type { MarketRateFormProblems } from "../types/utility/market-rate-form-problems";
 import type { MarketRateFormValues } from "../types/utility/market-rate-form-values";
 import type { UtilityServiceType } from "../types/utility/utility-service-type";
-import { decimalPlaces, isPlainNumber, isTooLong, observedOnProblem } from "./benchmarkFieldChecks";
+import { isTooLong, observedOnProblem } from "./benchmarkFieldChecks";
 import { localToday } from "@platform/core/utils/localToday";
 import { formatCents, formatCentsPerKwh } from "./utilityPlanFormat";
+import { MONEY_AMOUNT_LOOKS_TYPED } from "../constants/moneyInput";
+import { moneyTextToCents } from "./moneyTextToCents";
 import { normalizeDecimalText } from "./normalizeDecimalText";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
@@ -59,13 +60,11 @@ function rateProblem(figure: string, decimalSeparator: DecimalSeparator): string
   return Number(rate) > MARKET_RATE_MAX_CENTS_PER_KWH ? BENCHMARK_FORM_PROBLEMS.rateTooHigh(decimalSeparator) : undefined;
 }
 
-function monthlyProblem(figure: string): string | undefined {
-  const text = figure.trim();
+function monthlyProblem(figure: string, decimalSeparator: DecimalSeparator): string | undefined {
   const required = BENCHMARK_FORM_PROBLEMS.monthlyRequired;
-  if (!isPlainNumber(text) || Number(text) <= 0) return required;
-  if (decimalPlaces(text) > BENCHMARK_MONEY_MAX_DECIMALS) return BENCHMARK_FORM_PROBLEMS.moneyTooPrecise;
-  const cents = Math.round(Number(text) * 100);
-  if (cents <= 0) return required;
+  const cents = moneyTextToCents(figure, decimalSeparator);
+  if (cents === undefined) return MONEY_AMOUNT_LOOKS_TYPED.test(figure) ? BENCHMARK_FORM_PROBLEMS.moneyTooPrecise(decimalSeparator) : required;
+  if (cents === null || cents <= 0) return required;
   return Number.isSafeInteger(cents) ? undefined : BENCHMARK_FORM_PROBLEMS.monthlyTooLarge;
 }
 
@@ -80,7 +79,7 @@ export function marketRateFormProblems(
   decimalSeparator: DecimalSeparator,
 ): MarketRateFormProblems {
   const problems: MarketRateFormProblems = {};
-  const figure = isFlatService(serviceType) ? monthlyProblem(values.figure) : rateProblem(values.figure, decimalSeparator);
+  const figure = isFlatService(serviceType) ? monthlyProblem(values.figure, decimalSeparator) : rateProblem(values.figure, decimalSeparator);
   if (figure) problems.figure = figure;
   if (isTooLong(values.source, BENCHMARK_SOURCE_MAX_LENGTH)) problems.source = BENCHMARK_FORM_PROBLEMS.sourceTooLong;
   const observedOn = observedOnProblem(values.observedOn, today);
@@ -99,7 +98,7 @@ export function toMarketRateUpsert(
   const notes = values.notes.trim();
   return {
     ...(isFlatService(serviceType)
-      ? { monthly_cents: Math.round(Number(values.figure) * 100) }
+      ? { monthly_cents: moneyTextToCents(values.figure, decimalSeparator) }
       : { rate_cents_per_kwh: rateText(values.figure, decimalSeparator) || null }),
     source: source === "" ? null : source,
     observed_on: values.observedOn,

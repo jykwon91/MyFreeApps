@@ -166,6 +166,16 @@ describe("MarketRateFormScreen", () => {
     expect(body).not.toHaveProperty("rate_cents_per_kwh");
   });
 
+  it("saves an internet price typed with a decimal comma as whole cents", async () => {
+    mockDecimalSeparator = ",";
+    const server = startUtilityServer();
+    await show(<MarketRateFormScreen serviceType="internet" />);
+    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureFlat.replace(/[()$]/g, "\\$&")}`)), "49,99");
+    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writesTo(server, "put")[0].data)).monthly_cents).toBe(4999);
+  });
+
   it("opens on the rate already recorded and offers to remove it", async () => {
     startUtilityServer({ benchmarks: [aBenchmark()] });
     await show(<MarketRateFormScreen serviceType="electricity" />);
