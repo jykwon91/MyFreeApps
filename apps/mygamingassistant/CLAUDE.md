@@ -2136,19 +2136,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   **Theater mode** (`MapFullSizeButton` in the breadcrumb row, labelled "Theater
   mode" / "Exit theater mode"; `useMapTheaterMode`, owned by `WowWorldMapPage`;
   preference persisted in `localStorage` via `data/worldMap/mapTheaterMode.ts`):
-  renders a `fixed inset-0 z-[1050] bg-background` overlay at the page level
-  containing BOTH the RoutePlanner + MapSearchResults (left sidebar on desktop,
-  `md:w-72`; compact top strip on mobile, `max-h-36`) and the WorldMapPanel
-  (filling the remaining space). `pageAround(theaterRef.current)` inerts the
-  AppShell chrome (sidebar, topbar, bottom nav) and locks body scroll. The
-  heading goes `sr-only`; WorldMapPanel is given simple `space-y-3 py-2 px-3`
-  (no fixed class of its own). `MapCanvas` receives `fullSize={theaterMode}` so
-  the same Esc chain applies (placing → selection → exit theater → zoom out);
-  document-level Esc also exits unless `escapeTaken` (picking / selection).
-  `WorldMapPanel` accepts `theaterMode`, `onTheaterToggle`,
-  `onExitTheater`. The map remounts when the mode flips, so `useCarriedMapView`
-  (page-level) pins the current zoom + pan as a pending `restore` for the new
-  canvas — the player's view survives the toggle. Tests: `wowWorldMapViewport.test.ts`,
+  the SAME page with the map about three times bigger — never an overlay, never
+  inert chrome or a scroll lock (operator: "theater mode like almost a new website"
+  was wrong). The page drops `max-w-7xl` and the grid becomes
+  `THEATER_GRID_CLASSES` (`lg:grid-cols-[minmax(18rem,1fr)_3fr]`: list column
+  keeps its size, map column gets 3×); the panel is capped by
+  `THEATER_PANEL_MAX_WIDTH` (`data/worldMap/mapTheaterLayout.ts`) so the whole
+  picture fits the window height while sticky. Entering scrolls the map into
+  view. `MapCanvas` receives `fullSize={theaterMode}` so the Esc chain applies
+  (placing → selection → exit theater → zoom out); document-level Esc also
+  exits unless `escapeTaken` (picking / selection). `useCarriedMapView` pins the
+  current zoom + pan as a pending `restore` across the resize. Tests: `wowWorldMapViewport.test.ts`,
   `wowWorldMapZoomQueue.test.ts`, `e2e/mocked/wow-world-map-viewer.spec.ts`,
   `hooks/__tests__/useMapTheaterMode.test.ts`,
   `e2e/mocked/wow-world-map-theater.spec.ts`.

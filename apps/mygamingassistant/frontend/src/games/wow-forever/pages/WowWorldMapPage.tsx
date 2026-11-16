@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
+import { useCallback, useMemo, useState } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
@@ -27,7 +28,7 @@ import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hook
 import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
-import { THEATER_OVERLAY_STRIP_CLASSES } from "@/games/wow-forever/data/worldMap/mapTheaterLayout";
+import { THEATER_GRID_CLASSES } from "@/games/wow-forever/data/worldMap/mapTheaterLayout";
 import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { isReadOnly } from "@/lib/readOnly";
 import type { MapFit } from "@/games/wow-forever/worldMap/mapLayers";
@@ -54,7 +55,7 @@ export default function WowWorldMapPage() {
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view);
-  // The map is remounted on entering / leaving theater: its zoom + pan are carried over, not reset to fit-to-zone.
+  // Entering / leaving theater resizes the map: its zoom + pan are re-applied, not reset to fit-to-zone.
   const carriedView = useCarriedMapView(view.mapId, selection.trackZoom);
   const marks = useMapMarks(view.mapId);
   // A "Share this view" link: its map, zoom and layers on screen, its marks shown read-only.
@@ -126,9 +127,8 @@ export default function WowWorldMapPage() {
     selection.clear();
   }
 
-  const theaterRef = useRef<HTMLDivElement>(null);
   // escapeTaken: MapCanvas is using Esc for its own chain — don't exit theater on that keypress.
-  const theater = useMapTheaterMode(theaterRef, planner.picking !== null || !!selectedPoiId, carriedView.carry);
+  const theater = useMapTheaterMode(planner.picking !== null || !!selectedPoiId, carriedView.carry);
 
   const training = nextWarlockTraining(settings.classId, settings.level);
   const rowProps = {
@@ -139,6 +139,12 @@ export default function WowWorldMapPage() {
     onDirections: planner.directionsTo,
   };
   const showMap = () => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" });
+  /** Into theater mode, the bigger map is brought into view; out of it, the page stays where it is. */
+  function toggleTheater() {
+    const entering = !theater.active;
+    theater.toggle();
+    if (entering) requestAnimationFrame(showMap);
+  }
 
   /** All props for WorldMapPanel, excluding theater-mode control props. */
   const worldMapPanelProps = data && view.mapId !== null ? {
@@ -195,43 +201,7 @@ export default function WowWorldMapPage() {
   ) : null;
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 max-w-7xl">
-      {/* Theater mode overlay — fixed inset-0, covers the full viewport.
-          The ref is passed to useMapTheaterMode which inerts everything outside it. */}
-      {data && theater.active && worldMapPanelProps && (
-        <div
-          ref={theaterRef}
-          className={`m-0 fixed inset-0 z-[1050] bg-background flex flex-col md:flex-row overflow-hidden ${THEATER_OVERLAY_STRIP_CLASSES}`}
-          data-testid="theater-overlay"
-        >
-          {/* Route panel: compact top strip on mobile, left sidebar on desktop */}
-          <div className="shrink-0 max-h-36 md:max-h-none md:w-72 overflow-y-auto border-b md:border-b-0 md:border-r p-3 space-y-3">
-            <RoutePlanner
-              planner={planner}
-              data={data}
-              places={places}
-              context={searchContext}
-              faction={settings.faction}
-              travel={travel}
-              currentZoneId={settings.zoneId}
-              onShowMap={() => {}}
-              onShowAll={mapSearch.show}
-            />
-            {searchResultsNode}
-          </div>
-          {/* Map fills the remaining space */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <WorldMapPanel
-              {...worldMapPanelProps}
-              theaterMode={true}
-              onTheaterToggle={theater.toggle}
-              onExitTheater={theater.exit}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Normal page content — always rendered; visually covered and made inert by the theater overlay when active. */}
+    <div className={clsx("p-4 sm:p-8 space-y-6", !theater.active && "max-w-7xl")}>
       <WowPageHeader
         title="World Map"
         subtitle="Find the nearest trainer, flight master, inn, bank, quest or dungeon — and how to get there."
@@ -280,7 +250,7 @@ export default function WowWorldMapPage() {
             </p>
           )}
           {model && training && <p className="text-sm">{training}</p>}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className={clsx("grid grid-cols-1 gap-6 items-start", theater.active ? THEATER_GRID_CLASSES : "lg:grid-cols-2")}>
             <div className="space-y-8">
               {searchResultsNode}
               {!model && (
@@ -312,14 +282,12 @@ export default function WowWorldMapPage() {
             </div>
             {worldMapPanelProps && (
               <div id={MAP_PANEL_ID} className="lg:sticky lg:top-4 scroll-mt-4">
-                {!theater.active && (
-                  <WorldMapPanel
-                    {...worldMapPanelProps}
-                    theaterMode={false}
-                    onTheaterToggle={theater.toggle}
-                    onExitTheater={theater.exit}
-                  />
-                )}
+                <WorldMapPanel
+                  {...worldMapPanelProps}
+                  theaterMode={theater.active}
+                  onTheaterToggle={toggleTheater}
+                  onExitTheater={theater.exit}
+                />
               </div>
             )}
           </div>
