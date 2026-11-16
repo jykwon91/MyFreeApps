@@ -14,6 +14,7 @@ const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePa
 const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfessionsPage"));
 const WowRecipesPage = lazy(() => import("@/games/wow-forever/pages/WowRecipesPage"));
+const WowDropRecipesPage = lazy(() => import("@/games/wow-forever/pages/WowDropRecipesPage"));
 const WowGoalPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowGoalPlannerPage"));
 const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPickerPage"));
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
@@ -93,6 +94,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/map", element: withSuggestFooter(<WowWorldMapPage />, "map_travel") },
   { path: "/wow-forever/professions", element: withSuggestFooter(<WowProfessionsPage />, "professions") },
   { path: "/wow-forever/recipes", element: withSuggestFooter(<WowRecipesPage />, "professions") },
+  { path: "/wow-forever/recipe-drops", element: withSuggestFooter(<WowDropRecipesPage />, "professions") },
   { path: GOAL_PLANNER_PATH, element: withSuggestFooter(<WowGoalPlannerPage />, "professions") },
   { path: "/wow-forever/food", element: withSuggestFooter(<WowFoodPickerPage />, "food_consumables") },
   { path: "/wow-forever/food/:foodId", element: withSuggestFooter(<WowFoodDetailPage />, "food_consumables") },

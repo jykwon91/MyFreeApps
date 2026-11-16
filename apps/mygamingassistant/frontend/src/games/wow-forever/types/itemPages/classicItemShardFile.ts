@@ -1,5 +1,5 @@
 import type { SourceCell } from "@/games/wow-forever/data/spotDecode";
-import type { ClassicItemRecord } from "@/games/wow-forever/types/itemPages/classicItemRecord";
+import type { RawSources } from "@/games/wow-forever/data/sourceDecode";
 
 /** `data/items/pages/classic/NN.json` (cmangos classic-db, GPL), written by `scripts/wow_item_pages/build.py`. */
 export interface ClassicItemShardFile {
@@ -12,5 +12,6 @@ export interface ClassicItemShardFile {
   quests: Record<string, readonly SourceCell[]>;
   /** Instance map id -> `[name, type, minLevel, maxLevel, requiredLevel, zone, x, y]`. */
   instances: Record<string, readonly SourceCell[]>;
-  items: Record<string, ClassicItemRecord>;
+  /** One item's Classic sources: the food pages' shape, dungeon / raid drops included. */
+  items: Record<string, RawSources>;
 }

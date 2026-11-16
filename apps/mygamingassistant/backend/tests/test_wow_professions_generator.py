@@ -28,6 +28,7 @@ from scripts.wow_professions.build import (
     _best_giver,
     _disenchant_kind,
     _roll_chances,
+    mark_bind_on_pickup,
     with_child_skill_lines,
 )
 from scripts.wow_professions.classic_teaching import (
@@ -770,3 +771,32 @@ class TestSkinningSpots:
 
     def test_no_count_left_in_the_output(self, sources: dict) -> None:
         assert all("count" not in r["skinning"] for r in sources["reagents"].values() if r.get("skinning"))
+
+
+def test_mark_bind_on_pickup_flags_only_items_that_bind_when_picked_up() -> None:
+    recipes = [
+        {"learn": {"source": "item", "itemId": 16254, "item": "Formula: Enchant Weapon - Lifestealing"}},
+        {"learn": {"source": "item", "itemId": 6344, "item": "Formula: Enchant Bracer - Minor Spirit"}},
+        {"learn": {"source": "trainer"}},
+    ]
+    mark_bind_on_pickup(recipes, frozenset({16254}))
+    assert [r["learn"].get("bop") for r in recipes] == [True, None, None]
+
+
+class TestCommittedRecipeInstanceDrops:
+    """sources.json gives dungeon / raid drops for formulas no open-world mob drops."""
+
+    @pytest.fixture(scope="class")
+    def sources(self) -> dict:
+        return json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))
+
+    def test_fiery_weapon_drops_from_pyromancer_loregrain_in_blackrock_depths(self, sources: dict) -> None:
+        mobs = sources["recipes"]["11207"]["instance"]["mobs"]
+        name, _, _, _, instance, kind = mobs[0]
+        assert (name, sources["instances"][str(instance)][0], kind) == ("Pyromancer Loregrain", "Blackrock Depths", "boss")
+
+    def test_every_instance_drop_names_a_listed_instance(self, sources: dict) -> None:
+        instances = set(sources["instances"])
+        rows = [m for r in sources["recipes"].values() if r.get("instance") for m in r["instance"]["mobs"]]
+        assert rows and all(str(m[4]) in instances for m in rows)
+        assert sources["instanceMobColumns"] == ["name", "minLevel", "maxLevel", "chance", "instance", "kind"]

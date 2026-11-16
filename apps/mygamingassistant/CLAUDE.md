@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/recipes`, `/wow-forever/goal-planner`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/recipes`, `/wow-forever/recipe-drops`, `/wow-forever/goal-planner`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -280,6 +280,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   which the Auction house folds into one "gear" place) and its Auction house place
   (`recipeCategory`), never from the name. Forever-only recipes reuse `sourceUnknown` + its chip;
   recipe-item sources are Classic data with the provenance badge.
+- **Drop-only recipes** (`/wow-forever/recipe-drops`, `?p=<profession>` default Enchanting, `&source=open-world|dungeon|raid|random`,
+  `&sort=odds`): crafting recipes whose item no vendor sells and no quest gives (`lib/dropRecipes/buildDropRecipes.ts`,
+  from `loadAllCraftingData`). Dungeon / raid drops come from `sources.json`'s `instance` + `instances` (the professions
+  generator reuses the item pages' `load_finder` / `instance_rows`; one TS decoder, `data/instanceDropDecode.ts`, for both).
+  A random drop (world pool or `COMMON_DROP_MOBS`+ kinds) NEVER lists mobs as a farm spot — only a level range — except
+  a mob at `RARE_DROP_PERCENT`+ (e.g. Greater Stamina's 7.7% mob in a 363-mob pool). Trade line from `learn.bop`
+  (Forever client `ItemSparse.Bonding` 1, written by the generator): bind-on-pickup never gets an Auction House link.
 - **Goal planner** (`/wow-forever/goal-planner`, `?g=tailoring.40.300~cooking.0.300` `&r=tailoring:3914`, saved to
   localStorage when there's no link): profession goals (skill now prefilled from that guide's saved skill,
   goal = 75/150/225/300) + recipe goals (Recipes-page keys) become ONE plan (`lib/goalPlanner/buildGoalPlan.ts`,

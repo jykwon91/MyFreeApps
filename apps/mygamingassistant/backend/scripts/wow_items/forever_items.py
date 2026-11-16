@@ -31,6 +31,9 @@ from scripts.wow_items.dbd import decode_record, layout_for, parse_dbd
 from scripts.wow_items.hotfix_cache import HotfixCache, latest_records, parse_hotfix_cache
 from scripts.wow_world_map.sources import CACHE_DIR, WAGO_BRANCH, WAGO_BUILD, wago_table, wowdbdefs_definition
 
+# ItemSparse.Bonding: the item binds to whoever loots it.
+BIND_ON_PICKUP = 1
+
 Row = dict[str, str]
 
 HOTFIX_CACHE_ENV = "WOW_FOREVER_HOTFIX_CACHE"

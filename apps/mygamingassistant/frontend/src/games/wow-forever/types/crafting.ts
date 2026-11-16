@@ -33,7 +33,8 @@ export interface CraftReagent {
  */
 export type RecipeLearn =
   | { source: "start"; skill: 1 }
-  | { source: "item"; skill: number; itemId: number; item: string; estimated?: true; classic?: RecipeClassicSource }
+  /** `bop`: the recipe item binds when picked up (the Forever client's ItemSparse.Bonding). */
+  | { source: "item"; skill: number; itemId: number; item: string; estimated?: true; classic?: RecipeClassicSource; bop?: true }
   | { source: "quest"; quests: RecipeQuest[]; classic?: RecipeClassicSource }
   | { source: "npc"; npcs: string[]; classic?: RecipeClassicSource }
   | { source: "trainer"; classic?: RecipeClassicSource };

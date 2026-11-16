@@ -219,6 +219,13 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Search every recipe from every profession: what it makes, the ingredients, and where to learn it.",
       },
       {
+        path: "/wow-forever/recipe-drops",
+        category: "crafting",
+        title: "Drop-only recipes",
+        iconName: "Skull",
+        description: "Recipes only monsters drop, Enchanting formulas first: which mobs, dungeons and raids drop each one, the odds, and whether it trades.",
+      },
+      {
         path: "/wow-forever/goal-planner",
         category: "crafting",
         title: "Goal planner",

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Drop-only recipes",
+    "summary": "A new page lists every profession recipe only monsters drop, Enchanting formulas first: which mobs, dungeons and raids drop each one, the chance per kill, Directions there, and whether you can buy it on the Auction House instead.",
+    "to": "/wow-forever/recipe-drops"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Help each other: upgrades you can make yourself",
     "summary": "The guild's Help each other tab now counts your own professions: an upgrade or enchant you can make yourself shows as \"can make this themselves\", and when a guild mate offers the same upgrade, the one you can make yourself comes first.",
     "to": "/wow-forever/topdeadcenter"
