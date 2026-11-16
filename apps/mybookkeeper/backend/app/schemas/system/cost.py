@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 
 class CostSummary(BaseModel):
@@ -37,13 +39,29 @@ class CostThresholds(BaseModel):
     output_rate_per_million: float
 
 
-
 class CostThresholdsUpdate(BaseModel):
-    daily_budget: float | None = None
-    monthly_budget: float | None = None
-    per_user_daily_alert: float | None = None
-    input_rate_per_million: float | None = None
-    output_rate_per_million: float | None = None
+    """Bounds match the platform_settings columns: budgets Numeric(10,2), rates Numeric(10,4), all NOT NULL."""
+
+    daily_budget: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2, allow_inf_nan=False)
+    monthly_budget: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2, allow_inf_nan=False)
+    per_user_daily_alert: Decimal | None = Field(
+        default=None, ge=0, max_digits=10, decimal_places=2, allow_inf_nan=False,
+    )
+    input_rate_per_million: Decimal | None = Field(
+        default=None, ge=0, max_digits=10, decimal_places=4, allow_inf_nan=False,
+    )
+    output_rate_per_million: Decimal | None = Field(
+        default=None, ge=0, max_digits=10, decimal_places=4, allow_inf_nan=False,
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _refuse_explicit_null(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            nulls = sorted(key for key, value in data.items() if value is None)
+            if nulls:
+                raise ValueError(f"{', '.join(nulls)} can't be empty; leave a field out to keep its value.")
+        return data
 
 
 class CostAlert(BaseModel):

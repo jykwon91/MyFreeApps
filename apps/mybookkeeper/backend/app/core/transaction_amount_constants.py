@@ -8,3 +8,4 @@ MAX_TRANSACTION_AMOUNT = Decimal("9999999999.99")
 AMOUNT_NOT_POSITIVE = "Enter an amount above $0."
 AMOUNT_TOO_PRECISE = "Use dollars and cents, like 84.20."
 AMOUNT_TOO_LARGE = "That amount is too large."
+AMOUNT_NEGATIVE = "Enter an amount of $0 or more."

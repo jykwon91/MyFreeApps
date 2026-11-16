@@ -3,6 +3,10 @@ import { useGetCostThresholdsQuery, useUpdateCostThresholdsMutation } from "@/sh
 import type { CostThresholds } from "@/shared/types/admin/cost";
 import { useToast } from "@/shared/hooks/useToast";
 import Card from "@/shared/components/ui/Card";
+import FieldProblem from "@/shared/components/FieldProblem";
+import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
+import { fieldProblemAria, fieldProblemId } from "@/shared/utils/field-problem-aria";
+import { thresholdFieldError } from "@/admin/lib/threshold-field-error";
 import { LoadingButton } from "@platform/ui";
 
 type ThresholdKey = keyof CostThresholds;
@@ -30,6 +34,7 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
   const { showSuccess, showError } = useToast();
   // Track user edits as partial overrides; fall back to server values for unedited fields.
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [problems, setProblems] = useState<Partial<Record<ThresholdKey, string>>>({});
   const dirty = Object.keys(overrides).length > 0;
 
   // Merge server data with user overrides to get the current displayed values.
@@ -41,23 +46,31 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
 
   function handleChange(key: ThresholdKey, val: string) {
     setOverrides((prev) => ({ ...prev, [key]: val }));
+    setProblems((prev) => ({ ...prev, [key]: undefined }));
   }
 
   async function handleSave() {
+    const found: Partial<Record<ThresholdKey, string>> = {};
     const updates: Partial<CostThresholds> = {};
     for (const field of FIELDS) {
-      const val = parseFloat(getValue(field.key));
-      if (!isNaN(val) && val >= 0) {
-        updates[field.key] = val;
-      }
+      const value = getValue(field.key);
+      const problem = thresholdFieldError(value, field.max);
+      if (problem) found[field.key] = problem;
+      else updates[field.key] = Number(value);
+    }
+    setProblems(found);
+    const firstBad = FIELDS.find((field) => found[field.key]);
+    if (firstBad) {
+      document.getElementById(`threshold-${firstBad.key}`)?.focus();
+      return;
     }
     try {
       await updateThresholds(updates).unwrap();
       showSuccess("Thresholds updated");
       setOverrides({});
       onSaved?.();
-    } catch {
-      showError("Couldn't update thresholds");
+    } catch (err) {
+      showError(getApiErrorDetail(err, "Couldn't update thresholds"));
     }
   }
 
@@ -82,9 +95,11 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
                 value={getValue(field.key)}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 className="w-24 border rounded-md px-2 py-1.5 text-sm bg-background"
+                {...fieldProblemAria(problems, field.key, "threshold")}
               />
               {field.suffix && <span className="text-xs text-muted-foreground whitespace-nowrap">{field.suffix}</span>}
             </div>
+            <FieldProblem id={fieldProblemId("threshold", field.key)} message={problems[field.key]} />
             <input
               type="range"
               min="0"

@@ -20,6 +20,11 @@ def validate_transaction_amount(value: Decimal) -> Decimal:
     """
     if not value.is_finite() or value <= 0:
         raise ValueError(AMOUNT_NOT_POSITIVE)
+    return check_amount_fits_column(value)
+
+
+def check_amount_fits_column(value: Decimal) -> Decimal:
+    """Reject a finite amount a ``Numeric(12, 2)`` column would refuse or round."""
     if value > MAX_TRANSACTION_AMOUNT:
         raise ValueError(AMOUNT_TOO_LARGE)
     # Judged on the value, not the digits sent: "100.000" is whole cents.
