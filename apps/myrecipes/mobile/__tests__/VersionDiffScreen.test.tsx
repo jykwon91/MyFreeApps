@@ -206,7 +206,7 @@ describe("VersionDiffScreen", () => {
     diffReply = "offline";
     await show();
 
-    expect(await screen.findByText("One of these versions may not exist. Go back and pick two versions to compare.")).toBeTruthy();
+    expect(await screen.findByText("We can't reach the server to load this comparison. Check your connection and try again.")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Go back" }));
     expect(mockReplace).toHaveBeenCalledWith({ pathname: "/recipes/[id]", params: { id: "r1" } });
   });
