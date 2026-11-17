@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { formatAppliedDate } from "../utils/formatAppliedDate";
 import { formatFitScore } from "../utils/formatFitScore";
 import { formatRemoteType } from "../utils/formatRemoteType";
 
@@ -29,17 +28,5 @@ describe("formatFitScore", () => {
   it("treats only null as no score", () => {
     expect(formatFitScore(null)).toBeNull();
     expect(formatFitScore("0")).toBe("0%");
-  });
-});
-
-describe("formatAppliedDate", () => {
-  it("formats the date in the reader's locale", () => {
-    const iso = "2026-03-15T12:00:00Z";
-    expect(formatAppliedDate(iso)).toBe(new Date(iso).toLocaleDateString());
-  });
-
-  it("is null for an application not sent yet", () => {
-    expect(formatAppliedDate(null)).toBeNull();
-    expect(formatAppliedDate("")).toBeNull();
   });
 });

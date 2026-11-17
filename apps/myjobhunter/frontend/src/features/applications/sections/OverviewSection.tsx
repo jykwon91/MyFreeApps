@@ -8,18 +8,10 @@
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { formatSalaryRange } from "@platform/ui";
 import type { Application } from "@myjobhunter/api-client/types/application";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 
 interface OverviewSectionProps {
   application: Application;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 interface FieldProps {
@@ -63,7 +55,7 @@ export default function OverviewSection({ application }: OverviewSectionProps) {
       ) : null}
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        <Field label="Applied" value={formatDate(application.applied_at)} />
+        <Field label="Applied" value={application.applied_at ? formatShortDate(application.applied_at) : "—"} />
         <Field
           label="Fit score"
           value={application.fit_score ? `${application.fit_score}%` : "—"}

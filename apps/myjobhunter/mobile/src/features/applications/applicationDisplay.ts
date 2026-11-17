@@ -1,6 +1,6 @@
 import type { Application } from "@myjobhunter/api-client/types/application";
 import type { StatusTone } from "@myjobhunter/api-client/types/status-tone";
-import { formatAppliedDate } from "@myjobhunter/api-client/utils/formatAppliedDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
@@ -25,8 +25,7 @@ export function fitText(application: Application): string | null {
 }
 
 function appliedText(application: Application): string | null {
-  const applied = formatAppliedDate(application.applied_at);
-  return applied === null ? null : `${APPLICATION_MESSAGES.applied} ${applied}`;
+  return application.applied_at ? `${APPLICATION_MESSAGES.applied} ${formatShortDate(application.applied_at)}` : null;
 }
 
 /** Where, how remote and when, leaving out whatever the application doesn't say. Null if none of it. */

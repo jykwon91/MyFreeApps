@@ -67,7 +67,7 @@ describe("CompanyDetail applications table", () => {
   it("shows the applied date in the reader's locale, and a dash when not sent", () => {
     renderCompany();
 
-    expect(screen.getByText(new Date("2026-10-02T00:00:00Z").toLocaleDateString())).toBeInTheDocument();
+    expect(screen.getByText(new Date("2026-10-02T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }))).toBeInTheDocument();
     expect(columnValues(3)[3]).toBe("—");
   });
 
