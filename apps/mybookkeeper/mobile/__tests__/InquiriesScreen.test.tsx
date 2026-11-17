@@ -115,6 +115,41 @@ describe("InquiriesScreen", () => {
     expect(await screen.findByText("No inquiries yet")).toBeTruthy();
   });
 
+  it("with Gmail connected, the empty inbox keeps the plain copy and no connect action", async () => {
+    startInquiryServer([]);
+    await renderScreen();
+    expect(await screen.findByText("When someone asks about a room, it'll show up here.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Connect Gmail" })).toBeNull();
+  });
+
+  it("with Gmail not connected, the empty inbox explains how inquiries arrive and opens Integrations", async () => {
+    const server = startInquiryServer([]);
+    server.integrations = [];
+    await renderScreen();
+    expect(await screen.findByText(/Inquiries come in through your Gmail\. Connect it/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Connect Gmail" }));
+    expect(mockPush).toHaveBeenCalledWith("/integrations");
+  });
+
+  it("with Gmail not connected, a view-only member is told to ask an owner and gets no button", async () => {
+    const server = startInquiryServer([]);
+    server.integrations = [];
+    server.role = "viewer";
+    await renderScreen();
+    expect(await screen.findByText("Inquiries arrive through the workspace's Gmail connection. Ask an owner to connect it.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Connect Gmail" })).toBeNull();
+    expect(screen.queryByText(/add one yourself/)).toBeNull();
+  });
+
+  it("with Gmail needing a fresh sign-in, the empty inbox says so", async () => {
+    const server = startInquiryServer([]);
+    server.integrations = [{ provider: "gmail", has_send_scope: true, needs_reauth: true }];
+    await renderScreen();
+    expect(await screen.findByText(/it needs you to sign in again/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Fix Gmail" }));
+    expect(mockPush).toHaveBeenCalledWith("/integrations");
+  });
+
   it("offers a retry when the list can't load", async () => {
     const server = startInquiryServer([anInquiry()]);
     server.offline = true;

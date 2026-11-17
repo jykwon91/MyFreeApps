@@ -90,6 +90,7 @@ describe("ApplicantsScreen", () => {
     startApplicantServer([]);
     await renderScreen();
     expect(await screen.findByText("No applicants yet")).toBeTruthy();
+    expect(screen.getByText(/Applicants start as inquiries\. Open an inquiry you want to move forward and promote it/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "See inquiries" }));
     expect(onSeeInquiries).toHaveBeenCalled();
   });

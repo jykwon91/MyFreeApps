@@ -5,6 +5,7 @@ import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MES
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
+import { APPLICANT_EMPTY_BODY } from "../../constants/applicants";
 import { ALL_STAGES_OPTION } from "../../constants/inquiries";
 import { uniqueById } from "../../lib/uniqueById";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
@@ -55,7 +56,7 @@ export default function ApplicantsScreen({
   ) : (
     <EmptyState
       action={{ label: "See inquiries", onPress: onSeeInquiries }}
-      body="When you promote an inquiry, they'll show up here."
+      body={APPLICANT_EMPTY_BODY}
       heading="No applicants yet"
     />
   );
