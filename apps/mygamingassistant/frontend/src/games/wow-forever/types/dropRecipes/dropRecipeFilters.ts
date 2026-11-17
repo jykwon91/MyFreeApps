@@ -8,4 +8,6 @@ export interface DropRecipeFilters {
   /** Null = every kind of source. */
   source: DropRecipeSource | null;
   sort: DropRecipeSort;
+  /** The character whose known recipes are crossed out (a Blizzard slug); null = no character. */
+  character: string | null;
 }

@@ -1,10 +1,11 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
-import { DEFAULT_DROP_RECIPE_PROFESSION, DROP_RECIPE_PROFESSIONS } from "@/games/wow-forever/data/dropRecipes/dropRecipesConfig";
+import { DEFAULT_DROP_RECIPE_PROFESSION, DROP_RECIPE_PROFESSIONS, DROP_RECIPES_TEXT } from "@/games/wow-forever/data/dropRecipes/dropRecipesConfig";
 import { buildDropRecipes } from "@/games/wow-forever/lib/dropRecipes/buildDropRecipes";
 import { dropRecipeFiltersFromParams, dropRecipeParams } from "@/games/wow-forever/lib/dropRecipes/dropRecipeParams";
 import { dropRecipeSummary } from "@/games/wow-forever/lib/dropRecipes/dropRecipeSummary";
 import { killsPerDrop } from "@/games/wow-forever/lib/dropRecipes/killsPerDrop";
+import { knownNoteMessage } from "@/games/wow-forever/lib/dropRecipes/knownNoteMessage";
 import { dropRecipeProfessions, selectDropRecipes } from "@/games/wow-forever/lib/dropRecipes/selectDropRecipes";
 import type { DropRecipe } from "@/games/wow-forever/types/dropRecipes/dropRecipe";
 import { DROP_RECIPE_SORT } from "@/games/wow-forever/types/dropRecipes/dropRecipeSort";
@@ -110,10 +111,26 @@ describe("drop recipe text and params", () => {
   });
 
   it("round-trips the URL, leaving defaults out", () => {
-    const filters = { profession: "tailoring", source: DROP_RECIPE_SOURCE.dungeon, sort: DROP_RECIPE_SORT.odds } as const;
+    const filters = { profession: "tailoring", source: DROP_RECIPE_SOURCE.dungeon, sort: DROP_RECIPE_SORT.odds, character: "jason-kwon" } as const;
     expect(dropRecipeFiltersFromParams(dropRecipeParams(filters))).toEqual(filters);
     const plain = dropRecipeFiltersFromParams(new URLSearchParams("p=nope&source=nope&sort=nope"));
-    expect(plain).toEqual({ profession: DEFAULT_DROP_RECIPE_PROFESSION, source: null, sort: DROP_RECIPE_SORT.skill });
+    expect(plain).toEqual({ profession: DEFAULT_DROP_RECIPE_PROFESSION, source: null, sort: DROP_RECIPE_SORT.skill, character: null });
     expect(dropRecipeParams(plain).toString()).toBe("");
+  });
+
+  it("reads ?who= as a character slug, dropping a name Blizzard can't have", () => {
+    expect(dropRecipeFiltersFromParams(new URLSearchParams("who=Jason Kwon")).character).toBe("jason-kwon");
+    expect(dropRecipeFiltersFromParams(new URLSearchParams("who=x1")).character).toBeNull();
+  });
+
+  it("says what the picked character did to the list", () => {
+    const mine = { characterName: "Jason Kwon", skill: 225, maxSkill: 300, knownSpells: new Set<number>() };
+    expect(knownNoteMessage({ kind: "none" }, "Enchanting")).toBeNull();
+    expect(knownNoteMessage({ kind: "error", retry: () => undefined, retrying: false }, "Enchanting")).toBeNull();
+    expect(knownNoteMessage({ kind: "loading", characterName: "Jason Kwon" }, "Enchanting")).toBe("Reading Jason Kwon's recipes from Blizzard…");
+    expect(knownNoteMessage({ kind: "not-found", characterName: "Jason Kwon" }, "Enchanting")).toMatch(/^Blizzard doesn't know a character named Jason Kwon/);
+    expect(knownNoteMessage({ kind: "ready", mine }, "Enchanting")).toBe("Crossed out: what Jason Kwon knows (Enchanting 225 / 300).");
+    expect(knownNoteMessage({ kind: "not-learned", characterName: "Jason Kwon" }, "Enchanting")).toBe("Jason Kwon hasn't learned Enchanting, so nothing is crossed out.");
+    expect(DROP_RECIPES_TEXT.countKnown(58, 1, "Jason Kwon")).toBe("58 recipes · Jason Kwon knows 1");
   });
 });

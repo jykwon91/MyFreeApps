@@ -5,10 +5,20 @@ const PROFESSION_BUTTONS = 7;
 const SOURCE_BUTTONS = 5;
 const SORT_BUTTONS = 2;
 
-/** The filters, the count and a few closed recipe rows, while the recipes load. */
+/** The character box, the filters, the count and a few closed recipe rows, while the recipes load. */
 export default function DropRecipesSkeleton() {
   return (
     <div className="space-y-4 animate-pulse" aria-hidden data-testid="drop-recipes-skeleton">
+      <div className="space-y-3 rounded-xl border bg-card p-4" data-testid="drop-recipes-skeleton-character">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1">
+            <div className="h-5 w-64 max-w-full rounded bg-muted" />
+            <div className="h-11 rounded-md bg-muted" />
+          </div>
+          <div className="h-11 w-24 rounded-md bg-muted" />
+        </div>
+        <div className="h-4 w-full max-w-md rounded bg-muted" />
+      </div>
       <div className="space-y-3">
         <div className="space-y-1">
           <div className="h-5 w-20 rounded bg-muted" />

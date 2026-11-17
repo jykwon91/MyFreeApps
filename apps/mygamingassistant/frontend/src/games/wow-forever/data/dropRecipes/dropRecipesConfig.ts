@@ -17,7 +17,7 @@ export const DROP_RECIPE_PROFESSIONS: readonly CraftingProfession[] = [
 
 export const DEFAULT_DROP_RECIPE_PROFESSION: CraftingProfession = "enchanting";
 
-export const DROP_RECIPE_PARAMS = { profession: "p", source: "source", sort: "sort" } as const;
+export const DROP_RECIPE_PARAMS = { profession: "p", source: "source", sort: "sort", character: "who" } as const;
 
 export const DROP_RECIPE_SOURCE_LABELS: Readonly<Record<DropRecipeSource, string>> = {
   [DROP_RECIPE_SOURCE.openWorld]: "Open world",
@@ -46,6 +46,18 @@ export const DROP_RECIPES_TEXT = {
   allSources: "All",
   sortLabel: "Sort by",
   count: (n: number) => (n === 1 ? "1 recipe" : `${n} recipes`),
+  /** "58 recipes · Jason Kwon knows 5" */
+  countKnown: (n: number, known: number, who: string) => `${n === 1 ? "1 recipe" : `${n} recipes`} · ${who} knows ${known}`,
+  knownBadge: "Known",
+  characterNote: "Pick a character to cross out the recipes they already know. US characters; Blizzard updates a character when they log out.",
+  knownLoading: (who: string) => `Reading ${who}'s recipes from Blizzard…`,
+  /** "Crossed out: what Jason Kwon knows (Enchanting 225 / 300)." */
+  knownReady: (who: string, profession: string, skill: number, maxSkill: number) =>
+    `Crossed out: what ${who} knows (${profession} ${skill} / ${maxSkill}).`,
+  knownNotLearned: (who: string, profession: string) => `${who} hasn't learned ${profession}, so nothing is crossed out.`,
+  knownNotFound: (who: string) => `Blizzard doesn't know a character named ${who}. Check the spelling (US characters only).`,
+  knownError: "Couldn't read that character's recipes from Blizzard.",
+  showAll: "Clear character",
   empty: "No drop-only recipe drops there. Pick another place.",
   loadError: "Couldn't load the recipes.",
   bindOnPickup: "Binds when picked up: you have to loot it yourself.",

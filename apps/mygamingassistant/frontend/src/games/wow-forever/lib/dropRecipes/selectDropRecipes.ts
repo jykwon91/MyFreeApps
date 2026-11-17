@@ -13,7 +13,7 @@ function byOdds(a: DropRecipe, b: DropRecipe): number {
 }
 
 /** The profession's drop-only recipes that match the source filter, in the chosen order. */
-export function selectDropRecipes(recipes: readonly DropRecipe[], filters: DropRecipeFilters): DropRecipe[] {
+export function selectDropRecipes(recipes: readonly DropRecipe[], filters: Pick<DropRecipeFilters, "profession" | "source" | "sort">): DropRecipe[] {
   const { profession, source, sort } = filters;
   const shown = recipes.filter((r) => r.profession === profession && (source === null || r.sources.includes(source)));
   return shown.sort(sort === DROP_RECIPE_SORT.odds ? byOdds : bySkill);

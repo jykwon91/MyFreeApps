@@ -57,3 +57,6 @@ export const MAIN_HAND_SLOT = "MAIN_HAND";
 
 /** Green for what gear adds — the game's equip-bonus colour, readable in both themes. */
 export const CHARACTER_BONUS_TEXT = "text-green-700 dark:text-green-400";
+
+/** The lookup form's small print on the character page. */
+export const CHARACTER_GEAR_NOTE = "US characters. Blizzard updates a character when they log out, so gear changed since then shows after your next log out.";
