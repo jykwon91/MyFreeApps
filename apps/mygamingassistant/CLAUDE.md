@@ -242,11 +242,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   enchant ... by 6."; `$ecN` filled from the SpellItemEnchantment the spell's
   ENCHANT_ITEM effect points at); it shows in the recipe hover card
   (`RecipeTooltipCard`, `RecipeEntry.effect`) and on guild Help each other cards.
+  **Camp objects** (every crafting guide, section `#camp`, `CampObjectsSection`):
+  the generator marks a recipe `camp: true` when its item's tooltip has "Requires a
+  Campfire nearby." (`mark_camp_objects` in `effects.py`) and stores that tooltip as
+  `effect` with the `$?$PL<N[..]` player-level branches resolved for level 60
+  (`resolve_level_branches`). Tier 2/3 objects are taught by `Blueprint:` items
+  (game files); who drops each Blueprint is server-side, so
+  `data/professions/crafting/campBlueprintDrops.ts` holds it from player guides and
+  shows it Unconfirmed — a Blueprint missing there reads "isn't known yet" (the
+  Arcane Forge, on purpose). Mining's camp items stay in its own `mining.json` `camp`.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
   (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering,firstaid,mining}.json`
   (`mining.json` = Mining's own smelts + camp items, with each smelt's `focus`)
   (with `smelting` / `specs` where they apply; teaching items are found by
-  prefix — Pattern/Formula/Recipe/Plans/Schematic/Manual — and by the
+  prefix — Pattern/Formula/Recipe/Plans/Schematic/Manual/Blueprint — and by the
   profession's skill line or its Forever child lines, e.g. First Aid's 2942)
   from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).

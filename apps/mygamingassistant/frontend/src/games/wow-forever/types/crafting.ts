@@ -58,8 +58,10 @@ export interface CraftRecipe {
   enchant?: true;
   /** Must be in your bags (Enchanting's runed rods). */
   tool?: { id: number; name: string };
-  /** What the item does, in its Forever tooltip's words (Engineering). */
+  /** What the item does, in its Forever tooltip's words (Engineering, Enchanting, and every camp object — at level 60). */
   effect?: string;
+  /** A camp object (Mana Well, Spinning Wheel…): its tooltip says it needs a Campfire nearby. */
+  camp?: true;
   learn: RecipeLearn;
   newInForever?: true;
   /** The specialization spell it needs (Armorsmith…): its Plans ask for it (Forever), or only that specialization's trainers teach it (Classic). */

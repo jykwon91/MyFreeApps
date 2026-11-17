@@ -466,3 +466,17 @@ test("a route recipe has a hover tooltip and opens in full on the Recipes page",
   const row = page.getByTestId("recipe-row").filter({ hasText: "Bolt of Linen Cloth" }).first();
   await expect(row.locator("details")).toHaveAttribute("open", "");
 });
+
+test("Tailoring lists its camp objects: the Spinning Wheel's Blueprint and who drops it", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=tailoring");
+  await page.getByRole("link", { name: "Camp objects" }).click();
+  await expect(page).toHaveURL(/#camp$/);
+  const camp = page.locator("#camp");
+  await expect(camp.getByTestId("camp-object")).toHaveCount(4);
+  const wheel = camp.getByTestId("camp-object").filter({ has: page.getByRole("heading", { name: "Spinning Wheel" }) });
+  await expect(wheel.getByText("Skill 140", { exact: true })).toBeVisible();
+  await expect(wheel.getByText(/Places a Spinning Wheel/)).toBeVisible();
+  await expect(wheel.getByText("Blueprint: Spinning Wheel (needs skill 140)")).toBeVisible();
+  await expect(wheel.getByText("Drops from Unstable Sentinel in City of Dalaran")).toBeVisible();
+  await expect(wheel.getByText(/5× Bolt of Silk Cloth/)).toBeVisible();
+});

@@ -1,4 +1,5 @@
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
+import { CAMP_OBJECTS_TEXT } from "@/games/wow-forever/data/professions/crafting/campObjectsText";
 import { LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 import { GATHERING_SECTIONS } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
@@ -20,6 +21,7 @@ const CRAFTING_SECTIONS = [
   { id: "route", label: "Leveling route" },
   VENDORS,
   { id: "shopping", label: "Shopping list" },
+  { id: CAMP_OBJECTS_TEXT.id, label: CAMP_OBJECTS_TEXT.navLabel },
   { id: "forever", label: "What's different in Forever" },
 ] as const;
 

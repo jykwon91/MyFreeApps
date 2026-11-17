@@ -14,7 +14,14 @@ from pathlib import Path
 import pytest
 
 from scripts.wow_food.tooltip import Effect, SpellBook, evaluate, roll_range
-from scripts.wow_professions.effects import add_effects, enchant_effect, item_effect
+from scripts.wow_professions.effects import (
+    CAMP_MARKER,
+    add_effects,
+    enchant_effect,
+    item_effect,
+    mark_camp_objects,
+    resolve_level_branches,
+)
 
 CRAFTING_DATA = (
     Path(__file__).resolve().parents[2]
@@ -139,6 +146,61 @@ class TestCommittedEngineering:
         assert smelting[0]["creates"]["id"] == COPPER_BAR and smelting[0]["skill"] == 1
         assert MITHRIL_BAR in {s["creates"]["id"] for s in smelting}
 
-    def test_other_professions_carry_no_effect_lines(self) -> None:
+    def test_other_professions_carry_effect_lines_only_on_camp_objects(self) -> None:
         blacksmithing = json.loads((CRAFTING_DATA / "blacksmithing.json").read_text(encoding="utf-8"))
-        assert not any("effect" in r for r in blacksmithing["recipes"])
+        assert all(r.get("camp") for r in blacksmithing["recipes"] if "effect" in r)
+
+
+# Camp objects. Real text: the Forever client's Mana Well spell (1307259) and Faction Banner (1307240).
+MANA_WELL_ITEM, MANA_WELL_SPELL = 279956, 1307259
+MANA_WELL_TEXT = (
+    "Constructs a mana well that allows you and others sitting nearby to regenerate "
+    "$?$PL<24[10]?$PL<34[15]?$PL<44[20]?$PL<54[24][29] Mana every 5 sec, mutually exclusive with "
+    "Blessing of Wisdom. Requires a Campfire nearby. All camping features share a cooldown of 1 hr."
+)
+
+
+class TestCampObjects:
+    @pytest.mark.parametrize(("level", "mana"), [(1, "10"), (24, "15"), (40, "20"), (53, "24"), (60, "29")])
+    def test_level_branches_pick_the_first_that_holds(self, level: int, mana: str) -> None:
+        assert f"regenerate {mana} Mana" in resolve_level_branches(MANA_WELL_TEXT, level)
+
+    def test_greater_than_tests_and_empty_branches(self) -> None:
+        text = "gain 9 Armor$?$PL<10[]?$PL<30[ and ][, ]$?$PL>59[13]?$PL>49[12][]$?$PL>9[ to all stats][]."
+        assert resolve_level_branches(text, 60) == "gain 9 Armor, 13 to all stats."
+        assert resolve_level_branches(text, 5) == "gain 9 Armor."
+
+    def test_a_chain_that_doesnt_parse_is_left_alone(self) -> None:
+        assert resolve_level_branches("Lasts $?$d[x].", 60) == "Lasts $?$d[x]."
+
+    def test_marks_camp_objects_with_the_level_60_tooltip(self, book: SpellBook) -> None:
+        book.descriptions[MANA_WELL_SPELL] = MANA_WELL_TEXT
+        recipes = [
+            {"spell": 1, "creates": {"id": MANA_WELL_ITEM}},
+            {"spell": 2, "creates": {"id": ROUGH_DYNAMITE_ITEM}},
+            {"spell": 3},
+        ]
+        mark_camp_objects(recipes, book, {MANA_WELL_ITEM: [MANA_WELL_SPELL], ROUGH_DYNAMITE_ITEM: [ROUGH_DYNAMITE_SPELL]})
+        assert recipes[0]["camp"] is True
+        assert "regenerate 29 Mana every 5 sec" in recipes[0]["effect"]
+        assert "camp" not in recipes[1] and "effect" not in recipes[1]
+        assert "camp" not in recipes[2]
+
+    def test_a_camp_tooltip_that_doesnt_read_fails_the_build(self, book: SpellBook) -> None:
+        book.descriptions[MANA_WELL_SPELL] = "Lasts $d. " + CAMP_MARKER
+        with pytest.raises(ValueError, match="Mana Well"):
+            mark_camp_objects(
+                [{"spell": 1, "name": "Mana Well", "creates": {"id": MANA_WELL_ITEM}}], book, {MANA_WELL_ITEM: [MANA_WELL_SPELL]},
+            )
+
+    @pytest.mark.parametrize(
+        ("name", "count"),
+        [("tailoring", 4), ("enchanting", 3), ("alchemy", 3), ("blacksmithing", 3), ("leatherworking", 3), ("engineering", 3), ("firstaid", 3)],
+    )
+    def test_every_crafting_file_has_its_camp_objects(self, name: str, count: int) -> None:
+        recipes = json.loads((CRAFTING_DATA / f"{name}.json").read_text(encoding="utf-8"))["recipes"]
+        camp = [r for r in recipes if r.get("camp")]
+        assert len(camp) == count, name
+        assert all("$" not in r["effect"] and CAMP_MARKER in r["effect"] for r in camp), name
+        blueprints = [r for r in camp if r["learn"]["source"] == "item"]
+        assert len(blueprints) == 2 and all(r["learn"]["item"].startswith("Blueprint: ") for r in blueprints), name

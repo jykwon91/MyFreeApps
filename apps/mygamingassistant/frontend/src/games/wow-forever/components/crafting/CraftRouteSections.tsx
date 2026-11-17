@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import CampObjectsSection from "@/games/wow-forever/components/crafting/CampObjectsSection";
 import CraftPricesPanel from "@/games/wow-forever/components/crafting/CraftPricesPanel";
 import CraftRouteHeader from "@/games/wow-forever/components/crafting/CraftRouteHeader";
 import CraftRouteList from "@/games/wow-forever/components/crafting/CraftRouteList";
@@ -45,7 +46,7 @@ function statusLine(entries: readonly ResolvedRouteEntry[], current: number | nu
   return `Craft ${entry.recipe.name} until ${entry.step.to}.`;
 }
 
-/** The "Leveling route", "Recipe vendors" and "Shopping list" sections, once the recipe data has loaded. */
+/** The "Leveling route", "Recipe vendors", "Shopping list" and "Camp objects" sections, once the recipe data has loaded. */
 export default function CraftRouteSections({ profession, faction, zoneId, level, position, data }: CraftRouteSectionsProps) {
   const guide = CRAFTING_GUIDES[profession];
   const features = CRAFTING_FEATURES[profession];
@@ -143,6 +144,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           keepCrafts={!features.priced}
         />
       </GuideSection>
+      <CampObjectsSection recipes={data.file.recipes} place={place} professionLabel={guide.label} />
     </>
   );
 }
