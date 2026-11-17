@@ -1,8 +1,8 @@
 import NoAuctionPrice from "@/games/wow-forever/components/prices/NoAuctionPrice";
 import { formatCost } from "@/games/wow-forever/crafting/matPrices";
-import { cookCost } from "@/games/wow-forever/food/foodPrices";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import { auctionCopper } from "@/games/wow-forever/prices/auctionPrices";
+import { materialsCost } from "@/games/wow-forever/prices/materialsCost";
 import { itemsWithNoPrice } from "@/games/wow-forever/prices/missingText";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
 
@@ -10,7 +10,7 @@ import type { FoodRecord } from "@/games/wow-forever/types/food";
 export default function FoodPriceLine({ food }: { food: FoodRecord }) {
   const { prices } = useAuctionPrices();
   if (!prices) return null;
-  const cook = cookCost(food, prices);
+  const cook = materialsCost(food.reagents, prices);
   const buy = auctionCopper(prices, food.id);
   const cookPriced = food.reagents.length > 0 && cook.missing.length < food.reagents.length;
   const left = cook.missing.length;

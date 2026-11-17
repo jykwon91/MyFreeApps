@@ -48,6 +48,51 @@ test("opens an item page from Best gear, shows how to get it, and goes back", as
   await expect(page.getByTestId("gear-item-row").first()).toBeVisible();
 });
 
+// Felcloth Gloves (bind on equip): its materials at 1s each, the gloves 1g and their pattern 5g.
+const FELCLOTH_PRICES: [number, number, string][] = [
+  [14048, 100, "Bolt of Runecloth"],
+  [14256, 100, "Felcloth"],
+  [12662, 100, "Demonic Rune"],
+  [12808, 100, "Essence of Undeath"],
+  [14341, 100, "Rune Thread"],
+  [18415, 50000, "Pattern: Felcloth Gloves"],
+  [18407, 10000, "Felcloth Gloves"],
+];
+
+test("a crafted item shows its auction prices: each material, one craft's worth, the item, which is cheaper, and the pattern", async ({ page }) => {
+  await page.route(/\/wow\/prices(\?|$)/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        region: "us",
+        server: "pvp",
+        faction: "alliance",
+        source_updated_at: "2026-11-17T09:00:00Z",
+        fetched_at: "2026-11-17T09:00:00Z",
+        columns: ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"],
+        items: FELCLOTH_PRICES.map(([id, value, name]) => [id, value, value, 20, 4, name]),
+      }),
+    }),
+  );
+  await page.goto("/wow-forever/items/18407");
+  await expect(page.getByRole("heading", { level: 1, name: "Felcloth Gloves" })).toBeVisible();
+  const sources = howToGet(page);
+  await expect(sources.getByText("(~20s for 20)")).toBeVisible();
+  const prices = sources.getByTestId("crafted-prices");
+  // 12 + 20 + 6 + 8 + 2 materials at 1s: ~48s.
+  await expect(prices.getByText("Materials for one craft")).toBeVisible();
+  await expect(prices.getByText("~48s", { exact: true })).toBeVisible();
+  await expect(prices.getByText("Pattern: Felcloth Gloves at the auction house")).toBeVisible();
+  await expect(prices.getByText("~5g", { exact: true })).toBeVisible();
+  await expect(prices.getByText("Buy one at the auction house")).toBeVisible();
+  await expect(prices.getByText("~1g", { exact: true })).toBeVisible();
+  await expect(prices.getByText("Cheaper to craft: saves ~52s per craft.")).toBeVisible();
+
+  await page.setViewportSize(PHONE);
+  await expectNoHorizontalOverflow(page);
+});
+
 test("lists a dungeon boss drop with its chance, labelled Classic, with directions to the door", async ({ page }) => {
   await page.goto("/wow-forever/items/11815");
   await expect(page.getByRole("heading", { level: 1, name: "Hand of Justice" })).toBeVisible();

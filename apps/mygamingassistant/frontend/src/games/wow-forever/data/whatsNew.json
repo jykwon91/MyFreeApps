@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Item pages: craft or buy at auction prices",
+    "summary": "An item you can craft now shows auction prices under its recipe: what each material costs, the total for one craft, what the item sells for, which is cheaper, and what the pattern costs. Bind-on-pickup items skip the buy price, since they never sell.",
+    "to": "/wow-forever/items"
+  },
+  {
+    "date": "2026-11-17",
     "title": "Professions: camp objects",
     "summary": "Every crafting guide now has a Camp objects section: the Spinning Wheel, Arcane Salvager, Mana Well and the rest your profession builds for a campfire. Each shows its skill, what it does in the game's own words (level 60 numbers), the materials, and how to learn it: a trainer, or a Blueprint and the boss player guides say drops it.",
     "to": "/wow-forever/professions?p=tailoring#camp"
