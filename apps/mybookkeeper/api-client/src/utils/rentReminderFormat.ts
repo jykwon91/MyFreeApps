@@ -1,6 +1,7 @@
 import { WEEKDAY_NAMES } from "../constants/rentReminderLabels";
 import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import { formatShortDate } from "./inquiryDateFormat";
+import { zoneAbbreviation } from "./rentReminderZone";
 
 /** "18:00" or "18:00:00" → "6:00 PM". */
 export function formatSendTime(time: string): string {
@@ -16,7 +17,7 @@ export function toTimeInputValue(time: string): string {
   return time.slice(0, 5);
 }
 
-/** An ISO timestamp as a wall-clock moment in `timeZone`: "Sat, Oct 31, 6:00 PM". */
+/** An ISO timestamp as a wall-clock moment in `timeZone`: "Sat, Oct 31, 6:00 PM CDT". */
 export function formatSendMoment(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleString("en-US", {
     timeZone,
@@ -25,6 +26,7 @@ export function formatSendMoment(iso: string, timeZone: string): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZoneName: "short",
   });
 }
 
@@ -43,11 +45,11 @@ function daysBeforeText(days: number): string {
   return `${days} days before`;
 }
 
-/** One-line summary: "Weekly, due every Sunday · reminded the day before at 6:00 PM". */
+/** One-line summary: "Weekly, due every Sunday · reminded the day before at 6:00 PM CST". */
 export function describePlan(plan: RentReminderPlan): string {
   const cadence =
     plan.frequency === "weekly" && plan.due_weekday !== null
       ? `Weekly, due every ${WEEKDAY_NAMES[plan.due_weekday]}`
       : "Monthly, due on the 1st";
-  return `${cadence} · reminded ${daysBeforeText(plan.send_days_before)} at ${formatSendTime(plan.send_time)}`;
+  return `${cadence} · reminded ${daysBeforeText(plan.send_days_before)} at ${formatSendTime(plan.send_time)} ${zoneAbbreviation(plan.timezone)}`;
 }

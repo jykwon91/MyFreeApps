@@ -1,7 +1,6 @@
 import {
   DEFAULT_SEND_DAYS_BEFORE,
   DEFAULT_SEND_TIME,
-  DEFAULT_TIMEZONE,
   MAX_SEND_DAYS_BEFORE,
   SEND_TIME_MAX,
   SEND_TIME_MIN,
@@ -15,14 +14,16 @@ import type { RentReminderPlanRequest } from "../types/rent/rent-reminder-plan-r
 import { moneyInputError } from "./moneyInputError";
 import { normalizeMoneyText } from "./normalizeMoneyText";
 import { toTimeInputValue } from "./rentReminderFormat";
+import { deviceTimeZone } from "./rentReminderZone";
 
-/** The form's starting point: the saved plan, or the defaults for a first-time setup. */
+/** The form's starting point: the saved plan, or the defaults for a first-time setup (in the device's time zone). */
 export function reminderFormValues(plan: RentReminderPlan | null, smsAvailable: boolean): RentReminderFormValues {
   return {
     frequency: plan?.frequency ?? "weekly",
     dueWeekday: plan?.due_weekday ?? SUNDAY,
     sendDaysBefore: String(plan?.send_days_before ?? DEFAULT_SEND_DAYS_BEFORE.weekly),
     sendTime: plan ? toTimeInputValue(plan.send_time) : DEFAULT_SEND_TIME,
+    timezone: plan?.timezone ?? deviceTimeZone(),
     emailEnabled: plan?.email_enabled ?? true,
     smsEnabled: (plan?.sms_enabled ?? false) && smsAvailable,
     paymentInstructions: plan?.payment_instructions ?? "",
@@ -66,7 +67,6 @@ export function canSaveReminder(values: RentReminderFormValues, decimalSeparator
 /** The whole plan, as the server wants it every time. A saved plan keeps its own time zone. */
 export function reminderPlanRequest(
   values: RentReminderFormValues,
-  plan: RentReminderPlan | null,
   decimalSeparator: DecimalSeparator,
 ): RentReminderPlanRequest {
   return {
@@ -74,7 +74,7 @@ export function reminderPlanRequest(
     due_weekday: values.frequency === "weekly" ? values.dueWeekday : null,
     send_days_before: Number(values.sendDaysBefore),
     send_time: values.sendTime,
-    timezone: plan?.timezone ?? DEFAULT_TIMEZONE,
+    timezone: values.timezone,
     email_enabled: values.emailEnabled,
     sms_enabled: values.smsEnabled,
     amount_override: normalizeMoneyText(values.amountOverride, decimalSeparator) || null,

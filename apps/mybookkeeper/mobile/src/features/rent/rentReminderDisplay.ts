@@ -5,6 +5,7 @@ import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/re
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
 import { formatDueDate, formatSendTime } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+import { zoneAbbreviation } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { formatCurrency } from "@platform/core/utils/currency";
 import {
   addEmailFirst,
@@ -41,10 +42,10 @@ export function dueLine(preview: Pick<RentReminderPreview, "amount" | "due_date"
 }
 
 /** Reads the date and time as the server wrote them: they're already in the plan's timezone. */
-export function sendMoment(sendAt: string, now: Date = new Date()): string {
+export function sendMoment(sendAt: string, timeZone: string, now: Date = new Date()): string {
   if (Date.parse(sendAt) <= now.getTime()) return REMINDER_MESSAGES.sendingSoon;
   const [date, time] = sendAt.split("T");
-  return goesOut(`${formatDueDate(date)} at ${formatSendTime(time)}`);
+  return goesOut(`${formatDueDate(date)} at ${formatSendTime(time)} ${zoneAbbreviation(timeZone, new Date(sendAt))}`);
 }
 
 /**

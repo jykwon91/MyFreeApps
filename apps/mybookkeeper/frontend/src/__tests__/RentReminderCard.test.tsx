@@ -135,6 +135,28 @@ describe("RentReminderCard", () => {
     );
   });
 
+  it("labels a new plan's send time in the device's zone and saves that zone", () => {
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions");
+    spy.mockReturnValue({ timeZone: "America/Los_Angeles" } as Intl.ResolvedDateTimeFormatOptions);
+    mockOverview.mockReturnValue({ data: NO_PLAN, isLoading: false, isError: false });
+    mockCreate.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-setup"));
+
+    expect(screen.getByText(/^At \(P[SD]T\)$/)).toBeInTheDocument();
+    expect(screen.queryByText(/Central/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("rent-reminder-save"));
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ timezone: "America/Los_Angeles" }));
+    spy.mockRestore();
+  });
+
+  it("keeps a saved plan's zone in the edit label", () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-edit"));
+    expect(screen.getByText(/^At \(C[SD]T\)$/)).toBeInTheDocument();
+  });
+
   it("submits the monthly plan", () => {
     mockOverview.mockReturnValue({ data: NO_PLAN, isLoading: false, isError: false });
     mockCreate.mockReturnValue({ unwrap: () => Promise.resolve({}) });
@@ -163,7 +185,7 @@ describe("RentReminderCard", () => {
     renderCard();
 
     expect(screen.getByTestId("rent-reminder-summary")).toHaveTextContent(
-      "Weekly, due every Sunday · reminded the day before at 6:00 PM",
+      /^Weekly, due every Sunday · reminded the day before at 6:00 PM C[SD]T$/,
     );
     expect(screen.getByTestId("rent-reminder-message")).toHaveTextContent(
       "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday).",

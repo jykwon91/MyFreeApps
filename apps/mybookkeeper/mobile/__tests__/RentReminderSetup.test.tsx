@@ -1,4 +1,5 @@
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
+import { deviceTimeZone, sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
@@ -15,6 +16,8 @@ import { aRentLedger, aRentSchedule } from "../test-support/aRentLedger";
 import { aReminderOverview, aReminderPlan } from "../test-support/aRentReminder";
 import { startRentWritesServer, type RentWritesServer } from "../test-support/rentWritesServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+
+const SEND_TIME = sendTimeLabel(deviceTimeZone());
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -109,7 +112,7 @@ describe("setting reminders up", () => {
           due_weekday: 4,
           send_days_before: 2,
           send_time: "18:00",
-          timezone: "America/Chicago",
+          timezone: "America/Los_Angeles",
           email_enabled: true,
           sms_enabled: false,
           amount_override: "300",
@@ -160,9 +163,9 @@ describe("setting reminders up", () => {
   it("changes the send time", async () => {
     const server = await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);
-    await fireEvent.press(screen.getByLabelText(`Change ${S.sendTime.toLowerCase()}`));
+    await fireEvent.press(screen.getByLabelText(`Change ${SEND_TIME.toLowerCase()}`));
     await act(async () => {
-      screen.getByTestId(`${S.sendTime}-picker`).props.onChange({ type: "set" }, new Date(2000, 0, 1, 9, 5));
+      screen.getByTestId(`${SEND_TIME}-picker`).props.onChange({ type: "set" }, new Date(2000, 0, 1, 9, 5));
     });
     expect(screen.getByText("9:05 AM")).toBeTruthy();
 
@@ -175,9 +178,9 @@ describe("setting reminders up", () => {
   it("refuses a time outside the sending window", async () => {
     await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);
-    await fireEvent.press(screen.getByLabelText(`Change ${S.sendTime.toLowerCase()}`));
+    await fireEvent.press(screen.getByLabelText(`Change ${SEND_TIME.toLowerCase()}`));
     await act(async () => {
-      screen.getByTestId(`${S.sendTime}-picker`).props.onChange({ type: "set" }, new Date(2000, 0, 1, 22, 0));
+      screen.getByTestId(`${SEND_TIME}-picker`).props.onChange({ type: "set" }, new Date(2000, 0, 1, 22, 0));
     });
 
     expect(screen.getByText(S.timeHintBad)).toBeTruthy();

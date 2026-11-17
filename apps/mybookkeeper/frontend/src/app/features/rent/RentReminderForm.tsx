@@ -3,6 +3,7 @@ import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { MAX_SEND_DAYS_BEFORE, SEND_TIME_MAX, SEND_TIME_MIN } from "@mybookkeeper/api-client/constants/rentReminderDefaults";
 import RentReminderChannelFields from "./RentReminderChannelFields";
 import RentReminderFrequencyChoice from "./RentReminderFrequencyChoice";
+import { sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { useRentReminderForm } from "./useRentReminderForm";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 
@@ -68,7 +69,7 @@ export default function RentReminderForm({
 
         <div>
           <label htmlFor="rent-reminder-time" className="block text-sm font-medium mb-1">
-            At (Central time)
+            {sendTimeLabel(form.timezone)}
           </label>
           <input
             id="rent-reminder-time"

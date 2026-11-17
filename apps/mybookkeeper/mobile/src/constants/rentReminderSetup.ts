@@ -12,7 +12,6 @@ export const REMINDER_SETUP_MESSAGES = {
   weekday: "Rent is due every",
   daysBefore: "Days before it's due",
   daysHintOk: "0 sends it the morning rent is due.",
-  sendTime: "At (Central time)",
   timeHintOk: "Reminders only go out between 9am and 8pm.",
   timeHintBad: "Choose a time between 9:00 AM and 7:59 PM.",
   sendBy: "Send by",

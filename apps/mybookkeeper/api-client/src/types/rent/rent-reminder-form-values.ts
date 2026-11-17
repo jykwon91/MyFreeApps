@@ -8,6 +8,8 @@ export interface RentReminderFormValues {
   sendDaysBefore: string;
   /** "HH:MM". */
   sendTime: string;
+  /** IANA zone the send time is read in: the saved plan's, or the device's for a new one. Not editable. */
+  timezone: string;
   emailEnabled: boolean;
   smsEnabled: boolean;
   paymentInstructions: string;

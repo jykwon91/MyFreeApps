@@ -129,8 +129,8 @@ describe("what the section shows", () => {
     await renderReminders(startServer({ sends: [aReminderSend({ due_date: "2030-10-27" })] }));
 
     expect(await screen.findByText("$300.00 due Sun, Nov 3")).toBeTruthy();
-    expect(screen.getByText("Weekly, due every Sunday · reminded the day before at 6:00 PM")).toBeTruthy();
-    expect(screen.getByText("Goes out Sat, Nov 2 at 6:00 PM")).toBeTruthy();
+    expect(screen.getByText(/^Weekly, due every Sunday · reminded the day before at 6:00 PM C[SD]T$/)).toBeTruthy();
+    expect(screen.getByText("Goes out Sat, Nov 2 at 6:00 PM CDT")).toBeTruthy();
     expect(screen.getByText("Hi Dana, rent of $300 is due tomorrow (Sunday).")).toBeTruthy();
     expect(screen.getByText("Goes by email and text.")).toBeTruthy();
     expect(screen.getByText(REMINDER_MESSAGES.dontCheckPaid)).toBeTruthy();
@@ -150,6 +150,21 @@ describe("what the section shows", () => {
 
     await fireEvent.press(await screen.findByText(REMINDER_SETUP_MESSAGES.setUp));
     expect(await screen.findByRole("header", { name: REMINDER_SETUP_MESSAGES.titleNew })).toBeTruthy();
+  });
+
+  it("labels a new plan's send time in the device's zone, not Central", async () => {
+    await renderReminders(startServer({ overview: aReminderOverview({ plan: null }) }));
+
+    await fireEvent.press(await screen.findByText(REMINDER_SETUP_MESSAGES.setUp));
+    expect(await screen.findByText(/^At \(P[SD]T\)$/)).toBeTruthy();
+    expect(screen.queryByText(/Central/)).toBeNull();
+  });
+
+  it("keeps a saved plan's own zone in the edit label", async () => {
+    await renderReminders(startServer());
+
+    await fireEvent.press(await screen.findByText(REMINDER_SETUP_MESSAGES.edit));
+    expect(await screen.findByText(/^At \(C[SD]T\)$/)).toBeTruthy();
   });
 
   it("says when a paused plan can't send, and offers no Send", async () => {
@@ -208,7 +223,7 @@ describe("what the section shows", () => {
 
     expect(await screen.findByText(REMINDER_MESSAGES.couldntLoadNext)).toBeTruthy();
     expect(await screen.findByText(REMINDER_MESSAGES.couldntLoadHistory)).toBeTruthy();
-    expect(screen.getByText("Weekly, due every Sunday · reminded the day before at 6:00 PM")).toBeTruthy();
+    expect(screen.getByText(/^Weekly, due every Sunday · reminded the day before at 6:00 PM C[SD]T$/)).toBeTruthy();
   });
 
   it("disables Send on what was last loaded once the server can't be reached", async () => {
@@ -399,12 +414,14 @@ describe("Send now", () => {
 describe("reminder wording", () => {
   const plan = aReminderPlan();
 
-  it("reads the send time as the server wrote it", () => {
-    expect(sendMoment("2030-11-02T18:00:00-05:00", new Date("2030-01-01T00:00:00Z"))).toBe(goesOut("Sat, Nov 2 at 6:00 PM"));
+  it("reads the send time as the server wrote it, naming the plan's zone", () => {
+    const now = new Date("2030-01-01T00:00:00Z");
+    expect(sendMoment("2030-11-02T18:00:00-05:00", "America/Chicago", now)).toBe(goesOut("Sat, Nov 2 at 6:00 PM CDT"));
+    expect(sendMoment("2030-11-02T18:00:00-08:00", "America/Los_Angeles", now)).toBe(goesOut("Sat, Nov 2 at 6:00 PM PDT"));
   });
 
   it("says sending soon once the time has passed", () => {
-    expect(sendMoment("2030-11-02T18:00:00-05:00", new Date("2031-01-01T00:00:00Z"))).toBe(REMINDER_MESSAGES.sendingSoon);
+    expect(sendMoment("2030-11-02T18:00:00-05:00", "America/Chicago", new Date("2031-01-01T00:00:00Z"))).toBe(REMINDER_MESSAGES.sendingSoon);
   });
 
   it("formats the amount and due date", () => {
