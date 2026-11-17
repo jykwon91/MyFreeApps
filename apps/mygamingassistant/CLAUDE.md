@@ -1914,7 +1914,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Pawn Classic per spec at 60, class proficiencies, talent tab per spec in
   `data/lootAddon/lootAddonTalentTabs.ts`) and kept in step by a
   `toMatchFileSnapshot` in `src/__tests__/wowLootAddon.test.ts` (`-u` rewrites
-  it). Rings compare with the weaker equipped one, a two-hander with main + off
+  it). Rings compare with the weaker equipped one (since 1.2.0 a second line gives
+  the % vs the stronger one, `(your other one)`), a two-hander with main + off
   hand, a one-hander with the off hand only when you dual wield a weapon
   there; armor never compares with a two-hander; "already wear it" only
   blocks Unique items; trinkets get no score. Spec at 60 = `/mgaloot spec <id>`

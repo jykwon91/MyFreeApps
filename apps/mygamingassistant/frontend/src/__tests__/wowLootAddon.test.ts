@@ -85,6 +85,21 @@ describe("MGA Loot verdicts", () => {
     expect(line).toMatch(/Upgrade \+50% over .*\[Item 12\]/);
   });
 
+  it("shows how a ring does against both rings you wear", () => {
+    const wearing = `items[11] = { ${RING}, ${strength(30)} }; items[12] = { ${RING}, ${strength(10)} }; equipped[11] = 11; equipped[12] = 12`;
+    const better = run(roll(`${RING}, ${strength(15)}`, wearing)).join("\n");
+    expect(better).toMatch(/Upgrade \+50% over .*\[Item 12\]\S* \/\/ -50% vs .*\[Item 11\]\S* \(your other one\)/);
+    const worse = run(roll(`${RING}, ${strength(8)}`, wearing)).join("\n");
+    expect(worse).toMatch(/Downgrade -20% vs .*\[Item 12\]\S* \/\/ -73% vs .*\[Item 11\]\S* \(your other one\)/);
+    // Two rings that score the same: one verdict line, the other "About the same" below it.
+    const twins = `items[11] = { ${RING}, ${strength(10)} }; items[12] = { ${RING}, ${strength(10)} }; equipped[11] = 11; equipped[12] = 12`;
+    expect(run(roll(`${RING}, ${strength(10)}`, twins)).join(" ")).toMatch(/About the same as .*\[Item 11\]\S* \/\/ 0% vs .*\[Item 12\]/);
+    // A ring with nothing it scores gets no second line contradicting "Nothing it scores".
+    expect(run(roll(`${RING}, stats = {}`, wearing)).join(" ")).not.toContain("your other one");
+    // One finger empty: there's no other ring to compare with.
+    expect(run(roll(`${RING}, ${strength(15)}`, `items[11] = { ${RING}, ${strength(30)} }; equipped[11] = 11`)).join("\n")).not.toContain("your other one");
+  });
+
   it("won't compare a Unique item you already wear", () => {
     expect(run(roll(`${CHEST}, ${strength(10)}, lines = { "Unique" }`, "equipped[5] = 100"))[0]).toContain(
       "Can't compare: it's unique and you wear one",
@@ -124,7 +139,7 @@ describe("MGA Loot verdicts", () => {
         `items[16] = { loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7, ${strength(30)} }; items[17] = { loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7, ${strength(10)} }; equipped[16] = 16; equipped[17] = 17`,
       ),
     );
-    expect(line).toMatch(/Upgrade \+100% over .*\[Item 17\]/);
+    expect(line).toMatch(/Upgrade \+100% over .*\[Item 17\]\S* \/\/ -33% vs .*\[Item 16\]\S* \(your other one\)/);
   });
 
   it("calls 5% an upgrade and 4% about the same", () => {

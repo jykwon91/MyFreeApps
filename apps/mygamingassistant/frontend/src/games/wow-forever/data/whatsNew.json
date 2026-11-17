@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-17",
+    "title": "MGA Loot: both rings",
+    "summary": "A ring's MGA Loot line still compares with the weaker ring you wear, the one you'd swap out, and now adds a second line with how it does against your other ring, so you see both at once. Same for a one-hander when you dual wield. Download the addon again to get it.",
+    "to": "/wow-forever/compare"
+  },
+  {
     "date": "2026-11-16",
     "title": "MGA Buffs: no more \"stopped checking\" error",
     "summary": "Where the game hides buff details from addons, MGA Buffs used to stop with a \"GetAuraDataByIndex: Auras cannot be accessed when secret\" error. Now it says once that the game is hiding buffs there, pauses the buff reminders instead of guessing, and picks up again by itself. Download the addon again to get it.",

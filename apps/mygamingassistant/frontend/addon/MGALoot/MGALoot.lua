@@ -267,6 +267,7 @@ local function candidateSlots(info, me)
 end
 
 -- What the new item would replace: {link, score} (nil link = empty slot), or a reason it can't be compared.
+-- For rings and dual-wielded weapons it's the weaker of the two you wear, and `other` is the stronger one.
 local function replaced(info, w, me, link)
   local main = equipped(MAIN_HAND)
   local slots = candidateSlots(info, me)
@@ -291,12 +292,18 @@ local function replaced(info, w, me, link)
     table.insert(held, item)
   end
   local newId = itemId(link)
-  local weakest
+  local weakest, other
   for _, item in ipairs(held) do
     if itemId(item.link) == newId and isUnique(link) then return { blocked = "it's unique and you wear one" } end
     local s = score(item.link, item.loc, w) or 0
-    if not weakest or s < weakest.score then weakest = { link = item.link, score = s } end
+    local this = { link = item.link, score = s }
+    if not weakest or s < weakest.score then
+      other, weakest = weakest, this
+    else
+      other = this
+    end
   end
+  weakest.other = other
   return weakest
 end
 
@@ -375,6 +382,13 @@ local function judge(link, brief)
       else
         text, kind = YELLOW .. "About the same as|r " .. old.link, "same"
       end
+    end
+    -- Two rings: the verdict is against the one you'd swap out; this line shows the other too.
+    local other = old.link and old.other
+    if other and other.score > 0 and new > 0 then
+      local otherPct, otherShown = percentText(new, other.score)
+      local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
+      text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
     end
   end
   if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end
