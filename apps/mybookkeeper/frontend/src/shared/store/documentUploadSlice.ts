@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
 import type { UploadState } from "@/shared/types/document/upload-state";
@@ -35,7 +36,7 @@ const documentUploadSlice = createSlice({
     },
     startMultiUpload(state, action: PayloadAction<{ total: number }>) {
       state.current = {
-        fileName: `${action.payload.total} files`,
+        fileName: formatCount(action.payload.total, "file"),
         status: FILE_STATUSES.UPLOADING,
         documentId: null,
         batchId: null,

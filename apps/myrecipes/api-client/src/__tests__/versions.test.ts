@@ -43,13 +43,13 @@ describe("diffSummary", () => {
       stepCount: 1,
       total: 3,
       isIdentical: false,
-      subtitle: "3 changes — 2 ingredient, 1 step.",
+      subtitle: "3 changes — 2 ingredients, 1 step.",
     });
   });
 
   it("says one change in the singular", () => {
     const summary = diffSummary(diff({ step_changes: [{ position: 1, change: "added", before: null, after: "Stir." }] }));
-    expect(summary.subtitle).toBe("1 change — 0 ingredient, 1 step.");
+    expect(summary.subtitle).toBe("1 change — 0 ingredients, 1 step.");
   });
 
   it("calls two versions with nothing between them identical", () => {

@@ -1,3 +1,4 @@
+import { formatCount } from "@platform/core/utils/count";
 import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseTemplateFile } from "@mybookkeeper/api-client/types/lease/lease-template-file";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
@@ -6,12 +7,8 @@ import { formatFileSize } from "@mybookkeeper/api-client/utils/file-size";
 import { PLACEHOLDER_MESSAGES } from "../../constants/leasePlaceholderEdit";
 import { LEASE_TEMPLATE_FILE_KINDS, LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
 
-function counted(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? "" : "s"}`;
-}
-
 export function templateCountsLine(template: Pick<LeaseTemplateSummary, "file_count" | "placeholder_count">): string {
-  return `${counted(template.file_count, "file")}, ${counted(template.placeholder_count, "placeholder")}`;
+  return `${formatCount(template.file_count, "file")}, ${formatCount(template.placeholder_count, "placeholder")}`;
 }
 
 export function templateRowLabel(template: LeaseTemplateSummary): string {
@@ -27,7 +24,7 @@ export function templateFileLine(file: Pick<LeaseTemplateFile, "content_type" | 
 
 export function placeholdersLine(count: number): string {
   if (count === 0) return LEASE_TEMPLATE_MESSAGES.noPlaceholders;
-  return `This template has ${counted(count, "placeholder")} that ${count === 1 ? "gets" : "get"} filled in when you make a lease.`;
+  return `This template has ${formatCount(count, "placeholder")} that ${count === 1 ? "gets" : "get"} filled in when you make a lease.`;
 }
 
 export function inDisplayOrder(files: readonly LeaseTemplateFile[]): LeaseTemplateFile[] {

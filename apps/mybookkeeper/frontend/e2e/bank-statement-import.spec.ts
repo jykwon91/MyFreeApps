@@ -56,7 +56,7 @@ async function importCsv(page: Page, runId: number, propertyName?: string): Prom
   if (propertyName) await dialog.getByRole("combobox").selectOption({ label: propertyName });
   await submit.click();
 
-  await expect(toastRegion(page).getByText("Imported 2 transaction(s)")).toBeVisible({ timeout: 15000 });
+  await expect(toastRegion(page).getByText("Imported 2 transactions")).toBeVisible({ timeout: 15000 });
   await expect(dialog).toBeHidden();
 }
 

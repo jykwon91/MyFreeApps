@@ -1,10 +1,11 @@
+import { formatCount } from "@platform/core/utils/count";
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import { shareUrl } from "@mybookkeeper/api-client/utils/welcomeManualShare";
 import { formatSectionCount, formatUpdatedAt } from "@mybookkeeper/api-client/utils/welcomeManualFormat";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import { WEB_BASE_URL } from "../../constants/api";
-import { WELCOME_MANUAL_MESSAGES as MESSAGES, countLabel } from "../../constants/welcomeManuals";
+import { WELCOME_MANUAL_MESSAGES as MESSAGES } from "../../constants/welcomeManuals";
 
 /** Blank rather than a wrong guess while the properties are still loading. */
 export function manualPropertyName(
@@ -41,6 +42,6 @@ export function placeMapLabel(placeName: string): string {
 }
 
 export function sectionSummaryLine(section: Pick<WelcomeManualSectionResponse, "fields" | "images">): string {
-  const parts = [countLabel(section.fields.length, "field", "fields"), countLabel(section.images.length, "photo", "photos")];
+  const parts = [formatCount(section.fields.length, "field", "fields"), formatCount(section.images.length, "photo", "photos")];
   return parts.join(" · ");
 }

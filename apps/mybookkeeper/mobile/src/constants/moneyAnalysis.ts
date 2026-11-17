@@ -1,3 +1,5 @@
+import { formatCount } from "@platform/core/utils/count";
+
 export const MONEY_ANALYSIS_MESSAGES = {
   title: "Money analysis",
   backTitle: "More",
@@ -14,7 +16,7 @@ export const MONEY_ANALYSIS_MESSAGES = {
   propertiesHint: "Choose which properties to count",
   propertiesSheetTitle: "Properties",
   allProperties: "All properties",
-  nProperties: (count: number) => `${count} properties`,
+  nProperties: (count: number) => formatCount(count, "property", "properties"),
   categories: "Categories",
   categoriesHint: "Choose which kinds of income and expense to count",
   categoriesSheetTitle: "Categories",

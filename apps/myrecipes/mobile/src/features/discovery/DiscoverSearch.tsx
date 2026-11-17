@@ -12,7 +12,7 @@ import { FlatList, Keyboard, ScrollView, Text, View } from "react-native";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import { DISCOVER_ROUTE, DISCOVERY_DETAIL_PATHNAME, DISCOVERY_MESSAGES } from "../../constants/discovery";
 import type { AppStore, RootState } from "../../lib/store";
-import { countLabel } from "../../utils/countLabel";
+import { formatCount } from "@platform/core/utils/count";
 import DiscoverIdle from "./DiscoverIdle";
 import DiscoveryCard from "./DiscoveryCard";
 import DiscoveryResultsSkeleton from "./DiscoveryResultsSkeleton";
@@ -55,7 +55,7 @@ export default function DiscoverSearch() {
     // A newer search, or another account, has taken over: this answer was dropped.
     if (store.getState().discovery.search?.requestId !== action.meta.requestId || isFocusedRef.current) return;
     if (searchDiscoveredRecipes.fulfilled.match(action)) {
-      showToast(`Found ${countLabel(action.payload.recipes.length, "version")} of ${action.payload.query}.`, "success", {
+      showToast(`Found ${formatCount(action.payload.recipes.length, "version")} of ${action.payload.query}.`, "success", {
         label: "Show",
         onPress: () => router.navigate(DISCOVER_ROUTE),
       });
@@ -93,7 +93,7 @@ export default function DiscoverSearch() {
         ListHeaderComponent={
           results.recipes.length > 0 ? (
             <Text style={{ marginBottom: spacing.md, color: colors.mutedForeground, fontSize: fontSize.sm }}>
-              {countLabel(results.recipes.length, "version")} of{" "}
+              {formatCount(results.recipes.length, "version")} of{" "}
               <Text style={{ color: colors.foreground }}>{results.query}</Text>, best first.
             </Text>
           ) : undefined

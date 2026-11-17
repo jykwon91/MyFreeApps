@@ -1,3 +1,4 @@
+import { formatCount } from "@platform/core/utils/count";
 import type { ResumeUploadJob } from "../types/resume-upload-job/resume-upload-job";
 import { formatShortDate } from "./formatShortDate";
 
@@ -5,7 +6,7 @@ import { formatShortDate } from "./formatShortDate";
 export function resumeJobSummary(job: Pick<ResumeUploadJob, "result_parsed_fields" | "created_at">): string {
   const fields = job.result_parsed_fields;
   const summary = fields
-    ? `${fields.work_history_count} role${fields.work_history_count === 1 ? "" : "s"}, ${fields.skills_count} skills`
+    ? `${formatCount(fields.work_history_count, "role")}, ${formatCount(fields.skills_count, "skill")}`
     : "Parsed resume";
   return `${summary} · uploaded ${formatShortDate(job.created_at)}`;
 }

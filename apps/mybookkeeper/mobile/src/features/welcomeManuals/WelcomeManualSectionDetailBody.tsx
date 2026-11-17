@@ -1,10 +1,10 @@
+import { formatCount } from "@platform/core/utils/count";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import { Banner, Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { DELETE_SECTION_BODY, WELCOME_MANUAL_SECTION_MESSAGES as MESSAGES, deleteSectionTitle, photoCountLabel } from "../../constants/welcomeManualForms";
-import { countLabel } from "../../constants/welcomeManuals";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import type { WelcomeManualView } from "../../types/WelcomeManualView";
@@ -49,7 +49,7 @@ export default function WelcomeManualSectionDetailBody({ view, section, onDelete
         </View>
       ) : null}
       <View>
-        <WelcomeManualNavRow label={MESSAGES.fieldsRow} onPress={() => router.push(`${base}/fields`)} value={countLabel(section.fields.length, "field", "fields")} />
+        <WelcomeManualNavRow label={MESSAGES.fieldsRow} onPress={() => router.push(`${base}/fields`)} value={formatCount(section.fields.length, "field", "fields")} />
         <WelcomeManualNavRow label={MESSAGES.photosRow} onPress={() => router.push(`${base}/photos`)} value={photoCountLabel(section.images.length)} />
       </View>
       {canWrite ? (

@@ -106,7 +106,7 @@ describe("VersionDiffScreen", () => {
     await show();
 
     expect(await screen.findByRole("header", { name: "v1 to v3" })).toBeTruthy();
-    expect(screen.getByText("3 changes — 2 ingredient, 1 step.")).toBeTruthy();
+    expect(screen.getByText("3 changes — 2 ingredients, 1 step.")).toBeTruthy();
     expect(diffRequests[0]?.url).toBe("/recipes/r1/versions/v3/diff");
     expect(diffRequests[0]?.params).toEqual({ against: "v1" });
     expect(mockScreenOptions).toEqual({ title: "Changes", headerBackTitle: "Versions" });
@@ -143,7 +143,7 @@ describe("VersionDiffScreen", () => {
     await show();
 
     expect(await screen.findByText("No step changes.")).toBeTruthy();
-    expect(screen.getByText("2 changes — 2 ingredient, 0 step.")).toBeTruthy();
+    expect(screen.getByText("2 changes — 2 ingredients, 0 steps.")).toBeTruthy();
   });
 
   it("calls two versions with no differences identical", async () => {

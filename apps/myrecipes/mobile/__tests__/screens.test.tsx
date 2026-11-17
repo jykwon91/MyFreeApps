@@ -1,7 +1,7 @@
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import reducer, { ingredientToggled, pageChanged, sessionFinished, sessionOpened } from "../src/features/cook/cookSessionsSlice";
 import { buildCookPages } from "../src/utils/buildCookPages";
-import { countLabel } from "../src/utils/countLabel";
+import { formatCount } from "@platform/core/utils/count";
 import { recipeFacts } from "../src/utils/recipeFacts";
 
 describe("recipeFacts", () => {
@@ -77,10 +77,10 @@ describe("cookSessions", () => {
   });
 });
 
-describe("countLabel", () => {
+describe("formatCount", () => {
   it("handles singular and plural", () => {
-    expect(countLabel(1, "version")).toBe("1 version");
-    expect(countLabel(0, "recipe")).toBe("0 recipes");
-    expect(countLabel(3, "version")).toBe("3 versions");
+    expect(formatCount(1, "version")).toBe("1 version");
+    expect(formatCount(0, "recipe")).toBe("0 recipes");
+    expect(formatCount(3, "version")).toBe("3 versions");
   });
 });

@@ -50,7 +50,7 @@ describe("useTransactionPageState bulk actions over the cap", () => {
     await act(async () => result.current.executeBulkDelete(ids));
 
     expect(mockBulkDelete.mock.calls.map(([batch]) => batch.length)).toEqual([MAX_BULK_TRANSACTION_IDS, 1]);
-    expect(mockShowSuccess).toHaveBeenCalledWith("501 transaction(s) deleted");
+    expect(mockShowSuccess).toHaveBeenCalledWith("501 transactions deleted");
   });
 
   it("reports what a delete did before a later batch failed", async () => {

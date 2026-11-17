@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
@@ -108,7 +109,7 @@ export default function Integrations() {
   const handleExtractAll = useCallback(() => {
     extractAll()
       .unwrap()
-      .then((res) => showSuccess(`Extracting ${res.count} items...`))
+      .then((res) => showSuccess(`Extracting ${formatCount(res.count, "item")}...`))
       .catch((err) => showError(`Extract failed: ${extractErrorMessage(err)}`));
   }, [extractAll, showError, showSuccess]);
 

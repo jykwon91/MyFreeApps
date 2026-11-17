@@ -1,3 +1,4 @@
+import { formatCount } from "@platform/core/utils/count";
 import type { BulkCountsRun } from "../types/bulk/BulkCountsRun";
 import type { BulkOutcomeMessage } from "../types/bulk/BulkOutcomeMessage";
 
@@ -24,5 +25,5 @@ export function bulkDeleteMessage(run: BulkCountsRun<"deleted" | "skipped">): Bu
       ? { text: `${withSkipped("Deleted", deleted, skipped)} The rest failed \u2014 try again.`, isError: true }
       : { text: "Failed to delete transactions", isError: true };
   }
-  return { text: `${deleted} transaction(s) deleted${skipped > 0 ? `, ${skipped} skipped` : ""}`, isError: false };
+  return { text: `${formatCount(deleted, "transaction")} deleted${skipped > 0 ? `, ${skipped} skipped` : ""}`, isError: false };
 }

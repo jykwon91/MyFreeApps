@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { useMemo } from "react";
 import { useTable, type ColumnVisibilityState } from "@tanstack/react-table";
 import { appTableFeatures } from "@/shared/lib/table-features";
@@ -297,7 +298,7 @@ export default function Transactions() {
       <ConfirmDialog
         open={confirmBulkDelete}
         title="Delete transactions"
-        description={`Are you sure you want to delete ${selectedCount} transaction(s)? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${formatCount(selectedCount, "transaction")}? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
         isLoading={selection.isChecking}

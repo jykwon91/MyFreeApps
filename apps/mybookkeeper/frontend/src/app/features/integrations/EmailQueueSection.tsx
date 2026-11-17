@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { useCallback, useMemo, useState } from "react";
 import {
   useGetEmailQueueQuery,
@@ -36,7 +37,7 @@ export default function EmailQueueSection() {
   const handleExtractAll = useCallback(() => {
     extractAll()
       .unwrap()
-      .then((res) => showSuccess(`Extracting ${res.count} items...`))
+      .then((res) => showSuccess(`Extracting ${formatCount(res.count, "item")}...`))
       .catch((err) => showError(`Extract failed: ${extractErrorMessage(err)}`));
   }, [extractAll, showError, showSuccess]);
 

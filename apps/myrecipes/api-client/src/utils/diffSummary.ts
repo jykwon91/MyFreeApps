@@ -1,3 +1,4 @@
+import { formatCount } from "@platform/core/utils/count";
 import { VERSION_COPY } from "../constants/versions";
 import type { DiffResponse } from "../types/recipe/diff";
 import type { DiffSummary } from "../types/recipe/diff-summary";
@@ -20,6 +21,6 @@ export function diffSummary(diff: DiffResponse): DiffSummary {
     subtitle:
       total === 0
         ? VERSION_COPY.noDifferences
-        : `${total} change${total === 1 ? "" : "s"} — ${ingredientCount} ingredient, ${stepCount} step.`,
+        : `${formatCount(total, "change")} — ${formatCount(ingredientCount, "ingredient")}, ${formatCount(stepCount, "step")}.`,
   };
 }

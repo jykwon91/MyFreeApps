@@ -35,7 +35,8 @@ describe("bankImportFailure", () => {
 describe("bankImportSummary", () => {
   it("mentions duplicates only when some were skipped", () => {
     const base = { imported: 4, skipped_duplicates: 0, format_detected: "chase", preview: [] };
-    expect(bankImportSummary(base)).toBe("Imported 4 transaction(s)");
-    expect(bankImportSummary({ ...base, skipped_duplicates: 2 })).toBe("Imported 4 transaction(s), 2 duplicate(s) skipped");
+    expect(bankImportSummary(base)).toBe("Imported 4 transactions");
+    expect(bankImportSummary({ ...base, skipped_duplicates: 2 })).toBe("Imported 4 transactions, 2 duplicates skipped");
+    expect(bankImportSummary({ ...base, imported: 1, skipped_duplicates: 1 })).toBe("Imported 1 transaction, 1 duplicate skipped");
   });
 });

@@ -138,7 +138,7 @@ test.describe("Documents — upload, verify, delete", () => {
 
       const confirm = page.getByRole("dialog", { name: "Delete documents" });
       await page.getByRole("button", { name: "Delete selected" }).click();
-      await expect(confirm).toContainText("Are you sure you want to delete 2 document(s)?");
+      await expect(confirm).toContainText("Are you sure you want to delete 2 documents?");
       await confirm.getByRole("button", { name: "Cancel" }).click();
       await expect(confirm).toBeHidden();
       await expect(rows).toHaveCount(2);
