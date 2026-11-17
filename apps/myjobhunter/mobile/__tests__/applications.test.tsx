@@ -163,7 +163,7 @@ it("opens the Applications tab on a skeleton of the rows while the list loads, t
   expect(screen.getByText("Staff Engineer")).toBeTruthy();
   expect(screen.getByText("Interview scheduled")).toBeTruthy();
   expect(screen.getByText("85% fit")).toBeTruthy();
-  expect(screen.getByText(`Seattle, WA · Hybrid · Applied ${new Date(STRIPE.applied_at ?? "").toLocaleDateString()}`)).toBeTruthy();
+  expect(screen.getByText(`Seattle, WA · Hybrid · Applied Oct 20, 2026`)).toBeTruthy();
   expect(screen.getByText("92.50% fit")).toBeTruthy();
   // Nothing to say about a draft beyond its company and role, so it says nothing more.
   expect(screen.getByRole("link", { name: "Zillow, Engineer" })).toBeTruthy();

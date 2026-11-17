@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@platform/ui";
-import { formatAppliedDate } from "@myjobhunter/api-client/utils/formatAppliedDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import type { Application } from "@myjobhunter/api-client/types/application";
 
 /**
@@ -12,5 +12,5 @@ export const APPLIED_AT_COLUMN: ColumnDef<Application> = {
   header: "Applied",
   accessorFn: (row) => row.applied_at || undefined,
   sortDescFirst: true,
-  cell: ({ row }) => formatAppliedDate(row.original.applied_at) ?? "—",
+  cell: ({ row }) => row.original.applied_at ? formatShortDate(row.original.applied_at) : "—",
 };

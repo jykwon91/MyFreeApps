@@ -173,7 +173,7 @@ describe("the applications at a company", () => {
 
     expect(await screen.findByRole("header", { name: `${APPS.heading("Acme Corp")} (2)` })).toBeTruthy();
     expect(listRequests(sent)[0]?.params).toEqual({ company_id: ID, sort: "applied", order: "desc", limit: APPLICATIONS_PAGE_SIZE, offset: 0 });
-    const row = screen.getByRole("link", { name: `Staff Engineer, Remote, US · Remote · Applied ${new Date(STAFF.applied_at ?? "").toLocaleDateString()}` });
+    const row = screen.getByRole("link", { name: `Staff Engineer, Remote, US · Remote · Applied Oct 2, 2026` });
     expect(screen.getByRole("link", { name: "Senior Engineer" })).toBeTruthy();
 
     await fireEvent.press(row);
