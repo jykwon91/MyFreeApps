@@ -6,6 +6,7 @@ import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/re
 import { buildRecipeUpdateRequest } from "@myrecipes/api-client/utils/buildRecipeUpdateRequest";
 import type { RecipeMetaValues } from "@myrecipes/api-client/types/recipe/recipe-meta-values";
 import EditRecipeMetaForm from "@/features/recipes/EditRecipeMetaForm";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { recipeMetaProblems } from "@myrecipes/api-client/utils/recipeMetaProblems";
 
 interface Props {
@@ -39,8 +40,8 @@ export default function EditRecipeMetaModal({ open, onClose, recipe }: Props) {
       await updateRecipe({ recipeId: recipe.id, body: buildRecipeUpdateRequest(values) }).unwrap();
       showSuccess(MESSAGES.updated);
       onClose();
-    } catch {
-      showError(MESSAGES.couldntUpdate);
+    } catch (error) {
+      showError(recipeWriteErrorMessage(error, "update"));
     }
   }
 

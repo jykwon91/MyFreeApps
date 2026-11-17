@@ -110,13 +110,25 @@ test("a server error keeps everything typed so it can be sent again", async ({ p
   await fillRequired(page);
   await page.getByRole("button", { name: "Create recipe" }).click();
 
-  await expect(toast(page, "Couldn't create this recipe — please try again.")).toBeVisible();
+  await expect(toast(page, "Something went wrong on our end. Try again in a moment.")).toBeVisible();
   await expect(page).toHaveURL(/\/recipes\/new$/);
   await expect(page.getByLabel(/^Title/)).toHaveValue("Tomato soup");
   await expect(page.getByLabel("Ingredient name").first()).toHaveValue("tomatoes");
   await expect(page.getByLabel("Step 1")).toHaveValue("Simmer.");
   await expect(page.getByRole("button", { name: "Create recipe" })).toBeEnabled();
   expect(posted).toHaveLength(1);
+});
+
+test("a refusal with a reason from the server shows that reason", async ({ page }) => {
+  await stubSignedInShell(page);
+  await stubRecipeCreate(page, CREATED_ID, 422, "A recipe with that title already exists.");
+
+  await page.goto("/recipes/new");
+  await fillRequired(page);
+  await page.getByRole("button", { name: "Create recipe" }).click();
+
+  await expect(toast(page, "A recipe with that title already exists.")).toBeVisible();
+  await expect(page.getByLabel(/^Title/)).toHaveValue("Tomato soup");
 });
 
 test.describe("in a comma-decimal locale", () => {

@@ -1,4 +1,4 @@
-import { getApiValidationDetail } from "./apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { httpStatus } from "./httpStatus";
 
 /**

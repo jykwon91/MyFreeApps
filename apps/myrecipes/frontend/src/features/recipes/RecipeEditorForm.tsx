@@ -30,7 +30,7 @@ import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeF
 import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
 import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
-import { tweakErrorMessage } from "@myrecipes/api-client/utils/tweakErrorMessage";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
@@ -140,7 +140,7 @@ export default function RecipeEditorForm(props: Props) {
         navigate(`/recipes/${props.recipeId}`, { replace: true });
       }
     } catch (error) {
-      showError(isTweak ? tweakErrorMessage(error) : "Couldn't create this recipe — please try again.");
+      showError(recipeWriteErrorMessage(error, isTweak ? "tweak" : "create"));
     }
   }
 

@@ -23,7 +23,7 @@ import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
 import TaxAdvisorPanel from "@/app/features/tax/TaxAdvisorPanel";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import type { TaxFieldOverrideValue } from "@mybookkeeper/api-client/types/tax/TaxFieldOverrideValue";
-import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";

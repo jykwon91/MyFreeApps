@@ -1,4 +1,4 @@
-import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";

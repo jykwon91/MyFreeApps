@@ -3,6 +3,7 @@ export const RECIPE_MANAGE_MESSAGES = {
   editTitle: "Edit recipe details",
   editIntro: "Change the title, description, or source. To change ingredients or steps, make a tweak instead.",
   updated: "Recipe updated.",
+  couldntCreate: "Couldn't create this recipe — please try again.",
   couldntUpdate: "Couldn't save those changes — please try again.",
   deleteTitle: "Delete this recipe?",
   deleteBody: "This removes the recipe and its whole version history from your list. This can't be undone here.",

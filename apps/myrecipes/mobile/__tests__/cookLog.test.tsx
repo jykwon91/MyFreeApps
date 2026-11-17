@@ -1,3 +1,4 @@
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { COOK_LOG_MESSAGES as SHARED, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
@@ -293,7 +294,7 @@ describe("logging a cook", () => {
     await fireEvent.changeText(notesField(), "Burnt");
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByRole("alert", { name: SHARED.couldntLog })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: RECIPE_WRITE_MESSAGES.serverTrouble })).toBeTruthy();
     expect(notesField().props.value).toBe("Burnt");
     expect(screen.getByRole("radio", { name: SHARED.starLabel(2) }).props.accessibilityState).toMatchObject({ checked: true });
 

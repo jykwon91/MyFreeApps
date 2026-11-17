@@ -1,3 +1,4 @@
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { COOK_LOG_MESSAGES as SHARED } from "@myrecipes/api-client/constants/cookLog";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
@@ -327,7 +328,7 @@ describe("logging a cook of an older version", () => {
     await fireEvent.press(await screen.findByRole("button", { name: SHARED.madeIt }));
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByRole("alert", { name: SHARED.couldntLog })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: RECIPE_WRITE_MESSAGES.serverTrouble })).toBeTruthy();
     expect(screen.getByRole("header", { name: SHARED.logTitle })).toBeTruthy();
   });
 });

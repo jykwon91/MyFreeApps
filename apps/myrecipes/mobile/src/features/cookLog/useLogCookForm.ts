@@ -3,6 +3,7 @@ import { useLogCookMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { CookLogFormValues } from "@myrecipes/api-client/types/recipe/cook-log-form-values";
 import { buildCookLogCreateRequest } from "@myrecipes/api-client/utils/buildCookLogCreateRequest";
 import { cookNotesProblem } from "@myrecipes/api-client/utils/cookNotesProblem";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { useToast } from "@platform/mobile";
 import { useState } from "react";
 
@@ -38,8 +39,8 @@ export function useLogCookForm(recipeId: string, versionId: string, onSaved: () 
       await logCook({ recipeId, versionId, body: buildCookLogCreateRequest(values) }).unwrap();
       onSaved();
       showToast(SHARED.logged);
-    } catch {
-      setFailure(SHARED.couldntLog);
+    } catch (error) {
+      setFailure(recipeWriteErrorMessage(error, "logCook"));
     }
   }
 

@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RECIPE_FORM_PROBLEMS } from "@myrecipes/api-client/constants/recipeForm";
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
@@ -113,10 +114,10 @@ describe("RecipeEditorForm (tweak)", () => {
   it.each([
     [404, TWEAK_MESSAGES.changedOrNotYours],
     [400, TWEAK_MESSAGES.changedOrNotYours],
-    [422, TWEAK_MESSAGES.checkEntries],
-    [500, TWEAK_MESSAGES.couldntSave],
+    [422, "The change note is too long."],
+    [500, RECIPE_WRITE_MESSAGES.serverTrouble],
   ])("says why a %i didn't save, and stays on the form", async (status, message) => {
-    unwrap.mockRejectedValue({ status, data: { detail: "no" } });
+    unwrap.mockRejectedValue({ status, data: { detail: status === 422 ? "The change note is too long." : "no" } });
     renderTweak();
     await userEvent.type(screen.getByLabelText(/What did you change\?/), "More salt");
     await userEvent.click(screen.getByRole("button", { name: "Save new version" }));

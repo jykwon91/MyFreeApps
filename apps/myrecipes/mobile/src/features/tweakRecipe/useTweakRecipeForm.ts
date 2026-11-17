@@ -5,7 +5,7 @@ import { buildVersionCreateRequest } from "@myrecipes/api-client/utils/buildVers
 import { changeNoteProblem } from "@myrecipes/api-client/utils/changeNoteProblem";
 import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContentProblems";
 import { recipeFormValuesFromVersion } from "@myrecipes/api-client/utils/recipeFormValuesFromVersion";
-import { tweakErrorMessage } from "@myrecipes/api-client/utils/tweakErrorMessage";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { useNavigation } from "expo-router";
@@ -91,7 +91,7 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
     } catch (error) {
       // Only a failure can be tried again; a saved tweak is on its way out.
       isSending.current = false;
-      if (isMounted.current) showToast(tweakErrorMessage(error), "error");
+      if (isMounted.current) showToast(recipeWriteErrorMessage(error, "tweak"), "error");
     }
   }
 

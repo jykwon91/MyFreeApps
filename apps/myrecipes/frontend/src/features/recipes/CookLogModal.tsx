@@ -4,6 +4,7 @@ import { LoadingButton, Button, showError, showSuccess } from "@platform/ui";
 import StarRatingInput from "@/features/recipes/StarRatingInput";
 import { useLogCookMutation } from "@myrecipes/api-client/store/recipesApi";
 import { COOK_LOG_MESSAGES as MESSAGES, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { buildCookLogCreateRequest } from "@myrecipes/api-client/utils/buildCookLogCreateRequest";
 
 interface Props {
@@ -54,8 +55,8 @@ export default function CookLogModal({
       showSuccess(MESSAGES.logged);
       reset();
       onClose();
-    } catch {
-      showError(MESSAGES.couldntLog);
+    } catch (error) {
+      showError(recipeWriteErrorMessage(error, "logCook"));
     }
   }
 

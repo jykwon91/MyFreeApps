@@ -39,7 +39,6 @@ export const NEW_RECIPE_MESSAGES = {
   create: "Create recipe",
   creating: "Creating…",
   created: "Recipe created.",
-  couldntCreate: "Couldn't create this recipe. Please try again.",
 } as const;
 
 /** Over a draft that came back thin, so it's checked before it's created. */

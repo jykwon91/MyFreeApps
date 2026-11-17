@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { CHANGE_NOTE_MAX_LENGTH, RECIPE_FORM_PROBLEMS as PROBLEMS, RECIPE_SERVINGS_MAX_LENGTH } from "../constants/recipeForm";
-import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
-import { TWEAK_MESSAGES } from "../constants/tweak";
 import type { RecipeVersionFormValues } from "../types/recipe/recipe-version-form-values";
 import type { VersionResponse } from "../types/recipe/version";
 import { buildVersionCreateRequest } from "../utils/buildVersionCreateRequest";
@@ -11,7 +9,6 @@ import { emptyIngredientRow, emptyStepRow } from "../utils/emptyRecipeRows";
 import { recipeContentProblems } from "../utils/recipeContentProblems";
 import { recipeFormProblems } from "../utils/recipeFormProblems";
 import { recipeFormValuesFromVersion } from "../utils/recipeFormValuesFromVersion";
-import { tweakErrorMessage } from "../utils/tweakErrorMessage";
 import { tweakFormProblem } from "../utils/tweakFormProblem";
 
 const VERSION: VersionResponse = {
@@ -152,21 +149,5 @@ describe("servings in a new recipe", () => {
     const tooMany = "s".repeat(RECIPE_SERVINGS_MAX_LENGTH + 1);
     const form = { ...values({ servings: tooMany }), title: "Soup", description: "", source: "" };
     expect(recipeFormProblems(form, ".").servings).toBe(tooLongProblem(tooMany, RECIPE_SERVINGS_MAX_LENGTH));
-  });
-});
-
-describe("tweakErrorMessage", () => {
-  it("says why a tweak didn't save, by status", () => {
-    expect(tweakErrorMessage({ status: 400 })).toBe(TWEAK_MESSAGES.changedOrNotYours);
-    expect(tweakErrorMessage({ status: 404 })).toBe(TWEAK_MESSAGES.changedOrNotYours);
-    expect(tweakErrorMessage({ status: 422 })).toBe(TWEAK_MESSAGES.checkEntries);
-    expect(tweakErrorMessage({ status: 401 })).toBe(TWEAK_MESSAGES.signInAgain);
-    expect(tweakErrorMessage({ status: 500 })).toBe("Couldn't save this tweak — please try again.");
-    expect(tweakErrorMessage(new Error("boom"))).toBe(TWEAK_MESSAGES.couldntSave);
-  });
-
-  it("says the server can't be reached when no answer came back", () => {
-    expect(tweakErrorMessage({ status: undefined })).toBe(CONNECTION_MESSAGES.tweak);
-    expect(tweakErrorMessage({ status: "TIMEOUT_ERROR" })).toBe(CONNECTION_MESSAGES.tweak);
   });
 });
