@@ -10,7 +10,7 @@ import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { DRAFT_CAN_BE_REBUILT, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { AppStore } from "../../lib/store";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { nextRowKey } from "../../utils/nextRowKey";
@@ -48,7 +48,8 @@ function hasText(values: RecipeFormValues): boolean {
  * saved, the new recipe replaces this screen, so Back goes to where the form was opened from.
  *
  * With a `seed`, the form starts filled in from its draft, as the website's editor does with a
- * discovered or photographed recipe. Leaving it untouched loses nothing, so only an edit asks first.
+ * discovered or photographed recipe. A draft that can be opened again loses nothing when left
+ * untouched, so only an edit asks first; one that can't (a photo's read) always asks until it's created.
  */
 export function useNewRecipeForm(seed?: NewRecipeSeed) {
   const { showToast, showVisualToast } = useToast();
@@ -113,7 +114,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
     rows,
     isSaving,
     isLeaving: created !== null,
-    isDirty: seed ? values !== initialValues : hasText(values),
+    isDirty: seed ? values !== initialValues || !DRAFT_CAN_BE_REBUILT[seed.origin] : hasText(values),
     edit,
     save,
   };
