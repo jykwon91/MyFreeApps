@@ -103,7 +103,6 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
       />
       <FormField
         editable={!isBusy}
-        inputStyle={{ minHeight: 96, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={MESSAGES.notes}
         maxLength={MORTGAGE_NOTES_MAX_LENGTH}
         multiline

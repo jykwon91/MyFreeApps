@@ -150,7 +150,6 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
           <FormField
             editable={!isBusy}
             hint={LEASE_MESSAGES.extensionNoteHint}
-            inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
             label={LEASE_MESSAGES.extensionNote}
             maxLength={EXTENSION_NOTE_MAX_LENGTH}
             multiline

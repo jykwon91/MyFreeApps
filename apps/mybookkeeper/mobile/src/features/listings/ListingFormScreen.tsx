@@ -8,7 +8,7 @@ import { EMPTY_LISTING_FORM, listingDirtyFields, listingFormProblems, listingToF
 import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
-import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_MULTILINE_MIN_HEIGHT, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
+import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
 import type { ListingFormPicking } from "../../types/ListingFormPicking";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
 import { daysInput, listingValuesToSend } from "./listingInput";
@@ -43,7 +43,6 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
     void submit(sent, saved);
   }
 
-  const multiline = { minHeight: LISTING_MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" } as const;
 
   return (
     <>
@@ -51,7 +50,7 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
         {failure ? <Banner message={failure} /> : null}
         <FormField editable={!locked} error={errorFor("title")} label={MESSAGES.title} maxLength={LISTING_TITLE_MAX_LENGTH} onChangeText={(text) => edit("title", text)} required value={values.title} />
         <PropertyChoiceField disabled={locked} error={errorFor("property_id")} messages={LISTING_PROPERTY_CHOICE} onChange={(id) => edit("property_id", id)} value={values.property_id} />
-        <FormField editable={!locked} hint={MESSAGES.descriptionHint} inputStyle={multiline} label={MESSAGES.description} multiline onChangeText={(text) => edit("description", text)} value={values.description} />
+        <FormField editable={!locked} hint={MESSAGES.descriptionHint} label={MESSAGES.description} multiline onChangeText={(text) => edit("description", text)} value={values.description} />
         <FormField
           editable={!locked}
           error={errorFor("monthly_rate")}
@@ -74,7 +73,7 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
         <FormField editable={!locked} error={errorFor("amenities")} hint={MESSAGES.amenitiesHint} label={MESSAGES.amenities} onChangeText={(text) => edit("amenities", text)} value={values.amenities} />
         <SwitchRow disabled={locked} label={MESSAGES.pets} onValueChange={(next) => edit("pets_on_premises", next)} value={values.pets_on_premises} />
         {values.pets_on_premises ? (
-          <FormField editable={!locked} hint={MESSAGES.petDisclosureHint} inputStyle={multiline} label={MESSAGES.petDisclosure} multiline onChangeText={(text) => edit("large_dog_disclosure", text)} value={values.large_dog_disclosure} />
+          <FormField editable={!locked} hint={MESSAGES.petDisclosureHint} label={MESSAGES.petDisclosure} multiline onChangeText={(text) => edit("large_dog_disclosure", text)} value={values.large_dog_disclosure} />
         ) : null}
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={original ? MESSAGES.saving : MESSAGES.adding} onPress={save}>
           {original ? MESSAGES.save : MESSAGES.add}

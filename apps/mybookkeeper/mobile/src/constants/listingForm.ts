@@ -36,7 +36,6 @@ export const LISTING_FORM_MESSAGES = {
 
 export const LISTING_ROOM_OPTIONS = LISTING_ROOM_TYPES.map((value) => ({ value, label: LISTING_ROOM_TYPE_LABELS[value] }));
 export const LISTING_STATUS_OPTIONS = LISTING_STATUSES.map((value) => ({ value, label: LISTING_STATUS_LABELS[value] }));
-export const LISTING_MULTILINE_MIN_HEIGHT = 96;
 
 export const LISTING_PROPERTY_CHOICE: PropertyChoiceMessages = {
   property: "Property",

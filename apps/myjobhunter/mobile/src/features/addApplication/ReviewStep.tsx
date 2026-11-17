@@ -1,6 +1,6 @@
 import { addApplicationFormCounters } from "@myjobhunter/api-client/utils/addApplicationFormCounters";
 import type { RemoteType } from "@myjobhunter/api-client/types/application/remote-type";
-import { FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { FormField, LoadingButton, OptionSheet, PickerField } from "@platform/mobile";
 import { useState } from "react";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT, REMOTE_TYPE_OPTIONS } from "../../constants/addApplication";
 import type { ReviewStepProps } from "../../types/ReviewStepProps";
@@ -9,7 +9,6 @@ import ReviewSummary from "./ReviewSummary";
 
 /** The form to check and save: company, role, location, remote and notes, as on the website. */
 export default function ReviewStep({ review, values, errors, onEdit, onChangeCompany, onSave, isSaving, isLocked }: ReviewStepProps) {
-  const { spacing } = useTheme();
   const [isRemoteOpen, setIsRemoteOpen] = useState(false);
   const locked = isSaving || isLocked;
   const remoteLabel = REMOTE_TYPE_OPTIONS.find((option) => option.value === values.remote_type)?.label ?? "";
@@ -44,7 +43,7 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         editable={!locked}
         counter={counters.notes}
         error={errors.notes}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT }}
         label={MESSAGES.notesLabel}
         multiline
         onChangeText={(text) => onEdit("notes", text)}

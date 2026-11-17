@@ -3,7 +3,6 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COOK_LOG_PHONE_MESSAGES as MESSAGES } from "../../constants/cookLog";
-import { MULTILINE_MIN_HEIGHT } from "../../constants/newRecipe";
 import type { LogCookSheetProps } from "../../types/LogCookSheetProps";
 import StarRatingInput from "./StarRatingInput";
 import { useLogCookForm } from "./useLogCookForm";
@@ -25,7 +24,6 @@ export default function LogCookSheet({ recipeId, versionId, versionNumber, onClo
         counter={characterCounter(form.values.notes.trim(), COOK_NOTES_MAX_LENGTH)}
         editable={!form.isSaving}
         error={form.notesProblem}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={`${SHARED.notesLabel} ${SHARED.notesOptional}`}
         multiline
         onChangeText={form.setNotes}

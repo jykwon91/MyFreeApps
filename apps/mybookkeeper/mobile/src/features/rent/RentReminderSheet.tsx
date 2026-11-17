@@ -128,7 +128,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       <FormField
         editable={!isBusy}
         hint={REMINDER_SETUP_MESSAGES.howToPayHint}
-        inputStyle={{ minHeight: 72, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: 72 }}
         label={REMINDER_SETUP_MESSAGES.howToPay}
         maxLength={500}
         multiline

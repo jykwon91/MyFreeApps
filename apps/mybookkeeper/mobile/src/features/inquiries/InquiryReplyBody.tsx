@@ -224,7 +224,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
         <FormField
           editable={!isBusy && !isRendering}
           hint={addsDisclosure ? "If this listing has a pet disclosure, I'll add it to the top of your first reply." : undefined}
-          inputStyle={{ minHeight: REPLY_BODY_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+          inputStyle={{ minHeight: REPLY_BODY_MIN_HEIGHT }}
           label="Message"
           maxLength={REPLY_BODY_MAX_LENGTH}
           multiline

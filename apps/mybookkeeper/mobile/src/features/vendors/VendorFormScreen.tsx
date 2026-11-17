@@ -11,7 +11,6 @@ import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
 import { useSaveVendor } from "./useSaveVendor";
 
 const CATEGORY_OPTIONS = VENDOR_CATEGORIES.map((category) => ({ value: category, label: VENDOR_CATEGORY_LABELS[category] }));
-const NOTES_MIN_HEIGHT = 96;
 
 /** Adds a vendor, or changes `original`. What's typed is kept here, so a reload can't overwrite it. */
 export default function VendorFormScreen({ original }: { original: VendorResponse | null }) {
@@ -92,7 +91,6 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
         />
         <FormField
           editable={!locked}
-          inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
           label={MESSAGES.flatRates}
           multiline
           onChangeText={(text) => edit("flat_rate_notes", text)}
@@ -102,7 +100,6 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
         <SwitchRow disabled={locked} label={MESSAGES.preferred} onValueChange={(next) => edit("preferred", next)} value={values.preferred} />
         <FormField
           editable={!locked}
-          inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
           label={MESSAGES.notes}
           multiline
           onChangeText={(text) => edit("notes", text)}

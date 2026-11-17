@@ -2,7 +2,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Alert, Linking } from "react-native";
+import { Alert, Linking, StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import InquiryDetailScreen from "../src/features/inquiries/InquiryDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -379,6 +379,15 @@ describe("InquiryDetailScreen", () => {
       await openNotes();
       expect(mockPreventRemove.active).toBe(false);
       expect(screen.getByRole("button", { name: "Save notes" }).props.accessibilityState.disabled).toBe(true);
+    });
+
+    it("draws the notes box as a tall, top-aligned note box", async () => {
+      startInquiryServer([anInquiry()]);
+      await renderScreen();
+      await openNotes();
+      const style = StyleSheet.flatten(screen.getByLabelText("Your notes").props.style);
+      expect(style.minHeight).toBeGreaterThan(44);
+      expect(style.textAlignVertical).toBe("top");
     });
 
     it("stops at the server's limit", async () => {

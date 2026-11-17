@@ -50,7 +50,7 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
         />
         <FormField
           editable={!locked}
-          inputStyle={{ minHeight: WELCOME_MANUAL_SECTION_BODY_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+          inputStyle={{ minHeight: WELCOME_MANUAL_SECTION_BODY_MIN_HEIGHT }}
           label={MESSAGES.bodyLabel}
           multiline
           onChangeText={(text) => edit("body", text)}

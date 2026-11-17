@@ -34,7 +34,6 @@ export default function RentWaiveSheet({ applicantId, charge, onClose }: { appli
       <FormField
         editable={!isBusy}
         hint={`${RENT_MANAGE_MESSAGES.waiveReasonHint} ${reason.length}/${RENT_WAIVE_REASON_MAX_LENGTH}`}
-        inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
         label={RENT_MANAGE_MESSAGES.waiveReason}
         maxLength={RENT_WAIVE_REASON_MAX_LENGTH}
         multiline

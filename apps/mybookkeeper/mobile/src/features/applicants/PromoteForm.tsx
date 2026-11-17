@@ -109,7 +109,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
           <SegmentedControl accessibilityLabel="Smoker" onChange={(smoker) => update({ smoker })} segments={SMOKER_SEGMENTS} value={values.smoker} />
         </View>
         <FormField
-          inputStyle={{ minHeight: 72, textAlignVertical: "top" }}
+          inputStyle={{ minHeight: 72 }}
           label="Pets"
           maxLength={APPLICANT_PETS_MAX}
           multiline
