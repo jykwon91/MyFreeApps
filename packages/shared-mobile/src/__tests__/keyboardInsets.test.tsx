@@ -158,6 +158,11 @@ describe("keyboard insets", () => {
       write("tapsKept/ReadOnly.tsx", "export default () => <ScrollView><Text>Hello</Text></ScrollView>;");
       write("tapsKept/Opener.tsx", 'import AddSheet from "./AddSheet";\nexport default () => <ScrollView><AddSheet /></ScrollView>;');
       write("tapsKept/AddSheet.tsx", "export default () => <FormSheet><FormField label=\"Name\" /></FormSheet>;");
+      // Next only moves on when the field says where to; without it the key just closes the keyboard.
+      write("NextDead.tsx", 'export default () => <FormField label="Name" returnKeyType="next" />;');
+      write("NextConditional.tsx", 'export default ({ more }) => <TextInput returnKeyType={more ? "next" : "done"} />;');
+      write("NextWired.tsx", 'export default () => <FormField label="Name" onSubmitEditing={() => other.current?.focus()} returnKeyType="next" />;');
+      write("DoneOnly.tsx", 'export default () => <FormField label="Name" returnKeyType="done" />;');
       write("SlashesInString.tsx", 'export const hint = "a // b /* c */ automaticallyAdjust" + "KeyboardInsets";');
       expect(keyboardHandlingProblems(root, ["src"]).map((problem) => problem.split(":")[0]).sort()).toEqual([
         "src/Bar.tsx",
@@ -172,6 +177,8 @@ describe("keyboard insets", () => {
         "src/NamedOnly.tsx",
         "src/NamespaceAvoiding.tsx",
         "src/NavBar.ts",
+        "src/NextConditional.tsx",
+        "src/NextDead.tsx",
         "src/QuotedBar.tsx",
         "src/RawAvoiding.tsx",
         "src/SafeAreaBar.tsx",

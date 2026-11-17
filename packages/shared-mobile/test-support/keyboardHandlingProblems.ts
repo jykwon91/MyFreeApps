@@ -155,6 +155,17 @@ function homeIndicatorProblems(path: string, code: string): string[] {
   return [...(usesBottomInset(code) ? [INSET_PROBLEM] : []), ...(usesBottomSafeAreaView(code) ? [SAFE_AREA_VIEW_PROBLEM] : [])];
 }
 
+/** Whether a field's Next key would do nothing: it names "next" as its return key but never says where to go. */
+function hasDeadNextKey(code: string): boolean {
+  return nodesOf(parse(code)).some((node) => {
+    if (!ts.isJsxOpeningElement(node) && !ts.isJsxSelfClosingElement(node)) return false;
+    const returnKey = jsxAttribute(node, "returnKeyType")?.initializer;
+    if (!returnKey || !/["']next["']/.test(returnKey.getText())) return false;
+    // A spread may carry the handler, so only a field that visibly lacks it counts.
+    return !jsxAttribute(node, "onSubmitEditing") && !node.attributes.properties.some(ts.isJsxSpreadAttribute);
+  });
+}
+
 function problemsIn(path: string, code: string): string[] {
   const problems: string[] = [];
   if (/\bautomaticallyAdjustKeyboardInsets\b/.test(code)) {
@@ -166,6 +177,9 @@ function problemsIn(path: string, code: string): string[] {
   }
   if (/\bendCoordinates\b/.test(code)) {
     problems.push("React Native's keyboard height leaves out Android's nav bar; read useKeyboardState");
+  }
+  if (hasDeadNextKey(code)) {
+    problems.push('a field with returnKeyType "next" needs onSubmitEditing to move to the next field, or Next just closes the keyboard');
   }
   if (HEADER_KEYBOARD_AVOIDING_VIEW.test(code)) problems.push(...homeIndicatorProblems(path, code));
   if (/<Modal\b/.test(code) && TEXT_INPUT.test(code) && !KEYBOARD_AWARE_SCROLL.test(code)) {

@@ -6,8 +6,8 @@ import type { PropertyForm } from "@mybookkeeper/api-client/types/property/Prope
 import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { useState } from "react";
-import { View } from "react-native";
+import { type ComponentRef, useRef, useState } from "react";
+import { TextInput, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
 import { useSaveProperty } from "./useSaveProperty";
 
@@ -20,6 +20,10 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const [hasTried, setHasTried] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const { submit, isBusy, isLeaving, failure } = useSaveProperty(original);
+  const streetInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const cityInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const stateInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const zipInput = useRef<ComponentRef<typeof TextInput>>(null);
 
   const problems = propertyFormProblems(form, original);
   const isDirty = original ? Object.keys(propertyChanges(form, original)).length > 0 : !isBlank(form);
@@ -48,9 +52,11 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           error={errorFor("name")}
           label={MESSAGES.name}
           onChangeText={(text) => edit("name", text)}
+          onSubmitEditing={() => streetInput.current?.focus()}
           placeholder={MESSAGES.namePlaceholder}
           required
           returnKeyType="next"
+          submitBehavior="submit"
           value={form.name}
         />
         <FormField
@@ -59,9 +65,12 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           error={errorFor("street")}
           label={MESSAGES.street}
           onChangeText={(text) => edit("street", text)}
+          onSubmitEditing={() => cityInput.current?.focus()}
           placeholder={MESSAGES.streetPlaceholder}
+          ref={streetInput}
           required
           returnKeyType="next"
+          submitBehavior="submit"
           value={form.street}
         />
         <FormField
@@ -69,8 +78,11 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           error={errorFor("city")}
           label={MESSAGES.city}
           onChangeText={(text) => edit("city", text)}
+          onSubmitEditing={() => stateInput.current?.focus()}
+          ref={cityInput}
           required
           returnKeyType="next"
+          submitBehavior="submit"
           value={form.city}
         />
         <View style={{ flexDirection: "row", gap: spacing.md }}>
@@ -81,9 +93,12 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             label={MESSAGES.state}
             maxLength={PROPERTY_STATE_LENGTH}
             onChangeText={(text) => edit("state", text)}
+            onSubmitEditing={() => zipInput.current?.focus()}
             placeholder={MESSAGES.statePlaceholder}
+            ref={stateInput}
             required
             returnKeyType="next"
+            submitBehavior="submit"
             style={{ flex: 1 }}
             value={form.state}
           />
@@ -94,7 +109,9 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             keyboardType="numbers-and-punctuation"
             label={MESSAGES.zip}
             onChangeText={(text) => edit("zip", text)}
+            ref={zipInput}
             required
+            returnKeyType="done"
             style={{ flex: 2 }}
             value={form.zip}
           />

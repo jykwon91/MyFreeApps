@@ -4,7 +4,8 @@ import type { WelcomeManualSectionFormValues } from "@mybookkeeper/api-client/ty
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import { sectionProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { useState } from "react";
+import { type ComponentRef, useRef, useState } from "react";
+import type { TextInput } from "react-native";
 
 import { WELCOME_MANUAL_SECTION_BODY_MIN_HEIGHT, WELCOME_MANUAL_SECTION_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
@@ -28,6 +29,7 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
   const { values, edit } = form;
   const { submit, isBusy, isLeaving, failure } = useSaveWelcomeManualSection(manual.id, original?.id ?? null);
   const locked = isBusy || isLeaving;
+  const bodyInput = useRef<ComponentRef<typeof TextInput>>(null);
   useDiscardPrompt(form.isDirty && !isLeaving, isBusy);
 
   function save(): void {
@@ -44,8 +46,10 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
           label={MESSAGES.titleLabel}
           maxLength={WELCOME_MANUAL_SECTION_TITLE_MAX_LENGTH}
           onChangeText={(text) => edit("title", text)}
+          onSubmitEditing={() => bodyInput.current?.focus()}
           required
           returnKeyType="next"
+          submitBehavior="submit"
           value={values.title}
         />
         <FormField
@@ -55,6 +59,7 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
           multiline
           onChangeText={(text) => edit("body", text)}
           placeholder={MESSAGES.bodyPlaceholder}
+          ref={bodyInput}
           value={values.body}
         />
         {manual.rooms.length > 0 ? (
