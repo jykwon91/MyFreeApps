@@ -14,5 +14,4 @@ export interface TransactionCreateValues {
   /** Empty when there is none. */
   paymentMethod: string;
   taxRelevant: boolean;
-  isCapitalImprovement: boolean;
 }

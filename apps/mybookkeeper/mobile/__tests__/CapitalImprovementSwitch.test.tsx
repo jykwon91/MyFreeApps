@@ -90,7 +90,7 @@ describe("Capital improvement — edit form", () => {
 });
 
 describe("Capital improvement — new transaction form", () => {
-  it("shows the switch for expense (the default type)", async () => {
+  it("is not offered when adding by hand, same as the website", async () => {
     startTransactionServer([], [aProperty()]);
     await render(
       <Provider store={store}>
@@ -99,39 +99,7 @@ describe("Capital improvement — new transaction form", () => {
         </ToastProvider>
       </Provider>,
     );
-    expect(await screen.findByLabelText("Capital improvement")).toBeTruthy();
-  });
-
-  it("hides the switch when type is changed to income", async () => {
-    startTransactionServer([], [aProperty()]);
-    await render(
-      <Provider store={store}>
-        <ToastProvider bottomOffset={0}>
-          <NewTransactionScreen />
-        </ToastProvider>
-      </Provider>,
-    );
-    await screen.findByLabelText("Capital improvement");
-    await fireEvent.press(screen.getByRole("tab", { name: "Income" }));
+    await screen.findByRole("button", { name: "Add transaction" });
     expect(screen.queryByLabelText("Capital improvement")).toBeNull();
-  });
-
-  it("sends is_capital_improvement: true in the POST when toggled on", async () => {
-    const server = startTransactionServer([], [aProperty()]);
-    await render(
-      <Provider store={store}>
-        <ToastProvider bottomOffset={0}>
-          <NewTransactionScreen />
-        </ToastProvider>
-      </Provider>,
-    );
-    await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "500");
-    await fireEvent.press(screen.getByLabelText("Capital improvement"));
-    await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
-    await waitFor(() =>
-      expect(
-        JSON.parse(String(server.requests.filter((r) => r.method === "post").at(-1)?.data)),
-      ).toMatchObject({ is_capital_improvement: true }),
-    );
   });
 });
