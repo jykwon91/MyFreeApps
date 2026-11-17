@@ -4,6 +4,7 @@ import { DEFAULT_DROP_RECIPE_PROFESSION, DROP_RECIPE_PROFESSIONS, DROP_RECIPES_T
 import { buildDropRecipes } from "@/games/wow-forever/lib/dropRecipes/buildDropRecipes";
 import { dropRecipeFiltersFromParams, dropRecipeParams } from "@/games/wow-forever/lib/dropRecipes/dropRecipeParams";
 import { dropRecipeSummary } from "@/games/wow-forever/lib/dropRecipes/dropRecipeSummary";
+import { emptyDropRecipesMessage } from "@/games/wow-forever/lib/dropRecipes/emptyDropRecipesMessage";
 import { killsPerDrop } from "@/games/wow-forever/lib/dropRecipes/killsPerDrop";
 import { knownNoteMessage } from "@/games/wow-forever/lib/dropRecipes/knownNoteMessage";
 import { dropRecipeProfessions, selectDropRecipes } from "@/games/wow-forever/lib/dropRecipes/selectDropRecipes";
@@ -109,6 +110,28 @@ describe("selectDropRecipes", () => {
     const chances = shown.map((r) => r.bestChance);
     expect(chances).toEqual([...chances].sort((a, b) => b - a));
     expect(shown[shown.length - 1]?.bestChance).toBe(0);
+  });
+});
+
+describe("emptyDropRecipesMessage", () => {
+  const filters = { sort: DROP_RECIPE_SORT.skill } as const;
+
+  it("says why when a profession has no bind-on-pickup drop-only recipe at all", () => {
+    // Alchemy's bind-on-pickup recipes are all sold by vendors, given by quests, or new in Forever.
+    const msg = emptyDropRecipesMessage(recipes, { ...filters, profession: "alchemy", source: null, trade: DROP_RECIPE_TRADE.bindOnPickup });
+    expect(msg).toBe(DROP_RECIPES_TEXT.noneForTrade[DROP_RECIPE_TRADE.bindOnPickup]("Alchemy"));
+    expect(msg).toContain("None of Alchemy's bind-on-pickup recipes are drop-only");
+    // Whatever the source filter.
+    expect(emptyDropRecipesMessage(recipes, { ...filters, profession: "alchemy", source: DROP_RECIPE_SOURCE.raid, trade: DROP_RECIPE_TRADE.bindOnPickup })).toBe(msg);
+  });
+
+  it("points at the filters when the profession has that kind elsewhere", () => {
+    // Enchanting has bind-on-pickup formulas, just none from a dungeon.
+    expect(emptyDropRecipesMessage(recipes, { ...filters, profession: "enchanting", source: DROP_RECIPE_SOURCE.dungeon, trade: DROP_RECIPE_TRADE.bindOnPickup }))
+      .toBe(DROP_RECIPES_TEXT.empty);
+    expect(emptyDropRecipesMessage(recipes, { ...filters, profession: "alchemy", source: null, trade: null })).toBe(DROP_RECIPES_TEXT.empty);
+    // A profession with no drop-only recipe at all (only reachable by URL): the generic note, not "every one binds".
+    expect(emptyDropRecipesMessage([], { ...filters, profession: "alchemy", source: null, trade: DROP_RECIPE_TRADE.auctionHouse })).toBe(DROP_RECIPES_TEXT.empty);
   });
 });
 

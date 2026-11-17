@@ -284,6 +284,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `&sort=odds`, `&trade=ah|bop` = only tradeable / only bind-on-pickup by `bindOnPickup`): crafting recipes whose item no vendor sells and no quest gives (`lib/dropRecipes/buildDropRecipes.ts`,
   from `loadAllCraftingData`). Dungeon / raid drops come from `sources.json`'s `instance` + `instances` (the professions
   generator reuses the item pages' `load_finder` / `instance_rows`; one TS decoder, `data/instanceDropDecode.ts`, for both).
+  Empty list: `emptyDropRecipesMessage` says why when the profession has none of the picked `trade` at all (Alchemy has no
+  bind-on-pickup drop-only recipe: its BoP ones are vendor / quest / Forever-new), else the generic "try All" note.
   A random drop (world pool or `COMMON_DROP_MOBS`+ kinds) NEVER lists mobs as a farm spot — only a level range — except
   a mob at `RARE_DROP_PERCENT`+ (e.g. Greater Stamina's 7.7% mob in a 363-mob pool). Trade line from `learn.bop`
   (Forever client `ItemSparse.Bonding` 1, written by the generator): bind-on-pickup never gets an Auction House link.

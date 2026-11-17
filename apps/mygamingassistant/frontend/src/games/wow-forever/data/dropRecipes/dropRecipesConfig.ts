@@ -69,6 +69,13 @@ export const DROP_RECIPES_TEXT = {
   knownError: "Couldn't read that character's recipes from Blizzard.",
   showAll: "Clear character",
   empty: "No drop-only recipe matches these filters. Try All on one of them.",
+  /** The profession has no drop-only recipe of the picked kind at all, whatever the other filters: say why. */
+  noneForTrade: {
+    [DROP_RECIPE_TRADE.bindOnPickup]: (profession: string) =>
+      `None of ${profession}'s bind-on-pickup recipes are drop-only: vendors sell them, quests give them, or where they drop isn't known yet (most are new in WoW Forever). Try All under Can you buy it?`,
+    [DROP_RECIPE_TRADE.auctionHouse]: (profession: string) =>
+      `Every drop-only ${profession} recipe binds when picked up, so none can be bought. Try All under Can you buy it?`,
+  } satisfies Record<DropRecipeTrade, (profession: string) => string>,
   loadError: "Couldn't load the recipes.",
   bindOnPickup: "Binds when picked up: you have to loot it yourself.",
   tradeable: "Tradeable: someone may be selling it.",

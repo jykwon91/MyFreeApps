@@ -148,6 +148,11 @@ test("Can you buy it? keeps only Auction House recipes, or only bind-on-pickup o
   await page.goto(`${PAGE}?source=dungeon&trade=bop`);
   await expect(rows).toHaveCount(0);
   await expect(page.getByText("No drop-only recipe matches these filters. Try All on one of them.")).toBeVisible();
+
+  // Alchemy has no bind-on-pickup drop-only recipe at all: the note says why.
+  await page.goto(`${PAGE}?p=alchemy&trade=bop`);
+  await expect(rows).toHaveCount(0);
+  await expect(page.getByText(/None of Alchemy's bind-on-pickup recipes are drop-only: vendors sell them/)).toBeVisible();
 });
 
 test("fits a phone with no sideways scroll", async ({ page }) => {

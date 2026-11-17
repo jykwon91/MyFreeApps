@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Drop-only recipes: why Bind on pickup is empty",
+    "summary": "Pick Alchemy and Bind on pickup on the Drop-only recipes page and it now says why the list is empty: Alchemy's bind-on-pickup recipes are sold by vendors, given by quests, or new in WoW Forever, so none are drop-only.",
+    "to": "/wow-forever/recipe-drops?p=alchemy&trade=bop"
+  },
+  {
+    "date": "2026-11-17",
     "title": "Guild: PvE or PvP upgrades",
     "summary": "The guild's Help each other tab now has PvE and PvP buttons. PvP scores count Stamina as much as your best main stat, so Stamina enchants and gear show up for PvPers who'd skip them in PvE. Both are estimates built on Classic stat weights, since WoW Forever hasn't published its own.",
     "to": "/wow-forever/topdeadcenter"
