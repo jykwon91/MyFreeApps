@@ -140,6 +140,27 @@ describe("DrillDownScreen", () => {
     expect(await screen.findByText("Guest A")).toBeTruthy();
   });
 
+  it("says minus out loud when a category holds only a refund", async () => {
+    mockParams = { ...mockParams, type: "expenses", categories: "maintenance" };
+    startTransactionServer([aTransaction({ id: "r", category: "maintenance", vendor: "Hardware", amount: "-45.00" })]);
+    await show();
+    await screen.findByText("Hardware");
+    expect(screen.getByText("1 transaction · -$45.00")).toBeTruthy();
+    expect(screen.getByLabelText("1 transaction, minus 45 dollars")).toBeTruthy();
+  });
+
+  it("shows no minus sign when amounts cancel out", async () => {
+    mockParams = { ...mockParams, type: "expenses", categories: "maintenance" };
+    startTransactionServer([
+      aTransaction({ id: "a", category: "maintenance", vendor: "Hardware", amount: "0.10" }),
+      aTransaction({ id: "b", category: "maintenance", vendor: "Plumber", amount: "0.20" }),
+      aTransaction({ id: "c", category: "maintenance", vendor: "Refund", amount: "-0.30" }),
+    ]);
+    await show();
+    await screen.findByText("Hardware");
+    expect(screen.getByText("3 transactions · $0.00")).toBeTruthy();
+  });
+
   it("keeps the last list with a notice when a refresh fails", async () => {
     const server = startTransactionServer([aTransaction({ id: "in1", transaction_type: "income", category: "rental_revenue", vendor: "Guest A" })]);
     await show();

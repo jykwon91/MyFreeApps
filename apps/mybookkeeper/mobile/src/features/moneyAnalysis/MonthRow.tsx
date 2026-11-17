@@ -9,7 +9,7 @@ import type { AnalysisScope } from "../../types/AnalysisScope";
 import { drillDownLink } from "../drillDown/drillDownLink";
 import HomeLinkRow from "../home/HomeLinkRow";
 import { monthName } from "../../lib/localDate";
-import { categoryLabel, moneySign, signedMoney, spokenMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { categoryLabel, moneySign, signedMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
 import type { CategoryTotal } from "../../types/CategoryTotal";
 import { monthDrillDown } from "./moneyAnalysisDrillDowns";
 
@@ -29,7 +29,7 @@ export default function MonthRow({ month, expenseRows, scope }: MonthRowProps) {
   return (
     <View>
       <Pressable
-        accessibilityLabel={`${name}, net ${spokenSignedMoney(month.profit)}, revenue ${spokenMoney(month.revenue)}, expenses ${spokenMoney(month.expenses)}`}
+        accessibilityLabel={`${name}, net ${spokenSignedMoney(month.profit)}, revenue ${spokenSignedMoney(month.revenue)}, expenses ${spokenSignedMoney(month.expenses)}`}
         accessibilityRole="button"
         accessibilityState={{ expanded: isOpen }}
         onPress={() => setIsOpen((value) => !value)}
@@ -43,11 +43,11 @@ export default function MonthRow({ month, expenseRows, scope }: MonthRowProps) {
       </Pressable>
       {isOpen ? (
         <View style={{ paddingLeft: spacing.md }}>
-          <HomeLinkRow accessibilityLabel={`${MESSAGES.revenue}, ${spokenMoney(month.revenue)}`} detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => open("revenue")} />
-          <HomeLinkRow accessibilityLabel={`${MESSAGES.expenses}, ${spokenMoney(month.expenses)}`} detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => open("expenses")} />
+          <HomeLinkRow accessibilityLabel={`${MESSAGES.revenue}, ${spokenSignedMoney(month.revenue)}`} detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => open("revenue")} />
+          <HomeLinkRow accessibilityLabel={`${MESSAGES.expenses}, ${spokenSignedMoney(month.expenses)}`} detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => open("expenses")} />
           {expenseRows.map((row) => (
             <HomeLinkRow
-              accessibilityLabel={`${categoryLabel(row.category)}, ${spokenMoney(row.amount)}`}
+              accessibilityLabel={`${categoryLabel(row.category)}, ${spokenSignedMoney(row.amount)}`}
               detail={formatCurrency(row.amount)}
               key={row.category}
               label={categoryLabel(row.category)}

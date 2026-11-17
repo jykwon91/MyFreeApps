@@ -2,7 +2,7 @@ import { ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Pressable, Text, View } from "react-native";
 import { HOME_CATEGORY_BAR_HEIGHT } from "../../constants/home";
-import { spokenMoney } from "../transactions/transactionDisplay";
+import { spokenSignedMoney } from "../transactions/transactionDisplay";
 
 /** One category, with a bar as long as its share of the biggest one. */
 export default function CategoryBarRow({
@@ -19,7 +19,7 @@ export default function CategoryBarRow({
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
     <Pressable
-      accessibilityLabel={`${label}, ${spokenMoney(amount)}`}
+      accessibilityLabel={`${label}, ${spokenSignedMoney(amount)}`}
       accessibilityRole="button"
       onPress={onPress}
       style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", gap: spacing.xs }}

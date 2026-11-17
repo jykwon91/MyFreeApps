@@ -4,7 +4,7 @@ import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/uti
 import { HOME_PERIODS, type HomePeriod } from "../../constants/home";
 import { monthName } from "../../lib/localDate";
 import type { HomeAlertFailures } from "../../types/HomeAlertFailures";
-import { spokenMoney } from "../transactions/transactionDisplay";
+import { spokenSignedMoney } from "../transactions/transactionDisplay";
 
 export function transactionsWaiting(count: number): string {
   return `${formatCount(count, "transaction", "transactions")} to review`;
@@ -77,7 +77,7 @@ export function axisMoney(value: number): string {
 }
 
 export function spokenMonth(month: MonthSummary): string {
-  return `Revenue ${spokenMoney(month.revenue)}, expenses ${spokenMoney(month.expenses)}, ${monthName(month.month, "long")}`;
+  return `Revenue ${spokenSignedMoney(month.revenue)}, expenses ${spokenSignedMoney(month.expenses)}, ${monthName(month.month, "long")}`;
 }
 
 export function monthlyChartSummary(months: readonly MonthSummary[]): string {

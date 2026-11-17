@@ -12,7 +12,7 @@ import type { AnalysisScope } from "../../types/AnalysisScope";
 import ChangeNote from "../analyticsControls/ChangeNote";
 import { drillDownLink } from "../drillDown/drillDownLink";
 import HomeLinkRow from "../home/HomeLinkRow";
-import { moneySign, signedMoney, spokenMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { moneySign, signedMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
 import { monthsNewestFirst } from "./moneyAnalysisDisplay";
 import { propertyDrillDown, propertyMonthDrillDown } from "./moneyAnalysisDrillDowns";
 
@@ -63,8 +63,8 @@ export default function PropertyRow({ property, previous, isComparing, monthly, 
       {isComparing ? <ChangeNote againstLabel={againstLabel} figures={changeFigures(property.profit, previous ? previous.profit : 0)} higherIsBetter previous={previous ? previous.profit : 0} /> : null}
       {isOpen ? (
         <View style={{ paddingLeft: spacing.md }}>
-          <HomeLinkRow accessibilityLabel={`${MESSAGES.revenue}, ${spokenMoney(property.revenue)}`} detail={formatCurrency(property.revenue)} label={MESSAGES.revenue} onPress={() => open("revenue")} />
-          <HomeLinkRow accessibilityLabel={`${MESSAGES.expenses}, ${spokenMoney(property.expenses)}`} detail={formatCurrency(property.expenses)} label={MESSAGES.expenses} onPress={() => open("expenses")} />
+          <HomeLinkRow accessibilityLabel={`${MESSAGES.revenue}, ${spokenSignedMoney(property.revenue)}`} detail={formatCurrency(property.revenue)} label={MESSAGES.revenue} onPress={() => open("revenue")} />
+          <HomeLinkRow accessibilityLabel={`${MESSAGES.expenses}, ${spokenSignedMoney(property.expenses)}`} detail={formatCurrency(property.expenses)} label={MESSAGES.expenses} onPress={() => open("expenses")} />
           <HomeLinkRow label={MESSAGES.allTransactions} onPress={() => open()} />
           {monthly && monthly.months.length > 0 ? (
             <View accessibilityLabel={MESSAGES.monthlyByProperty} accessibilityRole="list">

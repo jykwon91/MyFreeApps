@@ -1,6 +1,7 @@
 import { EXPENSE_CATEGORY_SET, REVENUE_CATEGORY_SET } from "../constants/summaryCategorySets";
 import { TRANSACTION_LIST_LIMIT } from "../constants/transactionPaging";
 import { UNASSIGNED_PROPERTY_ID } from "../constants/unassignedProperty";
+import { amountToCents } from "./amountToCents";
 import type { DrillDownFilter } from "../types/analytics/drill-down-filter";
 import type { Transaction } from "../types/transaction/transaction";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
@@ -48,12 +49,10 @@ export function filterDrillDownTransactions(transactions: readonly Transaction[]
   return rows;
 }
 
-/** What the rows add up to; amounts can arrive as text. */
+/** What the rows add up to, summed in whole cents so amounts that cancel give exactly zero; amounts can arrive as text. */
 export function drillDownTotal(transactions: readonly Transaction[]): number {
-  return transactions.reduce((sum, transaction) => {
-    const amount = typeof transaction.amount === "string" ? parseFloat(transaction.amount) || 0 : transaction.amount;
-    return sum + amount;
-  }, 0);
+  const cents = transactions.reduce((sum, transaction) => sum + amountToCents(String(transaction.amount)), 0);
+  return cents === 0 ? 0 : cents / 100;
 }
 
 /** The server stops at its limit, so a list that long may be missing rows. */

@@ -6,7 +6,7 @@ import { Text, View } from "react-native";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxReportView } from "../../types/TaxReportView";
 import PickerField from "../transactions/PickerField";
-import { spokenMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { spokenSignedMoney } from "../transactions/transactionDisplay";
 import { hasW2Income, taxReportHeadline } from "@mybookkeeper/api-client/utils/taxReportTotals";
 import { hasTaxData, toCents, uncategorizedCents } from "./taxReportDisplay";
 
@@ -42,7 +42,7 @@ export default function TaxReportHeader({
         <>
           <View
             accessible
-            accessibilityLabel={`${MESSAGES.netIncome}, ${spokenSignedMoney(net)}. ${MESSAGES.revenue} ${spokenMoney(summary.gross_revenue)}. ${MESSAGES.deductions} ${spokenMoney(summary.total_deductions)}. ${hasW2Income(summary) ? `${MESSAGES.totalIncomeWithWages} ${spokenMoney(taxReportHeadline(summary).amount)}. ` : ""}${MESSAGES.approvedOnly}`}
+            accessibilityLabel={`${MESSAGES.netIncome}, ${spokenSignedMoney(net)}. ${MESSAGES.revenue} ${spokenSignedMoney(summary.gross_revenue)}. ${MESSAGES.deductions} ${spokenSignedMoney(summary.total_deductions)}. ${hasW2Income(summary) ? `${MESSAGES.totalIncomeWithWages} ${spokenSignedMoney(taxReportHeadline(summary).amount)}. ` : ""}${MESSAGES.approvedOnly}`}
             style={{ gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}
           >
             <Text style={muted}>{MESSAGES.netIncome}</Text>
@@ -68,7 +68,7 @@ export default function TaxReportHeader({
         />
       ) : null}
       {summary && hasW2Income(summary) ? (
-        <View accessible accessibilityLabel={`${MESSAGES.wages}, ${spokenMoney(summary.w2_total)}. ${MESSAGES.wagesNote}`} style={{ gap: spacing.xs }}>
+        <View accessible accessibilityLabel={`${MESSAGES.wages}, ${spokenSignedMoney(summary.w2_total)}. ${MESSAGES.wagesNote}`} style={{ gap: spacing.xs }}>
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
             {MESSAGES.wages} {formatCurrency(summary.w2_total)}
           </Text>
