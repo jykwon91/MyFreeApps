@@ -10,7 +10,7 @@ import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/F
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
 import { taxFieldSourceMode } from "@mybookkeeper/api-client/utils/taxFieldSourceMode";
 import { parseTaxFieldOverride, taxFieldEditText, taxFieldOverrideProblems } from "@mybookkeeper/api-client/utils/taxFieldOverride";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { VALIDATION_ICONS, SOURCE_BADGES } from "@/shared/lib/tax-form-config";
 
 function resolveFieldSourceBadge(

@@ -12,5 +12,7 @@ export const EDUCATION_FIELD_MAX_LENGTH = 100;
 export const EDUCATION_YEAR_MIN = 1950;
 export const EDUCATION_YEAR_MAX = 2100;
 export const EDUCATION_GPA_MAX = 9.99;
+/** The server's GPA column holds two decimals. */
+export const EDUCATION_GPA_MAX_DECIMALS = 2;
 export const SKILL_NAME_MAX_LENGTH = 100;
 export const SCREENING_ANSWER_MAX_LENGTH = 5000;

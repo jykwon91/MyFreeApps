@@ -4,7 +4,7 @@ import type { MortgageRateType } from "../types/mortgage/mortgage-rate-type";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { MORTGAGE_RATE_MAX_DECIMALS } from "../constants/mortgageFieldLimits";
 import { moneyTextToCents } from "./moneyTextToCents";
-import { normalizeDecimalText } from "./normalizeDecimalText";
+import { normalizeDecimalText } from "@platform/core/utils/normalizeDecimalText";
 
 /**
  * Conversion between the mortgage form's text state and the API shape.
@@ -62,7 +62,7 @@ export function toMortgagePayload(values: MortgageFormValues, decimalSeparator: 
     lender: textOrNull(values.lender),
     account_number: textOrNull(values.accountNumber),
     // Blank, or text the form check already refused, is no rate rather than a guessed one.
-    interest_rate: normalizeDecimalText(values.interestRate, decimalSeparator, MORTGAGE_RATE_MAX_DECIMALS) || null,
+    interest_rate: normalizeDecimalText(values.interestRate, decimalSeparator, { maxDecimals: MORTGAGE_RATE_MAX_DECIMALS }) || null,
     fixed_until: rateType === "arm" ? values.fixedUntil || null : null,
     current_balance_cents: centsOrNull(values.balanceDollars, decimalSeparator),
     statement_date: values.statementDate || null,

@@ -29,12 +29,17 @@ describe("what the form asks for", () => {
   });
 
   it("flags a missing required field and a number that can't be read, each on its own field", () => {
-    expect(prefillProblems(items, {})).toEqual({ rent: "required" });
-    expect(prefillProblems(items, { rent: "lots" })).toEqual({ rent: "not_a_number" });
-    expect(prefillProblems(items, { rent: "$1,500.00", note: "anything" })).toEqual({});
+    expect(prefillProblems(items, {}, ".")).toEqual({ rent: "required" });
+    expect(prefillProblems(items, { rent: "lots" }, ".")).toEqual({ rent: "not_a_number" });
+    expect(prefillProblems(items, { rent: "$1,500.00", note: "anything" }, ".")).toEqual({});
   });
 
   it("lets an optional number stay blank", () => {
-    expect(prefillProblems([anItem({ required: false })], { rent: "" })).toEqual({});
+    expect(prefillProblems([anItem({ required: false })], { rent: "" }, ".")).toEqual({});
+  });
+
+  it("reads a number written with the keypad's decimal comma", () => {
+    expect(prefillProblems(items, { rent: "1.500,50" }, ",")).toEqual({});
+    expect(prefillProblems(items, { rent: "1.500,50" }, ".")).toEqual({ rent: "not_a_number" });
   });
 });

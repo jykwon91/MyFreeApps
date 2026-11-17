@@ -1,3 +1,4 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { MergedPlaceholder } from "../types/lease/merged-placeholder";
 import type { PlaceholderEdits } from "../types/lease/placeholder-edits";
 import type { PlaceholderProvenance } from "../types/lease/placeholder-provenance";
@@ -25,9 +26,16 @@ export function missingRequired(fields: readonly MergedPlaceholder[], edits: Pla
   return fields.filter((field) => field.placeholder.required && !placeholderValue(field, edits).trim());
 }
 
-/** A number typed in that can't be read: sent as it is, the lease would print something nobody meant. */
-export function unreadableNumbers(fields: readonly MergedPlaceholder[], edits: PlaceholderEdits): MergedPlaceholder[] {
-  return fields.filter((field) => placeholderNumberUnreadable(field.placeholder, placeholderValue(field, edits)));
+/**
+ * A number typed in that can't be read: sent as it is, the lease would print something nobody meant.
+ * `decimalSeparator` is the one the person's keypad types.
+ */
+export function unreadableNumbers(
+  fields: readonly MergedPlaceholder[],
+  edits: PlaceholderEdits,
+  decimalSeparator: DecimalSeparator,
+): MergedPlaceholder[] {
+  return fields.filter((field) => placeholderNumberUnreadable(field.placeholder, placeholderValue(field, edits), decimalSeparator));
 }
 
 /** Only the current fields are sent, so an edit to a field that is gone never reaches the server. */

@@ -18,6 +18,9 @@ import type { SentRequest } from "@platform/mobile/test-support/types/SentReques
 import { workHistoryRecord } from "../test-support/workHistoryRecord";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
@@ -49,6 +52,7 @@ beforeEach(() => {
   storeSession();
   jest.clearAllMocks();
   store.dispatch(baseApi.util.resetApiState());
+  mockDecimalSeparator = ".";
 });
 
 /** Opens a date field's picker, turns it to `date`, and closes it again. */
@@ -286,12 +290,40 @@ describe("education", () => {
 
     expect(await screen.findByText(PROBLEMS.schoolRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.year, SHOWN)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.gpa, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.gpa("."), SHOWN)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.startYearLabel), "2018");
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.endYearLabel), "2014");
     expect(await screen.findByText(PROBLEMS.endYearBeforeStart, SHOWN)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([]);
+  });
+
+  it("takes a GPA typed with a decimal comma on a phone that uses one, and sends it with \".\"", async () => {
+    mockDecimalSeparator = ",";
+    const sent = serve(profileRoutes());
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: EDUCATION.add }));
+    await fireEvent.changeText(screen.getByLabelText(`${EDUCATION.schoolLabel}, required`), "Tech Institute");
+    await fireEvent.changeText(screen.getByLabelText(EDUCATION.gpaLabel), "3,8,5");
+    await fireEvent.press(screen.getByRole("button", { name: EDUCATION.create }));
+    expect(await screen.findByText("Enter a GPA from 0 to 9,99, like 3,8.", SHOWN)).toBeTruthy();
+    expect(sentTo(sent, "POST /education")).toEqual([]);
+
+    await fireEvent.changeText(screen.getByLabelText(EDUCATION.gpaLabel), "3,85");
+    await fireEvent.press(screen.getByRole("button", { name: EDUCATION.create }));
+    expect(await screen.findByText(EDUCATION.created)).toBeTruthy();
+    expect(sentTo(sent, "POST /education")).toEqual([{ school: "Tech Institute", degree: null, field: null, start_year: null, end_year: null, gpa: "3.85" }]);
+  });
+
+  it("saves a GPA the server sent with \".\" unchanged on a decimal-comma phone", async () => {
+    mockDecimalSeparator = ",";
+    const sent = serve(profileRoutes({ education: [STATE] }));
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: `${PROFILE.edit} State University` }));
+    await fireEvent.changeText(screen.getByLabelText(EDUCATION.degreeLabel), "M.S.");
+    await fireEvent.press(screen.getByRole("button", { name: PROFILE.saveChanges }));
+    expect(await screen.findByText(EDUCATION.updated)).toBeTruthy();
+    expect(sentTo(sent, "PATCH /education/ed-1")).toEqual([expect.objectContaining({ gpa: "3.80" })]);
   });
 
   it("edits a school from what's saved, and shows the change", async () => {

@@ -7,7 +7,7 @@ import {
 } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { graceDaysFromText, graceDaysToText } from "@mybookkeeper/api-client/utils/rentScheduleForm";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 

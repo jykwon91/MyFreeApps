@@ -12,7 +12,7 @@ import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/tra
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import TransactionFieldError from "@/app/features/transactions/TransactionFieldError";
 
 export interface ManualEntryFormProps {

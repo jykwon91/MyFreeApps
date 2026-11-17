@@ -62,7 +62,7 @@ describe("EducationDialog — shared validation", () => {
     renderDialog();
     await submitWithGpa("3.855");
 
-    expect(await screen.findByText(PROFILE_FORM_PROBLEMS.gpa)).toBeInTheDocument();
+    expect(await screen.findByText(PROFILE_FORM_PROBLEMS.gpa("."))).toBeInTheDocument();
     expect(createTrigger).not.toHaveBeenCalled();
   });
 
@@ -71,6 +71,6 @@ describe("EducationDialog — shared validation", () => {
     await submitWithGpa("3.85");
 
     await waitFor(() => expect(createTrigger).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText(PROFILE_FORM_PROBLEMS.gpa)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_FORM_PROBLEMS.gpa("."))).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
 import { benchmarkFormPayload, benchmarkFormProblems, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";

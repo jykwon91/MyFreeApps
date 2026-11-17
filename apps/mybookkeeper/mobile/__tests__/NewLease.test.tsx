@@ -25,6 +25,9 @@ import { aLease } from "../test-support/aLease";
 import { holdWrites } from "../test-support/holdWrites";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
@@ -189,6 +192,7 @@ beforeEach(() => {
   testStore.dispatch(workspaceChosen("w1"));
   alert.mockReset();
   alert.mockImplementation(() => undefined);
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -409,7 +413,7 @@ describe("what goes in the lease", () => {
     await openDetails();
     await fireEvent.changeText(await screen.findByLabelText("Deposit"), "one thousand");
     await pressCreate();
-    expect(screen.getAllByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number, SHOWN)).toHaveLength(1);
+    expect(screen.getAllByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number("."), SHOWN)).toHaveLength(1);
     expect(screen.getByText(MESSAGES.needMoreAnswers)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
 
@@ -417,6 +421,21 @@ describe("what goes in the lease", () => {
     await pressCreate();
     await screen.findByText("lease-new1");
     expect(sent(server.creates[0]).values).toEqual({ Rent: "1,500.50", Deposit: "$1,000" });
+  });
+
+  it("reads a number typed with a decimal comma on a phone that uses one, and sends it as typed", async () => {
+    mockDecimalSeparator = ",";
+    const server = startServer({ fields: [aField("Rent", { type: "number", value: "1500.00" }), aField("Deposit", { type: "number" })] });
+    await openDetails();
+    await fireEvent.changeText(await screen.findByLabelText("Deposit"), "one thousand");
+    await pressCreate();
+    expect(screen.getByText("That isn't a number I can read. Use digits, like 1500 or 1.500,50.", SHOWN)).toBeTruthy();
+    expect(server.creates).toHaveLength(0);
+
+    await fireEvent.changeText(screen.getByLabelText("Deposit"), "1.000,50");
+    await pressCreate();
+    await screen.findByText("lease-new1");
+    expect(sent(server.creates[0]).values).toEqual({ Rent: "1500.00", Deposit: "1.000,50" });
   });
 
   it("doesn't ask for what is worked out when the files are made, and says so", async () => {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
 import { localToday } from "@platform/core/utils/localToday";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,

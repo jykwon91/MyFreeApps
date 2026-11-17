@@ -1,3 +1,4 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { LeaseTemplatePlaceholder } from "../types/lease/lease-template-placeholder";
 import type { PlaceholderDefault } from "../types/lease/placeholder-default";
 import type { MergedPlaceholder } from "../types/lease/merged-placeholder";
@@ -17,9 +18,13 @@ export function computedFields(fields: readonly MergedPlaceholder[]): MergedPlac
 }
 
 /** A typed number that can't be read, to flag on its own field. Blank is the required check's to judge. */
-export function placeholderNumberUnreadable(placeholder: LeaseTemplatePlaceholder, value: string): boolean {
+export function placeholderNumberUnreadable(
+  placeholder: LeaseTemplatePlaceholder,
+  value: string,
+  decimalSeparator: DecimalSeparator,
+): boolean {
   const trimmed = value.trim();
-  return placeholder.input_type === "number" && trimmed !== "" && !isReadableLeaseNumber(trimmed);
+  return placeholder.input_type === "number" && trimmed !== "" && !isReadableLeaseNumber(trimmed, decimalSeparator);
 }
 
 /** A single template's placeholders in the merged shape, each carrying its pulled default. */

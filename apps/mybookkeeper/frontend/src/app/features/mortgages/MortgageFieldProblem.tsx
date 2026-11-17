@@ -2,7 +2,7 @@ import { mortgageProblemMessages } from "@mybookkeeper/api-client/constants/mort
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import FieldProblem from "@/shared/components/FieldProblem";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { fieldProblemId } from "@/shared/utils/field-problem-aria";
 
 export interface MortgageFieldProblemProps {

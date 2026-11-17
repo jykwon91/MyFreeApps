@@ -12,7 +12,7 @@ import type { UtilityPlanFormProblems } from "../types/utility/utility-plan-form
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
-import { normalizeDecimalText } from "./normalizeDecimalText";
+import { normalizeDecimalText } from "@platform/core/utils/normalizeDecimalText";
 
 /**
  * Conversions between a utility plan and the form that edits it.
@@ -169,7 +169,7 @@ const WHOLE = /^\d+$/;
 
 /** A rate in cents as the payload sends it and the form checks it: "" when blank, undefined when unreadable. */
 function rateText(value: string, decimalSeparator: DecimalSeparator): string | undefined {
-  return normalizeDecimalText(value, decimalSeparator, UTILITY_PLAN_RATE_MAX_DECIMALS);
+  return normalizeDecimalText(value, decimalSeparator, { maxDecimals: UTILITY_PLAN_RATE_MAX_DECIMALS });
 }
 
 /** A filled rate field the payload would silently turn into null, wiping what was stored. */

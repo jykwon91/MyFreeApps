@@ -10,7 +10,7 @@ import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
 import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
-import { FormField, FormSheet, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { EDUCATION_MESSAGES as MESSAGES } from "../../constants/profileEducation";
@@ -28,7 +28,8 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
   const [values, setValues] = useState<EducationFormValues>(initial);
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const problems = hasTried ? educationFormProblems(values) : {};
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
+  const problems = hasTried ? educationFormProblems(values, decimalSeparator) : {};
 
   function change(field: keyof EducationFormValues) {
     return (value: string) => setValues((current) => ({ ...current, [field]: value }));
@@ -36,9 +37,9 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
 
   async function save(): Promise<void> {
     setHasTried(true);
-    if (Object.keys(educationFormProblems(values)).length > 0) return;
+    if (Object.keys(educationFormProblems(values, decimalSeparator)).length > 0) return;
     setFailure(null);
-    const body = educationRequest(values);
+    const body = educationRequest(values, decimalSeparator);
     try {
       if (existing) await updateEducation({ id: existing.id, patch: body }).unwrap();
       else await createEducation(body).unwrap();

@@ -28,6 +28,9 @@ import { holdWrites } from "../test-support/holdWrites";
 import { aPrefillItem, type FakeLeaseWritesServer, lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
@@ -91,6 +94,7 @@ beforeEach(() => {
   testStore.dispatch(workspaceChosen("w1"));
   alert.mockReset();
   alert.mockImplementation(() => undefined);
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -285,7 +289,7 @@ describe("filling in what the documents need", () => {
     await fireEvent.changeText(screen.getByLabelText("Rent"), "about 1600");
     await make();
     expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required, SHOWN)).toBeTruthy();
-    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number("."), SHOWN)).toBeTruthy();
     expect(lastRequest(server, "post", "/templates")).toBeUndefined();
 
     await fireEvent.changeText(screen.getByLabelText("Tenant name, required"), "Dana");
@@ -293,6 +297,16 @@ describe("filling in what the documents need", () => {
     await make();
     await screen.findByText("lease-page-l1");
     expect(sent(server, "post", "/signed-leases/l1/templates").values.Rent).toBe("$1,600.50");
+  });
+
+  it("reads a number typed with a decimal comma on a phone that uses one", async () => {
+    mockDecimalSeparator = ",";
+    const server = startLeaseWritesServer({ prefill: items });
+    await openValues();
+    await fireEvent.changeText(await screen.findByLabelText("Rent"), "1600,50");
+    await make();
+    await screen.findByText("lease-page-l1");
+    expect(sent(server, "post", "/signed-leases/l1/templates").values.Rent).toBe("1600,50");
   });
 
   it("shows a value already on a locked lease read-only, with the reason", async () => {
