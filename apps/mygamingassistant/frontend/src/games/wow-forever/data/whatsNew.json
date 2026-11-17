@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "MGA Buffs: no more \"stopped checking\" error",
+    "summary": "Where the game hides buff details from addons, MGA Buffs used to stop with a \"GetAuraDataByIndex: Auras cannot be accessed when secret\" error. Now it says once that the game is hiding buffs there, pauses the buff reminders instead of guessing, and picks up again by itself. Download the addon again to get it.",
+    "to": "/wow-forever/macros"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Drop-only recipes: can you buy it?",
     "summary": "A new filter on Drop-only recipes shows only the recipes you can buy on the Auction House, or only the bind-on-pickup ones you have to loot yourself.",
     "to": "/wow-forever/recipe-drops"

@@ -8,7 +8,9 @@
  * for a groupmate too far away (UnitInRange), `now` (GetTime) and `combat`,
  * then `fire(event, ...)` and `tick()` (the addon's ticker). A buff is
  * `{ name, icon, expires, source, spellId }`. `knownSpells[id] = false`
- * unlearns a spell. `C_UnitAuras = nil` leaves only
+ * unlearns a spell. `units.<unit>.secret = true` makes the client refuse that unit's aura
+ * read the way Forever does when it hides auras; a buff whose name is `SECRET` comes back as a
+ * secret value (issecretvalue). `C_UnitAuras = nil` leaves only
  * the older UnitBuff. Lines go into `out`: "row: ..." for each list row it
  * draws, "hidden" when the list hides, "flash: ..." for a mid-screen message,
  * "sound", "chat: ...", and "options: ..." for the options window. `clear()`
@@ -60,8 +62,12 @@ end
 function GetNumGroupMembers() return group == "raid" and members("raid") or members("party") + 1 end
 function GetNumSubgroupMembers() return members("party") end
 
+SECRET = {}
+function issecretvalue(v) return v == SECRET end
+
 C_UnitAuras = {
   GetAuraDataByIndex = function(u, i)
+    if units[u] and units[u].secret then error("Auras cannot be accessed when secret while tainted by 'MGABuffs'") end
     local b = units[u] and units[u].buffs[i]
     if not b then return nil end
     return { name = b.name, icon = b.icon, expirationTime = b.expires, sourceUnit = b.source, spellId = b.spellId }
