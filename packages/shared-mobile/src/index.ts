@@ -144,6 +144,7 @@ export type { OptionRowProps } from "./types/OptionRowProps";
 export type { OptionSheetProps } from "./types/OptionSheetProps";
 export type { PickerFieldProps } from "./types/PickerFieldProps";
 export type { PinnedBarProps } from "./types/PinnedBarProps";
+export type { RegistrationMode } from "./types/RegistrationMode";
 export type { RemovalMessages } from "./types/RemovalMessages";
 export type { RemovalOptions } from "./types/RemovalOptions";
 export type { SearchFieldProps } from "./types/SearchFieldProps";

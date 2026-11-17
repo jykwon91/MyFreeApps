@@ -4,6 +4,7 @@ import { resendVerificationEmail } from "../auth/mobileAuthApi";
 import { SessionContext } from "../auth/SessionContext";
 import SignInScreen from "../components/SignInScreen";
 import type { MobileSession } from "../types/MobileSession";
+import type { RegistrationMode } from "../types/RegistrationMode";
 import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
 import { SHOWN } from "../../test-support/shown";
@@ -41,10 +42,11 @@ async function renderScreen(
   signIn: jest.Mock<Promise<SignInResult>>,
   onSignedIn = jest.fn(),
   initial: SessionState = SIGNED_OUT,
+  registration?: RegistrationMode,
 ) {
   await render(
     <SessionContext.Provider value={fakeSession(signIn, initial)}>
-      <SignInScreen appName="MyRecipes" onSignedIn={onSignedIn} webBaseUrl="https://web.test" />
+      <SignInScreen appName="MyRecipes" onSignedIn={onSignedIn} registration={registration} webBaseUrl="https://web.test" />
     </SessionContext.Provider>,
   );
   return onSignedIn;
@@ -161,6 +163,13 @@ describe("SignInScreen", () => {
     await fireEvent.press(screen.getByRole("link", { name: /Forgot your password/ }));
     await fireEvent.press(screen.getByRole("link", { name: /Create an account/ }));
     expect(open.mock.calls).toEqual([["https://web.test/forgot-password"], ["https://web.test/register"]]);
+  });
+
+  it("explains an invite-only app instead of linking to a sign-up page", async () => {
+    await renderScreen(jest.fn(), jest.fn(), SIGNED_OUT, "invite_only");
+    expect(screen.getByText("MyRecipes is invite-only. Use the link in your invite email to create an account.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Create an account/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Forgot your password/ })).toBeTruthy();
   });
 
   it("says so when the phone can't open the website", async () => {
