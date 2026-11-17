@@ -3,6 +3,20 @@ import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/pro
 import type { EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { EnchantSlotTarget } from "@/games/wow-forever/types/guild/enchantSlotTarget";
+import type { GuildHelpMode } from "@/games/wow-forever/types/guild/guildHelpMode";
+import type { GuildMatchType } from "@/games/wow-forever/types/guild/guildMatch";
+
+/** The PvE / PvP chips. */
+export const HELP_MODES: readonly GuildHelpMode[] = ["pve", "pvp"];
+export const HELP_MODE_LABELS: Readonly<Record<GuildHelpMode, string>> = { pve: "PvE", pvp: "PvP" };
+
+/** All filter values for the match-type chip. */
+export const HELP_TYPES: readonly (GuildMatchType | "all")[] = ["all", "enchant", "gear"];
+export const HELP_TYPE_LABELS: Readonly<Record<GuildMatchType | "all", string>> = {
+  all: "All",
+  enchant: "Enchants",
+  gear: "Gear upgrades",
+};
 
 /**
  * Score must be this many percent better than worn to count as an upgrade.
@@ -27,6 +41,12 @@ export const NO_HELP_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
 /** The Help each other tab's words. */
 export const GUILD_HELP_TEXT = {
   madeByLabel: "Made by",
+  modeLabel: "Score gear for",
+  /** Under the PvE / PvP chips. WoW Forever hasn't published stat weights, so both modes say where theirs come from. */
+  weightsNote: {
+    pve: "Upgrades are scored with Classic stat weights. WoW Forever hasn't published its own, so treat these as a guide.",
+    pvp: "PvP scores are estimates built on Classic stat weights: they count Stamina as much as your best main stat, since Classic PvP guides rank Stamina first. WoW Forever hasn't published its own.",
+  },
   madeByAnyone: "Anyone",
   forLabel: "Help for",
   forEveryone: "Everyone",

@@ -21,6 +21,7 @@ import type { CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { BestEnchant } from "@/games/wow-forever/types/guild/bestEnchant";
 import type { GuildHelpEquippedItem } from "@/games/wow-forever/types/guild/guildHelpEquippedItem";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
+import type { GuildHelpMode } from "@/games/wow-forever/types/guild/guildHelpMode";
 import type { GuildMatch, GuildMatchBeneficiary, GuildMatchCrafter } from "@/games/wow-forever/types/guild/guildMatch";
 import type { ScoredEnchant } from "@/games/wow-forever/types/guild/scoredEnchant";
 
@@ -72,13 +73,14 @@ function isBetter(value: number, skill: number, slug: string, spell: number, ben
  * Compute all enchant matches from the members' stored sheets and the
  * Enchanting crafting file. `itemsById` gives worn weapons' speed, so flat
  * weapon damage can be weighed as DPS. `crafters` (default: every member)
- * limits whose enchants count.
+ * limits whose enchants count; `mode` picks PvE or PvP weights.
  */
 export function computeEnchantMatches(
   members: readonly GuildHelpMember[],
   enchantingFile: Pick<CraftingFile, "recipes">,
   itemsById: ReadonlyMap<number, ClientItem>,
   crafters: readonly GuildHelpMember[] = members,
+  mode: GuildHelpMode = "pve",
 ): GuildMatch[] {
   // Spell → enchant recipe, only for enchants whose effect a stat weight can score.
   const enchantBySpell = new Map<number, ScoredEnchant>();
@@ -91,7 +93,7 @@ export function computeEnchantMatches(
 
   const weightsCache = new Map<string, StatWeights | null>();
   const weightsFor = (member: GuildHelpMember) => {
-    if (!weightsCache.has(member.slug)) weightsCache.set(member.slug, guildHelpWeights(member));
+    if (!weightsCache.has(member.slug)) weightsCache.set(member.slug, guildHelpWeights(member, mode));
     return weightsCache.get(member.slug) ?? null;
   };
 

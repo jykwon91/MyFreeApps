@@ -29,7 +29,7 @@ interface GuildHelpTabProps {
 export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
   const [params, setParams] = useSearchParams();
   const filters = helpFiltersFromParams(params);
-  const { type, forSlug, bySlug } = filters;
+  const { type, mode, forSlug, bySlug } = filters;
 
   const update = useCallback(
     (next: GuildHelpFilters) => setParams(buildHelpParams(params, next), { replace: true }),
@@ -61,12 +61,12 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     const enchantingFile = craftingState.files.get(PROFESSION_SKILL_LINES.enchanting);
     // Without the item list, weapon speeds are unknown, so flat weapon damage isn't weighed.
     const enchantMatches = enchantingFile
-      ? computeEnchantMatches(members, enchantingFile, itemList?.byId ?? NO_HELP_ITEMS, crafters)
+      ? computeEnchantMatches(members, enchantingFile, itemList?.byId ?? NO_HELP_ITEMS, crafters, mode)
       : [];
-    const gearMatches = itemList ? computeGearMatches(members, craftingState.files, itemList, crafters) : [];
+    const gearMatches = itemList ? computeGearMatches(members, craftingState.files, itemList, crafters, mode) : [];
 
     return [...enchantMatches, ...gearMatches];
-  }, [isReady, craftingState.files, members, itemsState, crafters]);
+  }, [isReady, craftingState.files, members, itemsState, crafters, mode]);
 
   const filtered = useMemo<GuildMatch[]>(() => {
     return allMatches.filter((m) => {
@@ -102,6 +102,9 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     <section className="space-y-4 rounded-xl border bg-card/50 p-3 sm:p-4" aria-label="Help each other">
       <h2 className="text-lg font-semibold">Help each other</h2>
       <GuildHelpFilterBar members={members} filters={filters} onChange={update} />
+      <p className="text-sm text-muted-foreground" data-testid="help-weights-note">
+        {GUILD_HELP_TEXT.weightsNote[mode]}
+      </p>
       {crafterName && filtered.length > 0 && (
         <p className="text-sm font-medium" data-testid="help-made-by-summary">
           {GUILD_HELP_TEXT.madeBySummary(crafterName, helped)}

@@ -14,20 +14,22 @@
  */
 import { blizzardSlotLabel } from "@/games/wow-forever/lib/guild/blizzardSlotLabel";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
-import { LEVELING_SPEC_ID } from "@/games/wow-forever/data/classes";
+import { LEVELING_SPEC_ID, roleFor } from "@/games/wow-forever/data/classes";
 import { UPGRADE_THRESHOLD_PCT } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
 import { BLIZZARD_SLOT_FOR, PAIRED_BLIZZARD_SLOTS } from "@/games/wow-forever/data/itemCompare/blizzardSlots";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { canEquip, canWear } from "@/games/wow-forever/gear/gearFilters";
-import { scorer } from "@/games/wow-forever/gear/rankGear";
+import { weightsScorer } from "@/games/wow-forever/gear/rankGear";
 import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessions";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
 import { resolveHelpSpecId } from "@/games/wow-forever/lib/guild/guildHelpSpec";
+import { guildHelpWeights } from "@/games/wow-forever/lib/guild/guildHelpWeights";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { GuildHelpEquippedItem } from "@/games/wow-forever/types/guild/guildHelpEquippedItem";
+import type { GuildHelpMode } from "@/games/wow-forever/types/guild/guildHelpMode";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
 import type { GuildMatch, GuildMatchBeneficiary, GuildMatchCrafter } from "@/games/wow-forever/types/guild/guildMatch";
 
@@ -130,12 +132,14 @@ function upgradePct(craftedScore: number, wornScore: number): number {
  * with the best score improvement. Items not in items.json are skipped.
  * `crafters` (default: every member) limits whose recipes count, so one
  * member's best offer per slot shows even when a guild mate's is better.
+ * `mode` picks PvE or PvP weights (`guildHelpWeights`).
  */
 export function computeGearMatches(
   members: readonly GuildHelpMember[],
   craftingFiles: ReadonlyMap<number, Pick<CraftingFile, "recipes">>,
   itemList: ClientItemList,
   crafters: readonly GuildHelpMember[] = members,
+  mode: GuildHelpMode = "pve",
 ): GuildMatch[] {
   const { byId, clientBuild } = itemList;
 
@@ -151,21 +155,19 @@ export function computeGearMatches(
   if (gearBySpell.size === 0) return [];
 
   // Per-beneficiary scorer, keyed by "{classId}|{specId}" to handle guild mates
-  // of the same class who specced differently.  Uses the beneficiary's real spec
-  // when it can be resolved from their talent trees; falls back to leveling weights.
+  // of the same class who specced differently. Uses the beneficiary's real spec
+  // when it can be resolved from their talent trees, else leveling weights (guildHelpWeights).
   const scorerCache = new Map<string, (item: ClientItem) => number>();
   function scorerFor(member: GuildHelpMember): ((item: ClientItem) => number) | null {
     const classId = member.class_name ? characterClassId(member.class_name) : null;
     if (!classId) return null;
-    const specId = resolveHelpSpecId(member.talents);
-    // specId null → use leveling weights; non-null → use spec's level60 weights
-    // (resolveWeights falls back to leveling if no Pawn entry exists for the spec).
-    const cacheKey = specId !== null ? `${classId}|${specId}` : classId;
+    const specId = resolveHelpSpecId(member.talents) ?? LEVELING_SPEC_ID;
+    const cacheKey = `${classId}|${specId}`;
     const cached = scorerCache.get(cacheKey);
     if (cached) return cached;
-    const fn = specId !== null
-      ? scorer({ classId, specId }, false)
-      : scorer({ classId, specId: LEVELING_SPEC_ID }, true);
+    const weights = guildHelpWeights(member, mode);
+    if (!weights) return null;
+    const fn = weightsScorer(weights, roleFor(classId, specId));
     const wrapped = (item: ClientItem) => fn(item, clientBuild);
     scorerCache.set(cacheKey, wrapped);
     return wrapped;
