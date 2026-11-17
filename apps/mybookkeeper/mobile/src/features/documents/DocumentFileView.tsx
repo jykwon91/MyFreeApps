@@ -48,6 +48,8 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
     return (
       <Image
         accessibilityLabel={`Photo of ${document.file_name ?? "this document"}`}
+        accessibilityRole="image"
+        accessible
         key={imageAttempt}
         onError={() => void retryImage()}
         resizeMode="contain"

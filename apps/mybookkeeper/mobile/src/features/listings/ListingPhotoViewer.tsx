@@ -51,7 +51,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
         </Text>
         {failure ? <Banner message={failure} /> : null}
         {url ? (
-          <Image accessibilityIgnoresInvertColors accessibilityLabel={photoLabel(index, photos.length, photo.caption, [])} resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
+          <Image accessibilityIgnoresInvertColors accessibilityLabel={photoLabel(index, photos.length, photo.caption, [])} accessibilityRole="image" accessible resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
         ) : (
           <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.unavailableDetail}</Text>
         )}

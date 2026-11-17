@@ -12,6 +12,7 @@ export default function PhotoPreview({ photo, problem, onExtract, onChooseAgain 
       {problem ? <Banner message={problem} /> : null}
       <Image
         accessibilityLabel={MESSAGES.previewLabel}
+        accessibilityRole="image"
         accessible
         resizeMode="contain"
         source={{ uri: photo.uri }}
