@@ -13,10 +13,10 @@ export default function CameraRoute() {
   const canWrite = useCanWrite();
   const isAllowed = useHasAiPermission();
   if (!canWrite) return <Redirect href="/money" />;
-  if (isAllowed) return <CaptureScreen />;
+  // The route is a headerless full-screen modal, so this is the one place every state clears the status bar and home indicator.
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <AiPermissionPanel onNotNow={() => router.dismissTo("/money")} />
+    <View testID="camera-route" style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      {isAllowed ? <CaptureScreen /> : <AiPermissionPanel onNotNow={() => router.dismissTo("/money")} />}
     </View>
   );
 }
