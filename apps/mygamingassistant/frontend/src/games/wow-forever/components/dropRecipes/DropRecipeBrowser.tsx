@@ -8,6 +8,7 @@ import { DROP_RECIPE_PROFESSIONS, DROP_RECIPES_TEXT } from "@/games/wow-forever/
 import { useKnownDropRecipes } from "@/games/wow-forever/hooks/useKnownDropRecipes";
 import { useRecentCharacters } from "@/games/wow-forever/hooks/useRecentCharacters";
 import { dropRecipeFiltersFromParams, dropRecipeParams } from "@/games/wow-forever/lib/dropRecipes/dropRecipeParams";
+import { emptyDropRecipesMessage } from "@/games/wow-forever/lib/dropRecipes/emptyDropRecipesMessage";
 import { dropRecipeProfessions, selectDropRecipes } from "@/games/wow-forever/lib/dropRecipes/selectDropRecipes";
 import type { DropRecipe } from "@/games/wow-forever/types/dropRecipes/dropRecipe";
 import type { DropRecipeFilters } from "@/games/wow-forever/types/dropRecipes/dropRecipeFilters";
@@ -55,7 +56,7 @@ export default function DropRecipeBrowser({ recipes, faction }: DropRecipeBrowse
           ))}
         </ul>
       ) : (
-        <EmptyStateNote message={DROP_RECIPES_TEXT.empty} />
+        <EmptyStateNote message={emptyDropRecipesMessage(recipes, filters)} />
       )}
     </div>
   );
