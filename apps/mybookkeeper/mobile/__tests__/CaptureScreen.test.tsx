@@ -104,6 +104,7 @@ describe("CaptureScreen", () => {
     const server = acceptUploads();
     await renderScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Take photo" }));
+    expect((await screen.findByLabelText("The photo you just took")).props.accessible).toBe(true);
     await fireEvent.press(await screen.findByRole("button", { name: "Use photo" }));
     expect(await screen.findByRole("button", { name: "Take photo" })).toBeTruthy();
     await waitFor(() => expect(server.names).toHaveLength(1));

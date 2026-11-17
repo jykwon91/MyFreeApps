@@ -90,6 +90,7 @@ describe("DocumentDetailScreen", () => {
   it("shows a photo with the sign-in in the headers, not the address", async () => {
     startFakeServer([aDocument({ file_mime_type: "image/jpeg" })]);
     await renderDetail();
+    expect(screen.getByLabelText(/^Photo of/).props.accessible).toBe(true);
     const source = screen.getByLabelText(/^Photo of/).props.source;
     expect(source.uri).toMatch(/\/documents\/d1\/download$/);
     expect(source.uri).not.toContain("the-token");

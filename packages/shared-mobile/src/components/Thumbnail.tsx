@@ -8,5 +8,7 @@ import type { ThumbnailProps } from "../types/ThumbnailProps";
  * Use it for every small local or remote photo; full-size viewers keep a plain Image.
  */
 export default function Thumbnail(props: ThumbnailProps) {
-  return <Image {...props} resizeMethod="resize" />;
+  // iOS only makes an Image an accessibility element when told to, so a bare label is never read.
+  const isLabelled = Boolean(props.accessibilityLabel ?? props.alt);
+  return <Image accessible={isLabelled} accessibilityRole={isLabelled ? "image" : undefined} {...props} resizeMethod="resize" />;
 }

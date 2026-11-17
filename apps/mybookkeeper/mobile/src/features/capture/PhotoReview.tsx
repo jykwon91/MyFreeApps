@@ -11,7 +11,7 @@ export default function PhotoReview({ uri, onRetake, onUse }: PhotoReviewProps) 
   const { spacing } = useTheme();
   return (
     <View style={{ flex: 1, gap: spacing.md, padding: spacing.lg }}>
-      <Image accessibilityLabel="The photo you just took" resizeMode="contain" source={{ uri }} style={{ flex: 1 }} />
+      <Image accessibilityLabel="The photo you just took" accessibilityRole="image" accessible resizeMode="contain" source={{ uri }} style={{ flex: 1 }} />
       <LoadingButton loadingText="Saving…" onPress={onUse}>
         Use photo
       </LoadingButton>
