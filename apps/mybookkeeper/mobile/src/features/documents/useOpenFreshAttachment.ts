@@ -1,4 +1,4 @@
-import { useToast } from "@platform/mobile";
+import { downloadFailureMessage, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { openAttachmentFile } from "./openDocumentFile";
 
@@ -29,8 +29,8 @@ export function useOpenFreshAttachment<File extends OpenableFile>(
       const url = fresh.find((candidate) => candidate.id === file.id)?.presigned_url;
       if (!url) throw new Error("This file has no link");
       await openAttachmentFile(url, file);
-    } catch {
-      showToast(couldntOpenMessage, "error");
+    } catch (error) {
+      showToast(downloadFailureMessage(error, couldntOpenMessage), "error");
     } finally {
       isOpening.current = false;
       setOpeningId(null);

@@ -16,6 +16,7 @@ export { clearDataExportFiles } from "./utils/dataExportFiles";
 export { deviceDecimalSeparator } from "./utils/deviceDecimalSeparator";
 export { confirmDiscard } from "./utils/confirmDiscard";
 export { discardFile } from "./utils/discardFile";
+export { downloadFailureMessage } from "./utils/downloadFailureMessage";
 export { shareDownloadedFile } from "./utils/shareDownloadedFile";
 
 export { default as AccountDeletedBanner } from "./components/AccountDeletedBanner";

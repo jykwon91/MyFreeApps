@@ -5,6 +5,7 @@ import { DATA_EXPORT_PATH, DATA_EXPORT_SHARE } from "../constants/dataExport";
 import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
 import type { DataExportSource } from "../types/DataExportSource";
 import { dataExportFileName } from "../utils/dataExportFileName";
+import { downloadFailureMessage } from "../utils/downloadFailureMessage";
 import { dataExportFiles } from "../utils/dataExportFiles";
 import { shareDownloadedFile } from "../utils/shareDownloadedFile";
 import { useToast } from "./useToast";
@@ -35,8 +36,8 @@ export function useDataExport(
       });
       // After the sheet closes: expo-sharing can't tell a share from a cancel, so this reports the download.
       showToast(MESSAGES.exported, "success");
-    } catch {
-      showToast(MESSAGES.exportFailed, "error");
+    } catch (error) {
+      showToast(downloadFailureMessage(error, MESSAGES.exportFailed), "error");
     } finally {
       isExporting.current = false;
     }

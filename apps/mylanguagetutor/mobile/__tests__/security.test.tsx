@@ -209,6 +209,17 @@ describe("data & privacy", () => {
     expect(fakeFiles()).toEqual([]);
   });
 
+  it("says why when the export can't reach the server", async () => {
+    jest.spyOn(File, "downloadFileAsync").mockRejectedValueOnce(new Error("The Internet connection appears to be offline."));
+    securityRoutes();
+    await openSecurity();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.exportButton }));
+
+    expect(await screen.findByText("I couldn't reach the server. Check your connection and try again.")).toBeTruthy();
+    expect(share).not.toHaveBeenCalled();
+    expect(fakeFiles()).toEqual([]);
+  });
+
   it("says only that the export failed when the share sheet fails after the download", async () => {
     share.mockRejectedValueOnce(new Error("Sharing isn't available"));
     securityRoutes();

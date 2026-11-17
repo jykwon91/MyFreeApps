@@ -209,6 +209,18 @@ describe("finishing", () => {
     expect(await screen.findByRole("button", { name: MESSAGES.markDone })).toBeEnabled();
   });
 
+  it("says the person was signed out when the download is refused for it", async () => {
+    const download = jest.spyOn(File, "downloadFileAsync").mockRejectedValueOnce(new Error("response has status 401"));
+    await openOnSession(refinementSessionRecord({ status: "completed" }), {}, "resume-complete");
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.downloadPdf }));
+
+    expect(await screen.findByText("You've been signed out. Sign in again, then try once more.")).toBeTruthy();
+    expect(mockShareAsync).not.toHaveBeenCalled();
+    expect(fakeFiles()).toEqual([]);
+    download.mockRestore();
+  });
+
   it("says a download failed, opens no share sheet and leaves no file behind", async () => {
     const download = jest.spyOn(File, "downloadFileAsync").mockRejectedValueOnce(new Error("HTTP 500"));
     await openOnSession(refinementSessionRecord({ status: "completed" }), {}, "resume-complete");

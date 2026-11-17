@@ -1,5 +1,5 @@
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
-import { LoadingButton, useTheme, WebLink } from "@platform/mobile";
+import { downloadFailureMessage, LoadingButton, useTheme, WebLink } from "@platform/mobile";
 import { useState } from "react";
 import { Image, Text, View } from "react-native";
 import { API_BASE_URL, WEB_BASE_URL } from "../../constants/api";
@@ -25,8 +25,8 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
     try {
       await refreshDocument();
       await openDocumentFile(url, document.id, headers());
-    } catch {
-      onError("I couldn't open that file. Want to try again?");
+    } catch (error) {
+      onError(downloadFailureMessage(error, "I couldn't open that file. Want to try again?"));
     }
   }
 

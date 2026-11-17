@@ -157,6 +157,16 @@ describe("exporting transactions from the Money tab", () => {
     expect(await screen.findByText("I couldn't export the PDF. Please try again in a bit.")).toBeTruthy();
   });
 
+  it("says when the export is gone rather than a generic failure", async () => {
+    startTransactionServer([aTransaction()]);
+    jest.spyOn(File, "downloadFileAsync").mockRejectedValueOnce(new Error("response has status: 404"));
+    await renderScreen();
+    await openSheet();
+    await fireEvent.press(screen.getByRole("radio", { name: "CSV spreadsheet" }));
+    expect(await screen.findByText("I couldn't find that file. It may have been removed.")).toBeTruthy();
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  });
+
   it("tells the person when they've hit the hourly export limit", async () => {
     startTransactionServer([aTransaction()]);
     jest.spyOn(File, "downloadFileAsync").mockRejectedValueOnce(new Error("Request failed with status code 429"));
