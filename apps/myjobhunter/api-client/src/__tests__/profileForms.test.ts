@@ -111,34 +111,47 @@ describe("education form", () => {
   });
 
   it("sends blanks as null and years as numbers", () => {
-    expect(educationRequest(SCHOOL)).toEqual({ school: "State", degree: null, field: "Physics", start_year: 2014, end_year: 2018, gpa: "3.85" });
-    expect(educationRequest({ ...SCHOOL, start_year: " ", gpa: "" })).toEqual(expect.objectContaining({ start_year: null, gpa: null }));
+    expect(educationRequest(SCHOOL, ".")).toEqual({ school: "State", degree: null, field: "Physics", start_year: 2014, end_year: 2018, gpa: "3.85" });
+    expect(educationRequest({ ...SCHOOL, start_year: " ", gpa: "" }, ".")).toEqual(expect.objectContaining({ start_year: null, gpa: null }));
   });
 
   it("has no problems with a complete school, or one with only its name", () => {
-    expect(educationFormProblems(SCHOOL)).toEqual({});
-    expect(educationFormProblems({ ...educationFormValues(), school: "State" })).toEqual({});
+    expect(educationFormProblems(SCHOOL, ".")).toEqual({});
+    expect(educationFormProblems({ ...educationFormValues(), school: "State" }, ".")).toEqual({});
   });
 
   it("asks for the school, and limits its length", () => {
-    expect(educationFormProblems({ ...SCHOOL, school: " " })).toEqual({ school: PROBLEMS.schoolRequired });
-    expect(educationFormProblems({ ...SCHOOL, school: "x".repeat(EDUCATION_SCHOOL_MAX_LENGTH + 1) }).school).toBeDefined();
+    expect(educationFormProblems({ ...SCHOOL, school: " " }, ".")).toEqual({ school: PROBLEMS.schoolRequired });
+    expect(educationFormProblems({ ...SCHOOL, school: "x".repeat(EDUCATION_SCHOOL_MAX_LENGTH + 1) }, ".").school).toBeDefined();
   });
 
   it("takes only whole four-digit years in range", () => {
     for (const year of ["1949", "2101", "20.5", "99", "abcd"]) {
-      expect(educationFormProblems({ ...SCHOOL, start_year: year, end_year: "" })).toEqual({ start_year: PROBLEMS.year });
+      expect(educationFormProblems({ ...SCHOOL, start_year: year, end_year: "" }, ".")).toEqual({ start_year: PROBLEMS.year });
     }
-    expect(educationFormProblems({ ...SCHOOL, start_year: "1950", end_year: "2100" })).toEqual({});
+    expect(educationFormProblems({ ...SCHOOL, start_year: "1950", end_year: "2100" }, ".")).toEqual({});
   });
 
   it("catches an end year before the start year", () => {
-    expect(educationFormProblems({ ...SCHOOL, start_year: "2018", end_year: "2014" })).toEqual({ end_year: PROBLEMS.endYearBeforeStart });
+    expect(educationFormProblems({ ...SCHOOL, start_year: "2018", end_year: "2014" }, ".")).toEqual({ end_year: PROBLEMS.endYearBeforeStart });
   });
 
   it("takes a GPA the server can hold: up to two decimals and 9.99", () => {
-    for (const gpa of ["3", "3.8", "9.99", "0"]) expect(educationFormProblems({ ...SCHOOL, gpa })).toEqual({});
-    for (const gpa of ["3.855", "10", "four", "-1", ".5"]) expect(educationFormProblems({ ...SCHOOL, gpa })).toEqual({ gpa: PROBLEMS.gpa });
+    for (const gpa of ["3", "3.8", "9.99", "0", ".5"]) expect(educationFormProblems({ ...SCHOOL, gpa }, ".")).toEqual({});
+    for (const gpa of ["3.855", "10", "four", "-1", "3,8"]) expect(educationFormProblems({ ...SCHOOL, gpa }, ".")).toEqual({ gpa: PROBLEMS.gpa(".") });
+  });
+
+  it("takes a GPA typed with a decimal comma on a keypad that has one, and the server's \".\" form too", () => {
+    for (const gpa of ["3,8", "3,85", "9,99", "3.80"]) expect(educationFormProblems({ ...SCHOOL, gpa }, ",")).toEqual({});
+    for (const gpa of ["3,855", "10", "3,8,5", "-1"]) expect(educationFormProblems({ ...SCHOOL, gpa }, ",")).toEqual({ gpa: PROBLEMS.gpa(",") });
+    expect(PROBLEMS.gpa(",")).toBe("Enter a GPA from 0 to 9,99, like 3,8.");
+    expect(PROBLEMS.gpa(".")).toBe("Enter a GPA from 0 to 9.99, like 3.8.");
+  });
+
+  it("sends the GPA with \".\" whichever mark it was typed with", () => {
+    expect(educationRequest({ ...SCHOOL, gpa: "3,8" }, ",").gpa).toBe("3.8");
+    expect(educationRequest({ ...SCHOOL, gpa: " 3.80 " }, ",").gpa).toBe("3.80");
+    expect(educationRequest({ ...SCHOOL, gpa: ".5" }, ".").gpa).toBe("0.5");
   });
 });
 

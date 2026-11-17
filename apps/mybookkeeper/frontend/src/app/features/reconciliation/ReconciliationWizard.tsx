@@ -19,7 +19,7 @@ import { useCompareWithRecords } from "./useCompareWithRecords";
 import FieldProblem from "@/shared/components/FieldProblem";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { fieldProblemId, problemAria } from "@/shared/utils/field-problem-aria";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";

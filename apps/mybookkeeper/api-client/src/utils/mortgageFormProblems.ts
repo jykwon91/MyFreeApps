@@ -8,7 +8,7 @@ import {
   MORTGAGE_RATE_MAX_DECIMALS,
 } from "../constants/mortgageFieldLimits";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
-import { normalizeDecimalText } from "./normalizeDecimalText";
+import { normalizeDecimalText } from "@platform/core/utils/normalizeDecimalText";
 
 type MoneyField =
   | "balanceDollars"
@@ -35,7 +35,7 @@ function rateProblem(text: string, decimalSeparator: DecimalSeparator): Mortgage
   const rate = normalizeDecimalText(text, decimalSeparator);
   if (rate === "") return undefined;
   if (rate === undefined || !(Number(rate) > 0 && Number(rate) < MORTGAGE_MAX_RATE_PCT)) return "rate_out_of_range";
-  return normalizeDecimalText(text, decimalSeparator, MORTGAGE_RATE_MAX_DECIMALS) === undefined ? "rate_decimals" : undefined;
+  return normalizeDecimalText(text, decimalSeparator, { maxDecimals: MORTGAGE_RATE_MAX_DECIMALS }) === undefined ? "rate_decimals" : undefined;
 }
 
 /** Blank is fine; otherwise the amount must be readable and pass `isAllowed` (cents). */

@@ -23,9 +23,11 @@ describe("lease placeholders", () => {
 
   it("flags only a typed number that can't be read", () => {
     const rent = FIELDS[3].placeholder;
-    expect(placeholderNumberUnreadable(rent, "lots")).toBe(true);
-    expect(placeholderNumberUnreadable(rent, "$1,200")).toBe(false);
-    expect(placeholderNumberUnreadable(rent, "  ")).toBe(false);
-    expect(placeholderNumberUnreadable(FIELDS[0].placeholder, "lots")).toBe(false);
+    expect(placeholderNumberUnreadable(rent, "lots", ".")).toBe(true);
+    expect(placeholderNumberUnreadable(rent, "$1,200", ".")).toBe(false);
+    expect(placeholderNumberUnreadable(rent, "  ", ".")).toBe(false);
+    expect(placeholderNumberUnreadable(FIELDS[0].placeholder, "lots", ".")).toBe(false);
+    expect(placeholderNumberUnreadable(rent, "1500,50", ".")).toBe(true);
+    expect(placeholderNumberUnreadable(rent, "1500,50", ",")).toBe(false);
   });
 });

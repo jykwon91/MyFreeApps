@@ -2,7 +2,7 @@ import {
   toUtilityPlanFields,
   toUtilityPlanFormValues,
 } from "@mybookkeeper/api-client/utils/utilityPlanForm";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { showError, showSuccess } from "@platform/ui";
 import { useUpdateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";

@@ -1,6 +1,6 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, confirmDiscard, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
@@ -37,12 +37,13 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   const [failure, setFailure] = useState<string | null>(null);
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const [isFindingNewer, setIsFindingNewer] = useState(false);
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const isSubmitting = useRef(false);
   const scroller = useRef<ScrollViewInstance>(null);
   const fieldTops = useRef<Record<string, number>>({});
   const isDirty = hasChanges(fields, edits);
   const missing = missingRequired(fields, edits);
-  const unreadable = unreadableNumbers(fields, edits);
+  const unreadable = unreadableNumbers(fields, edits, decimalSeparator);
   const problems = fields.filter((field) => missing.includes(field) || unreadable.includes(field));
 
   const isBusy = isLoading || isFindingNewer;
@@ -117,7 +118,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
 
   function fieldProblem(field: MergedPlaceholder): string | undefined {
     if (missing.includes(field)) return PLACEHOLDER_PROBLEM_MESSAGES.required;
-    return unreadable.includes(field) ? PLACEHOLDER_PROBLEM_MESSAGES.not_a_number : undefined;
+    return unreadable.includes(field) ? PLACEHOLDER_PROBLEM_MESSAGES.not_a_number(decimalSeparator) : undefined;
   }
 
   function captionFor(field: MergedPlaceholder): string | null {

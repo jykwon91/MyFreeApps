@@ -12,7 +12,7 @@ import type { InsurancePolicyFormProblems } from "../types/insurance/insurance-p
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 import { isPremiumBilledMissing } from "./insurancePolicyForm";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
-import { normalizeDecimalText } from "./normalizeDecimalText";
+import { normalizeDecimalText } from "@platform/core/utils/normalizeDecimalText";
 
 type MoneyField = "coverageDollars" | "feesAndTaxesDollars" | "deductibleDollars";
 
@@ -44,7 +44,7 @@ function windHailProblem(text: string, decimalSeparator: DecimalSeparator): Insu
   if (typed === undefined) return isNegativeNumber(text, decimalSeparator) ? "wind_hail_out_of_range" : "not_a_number";
   const value = Number(typed);
   if (!(value > 0 && value <= WIND_HAIL_MAX_PCT)) return "wind_hail_out_of_range";
-  return normalizeDecimalText(text, decimalSeparator, WIND_HAIL_MAX_DECIMALS) === undefined ? "wind_hail_decimals" : null;
+  return normalizeDecimalText(text, decimalSeparator, { maxDecimals: WIND_HAIL_MAX_DECIMALS }) === undefined ? "wind_hail_decimals" : null;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import {
   EDUCATION_GPA_MAX,
   EDUCATION_YEAR_MAX,
@@ -17,7 +18,8 @@ export const PROFILE_FORM_PROBLEMS = {
   schoolRequired: "School is required",
   year: `Enter a year from ${EDUCATION_YEAR_MIN} to ${EDUCATION_YEAR_MAX}.`,
   endYearBeforeStart: "The end year can't be before the start year.",
-  gpa: `Enter a GPA from 0 to ${EDUCATION_GPA_MAX}, like 3.8.`,
+  gpa: (decimalSeparator: DecimalSeparator) =>
+    `Enter a GPA from 0 to ${String(EDUCATION_GPA_MAX).replace(".", decimalSeparator)}, like 3${decimalSeparator}8.`,
   skillRequired: "Name the skill",
   skillDuplicate: "You already have this skill.",
   questionRequired: "Choose a question",

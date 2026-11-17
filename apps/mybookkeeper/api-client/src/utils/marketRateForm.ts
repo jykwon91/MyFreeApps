@@ -16,7 +16,7 @@ import { localToday } from "@platform/core/utils/localToday";
 import { formatCents, formatCentsPerKwh } from "./utilityPlanFormat";
 import { MONEY_AMOUNT_LOOKS_TYPED } from "../constants/moneyInput";
 import { moneyTextToCents } from "./moneyTextToCents";
-import { normalizeDecimalText } from "./normalizeDecimalText";
+import { normalizeDecimalText } from "@platform/core/utils/normalizeDecimalText";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 /** Internet is quoted per month; every other service per kWh. The service decides, never the operator. */
@@ -50,7 +50,7 @@ export function marketRateToFormValues(serviceType: UtilityServiceType, existing
 
 /** A ¢/kWh rate as the request sends it and the form checks it: "" when blank, undefined when unreadable. */
 function rateText(figure: string, decimalSeparator: DecimalSeparator): string | undefined {
-  return normalizeDecimalText(figure, decimalSeparator, MARKET_RATE_MAX_DECIMALS);
+  return normalizeDecimalText(figure, decimalSeparator, { maxDecimals: MARKET_RATE_MAX_DECIMALS });
 }
 
 function rateProblem(figure: string, decimalSeparator: DecimalSeparator): string | undefined {

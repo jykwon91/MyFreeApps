@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@platform/ui";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import {
@@ -130,7 +131,7 @@ export default function LeaseAddTemplateModal({
     if (!valuesState) return;
 
     setHasTried(true);
-    if (Object.keys(prefillProblems(valuesState.items, valuesState.values)).length > 0) return;
+    if (Object.keys(prefillProblems(valuesState.items, valuesState.values, NUMBER_INPUT_DECIMAL_SEPARATOR)).length > 0) return;
 
     const anyAlreadyLinked = selectedIds.some((id) => linkedSet.has(id));
 
@@ -180,7 +181,7 @@ export default function LeaseAddTemplateModal({
             <LeaseAddTemplateValuesStep
               items={valuesState.items}
               values={valuesState.values}
-              problems={hasTried ? prefillProblems(valuesState.items, valuesState.values) : {}}
+              problems={hasTried ? prefillProblems(valuesState.items, valuesState.values, NUMBER_INPUT_DECIMAL_SEPARATOR) : {}}
               onValueChange={handleValueChange}
               isAdding={isAdding}
               onBack={() => setValuesState(null)}

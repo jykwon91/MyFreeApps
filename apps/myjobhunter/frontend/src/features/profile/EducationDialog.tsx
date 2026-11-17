@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { X } from "lucide-react";
 import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
 import type { Education } from "@myjobhunter/api-client/types/education/education";
@@ -11,7 +12,8 @@ import { educationFormValues } from "@myjobhunter/api-client/utils/educationForm
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
 import { problemsResolver } from "@/lib/problems-resolver";
 
-const resolver = problemsResolver(educationFormProblems);
+// The GPA field is an <input type="number">, whose value always uses ".".
+const resolver = problemsResolver((values: FormValues) => educationFormProblems(values, NUMBER_INPUT_DECIMAL_SEPARATOR));
 
 export interface EducationDialogProps {
   open: boolean;
@@ -42,7 +44,7 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
   }, [open, existing, reset]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
-    const body = educationRequest(values);
+    const body = educationRequest(values, NUMBER_INPUT_DECIMAL_SEPARATOR);
     try {
       if (isEdit && existing) {
         await updateEducation({ id: existing.id, patch: body }).unwrap();

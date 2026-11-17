@@ -13,7 +13,7 @@ import {
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
 import type { RentReminderFormValues } from "@mybookkeeper/api-client/types/rent/rent-reminder-form-values";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 

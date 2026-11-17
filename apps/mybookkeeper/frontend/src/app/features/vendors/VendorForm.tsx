@@ -18,7 +18,7 @@ import {
   formValuesToUpdateRequest,
   vendorToFormValues,
 } from "@mybookkeeper/api-client/utils/vendorForm";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 
 export interface VendorFormProps {
   /** When provided the form is in edit mode; absent = create. */

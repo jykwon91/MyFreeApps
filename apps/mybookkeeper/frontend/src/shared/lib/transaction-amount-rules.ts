@@ -1,6 +1,6 @@
 import type { RegisterOptions } from "react-hook-form";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 
 /**

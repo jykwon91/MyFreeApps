@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FormFieldsTable from "@/app/features/tax/FormFieldsTable";
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { TAX_FIELD_OVERRIDE_PROBLEMS } from "@mybookkeeper/api-client/constants/taxFieldOverride";
 
 vi.mock("@/app/features/documents/DocumentViewer", () => ({ default: () => null }));

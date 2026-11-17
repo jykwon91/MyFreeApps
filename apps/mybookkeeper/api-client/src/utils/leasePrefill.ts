@@ -1,3 +1,4 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { PREFILL_PROVENANCE_LABELS } from "../constants/leaseLabels";
 import type { SignedLeaseTemplatePrefillItem } from "../types/lease/signed-lease-template-prefill";
 import type { LeasePrefillProblem } from "../types/lease/lease-prefill-problem";
@@ -17,17 +18,21 @@ export function prefillItemsToAsk(items: readonly SignedLeaseTemplatePrefillItem
   return items.filter((item) => item.input_type !== "signature");
 }
 
-/** What is wrong with each field, by key. A blank optional field is fine; a number that can't be read never is. */
+/**
+ * What is wrong with each field, by key. A blank optional field is fine; a number that can't be read
+ * never is. `decimalSeparator` is the one the person's keypad types.
+ */
 export function prefillProblems(
   items: readonly SignedLeaseTemplatePrefillItem[],
   values: Readonly<Record<string, string>>,
+  decimalSeparator: DecimalSeparator,
 ): Record<string, LeasePrefillProblem> {
   const problems: Record<string, LeasePrefillProblem> = {};
   for (const item of prefillItemsToAsk(items)) {
     const value = (values[item.key] ?? "").trim();
     if (value === "") {
       if (item.required) problems[item.key] = "required";
-    } else if (item.input_type === "number" && !isReadableLeaseNumber(value)) {
+    } else if (item.input_type === "number" && !isReadableLeaseNumber(value, decimalSeparator)) {
       problems[item.key] = "not_a_number";
     }
   }

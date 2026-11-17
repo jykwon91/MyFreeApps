@@ -2,12 +2,20 @@ import { describe, expect, it } from "vitest";
 import { isReadableLeaseNumber, leaseValueText } from "../utils/leasePlaceholderValue";
 
 describe("isReadableLeaseNumber", () => {
-  it.each(["1500", "1500.50", "$1,500", "$1,500.00", "-12", " 42 ", "0"])("reads %s", (value) => {
-    expect(isReadableLeaseNumber(value)).toBe(true);
+  it.each(["1500", "1500.50", "$1,500", "$1,500.00", "-12", " 42 ", "0", "1.500"])("reads %s on a \".\" keypad", (value) => {
+    expect(isReadableLeaseNumber(value, ".")).toBe(true);
   });
 
-  it.each(["abc", "12abc", "1,50", "1.2.3", "$", "", "1e5", "twelve hundred"])("rejects %s", (value) => {
-    expect(isReadableLeaseNumber(value)).toBe(false);
+  it.each(["abc", "12abc", "1,50", "1500,50", "1.500,50", "1.2.3", "$", "", "1e5", "twelve hundred"])("rejects %s on a \".\" keypad", (value) => {
+    expect(isReadableLeaseNumber(value, ".")).toBe(false);
+  });
+
+  it.each(["1500,50", "1,50", "1.500,50", "$1.500", "-12,5", "1500", "1500.50", "$1,500.00"])("reads %s on a \",\" keypad, in its own form or the pulled \".\" one", (value) => {
+    expect(isReadableLeaseNumber(value, ",")).toBe(true);
+  });
+
+  it.each(["abc", "1,2,3", "1.50,5,5", "1,500.50,5", "12,5abc", "$", ""])("rejects %s on a \",\" keypad", (value) => {
+    expect(isReadableLeaseNumber(value, ",")).toBe(false);
   });
 });
 

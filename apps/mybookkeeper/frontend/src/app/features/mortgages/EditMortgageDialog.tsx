@@ -1,4 +1,4 @@
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { useState } from "react";
 import { Button, ConfirmDialog, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";

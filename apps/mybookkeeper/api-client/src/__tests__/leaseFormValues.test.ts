@@ -34,7 +34,9 @@ describe("lease form values", () => {
 
   it("finds required fields left blank and unreadable numbers", () => {
     expect(missingRequired(FIELDS, { name: "  " }).map((f) => f.placeholder.key)).toEqual(["name"]);
-    expect(unreadableNumbers(FIELDS, { rent: "abc" }).map((f) => f.placeholder.key)).toEqual(["rent"]);
+    expect(unreadableNumbers(FIELDS, { rent: "abc" }, ".").map((f) => f.placeholder.key)).toEqual(["rent"]);
+    expect(unreadableNumbers(FIELDS, { rent: "1500,50" }, ".").map((f) => f.placeholder.key)).toEqual(["rent"]);
+    expect(unreadableNumbers(FIELDS, { rent: "1500,50" }, ",")).toEqual([]);
   });
 
   it("sends trimmed values for the current fields only", () => {

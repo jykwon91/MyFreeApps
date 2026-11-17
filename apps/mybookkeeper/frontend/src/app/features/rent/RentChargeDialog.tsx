@@ -4,7 +4,7 @@ import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import Select from "@/shared/components/ui/Select";
 import { useCreateRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
-import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "@mybookkeeper/api-client/constants/rentLabels";
 import type { RentChargeType } from "@mybookkeeper/api-client/types/rent/rent-charge-type";
