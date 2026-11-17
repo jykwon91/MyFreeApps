@@ -99,7 +99,7 @@ describe("deleting several transactions", () => {
     await selectAll();
     await fireEvent.press(screen.getByRole("button", { name: "Delete 5 selected" }));
     await pressAlertButton(alert, "Delete");
-    expect(await screen.findByText("5 transaction(s) deleted")).toBeTruthy();
+    expect(await screen.findByText("5 transactions deleted")).toBeTruthy();
     expect(deleteRequests(server.requests)).toEqual([["a", "b"], ["c", "d"], ["e"]]);
     expect(server.transactions).toEqual([]);
     await waitFor(() => expect(screen.queryByText(/selected$/)).toBeNull());
@@ -191,7 +191,7 @@ describe("deleting several transactions", () => {
     await fireEvent(await screen.findByLabelText(/Done/), "longPress");
     await fireEvent.press(screen.getByRole("button", { name: "Delete 1 selected" }));
     await pressAlertButton(alert, "Delete");
-    expect(await screen.findByText("1 transaction(s) deleted")).toBeTruthy();
+    expect(await screen.findByText("1 transaction deleted")).toBeTruthy();
     expect(deleteRequests(server.requests)).toEqual([["x"]]);
   });
 

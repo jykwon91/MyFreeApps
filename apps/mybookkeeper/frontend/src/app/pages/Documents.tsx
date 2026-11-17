@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useTable,
@@ -296,7 +297,7 @@ export default function Documents() {
       <ConfirmDialog
         open={confirmBulkDelete}
         title="Delete documents"
-        description={`Are you sure you want to delete ${selectedCount} document(s)? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${formatCount(selectedCount, "document")}? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
         isLoading={isBulkDeleting}

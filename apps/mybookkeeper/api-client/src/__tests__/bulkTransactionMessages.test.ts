@@ -14,12 +14,13 @@ describe("bulkDeleteMessage", () => {
 
   it("reports success, including skipped ids", () => {
     expect(bulkDeleteMessage({ counts: { deleted: 3, skipped: 0 }, failedIds: [], error: null })).toEqual({
-      text: "3 transaction(s) deleted",
+      text: "3 transactions deleted",
       isError: false,
     });
     expect(bulkDeleteMessage({ counts: { deleted: 2, skipped: 1 }, failedIds: [], error: null }).text).toBe(
-      "2 transaction(s) deleted, 1 skipped",
+      "2 transactions deleted, 1 skipped",
     );
+    expect(bulkDeleteMessage({ counts: { deleted: 1, skipped: 0 }, failedIds: [], error: null }).text).toBe("1 transaction deleted");
   });
 });
 

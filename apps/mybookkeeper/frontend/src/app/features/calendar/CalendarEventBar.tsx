@@ -1,3 +1,4 @@
+import { formatCount } from "@/shared/utils/count";
 import { getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
 import { getSourceColor } from "@/shared/lib/calendar-constants";
 import { CALENDAR_DAY_CELL_PX } from "@/shared/lib/calendar-constants";
@@ -75,7 +76,7 @@ export default function CalendarEventBar({ event, startCol, span, onClick }: Cal
           data-testid="event-bar-indicators"
         >
           {hasNotes ? <span title="Has notes">📝</span> : null}
-          {hasAttachments ? <span title={`${event.attachment_count} attachment(s)`}>📎</span> : null}
+          {hasAttachments ? <span title={formatCount(event.attachment_count, "attachment")}>📎</span> : null}
         </span>
       ) : null}
     </button>

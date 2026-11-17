@@ -52,7 +52,7 @@ describe("BankStatementImport", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "p1" } });
     fireEvent.click(screen.getByRole("button", { name: /^import$/i }));
 
-    await waitFor(() => expect(handlers.onSuccess).toHaveBeenCalledWith("Imported 3 transaction(s), 1 duplicate(s) skipped"));
+    await waitFor(() => expect(handlers.onSuccess).toHaveBeenCalledWith("Imported 3 transactions, 1 duplicate skipped"));
     const arg = importBankCsv.mock.calls[0][0] as { form: FormData; propertyId?: string };
     expect(arg.propertyId).toBe("p1");
     expect((arg.form.get("file") as File).name).toBe("statement.csv");

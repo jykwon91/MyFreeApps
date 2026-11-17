@@ -33,7 +33,7 @@ describe("useBulkDeleteTransactions", () => {
     await pressAlertButton(alert, "Delete");
 
     expect(mockSend.mock.calls.map(([batch]) => batch.length)).toEqual([MAX_BULK_TRANSACTION_IDS, MAX_BULK_TRANSACTION_IDS, 3]);
-    expect(mockShowToast).toHaveBeenCalledWith("1002 transaction(s) deleted, 1 skipped", "success");
+    expect(mockShowToast).toHaveBeenCalledWith("1002 transactions deleted, 1 skipped", "success");
     expect(onSettled).toHaveBeenCalledWith(ids, []);
   });
 

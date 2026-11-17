@@ -20,7 +20,7 @@ import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import { RECIPES_LOAD_MORE_MESSAGES, RECIPES_MESSAGES } from "../../constants/recipes";
 import { cookHref } from "../../utils/cookHref";
-import { countLabel } from "../../utils/countLabel";
+import { formatCount } from "@platform/core/utils/count";
 import { listCookCopies } from "../cook/cookCopies";
 import SavedCookCopies from "../cook/SavedCookCopies";
 import RecipeCard from "./RecipeCard";
@@ -65,7 +65,7 @@ export default function RecipesScreen() {
     hasListError && !rows.length
       ? "Can't load recipes"
       : (term || ownerMe) && list.hasData && isSearchSettled
-        ? countLabel(list.total, "recipe")
+        ? formatCount(list.total, "recipe")
         : undefined,
   );
 

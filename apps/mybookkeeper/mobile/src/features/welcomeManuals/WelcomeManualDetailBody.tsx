@@ -1,3 +1,4 @@
+import { formatCount } from "@platform/core/utils/count";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { Banner, LoadingButton, useTheme } from "@platform/mobile";
@@ -5,7 +6,7 @@ import { router } from "expo-router";
 import { useRef } from "react";
 import type { RefreshControlProps } from "react-native";
 import { ScrollView, Text, View } from "react-native";
-import { DELETE_MANUAL_BODY, WELCOME_MANUAL_MESSAGES as MESSAGES, countLabel, deleteManualTitle } from "../../constants/welcomeManuals";
+import { DELETE_MANUAL_BODY, WELCOME_MANUAL_MESSAGES as MESSAGES, deleteManualTitle } from "../../constants/welcomeManuals";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -54,11 +55,11 @@ export default function WelcomeManualDetailBody({ manual, refreshControl, onDele
         </View>
       ) : null}
       <View>
-        <WelcomeManualNavRow label={MESSAGES.sectionsRow} onPress={() => router.push(`${base}/sections`)} value={countLabel(manual.sections.length, "section", "sections")} />
+        <WelcomeManualNavRow label={MESSAGES.sectionsRow} onPress={() => router.push(`${base}/sections`)} value={formatCount(manual.sections.length, "section", "sections")} />
         {manual.rooms.length > 0 || canWrite ? (
-          <WelcomeManualNavRow label={MESSAGES.roomsRow} onPress={() => router.push(`${base}/rooms`)} value={countLabel(manual.rooms.length, "room", "rooms")} />
+          <WelcomeManualNavRow label={MESSAGES.roomsRow} onPress={() => router.push(`${base}/rooms`)} value={formatCount(manual.rooms.length, "room", "rooms")} />
         ) : null}
-        <WelcomeManualNavRow label={MESSAGES.placesRow} onPress={() => router.push(`${base}/places`)} value={countLabel(manual.places.length, "place", "places")} />
+        <WelcomeManualNavRow label={MESSAGES.placesRow} onPress={() => router.push(`${base}/places`)} value={formatCount(manual.places.length, "place", "places")} />
         <WelcomeManualNavRow label={MESSAGES.shareRow} onPress={() => router.push(`${base}/share`)} value={manual.share_token ? MESSAGES.shared : MESSAGES.notShared} />
         <WelcomeManualNavRow label={MESSAGES.previewRow} onPress={() => router.push(`${base}/preview`)} />
         {canWrite ? <WelcomeManualEmailRow base={base} hasSections={!lockEmail} /> : null}

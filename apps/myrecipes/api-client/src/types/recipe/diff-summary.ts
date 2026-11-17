@@ -9,6 +9,6 @@ export interface DiffSummary {
   stepCount: number;
   total: number;
   isIdentical: boolean;
-  /** "3 changes — 2 ingredient, 1 step." or "No differences between these versions." */
+  /** "3 changes — 2 ingredients, 1 step." or "No differences between these versions." */
   subtitle: string;
 }

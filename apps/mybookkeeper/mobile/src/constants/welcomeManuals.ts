@@ -43,9 +43,5 @@ export function deleteManualTitle(title: string): string {
 
 export const DELETE_MANUAL_BODY = "Its sections, photos and share link go with it, for good.";
 
-export function countLabel(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 /** Which write a welcome-manual item sheet ran last, so its failure copy and spinner match the button pressed. */
 export const WELCOME_MANUAL_ITEM_ACTION = { save: "save", remove: "remove" } as const;

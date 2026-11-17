@@ -102,7 +102,7 @@ test("shows the first version as all added when it is opened without a base", as
 
   await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(1)}/diff`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${VERSION_COPY.nothing} to v1`);
-  await expect(page.getByText("3 changes — 2 ingredient, 1 step.")).toBeVisible();
+  await expect(page.getByText("3 changes — 2 ingredients, 1 step.")).toBeVisible();
   await expect(page.getByText("Simmer.")).toBeVisible();
   expect(diffs[0]?.searchParams.has("against")).toBe(false);
 });

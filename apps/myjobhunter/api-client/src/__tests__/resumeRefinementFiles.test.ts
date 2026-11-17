@@ -20,6 +20,9 @@ describe("resume upload choices", () => {
   it("names and sums up each upload", () => {
     const date = formatShortDate("2026-10-20T12:00:00Z");
     expect(resumeJobSummary(job())).toBe(`1 role, 12 skills · uploaded ${date}`);
+    const counts = (work_history_count: number, skills_count: number) =>
+      job({ result_parsed_fields: { ...job().result_parsed_fields!, work_history_count, skills_count } });
+    expect(resumeJobSummary(counts(2, 1))).toBe(`2 roles, 1 skill · uploaded ${date}`);
     expect(resumeJobSummary(job({ result_parsed_fields: null }))).toBe(`Parsed resume · uploaded ${date}`);
     expect(resumeJobFileName(job())).toBe("ada.pdf");
     expect(resumeJobFileName(job({ file_filename: null }))).toBe("resume");
