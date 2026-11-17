@@ -1,5 +1,5 @@
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
-import { useTheme } from "@platform/mobile";
+import { deviceDecimalSeparator, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import type { RecipeIngredientLine } from "../../types/RecipeIngredientLine";
 import { byPosition } from "../../utils/byPosition";
@@ -13,6 +13,7 @@ export default function RecipeIngredients({
   emptyText?: string;
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const decimalSeparator = deviceDecimalSeparator();
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -33,7 +34,7 @@ export default function RecipeIngredients({
               }}
             >
               <Text style={{ color: colors.foreground, fontSize: fontSize.md }}>
-                {formatIngredientLine(ingredient)}
+                {formatIngredientLine(ingredient, decimalSeparator)}
               </Text>
             </View>
           ))}

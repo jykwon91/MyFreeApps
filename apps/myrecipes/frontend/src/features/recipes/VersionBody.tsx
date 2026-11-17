@@ -1,6 +1,7 @@
 import { Clock, Soup, Users } from "lucide-react";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
+import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 
 interface Props {
   version: VersionResponse;
@@ -12,6 +13,7 @@ interface Props {
  * column for whichever version is currently selected in the timeline.
  */
 export default function VersionBody({ version }: Props) {
+  const decimalSeparator = browserDecimalSeparator();
   const hasMeta =
     version.servings !== null ||
     version.prep_minutes !== null ||
@@ -51,7 +53,7 @@ export default function VersionBody({ version }: Props) {
             {version.ingredients.map((ingredient) => (
               <li key={ingredient.id} className="text-sm flex gap-2">
                 <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
-                <span>{formatIngredientLine(ingredient)}</span>
+                <span>{formatIngredientLine(ingredient, decimalSeparator)}</span>
               </li>
             ))}
           </ul>

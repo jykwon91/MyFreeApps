@@ -114,8 +114,13 @@ describe("diffErrorMessage", () => {
 describe("ingredientChangeLine", () => {
   it("formats the side that exists and leaves the other empty", () => {
     const change = { lineage_key: "a", change: "added" as const, before: null, after: { ...SALT, note: "fine" } };
-    expect(ingredientChangeLine(change, "after")).toBe("1 tsp salt (fine)");
-    expect(ingredientChangeLine(change, "before")).toBeNull();
+    expect(ingredientChangeLine(change, "after", ".")).toBe("1 tsp salt (fine)");
+    expect(ingredientChangeLine(change, "before", ".")).toBeNull();
+  });
+
+  it("shows a fractional quantity in the given decimal separator", () => {
+    const change = { lineage_key: "a", change: "added" as const, before: null, after: { ...SALT, quantity: 1.5 } };
+    expect(ingredientChangeLine(change, "after", ",")).toBe("1,5 tsp salt");
   });
 });
 

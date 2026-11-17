@@ -1,15 +1,17 @@
 import type { DiffResponse } from "@myrecipes/api-client/types/recipe/diff";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
+import { deviceDecimalSeparator } from "@platform/mobile";
 import type { DiffLines } from "../types/DiffLines";
 
 /** A diff's ingredient and step changes as text, keyed as the website keys them. */
 export function diffLines(diff: DiffResponse): DiffLines {
+  const decimalSeparator = deviceDecimalSeparator();
   return {
     ingredients: diff.ingredient_changes.map((change) => ({
       key: change.lineage_key,
       change: change.change,
-      before: ingredientChangeLine(change, "before"),
-      after: ingredientChangeLine(change, "after"),
+      before: ingredientChangeLine(change, "before", decimalSeparator),
+      after: ingredientChangeLine(change, "after", decimalSeparator),
     })),
     steps: diff.step_changes.map((change) => ({
       key: `${change.position}-${change.change}`,
