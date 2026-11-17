@@ -29,8 +29,8 @@ describe("writeFailure", () => {
     [503, "serverError"],
     [400, "other"],
     [401, "other"],
-    [413, "other"],
-    [429, "other"],
+    [413, "tooLarge"],
+    [429, "rateLimited"],
   ])("maps %s to %s", (status, expected) => {
     expect(writeFailure(failing(status))).toBe(expected);
   });

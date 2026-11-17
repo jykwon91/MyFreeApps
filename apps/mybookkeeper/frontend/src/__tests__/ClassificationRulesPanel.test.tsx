@@ -5,6 +5,7 @@ import ClassificationRulesPanel from "@/app/features/transactions/Classification
 import { showError, showSuccess } from "@platform/ui";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { CLASSIFICATION_RULE_MESSAGES } from "@/shared/lib/classification-rule-messages";
+import { WRITE_RATE_LIMITED_MESSAGE } from "@mybookkeeper/api-client/constants/writeFailureMessages";
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 const rule: ClassificationRule = {
@@ -137,6 +138,16 @@ describe("ClassificationRulesPanel delete flow", () => {
     await waitFor(() => expect(showError).toHaveBeenCalledWith(CLASSIFICATION_RULE_MESSAGES.deleteFailed));
     expect(screen.getByText("Delete classification rule")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+  });
+
+  it("says to wait, not to retry now, when the server limits the delete (429)", async () => {
+    rejectWith(429);
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+    await openConfirm();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(WRITE_RATE_LIMITED_MESSAGE));
+    expect(screen.getByText("Delete classification rule")).toBeInTheDocument();
   });
 
   it("sends one request when confirm is pressed twice while pending", async () => {

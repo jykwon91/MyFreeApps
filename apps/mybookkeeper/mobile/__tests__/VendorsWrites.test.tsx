@@ -177,6 +177,8 @@ describe("a vendor's own screen", () => {
     [403, "You have view-only access, so I can't delete this."],
     [409, "Something still depends on that vendor, so I couldn't delete it."],
     [500, "I couldn't delete that vendor. Want to try again?"],
+    [429, "I'm getting too many requests right now. Give it a minute, then try again."],
+    [413, "That's too big for me to take. Try something smaller."],
   ])("says so in fixed words when deleting fails with %s, and stays", async (status, message) => {
     const server = serverWith();
     await show(<VendorDetailScreen id="v1" />);
@@ -353,6 +355,7 @@ describe("adding a vendor", () => {
     [409, "That clashes with a vendor you already have. Check the name and try again."],
     [422, "Something in there isn't right. Check the fields and try again."],
     [500, "I'm not sure that saved. Check your vendors before trying again, so you don't end up with two."],
+    [429, "I'm getting too many requests right now. Give it a minute, then try again."],
   ])("keeps the form and says so in fixed words when saving fails with %s", async (status, message) => {
     const server = serverWith([]);
     server.failWritesWith = status;

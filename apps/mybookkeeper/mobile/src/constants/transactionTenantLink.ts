@@ -1,3 +1,4 @@
+import { WRITE_RATE_LIMITED_MESSAGE, WRITE_TOO_LARGE_MESSAGE } from "@mybookkeeper/api-client/constants/writeFailureMessages";
 import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import type { WriteFailureCopy } from "../types/WriteFailureCopy";
 
@@ -25,4 +26,6 @@ export const TENANT_LINK_FAILURE: WriteFailureCopy = {
   invalid: "I can't link that payment. Check that it's income and try again.",
   serverError: "I couldn't link that. Want to try again?",
   other: "I couldn't link that. Want to try again?",
+  rateLimited: WRITE_RATE_LIMITED_MESSAGE,
+  tooLarge: WRITE_TOO_LARGE_MESSAGE,
 };
