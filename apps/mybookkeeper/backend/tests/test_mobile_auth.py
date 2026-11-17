@@ -5,7 +5,7 @@ rows are exercised on Postgres in MyRecipes' copy of these tests instead.
 """
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
+from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from platform_shared.auth.jwt_backend import IatJWTStrategy
 from platform_shared.core.refresh_session_limits import MOBILE_ACCESS_TOKEN_SECONDS
@@ -58,6 +59,38 @@ async def test_a_phone_access_token_passes_the_normal_bearer_check(client: Async
     response = await client.get("/auth/mobile/sessions", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_a_phone_access_token_stops_working_once_its_device_is_signed_out(
+    client: AsyncClient, db: AsyncSession,
+) -> None:
+    """MyBookkeeper checks a phone token's session on every request, not only at refresh."""
+    user = User(
+        id=uuid.uuid4(),
+        email=f"mobile-{uuid.uuid4().hex[:8]}@example.com",
+        hashed_password="not-used",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db.add(user)
+    now = datetime.now(timezone.utc)
+    phone = RefreshSession(
+        id=uuid.uuid4(), user_id=user.id, current_secret_hash="0" * 64, auth_time=now,
+        created_at=now, last_used_at=now, expires_at=now + timedelta(days=30),
+    )
+    db.add(phone)
+    await db.commit()
+    strategy = IatJWTStrategy(secret=settings.secret_key, lifetime_seconds=MOBILE_ACCESS_TOKEN_SECONDS)
+    token = await strategy.write_session_token(user, auth_time=now, session_id=phone.id)
+    headers = {"Authorization": f"Bearer {token}"}
+    assert (await client.get("/users/me", headers=headers)).status_code == 200
+
+    await db.delete(phone)
+    await db.commit()
+
+    assert (await client.get("/users/me", headers=headers)).status_code == 401
 
 
 @pytest.mark.asyncio

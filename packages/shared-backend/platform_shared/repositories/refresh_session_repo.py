@@ -41,6 +41,16 @@ async def list_for_user(
     return (await db.execute(statement)).scalars().all()
 
 
+async def exists_owned(
+    db: AsyncSession, session_model: type[Any], user_id: uuid.UUID, session_id: uuid.UUID,
+) -> bool:
+    """Whether this user still has this session. One primary-key lookup."""
+    statement = select(session_model.id).where(
+        session_model.id == session_id, session_model.user_id == user_id,
+    )
+    return (await db.execute(statement)).first() is not None
+
+
 async def delete_owned(
     db: AsyncSession, session_model: type[Any], user_id: uuid.UUID, session_id: uuid.UUID,
 ) -> bool:
@@ -104,5 +114,5 @@ async def delete_by_id(db: AsyncSession, session_model: type[Any], session_id: u
 
 __all__ = ["add", "delete_all_but_newest",
     "delete_by_id",
-    "delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id",
+    "delete_expired_for_user", "delete_owned", "exists_owned", "delete_session", "list_for_user", "lock_by_id",
     "restart_owned"]

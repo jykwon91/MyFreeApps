@@ -86,7 +86,9 @@ class RealAuthStack:
         self._signed_in: uuid.UUID | None = None
         # A test sets this to make the step after the password and code checks refuse.
         self.prepare_deletion: Callable[[AsyncSession, Any], Awaitable[Any]] | None = None
-        self.strategy = IatJWTStrategy(secret=SECRET, lifetime_seconds=WEB_TOKEN_SECONDS)
+        self.strategy = IatJWTStrategy(
+            secret=SECRET, lifetime_seconds=WEB_TOKEN_SECONDS, session_model=StackRefreshSession,
+        )
         self.totp = TotpAccountService(
             user_model=StackUser,
             issuer="Test",

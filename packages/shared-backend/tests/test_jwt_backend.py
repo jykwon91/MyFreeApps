@@ -15,12 +15,18 @@ from __future__ import annotations
 
 import time
 import uuid
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from typing import Any
 
 import jwt
 import pytest
+import pytest_asyncio
 from fastapi import Request
+from fastapi_users.db import SQLAlchemyUserDatabase
+from sqlalchemy import Uuid
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from platform_shared.auth.jwt_backend import (
     IatJWTStrategy,
@@ -31,6 +37,18 @@ from platform_shared.core.permissions import make_decode_token_auth_time
 SECRET = "test-secret-key-for-jwt-backend-tests-32bytes"
 
 
+class _Base(DeclarativeBase):
+    pass
+
+
+class _Session(_Base):
+    """The columns of an app's ``RefreshSession`` that the phone-session check reads."""
+
+    __tablename__ = "refresh_sessions"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+
+
 class _FakeUser:
     def __init__(self, auth_valid_after: datetime | None = None) -> None:
         self.id = uuid.uuid4()
@@ -38,8 +56,12 @@ class _FakeUser:
 
 
 class _FakeManager:
-    def __init__(self, user: _FakeUser) -> None:
+    """``db`` is where the user's phone sessions are. Without it, reading one fails."""
+
+    def __init__(self, user: _FakeUser, db: AsyncSession | None = None) -> None:
         self.user = user
+        if db is not None:
+            self.user_db = SQLAlchemyUserDatabase(db, _Session)
 
     def parse_id(self, value: str) -> uuid.UUID:
         return uuid.UUID(value)
@@ -48,8 +70,33 @@ class _FakeManager:
         return self.user
 
 
+@pytest_asyncio.fixture
+async def db() -> AsyncIterator[AsyncSession]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(_Base.metadata.create_all)
+    async with async_sessionmaker(engine)() as session:
+        yield session
+    await engine.dispose()
+
+
+async def _add_session(db: AsyncSession, user: _FakeUser) -> uuid.UUID:
+    session_id = uuid.uuid4()
+    db.add(_Session(id=session_id, user_id=user.id))
+    await db.flush()
+    return session_id
+
+
 def _strategy() -> IatJWTStrategy:
-    return build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600).get_jwt_strategy()
+    return build_jwt_auth_backend(
+        secret_key=SECRET, lifetime_seconds=3600, session_model=_Session,
+    ).get_jwt_strategy()
+
+
+async def _phone_token(user: _FakeUser, session_id: uuid.UUID) -> str:
+    return await _strategy().write_session_token(
+        user, auth_time=datetime.now(timezone.utc), session_id=session_id,
+    )
 
 
 async def _token_issued_at(user: _FakeUser, issued_at: int) -> str:
@@ -89,7 +136,7 @@ def _decode_unchecked(token: str) -> dict[str, Any]:
 @pytest.mark.asyncio
 async def test_write_token_includes_iat_claim() -> None:
     """Tokens MUST carry ``iat`` — the strict-superuser gate requires it."""
-    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600)
+    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600, session_model=_Session)
     strategy = backend.get_jwt_strategy()
     before = int(time.time())
 
@@ -114,7 +161,7 @@ async def test_a_login_token_records_the_login_time() -> None:
 @pytest.mark.asyncio
 async def test_write_token_preserves_standard_claims() -> None:
     """The fix MUST NOT drop sub/aud/exp."""
-    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600)
+    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600, session_model=_Session)
     strategy = backend.get_jwt_strategy()
     user = _FakeUser()
 
@@ -134,7 +181,7 @@ async def test_factory_returns_iat_strategy() -> None:
     A future refactor that swaps ``IatJWTStrategy`` back to the upstream
     ``JWTStrategy`` would silently re-introduce the bug; pin the type.
     """
-    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600)
+    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600, session_model=_Session)
     assert isinstance(backend.get_jwt_strategy(), IatJWTStrategy)
 
 
@@ -145,7 +192,7 @@ async def test_auth_time_roundtrips_through_decode_token_auth_time() -> None:
     Catches mismatches in audience, algorithm, or secret-key plumbing
     between issue-side and verify-side.
     """
-    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600)
+    backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600, session_model=_Session)
     strategy = backend.get_jwt_strategy()
     token = await strategy.write_token(_FakeUser())
 
@@ -255,10 +302,10 @@ def test_another_servers_token_names_no_session() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_reissued_token_outlives_a_cutoff_and_keeps_everything_else() -> None:
+async def test_a_reissued_token_outlives_a_cutoff_and_keeps_everything_else(db: AsyncSession) -> None:
     """After a cutoff the caller carries on: same sign-in time, session and lifetime."""
     user = _FakeUser()
-    session_id = str(uuid.uuid4())
+    session_id = str(await _add_session(db, user))
     now = int(time.time())
     old = jwt.encode(
         {"sub": str(user.id), "aud": "fastapi-users:auth", "iat": now - 600, "exp": now - 600 + 1800,
@@ -267,7 +314,7 @@ async def test_a_reissued_token_outlives_a_cutoff_and_keeps_everything_else() ->
         algorithm="HS256",
     )
     user.auth_valid_after = datetime.fromtimestamp(now - 5, timezone.utc)
-    assert await _strategy().read_token(old, _FakeManager(user)) is None
+    assert await _strategy().read_token(old, _FakeManager(user, db)) is None
 
     new = await _strategy().reissue(user, old)
 
@@ -277,7 +324,7 @@ async def test_a_reissued_token_outlives_a_cutoff_and_keeps_everything_else() ->
     assert claims["auth_time"] == now - 7200
     assert claims["sid"] == session_id
     assert claims["sub"] == str(user.id)
-    assert await _strategy().read_token(new, _FakeManager(user)) is user
+    assert await _strategy().read_token(new, _FakeManager(user, db)) is user
 
 
 @pytest.mark.asyncio
@@ -299,3 +346,69 @@ async def test_a_reissued_token_without_a_login_time_proves_no_recent_login() ->
     user = _FakeUser()
     claims = _decode_unchecked(await _strategy().reissue(user, _signed_token(iat=int(time.time()))))
     assert claims["auth_time"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_phone_token_works_while_its_session_exists(db: AsyncSession) -> None:
+    user = _FakeUser()
+    token = await _phone_token(user, await _add_session(db, user))
+    assert await _strategy().read_token(token, _FakeManager(user, db)) is user
+
+
+@pytest.mark.asyncio
+async def test_a_phone_token_stops_working_once_its_session_is_signed_out(db: AsyncSession) -> None:
+    """Signing a device out deletes its session: its access token mustn't last 30 more minutes."""
+    user = _FakeUser()
+    session_id = await _add_session(db, user)
+    token = await _phone_token(user, session_id)
+
+    await db.delete(await db.get(_Session, session_id))
+    await db.flush()
+
+    assert await _strategy().read_token(token, _FakeManager(user, db)) is None
+
+
+@pytest.mark.asyncio
+async def test_signing_out_one_phone_leaves_the_others_signed_in(db: AsyncSession) -> None:
+    user = _FakeUser()
+    signed_out, other = await _add_session(db, user), await _add_session(db, user)
+    other_token = await _phone_token(user, other)
+
+    await db.delete(await db.get(_Session, signed_out))
+    await db.flush()
+
+    assert await _strategy().read_token(other_token, _FakeManager(user, db)) is user
+
+
+@pytest.mark.asyncio
+async def test_a_phone_token_naming_another_users_session_is_refused(db: AsyncSession) -> None:
+    user, stranger = _FakeUser(), _FakeUser()
+    token = await _phone_token(user, await _add_session(db, stranger))
+    assert await _strategy().read_token(token, _FakeManager(user, db)) is None
+
+
+@pytest.mark.asyncio
+async def test_a_phone_token_with_a_malformed_session_is_refused(db: AsyncSession) -> None:
+    user = _FakeUser()
+    token = jwt.encode(
+        {"sub": str(user.id), "aud": "fastapi-users:auth", "exp": int(time.time()) + 60, "sid": "not-a-uuid"},
+        SECRET,
+        algorithm="HS256",
+    )
+    assert await _strategy().read_token(token, _FakeManager(user, db)) is None
+
+
+@pytest.mark.asyncio
+async def test_a_strategy_that_cant_check_sessions_refuses_phone_tokens(db: AsyncSession) -> None:
+    user = _FakeUser()
+    token = await _phone_token(user, await _add_session(db, user))
+    strategy = IatJWTStrategy(secret=SECRET, lifetime_seconds=3600)
+    assert await strategy.read_token(token, _FakeManager(user, db)) is None
+
+
+@pytest.mark.asyncio
+async def test_a_web_token_needs_no_session_lookup() -> None:
+    """Web tokens carry no ``sid``: no database read, and they work as before."""
+    user = _FakeUser()
+    token = await _strategy().write_token(user)
+    assert await _strategy().read_token(token, _FakeManager(user)) is user
