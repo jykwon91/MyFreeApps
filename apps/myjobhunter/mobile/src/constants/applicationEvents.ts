@@ -18,6 +18,7 @@ export const APPLICATION_EVENT_MESSAGES = {
   logging: "Logging…",
   logged: "Event logged.",
   couldntLog: "I couldn't log that event. Want to try again?",
+  checkWhere: "this application's activity",
   saveChanges: "Save changes",
   saving: "Saving…",
   updated: "Interview details updated.",

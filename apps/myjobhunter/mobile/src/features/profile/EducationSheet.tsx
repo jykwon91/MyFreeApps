@@ -14,7 +14,7 @@ import { deviceDecimalSeparator, FormField, FormSheet, useToast } from "@platfor
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { EDUCATION_MESSAGES as MESSAGES } from "../../constants/profileEducation";
-import { writeFailure } from "../../lib/writeFailure";
+import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { EducationSheetProps } from "../../types/EducationSheetProps";
 import SheetButtons from "../../components/forms/SheetButtons";
 
@@ -46,7 +46,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
       showToast(existing ? MESSAGES.updated : MESSAGES.created);
       onClose();
     } catch (error) {
-      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : MESSAGES.couldntCreate);
+      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere }));
     }
   }
 

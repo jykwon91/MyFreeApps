@@ -10,7 +10,7 @@ import { FormField, FormSheet, SwitchRow, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { WORK_HISTORY_MESSAGES as MESSAGES } from "../../constants/profileWorkHistory";
-import { writeFailure } from "../../lib/writeFailure";
+import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { WorkHistorySheetProps } from "../../types/WorkHistorySheetProps";
 import DateField from "../../components/forms/DateField";
 import SheetButtons from "../../components/forms/SheetButtons";
@@ -42,7 +42,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
       showToast(existing ? MESSAGES.updated : MESSAGES.created);
       onClose();
     } catch (error) {
-      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : MESSAGES.couldntCreate);
+      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere }));
     }
   }
 

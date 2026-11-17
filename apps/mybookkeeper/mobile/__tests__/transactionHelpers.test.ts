@@ -7,7 +7,7 @@ import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, taxYearError, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
-import { approveFailureMessage, bulkDeleteConfirmBody, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
+import { approveFailureMessage, bulkDeleteConfirmBody, createFailureMessage, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aSavedVendor, aTransaction } from "../test-support/transactionsServer";
 
@@ -249,6 +249,31 @@ describe("messages", () => {
 
   it("says when the server can't be reached", () => {
     expect(saveFailureMessage({ data: "Network Error" })).toContain("can't reach the server");
+  });
+
+  describe("adding a transaction", () => {
+    const unsure = "I'm not sure that saved. Check your transactions before trying again, so you don't end up with two.";
+
+    it.each([
+      ["no answer came back", { status: undefined, data: "Network Error" }],
+      ["it timed out", { status: undefined, data: "timeout of 30000ms exceeded" }],
+      ["the server broke without a reason", { status: 500, data: "Internal Server Error" }],
+      ["the proxy failed", { status: 502, data: "<html>Bad Gateway</html>" }],
+    ])("says to check first when %s, since it may have saved", (_, error) => {
+      expect(createFailureMessage(error)).toBe(unsure);
+    });
+
+    it.each([
+      [422, "I couldn't add that. Want to try again?"],
+      [400, "I couldn't add that. Want to try again?"],
+      [403, "You have read-only access, so I can't add transactions."],
+    ])("keeps the plain wording for a %s, which the server answers before saving", (status, message) => {
+      expect(createFailureMessage({ status, data: { detail: "nope" } })).toBe(message);
+    });
+
+    it("keeps the plain wording for a server failure that gives its own reason", () => {
+      expect(createFailureMessage({ status: 503, data: { detail: "Database unavailable" } })).toBe("I couldn't add that. Want to try again?");
+    });
   });
 
   it("says how many others changed, only if any did", () => {

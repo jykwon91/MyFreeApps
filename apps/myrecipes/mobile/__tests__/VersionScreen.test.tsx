@@ -1,4 +1,3 @@
-import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { COOK_LOG_MESSAGES as SHARED } from "@myrecipes/api-client/constants/cookLog";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
@@ -323,12 +322,12 @@ describe("logging a cook of an older version", () => {
     expect(await screen.findByRole("alert", { name: SHARED.logged })).toBeTruthy();
   });
 
-  it("keeps the sheet open and says so when the save fails", async () => {
-    await show({ "POST /recipes/r1/versions/v1/cooks": () => reply(500) });
+  it("keeps the sheet open and says the cook may have been logged when the server breaks without a reason", async () => {
+    await show({ "POST /recipes/r1/versions/v1/cooks": () => reply(500, "Internal Server Error") });
     await fireEvent.press(await screen.findByRole("button", { name: SHARED.madeIt }));
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByRole("alert", { name: RECIPE_WRITE_MESSAGES.serverTrouble })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: "We're not sure this cook was logged. Check the recipe's cook log before trying again, so you don't log it twice." })).toBeTruthy();
     expect(screen.getByRole("header", { name: SHARED.logTitle })).toBeTruthy();
   });
 });

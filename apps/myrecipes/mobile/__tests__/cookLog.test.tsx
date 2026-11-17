@@ -288,7 +288,7 @@ describe("logging a cook", () => {
 
   it("keeps what was entered when the save fails, says so in the sheet, and can try again", async () => {
     let fail = true;
-    await show({ "POST /recipes/r1/versions/v2/cooks": () => (fail ? reply(500) : reply(201, NEWER)) });
+    await show({ "POST /recipes/r1/versions/v2/cooks": () => (fail ? reply(500, { detail: "Database unavailable" }) : reply(201, NEWER)) });
     await openLog();
     await fireEvent.press(screen.getByRole("radio", { name: SHARED.starLabel(2) }));
     await fireEvent.changeText(notesField(), "Burnt");

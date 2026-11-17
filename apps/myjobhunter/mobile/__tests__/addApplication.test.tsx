@@ -32,6 +32,7 @@ import { storeSession, tokens } from "@platform/mobile/test-support/storedSessio
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -642,6 +643,22 @@ describe("checking and saving", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
     await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /applications")).toHaveLength(2);
+  });
+
+  it("says it may have saved and to check before trying again when the answer to saving is lost", async () => {
+    const sent = serveAdd({ "POST /applications/extract-from-url": ok(extracted()) });
+    timeOutPostsTo(/^\/applications$/);
+    await openAddScreen();
+    await readLink();
+    await screen.findByText(MESSAGES.reviewHeading);
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    expect(
+      await screen.findByText("I lost the connection, so I'm not sure that saved. Check your applications before trying again, so you don't end up with two."),
+    ).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntSave, SHOWN)).toBeNull();
+    expect(screen).toHavePathname("/applications/new");
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(1);
   });
 
   it("shows it's saving on the button the moment it's pressed, and won't save twice", async () => {

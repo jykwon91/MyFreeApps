@@ -22,6 +22,7 @@ import * as Clipboard from "expo-clipboard";
 import { useEffect, useRef, useState } from "react";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, EMPTY_ADD_APPLICATION_FORM } from "../../constants/addApplication";
 import { htmlTextContent } from "../../lib/htmlTextContent";
+import { createFailure } from "../../lib/writeFailure";
 import { urlHostname } from "../../lib/urlHostname";
 import type { AddApplicationReading } from "../../types/AddApplicationReading";
 import type { AddApplicationReview } from "../../types/AddApplicationReview";
@@ -245,8 +246,8 @@ export function useAddApplicationFlow() {
       }
       try {
         await createApplication(buildApplicationCreateRequest(values, { companyId, sourceUrl: review.sourceUrl, jdText: submittedJdText })).unwrap();
-      } catch {
-        if (isMounted.current) saveFailed(MESSAGES.couldntSave);
+      } catch (error) {
+        if (isMounted.current) saveFailed(createFailure(error, { failed: MESSAGES.couldntSave, checkWhere: MESSAGES.checkWhere }));
         return;
       }
       showToast(MESSAGES.added);

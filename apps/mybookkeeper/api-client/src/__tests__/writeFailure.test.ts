@@ -35,6 +35,16 @@ describe("writeFailure", () => {
     expect(writeFailure(failing(status))).toBe(expected);
   });
 
+  it("reads RTK's own no-answer statuses as the server being unreachable", () => {
+    expect(writeFailure({ status: "FETCH_ERROR", error: "Failed to fetch" })).toBe("noResponse");
+    expect(writeFailure({ status: "TIMEOUT_ERROR", error: "timeout" })).toBe("noResponse");
+  });
+
+  it("reads a 5xx that gives its own reason as a refusal, not a server failure that may have saved", () => {
+    expect(writeFailure(failing(503, "Photo storage is not configured"))).toBe("other");
+    expect(writeFailure(failing(502, ""))).toBe("serverError");
+  });
+
   it("does not read the demo wording on other statuses as a demo refusal", () => {
     expect(writeFailure(failing(409, "This feature is not available for demo accounts"))).toBe("conflict");
   });

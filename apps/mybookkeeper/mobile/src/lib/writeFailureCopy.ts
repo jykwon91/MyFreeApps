@@ -2,10 +2,17 @@ import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoR
 import { WRITE_RATE_LIMITED_MESSAGE, WRITE_TOO_LARGE_MESSAGE } from "@mybookkeeper/api-client/constants/writeFailureMessages";
 import type { WriteFailureCopy } from "../types/WriteFailureCopy";
 
+/**
+ * For a create whose outcome is unknown (see writeOutcome): a lost answer or a proxy error can come after the server saved,
+ * so a retry could make two. `plural` reads after "Check your", like "vendors".
+ */
+export function unsureSavedMessage(plural: string): string {
+  return `I'm not sure that saved. Check your ${plural} before trying again, so you don't end up with two.`;
+}
+
 /** `noun` and `plural` read in a sentence, like "vendor" and "vendors". Fixed wording only: the server's own text is never shown. */
 export function saveFailureCopy(noun: string, plural: string, isNew: boolean): WriteFailureCopy {
-  // A lost answer or a proxy error can come after the server saved, so a retry could make two.
-  const unsure = `I'm not sure that saved. Check your ${plural} before trying again, so you don't end up with two.`;
+  const unsure = unsureSavedMessage(plural);
   const tryAgain = "I couldn't save that. Want to try again?";
   return {
     noResponse: isNew ? unsure : `I can't reach the server, so I couldn't save that. Your changes are still here.`,

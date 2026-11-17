@@ -1,5 +1,7 @@
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import type { TransactionUpdateResult } from "@mybookkeeper/api-client/types/transaction/TransactionUpdateResult";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
+import { unsureSavedMessage } from "../../lib/writeFailureCopy";
 
 /** The server's own wording can be a developer string, so it's never shown. */
 export function saveFailureMessage(error: unknown): string {
@@ -36,14 +38,8 @@ export function othersUpdatedSentence(result: TransactionUpdateResult, vendor: s
 }
 
 export function createFailureMessage(error: unknown): string {
-  switch (httpStatus(error)) {
-    case undefined:
-      return "I can't reach the server, so I couldn't add that. Your details are still here.";
-    case 403:
-      return "You have read-only access, so I can't add transactions.";
-    default:
-      return "I couldn't add that. Want to try again?";
-  }
+  if (writeOutcome(error) === "unknown") return unsureSavedMessage("transactions");
+  return httpStatus(error) === 403 ? "You have read-only access, so I can't add transactions." : "I couldn't add that. Want to try again?";
 }
 
 export function bulkApproveFailureMessage(error: unknown): string {

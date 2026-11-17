@@ -17,6 +17,7 @@ import { NEW_RECIPE_MESSAGES as MESSAGES } from "../src/constants/newRecipe";
 import NewRecipeScreen from "../src/features/newRecipe/NewRecipeScreen";
 import { makeStore } from "../src/lib/store";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -60,6 +61,7 @@ let reply: Reply;
 let gate: Promise<void> = Promise.resolve();
 const sent: InternalAxiosRequestConfig[] = [];
 const originalAdapter = api.defaults.adapter;
+const UNSURE = "We're not sure this recipe was saved. Check your recipes before trying again, so you don't end up with two.";
 
 const adapter: AxiosAdapter = async (config) => {
   sent.push(config);
@@ -381,15 +383,29 @@ describe("creating", () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("says it's the connection when the server can't be reached", async () => {
+  it("says the recipe may have saved when no answer came back, keeping what was typed", async () => {
     await show();
     await fillMinimalRecipe();
     reply = { status: 0, data: null };
 
     await press(MESSAGES.create);
 
-    expect(await screen.findByText(CONNECTION_MESSAGES.write)).toBeTruthy();
+    expect(await screen.findByText(UNSURE)).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Title, required").props.value).toBe("Tomato soup");
+  });
+
+  it("says to check the recipes before trying again when the recipe saved but its answer timed out", async () => {
+    await show();
+    await fillMinimalRecipe();
+    timeOutPostsTo(/^\/recipes$/);
+
+    await press(MESSAGES.create);
+
+    expect(await screen.findByText(UNSURE)).toBeTruthy();
+    expect(screen.queryByText(CONNECTION_MESSAGES.write, SHOWN)).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(sent.filter((config) => config.method === "post")).toHaveLength(1);
   });
 });
 

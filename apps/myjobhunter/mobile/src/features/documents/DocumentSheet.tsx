@@ -9,7 +9,8 @@ import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
-import { writeFailure } from "../../lib/writeFailure";
+import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
+import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { DocumentSheetProps } from "../../types/DocumentSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
@@ -49,7 +50,11 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
       }
       onClose();
     } catch (error) {
-      setFailure(writeFailure(error, document ? MESSAGES.couldntUpdate : MESSAGES.couldntCreate));
+      setFailure(
+        document
+          ? writeFailure(error, MESSAGES.couldntUpdate)
+          : createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere, gone: APPLICATION_DETAIL_MESSAGES.gone }),
+      );
     }
   }
 

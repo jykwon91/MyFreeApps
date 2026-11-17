@@ -4,6 +4,7 @@ import { act, waitFor } from "@testing-library/react-native";
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { aLease } from "./aLease";
+import { failedBody } from "./failedBody";
 
 export type LeaseWriteFailure = { status: number; detail?: unknown } | "offline";
 export type LeaseWriteRoute = "patch" | "attachmentPatch" | "attachmentDelete" | "prefill" | "addTemplates" | "import" | "templates" | "applicants" | "listings";
@@ -52,7 +53,7 @@ export function startLeaseWritesServer(overrides: Partial<FakeLeaseWritesServer>
       if (!failure) return null;
       return failure === "offline"
         ? Promise.reject(Object.assign(new Error("Network Error"), { config }))
-        : respond({ detail: failure.detail ?? "A developer's message" }, failure.status);
+        : respond(failure.detail === undefined ? failedBody(failure.status, "A developer's message") : { detail: failure.detail }, failure.status);
     };
     const url = config.url ?? "";
     const method = (config.method ?? "get").toLowerCase();

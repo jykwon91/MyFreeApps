@@ -215,13 +215,13 @@ describe("the activity timeline", () => {
     ]);
   });
 
-  it("keeps the sheet open and says so when logging fails", async () => {
+  it("keeps the sheet open and says the event may have been logged when the server breaks without a reason", async () => {
     serve({ ...applicationDetailRoutes(STRIPE), [`POST /applications/${ID}/events`]: () => ({ status: 500 }) });
     await renderApplicationDetail(ID);
     await fireEvent.press(await screen.findByRole("button", { name: EVENTS.logEvent }));
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
 
-    expect(await screen.findByText(EVENTS.couldntLog)).toBeTruthy();
+    expect(await screen.findByText("I'm not sure that saved. Check this application's activity before trying again, so you don't end up with two.")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Applied" })).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: EVENTS.cancel }));
     expect(screen.queryByRole("radio", { name: "Applied" })).toBeNull();
@@ -489,7 +489,7 @@ describe("uploading a file", () => {
   });
 
   it("keeps the sheet open with the chosen file and says so when the upload fails", async () => {
-    serve({ ...applicationDetailRoutes(STRIPE), "POST /documents/upload": () => ({ status: 500 }) });
+    serve({ ...applicationDetailRoutes(STRIPE), "POST /documents/upload": () => ({ status: 500, data: { detail: "Storage failed" } }) });
     await renderApplicationDetail(ID);
     await openUpload();
     pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });

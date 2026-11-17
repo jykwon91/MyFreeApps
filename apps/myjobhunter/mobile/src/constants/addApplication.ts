@@ -50,6 +50,7 @@ export const ADD_APPLICATION_MESSAGES = {
   saving: "Adding…",
   added: "Application added",
   couldntSave: "I couldn't add the application. Want to try again?",
+  checkWhere: "your applications",
   pickerTitle: "Choose a company",
   close: "Close",
   searchPlaceholder: "Search, or type a new company",

@@ -7,7 +7,8 @@ import { FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
 import { LOGGABLE_EVENT_OPTIONS } from "../../constants/eventOptions";
-import { writeFailure } from "../../lib/writeFailure";
+import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
+import { createFailure } from "../../lib/writeFailure";
 import type { LogEventSheetProps } from "../../types/LogEventSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import DateTimeField from "./DateTimeField";
@@ -31,7 +32,7 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
       onClose();
       showToast(MESSAGES.logged);
     } catch (error) {
-      setFailure(writeFailure(error, MESSAGES.couldntLog));
+      setFailure(createFailure(error, { failed: MESSAGES.couldntLog, checkWhere: MESSAGES.checkWhere, gone: APPLICATION_DETAIL_MESSAGES.gone }));
     }
   }
 

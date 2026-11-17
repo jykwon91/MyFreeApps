@@ -14,7 +14,8 @@ import { Text } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
 import { CONTACT_ROLE_CHOICES } from "../../constants/contactRoleChoices";
 import { contactFieldMessage } from "../../lib/contactFieldMessage";
-import { writeFailure } from "../../lib/writeFailure";
+import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
+import { createFailure } from "../../lib/writeFailure";
 import type { ContactSheetProps } from "../../types/ContactSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
@@ -54,7 +55,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
     } catch (error) {
       const blamed = contactServerErrors(error);
       setServerErrors(blamed);
-      setFailure(Object.keys(blamed).length > 0 ? MESSAGES.checkFields : writeFailure(error, MESSAGES.couldntCreate));
+      setFailure(Object.keys(blamed).length > 0 ? MESSAGES.checkFields : createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere, gone: APPLICATION_DETAIL_MESSAGES.gone }));
     }
   }
 
