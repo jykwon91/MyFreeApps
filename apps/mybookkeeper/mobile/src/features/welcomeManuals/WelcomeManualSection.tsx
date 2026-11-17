@@ -7,7 +7,7 @@ import TransactionFact from "../transactions/TransactionFact";
 import WelcomeManualPhoto from "./WelcomeManualPhoto";
 
 /** One section as a guest reads it: its text, its label and value pairs and its photos. */
-export default function WelcomeManualSection({ section }: { section: WelcomeManualSectionResponse }) {
+export default function WelcomeManualSection({ section, onRetryPhoto }: { section: WelcomeManualSectionResponse; onRetryPhoto: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.sm }}>
@@ -23,7 +23,7 @@ export default function WelcomeManualSection({ section }: { section: WelcomeManu
         <TransactionFact key={field.id} label={field.label} selectable value={field.value ?? ""} />
       ))}
       {section.images.map((image) => (
-        <WelcomeManualPhoto image={image} key={image.id} size="full" />
+        <WelcomeManualPhoto image={image} key={image.id} onRetry={onRetryPhoto} size="full" />
       ))}
     </View>
   );

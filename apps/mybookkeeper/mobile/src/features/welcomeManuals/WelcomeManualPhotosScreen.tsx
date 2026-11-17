@@ -21,7 +21,7 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
   const [isReordering, setIsReordering] = useState(false);
   return (
     <WelcomeManualSectionGate manualId={manualId} sectionId={sectionId}>
-      {({ refreshControl }, section) => {
+      {({ refreshControl, refresh }, section) => {
         const open: WelcomeManualSectionImageResponse | undefined = section.images.find((image) => image.id === editId);
         const viewIndex = section.images.findIndex((image) => image.id === viewId);
         return (
@@ -53,11 +53,12 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
               <WelcomeManualPhotoViewer
                 images={section.images}
                 onClose={() => setViewId(null)}
+                onRetry={() => void refresh()}
                 onEdit={canWrite ? (image) => { setViewId(null); setEditId(image.id); } : undefined}
                 startIndex={viewIndex}
               />
             ) : null}
-            {open ? <WelcomeManualPhotoSheet image={open} manualId={manualId} onClose={() => setEditId(null)} sectionId={sectionId} /> : null}
+            {open ? <WelcomeManualPhotoSheet image={open} manualId={manualId} onClose={() => setEditId(null)} onRetryPhoto={() => void refresh()} sectionId={sectionId} /> : null}
             {isUploading ? <WelcomeManualPhotoUploadSheet existingCount={section.images.length} manualId={manualId} onClose={() => setIsUploading(false)} sectionId={sectionId} /> : null}
             {isReordering ? <WelcomeManualPhotosReorder manualId={manualId} onClose={() => setIsReordering(false)} section={section} /> : null}
           </>

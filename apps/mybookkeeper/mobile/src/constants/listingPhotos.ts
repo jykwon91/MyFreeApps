@@ -11,6 +11,7 @@ export const LISTING_PHOTO_MESSAGES = {
   fromLibrary: "Photo library",
   cover: "Cover",
   unavailable: "Photo unavailable",
+  couldntLoad: "Photo couldn't load",
   unavailableDetail: "I can't show this photo right now.",
   select: "Select",
   cancelSelect: "Done",

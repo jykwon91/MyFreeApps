@@ -28,7 +28,7 @@ export default function WelcomeManualContent({ id, isLeaving = false, children }
   return (
     <View style={{ flex: 1 }}>
       {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-      {children({ manual, refreshControl })}
+      {children({ manual, refreshControl, refresh })}
     </View>
   );
 }

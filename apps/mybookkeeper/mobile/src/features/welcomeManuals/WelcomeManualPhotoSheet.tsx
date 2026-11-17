@@ -16,12 +16,13 @@ interface WelcomeManualPhotoSheetProps {
   sectionId: string;
   image: WelcomeManualSectionImageResponse;
   onClose: () => void;
+  onRetryPhoto: () => void;
 }
 
 const never = (): Promise<unknown> => Promise.resolve();
 
 /** A photo full size, with its caption to change and a way to delete it. */
-export default function WelcomeManualPhotoSheet({ manualId, sectionId, image, onClose }: WelcomeManualPhotoSheetProps) {
+export default function WelcomeManualPhotoSheet({ manualId, sectionId, image, onClose, onRetryPhoto }: WelcomeManualPhotoSheetProps) {
   const [updateImage] = useUpdateSectionImageMutation();
   const [deleteImage] = useDeleteSectionImageMutation();
   const form = useSnapshotForm<WelcomeManualCaptionFormValues>(() => ({ caption: image.caption ?? "" }), captionProblems);
@@ -51,7 +52,7 @@ export default function WelcomeManualPhotoSheet({ manualId, sectionId, image, on
       onSave={() => { if (form.validate()) void writes.save(); }}
       title={MESSAGES.view}
     >
-      <WelcomeManualPhoto image={image} size="full" />
+      <WelcomeManualPhoto image={image} onRetry={onRetryPhoto} size="full" />
       <FormField editable={!writes.isBusy} error={form.errorFor("caption")} label={MESSAGES.captionLabel} maxLength={WELCOME_MANUAL_IMAGE_CAPTION_MAX_LENGTH} multiline onChangeText={(text) => form.edit("caption", text)} placeholder={MESSAGES.captionPlaceholder} value={form.values.caption} />
     </WelcomeManualEditSheet>
   );

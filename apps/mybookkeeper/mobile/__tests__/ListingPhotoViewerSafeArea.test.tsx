@@ -13,7 +13,7 @@ jest.mock("react-native/Libraries/Modal/Modal", () => ({
 describe("the listing photo viewer", () => {
   it("keeps its header and Close button clear of the status bar and home indicator", async () => {
     await show(
-      <ListingPhotoViewer canWrite={false} failure={null} index={0} isBusy={false} onClose={jest.fn()} onIndexChange={jest.fn()} onMove={jest.fn()} onRemove={jest.fn()} photos={[aPhoto("a", 0), aPhoto("b", 1)]} />,
+      <ListingPhotoViewer canWrite={false} failure={null} index={0} isBusy={false} onClose={jest.fn()} onIndexChange={jest.fn()} onMove={jest.fn()} onRemove={jest.fn()} onRetryPhoto={jest.fn()} photos={[aPhoto("a", 0), aPhoto("b", 1)]} />,
     );
     await screen.findByText("Photo 1 of 2");
     const content = StyleSheet.flatten(screen.getByTestId("listing-photo-viewer").props.contentContainerStyle);

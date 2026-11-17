@@ -1,5 +1,6 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import { Thumbnail, useTheme } from "@platform/mobile";
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { LISTING_PHOTO_CAPTION_LINES, LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel } from "../../constants/listingPhotos";
 import { photoUrl } from "./listingPhotoDisplay";
@@ -16,8 +17,9 @@ interface ListingPhotoTileProps {
 
 export default function ListingPhotoTile({ photo, index, total, size, isSelecting, isSelected, onPress }: ListingPhotoTileProps) {
   const { colors, radius, fontSize, spacing } = useTheme();
+  const [hasFailed, setHasFailed] = useState(false);
   const url = photoUrl(photo);
-  const label = photoLabel(index, total, photo.caption, [index === 0 ? MESSAGES.cover : null, url ? null : MESSAGES.unavailable]);
+  const label = photoLabel(index, total, photo.caption, [index === 0 ? MESSAGES.cover : null, url ? null : MESSAGES.unavailable, hasFailed ? MESSAGES.couldntLoad : null]);
 
   return (
     <Pressable
@@ -28,7 +30,7 @@ export default function ListingPhotoTile({ photo, index, total, size, isSelectin
       style={{ width: size, height: size, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.muted, borderWidth: isSelected ? 3 : 0, borderColor: colors.foreground }}
     >
       {url ? (
-        <Thumbnail accessibilityIgnoresInvertColors resizeMode="cover" source={{ uri: url }} style={{ width: "100%", height: "100%" }} />
+        <Thumbnail accessibilityIgnoresInvertColors failedMessage={MESSAGES.couldntLoad} onFailedChange={setHasFailed} resizeMode="cover" source={{ uri: url }} testID="listing-photo-image" style={{ width: "100%", height: "100%" }} />
       ) : (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xs }}>
           <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground, textAlign: "center" }}>{MESSAGES.unavailable}</Text>
