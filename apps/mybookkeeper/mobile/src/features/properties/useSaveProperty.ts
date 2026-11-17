@@ -7,6 +7,11 @@ import { PROPERTY_FORM_MESSAGES } from "../../constants/propertyForm";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 
+/** Extra fields that can be patched onto a property update beyond the core form. */
+interface PropertyExtraFields {
+  purchase_price?: string;
+}
+
 /** Adds a property, or saves what changed on `original`, and goes back when it's done. */
 export function useSaveProperty(original: Property | null) {
   const { showToast } = useToast();
@@ -16,14 +21,19 @@ export function useSaveProperty(original: Property | null) {
   const { isLeaving, leave } = useLeaveWhenSaved("/properties");
   const copy = saveFailureCopy("property", "properties", original === null);
 
-  async function submit(form: PropertyForm): Promise<void> {
+  async function submit(form: PropertyForm, extra: PropertyExtraFields = {}): Promise<void> {
     const changes = original ? propertyChanges(form, original) : null;
-    if (original && changes && Object.keys(changes).length === 0) {
+    const hasFormChanges = !original || (changes && Object.keys(changes).length > 0);
+    const hasExtraChanges = Object.keys(extra).length > 0;
+    if (original && !hasFormChanges && !hasExtraChanges) {
       leave();
       return;
     }
     const result = await write.run(
-      () => (original && changes ? updateProperty({ id: original.id, data: changes }).unwrap() : createProperty(toPropertyWrite(trimmedForm(form))).unwrap()),
+      () =>
+        original && changes !== null
+          ? updateProperty({ id: original.id, data: { ...changes, ...extra } }).unwrap()
+          : createProperty(toPropertyWrite(trimmedForm(form))).unwrap(),
       { staysLocked: true },
     );
     if (result !== "done") return;

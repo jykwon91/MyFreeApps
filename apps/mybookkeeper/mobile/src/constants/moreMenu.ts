@@ -30,6 +30,7 @@ export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
       { label: "Vendors", screen: "/vendors", keywords: ["contractors", "suppliers", "plumber", "payees", "1099"] },
       { label: "Vendor rules", screen: "/vendor-rules", keywords: ["classification", "auto categorize", "categorization", "payee rules"] },
       { label: "Money analysis", screen: "/analytics/money", keywords: ["spending", "trends", "charts", "compare", "income", "expenses"] },
+      { label: "Rental ROI", screen: "/analytics/rental-roi", keywords: ["return", "investment", "cash on cash", "cap rate", "break even", "purchase price", "roi"] },
       { label: "Utility costs", screen: "/analytics", keywords: ["electric", "gas", "water", "internet", "bills", "analytics"] },
       { label: "Insurance", screen: "/insurance", keywords: ["policies", "premium", "coverage", "renewal"] },
       { label: "Mortgages", screen: "/mortgages", keywords: ["loans", "interest", "escrow", "refinance", "payments"] },

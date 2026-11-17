@@ -5,9 +5,10 @@ import type { PropertyClassification } from "@mybookkeeper/api-client/types/prop
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
+import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { type ComponentRef, useRef, useState } from "react";
-import { TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
 import { useSaveProperty } from "./useSaveProperty";
 
@@ -15,10 +16,11 @@ const CLASSIFICATION_OPTIONS = CLASSIFICATION_CHOICES.map(({ value, label }) => 
 
 /** Adds a property, or changes `original`. What's typed is kept here, so a reload can't overwrite it. */
 export default function PropertyFormScreen({ original }: { original: Property | null }) {
-  const { spacing } = useTheme();
+  const { colors, fontSize, spacing } = useTheme();
   const [form, setForm] = useState<PropertyForm>(() => (original ? fromProperty(original) : blankForm()));
   const [hasTried, setHasTried] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [purchasePrice, setPurchasePrice] = useState(original?.purchase_price ?? "");
   const { submit, isBusy, isLeaving, failure } = useSaveProperty(original);
   const streetInput = useRef<ComponentRef<typeof TextInput>>(null);
   const cityInput = useRef<ComponentRef<typeof TextInput>>(null);
@@ -26,7 +28,13 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const zipInput = useRef<ComponentRef<typeof TextInput>>(null);
 
   const problems = propertyFormProblems(form, original);
-  const isDirty = original ? Object.keys(propertyChanges(form, original)).length > 0 : !isBlank(form);
+  const cleanedPrice = cleanPurchasePrice(purchasePrice);
+  const priceBlank = purchasePrice.trim() === "";
+  const priceRemoved = priceBlank && original?.purchase_price != null;
+  const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
+  const isDirty = original
+    ? Object.keys(propertyChanges(form, original)).length > 0 || purchasePrice !== (original.purchase_price ?? "")
+    : !isBlank(form);
   const choice = CLASSIFICATION_CHOICES.find((candidate) => candidate.value === form.classification);
   const locked = isBusy || isLeaving;
   const errorFor = (field: keyof PropertyForm) => (hasTried ? problems[field] : undefined);
@@ -39,8 +47,9 @@ export default function PropertyFormScreen({ original }: { original: Property | 
 
   function save(): void {
     setHasTried(true);
-    if (Object.keys(problems).length > 0) return;
-    void submit(form);
+    if (Object.keys(problems).length > 0 || priceInvalid) return;
+    const extra = cleanedPrice ? { purchase_price: cleanedPrice } : {};
+    void submit(form, extra);
   }
 
   return (
@@ -131,6 +140,24 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             value={form.type ?? "short_term"}
           />
         ) : null}
+        <FormField
+          editable={!locked}
+          error={hasTried && priceInvalid
+            ? (priceRemoved ? MESSAGES.purchasePriceRemoved : MESSAGES.purchasePriceInvalid)
+            : undefined}
+          inputMode="decimal"
+          keyboardType="decimal-pad"
+          label={MESSAGES.purchasePrice}
+          onChangeText={setPurchasePrice}
+          placeholder={MESSAGES.purchasePricePlaceholder}
+          returnKeyType="done"
+          value={purchasePrice}
+        />
+        {original?.purchase_price && (
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground, marginTop: -spacing.sm }}>
+            {MESSAGES.purchasePriceHint}
+          </Text>
+        )}
         <LoadingButton
           disabled={locked}
           isLoading={isBusy}
