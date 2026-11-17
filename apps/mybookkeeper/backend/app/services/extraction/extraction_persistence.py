@@ -9,25 +9,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.parsers import safe_date, safe_decimal
 from app.core.tags import transaction_type_for_category
 from app.core.trusted_email_senders import is_trusted_sender
+from app.mappers.booking_statement_mapper import build_booking_statement_from_line_item
+from app.mappers.extraction_mapper import (
+    derive_category,
+    derive_transaction_type,
+    sanitize_extraction_tags,
+)
+from app.mappers.transaction_mapper import build_transaction_from_extraction_data
 from app.models.documents.document import Document
 from app.models.email.email_types import Attachment
 from app.models.extraction.email_extraction_outcome import EmailExtractionOutcome
 from app.models.extraction.extraction import Extraction
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
 from app.repositories import (
-    document_repo, extraction_repo, processed_email_repo,
-    booking_statement_repo, transaction_repo, usage_log_repo,
+    booking_statement_repo,
+    document_repo,
+    extraction_repo,
+    processed_email_repo,
+    usage_log_repo,
 )
-from app.services.extraction.dedup_service import evaluate_dedup
-from app.services.extraction.dedup_resolution_service import resolve_and_link
+from app.services.classification.rule_engine import classify
+from app.services.documents.document_mime_constants import EMAIL_FILE_TYPE
+from app.services.documents.document_mime_type import stored_document_mime_type
 from app.services.documents.document_query_service import _extract_renderable_from_eml
-from app.mappers.extraction_mapper import derive_category, derive_transaction_type, sanitize_extraction_tags
-from app.mappers.booking_statement_mapper import build_booking_statement_from_line_item
-from app.mappers.transaction_mapper import build_transaction_from_extraction_data
+from app.services.extraction.dedup_resolution_service import resolve_and_link
+from app.services.extraction.dedup_service import evaluate_dedup
 from app.services.extraction.property_matcher_service import resolve_property_id
 from app.services.extraction.sender_category_service import match_sender_category
 from app.services.extraction.utility_account_service import sender_domain_from_email
-from app.services.classification.rule_engine import classify
 from app.services.transactions.attribution_service import maybe_attribute_payment
 
 logger = logging.getLogger(__name__)
@@ -168,7 +177,7 @@ async def save_email_extraction(
             property_id=property_id,
             email_message_id=message_id,
             file_name=file_name,
-            file_type="email",
+            file_type=EMAIL_FILE_TYPE,
             document_type=doc_type,
             file_content=file_content,
             file_mime_type=file_mime_type,
@@ -425,7 +434,10 @@ def _is_payment_confirmation(documents_data: list) -> bool:
 def _resolve_attachment_content(
     source_att: Attachment | None,
 ) -> tuple[bytes | None, str | None, str | None]:
-    """Extract file content from an attachment, unwrapping .eml if needed."""
+    """Extract file content from an attachment, unwrapping .eml if needed.
+
+    The type is sniffed from the bytes; the attachment header is the sender's claim.
+    """
     if not source_att:
         return None, None, None
 
@@ -435,7 +447,7 @@ def _resolve_attachment_content(
         if inner:
             att = cast(Attachment, inner)
 
-    return att["data"], att.get("filename"), att.get("content_type")
+    return att["data"], att.get("filename"), stored_document_mime_type(att["data"], EMAIL_FILE_TYPE)
 
 
 def _is_airbnb_payout(data: ExtractionData) -> bool:

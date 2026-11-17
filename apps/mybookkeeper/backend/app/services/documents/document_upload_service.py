@@ -9,16 +9,17 @@ from app.db.session import unit_of_work
 from app.models.documents.document import Document
 from app.repositories import document_repo, usage_log_repo
 from app.repositories.demo import demo_repo
+from app.services.documents.document_mime_type import stored_document_mime_type
 from app.services.extraction.extractor_service import (
     detect_file_type,
     extract_zip_files,
     unsupported_file_message,
 )
-from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.storage.attachment_content import (
     UnreadableImage,
     strip_photo_metadata,
 )
+from app.services.storage.stored_file_cleanup import delete_stored_files
 
 
 async def clean_document_file(content: bytes, filename: str) -> bytes:
@@ -88,7 +89,7 @@ async def accept_upload(
 
     stale_storage_keys: list[str] = []
     result = await _save_placeholder_documents(
-        ctx, content, filename, content_type, file_type, property_id,
+        ctx, content, filename, file_type, property_id,
         reference_only, stale_storage_keys,
     )
     await delete_stored_files(stale_storage_keys)
@@ -99,7 +100,6 @@ async def _save_placeholder_documents(
     ctx: RequestContext,
     content: bytes,
     filename: str,
-    content_type: str,
     file_type: str,
     property_id: uuid.UUID | None,
     reference_only: bool,
@@ -121,13 +121,14 @@ async def _save_placeholder_documents(
                 raise ValueError("No supported files found in zip")
             # Every photo is cleaned before any file is stored, so one that
             # can't be read rejects the zip without leaving files behind.
-            extracted = [(name, await clean_document_file(data, name), mime) for name, data, mime in extracted]
+            extracted = [(name, await clean_document_file(data, name), guessed) for name, data, guessed in extracted]
 
             batch_id = str(uuid.uuid4())
             first_doc_id: uuid.UUID | None = None
 
-            for name, data, mime in extracted:
-                child_type = detect_file_type(name, mime)
+            for name, data, guessed in extracted:
+                child_type = detect_file_type(name, guessed)
+                mime = stored_document_mime_type(data, child_type)
                 stored_content, storage_key = _store_file(ctx.organization_id, name, data, mime)
                 doc = Document(
                     organization_id=ctx.organization_id,
@@ -167,7 +168,8 @@ async def _save_placeholder_documents(
         await document_repo.soft_delete_by_user(db, [d.id for d in replaced])
         stale_storage_keys.extend(d.file_storage_key for d in replaced if d.file_storage_key)
 
-        stored_content, storage_key = _store_file(ctx.organization_id, filename, content, content_type)
+        mime_type = stored_document_mime_type(content, file_type)
+        stored_content, storage_key = _store_file(ctx.organization_id, filename, content, mime_type)
         doc = Document(
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
@@ -176,7 +178,7 @@ async def _save_placeholder_documents(
             file_type=file_type,
             file_content=stored_content,
             file_storage_key=storage_key,
-            file_mime_type=content_type,
+            file_mime_type=mime_type,
             content_hash=content_hash,
             source="upload",
             status="processing",

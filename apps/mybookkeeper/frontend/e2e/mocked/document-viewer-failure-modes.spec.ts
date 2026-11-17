@@ -121,4 +121,31 @@ test.describe("DocumentViewer — failure modes surface to user", () => {
     await expect(page.getByTestId("document-empty")).toHaveCount(0);
     await expect(page.getByTestId("document-error")).toHaveCount(0);
   });
+  test("a file that isn't a photo or PDF is shown in a sandboxed frame where script can't run", async ({ page }) => {
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
+    await stubDocumentList(page);
+
+    // The backend never serves a web page any more; the sandbox is the second
+    // line of defence for a row saved before it sniffed file types.
+    await page.route(`**/api/documents/${DOC_ID}/download`, (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+        body: "<script>window.parent.document.title='pwned'</script><p>date,amount</p>",
+      });
+    });
+
+    await page.goto("/documents");
+    await expect(page.locator("table")).toBeVisible({ timeout: 15000 });
+    await page.locator("tbody tr", { hasText: "empty-test.pdf" }).first().click();
+
+    const iframe = page.locator('iframe[title="Source document"]');
+    await expect(iframe).toBeVisible({ timeout: 10000 });
+    expect(await iframe.getAttribute("sandbox")).toBe("allow-downloads");
+
+    // The page renders, but its script never ran.
+    await expect(page.frameLocator('iframe[title="Source document"]').locator("body")).toContainText("date,amount");
+    await expect(page).not.toHaveTitle("pwned");
+  });
 });

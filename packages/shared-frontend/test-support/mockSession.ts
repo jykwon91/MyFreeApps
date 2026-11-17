@@ -42,10 +42,15 @@ function apiUrl(path: string, apiBase: string = DEFAULT_API_BASE): string {
 /**
  * Plants an unexpired (unsigned) JWT under the web platform's "token" key so
  * the auth guard lets the page render, plus any `storage` entries given.
+ *
+ * Init scripts run in every frame. Only the top page writes: storage is shared
+ * across the origin anyway, and a sandboxed frame (a document viewer's) has no
+ * storage, so reading it there throws.
  */
 export async function plantAuth(page: Page, storage: Record<string, string> = {}, token: string = unsignedJwt()): Promise<void> {
   await page.addInitScript(
     ({ token, entries }) => {
+      if (window !== window.top) return;
       window.localStorage.setItem("token", token);
       for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
     },

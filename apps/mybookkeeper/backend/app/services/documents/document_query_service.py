@@ -11,6 +11,11 @@ from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_repo, integration_repo
 from app.schemas.documents.document_summary import DocumentSummary
+from app.services.documents.document_mime_constants import EMAIL_FILE_TYPE
+from app.services.documents.document_mime_type import (
+    servable_document_mime_type,
+    stored_document_mime_type,
+)
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import fetch_email_by_id, get_gmail_service
 from app.services.storage.stored_file import read_stored_file
@@ -28,6 +33,12 @@ def _extract_renderable_from_eml(eml_bytes: bytes) -> dict[str, str | bytes] | N
                 filename = part.get_filename() or f"attachment.{content_type.split('/')[-1]}"
                 return {"filename": filename, "content_type": content_type, "data": data}
     return None
+
+
+def _download_result(content: bytes, media_type: str, filename: str) -> DownloadResult:
+    """Only renderable types are served inline; anything else downloads."""
+    disposition = "inline" if media_type in _RENDERABLE_MIME_TYPES else f"attachment; filename*=UTF-8''{quote(filename)}"
+    return DownloadResult(content=content, media_type=media_type, disposition=disposition)
 
 
 async def get_document(ctx: RequestContext, document_id: uuid.UUID) -> Document | None:
@@ -103,16 +114,12 @@ async def get_document_download(
             if storage is None:
                 raise ValueError("File stored in object storage but MinIO is not configured")
             file_bytes = read_stored_file(storage, doc.file_storage_key)
-            media_type = doc.file_mime_type or "application/octet-stream"
-            fname = doc.file_name or "file"
-            disposition = "inline" if media_type in _RENDERABLE_MIME_TYPES else f"attachment; filename*=UTF-8''{quote(fname)}"
-            return DownloadResult(content=file_bytes, media_type=media_type, disposition=disposition)
+            media_type = servable_document_mime_type(doc.file_mime_type)
+            return _download_result(file_bytes, media_type, doc.file_name or "file")
 
         if doc.file_content:
-            media_type = doc.file_mime_type or "application/octet-stream"
-            fname = doc.file_name or "file"
-            disposition = "inline" if media_type in _RENDERABLE_MIME_TYPES else f"attachment; filename*=UTF-8''{quote(fname)}"
-            return DownloadResult(content=doc.file_content, media_type=media_type, disposition=disposition)
+            media_type = servable_document_mime_type(doc.file_mime_type)
+            return _download_result(doc.file_content, media_type, doc.file_name or "file")
 
         if not doc.email_message_id:
             raise ValueError("No source file available for this document")
@@ -139,10 +146,9 @@ async def get_document_download(
                 inner = _extract_renderable_from_eml(att["data"])
                 if inner:
                     att = inner
-            att_filename = att["filename"]
-            media_type = att["content_type"] or "application/octet-stream"
-            disposition = "inline" if media_type in _RENDERABLE_MIME_TYPES else f"attachment; filename*=UTF-8''{quote(att_filename)}"
-            return DownloadResult(content=att["data"], media_type=media_type, disposition=disposition)
+            # The attachment's header is the sender's claim; serve what the bytes are.
+            media_type = stored_document_mime_type(att["data"], EMAIL_FILE_TYPE)
+            return _download_result(att["data"], media_type, att["filename"])
 
         body = email_data.get("body", "")
         return DownloadResult(content=body.encode(), media_type="text/plain", disposition="inline")

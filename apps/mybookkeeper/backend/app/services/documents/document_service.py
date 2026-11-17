@@ -9,7 +9,11 @@ from app.db.session import unit_of_work
 from app.models.responses.document_delete_result import DocumentDeleteResult
 from app.repositories import document_repo, transaction_repo
 from app.services.documents.document_errors import DocumentBeingReadError
-from app.services.documents.document_read_state import is_being_read, is_claimed_by_worker
+from app.services.documents.document_mime_type import stored_document_mime_type
+from app.services.documents.document_read_state import (
+    is_being_read,
+    is_claimed_by_worker,
+)
 from app.services.documents.document_upload_service import clean_document_file
 from app.services.extraction.extractor_service import (
     detect_file_type,
@@ -72,6 +76,7 @@ async def replace_file(
         raise ValueError(unsupported_file_message(filename))
 
     content = await clean_document_file(content, filename)
+    mime_type = stored_document_mime_type(content, file_type)
 
     new_key: str | None = None
     old_key: str | None = None
@@ -89,7 +94,7 @@ async def replace_file(
             if storage:
                 old_key = doc.file_storage_key
                 new_key = storage.generate_key(str(ctx.organization_id), filename)
-                storage.upload_file(new_key, content, content_type)
+                storage.upload_file(new_key, content, mime_type)
                 doc.file_content = None
                 doc.file_storage_key = new_key
             else:
@@ -98,7 +103,7 @@ async def replace_file(
 
             doc.file_name = filename
             doc.file_type = file_type
-            doc.file_mime_type = content_type
+            doc.file_mime_type = mime_type
     except Exception:
         # The row did not change, so the object uploaded for it is an orphan.
         await delete_stored_files([new_key] if new_key else [])

@@ -9,6 +9,7 @@ from PIL import Image
 
 from app.services.storage.attachment_content import (
     DOCX_MIME,
+    XLSX_MIME,
     UnreadableImage,
     UnsupportedAttachmentType,
     clean_attachment,
@@ -50,6 +51,9 @@ class TestSniffContentType:
 
     def test_docx(self) -> None:
         assert sniff_content_type(_zip("word/document.xml")) == DOCX_MIME
+
+    def test_xlsx(self) -> None:
+        assert sniff_content_type(_zip("xl/workbook.xml")) == XLSX_MIME
 
     def test_a_zip_that_isnt_a_word_document(self) -> None:
         assert sniff_content_type(_zip("payload.exe")) is None
