@@ -71,12 +71,14 @@ function isBetter(value: number, skill: number, slug: string, spell: number, ben
 /**
  * Compute all enchant matches from the members' stored sheets and the
  * Enchanting crafting file. `itemsById` gives worn weapons' speed, so flat
- * weapon damage can be weighed as DPS.
+ * weapon damage can be weighed as DPS. `crafters` (default: every member)
+ * limits whose enchants count.
  */
 export function computeEnchantMatches(
   members: readonly GuildHelpMember[],
   enchantingFile: Pick<CraftingFile, "recipes">,
   itemsById: ReadonlyMap<number, ClientItem>,
+  crafters: readonly GuildHelpMember[] = members,
 ): GuildMatch[] {
   // Spell → enchant recipe, only for enchants whose effect a stat weight can score.
   const enchantBySpell = new Map<number, ScoredEnchant>();
@@ -96,7 +98,7 @@ export function computeEnchantMatches(
   // Key: "beneficiary_slug|blizzard_slot" → best match so far and its value to the beneficiary.
   const best = new Map<string, BestEnchant>();
 
-  for (const crafter of members) {
+  for (const crafter of crafters) {
     const crafterEnch = crafter.professions.find((p) => p.profession_id === ENCHANTING_SKILL_LINE_ID);
     if (!crafterEnch) continue;
 

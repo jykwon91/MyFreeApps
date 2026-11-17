@@ -1530,8 +1530,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   upgrade, making it yourself beats asking a guild mate (operator, 2026-11-16).
   Both use `recipeSpell()` to map
   the SkillLineAbility id from the sheet to the crafting JSON's spell id.
-  Filter chips (All / Enchants / Gear upgrades) and a member picker use `?help_type=`
-  / `?help_for=` URL params. AH prices show per-reagent and total estimated cost.
+  Filter chips (All / Enchants / Gear upgrades), a "Made by" crafter picker and a
+  "Help for" member picker use `?help_type=` / `?help_by=` / `?help_for=` URL params
+  (`helpFiltersFromParams` / `buildHelpParams`). Made by passes that one member as
+  `crafters` to both compute functions, so their best offer per slot shows even where
+  a guild mate's would win the dedup (operator, 2026-11-17), with an "N members could
+  use something X makes" line. AH prices show per-reagent and total estimated cost.
   Backend: `services/wow/guild/guild_help_service.py`, repo: `guild_repo.member_sheets`.
   Tests: `tests/test_wow_guild_help.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
