@@ -2,6 +2,7 @@ import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listin
 import { Banner, downloadFailureMessage, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Image, Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
 import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
@@ -26,6 +27,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const asking = useRef(false);
   const [isSharing, setIsSharing] = useState(false);
   const photo = index === null ? undefined : photos[index];
@@ -44,8 +46,8 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} visible>
-      <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} style={{ backgroundColor: colors.background }}>
+    <Modal animationType="slide" onRequestClose={onClose} statusBarTranslucent visible>
+      <ScrollView testID="listing-photo-viewer" contentContainerStyle={{ gap: spacing.md, padding: spacing.lg, paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom }} style={{ backgroundColor: colors.background }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {photoPosition(index, photos.length)}
         </Text>
