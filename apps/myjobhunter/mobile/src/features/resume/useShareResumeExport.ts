@@ -2,7 +2,7 @@ import { RESUME_EXPORT_MIME_TYPES } from "@myjobhunter/api-client/constants/resu
 import type { ExportFormat } from "@myjobhunter/api-client/types/resume-refinement/export-format";
 import { resumeExportFileName } from "@myjobhunter/api-client/utils/resumeExportFileName";
 import { resumeExportPath } from "@myjobhunter/api-client/utils/resumeExportPath";
-import { clearDownloadCopies, newDownloadFolder, shareDownloadedFile, useToast } from "@platform/mobile";
+import { clearDownloadCopies, downloadFailureMessage, newDownloadFolder, shareDownloadedFile, useToast } from "@platform/mobile";
 import { File } from "expo-file-system";
 import { useRef, useState } from "react";
 import { API_BASE_URL } from "../../constants/api";
@@ -37,7 +37,7 @@ export function useShareResumeExport(sessionId: string, renewSession: () => Prom
         share: { mimeType: RESUME_EXPORT_MIME_TYPES[format], UTI: RESUME_EXPORT_UTIS[format] },
       });
     } catch (error) {
-      showToast(refinementFailure(error, MESSAGES.couldntDownload), "error");
+      showToast(downloadFailureMessage(error, refinementFailure(error, MESSAGES.couldntDownload)), "error");
     } finally {
       clearDownloadCopies(folder);
       isBusy.current = false;

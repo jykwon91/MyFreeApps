@@ -23,3 +23,9 @@ export const EXPORT_REQUEST_TIMEOUT_MS = 2 * 60_000;
 
 /** Clearing years of records takes a while, and giving up early leaves the answer unknown. */
 export const DELETE_ACCOUNT_TIMEOUT_MS = 60_000;
+
+/**
+ * Downloading a file straight to the phone, outside the API client. The server may build a report
+ * before the first byte, and the whole file still has to arrive over a phone connection.
+ */
+export const FILE_DOWNLOAD_TIMEOUT_MS = 2 * 60_000;

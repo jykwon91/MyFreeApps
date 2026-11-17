@@ -1,6 +1,6 @@
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import { receiptPreviewPath } from "@mybookkeeper/api-client/utils/receiptPreviewPath";
-import { useToast } from "@platform/mobile";
+import { downloadFailureMessage, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { API_BASE_URL } from "../../constants/api";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
@@ -26,8 +26,8 @@ export function useReceiptPreview(renewSession: () => Promise<unknown>): { isPre
       await renewSession();
       // Named by the payment's id, never the tenant's name: it's someone's record.
       await shareExportFile(`${API_BASE_URL}${receiptPreviewPath(receipt.transaction_id, values)}`, `receipt-${receipt.transaction_id}.pdf`, headers());
-    } catch {
-      showToast(MESSAGES.previewFailed, "error");
+    } catch (error) {
+      showToast(downloadFailureMessage(error, MESSAGES.previewFailed), "error");
     } finally {
       isBusy.current = false;
       setIsPreviewing(false);

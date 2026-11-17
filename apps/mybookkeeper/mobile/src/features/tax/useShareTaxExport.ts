@@ -1,4 +1,4 @@
-import { useToast } from "@platform/mobile";
+import { downloadFailureMessage, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { API_BASE_URL } from "../../constants/api";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
@@ -25,7 +25,7 @@ export function useShareTaxExport(renewSession: () => Promise<unknown>): { shari
       await renewSession();
       await shareExportFile(`${API_BASE_URL}${taxExport.path}`, taxExport.fileName, headers());
     } catch (error) {
-      showToast(isExportLimitError(error) ? MESSAGES.tooManyExports : MESSAGES.couldntExport, "error");
+      showToast(isExportLimitError(error) ? MESSAGES.tooManyExports : downloadFailureMessage(error, MESSAGES.couldntExport), "error");
     } finally {
       isSharing.current = false;
       setSharingId(null);

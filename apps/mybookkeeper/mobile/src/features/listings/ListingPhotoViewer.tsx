@@ -1,5 +1,5 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, downloadFailureMessage, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Image, Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
@@ -36,8 +36,8 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
     setIsSharing(true);
     try {
       await openAttachmentFile(address, { id: current.id, filename: current.storage_key, content_type: mimeTypeFor(current.storage_key) });
-    } catch {
-      showToast(MESSAGES.shareFailed, "error");
+    } catch (error) {
+      showToast(downloadFailureMessage(error, MESSAGES.shareFailed), "error");
     } finally {
       setIsSharing(false);
     }
