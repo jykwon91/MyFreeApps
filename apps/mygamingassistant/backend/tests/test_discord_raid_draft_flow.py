@@ -70,6 +70,20 @@ async def _draft(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> tup
     return preview, event
 
 
+async def test_create_a_dungeon_run_defaults_to_five(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    await setup_guild(post)
+    await post(command("raid-admin", "create", raid="deadmines", when=future_when()))
+    event = (await db.execute(select(WowRaidEvent))).scalars().one()
+    assert (event.raid_key, event.size_cap) == ("deadmines", 5)
+
+
+async def test_create_refuses_a_name_that_isnt_in_the_list(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    await setup_guild(post)
+    response = await post(command("raid-admin", "create", raid="deadmine", when=future_when()))
+    assert "Pick a raid or dungeon from the list." in str(response)
+    assert (await db.execute(select(WowRaidEvent))).scalars().all() == []
+
+
 def _ed(event: WowRaidEvent, action: str, **as_who: Any) -> dict[str, Any]:
     """A click on one of the draft's buttons — by the organiser unless *as_who* says otherwise."""
     as_who = {"user_id": ORGANISER, "permissions": ORGANISER_PERMS, **as_who}

@@ -1,7 +1,7 @@
-"""Static catalog for the raid signup bot — raids, classes, specs, roles.
+"""Static catalog for the raid signup bot — raids and dungeons, classes, specs, roles.
 
-Single source of truth for display names, default raid sizes, the slash-command
-choice order (WoW Forever raids first), class tags, each class's specs and the
+Single source of truth for display names, default sizes, the slash-command
+search order (raids first, then dungeons), class tags, each class's specs and the
 role every spec plays.  Keys must match the CHECK-constraint tuples in
 ``app/models/wow/wow_raid_event.py`` / ``wow_raid_signup.py`` — a unit test
 pins that.  Spec ids mirror the frontend's
@@ -15,19 +15,27 @@ from dataclasses import dataclass
 from typing import Final, Literal
 
 RaidEra = Literal["forever", "classic"]
+InstanceKind = Literal["raid", "dungeon"]
 SpecRole = Literal["tank", "healer", "melee", "ranged", "caster"]
 
 
 @dataclass(frozen=True)
 class RaidInfo:
+    """A raid or dungeon the bot can schedule (``era`` = new in Forever, or from Classic)."""
+
     key: str
     name: str
     default_size: int
     era: RaidEra
+    kind: InstanceKind = "raid"
 
     @property
     def choice_label(self) -> str:
-        """Label in the /raid-admin create ``raid`` choice list."""
+        """Label in the /raid-admin ``raid`` search."""
+        if self.kind == "dungeon":
+            if self.era == "forever":
+                return f"{self.name} (dungeon, new in Forever)"
+            return f"{self.name} (dungeon, Classic)"
         if self.era == "forever":
             return f"{self.name} ({self.default_size})"
         return f"{self.name} (Classic)"
@@ -111,7 +119,49 @@ RAIDS: Final[tuple[RaidInfo, ...]] = (
     RaidInfo("aq40", "Temple of Ahn'Qiraj", 40, "classic"),
     RaidInfo("naxx", "Naxxramas", 40, "classic"),
 )
-RAIDS_BY_KEY: Final[dict[str, RaidInfo]] = {raid.key: raid for raid in RAIDS}
+
+# Dungeons: Forever's new ones, then Classic's, each by level (the Forever and
+# Classic Era game files' Map / instance tables).  5-player, except Upper
+# Blackrock Spire's 10.  The leader can change the size.
+DUNGEONS: Final[tuple[RaidInfo, ...]] = tuple(
+    RaidInfo(key, name, size, era, "dungeon")
+    for key, name, size, era in (
+        ("hall_of_thanes", "The Hall of Thanes", 5, "forever"),
+        ("ruins_of_lordaeron", "Ruins of Lordaeron", 5, "forever"),
+        ("excavation_wetlands", "Excavation Site: Wetlands", 5, "forever"),
+        ("city_of_dalaran", "City of Dalaran", 5, "forever"),
+        ("drowned_city", "The Drowned City", 5, "forever"),
+        ("krol_dok", "Krol'dok Stronghold", 5, "forever"),
+        ("alcaz_prison", "Alcaz Prison", 5, "forever"),
+        ("blackmaw_hold", "Blackmaw Hold", 5, "forever"),
+        ("shapers_terrace", "The Shaper's Terrace", 5, "forever"),
+        ("ragefire", "Ragefire Chasm", 5, "classic"),
+        ("deadmines", "The Deadmines", 5, "classic"),
+        ("wailing_caverns", "Wailing Caverns", 5, "classic"),
+        ("shadowfang", "Shadowfang Keep", 5, "classic"),
+        ("blackfathom", "Blackfathom Deeps", 5, "classic"),
+        ("stockade", "The Stockade", 5, "classic"),
+        ("razorfen_kraul", "Razorfen Kraul", 5, "classic"),
+        ("gnomeregan", "Gnomeregan", 5, "classic"),
+        ("scarlet_monastery", "Scarlet Monastery", 5, "classic"),
+        ("razorfen_downs", "Razorfen Downs", 5, "classic"),
+        ("uldaman", "Uldaman", 5, "classic"),
+        ("maraudon", "Maraudon", 5, "classic"),
+        ("zul_farrak", "Zul'Farrak", 5, "classic"),
+        ("sunken_temple", "Sunken Temple", 5, "classic"),
+        ("brd", "Blackrock Depths", 5, "classic"),
+        ("lbrs", "Lower Blackrock Spire", 5, "classic"),
+        ("ubrs", "Upper Blackrock Spire", 10, "classic"),
+        ("dire_maul", "Dire Maul", 5, "classic"),
+        ("stratholme", "Stratholme", 5, "classic"),
+        ("scholomance", "Scholomance", 5, "classic"),
+    )
+)
+# Everything /raid-admin create can schedule, in search order.
+INSTANCES: Final[tuple[RaidInfo, ...]] = (*RAIDS, *DUNGEONS)
+INSTANCES_BY_KEY: Final[dict[str, RaidInfo]] = {info.key: info for info in INSTANCES}
+# Discord shows at most 25 autocomplete choices.
+MAX_INSTANCE_CHOICES: Final = 25
 
 ROLE_ORDER: Final[tuple[str, ...]] = ("tank", "healer", "dps")
 ROLE_LABELS: Final[dict[str, str]] = {"tank": "Tank", "healer": "Healer", "dps": "DPS"}
@@ -292,11 +342,28 @@ def column_specs(column: str) -> tuple[WowSpecInfo, ...]:
 
 
 def raid_name(raid_key: str) -> str:
-    """Display name for a raid key; falls back to the key for unknown values."""
-    info = RAIDS_BY_KEY.get(raid_key)
+    """Display name for a raid or dungeon key; falls back to the key for unknown values."""
+    info = INSTANCES_BY_KEY.get(raid_key)
     if info is None:
         return raid_key
     return info.name
+
+
+def is_dungeon(raid_key: str) -> bool:
+    info = INSTANCES_BY_KEY.get(raid_key)
+    return info is not None and info.kind == "dungeon"
+
+
+def search_instances(text: str) -> list[RaidInfo]:
+    """Type-ahead for the ``raid`` option: raids and dungeons whose label has every
+    typed word ("dead" → The Deadmines, "dungeon strat" → Stratholme); empty text
+    lists them in order.  At most ``MAX_INSTANCE_CHOICES``."""
+    words = _normalise(text).split()
+    found = [
+        info for info in INSTANCES
+        if all(word in f"{_normalise(info.choice_label)} {_normalise(info.key)}" for word in words)
+    ]
+    return found[:MAX_INSTANCE_CHOICES]
 
 
 def class_can_fill(wow_class: str, role: str) -> bool:

@@ -39,7 +39,7 @@ from app.services.discord.raid_context import load_event, parse_event_id, utcnow
 from app.services.discord.raid_draft_views import preview_data
 from app.services.discord.raid_views import cancel_confirm_data
 from app.services.wow import raid_event_service, raid_timezones
-from app.services.wow.raid_catalog import RAIDS_BY_KEY
+from app.services.wow.raid_catalog import INSTANCES_BY_KEY
 from app.services.wow.raid_time_parser import RaidTimeError, parse_raid_time
 
 MIN_SIZE = 5  # matches commands_spec min_value; re-checked because Discord-side limits are advisory
@@ -137,9 +137,9 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
 
 
 async def _create(interaction: Interaction) -> dict[str, Any]:
-    raid = RAIDS_BY_KEY.get(interaction.str_option("raid") or "")
+    raid = INSTANCES_BY_KEY.get(interaction.str_option("raid") or "")
     if raid is None:
-        return ephemeral_response("Pick a raid from the list.")
+        return ephemeral_response("Pick a raid or dungeon from the list.")
     size = interaction.int_option("size")
     if size is None:
         size = raid.default_size

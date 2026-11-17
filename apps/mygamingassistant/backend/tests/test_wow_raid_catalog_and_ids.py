@@ -19,6 +19,10 @@ from app.services.wow.raid_catalog import (
     _LEGACY_SPECS,
     CLASSES,
     CLASSES_BY_KEY,
+    DUNGEONS,
+    INSTANCES,
+    INSTANCES_BY_KEY,
+    MAX_INSTANCE_CHOICES,
     POST_COLUMNS,
     RAIDS,
     ROLE_ORDER,
@@ -30,6 +34,9 @@ from app.services.wow.raid_catalog import (
     column_specs,
     column_tag,
     effective_spec,
+    is_dungeon,
+    raid_name,
+    search_instances,
     find_specs,
     raid_name,
     search_specs,
@@ -64,8 +71,32 @@ _CLASSES_TS = Path(__file__).resolve().parents[2] / "frontend/src/games/wow-fore
 # ---------------------------------------------------------------------------
 
 
+def test_dungeons_are_schedulable_alongside_raids() -> None:
+    assert all(raid.kind == "raid" for raid in RAIDS)
+    assert len(DUNGEONS) == 29 and all(d.kind == "dungeon" for d in DUNGEONS)
+    assert {d.default_size for d in DUNGEONS if d.key != "ubrs"} == {5}
+    assert INSTANCES_BY_KEY["ubrs"].default_size == 10
+    assert all(len(info.key) <= 20 for info in INSTANCES)  # wow_raid_event.raid_key is String(20)
+    assert INSTANCES_BY_KEY["deadmines"].choice_label == "The Deadmines (dungeon, Classic)"
+    assert INSTANCES_BY_KEY["alcaz_prison"].choice_label == "Alcaz Prison (dungeon, new in Forever)"
+    assert INSTANCES_BY_KEY["onyxia"].choice_label == "Onyxia's Lair (40)"
+    assert is_dungeon("stratholme") and not is_dungeon("naxx") and not is_dungeon("nope")
+    assert raid_name("brd") == "Blackrock Depths"
+
+
+def test_search_instances_matches_every_typed_word() -> None:
+    assert [i.key for i in search_instances("dead")] == ["deadmines"]
+    assert [i.key for i in search_instances("blackrock spire")] == ["lbrs", "ubrs"]
+    assert [i.key for i in search_instances("dungeon forever")][:2] == ["hall_of_thanes", "ruins_of_lordaeron"]
+    assert [i.key for i in search_instances("naxx")] == ["naxx"]
+    assert "scholomance" in [i.key for i in search_instances("classic dungeon")]
+    first = search_instances("")
+    assert len(first) == MAX_INSTANCE_CHOICES and first[: len(RAIDS)] == list(RAIDS)
+
+
 def test_catalog_matches_model_check_constraints() -> None:
-    assert {raid.key for raid in RAIDS} == set(RAID_KEYS)
+    assert [info.key for info in INSTANCES] and {info.key for info in INSTANCES} == set(RAID_KEYS)
+    assert len(INSTANCES_BY_KEY) == len(INSTANCES)
     assert {cls.key for cls in CLASSES} == set(WOW_CLASSES)
     assert set(ROLE_ORDER) == set(RAID_ROLES)
 

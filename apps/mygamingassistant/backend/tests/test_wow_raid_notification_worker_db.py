@@ -226,6 +226,22 @@ async def test_ready_check_mentions_seated_players_only(
 # ---------------------------------------------------------------------------
 
 
+async def test_a_dungeon_run_gets_the_plain_reminder_not_a_raid_checklist(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    round_due = _NOW - timedelta(minutes=1)
+    event = await _raid(db, starts_at=_starts_for_round(round_due), raid_key="stratholme", size=5)
+    await _signup(db, event, "31")
+    await _row(db, event, "consumables_reminder", round_due)
+
+    await process_due_notifications(now=_NOW)
+
+    [dm] = fake_discord.posts("dm-31")
+    assert dm.body is not None and not dm.body.get("embeds")
+    assert "starts <t:" in dm.body["content"] and "checklist" not in dm.body["content"]
+
+
 async def test_consumables_dms_and_single_fallback_post(
     bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
 ) -> None:

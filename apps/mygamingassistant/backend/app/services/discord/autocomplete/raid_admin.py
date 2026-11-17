@@ -1,6 +1,8 @@
 """Autocomplete for /raid-admin options.
 
 * ``timezone`` (setup) — IANA zones + friendly aliases, no DB.
+* ``raid`` (create, attendance, export) — raids and dungeons matching what's
+  typed, labelled "The Deadmines (dungeon, Classic)"; the value is the key.  No DB.
 * ``event`` (edit / cancel / signup) — this guild's upcoming scheduled raids,
   labelled "Sat Oct 10 8pm Onyxia"; the value is the event UUID.  For
   ``signup``, raids that have started too, until they're finished.  For
@@ -18,6 +20,7 @@ from app.services.discord.interaction import Interaction, autocomplete_response
 from app.services.discord.raid_context import load_configured_guild, utcnow
 from app.services.discord.raid_views import event_choice_label
 from app.services.wow import raid_timezones
+from app.services.wow.raid_catalog import search_instances
 
 MAX_CHOICES: Final = 25
 
@@ -27,6 +30,8 @@ async def handle_raid_admin_autocomplete(interaction: Interaction) -> dict[str, 
     query = str(interaction.options.get(focused) or "")
     if focused == "timezone":
         return autocomplete_response(raid_timezones.search(query))
+    if focused == "raid":
+        return autocomplete_response([{"name": info.choice_label, "value": info.key} for info in search_instances(query)])
     if focused == "event":
         return autocomplete_response(await _event_choices(interaction, query))
     return autocomplete_response([])
