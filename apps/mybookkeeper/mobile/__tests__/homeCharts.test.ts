@@ -54,7 +54,12 @@ describe("topExpenseCategories", () => {
 
 describe("home wording", () => {
   it("shortens the chart's side axis", () => {
-    expect([axisMoney(0), axisMoney(950), axisMoney(1000), axisMoney(12_400)]).toEqual(["$0", "$950", "$1k", "$12k"]);
+    expect([axisMoney(0), axisMoney(950), axisMoney(1000), axisMoney(12_000)]).toEqual(["$0", "$950", "$1k", "$12k"]);
+  });
+
+  it("labels each gridline exactly, never rounding it to another value", () => {
+    expect([axisMoney(750), axisMoney(2500), axisMoney(1000), axisMoney(1250)]).toEqual(["$750", "$2.5k", "$1k", "$1.25k"]);
+    expect([axisMoney(1_000_000), axisMoney(1_250_000), axisMoney(-2500)]).toEqual(["$1M", "$1.25M", "-$2.5k"]);
   });
 
   it("names the chart's span", () => {
