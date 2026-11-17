@@ -13,6 +13,9 @@ jest.mock("expo-notifications", () => ({
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
+// Stands in for the phone's keychain, where whose things are on the phone is kept.
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+
 jest.mock("../src/lib/session", () => {
   let state = { status: "signedIn", email: "a@example.com", sessionId: "s" };
   const listeners = new Set<() => void>();
