@@ -13,7 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { IMPORT_RECIPE_MESSAGES as MESSAGES } from "../src/constants/importRecipe";
-import { DRAFT_FILLED_IN, DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
+import { DRAFT_DISCARD_COPY, DRAFT_FILLED_IN, DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import ImportRecipeScreen from "../src/features/importRecipe/ImportRecipeScreen";
 import { usePhotoImport } from "../src/features/importRecipe/usePhotoImport";
 import { makeStore } from "../src/lib/store";
@@ -318,8 +318,8 @@ describe("reading the photo", () => {
     expect(screen.getByLabelText("Ingredient 1 amount").props.value).toBe("2");
     expect(screen.getByLabelText("Step 1").props.value).toBe("Simmer.");
     expect(fakeFiles()).toEqual([]);
-    // Nothing's changed yet, so leaving needn't ask.
-    expect(mockGuard.prevent).toBe(false);
+    // Untouched, leaving still asks: the photo would need reading again.
+    expect(mockGuard.prevent).toBe(true);
 
     await press(NEW_RECIPE_MESSAGES.create);
     await waitFor(() =>
@@ -330,6 +330,31 @@ describe("reading the photo", () => {
     );
     const created = sent.find((candidate) => candidate.route === "POST /recipes");
     expect(created?.body).toMatchObject({ title: DRAFT.title, source: DRAFT.source, prep_minutes: 10, cook_minutes: 25 });
+  });
+
+  it("asks before leaving an untouched read, saying the photo would need reading again", async () => {
+    sent = serve({ "POST /recipes/extract": () => reply(200, DRAFT) });
+    await show();
+    await press(MESSAGES.choosePhoto);
+    await press(MESSAGES.extract);
+    expect(await screen.findByLabelText("Title, required")).toBeTruthy();
+
+    await tryToLeave();
+    const copy = DRAFT_DISCARD_COPY.photo;
+    expect(alert).toHaveBeenCalledWith(copy.discardTitle, copy.discardBody, expect.any(Array));
+    expect(mockRepeat).not.toHaveBeenCalled();
+    await act(async () => alertButton(copy.discard).onPress?.());
+    expect(mockRepeat).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops asking once the recipe is created", async () => {
+    sent = serve({ "POST /recipes/extract": () => reply(200, DRAFT), "POST /recipes": () => reply(201, CREATED) });
+    await show();
+    await press(MESSAGES.choosePhoto);
+    await press(MESSAGES.extract);
+    await press(NEW_RECIPE_MESSAGES.create);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    expect(mockGuard.prevent).toBe(false);
   });
 
   it("shows how long it takes once it's been a while", async () => {

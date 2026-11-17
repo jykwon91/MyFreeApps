@@ -1,5 +1,5 @@
-import { Banner, LoadingButton, useDiscardPrompt } from "@platform/mobile";
-import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { Banner, confirmDiscard, LoadingButton, useConfirmLeave } from "@platform/mobile";
+import { DRAFT_DISCARD_COPY, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { draftNotice } from "../../utils/draftNotice";
 import RecipeDetailsFields from "./RecipeDetailsFields";
@@ -11,7 +11,10 @@ import { useNewRecipeForm } from "./useNewRecipeForm";
 export default function NewRecipeForm({ seed }: { seed?: NewRecipeSeed }) {
   const form = useNewRecipeForm(seed);
   const locked = form.isSaving || form.isLeaving;
-  useDiscardPrompt(form.isDirty && !form.isLeaving, form.isSaving);
+  // A save in flight can't be walked away from.
+  useConfirmLeave(form.isDirty && !form.isLeaving, (leave) => {
+    if (!form.isSaving) confirmDiscard(leave, seed ? DRAFT_DISCARD_COPY[seed.origin] : undefined);
+  });
   const notice = seed ? draftNotice(seed) : null;
 
   return (
