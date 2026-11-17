@@ -22,11 +22,13 @@ export default function RentalRoiTargetCell({ property }: RentalRoiTargetCellPro
       </Link>
     );
   }
-  // A price but no target: the loans' original amounts are missing, or cover the whole price.
+  // A price but no target: a loan's original amount is missing, or the loans cover the whole price.
   return (
-    <span>
-      <span aria-hidden>—</span>
-      <span className="sr-only">Not available</span>
-    </span>
+    <Link
+      to="/mortgages"
+      className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary hover:underline"
+    >
+      Add the loan's original amount
+    </Link>
   );
 }

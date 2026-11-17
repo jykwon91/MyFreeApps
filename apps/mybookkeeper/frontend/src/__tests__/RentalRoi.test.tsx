@@ -172,6 +172,14 @@ describe("RentalRoi missing data", () => {
     expect(within(betaRow).getByText("-$420")).toBeInTheDocument();
   });
 
+  it("asks for the loan's original amount when a price is saved but there is still no target", () => {
+    mockQuery({ data: response({ properties: [{ ...BETA, has_purchase_price: true }] }) });
+    renderTab();
+    const table = screen.getByRole("table");
+    expect(within(table).queryByRole("link", { name: "Add purchase price" })).toBeNull();
+    expect(within(table).getByRole("link", { name: "Add the loan's original amount" })).toHaveAttribute("href", "/mortgages");
+  });
+
   it("explains where the mortgage came from, or that there isn't one", () => {
     mockQuery({ data: response() });
     renderTab();
