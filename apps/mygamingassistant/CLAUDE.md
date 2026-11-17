@@ -281,7 +281,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`recipeCategory`), never from the name. Forever-only recipes reuse `sourceUnknown` + its chip;
   recipe-item sources are Classic data with the provenance badge.
 - **Drop-only recipes** (`/wow-forever/recipe-drops`, `?p=<profession>` default Enchanting, `&source=open-world|dungeon|raid|random`,
-  `&sort=odds`): crafting recipes whose item no vendor sells and no quest gives (`lib/dropRecipes/buildDropRecipes.ts`,
+  `&sort=odds`, `&trade=ah|bop` = only tradeable / only bind-on-pickup by `bindOnPickup`): crafting recipes whose item no vendor sells and no quest gives (`lib/dropRecipes/buildDropRecipes.ts`,
   from `loadAllCraftingData`). Dungeon / raid drops come from `sources.json`'s `instance` + `instances` (the professions
   generator reuses the item pages' `load_finder` / `instance_rows`; one TS decoder, `data/instanceDropDecode.ts`, for both).
   A random drop (world pool or `COMMON_DROP_MOBS`+ kinds) NEVER lists mobs as a farm spot — only a level range — except

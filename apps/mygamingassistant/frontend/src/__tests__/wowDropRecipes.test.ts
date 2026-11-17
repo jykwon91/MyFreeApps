@@ -10,6 +10,7 @@ import { dropRecipeProfessions, selectDropRecipes } from "@/games/wow-forever/li
 import type { DropRecipe } from "@/games/wow-forever/types/dropRecipes/dropRecipe";
 import { DROP_RECIPE_SORT } from "@/games/wow-forever/types/dropRecipes/dropRecipeSort";
 import { DROP_RECIPE_SOURCE } from "@/games/wow-forever/types/dropRecipes/dropRecipeSource";
+import { DROP_RECIPE_TRADE, type DropRecipeTrade } from "@/games/wow-forever/types/dropRecipes/dropRecipeTrade";
 import { INSTANCE_KIND } from "@/games/wow-forever/types/itemPages/instanceKind";
 
 let recipes: DropRecipe[] = [];
@@ -83,14 +84,28 @@ describe("buildDropRecipes (committed data)", () => {
 
 describe("selectDropRecipes", () => {
   it("filters by profession and source, sorted by skill", () => {
-    const shown = selectDropRecipes(recipes, { profession: "enchanting", source: DROP_RECIPE_SOURCE.raid, sort: DROP_RECIPE_SORT.skill });
+    const shown = selectDropRecipes(recipes, { profession: "enchanting", source: DROP_RECIPE_SOURCE.raid, sort: DROP_RECIPE_SORT.skill, trade: null });
     expect(shown.length).toBeGreaterThan(0);
     expect(shown.every((r) => r.profession === "enchanting" && r.sources.includes(DROP_RECIPE_SOURCE.raid))).toBe(true);
     expect(shown.map((r) => r.skill)).toEqual([...shown.map((r) => r.skill)].sort((a, b) => a - b));
   });
 
+  it("keeps only the tradeable ones, or only the bind-on-pickup ones", () => {
+    const pick = (trade: DropRecipeTrade | null) =>
+      selectDropRecipes(recipes, { profession: "enchanting", source: null, sort: DROP_RECIPE_SORT.skill, trade });
+    const ah = pick(DROP_RECIPE_TRADE.auctionHouse);
+    const bop = pick(DROP_RECIPE_TRADE.bindOnPickup);
+    expect(ah.length).toBeGreaterThan(0);
+    expect(bop.length).toBeGreaterThan(0);
+    expect(ah.every((r) => !r.bindOnPickup)).toBe(true);
+    expect(bop.every((r) => r.bindOnPickup)).toBe(true);
+    expect(ah.length + bop.length).toBe(pick(null).length);
+    expect(bop.map((r) => r.name)).toContain("Enchant Cloak - Dodge");
+    expect(ah.map((r) => r.name)).toContain("Enchant Weapon - Fiery Weapon");
+  });
+
   it("puts the best odds first and random-only drops last", () => {
-    const shown = selectDropRecipes(recipes, { profession: "enchanting", source: null, sort: DROP_RECIPE_SORT.odds });
+    const shown = selectDropRecipes(recipes, { profession: "enchanting", source: null, sort: DROP_RECIPE_SORT.odds, trade: null });
     const chances = shown.map((r) => r.bestChance);
     expect(chances).toEqual([...chances].sort((a, b) => b - a));
     expect(shown[shown.length - 1]?.bestChance).toBe(0);
@@ -111,10 +126,10 @@ describe("drop recipe text and params", () => {
   });
 
   it("round-trips the URL, leaving defaults out", () => {
-    const filters = { profession: "tailoring", source: DROP_RECIPE_SOURCE.dungeon, sort: DROP_RECIPE_SORT.odds, character: "jason-kwon" } as const;
+    const filters = { profession: "tailoring", source: DROP_RECIPE_SOURCE.dungeon, sort: DROP_RECIPE_SORT.odds, trade: DROP_RECIPE_TRADE.bindOnPickup, character: "jason-kwon" } as const;
     expect(dropRecipeFiltersFromParams(dropRecipeParams(filters))).toEqual(filters);
-    const plain = dropRecipeFiltersFromParams(new URLSearchParams("p=nope&source=nope&sort=nope"));
-    expect(plain).toEqual({ profession: DEFAULT_DROP_RECIPE_PROFESSION, source: null, sort: DROP_RECIPE_SORT.skill, character: null });
+    const plain = dropRecipeFiltersFromParams(new URLSearchParams("p=nope&source=nope&sort=nope&trade=nope"));
+    expect(plain).toEqual({ profession: DEFAULT_DROP_RECIPE_PROFESSION, source: null, sort: DROP_RECIPE_SORT.skill, trade: null, character: null });
     expect(dropRecipeParams(plain).toString()).toBe("");
   });
 

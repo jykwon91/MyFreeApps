@@ -120,6 +120,36 @@ test("a character's known recipes are crossed out, kept in the URL, and cleared 
   await expect(page).toHaveURL(/who=no-enchanter/);
 });
 
+test("Can you buy it? keeps only Auction House recipes, or only bind-on-pickup ones, in the URL", async ({ page }) => {
+  await page.goto(PAGE);
+  const rows = page.getByTestId("drop-recipe-row");
+  const trade = page.getByRole("radiogroup", { name: "Can you buy it?" });
+  await expect(trade.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+
+  await trade.getByRole("radio", { name: "Bind on pickup" }).click();
+  await expect(page).toHaveURL(/trade=bop/);
+  await expect(rows.filter({ hasText: "Enchant Cloak - Dodge" })).toHaveCount(1);
+  await expect(rows.filter({ hasText: "Enchant Weapon - Fiery Weapon" })).toHaveCount(0);
+  const dodge = rows.filter({ hasText: "Enchant Cloak - Dodge" });
+  await dodge.locator("summary").click();
+  await expect(dodge.getByTestId("drop-recipe-trade")).toContainText("Binds when picked up");
+
+  await trade.getByRole("radio", { name: "Auction House" }).click();
+  await expect(page).toHaveURL(/trade=ah/);
+  await expect(rows.filter({ hasText: "Enchant Weapon - Fiery Weapon" })).toHaveCount(1);
+  await expect(rows.filter({ hasText: "Enchant Cloak - Dodge" })).toHaveCount(0);
+
+  await page.reload();
+  await expect(trade.getByRole("radio", { name: "Auction House" })).toHaveAttribute("aria-checked", "true");
+  await trade.getByRole("radio", { name: "All" }).click();
+  await expect(page).not.toHaveURL(/trade=/);
+
+  // Enchanting has no bind-on-pickup dungeon formula: the empty note points at the filters, not just the place.
+  await page.goto(`${PAGE}?source=dungeon&trade=bop`);
+  await expect(rows).toHaveCount(0);
+  await expect(page.getByText("No drop-only recipe matches these filters. Try All on one of them.")).toBeVisible();
+});
+
 test("fits a phone with no sideways scroll", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto(PAGE);
