@@ -112,14 +112,25 @@ local function nameOf(unit)
   return UnitName(unit) or "someone"
 end
 
+-- The client hides ("secret") aura data from addons in some places and refuses the read outright.
+-- True while your own buffs are hidden, so the chat note is said once each time hiding starts.
+local hidden = false
+
+local function isSecret(value)
+  return issecretvalue ~= nil and issecretvalue(value) == true
+end
+
 -- Each helpful aura on a unit as { name, icon, expires, mine, spellId }. Forever runs the modern
 -- aura API; older clients only have UnitBuff. `expires` is 0 for a buff without a timer.
+-- nil when the client hides that unit's auras: a missing buff can't be told from a hidden one.
 local function buffs(unit)
   local list = {}
   for i = 1, 40 do
     local name, icon, expires, source, spellId
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-      local aura = C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL")
+      local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL")
+      if not ok then return nil end
+      if aura and (isSecret(aura.name) or isSecret(aura.spellId) or isSecret(aura.expirationTime) or isSecret(aura.sourceUnit)) then return nil end
       if not aura then break end
       name, icon, expires, source, spellId = aura.name, aura.icon, aura.expirationTime, aura.sourceUnit, aura.spellId
     elseif UnitBuff then
@@ -240,7 +251,10 @@ end
 local function soulstoneWarning(units, now)
   if classOf("player") ~= "WARLOCK" or UnitLevel("player") < SOULSTONE_LEVEL then return nil end
   for _, unit in ipairs(units) do
-    for _, aura in ipairs(buffs(unit)) do
+    local list = buffs(unit)
+    -- Hidden buffs might be holding your stone: say nothing rather than "put it on someone".
+    if not list then return nil end
+    for _, aura in ipairs(list) do
       if aura.mine and (SOULSTONE_BUFFS[aura.spellId] or aura.name == SOULSTONE_BUFF) then
         -- Some clients don't give other players' buff timers; fall back to when you cast it.
         local cast = settings().lastSoulstoneCast
@@ -335,7 +349,8 @@ local function partyWarnings(units)
   local myClass = classOf("player")
   local auras = {} -- one aura read per unit per tick, however many buffs you cast
   local function aurasOf(unit)
-    auras[unit] = auras[unit] or buffs(unit)
+    -- false marks a hidden unit, so it is read once a tick like the rest.
+    if auras[unit] == nil then auras[unit] = buffs(unit) or false end
     return auras[unit]
   end
   for _, buff in ipairs(GROUP_BUFFS) do
@@ -343,7 +358,8 @@ local function partyWarnings(units)
       local missing, far = {}, 0
       for _, unit in ipairs(units) do
         local wants = not buff.manaOnly or not NO_MANA[classOf(unit)]
-        if wants and not UnitIsUnit(unit, "player") and present(unit) and not find(aurasOf(unit), buff.nameSet) then
+        local list = wants and not UnitIsUnit(unit, "player") and present(unit) and aurasOf(unit)
+        if list and not find(list, buff.nameSet) then
           if near(unit) then table.insert(missing, nameOf(unit)) else far = far + 1 end
         end
       end
@@ -361,14 +377,15 @@ local function currentWarnings()
   local s = settings()
   local now = GetTime()
   local myBuffs = buffs("player")
+  hidden = myBuffs == nil
   local units = groupUnits()
   local warnings = {}
   local function add(w) if w then table.insert(warnings, w) end end
-  if s.armor then add(armorWarning(myBuffs, now)) end
+  if myBuffs and s.armor then add(armorWarning(myBuffs, now)) end
   if s.soulstone then add(soulstoneWarning(units, now)) end
   if s.healthstone then add(healthstoneWarning(units, bagItems())) end
-  if s.food then add(foodWarning(myBuffs, now)) end
-  if s.group then
+  if myBuffs and s.food then add(foodWarning(myBuffs, now)) end
+  if myBuffs and s.group then
     for _, w in ipairs(groupWarnings(units, myBuffs, now)) do add(w) end
   end
   if s.party and #units > 1 then
@@ -481,8 +498,12 @@ local function update()
 end
 
 local failing = false
+local wasHidden = false
 local function check()
   local ok, problem = pcall(update)
+  -- Said once each time the game starts hiding buffs, not every second.
+  if hidden and not wasHidden then say("the game is hiding buffs here, so buff reminders pause until it shows them again.") end
+  wasHidden = hidden
   if ok then failing = false return end
   -- A client API that behaves differently from what this addon expects: say so once, not every second.
   if not failing then say("stopped checking: " .. tostring(problem) .. ". Tell MyGamingAssistant.") end

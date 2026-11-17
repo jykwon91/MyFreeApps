@@ -281,6 +281,42 @@ describe("MGA Buffs list", () => {
     expect(lines).not.toContain("hidden");
   });
 
+  it("pauses buff reminders and says so once when the game hides your buffs, then picks up again", () => {
+    const lines = run(FED, "clear(); units.player.secret = true; tick(); tick()");
+    expect(lines.filter((l) => l.startsWith("chat: MGA Buffs: stopped checking:"))).toHaveLength(0);
+    expect(lines.filter((l) => l.includes("hiding buffs"))).toHaveLength(1);
+    // Even the Soulstone check waits: a hidden buff list might be holding your stone.
+    expect(rows(lines)).toEqual([]);
+    const back = run(FED, "units.player.secret = true; tick(); clear(); units.player.secret = false; tick()");
+    expect(rows(back)).toEqual(["No Demon Armor", "No Soulstone in your bags: Create Soulstone"]);
+  });
+
+  it("skips a groupmate whose buffs the game hides instead of saying they're missing", () => {
+    const setup = `${ARMORED}; ${FED}; units.player.level = 15; group = "party"; units.player.class = "PRIEST"; units.player.buffs = { buff("Inner Fire", now + 900), buff("Power Word: Fortitude", now + 900), buff("Well Fed", now + 600) }; units.party1 = unit("WARRIOR", 60, "Bob", { secret = true }); units.party2 = unit("ROGUE", 60, "Ann")`;
+    const lines = run(setup);
+    expect(lines.filter((l) => l.startsWith("chat: MGA Buffs: stopped checking:"))).toHaveLength(0);
+    expect(rows(lines).filter((r) => r.includes("Fortitude"))).toEqual(["Fortitude missing on Ann"]);
+  });
+
+  it("treats a buff the client returns as a secret value like a hidden list", () => {
+    const lines = run(`${FED}; table.insert(units.player.buffs, buff(SECRET))`);
+    expect(lines.filter((l) => l.includes("hiding buffs"))).toHaveLength(1);
+    expect(rows(lines)).toEqual([]);
+  });
+
+  it("holds the Soulstone reminder while a groupmate's buffs are hidden", () => {
+    const setup = `${ARMORED}; ${FED}; ${STONE_IN_BAGS}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob", { secret = true })`;
+    const lines = run(setup);
+    expect(rows(lines).filter((r) => r.includes("Soulstone"))).toEqual([]);
+    expect(lines.filter((l) => l.includes("hiding buffs"))).toHaveLength(0);
+    expect(rows(run(setup.replace("secret = true", "secret = false")))).toContain("Soulstone ready: put it on someone");
+  });
+
+  it("says the note again the next time your buffs are hidden", () => {
+    const lines = run(FED, "units.player.secret = true; tick(); units.player.secret = false; tick(); units.player.secret = true; tick()");
+    expect(lines.filter((l) => l.includes("hiding buffs"))).toHaveLength(2);
+  });
+
   it("says once, not every second, when a client API surprises it", () => {
     const lines = run("", 'clear(); UnitLevel = function() error("no level") end; tick(); tick()');
     expect(lines.filter((l) => l.startsWith("chat: MGA Buffs: stopped checking:"))).toHaveLength(1);
