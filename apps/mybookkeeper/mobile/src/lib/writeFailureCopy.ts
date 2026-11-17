@@ -1,4 +1,5 @@
 import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
+import { WRITE_RATE_LIMITED_MESSAGE, WRITE_TOO_LARGE_MESSAGE } from "@mybookkeeper/api-client/constants/writeFailureMessages";
 import type { WriteFailureCopy } from "../types/WriteFailureCopy";
 
 /** `noun` and `plural` read in a sentence, like "vendor" and "vendors". Fixed wording only: the server's own text is never shown. */
@@ -15,6 +16,8 @@ export function saveFailureCopy(noun: string, plural: string, isNew: boolean): W
     invalid: "Something in there isn't right. Check the fields and try again.",
     serverError: isNew ? unsure : tryAgain,
     other: tryAgain,
+    rateLimited: WRITE_RATE_LIMITED_MESSAGE,
+    tooLarge: WRITE_TOO_LARGE_MESSAGE,
   };
 }
 
@@ -29,6 +32,8 @@ export function deleteFailureCopy(noun: string): WriteFailureCopy {
     invalid: tryAgain,
     serverError: tryAgain,
     other: tryAgain,
+    rateLimited: WRITE_RATE_LIMITED_MESSAGE,
+    tooLarge: WRITE_TOO_LARGE_MESSAGE,
   };
 }
 
@@ -44,6 +49,8 @@ export function actionFailureCopy(doing: string, overrides: Partial<WriteFailure
     invalid: tryAgain,
     serverError: tryAgain,
     other: tryAgain,
+    rateLimited: WRITE_RATE_LIMITED_MESSAGE,
+    tooLarge: WRITE_TOO_LARGE_MESSAGE,
     ...overrides,
   };
 }

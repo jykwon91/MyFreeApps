@@ -14,8 +14,12 @@ export function writeFailure(error: unknown): WriteFailure {
       return "gone";
     case 409:
       return "conflict";
+    case 413:
+      return "tooLarge";
     case 422:
       return "invalid";
+    case 429:
+      return "rateLimited";
     default:
       return status >= 500 ? "serverError" : "other";
   }
