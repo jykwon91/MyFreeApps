@@ -1,4 +1,5 @@
 import { CHANGE_NOTE_MAX_LENGTH, RECIPE_FORM_PROBLEMS as PROBLEMS, RECIPE_SERVINGS_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
@@ -473,13 +474,14 @@ describe("saving", () => {
   it.each([
     [400, TWEAK_MESSAGES.changedOrNotYours],
     [404, TWEAK_MESSAGES.changedOrNotYours],
-    [422, TWEAK_MESSAGES.checkEntries],
-    [500, TWEAK_MESSAGES.couldntSave],
+    [422, "The change note is too long."],
+    [500, RECIPE_WRITE_MESSAGES.serverTrouble],
   ])("says why a %i didn't save, and keeps everything typed to try again", async (status, message) => {
     let failing = true;
     sent = serve({
       "GET /recipes/r1": () => reply(200, SOUP),
-      "POST /recipes/r1/versions": () => (failing ? reply(status, { detail: "no" }) : reply(201, SAVED)),
+      "POST /recipes/r1/versions": () =>
+        failing ? reply(status, { detail: status === 422 ? "The change note is too long." : "no" }) : reply(201, SAVED),
     });
     await showForm();
     await type(NOTE, "More salt");

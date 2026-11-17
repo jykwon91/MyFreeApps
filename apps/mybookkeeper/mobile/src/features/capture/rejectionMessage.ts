@@ -1,5 +1,5 @@
 import { documentUploadProblemMessage } from "@mybookkeeper/api-client/utils/documentUploadFile";
-import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import type { ApiError } from "@platform/core/types/api-error";
 import { REQUEST_TOO_LARGE_STATUS, UPLOAD_REFUSED_REASON } from "../../constants/capture";
 
