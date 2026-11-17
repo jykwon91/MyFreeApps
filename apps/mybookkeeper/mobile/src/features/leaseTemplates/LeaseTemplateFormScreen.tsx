@@ -55,7 +55,7 @@ export default function LeaseTemplateFormScreen() {
       <FormField
         editable={!locked}
         hint={MESSAGES.descriptionHint}
-        inputStyle={{ minHeight: LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT }}
         label={MESSAGES.description}
         multiline
         onChangeText={setDescription}

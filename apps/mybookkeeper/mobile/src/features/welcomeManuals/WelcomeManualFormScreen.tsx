@@ -52,7 +52,7 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
         {original ? (
           <FormField
             editable={!locked}
-            inputStyle={{ minHeight: WELCOME_MANUAL_INTRO_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+            inputStyle={{ minHeight: WELCOME_MANUAL_INTRO_MIN_HEIGHT }}
             label={MESSAGES.introLabel}
             multiline
             onChangeText={(text) => edit("intro_text", text)}

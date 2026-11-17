@@ -1,6 +1,7 @@
 import { Text, TextInput, View } from "react-native";
 import CharacterCounter from "./CharacterCounter";
 import FieldError from "./FieldError";
+import { MULTILINE_FIELD_MIN_HEIGHT } from "../constants/multilineField";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { FormFieldProps } from "../types/FormFieldProps";
@@ -16,6 +17,7 @@ export default function FormField({
   inputStyle,
   accessibilityLabel,
   accessibilityHint,
+  multiline = false,
   ...inputProps
 }: FormFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -34,11 +36,13 @@ export default function FormField({
         <TextInput
           placeholderTextColor={colors.mutedForeground}
           {...inputProps}
+          multiline={multiline}
           accessibilityLabel={accessibilityLabel ?? (required ? `${label}, required` : label)}
           accessibilityHint={error ?? accessibilityHint ?? hint}
           style={[
             {
-              minHeight: MIN_TOUCH_TARGET,
+              minHeight: multiline ? MULTILINE_FIELD_MIN_HEIGHT : MIN_TOUCH_TARGET,
+              ...(multiline ? { paddingTop: spacing.md, textAlignVertical: "top" as const } : null),
               paddingHorizontal: spacing.md,
               paddingRight: trailing ? MIN_TOUCH_TARGET + spacing.md : spacing.md,
               borderWidth: 1,

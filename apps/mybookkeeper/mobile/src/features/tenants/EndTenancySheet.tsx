@@ -50,7 +50,6 @@ export default function EndTenancySheet({
       <FormField
         editable={!isEnding}
         hint={`${reason.length}/${TENANCY_END_REASON_MAX_LENGTH}`}
-        inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
         label={TENANT_MESSAGES.reason}
         maxLength={TENANCY_END_REASON_MAX_LENGTH}
         multiline

@@ -55,7 +55,6 @@ export default function ApplicantStageSheet({
       <FormField
         editable={!isMoving}
         hint={`${note.length}/${APPLICANT_STAGE_NOTE_MAX_LENGTH}`}
-        inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
         label="Note (optional)"
         maxLength={APPLICANT_STAGE_NOTE_MAX_LENGTH}
         multiline

@@ -3,7 +3,7 @@ import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editabl
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, useTheme } from "@platform/mobile";
 import { View } from "react-native";
-import { MULTILINE_MIN_HEIGHT, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import RowControls from "./RowControls";
 
 interface StepRowEditorProps {
@@ -30,7 +30,6 @@ export default function StepRowEditor({ row, number, isLast, isNew, disabled, pr
         counter={characterCounter(row.instruction.trim(), STEP_INSTRUCTION_MAX_LENGTH)}
         editable={!disabled}
         error={problem}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={label}
         multiline
         onChangeText={(instruction) => onChange(row.key, instruction)}

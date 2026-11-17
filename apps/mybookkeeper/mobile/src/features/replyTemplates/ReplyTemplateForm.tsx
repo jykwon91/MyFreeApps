@@ -89,7 +89,7 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
           {...fieldProps("body")}
           error={hasTried ? problems.body : undefined}
           hint={messageHint}
-          inputStyle={{ minHeight: REPLY_TEMPLATE_BODY_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+          inputStyle={{ minHeight: REPLY_TEMPLATE_BODY_MIN_HEIGHT }}
           label={MESSAGES.message}
           maxLength={REPLY_TEMPLATE_BODY_MAX_LENGTH}
           multiline

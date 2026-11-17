@@ -2,7 +2,6 @@ import { CHANGE_NOTE_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeFo
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { MULTILINE_MIN_HEIGHT } from "../../constants/newRecipe";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../../constants/tweakRecipe";
 import type { TweakRecipeFormProps } from "../../types/TweakRecipeFormProps";
 import RecipeFormLayout from "../recipeForm/RecipeFormLayout";
@@ -35,7 +34,6 @@ export default function TweakRecipeForm({ recipe, version }: TweakRecipeFormProp
         counter={characterCounter(form.changeNote.trim(), CHANGE_NOTE_MAX_LENGTH)}
         editable={!locked}
         error={form.noteProblem}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={MESSAGES.changeNoteLabel}
         multiline
         onChangeText={form.setChangeNote}

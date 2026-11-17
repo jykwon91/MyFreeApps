@@ -139,7 +139,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
 
       <FormField
         editable={!busy}
-        inputStyle={{ minHeight: 72, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: 72 }}
         label={RENT_MANAGE_MESSAGES.notes}
         multiline
         onChangeText={setNotes}

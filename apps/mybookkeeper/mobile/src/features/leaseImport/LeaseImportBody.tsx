@@ -14,7 +14,6 @@ import LeaseApplicantField from "./LeaseApplicantField";
 import LeaseListingField from "./LeaseListingField";
 import { useImportLease } from "./useImportLease";
 
-const NOTES_MIN_HEIGHT = 96;
 
 /** Adds a lease that was signed outside the app: who signed it, its dates, and the files. */
 export default function LeaseImportBody() {
@@ -54,7 +53,6 @@ export default function LeaseImportBody() {
       <FormField
         editable={!locked}
         error={problemFor("notes")}
-        inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={MESSAGES.notes}
         maxLength={LEASE_NOTES_MAX_LENGTH}
         multiline

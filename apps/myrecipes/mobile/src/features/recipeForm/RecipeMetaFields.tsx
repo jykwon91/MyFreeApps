@@ -4,13 +4,12 @@ import {
   RECIPE_TITLE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, useTheme } from "@platform/mobile";
-import { MULTILINE_MIN_HEIGHT, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { FormField } from "@platform/mobile";
+import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { RecipeMetaFieldsProps } from "../../types/RecipeMetaFieldsProps";
 
 /** A recipe's title, description and source, for creating a recipe and for editing its details. */
 export default function RecipeMetaFields({ values, problems, disabled, focusTitle, onEdit }: RecipeMetaFieldsProps) {
-  const { spacing } = useTheme();
 
   return (
     <>
@@ -27,7 +26,6 @@ export default function RecipeMetaFields({ values, problems, disabled, focusTitl
       />
       <FormField
         editable={!disabled}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         counter={characterCounter(values.description.trim(), RECIPE_DESCRIPTION_MAX_LENGTH)}
         error={problems.description}
         label={MESSAGES.descriptionLabel}

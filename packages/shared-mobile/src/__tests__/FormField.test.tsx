@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet, Text, TextInput, View } from "react-native";
 import FormField from "../components/FormField";
 import { fieldErrorsSummary } from "../constants/formField";
+import { MULTILINE_FIELD_MIN_HEIGHT } from "../constants/multilineField";
 import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
@@ -12,6 +13,31 @@ describe("FormField", () => {
 
     const input = screen.getByLabelText("Email");
     expect(StyleSheet.flatten(input.props.style).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  });
+
+  it("draws a multi-line field tall, with the text starting at the top", async () => {
+    await render(<FormField label="Notes" multiline />);
+
+    const style = StyleSheet.flatten(screen.getByLabelText("Notes").props.style);
+    expect(style.minHeight).toBe(MULTILINE_FIELD_MIN_HEIGHT);
+    expect(style.textAlignVertical).toBe("top");
+    expect(style.paddingTop).toBe(12);
+  });
+
+  it("keeps a single-line field one line tall and centred", async () => {
+    await render(<FormField label="Name" />);
+
+    const style = StyleSheet.flatten(screen.getByLabelText("Name").props.style);
+    expect(style.minHeight).toBe(MIN_TOUCH_TARGET);
+    expect(style.textAlignVertical).toBeUndefined();
+  });
+
+  it("lets a multi-line field ask for a different height", async () => {
+    await render(<FormField inputStyle={{ minHeight: 160 }} label="Body" multiline />);
+
+    const style = StyleSheet.flatten(screen.getByLabelText("Body").props.style);
+    expect(style.minHeight).toBe(160);
+    expect(style.textAlignVertical).toBe("top");
   });
 
   it("passes input props through and reports changes", async () => {

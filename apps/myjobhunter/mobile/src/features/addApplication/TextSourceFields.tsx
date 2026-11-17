@@ -1,13 +1,12 @@
 import { JD_TEXT_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { FormField, LoadingButton } from "@platform/mobile";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT } from "../../constants/addApplication";
 import type { TextSourceFieldsProps } from "../../types/TextSourceFieldsProps";
 import ReadingHint from "./ReadingHint";
 
 /** A pasted job description, for postings a link can't be read from. */
 export default function TextSourceFields({ value, error, onChange, onRead, isReading, isLongRunning }: TextSourceFieldsProps) {
-  const { spacing } = useTheme();
   return (
     <>
       <FormField
@@ -15,7 +14,7 @@ export default function TextSourceFields({ value, error, onChange, onRead, isRea
         editable={!isReading}
         error={error ?? undefined}
         hint={MESSAGES.textHint}
-        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: MULTILINE_MIN_HEIGHT }}
         label={MESSAGES.textLabel}
         multiline
         onChangeText={onChange}

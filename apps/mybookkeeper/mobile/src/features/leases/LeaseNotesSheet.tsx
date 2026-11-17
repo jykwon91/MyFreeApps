@@ -1,5 +1,5 @@
 import { useUpdateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
 import { useWrite } from "../../lib/useWrite";
@@ -16,7 +16,6 @@ interface LeaseNotesSheetProps {
 }
 
 export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesSheetProps) {
-  const { spacing } = useTheme();
   const { showToast } = useToast();
   const [updateLease] = useUpdateSignedLeaseMutation();
   const write = useWrite();
@@ -38,7 +37,7 @@ export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesS
     <FormSheet failure={write.failure ? COPY[write.failure] : null} hasUnsavedChanges={isDirty} isBusy={write.isBusy} isOpen onRequestClose={onClose} title={MESSAGES.notesTitle}>
       <FormField
         editable={!write.isBusy}
-        inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        inputStyle={{ minHeight: NOTES_MIN_HEIGHT }}
         label={MESSAGES.notesLabel}
         multiline
         onChangeText={setText}

@@ -101,7 +101,6 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
             <FormField
               editable={!isUploading}
               hint={`${SCREENING_MESSAGES.reasonHint} ${reason.length}/${SCREENING_REASON_MAX_LENGTH}`}
-              inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
               label={SCREENING_MESSAGES.reason}
               maxLength={SCREENING_REASON_MAX_LENGTH}
               multiline

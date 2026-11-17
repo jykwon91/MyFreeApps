@@ -20,7 +20,6 @@ export default function CalendarEventNotes({ notes, canWrite }: CalendarEventNot
         <>
           <FormField
             editable={!notes.isSaving}
-            inputStyle={{ minHeight: 96, textAlignVertical: "top" }}
             label={EVENT_MESSAGES.notesLabel}
             maxLength={CALENDAR_NOTES_MAX_LENGTH}
             multiline
