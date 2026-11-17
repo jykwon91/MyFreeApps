@@ -61,12 +61,12 @@ describe("api axios interceptor — 401 handling", () => {
     expect(notifyAuthChange).not.toHaveBeenCalled();
   });
 
-  it("does NOT log the user out on 401 from /integrations/gmail/sync (business-level 401)", async () => {
+  it("does NOT log the user out when Gmail sync reports the Gmail connection expired (424)", async () => {
     const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: {
-        status: 401,
+        status: 424,
         data: { detail: "Gmail connection expired, please reconnect" },
         headers: {},
         statusText: "",
