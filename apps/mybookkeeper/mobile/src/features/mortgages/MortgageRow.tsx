@@ -1,6 +1,6 @@
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import { formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import { balanceLine, mortgageTitle } from "./mortgageDisplay";
@@ -31,13 +31,13 @@ export default function MortgageRow({ mortgage, onPress }: MortgageRowProps) {
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {mortgageTitle(mortgage)}
-      </Text>
+      </ClampedText>
       {lenderAndRate ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {lenderAndRate}
-        </Text>
+        </ClampedText>
       ) : null}
       {balance ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{balance}</Text> : null}
       {isAdjustable ? (

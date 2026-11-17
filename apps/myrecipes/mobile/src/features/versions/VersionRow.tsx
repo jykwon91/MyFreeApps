@@ -1,6 +1,6 @@
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import { versionNote } from "@myrecipes/api-client/utils/versionNote";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_PREVIEW_LINES, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { VERSION_HISTORY_MESSAGES as MESSAGES } from "../../constants/versions";
 import type { VersionRowProps } from "../../types/VersionRowProps";
@@ -28,7 +28,8 @@ export default function VersionRow({ version, isLatest, isComparing, isPicked, i
           </Text>
           {isLatest ? <Text style={{ color: colors.primary, fontSize: fontSize.xs }}>{VERSION_COPY.latest}</Text> : null}
         </View>
-        <Text
+        <ClampedText
+          largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES}
           numberOfLines={2}
           style={{
             color: colors.mutedForeground,
@@ -37,7 +38,7 @@ export default function VersionRow({ version, isLatest, isComparing, isPicked, i
           }}
         >
           {note.text}
-        </Text>
+        </ClampedText>
         <Text style={muted}>{versionMeta(version).map((part) => part.text).join(" · ")}</Text>
       </View>
     </>

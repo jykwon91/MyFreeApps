@@ -1,7 +1,7 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { replyTemplatePreview } from "@mybookkeeper/api-client/utils/replyTemplatePreview";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text } from "react-native";
+import { ClampedText, LARGE_TEXT_PREVIEW_LINES, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable } from "react-native";
 
 interface ReplyTemplateRowProps {
   template: ReplyTemplate;
@@ -26,13 +26,13 @@ export default function ReplyTemplateRow({ template, onPress }: ReplyTemplateRow
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {template.name}
-      </Text>
+      </ClampedText>
       {preview ? (
-        <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {preview}
-        </Text>
+        </ClampedText>
       ) : null}
     </Pressable>
   );

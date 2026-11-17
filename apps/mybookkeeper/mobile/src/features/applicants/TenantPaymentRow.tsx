@@ -1,7 +1,7 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { TENANT_PAYMENT_MESSAGES } from "../../constants/tenantPayments";
 import { categoryLabel, displayAmount, isMoneyIn, shortDate, spokenAmount, spokenDate, statusLabel } from "../transactions/transactionDisplay";
 
@@ -19,17 +19,18 @@ export default function TenantPaymentRow({ payment, rentNote }: { payment: Trans
       onPress={() => router.push(`/transactions/${payment.id}`)}
       style={({ pressed }) => ({ minHeight: MIN_TOUCH_TARGET, gap: spacing.xs, paddingVertical: spacing.sm, backgroundColor: pressed ? colors.muted : undefined })}
     >
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>
-          {payer}
-        </Text>
-        <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: isMoneyIn(payment) ? colors.positiveText : colors.foreground }}>
-          {displayAmount(payment)}
-        </Text>
-      </View>
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      <ListRowTitle
+        aside={
+          <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: isMoneyIn(payment) ? colors.positiveText : colors.foreground }}>
+            {displayAmount(payment)}
+          </Text>
+        }
+        title={payer}
+        weight="regular"
+      />
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {`${shortDate(payment.transaction_date)} · ${category}`}
-      </Text>
+      </ClampedText>
       {rentNote ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{rentNote}</Text> : null}
       {isApproved ? null : <Chip label={statusLabel(payment.status)} />}
     </Pressable>

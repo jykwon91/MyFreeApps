@@ -1,5 +1,5 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable, View } from "react-native";
 import { placeholderRowLabel, placeholderRowLine } from "./leaseTemplateDisplay";
 import type { PlaceholderRowProps } from "../../types/PlaceholderRowProps";
 
@@ -7,13 +7,13 @@ export default function PlaceholderRow({ placeholder, onPress }: PlaceholderRowP
   const { colors, spacing, fontSize } = useTheme();
   const content = (
     <>
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {placeholder.display_label}
-      </Text>
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`[${placeholder.key}]`}</Text>
-      <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`[${placeholder.key}]`}</ClampedText>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {placeholderRowLine(placeholder)}
-      </Text>
+      </ClampedText>
     </>
   );
   const rowStyle = { minHeight: MIN_TOUCH_TARGET, gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border } as const;

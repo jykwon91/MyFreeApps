@@ -1,5 +1,5 @@
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
-import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, LARGE_TEXT_PREVIEW_LINES, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { INQUIRY_ROW_NO_LISTING } from "../../constants/inquiries";
 import { inquirerName, qualityLabel, receivedAgo, rowAccessibilityLabel, rowDetails, shortSource, spamLabel, stageLabel } from "./inquiryDisplay";
@@ -18,7 +18,6 @@ export default function InquiryRow({
   onPress: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   const quality = qualityLabel(inquiry);
   const spam = showSpam ? spamLabel(inquiry.spam_status) : null;
 
@@ -41,16 +40,16 @@ export default function InquiryRow({
         aside={<Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{receivedAgo(inquiry.received_at)}</Text>}
         title={inquirerName(inquiry.inquirer_name)}
       />
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {rowDetails(inquiry)}
-      </Text>
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {listingTitle ?? INQUIRY_ROW_NO_LISTING}
-      </Text>
+      </ClampedText>
       {inquiry.last_message_preview ? (
-        <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+        <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
           {inquiry.last_message_preview}
-        </Text>
+        </ClampedText>
       ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
         {showStage ? <Chip label={stageLabel(inquiry.stage)} /> : null}

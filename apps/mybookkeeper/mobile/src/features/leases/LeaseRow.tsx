@@ -1,5 +1,5 @@
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { leaseCountdown, leaseIsInEffect, leaseStatusLabel, leaseTerm } from "./leaseDisplay";
 
@@ -36,9 +36,9 @@ export default function LeaseRow({ name, status, startsOn, endsOn, isInset = fal
       })}
     >
       {name ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {name}
-        </Text>
+        </ClampedText>
       ) : null}
       <Text style={name ? secondaryText : { fontSize: fontSize.md, color: colors.foreground }}>{term}</Text>
       <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm }}>

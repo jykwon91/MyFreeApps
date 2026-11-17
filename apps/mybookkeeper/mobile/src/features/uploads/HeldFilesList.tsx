@@ -1,4 +1,4 @@
-import { type FileForUpload, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_FILE_NAME_LINES, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, type FileForUpload, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE, removeHeldFileLabel, UPLOAD_MESSAGES } from "../../constants/uploads";
 
@@ -31,9 +31,9 @@ export default function HeldFilesList({ files, isDisabled, onRemove, emptyText, 
             />
           ) : null}
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={2} style={{ fontSize: fontSize.md, color: colors.foreground }}>
+            <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={2} style={{ fontSize: fontSize.md, color: colors.foreground }}>
               {file.name}
-            </Text>
+            </ClampedText>
             {index === 0 && firstFileNote ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{firstFileNote}</Text> : null}
           </View>
           <LoadingButton accessibilityLabel={removeHeldFileLabel(file.name)} disabled={isDisabled} onPress={() => onRemove(file.uri)} variant="ghost">

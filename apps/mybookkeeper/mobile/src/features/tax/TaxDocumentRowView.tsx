@@ -1,6 +1,6 @@
 import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { TAX_DOCUMENTS_MESSAGES as MESSAGES } from "../../constants/taxDocuments";
 import { taxDocumentName } from "./taxDocumentsDisplay";
@@ -23,9 +23,9 @@ export default function TaxDocumentRowView({ document, onPress }: { document: Ta
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text ellipsizeMode="middle" numberOfLines={1} style={{ fontSize: fontSize.md, color: colors.foreground }}>
+      <ClampedText ellipsizeMode="middle" numberOfLines={1} style={{ fontSize: fontSize.md, color: colors.foreground }}>
         {name}
-      </Text>
+      </ClampedText>
       {document.issuer_ein ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.ein(document.issuer_ein)}</Text> : null}
     </Pressable>
   );

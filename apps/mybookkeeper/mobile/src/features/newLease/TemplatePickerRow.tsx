@@ -1,5 +1,5 @@
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { selectedLabel } from "../../constants/newLease";
 import { templateCountsLine } from "../leaseTemplates/leaseTemplateDisplay";
@@ -40,12 +40,12 @@ export default function TemplatePickerRow({ template, position, onPress, note, i
       })}
     >
       <View style={{ flex: 1, gap: spacing.xs }}>
-        <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {template.name}
-        </Text>
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        </ClampedText>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {templateCountsLine(template)}
-        </Text>
+        </ClampedText>
         {note ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{note}</Text> : null}
       </View>
       {isSelected ? <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.primary }}>{selectedLabel(position)}</Text> : null}

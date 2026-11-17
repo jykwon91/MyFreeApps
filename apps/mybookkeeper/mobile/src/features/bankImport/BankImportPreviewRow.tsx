@@ -1,5 +1,5 @@
 import type { TransactionPreview } from "@mybookkeeper/api-client/types/transaction/TransactionPreview";
-import { ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { previewAmount, previewDetails, previewName } from "./bankImportDisplay";
 
@@ -9,7 +9,6 @@ interface BankImportPreviewRowProps {
 
 export default function BankImportPreviewRow({ row }: BankImportPreviewRowProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   return (
     <View
       accessible
@@ -19,9 +18,9 @@ export default function BankImportPreviewRow({ row }: BankImportPreviewRowProps)
         aside={<Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>{previewAmount(row)}</Text>}
         title={previewName(row)}
       />
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {previewDetails(row)}
-      </Text>
+      </ClampedText>
     </View>
   );
 }

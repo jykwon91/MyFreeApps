@@ -1,7 +1,7 @@
 import { PROPERTY_PNL_CATEGORIES_SHOWN } from "@mybookkeeper/api-client/constants/propertyPnl";
 import type { PropertyPnLEntry } from "@mybookkeeper/api-client/types/attribution/property-pnl-entry";
 import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
-import { LabelValueRow, useTheme } from "@platform/mobile";
+import { ClampedText, LabelValueRow, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
@@ -35,9 +35,9 @@ export default function PropertyPnlCard({ entry, range }: PropertyPnlCardProps) 
       style={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}
     >
       <View style={{ flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" }}>
-        <Text numberOfLines={2} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        <ClampedText numberOfLines={2} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {entry.name}
-        </Text>
+        </ClampedText>
         <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: moneySign(net) < 0 ? colors.destructiveText : colors.positiveText }}>
           {signedMoney(net)}
         </Text>

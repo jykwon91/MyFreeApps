@@ -1,6 +1,6 @@
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { versionBadgeLabel } from "@myrecipes/api-client/utils/versionBadgeLabel";
-import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, LARGE_TEXT_PREVIEW_LINES, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { lastCookedText } from "../../utils/lastCookedText";
 import { recipeCardFacts } from "../../utils/recipeCardFacts";
@@ -34,9 +34,9 @@ export default function RecipeCard({ recipe, onPress }: RecipeCardProps) {
     >
       <ListRowTitle aside={<Chip label={versionBadgeLabel(recipe.latest_version_number)} tone="info" />} numberOfLines={2} title={recipe.title} />
       {recipe.description ? (
-        <Text numberOfLines={2} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
+        <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
           {recipe.description}
-        </Text>
+        </ClampedText>
       ) : null}
       {versions ? (
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{versions}</Text>

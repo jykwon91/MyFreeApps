@@ -1,7 +1,7 @@
 import { RESUME_JOB_STATUS_LABELS } from "@myjobhunter/api-client/constants/resumeJobStatusLabels";
 import { RESUME_JOB_STATUS_TONES } from "@myjobhunter/api-client/constants/resumeJobStatusTones";
 import { resumeJobFileName } from "@myjobhunter/api-client/utils/resumeJobFileName";
-import { Chip, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, LARGE_TEXT_FILE_NAME_LINES, useTheme } from "@platform/mobile";
 import { ActivityIndicator, Text, View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import type { ResumeUploadStatusRowProps } from "../../types/ResumeUploadStatusRowProps";
@@ -20,9 +20,9 @@ export default function ResumeUploadStatusRow({ job }: ResumeUploadStatusRowProp
     >
       <View accessible accessibilityLabel={job.status === "failed" ? `${name}, ${status}. ${MESSAGES.readFailed}` : `${name}, ${status}`} style={{ gap: spacing.xs }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-          <Text numberOfLines={1} style={{ flex: 1, color: colors.foreground, fontSize: fontSize.sm, fontWeight: "600" }}>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={1} style={{ flex: 1, color: colors.foreground, fontSize: fontSize.sm, fontWeight: "600" }}>
             {name}
-          </Text>
+          </ClampedText>
           {isReading ? <ActivityIndicator color={colors.mutedForeground} size="small" /> : null}
           <Chip label={status} tone={RESUME_JOB_STATUS_TONES[job.status]} />
         </View>

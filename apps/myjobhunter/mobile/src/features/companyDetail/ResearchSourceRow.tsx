@@ -1,5 +1,5 @@
 import { researchSourceUrl } from "@myjobhunter/api-client/utils/researchSourceUrl";
-import { MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_PREVIEW_LINES, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import type { ResearchSourceRowProps } from "../../types/ResearchSourceRowProps";
@@ -14,9 +14,9 @@ export default function ResearchSourceRow({ source }: ResearchSourceRowProps) {
   const url = researchSourceUrl(source);
   const name = source.title ?? source.url;
   const snippet = source.snippet ? (
-    <Text numberOfLines={2} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
+    <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
       {source.snippet}
-    </Text>
+    </ClampedText>
   ) : null;
 
   if (url === null) {

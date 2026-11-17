@@ -1,5 +1,5 @@
-import { LoadingButton, useTheme } from "@platform/mobile";
-import { Text, View } from "react-native";
+import { ClampedText, LARGE_TEXT_FILE_NAME_LINES, LoadingButton, useTheme } from "@platform/mobile";
+import { View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import type { ResumeUnsentCardProps } from "../../types/ResumeUnsentCardProps";
 
@@ -11,9 +11,9 @@ export default function ResumeUnsentCard({ name, isRetrying, onRetry, onDiscard 
       style={{ gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}
       testID="resume-unsent"
     >
-      <Text numberOfLines={2} style={{ color: colors.foreground, fontSize: fontSize.sm }}>
+      <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={2} style={{ color: colors.foreground, fontSize: fontSize.sm }}>
         {MESSAGES.notUploaded(name)}
-      </Text>
+      </ClampedText>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton accessibilityLabel={MESSAGES.retryUploadOf(name)} isLoading={isRetrying} loadingText={MESSAGES.uploading} onPress={onRetry}>
           {MESSAGES.retryUpload}

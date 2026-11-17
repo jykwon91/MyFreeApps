@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import ClampedText from "./ClampedText";
 import { useLargeText } from "../hooks/useLargeText";
 import { useTheme } from "../theme/useTheme";
 import type { ListRowTitleProps } from "../types/ListRowTitleProps";
@@ -21,13 +22,14 @@ export default function ListRowTitle({
   const isLargeText = useLargeText();
   const isTitleInRow = !isLargeText || Boolean(leading);
   const titleText = (
-    <Text
+    <ClampedText
       ellipsizeMode={ellipsizeMode}
-      numberOfLines={isLargeText ? largeTextNumberOfLines : numberOfLines}
+      largeTextNumberOfLines={largeTextNumberOfLines}
+      numberOfLines={numberOfLines}
       style={{ flex: isTitleInRow ? 1 : undefined, fontSize: fontSize.md, fontWeight: weight === "semibold" ? "600" : "normal", color: colors.foreground }}
     >
       {title}
-    </Text>
+    </ClampedText>
   );
   const asideRow = aside ? (
     <View style={{ flexDirection: "row", flexWrap: isLargeText ? "wrap" : "nowrap", alignItems: "center", gap: spacing.sm }} testID="list-row-title-aside">

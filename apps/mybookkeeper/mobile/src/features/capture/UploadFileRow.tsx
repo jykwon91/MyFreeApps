@@ -1,4 +1,4 @@
-import { useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_FILE_NAME_LINES, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { UPLOAD_PROGRESS_BAR_HEIGHT, uploadFileAccessibilityLabel, uploadFileStatusLabel } from "../../constants/capture";
 import type { UploadFileProgress } from "../../types/UploadFileProgress";
@@ -12,9 +12,9 @@ export default function UploadFileRow({ file }: { file: UploadFileProgress }) {
     <View style={{ gap: spacing.xs }}>
       <View accessibilityLabel={uploadFileAccessibilityLabel(file)} accessible style={{ gap: spacing.xs }}>
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.foreground }}>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.foreground }}>
             {file.name}
-          </Text>
+          </ClampedText>
           <Text style={{ fontSize: fontSize.sm, color: statusColor }}>{uploadFileStatusLabel(file)}</Text>
         </View>
         {file.status === "uploading" ? (

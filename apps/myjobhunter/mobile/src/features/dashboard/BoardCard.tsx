@@ -3,8 +3,8 @@ import { formatDaysInStage } from "@myjobhunter/api-client/utils/formatDaysInSta
 import { formatVerdict } from "@myjobhunter/api-client/utils/formatVerdict";
 import { stageAgeTone } from "@myjobhunter/api-client/utils/stageAgeTone";
 import { toneForVerdict } from "@myjobhunter/api-client/utils/toneForVerdict";
-import { Chip, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { Chip, ClampedText, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable, View } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
 import { DASHBOARD_MESSAGES as MESSAGES } from "../../constants/dashboard";
 import { boardCardLabel, moveButtonLabel } from "../../lib/boardCardDisplay";
@@ -52,12 +52,12 @@ export default function BoardCard({ item, now, isMoving, onOpen, onMove }: Board
       >
         <CompanyLogo url={item.company_logo_url} />
         <View style={{ flex: 1, gap: spacing.xs }}>
-          <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+          <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
             {item.role_title}
-          </Text>
-          <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+          </ClampedText>
+          <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
             {item.company_name}
-          </Text>
+          </ClampedText>
           {verdict || shownDays !== null ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, paddingTop: spacing.xs }}>
               {verdict ? <Chip label={verdict} tone={toneForVerdict(item.verdict)} /> : null}

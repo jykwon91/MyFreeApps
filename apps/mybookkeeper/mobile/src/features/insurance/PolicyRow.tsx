@@ -1,6 +1,6 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { expiryLabel } from "@mybookkeeper/api-client/utils/insuranceExpiry";
 import { policyPlace, policyRowLabel } from "./policyDisplay";
@@ -30,13 +30,13 @@ export default function PolicyRow({ policy, todayIso, onPress }: PolicyRowProps)
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {policy.policy_name}
-      </Text>
+      </ClampedText>
       {place ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {place}
-        </Text>
+        </ClampedText>
       ) : null}
       {policy.annual_premium_cents !== null ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{formatAnnualPremium(policy.annual_premium_cents)}</Text>

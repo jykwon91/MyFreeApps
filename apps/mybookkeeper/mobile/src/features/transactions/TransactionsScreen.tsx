@@ -2,10 +2,10 @@ import DuplicatesLink from "../duplicates/DuplicatesLink";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, ClampedText, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, type ListRenderItem, Text, View } from "react-native";
+import { FlatList, type ListRenderItem, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
@@ -259,9 +259,9 @@ export default function TransactionsScreen({
             </View>
             {summary ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
+                <ClampedText numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
                   {summary}
-                </Text>
+                </ClampedText>
                 <LoadingButton onPress={clearNarrowing} variant="ghost">
                   Clear
                 </LoadingButton>

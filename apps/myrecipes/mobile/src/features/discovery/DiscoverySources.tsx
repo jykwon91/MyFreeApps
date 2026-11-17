@@ -1,5 +1,5 @@
 import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
-import { MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { DISCOVERY_DETAIL_COPY } from "../../constants/discovery";
 
@@ -22,9 +22,9 @@ export default function DiscoverySources({ sources }: { sources: string[] }) {
           onPress={() => void openLink(source)}
           style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center" }}
         >
-          <Text numberOfLines={1} style={{ color: colors.primary, fontSize: fontSize.sm, textDecorationLine: "underline" }}>
+          <ClampedText numberOfLines={1} style={{ color: colors.primary, fontSize: fontSize.sm, textDecorationLine: "underline" }}>
             {hostLabel(source) || source}
-          </Text>
+          </ClampedText>
         </Pressable>
       ))}
     </View>

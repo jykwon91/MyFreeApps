@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { continuesInto, eventHeadline, eventPlace, eventSpokenLabel, stayDates, stayLength } from "./calendarDisplay";
 
@@ -30,12 +30,12 @@ export default function CalendarEventRow({ event, month, onPress }: CalendarEven
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {eventHeadline(event)}
-      </Text>
-      <Text numberOfLines={1} style={secondaryText}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={secondaryText}>
         {eventPlace(event)}
-      </Text>
+      </ClampedText>
       <Text style={secondaryText}>
         {[`${stayDates(event)} · ${stayLength(event)}`, continues].filter(Boolean).join(", ")}
       </Text>

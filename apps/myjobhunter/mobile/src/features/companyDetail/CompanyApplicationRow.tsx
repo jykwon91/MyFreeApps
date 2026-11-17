@@ -1,5 +1,5 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text } from "react-native";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import { companyApplicationRowLabel } from "../../lib/companyApplicationRowLabel";
 import type { CompanyApplicationRowProps } from "../../types/CompanyApplicationRowProps";
@@ -26,13 +26,13 @@ export default function CompanyApplicationRow({ application, onPress }: CompanyA
         backgroundColor: pressed ? colors.muted : colors.card,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {application.role_title}
-      </Text>
+      </ClampedText>
       {details ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
-        </Text>
+        </ClampedText>
       ) : null}
     </Pressable>
   );

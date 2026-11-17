@@ -5,7 +5,7 @@ import {
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
@@ -31,9 +31,9 @@ export default function ReconciliationRow({ source, canWrite, year }: Reconcilia
         onPress={() => router.push(`/reconciliation/${source.id}?year=${year}`)}
         style={{ gap: spacing.xs }}
       >
-        <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {sourceTitle(source)}
-        </Text>
+        </ClampedText>
         {source.property_name ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{source.property_name}</Text> : null}
         <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{formatCurrency(Number(source.reported_amount))}</Text>
         {hasBeenCompared(source) ? (

@@ -1,6 +1,6 @@
 import { jobAnalysisHeadline } from "@myjobhunter/api-client/utils/jobAnalysisHeadline";
 import { jobAnalysisSourceUrl } from "@myjobhunter/api-client/utils/jobAnalysisSourceUrl";
-import { MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_LINK_LINES, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { ANALYZE_MESSAGES as MESSAGES } from "../../constants/analyze";
 import type { AnalysisHeaderProps } from "../../types/AnalysisHeaderProps";
@@ -28,14 +28,14 @@ export default function AnalysisHeader({ extracted, sourceUrl }: AnalysisHeaderP
           onPress={() => void openLink(link)}
           style={({ pressed }) => ({ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
         >
-          <Text ellipsizeMode="middle" numberOfLines={1} style={{ color: colors.primary, fontSize: fontSize.xs, textDecorationLine: "underline" }}>
+          <ClampedText ellipsizeMode="middle" largeTextNumberOfLines={LARGE_TEXT_LINK_LINES} numberOfLines={1} style={{ color: colors.primary, fontSize: fontSize.xs, textDecorationLine: "underline" }}>
             {link}
-          </Text>
+          </ClampedText>
         </Pressable>
       ) : sourceUrl ? (
-        <Text ellipsizeMode="middle" numberOfLines={1} selectable style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>
+        <ClampedText ellipsizeMode="middle" largeTextNumberOfLines={LARGE_TEXT_LINK_LINES} numberOfLines={1} selectable style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>
           {sourceUrl}
-        </Text>
+        </ClampedText>
       ) : null}
     </View>
   );

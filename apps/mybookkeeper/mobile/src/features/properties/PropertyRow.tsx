@@ -1,5 +1,5 @@
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
 import { needsClassification, propertySpokenLabel, propertyUse } from "./propertyDisplay";
@@ -28,13 +28,13 @@ export default function PropertyRow({ property, onPress }: PropertyRowProps) {
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {property.name}
-      </Text>
+      </ClampedText>
       {property.address ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {property.address}
-        </Text>
+        </ClampedText>
       ) : null}
       {use ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{use}</Text> : null}
       {isWaiting || !property.is_active ? (

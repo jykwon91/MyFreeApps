@@ -1,5 +1,5 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { memo } from "react";
 import { Pressable, Text } from "react-native";
 import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
@@ -22,7 +22,6 @@ function TransactionRow({
 }) {
   const isPicking = isSelected !== undefined;
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   const details = [shortDate(transaction.transaction_date), categoryLabel(transaction.category), propertyName]
     .filter(Boolean)
     .join(" · ");
@@ -67,9 +66,9 @@ function TransactionRow({
         }
         title={transactionName(transaction)}
       />
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {details}
-      </Text>
+      </ClampedText>
       {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
     </Pressable>
   );
