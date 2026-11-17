@@ -338,6 +338,20 @@ export default function TransactionForm({
         </label>
       </FormField>
 
+      {transactionType === "expense" && (
+        <FormField label={MSG.capitalImprovement} group dirty={!!dirtyFields.is_capital_improvement}>
+          <label className={`flex items-center gap-2 text-sm min-h-[44px] ${dirtyFields.is_capital_improvement ? "text-primary font-medium" : ""}`}>
+            <input
+              type="checkbox"
+              {...register("is_capital_improvement")}
+              className="cursor-pointer"
+            />
+            <span>{MSG.capitalImprovement}</span>
+          </label>
+          <p className="text-xs text-muted-foreground mt-1">{MSG.capitalImprovementHint}</p>
+        </FormField>
+      )}
+
       {transaction.schedule_e_line && (
         <div className="text-xs text-muted-foreground">
           Schedule E: {scheduleELineLabel(transaction.schedule_e_line)}

@@ -201,6 +201,15 @@ export default function TransactionEditForm({ original }: { original: Transactio
         />
         <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
 
+        {values.type === "expense" && (
+          <SwitchRow
+            label={LABELS.capitalImprovement}
+            note={LABELS.capitalImprovementNote}
+            onValueChange={(isCapitalImprovement) => update({ isCapitalImprovement })}
+            value={values.isCapitalImprovement}
+          />
+        )}
+
         {reviewable ? (
           <>
             {values.propertyId ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Choose a property to approve.</Text>}

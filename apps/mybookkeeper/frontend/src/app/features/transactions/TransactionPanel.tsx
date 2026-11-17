@@ -43,6 +43,7 @@ function buildDefaults(t: Transaction): TransactionFormValues {
     category: t.category,
     property_id: t.property_id ?? "",
     tax_relevant: t.tax_relevant,
+    is_capital_improvement: t.is_capital_improvement,
     payment_method: t.payment_method ?? "",
     channel: t.channel ?? "",
     transaction_date: t.transaction_date,

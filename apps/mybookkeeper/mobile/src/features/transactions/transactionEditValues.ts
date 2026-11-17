@@ -25,6 +25,7 @@ export function toEditValues(transaction: Transaction): TransactionEditValues {
     channel: transaction.channel ?? "",
     paymentMethod: transaction.payment_method ?? "",
     taxRelevant: transaction.tax_relevant,
+    isCapitalImprovement: transaction.is_capital_improvement ?? false,
   };
 }
 
@@ -78,6 +79,7 @@ export function changedFields(values: TransactionEditValues, original: Transacti
   if (values.channel !== (original.channel ?? "")) changes.channel = values.channel || null;
   if (values.paymentMethod !== (original.payment_method ?? "")) changes.payment_method = values.paymentMethod || null;
   if (values.taxRelevant !== original.tax_relevant) changes.tax_relevant = values.taxRelevant;
+  if (values.isCapitalImprovement !== (original.is_capital_improvement ?? false)) changes.is_capital_improvement = values.isCapitalImprovement;
   return changes;
 }
 

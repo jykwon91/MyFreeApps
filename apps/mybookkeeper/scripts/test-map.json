@@ -1920,6 +1920,13 @@
         "api-client/src/constants/transactionBulk.ts",
         "api-client/src/utils/bulkTransactionMessages.ts",
         "api-client/src/types/bulk/BulkOutcomeMessage.ts",
+        "mobile/src/types/TransactionEditValues.ts",
+        "mobile/src/types/TransactionCreateValues.ts",
+        "mobile/src/constants/transactionFieldLabels.ts",
+        "mobile/src/features/transactions/transactionEditValues.ts",
+        "mobile/src/features/transactions/transactionCreateValues.ts",
+        "mobile/src/features/transactions/TransactionEditForm.tsx",
+        "mobile/src/features/transactions/NewTransactionForm.tsx",
         "mobile/src/features/transactions/TransactionSelectionBar.tsx",
         "mobile/src/features/transactions/useBulkApprove.ts",
         "mobile/src/features/transactions/useBulkDeleteTransactions.ts",
@@ -2040,7 +2047,8 @@
         "Reconciliation.test.tsx",
         "ReconciliationCompare.test.tsx",
         "ReconciliationDelete.test.tsx",
-        "BankStatementImport.test.tsx"
+        "BankStatementImport.test.tsx",
+        "CapitalImprovementCheckbox.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",

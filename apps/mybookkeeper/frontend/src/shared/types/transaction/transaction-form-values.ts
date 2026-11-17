@@ -10,6 +10,7 @@ export interface TransactionFormValues {
   category: string;
   property_id: string;
   tax_relevant: boolean;
+  is_capital_improvement: boolean;
   payment_method: string;
   channel: string;
   transaction_date: string;

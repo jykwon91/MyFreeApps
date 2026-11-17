@@ -18,4 +18,5 @@ export interface TransactionEditValues {
   /** "" for none. */
   paymentMethod: string;
   taxRelevant: boolean;
+  isCapitalImprovement: boolean;
 }
