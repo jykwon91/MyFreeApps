@@ -6,6 +6,7 @@ import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import { diffErrorMessage } from "@myrecipes/api-client/utils/diffErrorMessage";
 import { diffSummary } from "@myrecipes/api-client/utils/diffSummary";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
+import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import DiffRow from "@/features/recipes/DiffRow";
 
 /**
@@ -15,6 +16,7 @@ import DiffRow from "@/features/recipes/DiffRow";
  * before -> after in amber.
  */
 export default function VersionDiff() {
+  const decimalSeparator = browserDecimalSeparator();
   const { id, vid } = useParams<{ id: string; vid: string }>();
   const recipeId = id ?? "";
   const versionId = vid ?? "";
@@ -105,8 +107,8 @@ export default function VersionDiff() {
                   <DiffRow
                     key={change.lineage_key}
                     change={change.change}
-                    before={ingredientChangeLine(change, "before")}
-                    after={ingredientChangeLine(change, "after")}
+                    before={ingredientChangeLine(change, "before", decimalSeparator)}
+                    after={ingredientChangeLine(change, "after", decimalSeparator)}
                   />
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 import type { IngredientResponse } from "@myrecipes/api-client/types/recipe/ingredient";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
-import { useTheme } from "@platform/mobile";
+import { deviceDecimalSeparator, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { COOK_TARGET_HEIGHT } from "../../constants/cook";
 import { byPosition } from "../../utils/byPosition";
@@ -15,6 +15,7 @@ export default function CookIngredientList({
   onToggle: (ingredientId: string) => void;
 }) {
   const { colors, spacing, radius, fontSize } = useTheme();
+  const decimalSeparator = deviceDecimalSeparator();
 
   return (
     <View>
@@ -22,7 +23,7 @@ export default function CookIngredientList({
         const isChecked = checked.includes(ingredient.id);
         return (
           <Pressable
-            accessibilityLabel={formatIngredientLine(ingredient)}
+            accessibilityLabel={formatIngredientLine(ingredient, decimalSeparator)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isChecked }}
             key={ingredient.id}
@@ -58,7 +59,7 @@ export default function CookIngredientList({
                 textDecorationLine: isChecked ? "line-through" : "none",
               }}
             >
-              {formatIngredientLine(ingredient)}
+              {formatIngredientLine(ingredient, decimalSeparator)}
             </Text>
           </Pressable>
         );

@@ -1,3 +1,5 @@
+import { USD_WHOLE } from "./formatRate";
+
 /**
  * Display formatting for market offers.
  *
@@ -12,7 +14,7 @@
  * printing it to the cent would claim a precision the input does not have.
  */
 export function formatWholeDollars(cents: number): string {
-  return `$${Math.round(cents / 100).toLocaleString()}`;
+  return USD_WHOLE.format(Math.round(cents / 100));
 }
 
 /** "10.50¢" — the offer's price at the 1,000 kWh disclosure point. */
@@ -34,7 +36,7 @@ export function formatCancellationFee(
 ): string {
   if (cents === null) return "Exit fee not published";
   if (cents === 0) return "No exit fee";
-  const dollars = `$${Math.round(cents / 100).toLocaleString()}`;
+  const dollars = formatWholeDollars(cents);
   if (isPerRemainingMonth) return `${dollars} per month left`;
   return `${dollars} exit fee`;
 }

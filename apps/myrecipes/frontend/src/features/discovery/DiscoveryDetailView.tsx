@@ -5,6 +5,7 @@ import { SOURCE_COLORS } from "@/features/discovery/discovery-display";
 import { DISCOVERY_SOURCE_LABELS } from "@myrecipes/api-client/constants/discovery";
 import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
+import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
 
 interface Props {
@@ -27,6 +28,7 @@ interface Props {
  * the results either way.
  */
 export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
+  const decimalSeparator = browserDecimalSeparator();
   const publisher = detail.site_name ?? hostLabel(detail.url);
   const { draft } = detail;
   const hasMeta =
@@ -108,7 +110,7 @@ export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
                 {draft.ingredients.map((ingredient, idx) => (
                   <li key={idx} className="flex gap-2 text-sm">
                     <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
-                    <span>{formatIngredientLine(ingredient)}</span>
+                    <span>{formatIngredientLine(ingredient, decimalSeparator)}</span>
                   </li>
                 ))}
               </ul>
