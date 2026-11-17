@@ -24,7 +24,7 @@ jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" 
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 
 const STRIPE = applicationRecord({
-  id: "app-stripe",
+  id: "00000000-0000-4000-8000-000000000001",
   company_name: "Stripe",
   role_title: "Staff Engineer",
   latest_status: "interview_scheduled",
@@ -34,7 +34,7 @@ const STRIPE = applicationRecord({
   fit_score: "85",
 });
 const AIRBNB = applicationRecord({
-  id: "app-airbnb",
+  id: "00000000-0000-4000-8000-000000000002",
   company_name: "Airbnb",
   role_title: "Senior Engineer",
   latest_status: "applied",
@@ -43,14 +43,14 @@ const AIRBNB = applicationRecord({
   fit_score: "92.50",
 });
 const LYFT = applicationRecord({
-  id: "app-lyft",
+  id: "00000000-0000-4000-8000-000000000003",
   company_name: "Lyft",
   role_title: "Principal Engineer",
   latest_status: "offer_received",
   applied_at: "2026-08-01T12:00:00Z",
   fit_score: "100",
 });
-const DRAFT = applicationRecord({ id: "app-draft", company_name: "Zillow", role_title: "Engineer" });
+const DRAFT = applicationRecord({ id: "00000000-0000-4000-8000-000000000004", company_name: "Zillow", role_title: "Engineer" });
 // The server sorts; the phone shows rows in the order they arrive.
 const SERVER_ORDER = [STRIPE, AIRBNB, LYFT, DRAFT] as const;
 
@@ -174,13 +174,13 @@ it("opens an application's own screen when its row is pressed", async () => {
   serve({
     "POST /auth/mobile/refresh": refreshed,
     "GET /applications": listOf(STRIPE, AIRBNB),
-    "GET /applications/app-airbnb": () => ({ status: 200, data: applicationDetailRecord({ id: "app-airbnb", role_title: "Senior Engineer" }) }),
+    "GET /applications/00000000-0000-4000-8000-000000000002": () => ({ status: 200, data: applicationDetailRecord({ id: "00000000-0000-4000-8000-000000000002", role_title: "Senior Engineer" }) }),
   });
   await renderApp("/applications");
 
   await fireEvent.press(await screen.findByRole("link", { name: /^Airbnb, Senior Engineer/ }));
 
-  expect(screen).toHavePathname("/applications/app-airbnb");
+  expect(screen).toHavePathname("/applications/00000000-0000-4000-8000-000000000002");
   expect(await screen.findByRole("header", { name: "Senior Engineer" })).toBeTruthy();
   expect(openURL).not.toHaveBeenCalled();
 });

@@ -35,7 +35,7 @@ jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" 
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 
-const APP_ID = "app-stripe";
+const APP_ID = "00000000-0000-4000-8000-000000000001";
 const PDF = "application/pdf";
 // The server's order: newest change first.
 const RESUME = documentRecord({
