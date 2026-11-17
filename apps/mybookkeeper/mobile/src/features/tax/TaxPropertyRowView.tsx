@@ -3,7 +3,7 @@ import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxPropertyRow } from "../../types/TaxPropertyRow";
-import { spokenMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { spokenSignedMoney } from "../transactions/transactionDisplay";
 
 export default function TaxPropertyRowView({ row }: { row: TaxPropertyRow }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -13,7 +13,7 @@ export default function TaxPropertyRowView({ row }: { row: TaxPropertyRow }) {
   return (
     <View
       accessible
-      accessibilityLabel={`${row.name}, ${MESSAGES.netIncome} ${spokenSignedMoney(net)}, ${MESSAGES.revenue} ${spokenMoney(revenue)}, ${MESSAGES.deductions} ${spokenMoney(expenses)}`}
+      accessibilityLabel={`${row.name}, ${MESSAGES.netIncome} ${spokenSignedMoney(net)}, ${MESSAGES.revenue} ${spokenSignedMoney(revenue)}, ${MESSAGES.deductions} ${spokenSignedMoney(expenses)}`}
       style={{
         minHeight: MIN_TOUCH_TARGET,
         flexDirection: "row",

@@ -9,7 +9,7 @@ import type { CategoryGroupKind } from "../../types/CategoryGroupKind";
 import type { CategoryTotal } from "../../types/CategoryTotal";
 import ChangeNote from "../analyticsControls/ChangeNote";
 import { drillDownLink } from "../drillDown/drillDownLink";
-import { categoryLabel, spokenMoney } from "../transactions/transactionDisplay";
+import { categoryLabel, spokenSignedMoney } from "../transactions/transactionDisplay";
 import { categoryDrillDown } from "./moneyAnalysisDrillDowns";
 
 interface CategoryRowProps {
@@ -31,7 +31,7 @@ export default function CategoryRow({ row, kind, largest, previous, againstLabel
   return (
     <View>
       <Pressable
-        accessibilityLabel={`${label}, ${spokenMoney(row.amount)}`}
+        accessibilityLabel={`${label}, ${spokenSignedMoney(row.amount)}`}
         accessibilityRole="button"
         onPress={() => router.navigate(drillDownLink(categoryDrillDown(row.category, scope)))}
         style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", gap: spacing.xs }}

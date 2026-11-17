@@ -2,7 +2,7 @@ import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
 import type { TaxCategoryRow } from "../../types/TaxCategoryRow";
-import { spokenMoney } from "../transactions/transactionDisplay";
+import { spokenSignedMoney } from "../transactions/transactionDisplay";
 
 export default function TaxCategoryRowView({ row }: { row: TaxCategoryRow }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -10,7 +10,7 @@ export default function TaxCategoryRowView({ row }: { row: TaxCategoryRow }) {
   return (
     <View
       accessible
-      accessibilityLabel={`${row.label}, ${spokenMoney(dollars)}${row.note ? `, ${row.note}` : ""}`}
+      accessibilityLabel={`${row.label}, ${spokenSignedMoney(dollars)}${row.note ? `, ${row.note}` : ""}`}
       style={{
         minHeight: MIN_TOUCH_TARGET,
         flexDirection: "row",

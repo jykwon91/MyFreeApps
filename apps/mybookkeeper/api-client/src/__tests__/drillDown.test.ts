@@ -75,6 +75,15 @@ describe("drillDownTotal", () => {
   it("adds amounts that arrive as text, and counts an unreadable one as nothing", () => {
     expect(drillDownTotal([aTransaction({ amount: "10.50" }), aTransaction({ amount: "2.25" }), aTransaction({ amount: "n/a" })])).toBeCloseTo(12.75);
   });
+
+  it("adds in whole cents, so 0.1 + 0.2 is exactly 0.3", () => {
+    expect(drillDownTotal([aTransaction({ amount: "0.10" }), aTransaction({ amount: "0.20" })])).toBe(0.3);
+  });
+
+  it("is exactly zero, never negative zero, when amounts cancel out", () => {
+    const total = drillDownTotal([aTransaction({ amount: "0.10" }), aTransaction({ amount: "0.20" }), aTransaction({ amount: "-0.30" })]);
+    expect(Object.is(total, 0)).toBe(true);
+  });
 });
 
 describe("isDrillDownTruncated", () => {

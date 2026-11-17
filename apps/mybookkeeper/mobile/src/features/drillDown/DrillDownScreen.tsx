@@ -11,7 +11,7 @@ import { DRILL_DOWN_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 import type { DrillDownParams } from "../../types/DrillDownParams";
 import TransactionRow from "../transactions/TransactionRow";
 import TransactionsSkeleton from "../transactions/TransactionsSkeleton";
-import { propertyLabel, spokenMoney } from "../transactions/transactionDisplay";
+import { propertyLabel, spokenSignedMoney } from "../transactions/transactionDisplay";
 import { drillDownFilterFromParams } from "./drillDownLink";
 
 /** The approved transactions a number on the analytics screen was added up from. */
@@ -46,7 +46,7 @@ export default function DrillDownScreen() {
             {filter.label}
           </Text>
           {currentData ? (
-            <Text accessibilityLabel={`${MESSAGES.count(transactions.length)}, ${spokenMoney(total)}`} style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
+            <Text accessibilityLabel={`${MESSAGES.count(transactions.length)}, ${spokenSignedMoney(total)}`} style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
               {MESSAGES.count(transactions.length)} · {formatCurrency(total)}
             </Text>
           ) : null}
