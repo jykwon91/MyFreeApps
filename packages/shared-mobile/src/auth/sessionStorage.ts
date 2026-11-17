@@ -1,6 +1,6 @@
 import * as Application from "expo-application";
 import * as SecureStore from "expo-secure-store";
-import { STORED_SESSION_KEY } from "../constants/session";
+import { LEFTOVERS_OWNER_KEY, STORED_SESSION_KEY } from "../constants/session";
 import type { StoredSession } from "../types/StoredSession";
 
 // Readable once the phone has been unlocked after a restart, so background work can use
@@ -38,6 +38,19 @@ export function writeStoredSession(session: StoredSession): Promise<void> {
 
 export function deleteStoredSession(): Promise<void> {
   return SecureStore.deleteItemAsync(STORED_SESSION_KEY, OPTIONS);
+}
+
+/** Throws if the phone won't give the value up. */
+export function readLeftoversOwner(): Promise<string | null> {
+  return SecureStore.getItemAsync(LEFTOVERS_OWNER_KEY, OPTIONS);
+}
+
+export function writeLeftoversOwner(email: string): Promise<void> {
+  return SecureStore.setItemAsync(LEFTOVERS_OWNER_KEY, email, OPTIONS);
+}
+
+export function deleteLeftoversOwner(): Promise<void> {
+  return SecureStore.deleteItemAsync(LEFTOVERS_OWNER_KEY, OPTIONS);
 }
 
 export async function currentInstallStamp(): Promise<string | null> {
