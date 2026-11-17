@@ -218,3 +218,84 @@ async def test_token_with_no_iat_is_rejected_once_there_is_a_cutoff() -> None:
 @pytest.mark.asyncio
 async def test_missing_token_still_reads_as_no_user() -> None:
     assert await _strategy().read_token(None, _FakeManager(_FakeUser())) is None
+
+
+@pytest.mark.asyncio
+async def test_a_phone_token_names_its_session() -> None:
+    session_id = uuid.uuid4()
+    token = await _strategy().write_session_token(
+        _FakeUser(), auth_time=datetime.now(timezone.utc), session_id=session_id,
+    )
+    assert _decode_unchecked(token)["sid"] == str(session_id)
+    assert _strategy().session_id_of(token) == session_id
+
+
+@pytest.mark.asyncio
+async def test_a_web_token_names_no_session() -> None:
+    token = await _strategy().write_token(_FakeUser())
+    assert "sid" not in _decode_unchecked(token)
+    assert _strategy().session_id_of(token) is None
+
+
+def test_a_malformed_session_id_reads_as_none() -> None:
+    token = jwt.encode(
+        {"sub": str(uuid.uuid4()), "aud": "fastapi-users:auth", "sid": "not-a-uuid"}, SECRET, algorithm="HS256",
+    )
+    assert _strategy().session_id_of(token) is None
+
+
+def test_another_servers_token_names_no_session() -> None:
+    token = jwt.encode(
+        {"sub": str(uuid.uuid4()), "aud": "fastapi-users:auth", "sid": str(uuid.uuid4())},
+        "some-other-secret-that-is-long-enough",
+        algorithm="HS256",
+    )
+    with pytest.raises(jwt.InvalidSignatureError):
+        _strategy().session_id_of(token)
+
+
+@pytest.mark.asyncio
+async def test_a_reissued_token_outlives_a_cutoff_and_keeps_everything_else() -> None:
+    """After a cutoff the caller carries on: same sign-in time, session and lifetime."""
+    user = _FakeUser()
+    session_id = str(uuid.uuid4())
+    now = int(time.time())
+    old = jwt.encode(
+        {"sub": str(user.id), "aud": "fastapi-users:auth", "iat": now - 600, "exp": now - 600 + 1800,
+         "auth_time": now - 7200, "sid": session_id},
+        SECRET,
+        algorithm="HS256",
+    )
+    user.auth_valid_after = datetime.fromtimestamp(now - 5, timezone.utc)
+    assert await _strategy().read_token(old, _FakeManager(user)) is None
+
+    new = await _strategy().reissue(user, old)
+
+    claims = _decode_unchecked(new)
+    assert claims["iat"] >= now
+    assert claims["exp"] - claims["iat"] == 1800, "A phone's token must not get the web lifetime."
+    assert claims["auth_time"] == now - 7200
+    assert claims["sid"] == session_id
+    assert claims["sub"] == str(user.id)
+    assert await _strategy().read_token(new, _FakeManager(user)) is user
+
+
+@pytest.mark.asyncio
+async def test_a_token_that_expired_while_the_request_ran_is_still_reissued() -> None:
+    user = _FakeUser()
+    now = int(time.time())
+    old = jwt.encode(
+        {"sub": str(user.id), "aud": "fastapi-users:auth", "iat": now - 3600, "exp": now - 1, "auth_time": now - 3600},
+        SECRET,
+        algorithm="HS256",
+    )
+    claims = _decode_unchecked(await _strategy().reissue(user, old))
+    assert claims["exp"] - claims["iat"] == 3599
+    assert "sid" not in claims
+
+
+@pytest.mark.asyncio
+async def test_a_reissued_token_without_a_login_time_proves_no_recent_login() -> None:
+    user = _FakeUser()
+    claims = _decode_unchecked(await _strategy().reissue(user, _signed_token(iat=int(time.time()))))
+    assert claims["auth_time"] == 0

@@ -12,3 +12,9 @@ export const NO_REFRESH_URL_PARTS = [
 
 /** A request refused with a 401 whose sign-in couldn't be renewed because the server didn't answer. */
 export const SESSION_RENEWAL_UNREACHABLE_MESSAGE = "Couldn't reach the server to renew the sign-in.";
+
+/**
+ * Turning 2FA on or off ends every earlier token, the one sent with it too. The response
+ * carries the caller's new token in `access_token`.
+ */
+export const TOKEN_REISSUING_URL_PARTS = ["/auth/totp/verify", "/auth/totp/disable"];

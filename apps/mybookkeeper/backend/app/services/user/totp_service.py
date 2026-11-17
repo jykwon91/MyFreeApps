@@ -10,6 +10,7 @@ from platform_shared.services.totp_service import decrypt_for_user, encrypt_for_
 
 from app.core.config import settings
 from app.db.session import unit_of_work
+from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 
 # Part of every enrolled QR code, so it must stay stable.
@@ -29,6 +30,7 @@ accounts = TotpAccountService(
     issuer=_TOTP_ISSUER,
     # Lambda for late lookup so tests patching `unit_of_work` take effect.
     unit_of_work_factory=lambda: unit_of_work(),
+    session_model=RefreshSession,
     encrypt=_encrypt,
     decrypt=_decrypt,
 )

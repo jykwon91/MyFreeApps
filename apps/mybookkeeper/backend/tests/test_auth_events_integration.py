@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, get_jwt_strategy
 from app.db.session import get_db
 from app.main import app
 from app.models.system.auth_event import AuthEvent
@@ -49,7 +49,11 @@ def _auth_client(user: User):
     async def _cm():
         app.dependency_overrides[current_active_user] = lambda: user
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        # Turning 2FA on reads the caller's token, to issue a new one.
+        token = await get_jwt_strategy().write_token(user)
+        async with AsyncClient(
+            transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"},
+        ) as c:
             yield c
         app.dependency_overrides.pop(current_active_user, None)
     return _cm

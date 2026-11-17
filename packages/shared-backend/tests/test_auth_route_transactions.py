@@ -497,7 +497,7 @@ async def test_right_disable_code_turns_it_off_and_clears_the_count(stack: RealA
 
     resp = await stack.client.post("/auth/totp/disable", json={"code": current_code(secret)})
 
-    assert resp.json() == {"disabled": True}
+    assert resp.json()["disabled"] is True
     stored = await stack.stored_user(user.id)
     assert not stored.totp_enabled and stored.failed_login_count == 0
     assert await stack.stored_event_types(user.id) == [AuthEventType.TOTP_DISABLED]

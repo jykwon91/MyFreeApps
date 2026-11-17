@@ -1625,6 +1625,16 @@ class TestTotpRoutesAreShared:
     def test_apps_with_phone_sign_in_mount_the_routes(self, app: str) -> None:
         assert "app.include_router(mobile_auth.router)" in _read("apps", app, "backend", "app", "main.py")
 
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _PHONE_SIGN_IN_APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_two_factor_changes_can_keep_the_phone_signed_in(self, backend: tuple[str, ...]) -> None:
+        """Without it, the phone turning 2FA on or off gets an error instead."""
+        source = _read(*backend, "app", "services", "user", "totp_service.py")
+        assert "session_model=RefreshSession," in source
+
     @pytest.mark.parametrize("app", [app for app in _PHONE_SIGN_IN_APPS if app != "mybookkeeper"])
     def test_phone_sign_in_wiring_matches_mybookkeeper(self, app: str) -> None:
         """The routes come from platform_shared; each app's file only wires its own

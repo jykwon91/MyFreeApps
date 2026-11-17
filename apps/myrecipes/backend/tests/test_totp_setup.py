@@ -23,12 +23,17 @@ import time
 
 import pyotp
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
+
+
+def _use_new_token(client: AsyncClient, response: Response) -> None:
+    """Turning 2FA on or off ends the token sent. The client carries on with the new one."""
+    client.headers["Authorization"] = f"Bearer {response.json()['access_token']}"
 
 
 @pytest.mark.asyncio
@@ -143,7 +148,7 @@ async def test_setup_rejects_when_already_enabled(
         setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
-        await authed.post("/auth/totp/verify", json={"code": code})
+        _use_new_token(authed, await authed.post("/auth/totp/verify", json={"code": code}))
 
         # Second setup attempt should be rejected
         resp = await authed.post("/auth/totp/setup", json={"password": user["password"]})
@@ -160,6 +165,7 @@ async def test_verify_with_correct_code_enables_totp(
         secret = setup.json()["secret"]
         code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         verify = await authed.post("/auth/totp/verify", json={"code": code})
+        _use_new_token(authed, verify)
         status = await authed.get("/auth/totp/status")
 
     assert verify.status_code == 200
@@ -193,7 +199,10 @@ async def test_disable_requires_current_totp_code(
         # Enroll
         setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
-        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
+        _use_new_token(
+            authed,
+            await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()}),
+        )
 
         # Wrong code is rejected — 2FA stays enabled
         bad = await authed.post("/auth/totp/disable", json={"code": "000000"})
@@ -201,12 +210,13 @@ async def test_disable_requires_current_totp_code(
 
         # Correct code disables
         good = await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)})
+        _use_new_token(authed, good)
         status_after_good = await authed.get("/auth/totp/status")
 
     assert bad.status_code == 400
     assert status_after_bad.json()["enabled"] is True
     assert good.status_code == 200
-    assert good.json() == {"disabled": True}
+    assert good.json()["disabled"] is True
     assert status_after_good.json()["enabled"] is False
 
 
@@ -220,7 +230,10 @@ async def test_disable_clears_totp_secret_and_recovery_codes(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
-        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
+        _use_new_token(
+            authed,
+            await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()}),
+        )
         await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)})
 
     # Read raw row to confirm fields are cleared
