@@ -1,5 +1,8 @@
 export const STORED_SESSION_KEY = "platform.session";
 
+/** Who the things this app keeps on the phone belong to. Outlives the session, which the server can end. */
+export const LEFTOVERS_OWNER_KEY = "platform.leftoversOwner";
+
 /** Signing out shouldn't sit on a spinner because the network has gone quiet. */
 export const LOGOUT_TIMEOUT_MS = 5000;
 
