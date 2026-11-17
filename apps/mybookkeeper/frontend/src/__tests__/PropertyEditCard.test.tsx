@@ -29,10 +29,10 @@ vi.mock("@/shared/hooks/useToast", () => ({
   useToast: vi.fn(() => ({ showError, showSuccess })),
 }));
 
-function renderCard(onDone = vi.fn()) {
+function renderCard(onDone = vi.fn(), property: Property = rental) {
   return render(
     <Provider store={store}>
-      <PropertyEditCard property={rental} onDone={onDone} />
+      <PropertyEditCard property={property} onDone={onDone} />
     </Provider>,
   );
 }
@@ -133,6 +133,16 @@ describe("PropertyEditCard", () => {
 
     expect(screen.getByText("Enter the price as a dollar amount, like 250000.")).toBeInTheDocument();
     expect(screen.getByLabelText("Purchase price")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
+
+  it("blocks clearing a saved purchase price instead of silently keeping it", async () => {
+    const user = userEvent.setup();
+    renderCard(vi.fn(), { ...rental, purchase_price: "250000.00" });
+
+    await user.clear(screen.getByLabelText("Purchase price"));
+
+    expect(screen.getByText("A saved purchase price can be changed but not removed.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 });

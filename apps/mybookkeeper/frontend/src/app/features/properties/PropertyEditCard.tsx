@@ -38,7 +38,9 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   }
 
   const cleanedPrice = cleanPurchasePrice(purchasePrice);
-  const priceInvalid = purchasePrice.trim() !== "" && cleanedPrice === null;
+  const priceBlank = purchasePrice.trim() === "";
+  const priceRemoved = priceBlank && property.purchase_price != null;
+  const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
   const canSave = !!(form.name && addressComplete(form)) && !priceInvalid;
 
   function handleSave() {
@@ -110,7 +112,9 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
             />
             {priceInvalid && (
               <p id={priceErrorId} className="mt-1 text-xs text-red-600 dark:text-red-400">
-                Enter the price as a dollar amount, like 250000.
+                {priceRemoved
+                  ? "A saved purchase price can be changed but not removed."
+                  : "Enter the price as a dollar amount, like 250000."}
               </p>
             )}
           </>
