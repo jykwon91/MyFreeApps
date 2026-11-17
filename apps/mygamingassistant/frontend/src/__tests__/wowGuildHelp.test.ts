@@ -22,6 +22,7 @@ import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
 import { mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
+import { buildHelpParams, helpFiltersFromParams } from "@/games/wow-forever/lib/guild/guildHelpParams";
 import { resolveHelpSpecId, TALENT_TREE_SPEC_ID } from "@/games/wow-forever/lib/guild/guildHelpSpec";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
@@ -178,6 +179,17 @@ describe("computeEnchantMatches", () => {
     expect(matches[0].crafter.skill).toBe(200);
   });
 
+  it("made by one member: their enchant shows even where a guild mate's higher skill would win", () => {
+    const enchanter = (slug: string, skill: number) => makeMember(slug, {
+      recipe_ability_ids: [4289],
+      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill, max_skill: 300 }],
+    });
+    const lowSkill = enchanter("low-skill", 50);
+    const members = [lowSkill, enchanter("high-skill", 200), makeMember("beneficiary", { equipped: [wristItem()] })];
+    const matches = computeEnchantMatches(members, ENCHANTING_FILE_BRACER, NO_ITEMS, [lowSkill]);
+    expect(matches.map((m) => [m.crafter.slug, m.beneficiary.slug])).toEqual([["low-skill", "beneficiary"]]);
+  });
+
   it("crafter with no Enchanting profession is skipped", () => {
     const crafter = makeMember("crafter", {
       recipe_ability_ids: [4289],
@@ -329,6 +341,23 @@ describe("computeGearMatches", () => {
     // Whichever comes first in the roster, the member makes it themselves.
     expect(pairs([tailor("aaa"), tailor("zed", worn)])).toEqual([["zed", "zed"]]);
     expect(pairs([tailor("zed", worn), tailor("aaa")])).toEqual([["zed", "zed"]]);
+  });
+
+  it("made by one member: their upgrade shows even where a guild mate would win the tie", () => {
+    const worn = [{ slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] }];
+    const tailor = (slug: string) => makeMember(slug, {
+      class_name: "Mage",
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const bob = tailor("bob");
+    const roster = [tailor("amy"), bob, makeMember("needy", { class_name: "Mage", equipped: worn })];
+    const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+    const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
+    expect(computeGearMatches(roster, craftingFiles, itemList, [bob]).map((m) => [m.crafter.slug, m.beneficiary.slug]))
+      .toEqual([["bob", "needy"]]);
+    // Someone with nothing worth making helps nobody.
+    expect(computeGearMatches(roster, craftingFiles, itemList, [roster[2]])).toEqual([]);
   });
 
   it("two guild mates offering the same upgrade: the alphabetically first, whatever the roster order", () => {
@@ -830,5 +859,20 @@ describe("computeEnchantMatches best-pick dedup (single crafter, multiple enchan
     const matches = computeEnchantMatches([crafter(), beneficiary()], twoEnchantFile(STAMINA(2), STAMINA(2)), NO_ITEMS);
     expect(matches).toHaveLength(1);
     expect(matches[0].proposed.spell).toBe(7428);
+  });
+});
+
+describe("help tab URL filters", () => {
+  it("reads defaults when no param is set", () => {
+    expect(helpFiltersFromParams(new URLSearchParams())).toEqual({ type: "all", forSlug: null, bySlug: null });
+    expect(helpFiltersFromParams(new URLSearchParams("help_type=bogus"))).toEqual({ type: "all", forSlug: null, bySlug: null });
+  });
+
+  it("round-trips made by, help for and type, keeping the tab's other params", () => {
+    const filters = { type: "gear", forSlug: "needy", bySlug: "tailor" } as const;
+    const params = buildHelpParams(new URLSearchParams("tab=help"), filters);
+    expect(params.toString()).toBe("tab=help&help_type=gear&help_for=needy&help_by=tailor");
+    expect(helpFiltersFromParams(params)).toEqual(filters);
+    expect(buildHelpParams(params, { type: "all", forSlug: null, bySlug: null }).toString()).toBe("tab=help");
   });
 });

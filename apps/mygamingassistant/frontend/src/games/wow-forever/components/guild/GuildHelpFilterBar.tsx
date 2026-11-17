@@ -1,24 +1,26 @@
 import clsx from "clsx";
+import { GUILD_HELP_TEXT } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { GUILD_CONTROL, GUILD_PROFESSION_CHIP, GUILD_PROFESSION_CHIP_ON } from "@/games/wow-forever/data/guild/guildStyles";
 import { memberFullName } from "@/games/wow-forever/lib/guild/guildMembers";
 import { HELP_TYPE_LABELS, HELP_TYPES } from "@/games/wow-forever/lib/guild/guildHelpParams";
+import type { GuildHelpFilters } from "@/games/wow-forever/types/guild/guildHelpFilters";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
-import type { GuildMatchType } from "@/games/wow-forever/types/guild/guildMatch";
 
 interface GuildHelpFilterBarProps {
   members: readonly GuildHelpMember[];
-  type: GuildMatchType | "all";
-  forSlug: string | null;
-  onType: (type: GuildMatchType | "all") => void;
-  onFor: (slug: string | null) => void;
+  filters: GuildHelpFilters;
+  onChange: (filters: GuildHelpFilters) => void;
 }
 
 /**
- * Two controls for the Help each other tab:
+ * The Help each other tab's controls:
  * - Type chips: All / Enchants / Gear upgrades
- * - Member picker: who the matches are for
+ * - Made by: whose recipes count (members with a profession)
+ * - Help for: who the matches are for
  */
-export default function GuildHelpFilterBar({ members, type, forSlug, onType, onFor }: GuildHelpFilterBarProps) {
+export default function GuildHelpFilterBar({ members, filters, onChange }: GuildHelpFilterBarProps) {
+  const { type, forSlug, bySlug } = filters;
+  const crafters = members.filter((m) => m.professions.length > 0);
   return (
     <div className="space-y-3">
       <div
@@ -32,7 +34,7 @@ export default function GuildHelpFilterBar({ members, type, forSlug, onType, onF
             key={t}
             type="button"
             aria-pressed={type === t}
-            onClick={() => onType(t)}
+            onClick={() => onChange({ ...filters, type: t })}
             className={clsx(GUILD_PROFESSION_CHIP, type === t && GUILD_PROFESSION_CHIP_ON)}
           >
             {HELP_TYPE_LABELS[t]}
@@ -40,24 +42,45 @@ export default function GuildHelpFilterBar({ members, type, forSlug, onType, onF
         ))}
       </div>
       {members.length > 0 && (
-        <div className="space-y-1">
-          <label htmlFor="help-for-picker" className="block text-sm font-medium text-foreground">
-            Help for
-          </label>
-          <select
-            id="help-for-picker"
-            value={forSlug ?? ""}
-            onChange={(e) => onFor(e.target.value || null)}
-            className={`${GUILD_CONTROL} sm:max-w-xs`}
-            data-testid="help-for-picker"
-          >
-            <option value="">Everyone</option>
-            {members.map((m) => (
-              <option key={m.slug} value={m.slug}>
-                {memberFullName(m)}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:max-w-xl">
+          <div className="space-y-1">
+            <label htmlFor="help-by-picker" className="block text-sm font-medium text-foreground">
+              {GUILD_HELP_TEXT.madeByLabel}
+            </label>
+            <select
+              id="help-by-picker"
+              value={bySlug ?? ""}
+              onChange={(e) => onChange({ ...filters, bySlug: e.target.value || null })}
+              className={GUILD_CONTROL}
+              data-testid="help-by-picker"
+            >
+              <option value="">{GUILD_HELP_TEXT.madeByAnyone}</option>
+              {crafters.map((m) => (
+                <option key={m.slug} value={m.slug}>
+                  {memberFullName(m)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="help-for-picker" className="block text-sm font-medium text-foreground">
+              {GUILD_HELP_TEXT.forLabel}
+            </label>
+            <select
+              id="help-for-picker"
+              value={forSlug ?? ""}
+              onChange={(e) => onChange({ ...filters, forSlug: e.target.value || null })}
+              className={GUILD_CONTROL}
+              data-testid="help-for-picker"
+            >
+              <option value="">{GUILD_HELP_TEXT.forEveryone}</option>
+              {members.map((m) => (
+                <option key={m.slug} value={m.slug}>
+                  {memberFullName(m)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
     </div>

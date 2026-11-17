@@ -24,6 +24,20 @@ export const MAIN_STATS: readonly StatKey[] = ["strength", "agility", "stamina",
 /** No item list (it failed to load): weapon speeds are unknown, so flat weapon damage isn't weighed. */
 export const NO_HELP_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
 
+/** The Help each other tab's words. */
+export const GUILD_HELP_TEXT = {
+  madeByLabel: "Made by",
+  madeByAnyone: "Anyone",
+  forLabel: "Help for",
+  forEveryone: "Everyone",
+  /** Above the cards when one crafter is picked. */
+  madeBySummary: (crafter: string, members: number) =>
+    `${members} ${members === 1 ? "member" : "members"} could use something ${crafter} makes.`,
+  madeByNone: (crafter: string) => `Nobody in the guild needs anything ${crafter} can make right now.`,
+  noneAtAll: "No opportunities found — everyone is fully enchanted and well-geared!",
+  noneForFilter: "No matches for the current filter.",
+} as const;
+
 /** On a Help each other card where the member can make it with their own profession. */
 export const GUILD_HELP_SELF_MADE = "can make this themselves";
 

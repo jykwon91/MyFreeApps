@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Guild: who could use what you make?",
+    "summary": "The guild's Help each other tab has a new Made by picker. Pick a guild mate who has a profession and it lists everyone in the guild who could use an enchant or a piece of gear they can make, even where someone else could make it too.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-17",
     "title": "MGA Loot: both rings",
     "summary": "A ring's MGA Loot line still compares with the weaker ring you wear, the one you'd swap out, and now adds a second line with how it does against your other ring, so you see both at once. Same for a one-hander when you dual wield. Download the addon again to get it.",
     "to": "/wow-forever/compare"

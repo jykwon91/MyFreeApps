@@ -1089,6 +1089,48 @@ test("help tab: member picker filters to that member's matches, kept in URL", as
   await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
 });
 
+test("help tab: Made by lists everyone who could use what that member makes, kept in URL", async ({ page }) => {
+  await stubHelp(page);
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+  await expect(page.getByTestId("help-match-list")).toBeVisible({ timeout: 10_000 });
+
+  const madeBy = page.getByTestId("help-by-picker");
+  // Only members with a profession can make anything.
+  await expect(madeBy.locator("option")).toHaveText(["Anyone", "Enchanter"]);
+
+  await madeBy.selectOption({ label: "Enchanter" });
+  await expect(page).toHaveURL(/help_by=enchanter/);
+  await expect(page.getByTestId("help-made-by-summary")).toHaveText("1 member could use something Enchanter makes.");
+  const card = page.getByTestId("guild-match-card");
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("Needy");
+
+  // Reload keeps the pick.
+  await page.reload();
+  await expect(page.getByTestId("help-by-picker")).toHaveValue("enchanter");
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+
+  // Combined with Help for someone they can't help: the empty note, no summary.
+  await page.getByTestId("help-for-picker").selectOption({ label: "Enchanter" });
+  await expect(page.getByTestId("help-empty")).toBeVisible();
+  await expect(page.getByTestId("help-made-by-summary")).toHaveCount(0);
+
+  await page.getByTestId("help-for-picker").selectOption({ value: "" });
+  await page.getByTestId("help-by-picker").selectOption({ value: "" });
+  await expect(page).not.toHaveURL(/help_by=/);
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+});
+
+test("help tab: Made by someone nobody needs anything from says so", async ({ page }) => {
+  await stubAll(page);
+  const bracers = { slot: "WRIST", item_id: 1001, name: "Linen Bracers", item_level: 10, inventory_type: "WRIST", enchantments: ["Enchant Bracer - Minor Stamina"] };
+  const body = helpResponse();
+  body.members[1].equipped = [bracers];
+  await page.route(HELP_PATTERN, (route) => json(route, body));
+  await page.goto("/wow-forever/topdeadcenter?tab=help&help_by=enchanter");
+  await expect(page.getByTestId("help-empty")).toHaveText("Nobody in the guild needs anything Enchanter can make right now.", { timeout: 10_000 });
+});
+
 test("help tab: skeleton while loading, then shows matches", async ({ page }) => {
   await stubAll(page);
   let release: () => void = () => {};

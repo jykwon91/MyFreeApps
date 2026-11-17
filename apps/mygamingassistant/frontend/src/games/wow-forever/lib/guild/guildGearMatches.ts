@@ -128,11 +128,14 @@ function upgradePct(craftedScore: number, wornScore: number): number {
  *
  * Returns one match per (beneficiary_slug, blizzard_slot) — the crafted item
  * with the best score improvement. Items not in items.json are skipped.
+ * `crafters` (default: every member) limits whose recipes count, so one
+ * member's best offer per slot shows even when a guild mate's is better.
  */
 export function computeGearMatches(
   members: readonly GuildHelpMember[],
   craftingFiles: ReadonlyMap<number, Pick<CraftingFile, "recipes">>,
   itemList: ClientItemList,
+  crafters: readonly GuildHelpMember[] = members,
 ): GuildMatch[] {
   const { byId, clientBuild } = itemList;
 
@@ -171,7 +174,7 @@ export function computeGearMatches(
   // Key: "beneficiary_slug|blizzard_slot" → best match so far (highest upgrade_pct).
   const best = new Map<string, GuildMatch>();
 
-  for (const crafter of members) {
+  for (const crafter of crafters) {
     // Build a lookup of which professions this crafter has.
     const crafterProfIds = new Set(crafter.professions.map((p) => p.profession_id));
 

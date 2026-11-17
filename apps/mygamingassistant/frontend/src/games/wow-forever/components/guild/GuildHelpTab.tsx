@@ -8,7 +8,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import GuildHelpFilterBar from "@/games/wow-forever/components/guild/GuildHelpFilterBar";
 import GuildHelpSkeleton from "@/games/wow-forever/components/guild/GuildHelpSkeleton";
 import GuildMatchCard from "@/games/wow-forever/components/guild/GuildMatchCard";
-import { GUILD_HELP_PROBLEM, NO_HELP_ITEMS } from "@/games/wow-forever/data/guild/guildHelpConfig";
+import { GUILD_HELP_PROBLEM, GUILD_HELP_TEXT, NO_HELP_ITEMS } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { useGetGuildHelpQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
@@ -16,12 +16,10 @@ import { useClientItems } from "@/games/wow-forever/hooks/useClientItems";
 import { useHelpCraftingFiles } from "@/games/wow-forever/hooks/useHelpCraftingFiles";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
-import {
-  buildHelpParams,
-  helpForParam,
-  helpTypeParam,
-} from "@/games/wow-forever/lib/guild/guildHelpParams";
-import type { GuildMatch, GuildMatchType } from "@/games/wow-forever/types/guild/guildMatch";
+import { memberFullName } from "@/games/wow-forever/lib/guild/guildMembers";
+import { buildHelpParams, helpFiltersFromParams } from "@/games/wow-forever/lib/guild/guildHelpParams";
+import type { GuildHelpFilters } from "@/games/wow-forever/types/guild/guildHelpFilters";
+import type { GuildMatch } from "@/games/wow-forever/types/guild/guildMatch";
 
 interface GuildHelpTabProps {
   slug: string;
@@ -30,16 +28,12 @@ interface GuildHelpTabProps {
 /** The guild "Help each other" tab. */
 export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
   const [params, setParams] = useSearchParams();
-  const type = helpTypeParam(params);
-  const forSlug = helpForParam(params);
+  const filters = helpFiltersFromParams(params);
+  const { type, forSlug, bySlug } = filters;
 
-  const setType = useCallback(
-    (next: GuildMatchType | "all") => setParams(buildHelpParams(params, next, forSlug), { replace: true }),
-    [params, setParams, forSlug],
-  );
-  const setFor = useCallback(
-    (next: string | null) => setParams(buildHelpParams(params, type, next), { replace: true }),
-    [params, setParams, type],
+  const update = useCallback(
+    (next: GuildHelpFilters) => setParams(buildHelpParams(params, next), { replace: true }),
+    [params, setParams],
   );
 
   const helpQuery = useGetGuildHelpQuery(slug);
@@ -54,6 +48,10 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     [helpQuery.data],
   );
 
+  // "Made by" someone: only their recipes count, so their best offer per slot shows even where a guild mate's is better.
+  const crafter = bySlug === null ? null : (members.find((m) => m.slug === bySlug) ?? null);
+  const crafters = useMemo(() => (crafter ? [crafter] : members), [crafter, members]);
+
   const allMatches = useMemo<GuildMatch[]>(() => {
     if (!isReady || craftingState.files === null) return [];
 
@@ -63,12 +61,12 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     const enchantingFile = craftingState.files.get(PROFESSION_SKILL_LINES.enchanting);
     // Without the item list, weapon speeds are unknown, so flat weapon damage isn't weighed.
     const enchantMatches = enchantingFile
-      ? computeEnchantMatches(members, enchantingFile, itemList?.byId ?? NO_HELP_ITEMS)
+      ? computeEnchantMatches(members, enchantingFile, itemList?.byId ?? NO_HELP_ITEMS, crafters)
       : [];
-    const gearMatches = itemList ? computeGearMatches(members, craftingState.files, itemList) : [];
+    const gearMatches = itemList ? computeGearMatches(members, craftingState.files, itemList, crafters) : [];
 
     return [...enchantMatches, ...gearMatches];
-  }, [isReady, craftingState.files, members, itemsState]);
+  }, [isReady, craftingState.files, members, itemsState, crafters]);
 
   const filtered = useMemo<GuildMatch[]>(() => {
     return allMatches.filter((m) => {
@@ -95,21 +93,23 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     return <GuildHelpSkeleton />;
   }
 
+  const crafterName = crafter ? memberFullName(crafter) : null;
+  const helped = new Set(filtered.map((m) => m.beneficiary.slug)).size;
+  let emptyText: string = GUILD_HELP_TEXT.noneForFilter;
+  if (allMatches.length === 0) emptyText = crafterName ? GUILD_HELP_TEXT.madeByNone(crafterName) : GUILD_HELP_TEXT.noneAtAll;
+
   return (
     <section className="space-y-4 rounded-xl border bg-card/50 p-3 sm:p-4" aria-label="Help each other">
       <h2 className="text-lg font-semibold">Help each other</h2>
-      <GuildHelpFilterBar
-        members={members}
-        type={type}
-        forSlug={forSlug}
-        onType={setType}
-        onFor={setFor}
-      />
+      <GuildHelpFilterBar members={members} filters={filters} onChange={update} />
+      {crafterName && filtered.length > 0 && (
+        <p className="text-sm font-medium" data-testid="help-made-by-summary">
+          {GUILD_HELP_TEXT.madeBySummary(crafterName, helped)}
+        </p>
+      )}
       {filtered.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground" data-testid="help-empty">
-          {allMatches.length === 0
-            ? "No opportunities found — everyone is fully enchanted and well-geared!"
-            : "No matches for the current filter."}
+          {emptyText}
         </p>
       ) : (
         <ul className="space-y-2" aria-label={`${filtered.length} help opportunities`} data-testid="help-match-list">
