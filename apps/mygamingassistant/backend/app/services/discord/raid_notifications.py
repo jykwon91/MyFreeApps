@@ -318,8 +318,10 @@ def build_consumables_dm(
     return {"embeds": [embed], "allowed_mentions": no_mentions()}
 
 
-def build_generic_reminder_dm(*, raid_label: str, starts_unix: int, signup_link: str | None) -> dict[str, Any]:
+def build_generic_reminder_dm(
+    *, raid_label: str, starts_unix: int, signup_link: str | None, offer_checklist: bool = True
+) -> dict[str, Any]:
     return {
-        "content": raid_copy.generic_reminder_dm(raid_label, starts_unix, signup_link),
+        "content": raid_copy.generic_reminder_dm(raid_label, starts_unix, signup_link, offer_checklist=offer_checklist),
         "allowed_mentions": no_mentions(),
     }

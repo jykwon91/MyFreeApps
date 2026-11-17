@@ -698,6 +698,12 @@ async def test_autocomplete(post: Post, db: AsyncSession, fake_discord: FakeDisc
     response = await post(autocomplete("cancel", "event", "naxx"))
     assert response["data"]["choices"] == []
 
+    # /raid-admin create raid: — raids and dungeons, searched by name.
+    response = await post(autocomplete("create", "raid", "strat"))
+    assert response["data"]["choices"] == [{"name": "Stratholme (dungeon, Classic)", "value": "stratholme"}]
+    response = await post(autocomplete("attendance", "raid", "molten"))
+    assert response["data"]["choices"] == [{"name": "Molten Core (Classic)", "value": "mc"}]
+
     # /raid prefs spec: — the filled-in class narrows the list.
     response = await post(autocomplete("prefs", "spec", "ho", name="raid", **{"class": "priest"}))
     assert response["data"]["choices"] == [{"name": "Holy", "value": "priest.holy"}]

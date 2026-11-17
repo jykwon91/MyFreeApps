@@ -75,6 +75,7 @@ from app.services.discord.raid_views import unix
 from app.services.wow import raid_consumables_round, raid_details, raid_sweeps
 from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_limits import raid_gaps
+from app.services.wow.raid_catalog import is_dungeon
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
 from app.services.wow.raid_text import title_text
 from app.services.wow.raid_consumables_round import DM_STATUSES
@@ -367,6 +368,9 @@ async def _plan_consumables_dm(db: AsyncSession, ctx: _Context, user_id: str) ->
     if pref is not None and pref.dm_opt_out:
         return Skipped("opted out of DMs")
     player = resolve_player(signup, pref)
+    # The consumables lists are per raid; a dungeon run gets the plain reminder.
+    if is_dungeon(ctx.event.raid_key):
+        return _DmPlan(user_id, _generic_dm(ctx, offer_checklist=False))
     if player.wow_class is None:
         return _DmPlan(user_id, _generic_dm(ctx))
     role = raid_notifications.consumables_role(player.wow_class, player.role, player.spec)
@@ -386,9 +390,9 @@ async def _plan_consumables_dm(db: AsyncSession, ctx: _Context, user_id: str) ->
     return _DmPlan(user_id, payload)
 
 
-def _generic_dm(ctx: _Context) -> dict[str, Any]:
+def _generic_dm(ctx: _Context, *, offer_checklist: bool = True) -> dict[str, Any]:
     return raid_notifications.build_generic_reminder_dm(
-        raid_label=ctx.label, starts_unix=ctx.starts_unix, signup_link=ctx.signup_link
+        raid_label=ctx.label, starts_unix=ctx.starts_unix, signup_link=ctx.signup_link, offer_checklist=offer_checklist
     )
 
 

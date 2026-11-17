@@ -51,7 +51,7 @@ from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, COMMAND_TYPE_
 
 from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX
 from app.services.wow.raid_attendance import WINDOW_DEFAULT, WINDOW_MAX
-from app.services.wow.raid_catalog import CLASSES, RAIDS
+from app.services.wow.raid_catalog import CLASSES
 
 # Application command option types
 _SUB_COMMAND: Final = 1
@@ -65,7 +65,6 @@ _ROLE: Final = 8
 # Channel types a raid can be posted into: GUILD_TEXT, GUILD_ANNOUNCEMENT.
 _POSTABLE_CHANNEL_TYPES: Final = [0, 5]
 
-_RAID_CHOICES: Final = [{"name": raid.choice_label, "value": raid.key} for raid in RAIDS]
 _CLASS_CHOICES: Final = [{"name": cls.label, "value": cls.key} for cls in CLASSES]
 
 _WHEN_DESCRIPTION: Final = "When it starts, in the server's timezone (e.g. sat 8pm, 10/14 8:00pm)"
@@ -77,7 +76,7 @@ _RAIDS_OPTION: Final = {
     "min_value": 1,
     "max_value": WINDOW_MAX,
 }
-_RAID_FILTER: Final = {"type": _STRING, "name": "raid", "description": "Only this raid", "choices": _RAID_CHOICES}
+_RAID_FILTER: Final = {"type": _STRING, "name": "raid", "description": "Only this raid or dungeon", "autocomplete": True}
 
 
 def _event_option(description: str) -> dict[str, Any]:
@@ -209,9 +208,9 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                 {
                     "type": _STRING,
                     "name": "raid",
-                    "description": "Which raid",
+                    "description": "Which raid or dungeon (type to search)",
                     "required": True,
-                    "choices": _RAID_CHOICES,
+                    "autocomplete": True,
                 },
                 {
                     "type": _STRING,
@@ -223,7 +222,7 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                 {
                     "type": _INTEGER,
                     "name": "size",
-                    "description": "Raid size (defaults to the raid's normal size)",
+                    "description": "Group size (defaults to the normal size: 5 for most dungeons)",
                     "min_value": 5,
                     "max_value": 40,
                 },

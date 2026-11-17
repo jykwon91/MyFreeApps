@@ -37,8 +37,8 @@ def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0058", (
-        f"Expected head 0058 (wow_character_blizzard_updated_at), "
+    assert heads[0] == "0059", (
+        f"Expected head 0059 (wow_raid_dungeons), "
         f"got {heads[0]}."
     )
 
@@ -396,3 +396,11 @@ def test_0058_down_revision_points_at_0057(
     """0058 (wow_character blizzard_updated_at) chains off 0057 (talent_points)."""
     rev = script_directory.get_revision("0058")
     assert rev.down_revision == "0057"
+
+
+def test_0059_down_revision_points_at_0058(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0059 (wow_raid_dungeons) chains off 0058 (blizzard_updated_at)."""
+    rev = script_directory.get_revision("0059")
+    assert rev.down_revision == "0058"

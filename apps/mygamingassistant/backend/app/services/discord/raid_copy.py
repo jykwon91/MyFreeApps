@@ -440,12 +440,11 @@ def consumables_title(raid_label: str, day_word: str, class_role: str) -> str:
     return f"{raid_label} {day_word} — {class_role}"
 
 
-def generic_reminder_dm(raid_label: str, unix: int, link: str | None) -> str:
-    """Reminder for a player with no class picked — no checklist to personalise."""
-    text = (
-        f"**{raid_label}** starts <t:{unix}:R> (<t:{unix}:F>). "
-        "Tell me your class and spec with `/raid prefs` and I'll send you a consumables checklist next time."
-    )
+def generic_reminder_dm(raid_label: str, unix: int, link: str | None, *, offer_checklist: bool = True) -> str:
+    """Reminder with no checklist: the player has no class picked (offer one), or it's a dungeon (there isn't one)."""
+    text = f"**{raid_label}** starts <t:{unix}:R> (<t:{unix}:F>)."
+    if offer_checklist:
+        text = f"{text} Tell me your class and spec with `/raid prefs` and I'll send you a consumables checklist next time."
     if link:
         text = f"{text}\n[Jump to the raid]({link})"
     return f"{text}\n-# {DM_FOOTER}"

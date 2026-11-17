@@ -2849,6 +2849,16 @@ POSTs signed requests to `https://mygamingassistant.myfreeapps.org/api/discord/i
    ```
    Discord sends a PING when you save; the endpoint must return `{"type":1}`.
 
+### Raids and dungeons
+
+`/raid-admin create raid:` schedules any raid or dungeon in `services/wow/raid_catalog.py`
+(`INSTANCES` = `RAIDS` then `DUNGEONS`; dungeons default to 5, Upper Blackrock Spire 10).
+37 is past Discord's 25-choice cap, so `raid` (create, and the attendance / export
+filter) is an autocomplete (`search_instances`, every typed word must match). A new key
+goes in the catalog, `RAID_KEYS` in `models/wow/wow_raid_event.py` and a migration for
+`ck_wowraidevent_raid_key` (keys fit `String(20)`). Dungeons have no banner art and get the
+plain reminder DM, not a consumables checklist (those are per raid).
+
 ### Local testing with cloudflared
 
 Discord requires a public HTTPS URL for the Interactions Endpoint. Use `cloudflared`
