@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useUpdatePropertyMutation } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
@@ -10,6 +10,7 @@ import { Button, FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import { fromProperty, toAddress, addressComplete } from "@mybookkeeper/api-client/utils/propertyForm";
+import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import AddressInputs from "./AddressInputs";
 
 export interface PropertyEditCardProps {
@@ -19,6 +20,8 @@ export interface PropertyEditCardProps {
 
 export default function PropertyEditCard({ property, onDone }: PropertyEditCardProps) {
   const [form, setForm] = useState<PropertyForm>(() => fromProperty(property));
+  const [purchasePrice, setPurchasePrice] = useState(property.purchase_price ?? "");
+  const priceErrorId = useId();
   const [updateProperty, { isLoading }] = useUpdatePropertyMutation();
   const { showSuccess, showError } = useToast();
 
@@ -34,7 +37,9 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
     }));
   }
 
-  const canSave = !!(form.name && addressComplete(form));
+  const cleanedPrice = cleanPurchasePrice(purchasePrice);
+  const priceInvalid = purchasePrice.trim() !== "" && cleanedPrice === null;
+  const canSave = !!(form.name && addressComplete(form)) && !priceInvalid;
 
   function handleSave() {
     updateProperty({
@@ -44,6 +49,7 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
         address: toAddress(form),
         classification: form.classification,
         ...(form.type ? { type: form.type } : {}),
+        ...(cleanedPrice ? { purchase_price: cleanedPrice } : {}),
       },
     })
       .unwrap()
@@ -89,6 +95,27 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
           )}
         </FormField>
       )}
+      <FormField label="Purchase price">
+        {(field) => (
+          <>
+            <input
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              inputMode="decimal"
+              placeholder="e.g. 250000"
+              aria-invalid={priceInvalid}
+              aria-describedby={priceInvalid ? priceErrorId : undefined}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              {...field}
+            />
+            {priceInvalid && (
+              <p id={priceErrorId} className="mt-1 text-xs text-red-600 dark:text-red-400">
+                Enter the price as a dollar amount, like 250000.
+              </p>
+            )}
+          </>
+        )}
+      </FormField>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone} disabled={isLoading}>Cancel</Button>
         <LoadingButton onClick={handleSave} disabled={!canSave} isLoading={isLoading} loadingText="Saving...">

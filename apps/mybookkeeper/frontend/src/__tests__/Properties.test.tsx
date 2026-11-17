@@ -282,3 +282,30 @@ describe("Properties — viewer role", () => {
     expect(screen.queryByTitle("Remove")).not.toBeInTheDocument();
   });
 });
+
+describe("Properties — edit link", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useGetPropertiesQuery).mockReturnValue({
+      data: mockProperties,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetPropertiesQuery>);
+    vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  it("opens the edit card for ?edit=<id>, and Cancel drops the param", async () => {
+    window.history.pushState({}, "", "/properties?edit=prop-1");
+    const user = userEvent.setup();
+    try {
+      renderWithProviders(<Properties />);
+      expect(screen.getByLabelText("Purchase price")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByLabelText("Purchase price")).not.toBeInTheDocument();
+      expect(window.location.search).toBe("");
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+});

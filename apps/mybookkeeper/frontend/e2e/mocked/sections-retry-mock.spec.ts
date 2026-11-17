@@ -1,5 +1,5 @@
 /**
- * No-backend E2E for Retry on the calendar, pending receipts, utility trends,
+ * No-backend E2E for Retry on the calendar, pending receipts, utility trends, rental ROI,
  * the lease template picker and a listing's channels.
  *
  * Fully mocks the API via page.route(), so it runs under playwright.layout.config.ts
@@ -68,11 +68,35 @@ const SECTIONS: Section[] = [
   },
   {
     name: "utility trends",
-    path: "/analytics",
+    path: "/analytics?tab=utility-trends",
     endpoint: /\/api\/analytics\/utility-trends(\?|$)/,
     error: "I ran into a problem loading your utility data. Want me to try again?",
     emptyAnswer: { trends: [], summary: {}, total_spend: 0 },
     empty: (p) => p.getByText(/I haven't found any utility expenses yet/),
+  },
+  {
+    name: "rental ROI",
+    path: "/analytics",
+    endpoint: /\/api\/analytics\/rental-roi(\?|$)/,
+    error: "Couldn't load your rental numbers.",
+    emptyAnswer: {
+      window_start: "2025-11-01",
+      window_end: "2026-10-31",
+      target_return_pct: "8",
+      has_transactions: false,
+      unassigned_revenue_monthly_cents: 0,
+      summary: {
+        property_count: 0,
+        properties_with_target: 0,
+        total_break_even_monthly_cents: 0,
+        total_target_monthly_cents: 0,
+        total_actual_revenue_monthly_cents: 0,
+        total_gap_monthly_cents: 0,
+        gap_basis: "break_even",
+      },
+      properties: [],
+    },
+    empty: (p) => p.getByText("Add a property to see what it needs to earn each month."),
   },
   {
     name: "lease template picker",

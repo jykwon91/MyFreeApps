@@ -16,7 +16,7 @@ export const propertiesApi = baseApi.enhanceEndpoints({
       query: (data) => ({ url: "/properties", method: "POST", data }),
       invalidatesTags: ["Property"],
     }),
-    updateProperty: builder.mutation<Property, { id: string; data: { name?: string; address?: string; classification?: PropertyClassification; type?: PropertyType; is_active?: boolean } }>({
+    updateProperty: builder.mutation<Property, { id: string; data: { name?: string; address?: string; classification?: PropertyClassification; type?: PropertyType; is_active?: boolean; purchase_price?: string } }>({
       query: ({ id, data }) => ({ url: `/properties/${id}`, method: "PATCH", data }),
       invalidatesTags: [...PROPERTY_CHANGE_TAGS],
     }),

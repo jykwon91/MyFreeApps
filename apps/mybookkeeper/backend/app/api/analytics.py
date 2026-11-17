@@ -1,18 +1,21 @@
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.core.rate_limit import RateLimiter
+from app.schemas.analytics.rental_roi_response import RentalRoiResponse
 from app.schemas.analytics.utility_trends import UtilityTrendsResponse
-from app.services.analytics import utility_trends_service
+from app.services.analytics import rental_roi_service, utility_trends_service
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 _MAX_PROPERTY_IDS = 20
 _analytics_limiter = RateLimiter(max_attempts=60, window_seconds=3600)
+_DEFAULT_TARGET_RETURN_PCT = Decimal("8")
 
 
 @router.get("/utility-trends", response_model=UtilityTrendsResponse)
@@ -41,3 +44,12 @@ async def get_utility_trends(
         property_ids=parsed_property_ids,
         granularity=granularity,
     )
+
+
+@router.get("/rental-roi", response_model=RentalRoiResponse)
+async def get_rental_roi(
+    target_return_pct: Decimal = Query(_DEFAULT_TARGET_RETURN_PCT, ge=0, le=100),
+    ctx: RequestContext = Depends(current_org_member),
+) -> RentalRoiResponse:
+    _analytics_limiter.check(f"analytics:{ctx.user_id}")
+    return await rental_roi_service.get_rental_roi(ctx, target_return_pct=target_return_pct)
