@@ -4,7 +4,8 @@ import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/wel
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { manualEditProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { useState } from "react";
+import { type ComponentRef, useRef, useState } from "react";
+import type { TextInput } from "react-native";
 
 import { WELCOME_MANUAL_FORM_MESSAGES as MESSAGES, WELCOME_MANUAL_INTRO_MIN_HEIGHT } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
@@ -24,6 +25,7 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
   const { values, edit } = form;
   const { create, update, isBusy, isLeaving, failure } = useSaveWelcomeManual(original?.id ?? null);
   const locked = isBusy || isLeaving;
+  const introInput = useRef<ComponentRef<typeof TextInput>>(null);
   const options = propertyOptions(properties);
   const propertyLabel = options.find((option) => option.value === (values.property_id || NO_PROPERTY_VALUE))?.label ?? MESSAGES.noProperty;
 
@@ -45,8 +47,10 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
           label={MESSAGES.titleLabel}
           maxLength={WELCOME_MANUAL_TITLE_MAX_LENGTH}
           onChangeText={(text) => edit("title", text)}
+          onSubmitEditing={() => introInput.current?.focus()}
           required
-          returnKeyType="next"
+          returnKeyType={original ? "next" : "done"}
+          submitBehavior={original ? "submit" : "blurAndSubmit"}
           value={values.title}
         />
         {original ? (
@@ -57,6 +61,7 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
             multiline
             onChangeText={(text) => edit("intro_text", text)}
             placeholder={MESSAGES.introPlaceholder}
+            ref={introInput}
             value={values.intro_text}
           />
         ) : null}

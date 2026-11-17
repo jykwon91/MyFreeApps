@@ -50,7 +50,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           maxLength={VENDOR_NAME_MAX_LENGTH}
           onChangeText={(text) => edit("name", text)}
           required
-          returnKeyType="next"
+          returnKeyType="done"
           value={values.name}
         />
         <PickerField disabled={locked} label={MESSAGES.category} onPress={() => setIsPickerOpen(true)} valueLabel={VENDOR_CATEGORY_LABELS[values.category]} />
