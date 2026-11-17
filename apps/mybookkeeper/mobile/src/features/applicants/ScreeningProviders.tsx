@@ -8,7 +8,7 @@ import { couldntOpenProviderMessage, learnMoreLabel, openedProviderMessage, SCRE
 export default function ScreeningProviders({ applicantId }: { applicantId: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const { data, error, isLoading, refetch } = useGetScreeningProvidersQuery(applicantId);
+  const { data, isLoading, refetch } = useGetScreeningProvidersQuery(applicantId);
   const openLink = useOpenLink();
   const [fetchRedirect] = useLazyGetScreeningRedirectQuery();
   const [openingName, setOpeningName] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
   }
 
   if (isLoading) return <Skeleton height={96} />;
-  if (error || !data) {
+  if (!data) {
     return (
       <Banner
         actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => void refetch() }]}
