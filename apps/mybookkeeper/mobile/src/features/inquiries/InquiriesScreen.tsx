@@ -3,11 +3,11 @@ import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrat
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, ClampedText, EmptyState, LoadingButton, OptionSheet, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { FlatList, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
 import { INQUIRY_CREATE_MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
 import { INTEGRATIONS_LINK } from "../../constants/home";
@@ -116,9 +116,9 @@ export default function InquiriesScreen({
             </LoadingButton>
             {stage ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
+                <ClampedText numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
                   {stageLabel(stage)}
-                </Text>
+                </ClampedText>
                 <LoadingButton onPress={() => onStageChange(null)} variant="ghost">
                   Clear
                 </LoadingButton>

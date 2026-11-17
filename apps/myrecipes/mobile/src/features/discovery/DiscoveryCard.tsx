@@ -2,7 +2,7 @@ import { DISCOVERY_DIFFICULTY_LABELS, DISCOVERY_SOURCE_LABELS } from "@myrecipes
 import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 import { formatTotalMinutes } from "@myrecipes/api-client/utils/formatTotalMinutes";
 import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
-import { useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_PREVIEW_LINES, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { DISCOVERY_CARD_IMAGE_ASPECT } from "../../constants/discovery";
 import DiscoverySourceLine from "./DiscoverySourceLine";
@@ -37,19 +37,19 @@ export default function DiscoveryCard({ recipe, onPress }: { recipe: DiscoveredR
     >
       <DiscoveryThumbnail aspectRatio={DISCOVERY_CARD_IMAGE_ASPECT} path={recipe.image_url} />
       <View style={{ padding: spacing.lg, gap: spacing.sm }}>
-        <Text numberOfLines={2} style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}>
+        <ClampedText numberOfLines={2} style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}>
           {recipe.title}
-        </Text>
+        </ClampedText>
         <DiscoverySourceLine publisher={publisher} sourceType={recipe.source_type} />
         {recipe.summary ? (
-          <Text numberOfLines={2} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
             {recipe.summary}
-          </Text>
+          </ClampedText>
         ) : null}
         {recipe.why_notable ? (
-          <Text numberOfLines={2} style={{ color: colors.primary, fontSize: fontSize.sm }}>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ color: colors.primary, fontSize: fontSize.sm }}>
             {recipe.why_notable}
-          </Text>
+          </ClampedText>
         ) : null}
         {time || difficulty ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md }}>

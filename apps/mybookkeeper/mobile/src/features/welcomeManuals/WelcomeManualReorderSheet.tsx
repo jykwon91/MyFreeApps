@@ -1,7 +1,7 @@
 import type { WelcomeManualItemWords } from "../../types/WelcomeManualItemWords";
 import type { WelcomeManualReorderItem } from "../../types/WelcomeManualReorderItem";
 import { moveItem, sameOrder } from "@mybookkeeper/api-client/utils/welcomeManualReorder";
-import { FormSheet, FormSheetCancelButton, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, useTheme, useToast } from "@platform/mobile";
+import { ClampedText, FormSheet, FormSheetCancelButton, LoadingButton, MIN_TOUCH_TARGET, Thumbnail, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE } from "../../constants/uploads";
@@ -60,9 +60,9 @@ export default function WelcomeManualReorderSheet({ title, words, items, reorder
                 style={{ width: HELD_THUMBNAIL_SIZE, height: HELD_THUMBNAIL_SIZE, borderRadius: radius.md, backgroundColor: colors.muted }}
               />
             ) : null}
-            <Text numberOfLines={2} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>
+            <ClampedText numberOfLines={2} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>
               {label}
-            </Text>
+            </ClampedText>
             <LoadingButton accessibilityLabel={moveUpLabel(label)} disabled={write.isBusy || index === 0} onPress={() => setOrder(moveItem(order, index, -1))} variant="ghost">
               ↑
             </LoadingButton>

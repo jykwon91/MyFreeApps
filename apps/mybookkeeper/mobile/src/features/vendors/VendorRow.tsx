@@ -1,7 +1,7 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
-import { Chip, LoadingButton, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { Chip, ClampedText, LoadingButton, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
+import { Pressable, View } from "react-native";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
 import { callLink, vendorRowFacts, vendorRowLabel } from "./vendorDisplay";
 
@@ -29,15 +29,15 @@ export default function VendorRow({ vendor, onPress }: VendorRowProps) {
           backgroundColor: pressed ? colors.muted : colors.background,
         })}
       >
-        <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {vendor.name}
-        </Text>
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        </ClampedText>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {VENDOR_CATEGORY_LABELS[vendor.category]}
-        </Text>
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        </ClampedText>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {vendorRowFacts(vendor)}
-        </Text>
+        </ClampedText>
         {vendor.preferred ? (
           <View style={{ flexDirection: "row" }}>
             <Chip label={VENDOR_MESSAGES.preferred} />

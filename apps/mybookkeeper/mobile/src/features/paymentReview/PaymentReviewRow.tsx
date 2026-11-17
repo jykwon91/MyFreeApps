@@ -1,7 +1,7 @@
 import { attributionPayoutLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
+import { ClampedText, ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
@@ -80,9 +80,9 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
         />
         {dateLine ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{dateLine}</Text> : null}
         {transaction?.description ? (
-          <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+          <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
             {transaction.description}
-          </Text>
+          </ClampedText>
         ) : null}
         <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{suggestionLine(item)}</Text>
       </View>

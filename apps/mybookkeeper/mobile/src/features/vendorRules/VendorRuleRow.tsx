@@ -1,6 +1,6 @@
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text } from "react-native";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable } from "react-native";
 import { vendorRuleRowLabel, vendorRuleSummary } from "./vendorRuleDisplay";
 
 interface VendorRuleRowProps {
@@ -27,12 +27,12 @@ export default function VendorRuleRow({ rule, propertyName, onPress }: VendorRul
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {rule.match_pattern}
-      </Text>
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {vendorRuleSummary(rule, propertyName)}
-      </Text>
+      </ClampedText>
     </Pressable>
   );
 }

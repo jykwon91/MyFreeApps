@@ -1,4 +1,4 @@
-import { useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_LINK_LINES, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { ReviewSummaryProps } from "../../types/ReviewSummaryProps";
@@ -16,9 +16,9 @@ export default function ReviewSummary({ summary, sourceUrl }: ReviewSummaryProps
       </Text>
       {summary ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{summary}</Text> : null}
       {sourceUrl ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
+        <ClampedText largeTextNumberOfLines={LARGE_TEXT_LINK_LINES} numberOfLines={1} style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
           {`${MESSAGES.fromLink} ${sourceUrl}`}
-        </Text>
+        </ClampedText>
       ) : null}
     </View>
   );

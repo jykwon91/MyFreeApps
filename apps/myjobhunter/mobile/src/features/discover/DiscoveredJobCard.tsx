@@ -12,7 +12,7 @@ import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { triageFailureMessage } from "@myjobhunter/api-client/utils/triageFailureMessage";
 import { undoDismissFailureMessage } from "@myjobhunter/api-client/utils/undoDismissFailureMessage";
-import { Chip, LoadingButton, OptionSheet, useOpenLink, useTheme, useToast } from "@platform/mobile";
+import { Chip, ClampedText, LARGE_TEXT_PREVIEW_LINES, LoadingButton, OptionSheet, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -106,9 +106,9 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
         </Text>
       ) : null}
       {job.description ? (
-        <Text numberOfLines={3} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={3} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {job.description}
-        </Text>
+        </ClampedText>
       ) : null}
       {job.dismissed_at ? (
         // Only the Dismissed view lists dismissed postings: Restore replaces the triage actions.

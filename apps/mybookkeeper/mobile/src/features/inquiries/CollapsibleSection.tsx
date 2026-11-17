@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, LARGE_TEXT_PREVIEW_LINES, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -35,9 +35,9 @@ export default function CollapsibleSection({
           <Text style={{ fontSize: fontSize.sm, color: colors.primary }}>{isOpen ? "Hide" : "Show"}</Text>
         </View>
         {preview && !isOpen ? (
-          <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
             {preview}
-          </Text>
+          </ClampedText>
         ) : null}
       </Pressable>
       {isOpen ? children : null}

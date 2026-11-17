@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 
 export default function HomeLinkRow({
@@ -22,9 +22,9 @@ export default function HomeLinkRow({
       onPress={onPress}
       style={{ minHeight: MIN_TOUCH_TARGET, flexDirection: "row", alignItems: "center", gap: spacing.sm }}
     >
-      <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>
+      <ClampedText numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>
         {label}
-      </Text>
+      </ClampedText>
       {detail ? (
         <Text style={{ fontSize: fontSize.md, fontVariant: ["tabular-nums"], color: detailColor ?? colors.foreground }}>{detail}</Text>
       ) : null}

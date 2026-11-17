@@ -1,5 +1,5 @@
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
-import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { EMAIL_QUEUE_STATUS_LABELS, INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
@@ -22,13 +22,13 @@ export default function QueueItemRow({ item }: { item: EmailQueueItem }) {
       accessible
       style={{ gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {name}
-      </Text>
+      </ClampedText>
       {item.email_subject ? (
-        <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {item.email_subject}
-        </Text>
+        </ClampedText>
       ) : null}
       <Chip label={EMAIL_QUEUE_STATUS_LABELS[item.status]} />
       {item.error ? (

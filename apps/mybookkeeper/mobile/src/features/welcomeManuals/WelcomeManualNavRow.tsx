@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 
 interface WelcomeManualNavRowProps {
@@ -35,9 +35,9 @@ export default function WelcomeManualNavRow({ label, value, disabled = false, on
       <Text style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>{label}</Text>
       {value ? (
         <View style={{ flexShrink: 1 }}>
-          <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+          <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
             {value}
-          </Text>
+          </ClampedText>
         </View>
       ) : null}
       <Text importantForAccessibility="no" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>

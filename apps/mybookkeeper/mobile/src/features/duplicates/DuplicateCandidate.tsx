@@ -3,7 +3,7 @@ import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transa
 import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { MERGEABLE_FIELDS, FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
-import { LabelValueRow, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, LabelValueRow, LARGE_TEXT_FILE_NAME_LINES, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
@@ -83,10 +83,10 @@ export default function DuplicateCandidate({
             onPress={() => router.push(`/documents/${txn.source_document_id}`)}
             style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center" }}
           >
-            <Text numberOfLines={1} style={{ fontSize: fontSize.md, color: colors.primary }}>{txn.source_file_name}</Text>
+            <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={1} style={{ fontSize: fontSize.md, color: colors.primary }}>{txn.source_file_name}</ClampedText>
           </Pressable>
         ) : (
-          <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{txn.source_file_name}</Text>
+          <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{txn.source_file_name}</ClampedText>
         )
       ) : (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.noSourceDocument}</Text>

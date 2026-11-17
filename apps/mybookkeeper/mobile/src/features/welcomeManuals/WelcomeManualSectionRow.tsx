@@ -1,6 +1,6 @@
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text } from "react-native";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable } from "react-native";
 import { sectionSummaryLine } from "./welcomeManualDisplay";
 
 interface WelcomeManualSectionRowProps {
@@ -27,13 +27,13 @@ export default function WelcomeManualSectionRow({ section, roomName, onPress }: 
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {section.title}
-      </Text>
+      </ClampedText>
       {roomName ? <Chip label={roomName} /> : null}
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {summary}
-      </Text>
+      </ClampedText>
     </Pressable>
   );
 }

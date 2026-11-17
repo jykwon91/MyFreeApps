@@ -1,4 +1,4 @@
-import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { memo } from "react";
 import { Pressable, Text } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
@@ -7,7 +7,6 @@ import { applicationDetails, applicationRowLabel, companyName, fitText, statusLa
 
 function ApplicationRow({ application, onPress }: ApplicationRowProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   const fit = fitText(application);
   const details = applicationDetails(application);
   const status = statusLabel(application);
@@ -29,13 +28,13 @@ function ApplicationRow({ application, onPress }: ApplicationRowProps) {
       })}
     >
       <ListRowTitle aside={fit ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{fit}</Text> : null} title={companyName(application)} />
-      <Text numberOfLines={isLargeText ? undefined : 2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {application.role_title}
-      </Text>
+      </ClampedText>
       {details ? (
-        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
-        </Text>
+        </ClampedText>
       ) : null}
       {status ? <Chip label={status} tone={statusTone(application)} /> : null}
     </Pressable>

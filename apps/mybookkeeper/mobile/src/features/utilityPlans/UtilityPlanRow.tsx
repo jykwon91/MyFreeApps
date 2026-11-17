@@ -1,6 +1,6 @@
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import { Chip, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
-import { Pressable, Text } from "react-native";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable } from "react-native";
 import { planChip, planPriceLine, planProvider, planRowLabel, planTitle } from "./utilityPlanDisplay";
 
 interface UtilityPlanRowProps {
@@ -11,7 +11,6 @@ interface UtilityPlanRowProps {
 
 export default function UtilityPlanRow({ plan, todayIso, onPress }: UtilityPlanRowProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   const chip = planChip(plan, todayIso);
   return (
     <Pressable
@@ -28,15 +27,15 @@ export default function UtilityPlanRow({ plan, todayIso, onPress }: UtilityPlanR
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={isLargeText ? undefined : 2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {planTitle(plan)}
-      </Text>
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {planProvider(plan)}
-      </Text>
-      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {planPriceLine(plan)}
-      </Text>
+      </ClampedText>
       {chip ? <Chip label={chip} /> : null}
     </Pressable>
   );

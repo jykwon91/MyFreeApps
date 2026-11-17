@@ -2,7 +2,7 @@ import type { UtilityPlanRateComparisonRow } from "@mybookkeeper/api-client/type
 import { UTILITY_PLAN_BENCHMARK_STATUS_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanBenchmarkLabels";
 import { formatBenchmarkGap } from "@mybookkeeper/api-client/utils/benchmarkFormat";
 import { formatComparisonFigure } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text } from "react-native";
 import { UTILITY_RATE_CHECK_MESSAGES as MESSAGES } from "../../constants/utilityInsights";
@@ -34,12 +34,12 @@ export default function UtilityRateCheckRow({ row }: { row: UtilityPlanRateCompa
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {planTitle(plan)}
-      </Text>
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+      </ClampedText>
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {planProvider(plan)}
-      </Text>
+      </ClampedText>
       {lines.map((line, index) => (
         <Text key={line} style={{ fontSize: fontSize.sm, fontWeight: index === 0 ? "600" : "400", color: index === 0 && compared ? colors.destructiveText : colors.foreground }}>
           {line}

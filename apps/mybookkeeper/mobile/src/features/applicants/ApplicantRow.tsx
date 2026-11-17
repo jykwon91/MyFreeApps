@@ -1,5 +1,5 @@
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
-import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { applicantName, applicantRowDetails, applicantRowLabel, applicantStageLabel, promotedAgo } from "./applicantDisplay";
 
@@ -13,7 +13,6 @@ export default function ApplicantRow({
   onPress: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
-  const isLargeText = useLargeText();
   const details = applicantRowDetails(applicant);
 
   return (
@@ -36,9 +35,9 @@ export default function ApplicantRow({
         title={applicantName(applicant.legal_name)}
       />
       {details ? (
-        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
-        </Text>
+        </ClampedText>
       ) : null}
       {showStage ? <Chip label={applicantStageLabel(applicant.stage)} /> : null}
     </Pressable>

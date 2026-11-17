@@ -1,6 +1,6 @@
 import { LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { listingRowLabel, monthlyRateText } from "./listingDisplay";
 
@@ -27,13 +27,13 @@ export default function ListingRow({ listing, propertyName, onPress }: ListingRo
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {listing.title}
-      </Text>
+      </ClampedText>
       {propertyName ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {propertyName}
-        </Text>
+        </ClampedText>
       ) : null}
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
         <Chip label={LISTING_STATUS_LABELS[listing.status]} />
