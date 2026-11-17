@@ -42,7 +42,7 @@ EFFECT_ENCHANT_ITEM = 53
 # SkillLineAbility.AcquireMethod: learned with the profession itself.
 ACQUIRE_ON_SKILL_LEARN = 1
 # Items a teaching item's name starts with.
-TEACHING_PREFIXES = ("Pattern: ", "Formula: ", "Recipe: ", "Plans: ", "Schematic: ", "Manual: ")
+TEACHING_PREFIXES = ("Pattern: ", "Formula: ", "Recipe: ", "Plans: ", "Schematic: ", "Manual: ", "Blueprint: ")
 # Item classes a disenchanter can break: weapons and armour.
 DISENCHANTABLE_CLASSES = {2, 4}
 UNCOMMON = 2

@@ -44,7 +44,7 @@ const COLUMNS = ["item_id", "market_value", "min_buyout", "quantity", "listings"
 const UPDATED_AT = "2026-11-06T09:00:00Z";
 const NOW = new Date("2026-11-06T12:00:00Z");
 /** Enchanting materials the stub leaves out: one nothing can price, one worked out from what Blacksmithing makes it with. */
-const LARGE_BRILLIANT_SHARD = 14344;
+const LARGE_RADIANT_SHARD = 11178;
 const GOLDEN_ROD = 11128;
 
 interface Reagent {
@@ -66,11 +66,11 @@ const ROD_MATERIALS: Row[] = [
   [3478, 50, "Coarse Grinding Stone"],
 ];
 
-/** Every material these guides use, at 50c, minus Large Brilliant Shard and Golden Rod (plus what Golden Rod is made of). */
+/** Every material these guides use, at 50c, minus Large Radiant Shard and Golden Rod (plus what Golden Rod is made of). */
 function craftingRows(): Row[] {
   const seen = new Map<number, string>();
   for (const file of ["tailoring", "enchanting", "alchemy"]) for (const r of reagentsOf(file)) seen.set(r.id, r.name);
-  seen.delete(LARGE_BRILLIANT_SHARD);
+  seen.delete(LARGE_RADIANT_SHARD);
   seen.delete(GOLDEN_ROD);
   for (const [id, , name] of ROD_MATERIALS) seen.set(id, name);
   return [...seen].map(([id, name]) => [id, 50, name]);
@@ -161,7 +161,7 @@ test("Enchanting fills in every price it can, works out what nobody sells yet, a
   const rod = route.getByLabel("Golden Rod");
   await expect(rod).toHaveValue("1s 50c");
   await expect(rod.locator("xpath=..").getByText("From its materials")).toBeVisible();
-  const shard = route.getByLabel("Large Brilliant Shard");
+  const shard = route.getByLabel("Large Radiant Shard");
   await expect(shard).toHaveValue("");
   await expect(shard.locator("xpath=..").getByText(/^Not on the auction house yet — fills in automatically once it sells$/)).toBeVisible();
   await expect(route.getByText(/e\.g\. 1g/)).toHaveCount(0);

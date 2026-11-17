@@ -74,7 +74,7 @@ from scripts.wow_professions.crafts import (
     sod_only_spells,
 )
 from scripts.wow_professions.classic_teaching import load_classic_teaching
-from scripts.wow_professions.effects import add_effects, load_enchant_points
+from scripts.wow_professions.effects import add_effects, load_enchant_points, mark_camp_objects
 from scripts.wow_professions.instance_sources import add_instance_drops
 from scripts.wow_professions.specs import spec_quests, spec_records, trainer_specs
 from scripts.wow_world_map.build import write_json
@@ -395,6 +395,8 @@ def main() -> None:
     book, item_spells, enchant_points = load_book(), load_item_spells(), load_enchant_points()
     for key in DESCRIBES_FOR:
         add_effects(recipes[key], book, item_spells, enchant_points)
+    for rows in recipes.values():
+        mark_camp_objects(rows, book, item_spells)
     smelting = {key: smelting_for(recipes[key], mining, mining_trainer) if key in SMELTS_FOR else [] for key in PROFESSIONS}
 
     write_json(DATA_DIR / "mining.json", {

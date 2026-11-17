@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Professions: camp objects",
+    "summary": "Every crafting guide now has a Camp objects section: the Spinning Wheel, Arcane Salvager, Mana Well and the rest your profession builds for a campfire. Each shows its skill, what it does in the game's own words (level 60 numbers), the materials, and how to learn it: a trainer, or a Blueprint and the boss player guides say drops it.",
+    "to": "/wow-forever/professions?p=tailoring#camp"
+  },
+  {
+    "date": "2026-11-17",
     "title": "Drop-only recipes: why Bind on pickup is empty",
     "summary": "Pick Alchemy and Bind on pickup on the Drop-only recipes page and it now says why the list is empty: Alchemy's bind-on-pickup recipes are sold by vendors, given by quests, or new in WoW Forever, so none are drop-only.",
     "to": "/wow-forever/recipe-drops?p=alchemy&trade=bop"

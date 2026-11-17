@@ -178,7 +178,8 @@ describe("Engineering item lines", () => {
     const on = Object.entries(CRAFTING_FEATURES).filter(([, f]) => f.effects).map(([p]) => p);
     expect(on).toEqual(["engineering"]);
     // Enchanting carries effects too (Help cards and recipe hovers), but its route doesn't show them.
-    for (const p of PROFESSIONS) if (p !== "engineering" && p !== "enchanting") expect(FILES[p].recipes.some((r) => r.effect)).toBe(false);
+    // Every profession's camp objects carry their tooltip for the "Camp objects" section.
+    for (const p of PROFESSIONS) if (p !== "engineering" && p !== "enchanting") expect(FILES[p].recipes.some((r) => r.effect && !r.camp)).toBe(false);
     expect(FILES.enchanting.recipes.some((r) => r.effect)).toBe(true);
   });
 });
