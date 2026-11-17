@@ -14,6 +14,8 @@ export const RENTAL_ROI_MESSAGES = {
   target: "Target",
   actual: "Actual",
   gap: "Gap",
+  basedOnMonths: (n: number) => `Based on ${n} month${n === 1 ? "" : "s"}`,
+  gapVsBreakEven: (words: string) => `${words} vs. break-even`,
   avgMonths: (n: number) => `Average of ${n} month${n === 1 ? "" : "s"}`,
   mortgagePayment: "Mortgage payment",
   operatingCosts: "Operating costs",

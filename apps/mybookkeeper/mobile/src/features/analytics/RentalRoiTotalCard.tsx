@@ -18,7 +18,6 @@ export default function RentalRoiTotalCard({ summary }: RentalRoiTotalCardProps)
   return (
     <View
       accessible
-      accessibilityLabel={MESSAGES.allProperties}
       style={{
         backgroundColor: colors.muted,
         borderColor: colors.border,

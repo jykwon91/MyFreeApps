@@ -64,10 +64,8 @@ export default function RentalRoiScreen() {
     >
       <View style={{ gap: spacing.lg, padding: spacing.lg }}>
 
-        {/* Headline */}
         <View
           accessible
-          accessibilityLabel="Monthly revenue target"
           accessibilityLiveRegion="polite"
           testID="rental-roi-headline"
         >
