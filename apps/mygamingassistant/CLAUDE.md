@@ -592,6 +592,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `/wow-forever/map?to=pt:...&dir=1` (vendors, mobs, quest givers, dungeon doors).
   Item names on Best gear and Item Compare link here (`ItemNameLink`, router
   state `{ from }` so Back returns to that page).
+- **Crafted auction prices** (`CraftedPrices`, under each recipe in `CraftedByList`):
+  each material's price (`ItemCountList priced`), one craft's materials
+  (`prices/materialsCost.ts`, also the food pages' Buy or cook), the item's own
+  price and "Cheaper to craft / buy" for what one craft makes (`makes.count`),
+  and the pattern's price when an item teaches it. Bind-on-pickup and quest
+  items never sell (`isAuctionable`), so they get no buy row or verdict. One
+  `PriceStatus` line tops the Crafted list.
 - **Item tooltip** (`ItemNameLink` → `ItemTooltip`, `hooks/useHoverTooltip.ts`):
   mouse hover (150 ms) or keyboard focus (`:focus-visible`) shows
   `ItemStatsBlock` in a `<body>` portal placed by `@floating-ui/react-dom`

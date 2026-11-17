@@ -4,6 +4,9 @@ export const DETAIL_LINK =
 
 export const DETAIL_CHIP = "inline-block rounded border px-1.5 py-0.5 text-xs text-muted-foreground";
 
+/** A label on the left, its price on the right ("Ingredients for one cook ... ~24c"). */
+export const PRICE_ROW = "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 text-sm";
+
 export const DETAIL_SECTION = "rounded-xl border bg-card p-4 sm:p-5 space-y-3";
 
 /** "Horde" / "Alliance" for the other-faction toggle. */

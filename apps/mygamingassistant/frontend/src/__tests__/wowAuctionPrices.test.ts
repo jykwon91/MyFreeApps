@@ -6,7 +6,10 @@ import { createPriceBook } from "@/games/wow-forever/crafting/matPrices";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
-import { cheaperWay, cookCost } from "@/games/wow-forever/food/foodPrices";
+import { isAuctionable } from "@/games/wow-forever/lib/itemPages/auctionable";
+import { craftedVerdict, materialsLabel } from "@/games/wow-forever/lib/itemPages/craftedPriceText";
+import { cheaperWay, materialsCost } from "@/games/wow-forever/prices/materialsCost";
+import { ITEM_BIND } from "@/games/wow-forever/types/itemPages/itemBind";
 import { clothAuctionPerHour, skinAuctionPerHour } from "@/games/wow-forever/gold/farmAuctionValue";
 import { clothPerHour } from "@/games/wow-forever/gold/goldFarms";
 import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
@@ -128,25 +131,46 @@ describe("the cheapest route from fetched prices", () => {
   });
 });
 
-describe("cookCost", () => {
+describe("materialsCost", () => {
   const food = { reagents: [{ id: 2672, name: "Stringy Wolf Meat", count: 1 }, { id: 2678, name: "Mild Spices", count: 2 }] };
 
   it("adds up the ingredients and lists the ones with no auction price", () => {
     const prices = mapPriceList(priceList([[2672, 15, "Stringy Wolf Meat"]]));
-    const cook = cookCost(food, prices);
+    const cook = materialsCost(food.reagents, prices);
     expect(cook.total).toBe(15);
-    expect(cook.missing.map((r) => r.name)).toEqual(["Mild Spices"]);
+    expect(cook.missing).toEqual(["Mild Spices"]);
     // Not every ingredient is priced, so there's no honest buy-or-cook answer.
     expect(cheaperWay(cook, 100)).toBeNull();
   });
 
   it("says which is cheaper only when everything is priced", () => {
     const prices = mapPriceList(priceList([[2672, 15, "Stringy Wolf Meat"], [2678, 5, "Mild Spices"]]));
-    const cook = cookCost(food, prices);
+    const cook = materialsCost(food.reagents, prices);
     expect(cook.total).toBe(25);
-    expect(cheaperWay(cook, 100)).toBe("cook");
+    expect(cheaperWay(cook, 100)).toBe("make");
     expect(cheaperWay(cook, 20)).toBe("buy");
+    expect(cheaperWay(cook, 25)).toBeNull();
     expect(cheaperWay(cook, undefined)).toBeNull();
+  });
+
+  it("compares one craft against buying everything it makes", () => {
+    const prices = mapPriceList(priceList([[2672, 15, "Stringy Wolf Meat"], [2678, 5, "Mild Spices"]]));
+    const cook = materialsCost(food.reagents, prices);
+    // 25c of materials makes 5; buying 5 at 10c is 50c.
+    expect(cheaperWay(cook, 10, 5)).toBe("make");
+    expect(craftedVerdict(cook, 10, 5)).toBe("Cheaper to craft: saves ~25c per craft.");
+    expect(craftedVerdict(cook, 4, 5)).toBe("Cheaper to buy: ~5c less than the materials.");
+    expect(craftedVerdict(cook, undefined, 1)).toBeNull();
+    expect(materialsLabel(1)).toBe("Materials for one craft");
+    expect(materialsLabel(5)).toBe("Materials for one craft (makes 5)");
+  });
+
+  it("never prices a bind-on-pickup or quest item at the auction house", () => {
+    expect(isAuctionable(ITEM_BIND.pickup)).toBe(false);
+    expect(isAuctionable(ITEM_BIND.quest)).toBe(false);
+    expect(isAuctionable(ITEM_BIND.equip)).toBe(true);
+    expect(isAuctionable(ITEM_BIND.use)).toBe(true);
+    expect(isAuctionable(null)).toBe(true);
   });
 });
 

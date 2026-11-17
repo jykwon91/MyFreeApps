@@ -7,6 +7,7 @@ import ItemDropSection from "@/games/wow-forever/components/itemPages/ItemDropSe
 import ItemQuestList from "@/games/wow-forever/components/itemPages/ItemQuestList";
 import ItemSourceSection from "@/games/wow-forever/components/itemPages/ItemSourceSection";
 import { questsFor } from "@/games/wow-forever/food/recipeSources";
+import { isAuctionable } from "@/games/wow-forever/lib/itemPages/auctionable";
 import { RAID_NOTE } from "@/games/wow-forever/lib/itemPages/describeItem";
 import { noSourceText } from "@/games/wow-forever/lib/itemPages/noSourceText";
 import { itemSectionProvenance } from "@/games/wow-forever/lib/provenance/itemSectionProvenance";
@@ -58,7 +59,7 @@ export default function ItemHowToGet({ page, faction, zoneId, level }: ItemHowTo
       case ITEM_SOURCE_SECTION.dungeon:
         return <InstanceDropList drops={dungeon} more={raid.length ? 0 : moreInstanceDrops} note="" />;
       case ITEM_SOURCE_SECTION.crafted:
-        return <CraftedByList crafted={page.facts.crafted} itemId={page.item.id} faction={faction} zoneId={zoneId} level={level} />;
+        return <CraftedByList crafted={page.facts.crafted} itemId={page.item.id} auctionable={isAuctionable(page.facts.bind)} faction={faction} zoneId={zoneId} level={level} />;
       case ITEM_SOURCE_SECTION.drop:
         return sources.drop ? <ItemDropSection drop={sources.drop} faction={faction} level={level} /> : null;
       case ITEM_SOURCE_SECTION.container:

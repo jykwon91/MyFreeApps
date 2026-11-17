@@ -1,21 +1,20 @@
-import FoodAuctionPrice from "@/games/wow-forever/components/food/detail/FoodAuctionPrice";
-import FoodCookValue from "@/games/wow-forever/components/food/detail/FoodCookValue";
-import { DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
+import { DETAIL_SECTION, PRICE_ROW } from "@/games/wow-forever/components/food/detail/detailStyles";
+import AuctionPriceValue from "@/games/wow-forever/components/prices/AuctionPriceValue";
+import MaterialsCostValue from "@/games/wow-forever/components/prices/MaterialsCostValue";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import { formatCost } from "@/games/wow-forever/crafting/matPrices";
-import { cheaperWay, cookCost, type CookCost } from "@/games/wow-forever/food/foodPrices";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import { auctionCopper } from "@/games/wow-forever/prices/auctionPrices";
+import { cheaperWay, makeOrBuyGap, materialsCost } from "@/games/wow-forever/prices/materialsCost";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
-
-const ROW = "flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-sm";
+import type { MaterialsCost } from "@/games/wow-forever/types/materialsCost";
 
 /** "Cheaper to cook: saves ~40c on each one." */
-function verdict(cook: CookCost, buy: number | undefined): string | null {
+function verdict(cook: MaterialsCost, buy: number | undefined): string | null {
   const way = cheaperWay(cook, buy);
   if (way === null || buy === undefined) return null;
-  const saved = formatCost(Math.abs(buy - cook.total));
-  return way === "cook" ? `Cheaper to cook: saves ${saved} on each one.` : `Cheaper to buy: ${saved} less than the ingredients.`;
+  const saved = formatCost(makeOrBuyGap(cook, buy));
+  return way === "make" ? `Cheaper to cook: saves ${saved} on each one.` : `Cheaper to buy: ${saved} less than the ingredients.`;
 }
 
 /**
@@ -25,7 +24,7 @@ function verdict(cook: CookCost, buy: number | undefined): string | null {
  */
 export default function FoodPriceSection({ food }: { food: FoodRecord }) {
   const { prices } = useAuctionPrices();
-  const cook = prices ? cookCost(food, prices) : null;
+  const cook = prices ? materialsCost(food.reagents, prices) : null;
   const buy = auctionCopper(prices, food.id);
   const recipeItem = food.learn.recipeItem;
   const answer = cook ? verdict(cook, buy) : null;
@@ -38,20 +37,20 @@ export default function FoodPriceSection({ food }: { food: FoodRecord }) {
       {prices && cook ? (
         <div className="space-y-2" data-testid="food-prices">
           {food.reagents.length ? (
-            <p className={ROW}>
+            <p className={PRICE_ROW}>
               <span>Ingredients for one cook</span>
-              <FoodCookValue cook={cook} reagents={food.reagents.length} />
+              <MaterialsCostValue cost={cook} />
             </p>
           ) : null}
-          <p className={ROW}>
+          <p className={PRICE_ROW}>
             <span>Buy {food.name} at the auction house</span>
-            <FoodAuctionPrice copper={buy} />
+            <AuctionPriceValue copper={buy} />
           </p>
           {answer ? <p className="text-sm font-medium">{answer}</p> : null}
           {recipeItem !== null && food.learn.recipe ? (
-            <p className={ROW}>
+            <p className={PRICE_ROW}>
               <span>The recipe ({food.learn.recipe})</span>
-              <FoodAuctionPrice copper={auctionCopper(prices, recipeItem)} />
+              <AuctionPriceValue copper={auctionCopper(prices, recipeItem)} />
             </p>
           ) : null}
         </div>
