@@ -143,7 +143,7 @@ describe("WorkspaceGate", () => {
     const [, listener] = addListener.mock.calls[addListener.mock.calls.length - 1];
     await act(async () => listener("active"));
     await waitFor(() => expect(store.getState().workspace.activeId).toBe("w2"));
-    expect(store.getState().uploads).toEqual({ phase: "idle", rejections: [], files: [] });
+    expect(store.getState().uploads).toEqual({ phase: "idle", rejections: [], files: [], blockedReason: null });
   });
 
   it("moves off a workspace this account can't see", async () => {

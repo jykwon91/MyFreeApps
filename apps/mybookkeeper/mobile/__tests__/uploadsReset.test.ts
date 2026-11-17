@@ -16,7 +16,7 @@ jest.mock("@platform/mobile", () => ({
 }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
-const EMPTY = { phase: "idle", rejections: [], files: [] };
+const EMPTY = { phase: "idle", rejections: [], files: [], blockedReason: null };
 const accountLeft = jest.mocked(onAccountLeft).mock.calls[0]![1];
 
 /** Mid-send, with one file refused: everything the list can be holding. */

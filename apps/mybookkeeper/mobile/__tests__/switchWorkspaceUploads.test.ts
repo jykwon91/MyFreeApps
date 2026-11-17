@@ -26,7 +26,7 @@ function switchLeavingRequestAlive(workspaceId: string): void {
   store.dispatch(uploadsReset());
 }
 
-const IDLE = { phase: "idle", rejections: [], files: [] };
+const IDLE = { phase: "idle", rejections: [], files: [], blockedReason: null };
 
 function addFile(workspaceId: string, name: string): void {
   resetFakeFiles([...fakeFiles(), SOURCE]);
