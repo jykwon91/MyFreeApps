@@ -80,7 +80,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" padForNavigationBar={false} refreshControl={refreshControl}>
         {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

@@ -88,7 +88,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl} testID="applicant-detail">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" padForNavigationBar={false} refreshControl={refreshControl} testID="applicant-detail">
         {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
