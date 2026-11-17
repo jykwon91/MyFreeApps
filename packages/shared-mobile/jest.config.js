@@ -7,7 +7,7 @@ const ES_MODULE_PACKAGES = "(?:axios|react-redux|@reduxjs/toolkit|immer|reselect
 module.exports = {
   preset: "jest-expo",
   resolver: "<rootDir>/jest/resolver.js",
-  setupFiles: ["<rootDir>/jest/animationFrame.js", "<rootDir>/jest/reanimated.js", "<rootDir>/jest/keyboardController.js"],
+  setupFiles: ["<rootDir>/jest/animationFrame.js", "<rootDir>/jest/reanimated.js", "<rootDir>/jest/keyboardController.js", "<rootDir>/jest/safeAreaInsets.js"],
   setupFilesAfterEnv: [
     "<rootDir>/test-support/resetStoresAfterAll.ts",
     "<rootDir>/test-support/resetMockKeyboardBeforeEach.ts",

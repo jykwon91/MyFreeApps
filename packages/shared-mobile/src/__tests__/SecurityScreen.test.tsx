@@ -3,6 +3,8 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { configureStore } from "@reduxjs/toolkit";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider } from "react-redux";
+import { nodesOfType } from "../../test-support/renderedNodes";
+import type { RenderedNode } from "../../test-support/types/RenderedNode";
 import { serve } from "../../test-support/fakeServer";
 import { fetchTwoFactorEnabled } from "../auth/mobileAuthApi";
 import SecurityScreen from "../components/SecurityScreen";
@@ -75,4 +77,32 @@ it("shows the saved name when opened again, before the account is read again", a
   await render(<Security store={store} />);
   expect(await screen.findByDisplayValue("Jane Smith")).toBeTruthy();
   expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(true);
+});
+
+it("scrolls the name field above the keyboard and keeps a tap on Save working", async () => {
+  serve({ "GET /users/me": () => ({ status: 200, data: USER }) });
+  await render(<Security store={makeStore()} />);
+  await screen.findByDisplayValue(USER.display_name);
+  const [scroll] = nodesOfType(screen.toJSON() as RenderedNode | null, "RCTScrollView");
+  expect(scroll.props.bottomOffset).toBeGreaterThan(0);
+  expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
+});
+
+it("saves the name when the keyboard's return key is pressed", async () => {
+  const saved: unknown[] = [];
+  serve({
+    "GET /users/me": () => ({ status: 200, data: USER }),
+    "PATCH /users/me": (body) => {
+      saved.push(body);
+      return { status: 200, data: { ...USER, ...body } };
+    },
+  });
+  await render(<Security store={makeStore()} />);
+  const field = await screen.findByDisplayValue(USER.display_name);
+  await fireEvent(field, "submitEditing");
+  expect(saved).toEqual([]);
+  await fireEvent.changeText(field, "Jane Smith");
+  await fireEvent(field, "submitEditing");
+  await screen.findByText(MESSAGES.displayNameSaved);
+  expect(saved).toEqual([{ display_name: "Jane Smith" }]);
 });

@@ -29,6 +29,7 @@ export default function PhotoImportFlow() {
     <ScrollView
       contentContainerStyle={{ flexGrow: 1, gap: spacing.md, padding: spacing.lg }}
       contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
       style={{ flex: 1, backgroundColor: colors.background }}
       testID="import-recipe"
     >

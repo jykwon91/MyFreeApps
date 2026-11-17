@@ -14,6 +14,7 @@ module.exports = {
     "<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js",
     "<rootDir>/../../../packages/shared-mobile/jest/reanimated.js",
     "<rootDir>/../../../packages/shared-mobile/jest/keyboardController.js",
+    "<rootDir>/../../../packages/shared-mobile/jest/safeAreaInsets.js",
   ],
   setupFilesAfterEnv: [
     "<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts",

@@ -4,10 +4,10 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
-import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, Chip, EmptyState, KeyboardAwareScroll, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import TenantLeases from "../leases/TenantLeases";
@@ -88,7 +88,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="applicant-detail">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl} testID="applicant-detail">
         {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
@@ -138,7 +138,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
         <ApplicantHistory applicant={applicant} />
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       {canWrite && moves.length > 0 ? (
         <View

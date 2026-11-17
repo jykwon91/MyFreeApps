@@ -20,8 +20,10 @@ export default function DisplayNameForm({ initialName, source }: DisplayNameForm
 
   const trimmed = name.trim();
   const problem = tooLongProblem(trimmed, maxLength);
+  const canSave = trimmed !== savedName && problem === undefined;
 
   async function save(): Promise<void> {
+    if (isSaving) return;
     setIsSaving(true);
     try {
       await saveName(trimmed);
@@ -44,11 +46,12 @@ export default function DisplayNameForm({ initialName, source }: DisplayNameForm
         error={problem}
         label={MESSAGES.displayNameLabel}
         onChangeText={setName}
+        onSubmitEditing={() => canSave && void save()}
         placeholder={MESSAGES.displayNamePlaceholder}
         returnKeyType="done"
         value={name}
       />
-      <LoadingButton disabled={trimmed === savedName || problem !== undefined} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={save}>
+      <LoadingButton disabled={!canSave} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={save}>
         {MESSAGES.save}
       </LoadingButton>
     </View>

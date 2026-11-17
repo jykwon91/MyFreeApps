@@ -144,6 +144,20 @@ describe("keyboard insets", () => {
       // The shared PinnedBar pads for the home indicator by design: it lets go of it as the keyboard opens.
       const pinnedBar = relative(join(root, "src"), join(__dirname, "..", "components", "PinnedBar"));
       write("PinnedScreen.tsx", `import PinnedBar from "${pinnedBar}";\nexport default () => <HeaderKeyboardAvoidingView><PinnedBar bottomSpacing={8} /></HeaderKeyboardAvoidingView>;`);
+      // A raw scroll view holding a field, directly or through a component it renders, must keep a button tap working.
+      mkdirSync(join(root, "src", "tapsLost"));
+      mkdirSync(join(root, "src", "tapsKept"));
+      write("tapsLost/ReplyForm.tsx", "export default () => <ScrollView><TextInput /></ScrollView>;");
+      write("tapsLost/NotesScreen.tsx", 'import Notes from "./Notes";\nexport default () => <ScrollView><Notes /></ScrollView>;');
+      write("tapsLost/Notes.tsx", 'import Field from "./Field";\nexport default () => <Field />;');
+      write("tapsLost/Field.tsx", 'export default () => <SearchField label="Note" />;');
+      write("tapsLost/ListWithSearch.tsx", "export default () => <FlatList data={[]} ListHeaderComponent={<SearchField />} />;");
+      // Fine: it sets the prop, is the keyboard-aware scroll, holds no field, or only opens a sheet that has its own.
+      write("tapsKept/Handled.tsx", 'export default () => <ScrollView keyboardShouldPersistTaps="handled"><TextInput /></ScrollView>;');
+      write("tapsKept/Aware.tsx", "export default () => <KeyboardAwareScroll><TextInput /></KeyboardAwareScroll>;");
+      write("tapsKept/ReadOnly.tsx", "export default () => <ScrollView><Text>Hello</Text></ScrollView>;");
+      write("tapsKept/Opener.tsx", 'import AddSheet from "./AddSheet";\nexport default () => <ScrollView><AddSheet /></ScrollView>;');
+      write("tapsKept/AddSheet.tsx", "export default () => <FormSheet><FormField label=\"Name\" /></FormSheet>;");
       write("SlashesInString.tsx", 'export const hint = "a // b /* c */ automaticallyAdjust" + "KeyboardInsets";');
       expect(keyboardHandlingProblems(root, ["src"]).map((problem) => problem.split(":")[0]).sort()).toEqual([
         "src/Bar.tsx",
@@ -155,6 +169,7 @@ describe("keyboard insets", () => {
         "src/IosOnly.tsx",
         "src/LibraryAvoiding.tsx",
         "src/NamedOnly.tsx",
+        "src/NamedOnly.tsx",
         "src/NamespaceAvoiding.tsx",
         "src/NavBar.ts",
         "src/QuotedBar.tsx",
@@ -163,7 +178,11 @@ describe("keyboard insets", () => {
         "src/SafeAreaScreen.tsx",
         "src/ScrollAndBar.tsx",
         "src/Sheet.tsx",
+        "src/Sheet.tsx",
         "src/bars/FooterBar.tsx",
+        "src/tapsLost/ListWithSearch.tsx",
+        "src/tapsLost/NotesScreen.tsx",
+        "src/tapsLost/ReplyForm.tsx",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
