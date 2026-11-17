@@ -24,6 +24,7 @@ export const RENTAL_ROI_MESSAGES = {
   unassigned: (amount: string) => `${amount}/mo of revenue isn't tied to a property.`,
   assignTransactions: "Assign it in Transactions",
   addPurchasePrice: "Add purchase price",
+  addLoanOriginalAmount: "Add the loan's original amount",
   addMortgage: "Add mortgage",
   mortgageFromTransactions: "Mortgage estimated from transactions",
   mortgageNone: "No mortgage found — costs exclude it.",

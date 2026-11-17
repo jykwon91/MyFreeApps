@@ -100,6 +100,9 @@ class TestCashInvested:
     def test_unknown_loan_amount_is_unknown(self) -> None:
         assert cash_invested(Decimal("250000"), [_loan(original=None)]) is None
 
+    def test_a_loan_recorded_with_zero_original_principal_counts_as_unknown(self) -> None:
+        assert cash_invested(Decimal("250000"), [_loan(original=0)]) is None
+
     def test_no_loans_is_the_whole_price(self) -> None:
         assert cash_invested(Decimal("250000"), []) == Decimal("250000")
 

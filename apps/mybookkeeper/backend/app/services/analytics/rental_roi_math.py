@@ -72,12 +72,13 @@ def cash_invested(purchase_price: Decimal | None, loans: Sequence[RentalRoiLoan]
     """Purchase price less what was borrowed against it.
 
     Unknown when the price is unknown, when any loan's original amount is
-    unknown (guessing zero would overstate the cash and inflate the target),
-    or when the loans cover the whole price.
+    unknown or recorded as zero (a statement that omits it saves 0, and
+    counting that would overstate the cash and inflate the target), or when
+    the loans cover the whole price.
     """
     if purchase_price is None:
         return None
-    if any(loan.original_principal_cents is None for loan in loans):
+    if any((loan.original_principal_cents or 0) <= 0 for loan in loans):
         return None
     invested = purchase_price - sum(
         (_cents_to_dollars(loan.original_principal_cents) for loan in loans), _ZERO,

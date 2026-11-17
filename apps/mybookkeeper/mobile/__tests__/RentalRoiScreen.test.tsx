@@ -204,6 +204,19 @@ describe("RentalRoiScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/properties/p1/edit");
   });
 
+  it("asks for the loan's original amount when a price is saved but there is still no target", async () => {
+    serve(
+      aResponse({
+        properties: [aProperty({ has_purchase_price: true, target_monthly_cents: null, gap_basis: "break_even" })],
+      }),
+    );
+    await render(tree());
+    await screen.findByTestId("rental-roi-headline");
+    expect(screen.queryByRole("link", { name: MESSAGES.addPurchasePrice })).toBeNull();
+    await fireEvent.press(screen.getByRole("link", { name: MESSAGES.addLoanOriginalAmount }));
+    expect(mockPush).toHaveBeenCalledWith("/mortgages");
+  });
+
   it("toggles the details panel for a property", async () => {
     serve();
     await render(tree());

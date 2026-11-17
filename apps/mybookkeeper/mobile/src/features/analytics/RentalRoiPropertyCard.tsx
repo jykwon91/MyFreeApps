@@ -46,10 +46,12 @@ export default function RentalRoiPropertyCard({ property }: RentalRoiPropertyCar
         {!hasTarget && (
           <Pressable
             accessibilityRole="link"
-            onPress={() => router.push(`/properties/${property.property_id}/edit`)}
+            onPress={() => router.push(property.has_purchase_price ? "/mortgages" : `/properties/${property.property_id}/edit`)}
             style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
           >
-            <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: "500" }}>{MESSAGES.addPurchasePrice}</Text>
+            <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: "500" }}>
+              {property.has_purchase_price ? MESSAGES.addLoanOriginalAmount : MESSAGES.addPurchasePrice}
+            </Text>
           </Pressable>
         )}
       </View>
