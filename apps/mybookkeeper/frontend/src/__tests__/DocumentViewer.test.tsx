@@ -42,6 +42,35 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("DocumentViewer — files that aren't a photo or a PDF", () => {
+  it("shows them in a sandboxed frame that can't run script or act as the site", async () => {
+    fetchDocumentBlobMock.mockResolvedValue({
+      url: "blob:text",
+      contentType: "text/plain",
+      size: 42,
+    });
+
+    render(<DocumentViewer documentId="doc-1" onClose={() => {}} />);
+
+    const iframe = await screen.findByTitle("Source document");
+    expect(iframe.getAttribute("src")).toBe("blob:text");
+    expect(iframe.getAttribute("sandbox")).toBe("allow-downloads");
+  });
+
+  it("leaves a PDF's frame unsandboxed so the browser's PDF viewer still loads", async () => {
+    fetchDocumentBlobMock.mockResolvedValue({
+      url: "blob:pdf",
+      contentType: "application/pdf",
+      size: 1989,
+    });
+
+    render(<DocumentViewer documentId="doc-1" onClose={() => {}} />);
+
+    const iframe = await screen.findByTitle("Source document");
+    expect(iframe.hasAttribute("sandbox")).toBe(false);
+  });
+});
+
 describe("DocumentViewer — successful PDF render", () => {
   it("shows the iframe and an 'Open in new tab' link when the blob has content", async () => {
     fetchDocumentBlobMock.mockResolvedValue({

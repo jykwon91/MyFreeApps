@@ -34,6 +34,7 @@ from app.services.storage.image_processor import (
 logger = logging.getLogger(__name__)
 
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 # Photo types re-encoded without metadata before storage. GIF has no EXIF
 # block (where phones write GPS), so it is stored as-is.
@@ -44,6 +45,7 @@ METADATA_STRIPPED_MIME_TYPES: frozenset[str] = frozenset({
 })
 
 _DOCX_MAIN_PART = "word/document.xml"
+_XLSX_MAIN_PART = "xl/workbook.xml"
 
 # Text is UTF-8 (ASCII included, BOM allowed). Control characters other than
 # tab, newline, vertical tab, form feed and carriage return mean binary data.
@@ -79,12 +81,18 @@ class CleanAttachment:
         return self.content_type
 
 
-def _is_docx(content: bytes) -> bool:
+def _office_zip_type(content: bytes) -> str | None:
+    """Return the Word or Excel type of a zip, or None for any other zip."""
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
-            return _DOCX_MAIN_PART in archive.namelist()
+            names = set(archive.namelist())
     except zipfile.BadZipFile:
-        return False
+        return None
+    if _DOCX_MAIN_PART in names:
+        return DOCX_MIME
+    if _XLSX_MAIN_PART in names:
+        return XLSX_MIME
+    return None
 
 
 def _is_plain_text(content: bytes) -> bool:
@@ -110,7 +118,7 @@ def sniff_content_type(content: bytes) -> str | None:
     if content.startswith(b"%PDF"):
         return "application/pdf"
     if content.startswith(b"PK\x03\x04"):
-        return DOCX_MIME if _is_docx(content) else None
+        return _office_zip_type(content)
     if _is_plain_text(content):
         return "text/plain"
     return None

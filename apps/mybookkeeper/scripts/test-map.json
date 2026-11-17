@@ -250,6 +250,7 @@
         "test_document_type.py",
         "test_document_upload_service.py",
         "test_document_photo_metadata.py",
+        "test_document_stored_mime_type.py",
         "test_stored_file_missing.py",
         "test_batch_status_counts.py",
         "test_document_summary.py",
