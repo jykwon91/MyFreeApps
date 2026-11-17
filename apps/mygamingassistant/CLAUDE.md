@@ -287,6 +287,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   A random drop (world pool or `COMMON_DROP_MOBS`+ kinds) NEVER lists mobs as a farm spot — only a level range — except
   a mob at `RARE_DROP_PERCENT`+ (e.g. Greater Stamina's 7.7% mob in a 363-mob pool). Trade line from `learn.bop`
   (Forever client `ItemSparse.Bonding` 1, written by the generator): bind-on-pickup never gets an Auction House link.
+  `&who=<character slug>` crosses out (never hides) the recipes that Blizzard character knows (`useKnownDropRecipes` →
+  `myProfession`, which reads primaries AND secondaries so First Aid works, on Trainers too); looked-up names reuse `useRecentCharacters`.
 - **Goal planner** (`/wow-forever/goal-planner`, `?g=tailoring.40.300~cooking.0.300` `&r=tailoring:3914`, saved to
   localStorage when there's no link): profession goals (skill now prefilled from that guide's saved skill,
   goal = 75/150/225/300) + recipe goals (Recipes-page keys) become ONE plan (`lib/goalPlanner/buildGoalPlan.ts`,

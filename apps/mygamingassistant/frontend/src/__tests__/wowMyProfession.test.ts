@@ -80,6 +80,15 @@ describe("myProfession", () => {
     expect(mine).toEqual({ characterName: "Jason Kwon", skill: 204, maxSkill: 225, knownSpells: new Set([3757]) });
   });
 
+  it("reads First Aid from the secondary professions", () => {
+    const withFirstAid = {
+      name: "Jason", surname: "Kwon",
+      professions: { primaries: [], secondaries: [{ id: 129, name: "First Aid", skill: 150, max_skill: 225, recipes: [] }] },
+    } as unknown as CharacterResponse;
+    expect(myProfession(withFirstAid, "firstaid")?.skill).toBe(150);
+    expect(myProfession(withFirstAid, "tailoring")).toBeNull();
+  });
+
   it("null when they haven't learned it, or Blizzard didn't send professions", () => {
     expect(myProfession(character([{ id: 197, name: "Tailoring", skill: 1, max_skill: 75, recipes: [] }]), "alchemy")).toBeNull();
     expect(myProfession(character(null), "tailoring")).toBeNull();

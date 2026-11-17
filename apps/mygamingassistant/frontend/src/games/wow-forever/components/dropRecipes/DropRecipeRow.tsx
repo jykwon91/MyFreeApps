@@ -16,17 +16,26 @@ import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 interface DropRecipeRowProps {
   recipe: DropRecipe;
   faction: PlayerFaction;
+  /** The picked character already knows it: crossed out, still listed. */
+  known: boolean;
 }
 
 /** Closed: the recipe, its skill, where it drops and the best spot's odds. Open: every spot, the recipe item and whether it trades. */
-export default function DropRecipeRow({ recipe, faction }: DropRecipeRowProps) {
+export default function DropRecipeRow({ recipe, faction, known }: DropRecipeRowProps) {
   return (
-    <li className="rounded-lg border bg-card" data-testid="drop-recipe-row">
+    <li className="rounded-lg border bg-card" data-testid="drop-recipe-row" data-known={known || undefined}>
       <details className="group">
         <summary className="flex min-h-[44px] cursor-pointer list-none items-start gap-2 rounded-lg p-3 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
           <GameIcon icon={recipe.icon} size={32} smSize={40} alt="" className="shrink-0" />
           <span className="min-w-0 flex-1 space-y-1">
-            <span className="block font-medium">{recipe.name}</span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span className={known ? "font-medium text-muted-foreground line-through" : "font-medium"}>{recipe.name}</span>
+              {known ? (
+                <span className="rounded-full border px-2 text-xs text-muted-foreground" data-testid="drop-recipe-known-badge">
+                  {DROP_RECIPES_TEXT.knownBadge}
+                </span>
+              ) : null}
+            </span>
             <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               <span>
                 {RECIPE_PROFESSION_LABELS[recipe.profession]} {recipe.skill}

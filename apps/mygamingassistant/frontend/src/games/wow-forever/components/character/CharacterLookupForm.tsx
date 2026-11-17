@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { LoadingButton } from "@platform/ui";
+import { CHARACTER_GEAR_NOTE } from "@/games/wow-forever/data/character/characterConfig";
 import { CHARACTER_BAD_NAME_MESSAGE } from "@/games/wow-forever/lib/character/characterLookupProblem";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 
@@ -9,10 +10,12 @@ interface CharacterLookupFormProps {
   currentSlug: string | null;
   busy: boolean;
   onLookup: (slug: string) => void;
+  /** The small print under the form; defaults to the gear note. */
+  note?: string;
 }
 
 /** First name + surname → the character, plus one-tap chips for names looked up before. */
-export default function CharacterLookupForm({ recent, currentSlug, busy, onLookup }: CharacterLookupFormProps) {
+export default function CharacterLookupForm({ recent, currentSlug, busy, onLookup, note = CHARACTER_GEAR_NOTE }: CharacterLookupFormProps) {
   const inputId = useId();
   const errorId = useId();
   const [name, setName] = useState("");
@@ -71,9 +74,7 @@ export default function CharacterLookupForm({ recent, currentSlug, busy, onLooku
           ))}
         </div>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        US characters. Blizzard updates a character when they log out, so gear changed since then shows after your next log out.
-      </p>
+      <p className="text-xs text-muted-foreground">{note}</p>
     </section>
   );
 }
