@@ -43,8 +43,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showError: vi.fn(),
 }));
 
-function rejectWith(status: number) {
-  deleteRule.mockReturnValue({ unwrap: () => Promise.reject({ status }) });
+function rejectWith(status: number, detail?: string) {
+  deleteRule.mockReturnValue({ unwrap: () => Promise.reject({ status, data: detail ? { detail } : undefined }) });
 }
 
 async function openConfirm() {
@@ -106,6 +106,16 @@ describe("ClassificationRulesPanel delete flow", () => {
     await openConfirm();
     expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+  });
+
+  it("says a demo workspace can't be changed, not view-only, on the demo 403", async () => {
+    rejectWith(403, "This feature is not available for demo accounts");
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+    await openConfirm();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(CLASSIFICATION_RULE_MESSAGES.deleteDemo));
+    expect(screen.queryByText("Delete classification rule")).not.toBeInTheDocument();
   });
 
   it("shows the view-only message on 403 and closes the dialog", async () => {

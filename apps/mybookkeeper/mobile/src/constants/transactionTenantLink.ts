@@ -1,3 +1,4 @@
+import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import type { WriteFailureCopy } from "../types/WriteFailureCopy";
 
 export const TENANT_LINK_MESSAGES = {
@@ -18,6 +19,7 @@ export const TENANT_LINK_MESSAGES = {
 export const TENANT_LINK_FAILURE: WriteFailureCopy = {
   noResponse: "I can't reach the server, so I couldn't link that.",
   viewOnly: "You have view-only access, so I can't link this.",
+  demo: DEMO_WORKSPACE_REFUSED,
   gone: "I can't find that transaction or tenant anymore. It may have been deleted.",
   conflict: "That clashes with how this is already linked. Refresh and try again.",
   invalid: "I can't link that payment. Check that it's income and try again.",

@@ -46,7 +46,7 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
         setConfirmDeleteId(null);
       } else {
         showError(CLASSIFICATION_RULE_DELETE_FAILURE_MESSAGES[failure]);
-        if (failure === "viewOnly") setConfirmDeleteId(null);
+        if (failure === "viewOnly" || failure === "demo") setConfirmDeleteId(null);
       }
     } finally {
       isDeleting.current = false;

@@ -10,7 +10,7 @@
  *   - With rules, it lists each one (pattern, category, times used) and the
  *     footer count matches.
  *   - Delete: the confirm dialog shows loading until the request finishes, and a
- *     403 shows the view-only toast.
+ *     403 shows the view-only toast and the demo-workspace 403 says so instead.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -104,5 +104,19 @@ test("a 403 on delete shows the view-only message", async ({ page }) => {
   await page.getByRole("dialog").filter({ hasText: "Delete classification rule" }).getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(page.getByText("You have view-only access, so I can't delete rules.", { exact: true })).toBeVisible();
+  await expect(panel.locator("tbody tr")).toHaveCount(1);
+});
+
+test("a demo-workspace 403 on delete says the demo can't be changed, not view-only", async ({ page }) => {
+  const panel = await openPanel(page, [rule(RULE_ID, "Home Depot", "maintenance", 4)]);
+  await page.route(`**/api/classification-rules/${RULE_ID}`, (route) =>
+    route.fulfill(json({ detail: "This feature is not available for demo accounts" }, 403)),
+  );
+
+  await panel.getByRole("button", { name: "Delete rule for Home Depot" }).click();
+  await page.getByRole("dialog").filter({ hasText: "Delete classification rule" }).getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByText("Demo workspaces can't be changed.", { exact: true })).toBeVisible();
+  await expect(page.getByText(/view-only/)).toHaveCount(0);
   await expect(panel.locator("tbody tr")).toHaveCount(1);
 });

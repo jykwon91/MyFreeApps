@@ -115,6 +115,5 @@ export const INTEGRATIONS_MESSAGES = {
   },
   dismissConfirmYes: "Dismiss",
   dismissed: "Dismissed.",
-  demoRefused: "Demo accounts can't do that.",
   viewOnly: "You have view-only access, so you can see this but not change it.",
 } as const;
