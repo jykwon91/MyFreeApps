@@ -127,14 +127,24 @@ async def test_turning_2fa_on_cant_keep_another_users_phone(stack: RealAuthStack
     user = await stack.add_user()
     stranger = await stack.add_user()
     stranger_phone = await _phone_login(stack, stranger)
-    caller = token_for(user.id, session_id=uuid.UUID(stranger_phone["session_id"]))
+    secret, _ = await stack.totp.setup_totp(user.id)
 
-    await _turn_on(stack, user, caller)
+    verified, _ = await stack.totp.confirm_totp(
+        user.id, current_code(secret), keep_session_id=uuid.UUID(stranger_phone["session_id"]),
+    )
 
+    assert verified
     sessions = await stack.stored_refresh_sessions(stranger.id)
     assert [session.created_at for session in sessions] == [sessions[0].created_at]
     assert sessions[0].created_at < (await stack.stored_user(user.id)).auth_valid_after
     assert await _refreshes(stack, stranger_phone["refresh_token"])
+
+
+async def test_a_token_naming_another_users_phone_is_refused(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stranger_phone = await _phone_login(stack, await stack.add_user())
+
+    assert not await _works(stack, token_for(user.id, session_id=uuid.UUID(stranger_phone["session_id"])))
 
 
 async def test_a_wrong_code_signs_nobody_out(stack: RealAuthStack) -> None:

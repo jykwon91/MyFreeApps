@@ -146,8 +146,8 @@ def build_mobile_auth_router(
     ) -> None:
         """The same 404 for another user's session as for one that doesn't exist.
 
-        The device can't refresh after this. Its current access token keeps working
-        until it expires, at most 30 minutes.
+        The device can't refresh after this, and its current access token stops
+        working on its next request.
         """
         if not await session_service.revoke(user.id, session_id, request=request):
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Session not found")

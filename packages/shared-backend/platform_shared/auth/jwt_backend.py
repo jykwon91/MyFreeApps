@@ -28,11 +28,13 @@ from fastapi_users.authentication import (
     BearerTransport,
     JWTStrategy,
 )
-from fastapi_users.jwt import decode_jwt, generate_jwt
+from fastapi_users.db import SQLAlchemyUserDatabase
+from fastapi_users.jwt import SecretType, decode_jwt, generate_jwt
 from fastapi_users.manager import BaseUserManager
 from pydantic import SecretStr
 
 from platform_shared.auth.session_invalidation import is_issued_before_cutoff
+from platform_shared.repositories import refresh_session_repo
 
 
 class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, models.ID]):
@@ -47,28 +49,67 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
       gate (``platform_shared.core.permissions.make_strict_superuser_gate``)
       reads it to enforce a recent-auth window.
     - ``sid``, the refresh session a phone's token belongs to, so a change that
-      ends every other session can tell which one is the caller's.
+      ends every other session can tell which one is the caller's, and so the token
+      stops working as soon as that session is signed out.
 
     ``iat`` and ``auth_time`` are separate because a token renewed without a login
     would get a new ``iat`` while the user's proof of identity stays as old as it was.
     """
 
+    def __init__(
+        self,
+        secret: SecretType,
+        lifetime_seconds: int | None,
+        *,
+        session_model: type[Any] | None = None,
+    ) -> None:
+        """``session_model`` is the app's ``RefreshSession`` model.
+
+        Without it a token carrying ``sid`` is refused, because its session can't be
+        checked. Only a strategy that never reads phone tokens may leave it out.
+        """
+        super().__init__(secret, lifetime_seconds)
+        self.session_model = session_model
+
     async def read_token(
         self, token: str | None, user_manager: BaseUserManager[models.UP, models.ID],
     ) -> models.UP | None:
-        """Reject a valid token issued before the user's session cutoff."""
+        """Reject a valid token issued before the user's session cutoff, or whose
+        phone session has been signed out."""
         user = await super().read_token(token, user_manager)
-        if user is None or user.auth_valid_after is None:
-            return user
+        if user is None:
+            return None
         try:
-            issued_at = decode_jwt(
+            claims = decode_jwt(
                 token, self.decode_key, self.token_audience, algorithms=[self.algorithm],
-            ).get("iat")
+            )
         except jwt.PyJWTError:
             return None
-        if not isinstance(issued_at, int) or is_issued_before_cutoff(issued_at, user.auth_valid_after):
+        if user.auth_valid_after is not None:
+            issued_at = claims.get("iat")
+            if not isinstance(issued_at, int) or is_issued_before_cutoff(issued_at, user.auth_valid_after):
+                return None
+        if "sid" in claims and not await self._session_is_live(claims["sid"], user, user_manager):
             return None
         return user
+
+    async def _session_is_live(
+        self, claimed_session_id: object, user: models.UP, user_manager: BaseUserManager[models.UP, models.ID],
+    ) -> bool:
+        """Whether the phone session a token belongs to still exists.
+
+        Signing a device out deletes its session, so its access token stops working
+        at once instead of lasting until it expires. Web tokens carry no ``sid``.
+        """
+        session_id = _parse_session_id(claimed_session_id)
+        if session_id is None or self.session_model is None:
+            return False
+        user_db = user_manager.user_db
+        if not isinstance(user_db, SQLAlchemyUserDatabase):
+            raise TypeError("IatJWTStrategy checks phone sessions through SQLAlchemyUserDatabase")
+        return await refresh_session_repo.exists_owned(
+            user_db.session, self.session_model, user.id, session_id,
+        )
 
     async def write_token(self, user: models.UP) -> str:
         now = int(time.time())
@@ -87,11 +128,7 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
 
     def session_id_of(self, token: str) -> uuid.UUID | None:
         """The refresh session a token this server signed belongs to, if it has one."""
-        session_id = self._signed_claims(token).get("sid")
-        try:
-            return uuid.UUID(session_id) if isinstance(session_id, str) else None
-        except ValueError:
-            return None
+        return _parse_session_id(self._signed_claims(token).get("sid"))
 
     async def reissue(self, user: models.UP, token: str) -> str:
         """The caller's token again, issued now, for after a session cutoff.
@@ -157,6 +194,13 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
         )
 
 
+def _parse_session_id(claimed: object) -> uuid.UUID | None:
+    try:
+        return uuid.UUID(claimed) if isinstance(claimed, str) else None
+    except ValueError:
+        return None
+
+
 class JwtAuthBackend(NamedTuple):
     """Bundle of the three fastapi-users auth wiring objects.
 
@@ -173,6 +217,7 @@ def build_jwt_auth_backend(
     *,
     secret_key: str,
     lifetime_seconds: int,
+    session_model: type[Any],
     token_url: str = "auth/jwt/login",
     backend_name: str = "jwt",
 ) -> JwtAuthBackend:
@@ -183,6 +228,8 @@ def build_jwt_auth_backend(
             ``settings.secret_key``.
         lifetime_seconds: Token TTL. Apps pass
             ``settings.jwt_lifetime_seconds``.
+        session_model: The app's ``RefreshSession`` model. A phone's token is
+            refused once its session is signed out.
         token_url: ``BearerTransport`` token URL. Defaults to the
             convention both apps use today (``"auth/jwt/login"``).
         backend_name: ``AuthenticationBackend`` name. Defaults to
@@ -195,7 +242,9 @@ def build_jwt_auth_backend(
     bearer_transport = BearerTransport(tokenUrl=token_url)
 
     def get_jwt_strategy() -> IatJWTStrategy:
-        return IatJWTStrategy(secret=secret_key, lifetime_seconds=lifetime_seconds)
+        return IatJWTStrategy(
+            secret=secret_key, lifetime_seconds=lifetime_seconds, session_model=session_model,
+        )
 
     auth_backend = AuthenticationBackend(
         name=backend_name,

@@ -19,6 +19,7 @@ from app.db.session import get_db
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.organization.tax_profile import TaxProfile
+from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from app.services.system.password_reset_email import send_password_reset_email
 from app.services.system.verification_email import send_verification_email
@@ -171,6 +172,7 @@ async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db
 _jwt = build_jwt_auth_backend(
     secret_key=settings.secret_key,
     lifetime_seconds=settings.jwt_lifetime_seconds,
+    session_model=RefreshSession,
 )
 bearer_transport = _jwt.bearer_transport
 get_jwt_strategy = _jwt.get_jwt_strategy
