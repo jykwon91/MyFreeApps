@@ -22,6 +22,7 @@ export function blankCreateValues(today: Date): TransactionCreateValues {
     channel: "",
     paymentMethod: "",
     taxRelevant: false,
+    isCapitalImprovement: false,
   };
 }
 
@@ -44,6 +45,7 @@ export function createPayload(values: TransactionCreateValues, decimalSeparator:
     category: values.category,
     property_id: values.propertyId,
     tax_relevant: values.taxRelevant,
+    is_capital_improvement: values.isCapitalImprovement,
     channel: values.channel || null,
     payment_method: values.paymentMethod || null,
     is_manual: true,

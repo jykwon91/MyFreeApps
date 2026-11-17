@@ -9,6 +9,8 @@ export const TRANSACTION_FIELD_LABELS = {
   taxRelevant: "Include in tax reports",
   taxReports: "Tax reports",
   scheduleE: "Schedule E line",
+  capitalImprovement: "Capital improvement",
+  capitalImprovementNote: "A one-time project like a remodel or new roof. Left out of Rental ROI averages.",
 } as const;
 
 /** Titles of the pick-one sheets in the add and edit forms. */

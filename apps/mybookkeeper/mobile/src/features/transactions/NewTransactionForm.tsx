@@ -134,6 +134,14 @@ export default function NewTransactionForm() {
           <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
           <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
           <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
+          {values.type === "expense" && (
+            <SwitchRow
+              label={LABELS.capitalImprovement}
+              note={LABELS.capitalImprovementNote}
+              onValueChange={(isCapitalImprovement) => update({ isCapitalImprovement })}
+              value={values.isCapitalImprovement}
+            />
+          )}
         </View>
         <LoadingButton disabled={locked} isLoading={isSaving} loadingText="Adding…" onPress={save}>
           Add transaction

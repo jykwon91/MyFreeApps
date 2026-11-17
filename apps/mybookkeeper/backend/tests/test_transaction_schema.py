@@ -1,7 +1,7 @@
 """Tests for transaction schema Literal type validation."""
 import re
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import ClassVar, get_args
 
@@ -12,6 +12,7 @@ from app.models.transactions.transaction import Transaction
 from app.schemas.transactions.transaction import (
     TransactionCategory,
     TransactionCreate,
+    TransactionRead,
     TransactionUpdate,
 )
 
@@ -227,6 +228,64 @@ class TestMeteredUsageValidation:
         payload = TransactionUpdate(status="approved").to_update_dict()
         assert "usage_quantity" not in payload
         assert "usage_unit" not in payload
+
+
+class TestCapitalImprovement:
+    """is_capital_improvement is surfaced in reads and honoured in writes."""
+
+    def _expense_base(self) -> dict:
+        return {
+            "transaction_date": date(2025, 6, 1),
+            "amount": Decimal("250.00"),
+            "transaction_type": "expense",
+            "category": "maintenance",
+        }
+
+    def _minimal_read(self, **overrides) -> TransactionRead:
+        return TransactionRead(
+            id=uuid.uuid4(),
+            organization_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            transaction_date=date(2025, 6, 1),
+            tax_year=2025,
+            amount=Decimal("250.00"),
+            transaction_type="expense",
+            category="maintenance",
+            status="pending",
+            created_at=datetime(2025, 6, 1),
+            updated_at=datetime(2025, 6, 1),
+            tags=[],
+            **overrides,
+        )
+
+    def test_read_defaults_to_false(self) -> None:
+        """Existing rows without the column present read back as False."""
+        read = self._minimal_read()
+        assert read.is_capital_improvement is False
+
+    def test_read_preserves_true(self) -> None:
+        read = self._minimal_read(is_capital_improvement=True)
+        assert read.is_capital_improvement is True
+
+    def test_create_defaults_to_false(self) -> None:
+        txn = TransactionCreate(**self._expense_base())
+        assert txn.is_capital_improvement is False
+
+    def test_create_accepts_true(self) -> None:
+        txn = TransactionCreate(**self._expense_base(), is_capital_improvement=True)
+        assert txn.is_capital_improvement is True
+
+    def test_update_roundtrips_true(self) -> None:
+        payload = TransactionUpdate(is_capital_improvement=True).to_update_dict()
+        assert payload["is_capital_improvement"] is True
+
+    def test_update_roundtrips_false(self) -> None:
+        payload = TransactionUpdate(is_capital_improvement=False).to_update_dict()
+        assert payload["is_capital_improvement"] is False
+
+    def test_update_omitted_field_excluded(self) -> None:
+        payload = TransactionUpdate(status="approved").to_update_dict()
+        assert "is_capital_improvement" not in payload
 
 
 class TestTransactionAmountValidation:

@@ -37,6 +37,7 @@ function buildDefaults(): TransactionFormValues {
     category: "maintenance",
     property_id: "",
     tax_relevant: false,
+    is_capital_improvement: false,
     channel: "",
     payment_method: "",
   };

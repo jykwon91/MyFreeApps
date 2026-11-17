@@ -11,4 +11,7 @@ export const TRANSACTION_EDIT_MESSAGES = {
   couldntDelete: "I couldn't delete that transaction. Mind trying again?",
   openingSource: "Opening the source document...",
   couldntOpenSource: "I couldn't open the source document. Mind trying again?",
+  capitalImprovement: "Capital improvement",
+  capitalImprovementHint:
+    "A one-time project like a remodel or new roof. Left out of Rental ROI averages.",
 } as const;
