@@ -51,6 +51,17 @@ CATEGORY_TO_SCHEDULE_E: dict[str, str | None] = {
     "business_income":       None,
 }
 
+# Rental ROI: what a rental earns, and what it costs to carry each month.
+RENTAL_ROI_REVENUE_TAGS = frozenset({"rental_revenue", "cleaning_fee_revenue"})
+RENTAL_ROI_DEBT_SERVICE_TAGS = frozenset({"mortgage_interest", "mortgage_principal"})
+# Every rental expense with a Schedule E line, less the loan (counted as debt service).
+RENTAL_ROI_OPERATING_TAGS = frozenset(
+    tag for tag in EXPENSE_TAGS if CATEGORY_TO_SCHEDULE_E.get(tag) is not None
+) - RENTAL_ROI_DEBT_SERVICE_TAGS
+# Paid out of the mortgage escrow when the loan has one, so counting the bills
+# as well would charge them twice.
+RENTAL_ROI_ESCROW_COVERED_TAGS = frozenset({"taxes", "insurance"})
+
 CATEGORY_TO_SCHEDULE_C: dict[str, str | None] = {
     "business_income":       "line_1_gross_receipts",
     "advertising":           "line_8_advertising",

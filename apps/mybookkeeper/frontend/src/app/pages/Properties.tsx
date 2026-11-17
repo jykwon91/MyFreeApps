@@ -8,7 +8,7 @@ import {
 } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import { useToast } from "@/shared/hooks/useToast";
-import { extractErrorMessage, AlertBox } from "@platform/ui";
+import { extractErrorMessage, AlertBox, useLiveSearchParams } from "@platform/ui";
 import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
@@ -26,12 +26,15 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useDismissable } from "@/shared/hooks/useDismissable";
+import { PROPERTY_EDIT_PARAM as EDIT_PARAM } from "@/shared/lib/property-routes";
 
 export default function Properties() {
   const canWrite = useCanWrite();
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("props-info-dismissed");
   const [form, setForm] = useState<PropertyForm>(blankForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useLiveSearchParams();
+  // `?edit=<id>` opens that property's edit card — Analytics links here to add a purchase price.
+  const [editingId, setEditingId] = useState<string | null>(() => searchParams.get(EDIT_PARAM));
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
 
@@ -43,6 +46,19 @@ export default function Properties() {
   const [deleteProperty, { isLoading: isDeletePending }] = useDeletePropertyMutation();
 
   const deleteTarget = confirmDeleteId ? properties.find((p) => p.id === confirmDeleteId) : null;
+
+  function finishEditing() {
+    setEditingId(null);
+    if (searchParams.has(EDIT_PARAM)) {
+      setSearchParams(
+        (prev) => {
+          prev.delete(EDIT_PARAM);
+          return prev;
+        },
+        { replace: true },
+      );
+    }
+  }
 
   function handleToggleActive(id: string, active: boolean) {
     updateProperty({ id, data: { is_active: active } })
@@ -173,7 +189,7 @@ export default function Properties() {
           {properties.map((property) =>
             canWrite && editingId === property.id ? (
               <li key={property.id}>
-                <PropertyEditCard property={property} onDone={() => setEditingId(null)} />
+                <PropertyEditCard property={property} onDone={finishEditing} />
               </li>
             ) : (
               <li key={property.id}>

@@ -46,6 +46,10 @@
       "source_paths": [
         "backend/app/services/analytics/",
         "backend/app/repositories/analytics/",
+        "backend/app/api/analytics.py",
+        "backend/app/schemas/analytics/",
+        "backend/app/mappers/rental_roi_mapper.py",
+        "backend/app/core/rental_roi_enums.py",
         "frontend/src/app/pages/Analytics.tsx",
         "frontend/src/app/features/analytics/",
         "api-client/src/store/analyticsApi.ts",
@@ -62,10 +66,14 @@
         "mobile/app/(app)/analytics/"
       ],
       "backend_tests": [
-        "test_utility_trends.py"
+        "test_utility_trends.py",
+        "test_rental_roi_math.py",
+        "test_rental_roi_service.py",
+        "test_rental_roi_api.py"
       ],
       "frontend_tests": [
         "Analytics.test.tsx",
+        "RentalRoi.test.tsx",
         "UtilityTrendsDateRange.test.tsx",
         "CollapsibleFilters.test.tsx",
         "filtersToggleLabel.test.ts",
@@ -73,6 +81,7 @@
       ],
       "e2e_specs": [
         "analytics.spec.ts",
+        "analytics-rental-roi.spec.ts",
         "transactions.spec.ts",
         "mocked/sections-retry-mock.spec.ts"
       ]
@@ -1128,6 +1137,7 @@
       ],
       "backend_tests": [
         "test_mortgages_api.py",
+        "test_rental_roi_service.py",
         "test_mortgage_response_mapping.py",
         "test_mortgage_validation.py",
         "test_mortgage_extraction.py",
@@ -1980,6 +1990,7 @@
         "test_booking_statement_repo.py",
         "test_booking_statement_routes.py",
         "test_summary_from_transactions.py",
+        "test_rental_roi_service.py",
         "test_transaction_repo.py",
         "test_transaction_list_order.py",
         "test_transaction_page.py",

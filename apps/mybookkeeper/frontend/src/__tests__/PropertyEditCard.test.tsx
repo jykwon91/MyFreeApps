@@ -29,10 +29,10 @@ vi.mock("@/shared/hooks/useToast", () => ({
   useToast: vi.fn(() => ({ showError, showSuccess })),
 }));
 
-function renderCard(onDone = vi.fn()) {
+function renderCard(onDone = vi.fn(), property: Property = rental) {
   return render(
     <Provider store={store}>
-      <PropertyEditCard property={rental} onDone={onDone} />
+      <PropertyEditCard property={property} onDone={onDone} />
     </Provider>,
   );
 }
@@ -102,5 +102,47 @@ describe("PropertyEditCard", () => {
     await waitFor(() => expect(showError).toHaveBeenCalled());
     expect(showError.mock.calls[0][0]).toContain("Server error");
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("saves a typed purchase price as a decimal amount", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.type(screen.getByLabelText("Purchase price"), "$250,000");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(updateProperty).toHaveBeenCalled());
+    expect(updateProperty.mock.calls[0][0].data.purchase_price).toBe("250000.00");
+  });
+
+  it("leaves the purchase price out when the field is blank", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(updateProperty).toHaveBeenCalled());
+    expect(updateProperty.mock.calls[0][0].data).not.toHaveProperty("purchase_price");
+  });
+
+  it("blocks saving a purchase price that isn't an amount", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.type(screen.getByLabelText("Purchase price"), "lots");
+
+    expect(screen.getByText("Enter the price as a dollar amount, like 250000.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Purchase price")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
+
+  it("blocks clearing a saved purchase price instead of silently keeping it", async () => {
+    const user = userEvent.setup();
+    renderCard(vi.fn(), { ...rental, purchase_price: "250000.00" });
+
+    await user.clear(screen.getByLabelText("Purchase price"));
+
+    expect(screen.getByText("A saved purchase price can be changed but not removed.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 });

@@ -39,7 +39,7 @@ const BANNER_PAGES: Array<{
     bannerSnippet: /Reconciliation compares what your rental platform/,
   },
   {
-    path: "/analytics",
+    path: "/analytics?tab=utility-trends",
     localStorageKey: "analytics-info-dismissed",
     headingText: "Analytics",
     bannerSnippet: /I track your utility costs over time/,

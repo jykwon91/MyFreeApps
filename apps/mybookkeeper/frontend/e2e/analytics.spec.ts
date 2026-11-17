@@ -8,6 +8,7 @@ import { seededOrg } from "./fixtures/seeded-org";
 import { ANALYTICS_SEED as SEED, seedAnalytics } from "./fixtures/analytics-seed";
 import {
   TYPE_CARDS,
+  UTILITY_TRENDS_PATH,
   cardAmount,
   expectCards,
   expectChart,
@@ -24,17 +25,23 @@ const org = seededOrg("analytics", seedAnalytics);
 test.describe("Analytics — Layout", () => {
   test.beforeEach(async ({ page }) => {
     await org().signIn(page);
-    await openAnalytics(page);
   });
 
-  test("shows the Utility Trends tab as active by default", async ({ page }) => {
-    await expect(page.getByRole("tab", { name: "Utility Trends" })).toHaveAttribute("aria-selected", "true");
+  test("opens on the Rental ROI tab by default", async ({ page }) => {
+    await page.goto("/analytics");
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.getByRole("tab").first()).toHaveText("Rental ROI");
+    await expect(page.getByRole("tab", { name: "Rental ROI" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Utility Trends" })).toHaveAttribute("aria-selected", "false");
     await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
   });
 
-  test("clicking the tab records it in the URL", async ({ page }) => {
+  test("clicking a tab records it in the URL", async ({ page }) => {
+    await page.goto("/analytics");
     await page.getByRole("tab", { name: "Utility Trends" }).click();
     await expect(page).toHaveURL(/tab=utility-trends/);
+    await expect(page.getByRole("tab", { name: "Utility Trends" })).toHaveAttribute("aria-selected", "true");
+    await expectCards(page, SEED.totals);
   });
 });
 
@@ -156,7 +163,7 @@ test.describe("Analytics — Utility Trends", () => {
 
   test("the skeleton holds the summary card slots while the trends load", async ({ page }) => {
     const release = await holdRequests(page, (url) => url.pathname.endsWith(TRENDS_PATH));
-    await page.goto("/analytics");
+    await page.goto(UTILITY_TRENDS_PATH);
 
     // The total plus one slot per utility type. Other gets a card only when
     // there are untyped bills, so it has no slot.

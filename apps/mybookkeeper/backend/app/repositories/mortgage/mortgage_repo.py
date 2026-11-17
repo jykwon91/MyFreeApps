@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mortgage.mortgage import Mortgage
@@ -146,6 +146,40 @@ async def list_with_properties(
     )
     result = await db.execute(stmt)
     return [(row[0], row[1]) for row in result.all()]
+
+
+async def list_active_for_org(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    today: _dt.date,
+) -> list[Mortgage]:
+    """Every loan still being paid, unpaginated.
+
+    A balance of zero or a maturity date already behind ``today`` is a note
+    that no longer costs anything each month, so it is left out. Unknown
+    balance or maturity is kept: absence of the figure is not a payoff.
+    """
+    stmt = (
+        select(Mortgage)
+        .where(
+            Mortgage.user_id == user_id,
+            Mortgage.organization_id == organization_id,
+            Mortgage.deleted_at.is_(None),
+            or_(
+                Mortgage.current_balance_cents.is_(None),
+                Mortgage.current_balance_cents > 0,
+            ),
+            or_(
+                Mortgage.maturity_date.is_(None),
+                Mortgage.maturity_date >= today,
+            ),
+        )
+        .order_by(Mortgage.created_at)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def update_mortgage(

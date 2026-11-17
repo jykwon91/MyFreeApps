@@ -1,7 +1,7 @@
 """Summary repository — transaction-based financial aggregations."""
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import select, func, and_, or_, extract, Row
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,10 +14,11 @@ from app.models.transactions.transaction import Transaction
 def _build_txn_filters(
     organization_id: uuid.UUID,
     *,
-    start_date: datetime | None = None,
-    end_date: datetime | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     property_ids: list[uuid.UUID] | None = None,
     tax_relevant_only: bool = False,
+    exclude_capital_improvements: bool = False,
 ) -> list:
     filters = [
         Transaction.organization_id == organization_id,
@@ -32,6 +33,8 @@ def _build_txn_filters(
         filters.append(Transaction.property_id.in_(property_ids))
     if tax_relevant_only:
         filters.append(Transaction.tax_relevant.is_(True))
+    if exclude_capital_improvements:
+        filters.append(Transaction.is_capital_improvement.is_(False))
     return filters
 
 
@@ -171,12 +174,14 @@ async def txn_sum_by_property_month_and_category(
     db: AsyncSession,
     organization_id: uuid.UUID,
     *,
-    start_date: datetime | None = None,
-    end_date: datetime | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     property_ids: list[uuid.UUID] | None = None,
+    exclude_capital_improvements: bool = False,
 ) -> Sequence[Row]:
     filters = _build_txn_filters(
         organization_id, start_date=start_date, end_date=end_date, property_ids=property_ids,
+        exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
         select(

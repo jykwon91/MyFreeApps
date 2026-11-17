@@ -28,8 +28,12 @@ export function xAxisLabels(page: Page): Locator {
   return trendsChart(page).locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-label");
 }
 
+/** The Utility Trends tab path: Rental ROI is the page's default tab. */
+export const UTILITY_TRENDS_PATH = "/analytics?tab=utility-trends";
+
+/** Opens the Utility Trends tab; ``query`` is extra params, like "?from=2025-01-01". */
 export async function openAnalytics(page: Page, query = ""): Promise<void> {
-  await page.goto(`/analytics${query}`);
+  await page.goto(`${UTILITY_TRENDS_PATH}${query.replace(/^\?/, "&")}`);
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
 }
 

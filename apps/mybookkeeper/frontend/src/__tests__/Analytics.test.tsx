@@ -33,6 +33,9 @@ vi.mock('@mybookkeeper/api-client/store/analyticsApi', () => ({
   useGetUtilityTrendsQuery: vi.fn(() => ({
     data: undefined, isLoading: true, isError: false, refetch: vi.fn(),
   })),
+  useGetRentalRoiQuery: vi.fn(() => ({
+    data: undefined, error: undefined, isFetching: true, refetch: vi.fn(),
+  })),
 }));
 
 vi.mock('@mybookkeeper/api-client/store/propertiesApi', () => ({
@@ -98,9 +101,22 @@ describe('Analytics page shell', () => {
     expect(screen.getByText('Analytics')).toBeInTheDocument();
   });
 
-  it('shows Utility Trends tab with aria-selected true by default', () => {
+  it('shows the Rental ROI tab first and selected by default', () => {
     renderWithProviders(<Analytics />);
-    expect(screen.getByRole('tab', { name: 'Utility Trends' })).toHaveAttribute('aria-selected', 'true');
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[0]).toHaveAccessibleName('Rental ROI');
+    expect(screen.getByRole('tab', { name: 'Rental ROI' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Utility Trends' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('falls back to Rental ROI for an unknown tab', () => {
+    renderWithProviders(<Analytics />, ['/?tab=nope']);
+    expect(screen.getByRole('tab', { name: 'Rental ROI' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('shows the utility info banner only on the Utility Trends tab', () => {
+    renderWithProviders(<Analytics />);
+    expect(screen.queryByText(/I track your utility costs over time/)).not.toBeInTheDocument();
   });
 
   it('shows Utility Trends tab as active when tab=utility-trends in URL', () => {
@@ -109,19 +125,19 @@ describe('Analytics page shell', () => {
   });
 
   it('shows info banner when not dismissed', () => {
-    renderWithProviders(<Analytics />);
+    renderWithProviders(<Analytics />, ['/?tab=utility-trends']);
     expect(screen.getByText(/I track your utility costs over time/)).toBeInTheDocument();
   });
 
   it('hides info banner when dismissed in localStorage', () => {
     localStorage.setItem('analytics-info-dismissed', '1');
-    renderWithProviders(<Analytics />);
+    renderWithProviders(<Analytics />, ['/?tab=utility-trends']);
     expect(screen.queryByText(/I track your utility costs over time/)).not.toBeInTheDocument();
   });
 
   it('dismisses info banner on click', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Analytics />);
+    renderWithProviders(<Analytics />, ['/?tab=utility-trends']);
 
     expect(screen.getByText(/I track your utility costs over time/)).toBeInTheDocument();
     await user.click(screen.getByLabelText('Dismiss'));
