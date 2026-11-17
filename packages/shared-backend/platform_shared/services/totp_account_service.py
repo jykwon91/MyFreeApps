@@ -6,6 +6,9 @@ one instance to its user model, issuer and session factory.
 
 A code works once. Every check locks the user row, so two requests with the same
 code can't both pass.
+
+Turning 2FA on or off ends every other session: someone turning it on may be shutting
+out an intruder, and someone turning it off proved a code, the same as a sign-in.
 """
 import uuid
 from collections.abc import Callable
@@ -16,6 +19,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.auth.session_invalidation import session_cutoff_now
+from platform_shared.repositories import refresh_session_repo
 from platform_shared.repositories.user_repo import lock_by_email, lock_by_id
 from platform_shared.services.account_lockout import is_locked as account_is_locked
 from platform_shared.services.totp_account_locked_error import TotpAccountLockedError
@@ -42,13 +47,18 @@ def _stored_as_is(value: str, _user_id: uuid.UUID) -> str:
 @dataclass(frozen=True)
 class TotpAccountService:
     """``encrypt`` and ``decrypt`` default to no-ops for apps whose columns encrypt
-    themselves. MyBookkeeper stores per-user ciphertext and passes its own."""
+    themselves. MyBookkeeper stores per-user ciphertext and passes its own.
+
+    ``session_model`` is the app's refresh session model. An app with phone sign-in
+    must pass it, or the phone that turns 2FA on or off can't stay signed in.
+    """
 
     user_model: Any
     issuer: str
     unit_of_work_factory: Callable[[], AbstractAsyncContextManager[AsyncSession]]
     encrypt: Callable[[str, uuid.UUID], str] = _stored_as_is
     decrypt: Callable[[str, uuid.UUID], str] = _stored_as_is
+    session_model: type[Any] | None = None
 
     def provisioning_uri(
         self,
@@ -84,12 +94,16 @@ class TotpAccountService:
                 secret, user.email, algorithm=DEFAULT_TOTP_ALGORITHM,
             )
 
-    async def confirm_totp(self, user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
+    async def confirm_totp(
+        self, user_id: uuid.UUID, code: str, *, keep_session_id: uuid.UUID | None = None,
+    ) -> tuple[bool, list[str]]:
         """Turn 2FA on if ``code`` is right and the account isn't locked.
         Returns ``(verified, recovery_codes)``. Raises ``TotpSetupNotStartedError`` if
         nothing is waiting to be confirmed.
 
-        The lock is checked under the row lock, as in :meth:`disable_totp`.
+        Ends every session but ``keep_session_id``, the caller's phone session if any:
+        see :meth:`_end_other_sessions`. The lock is checked under the row lock, as in
+        :meth:`disable_totp`.
         """
         async with self.unit_of_work_factory() as db:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
@@ -105,13 +119,17 @@ class TotpAccountService:
             recovery = generate_recovery_codes()
             user.totp_enabled = True
             user.totp_recovery_codes = self.encrypt(",".join(recovery), user_id)
+            await self._end_other_sessions(db, user, keep_session_id)
             return True, recovery
 
-    async def disable_totp(self, user_id: uuid.UUID, code: str) -> bool:
+    async def disable_totp(
+        self, user_id: uuid.UUID, code: str, *, keep_session_id: uuid.UUID | None = None,
+    ) -> bool:
         """Turn 2FA off if ``code`` is right and the account isn't locked.
 
-        The lock is checked under the row lock: guesses sent together all get past
-        the route's earlier check, and a right one mustn't win after the lockout.
+        Ends every session but ``keep_session_id``, as :meth:`confirm_totp` does. The
+        lock is checked under the row lock: guesses sent together all get past the
+        route's earlier check, and a right one mustn't win after the lockout.
         """
         async with self.unit_of_work_factory() as db:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
@@ -126,6 +144,7 @@ class TotpAccountService:
             user.totp_recovery_codes = None
             user.totp_algorithm = _ALGORITHM_WHEN_DISABLED
             user.totp_last_used_step = None
+            await self._end_other_sessions(db, user, keep_session_id)
             return True
 
     async def validate_totp_for_login(self, email: str, code: str) -> tuple[bool, bool]:
@@ -153,6 +172,27 @@ class TotpAccountService:
             and user.totp_enabled
             and bool(user.totp_secret)
             and (self._spend_time_code(user, code) or self._spend_recovery_code(user, code))
+        )
+
+    async def _end_other_sessions(
+        self, db: AsyncSession, user: Any, keep_session_id: uuid.UUID | None,
+    ) -> None:
+        """Set the session cutoff, then restart the caller's phone session from it.
+
+        Every token and phone session from before the cutoff stops working. The caller's
+        phone session counts as started at the cutoff, in the same transaction, so it
+        never stops. Its "signed in" date becomes now. The route gives the caller a new
+        access token.
+        """
+        cutoff = session_cutoff_now()
+        user.auth_valid_after = cutoff
+        if keep_session_id is None:
+            return
+        # Raising rolls the whole change back, rather than signing the phone out.
+        if self.session_model is None:
+            raise RuntimeError("TotpAccountService needs session_model to keep a phone signed in")
+        await refresh_session_repo.restart_owned(
+            db, self.session_model, user.id, keep_session_id, at=cutoff,
         )
 
     def _spend_time_code(self, user: Any, code: str) -> bool:

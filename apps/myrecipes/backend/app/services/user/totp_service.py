@@ -3,6 +3,7 @@ from platform_shared.services.totp_account_service import TotpAccountService
 
 from app.core.config import settings
 from app.db.session import unit_of_work
+from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 
 accounts = TotpAccountService(
@@ -10,6 +11,7 @@ accounts = TotpAccountService(
     issuer=settings.totp_issuer,
     # Lambda for late lookup so tests patching `unit_of_work` take effect.
     unit_of_work_factory=lambda: unit_of_work(),
+    session_model=RefreshSession,
 )
 
 setup_totp = accounts.setup_totp

@@ -93,3 +93,33 @@ describe("requestTwoStepDisable", () => {
     expect(await requestTwoStepDisable("123456")).toBe("unknown");
   });
 });
+
+describe("the phone's token after a change", () => {
+  it.each([
+    ["turning on", () => requestTwoStepVerify("123456"), { verified: true, recovery_codes: ["AAAA1111"] }],
+    ["turning off", () => requestTwoStepDisable("123456"), { disabled: true }],
+  ])("%s switches to the token the server sends, which outlives the change", async (_name, change, body) => {
+    let token: string | null = "old";
+    _resetPlatformForTests();
+    configurePlatform({
+      baseURL: "https://api.test",
+      tokenStore: {
+        get: () => token,
+        set: (next) => {
+          token = next;
+        },
+        clear: () => {
+          token = null;
+        },
+      },
+      orgStore: { get: () => null },
+      isOnLogin: () => false,
+      refreshSession: async () => "unavailable",
+    });
+    answerWith(200, undefined, { ...body, access_token: "new" });
+
+    await change();
+
+    expect(token).toBe("new");
+  });
+});

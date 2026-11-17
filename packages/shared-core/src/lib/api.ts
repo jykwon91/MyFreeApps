@@ -4,6 +4,7 @@ import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform";
 import { ORGANIZATION_HEADER } from "../constants/organizationHeader";
 import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
+import { adoptReissuedToken } from "./adoptReissuedToken";
 import { notifyAuthChange } from "./auth-store";
 import { renewAfterUnauthorized } from "./renewAfterUnauthorized";
 import { isExemptFromSignOut } from "./signOutExemptions";
@@ -66,7 +67,10 @@ function _hasStepUpHeader(headers: unknown): boolean {
 }
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    adoptReissuedToken(res);
+    return res;
+  },
   async (err) => {
     if (err.response?.status === 401 && !isExemptFromSignOut(err.config?.url)) {
       // Step-up 401s (X-Require-Step-Up: totp | reauth) are owned by

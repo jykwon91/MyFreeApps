@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -87,10 +87,22 @@ async def delete_all_but_newest(
     await db.execute(delete(session_model).where(session_model.id.in_(surplus)))
 
 
+async def restart_owned(
+    db: AsyncSession, session_model: type[Any], user_id: uuid.UUID, session_id: uuid.UUID, *, at: datetime,
+) -> None:
+    """Count a session of this user's as started ``at``, so a cutoff then doesn't end it."""
+    await db.execute(
+        update(session_model)
+        .where(session_model.id == session_id, session_model.user_id == user_id)
+        .values(created_at=at)
+    )
+
+
 async def delete_by_id(db: AsyncSession, session_model: type[Any], session_id: uuid.UUID) -> None:
     await db.execute(delete(session_model).where(session_model.id == session_id))
 
 
 __all__ = ["add", "delete_all_but_newest",
     "delete_by_id",
-    "delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id"]
+    "delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id",
+    "restart_owned"]

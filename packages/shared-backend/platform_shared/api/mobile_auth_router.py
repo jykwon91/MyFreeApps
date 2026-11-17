@@ -72,7 +72,7 @@ def build_mobile_auth_router(
 
     async def tokens_for(refreshed: RefreshedSession) -> MobileLoginResponse:
         access_token = await access_strategy.write_session_token(
-            refreshed.user, auth_time=refreshed.session.auth_time,
+            refreshed.user, auth_time=refreshed.session.auth_time, session_id=refreshed.session.id,
         )
         return MobileLoginResponse(
             access_token=access_token,

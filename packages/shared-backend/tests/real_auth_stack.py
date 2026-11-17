@@ -6,6 +6,7 @@ route that waits for a second connection while holding the first fails with a ti
 """
 import hashlib
 import os
+import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -16,9 +17,10 @@ from typing import Any
 import httpx
 import pyotp
 import pytest
-from fastapi import Depends, FastAPI
-from fastapi_users.authentication import JWTStrategy
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.security.utils import get_authorization_scheme_param
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from fastapi_users.jwt import generate_jwt
 from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -26,6 +28,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from platform_shared.api.account_deletion_router import build_account_deletion_router
 from platform_shared.api.mobile_auth_router import build_mobile_auth_router
 from platform_shared.api.totp_router import build_totp_router
+from platform_shared.auth.jwt_backend import IatJWTStrategy
 from platform_shared.auth.refresh_session import RefreshSessionMixin
 from platform_shared.auth.session_invalidation import SessionInvalidationMixin
 from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
@@ -40,6 +43,7 @@ POSTGRES_URL_ENV = "SHARED_BACKEND_TEST_POSTGRES_URL"
 SECRET = "test-secret-key-that-is-long-enough-to-sign-with"
 PASSWORD = "the-right-password"
 EMAIL_DOMAIN = "example.com"
+WEB_TOKEN_SECONDS = 3600
 
 
 class _Base(DeclarativeBase):
@@ -73,14 +77,21 @@ class _Manager(PlatformBaseUserManager):
 
 
 class RealAuthStack:
-    def __init__(self, engine: AsyncEngine) -> None:
+    """``check_tokens`` authenticates requests by their bearer token, as an app does.
+    Otherwise the user in ``signed_in`` is the caller, whatever token is sent."""
+
+    def __init__(self, engine: AsyncEngine, *, check_tokens: bool = False) -> None:
         self.engine = engine
         self.sessions = async_sessionmaker(engine, expire_on_commit=False)
-        self.signed_in: uuid.UUID | None = None
+        self._signed_in: uuid.UUID | None = None
         # A test sets this to make the step after the password and code checks refuse.
         self.prepare_deletion: Callable[[AsyncSession, Any], Awaitable[Any]] | None = None
+        self.strategy = IatJWTStrategy(secret=SECRET, lifetime_seconds=WEB_TOKEN_SECONDS)
         self.totp = TotpAccountService(
-            user_model=StackUser, issuer="Test", unit_of_work_factory=self.unit_of_work,
+            user_model=StackUser,
+            issuer="Test",
+            unit_of_work_factory=self.unit_of_work,
+            session_model=StackRefreshSession,
         )
         self.refresh_sessions = RefreshSessionService(
             session_model=StackRefreshSession,
@@ -89,8 +100,16 @@ class RealAuthStack:
             unit_of_work_factory=self.unit_of_work,
         )
 
-        async def current_active_user(db: AsyncSession = Depends(self.get_db)) -> StackUser | None:
-            return await db.get(StackUser, self.signed_in)
+        async def current_active_user(
+            request: Request, db: AsyncSession = Depends(self.get_db),
+        ) -> StackUser | None:
+            if not check_tokens:
+                return await db.get(StackUser, self._signed_in)
+            _, token = get_authorization_scheme_param(request.headers.get("Authorization"))
+            user = await self.strategy.read_token(token or None, _Manager(SQLAlchemyUserDatabase(db, StackUser)))
+            if user is None:
+                raise HTTPException(401)
+            return user
 
         async def get_user_manager(db: AsyncSession = Depends(self.get_db)) -> AsyncIterator[_Manager]:
             yield _Manager(SQLAlchemyUserDatabase(db, StackUser))
@@ -101,7 +120,7 @@ class RealAuthStack:
                 current_active_user=current_active_user,
                 get_user_manager=get_user_manager,
                 get_db=self.get_db,
-                get_jwt_strategy=lambda: JWTStrategy(secret=SECRET, lifetime_seconds=60),
+                get_jwt_strategy=lambda: self.strategy,
                 totp_service=self.totp,
                 login_dependencies=[],
             )
@@ -128,6 +147,19 @@ class RealAuthStack:
             )
         )
         self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+    @property
+    def signed_in(self) -> uuid.UUID | None:
+        return self._signed_in
+
+    @signed_in.setter
+    def signed_in(self, user_id: uuid.UUID | None) -> None:
+        """Sends a token for this user from now on: the 2FA routes read the caller's."""
+        self._signed_in = user_id
+        if user_id is None:
+            self.client.headers.pop("Authorization", None)
+        else:
+            self.client.headers["Authorization"] = f"Bearer {token_for(user_id)}"
 
     async def get_db(self) -> AsyncIterator[AsyncSession]:
         async with self.sessions() as session:
@@ -211,6 +243,23 @@ class RealAuthStack:
             )
 
 
+def token_for(
+    user_id: uuid.UUID,
+    *,
+    issued_seconds_ago: int = 0,
+    session_id: uuid.UUID | None = None,
+    lifetime_seconds: int = WEB_TOKEN_SECONDS,
+) -> str:
+    """An access token as the app issues one. An older one is from before a cutoff now."""
+    issued_at = int(time.time()) - issued_seconds_ago
+    claims: dict[str, Any] = {
+        "sub": str(user_id), "aud": "fastapi-users:auth", "iat": issued_at, "auth_time": issued_at,
+    }
+    if session_id is not None:
+        claims["sid"] = str(session_id)
+    return generate_jwt(claims, SECRET, lifetime_seconds)
+
+
 def current_code(secret: str) -> str:
     return pyotp.TOTP(
         secret, digits=TOTP_DIGITS, interval=TOTP_PERIOD_SECONDS, digest=hashlib.sha256,
@@ -218,7 +267,7 @@ def current_code(secret: str) -> str:
 
 
 @asynccontextmanager
-async def make_stack(*, pool_size: int) -> AsyncIterator[RealAuthStack]:
+async def make_stack(*, pool_size: int, check_tokens: bool = False) -> AsyncIterator[RealAuthStack]:
     url = os.environ.get(POSTGRES_URL_ENV)
     if not url:
         # CI sets this, so these tests can't quietly stop running there.
@@ -238,7 +287,7 @@ async def make_stack(*, pool_size: int) -> AsyncIterator[RealAuthStack]:
         await connection.run_sync(_Base.metadata.create_all)
         await connection.run_sync(AuthEvent.__table__.create)
 
-    stack = RealAuthStack(engine)
+    stack = RealAuthStack(engine, check_tokens=check_tokens)
     try:
         yield stack
     finally:

@@ -27,6 +27,7 @@ LOGIN = {"email": "a@example.com", "password": "correct-password"}
 
 
 PASSWORD = "correct-password"
+CALLER_TOKEN = "caller-token"
 
 
 def _user(**overrides: Any) -> SimpleNamespace:
@@ -67,6 +68,8 @@ class _Harness:
         self.manager.account_guard = self.guard
         self.strategy = MagicMock()
         self.strategy.write_token = AsyncMock(return_value="a-token")
+        self.strategy.session_id_of = MagicMock(return_value=None)
+        self.strategy.reissue = AsyncMock(return_value="reissued-token")
 
         async def current_active_user() -> SimpleNamespace | None:
             return self.user
@@ -88,7 +91,7 @@ class _Harness:
                 login_dependencies=list(login_dependencies),
             )
         )
-        self.client = TestClient(app)
+        self.client = TestClient(app, headers={"Authorization": f"Bearer {CALLER_TOKEN}"})
 
 
 def _logged_types(harness: _Harness) -> list[AuthEventType]:
@@ -323,8 +326,38 @@ def test_verify_returns_recovery_codes_and_logs_the_event() -> None:
 
     resp = harness.client.post("/auth/totp/verify", json={"code": "123456"})
 
-    assert resp.json() == {"verified": True, "recovery_codes": ["code-1"]}
+    assert resp.json() == {"verified": True, "recovery_codes": ["code-1"], "access_token": "reissued-token"}
     assert harness.guard.record_success.await_args.kwargs["events"] == (AuthEventType.TOTP_ENABLED,)
+
+
+@pytest.mark.parametrize(
+    ("path", "totp_enabled", "service_call"),
+    [("/auth/totp/verify", False, "confirm_totp"), ("/auth/totp/disable", True, "disable_totp")],
+    ids=["turn on", "turn off"],
+)
+def test_the_caller_keeps_its_phone_session_and_gets_its_token_reissued(
+    path: str, totp_enabled: bool, service_call: str,
+) -> None:
+    """The change ends every earlier session; the caller's must carry on."""
+    harness = _Harness(_user(totp_enabled=totp_enabled))
+    phone_session = uuid.uuid4()
+    harness.strategy.session_id_of.return_value = phone_session
+
+    resp = harness.client.post(path, json={"code": "123456"})
+
+    assert resp.json()["access_token"] == "reissued-token"
+    harness.strategy.session_id_of.assert_called_once_with(CALLER_TOKEN)
+    assert getattr(harness.service, service_call).await_args.kwargs == {"keep_session_id": phone_session}
+    assert harness.strategy.reissue.await_args.args == (harness.user, CALLER_TOKEN)
+
+
+def test_a_wrong_code_reissues_no_token() -> None:
+    harness = _Harness(_user(totp_enabled=True))
+    harness.service.disable_totp.return_value = False
+    harness.guard.record_code_attempt.return_value = GuardOutcome.WRONG
+
+    assert harness.client.post("/auth/totp/disable", json={"code": "000000"}).status_code == 400
+    harness.strategy.reissue.assert_not_awaited()
 
 
 def test_wrong_verify_code_enables_nothing() -> None:
@@ -347,7 +380,7 @@ def test_disable_logs_the_event() -> None:
 
     resp = harness.client.post("/auth/totp/disable", json={"code": "123456"})
 
-    assert resp.json() == {"disabled": True}
+    assert resp.json() == {"disabled": True, "access_token": "reissued-token"}
     assert harness.guard.record_success.await_args.kwargs["events"] == (AuthEventType.TOTP_DISABLED,)
 
 

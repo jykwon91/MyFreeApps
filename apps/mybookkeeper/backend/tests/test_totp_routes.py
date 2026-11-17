@@ -16,7 +16,7 @@ from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, get_jwt_strategy
 from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
@@ -112,14 +112,20 @@ async def user_with_totp(db: AsyncSession) -> tuple[User, str]:
 
 
 def _auth_client_for(user: User):
-    """Return a context manager that yields an AsyncClient with auth overridden to user."""
+    """Return a context manager that yields an AsyncClient with auth overridden to user.
+
+    It still sends the user's token: turning 2FA on or off issues the caller a new one.
+    """
     import contextlib
 
     @contextlib.asynccontextmanager
     async def _cm():
         app.dependency_overrides[current_active_user] = lambda: user
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        token = await get_jwt_strategy().write_token(user)
+        async with AsyncClient(
+            transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"},
+        ) as c:
             yield c
         app.dependency_overrides.clear()
 
@@ -223,6 +229,8 @@ class TestTotpVerify:
         data = resp.json()
         assert data["verified"] is True
         assert len(data["recovery_codes"]) == 8
+        assert data["access_token"]
+        assert user_no_totp.auth_valid_after is not None, "Turning 2FA on ends every other session."
 
     @pytest.mark.asyncio
     async def test_wrong_code_returns_400(
@@ -260,7 +268,9 @@ class TestTotpDisable:
         async with _auth_client_for(user)() as client:
             resp = await client.post("/auth/totp/disable", json={"code": code})
         assert resp.status_code == 200
-        assert resp.json() == {"disabled": True}
+        assert resp.json()["disabled"] is True
+        assert resp.json()["access_token"]
+        assert user.auth_valid_after is not None, "Turning 2FA off ends every other session."
 
     @pytest.mark.asyncio
     async def test_wrong_code_returns_400(

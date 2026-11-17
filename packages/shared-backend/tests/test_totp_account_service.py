@@ -38,10 +38,18 @@ async def _unit_of_work() -> AsyncIterator[Any]:
     yield MagicMock()
 
 
-def _service(*, encrypted: bool = False) -> TotpAccountService:
+class _SessionModel:
+    pass
+
+
+def _service(*, encrypted: bool = False, session_model: type[Any] | None = _SessionModel) -> TotpAccountService:
     codec = {"encrypt": _encrypt, "decrypt": _decrypt} if encrypted else {}
     return TotpAccountService(
-        user_model=object, issuer="MyApp", unit_of_work_factory=_unit_of_work, **codec,
+        user_model=object,
+        issuer="MyApp",
+        unit_of_work_factory=_unit_of_work,
+        session_model=session_model,
+        **codec,
     )
 
 
@@ -62,11 +70,19 @@ def _user(
         totp_algorithm=algorithm,
         totp_last_used_step=None,
         locked_until=locked_until,
+        auth_valid_after=None,
     )
 
 
 def _code(secret: str, algorithm: str = "sha256") -> str:
     return pyotp.TOTP(secret, digest=getattr(hashlib, algorithm)).now()
+
+
+@pytest.fixture
+def restarted(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    restart = AsyncMock()
+    monkeypatch.setattr(totp_account_service.refresh_session_repo, "restart_owned", restart)
+    return restart
 
 
 @pytest.fixture
@@ -337,3 +353,69 @@ async def test_encrypted_values_are_written_and_read_through_the_codec(stored: A
     assert _decrypt(user.totp_recovery_codes, user.id) == ",".join(recovery[1:])
     user.totp_last_used_step = None
     assert await service.validate_totp_for_login(user.email, _code(secret)) == (True, False)
+
+
+def _two_factor_change(turn_on: bool) -> tuple[SimpleNamespace, Any]:
+    secret = generate_secret()
+    user = _user(secret=secret, enabled=not turn_on)
+    return user, (lambda service, **kwargs: (
+        service.confirm_totp(user.id, _code(secret), **kwargs)
+        if turn_on
+        else service.disable_totp(user.id, _code(secret), **kwargs)
+    ))
+
+
+@pytest.mark.parametrize("turn_on", [True, False], ids=["turn on", "turn off"])
+@pytest.mark.asyncio
+async def test_a_two_factor_change_ends_every_earlier_session(
+    stored: Any, restarted: AsyncMock, turn_on: bool,
+) -> None:
+    """Someone turning 2FA on may be shutting out an intruder who is signed in."""
+    user, change = _two_factor_change(turn_on)
+    stored(user)
+    before = datetime.now(timezone.utc)
+
+    assert await change(_service())
+
+    assert before <= user.auth_valid_after <= datetime.now(timezone.utc)
+    restarted.assert_not_awaited()
+
+
+@pytest.mark.parametrize("turn_on", [True, False], ids=["turn on", "turn off"])
+@pytest.mark.asyncio
+async def test_the_callers_phone_session_restarts_at_the_cutoff(
+    stored: Any, restarted: AsyncMock, turn_on: bool,
+) -> None:
+    user, change = _two_factor_change(turn_on)
+    stored(user)
+    phone_session = uuid.uuid4()
+
+    assert await change(_service(), keep_session_id=phone_session)
+
+    restarted.assert_awaited_once()
+    args, kwargs = restarted.await_args.args, restarted.await_args.kwargs
+    assert args[1:] == (_SessionModel, user.id, phone_session)
+    assert kwargs == {"at": user.auth_valid_after}
+
+
+@pytest.mark.parametrize("turn_on", [True, False], ids=["turn on", "turn off"])
+@pytest.mark.asyncio
+async def test_keeping_a_phone_signed_in_needs_the_session_model(
+    stored: Any, restarted: AsyncMock, turn_on: bool,
+) -> None:
+    """An error rolls the change back. Carrying on would sign the phone out."""
+    user, change = _two_factor_change(turn_on)
+    stored(user)
+
+    with pytest.raises(RuntimeError):
+        await change(_service(session_model=None), keep_session_id=uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_a_wrong_code_ends_no_session(stored: Any, restarted: AsyncMock) -> None:
+    user = _user(secret=generate_secret())
+    stored(user)
+
+    assert await _service().disable_totp(user.id, "000000", keep_session_id=uuid.uuid4()) is False
+    assert user.auth_valid_after is None
+    restarted.assert_not_awaited()

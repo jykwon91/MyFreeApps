@@ -57,7 +57,7 @@ export class SuperuserSession {
       expect(signedIn.ok(), await signedIn.text()).toBe(true);
       ({ access_token: token } = (await signedIn.json()) as { access_token: string });
 
-      const auth = { Authorization: `Bearer ${token}` };
+      let auth = { Authorization: `Bearer ${token}` };
       expect((await anon.post("/test/promote-admin", { headers: auth })).ok()).toBe(true);
       expect((await anon.post("/test/promote-superuser", { headers: auth })).ok()).toBe(true);
 
@@ -76,7 +76,11 @@ export class SuperuserSession {
       const step = currentTotpStep();
       const enabled = await anon.post("/auth/totp/verify", { headers: auth, data: { code: totpCodeAtStep(secret, step) } });
       expect(enabled.ok(), await enabled.text()).toBe(true);
-      const { recovery_codes: recoveryCodes } = (await enabled.json()) as { recovery_codes: string[] };
+      const verified = (await enabled.json()) as { recovery_codes: string[]; access_token: string };
+      const recoveryCodes = verified.recovery_codes;
+      // Turning 2FA on ends every earlier token, this one too, and sends a new one.
+      token = verified.access_token;
+      auth = { Authorization: `Bearer ${token}` };
       recoveryCode = recoveryCodes[0];
       // One more than asked for: deleting the account spends one too.
       expect(recoveryCodes.length).toBeGreaterThan(stepUps);

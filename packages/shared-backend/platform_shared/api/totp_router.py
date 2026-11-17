@@ -12,6 +12,10 @@ Three enrollment endpoints (require an authenticated user):
                                Wrong codes count toward the same lockout as login,
                                or a stolen token could guess them here without limit.
 
+Turning 2FA on or off signs out every other browser and phone. The caller stays
+signed in: the response carries a new ``access_token`` for the client to use from
+then on, and a phone's refresh session is kept (see ``TotpAccountService``).
+
 One status probe (auth required, used by the Settings page):
     GET  /auth/totp/status
 
@@ -32,9 +36,10 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.params import Depends as DependsParam
-from fastapi_users.authentication import Strategy
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.auth.bearer_token import bearer_token
+from platform_shared.auth.jwt_backend import IatJWTStrategy
 from platform_shared.auth.refuse_as_locked import refuse_as_locked
 from platform_shared.auth.released_current_user import released_current_user
 from platform_shared.auth.require_current_password import require_current_password
@@ -68,7 +73,7 @@ def build_totp_router(
     current_active_user: Callable[..., Awaitable[TotpRouteUser]],
     get_user_manager: Callable[..., AsyncIterator[PlatformBaseUserManager]],
     get_db: Callable[..., AsyncIterator[AsyncSession]],
-    get_jwt_strategy: Callable[[], Strategy],
+    get_jwt_strategy: Callable[[], IatJWTStrategy],
     totp_service: TotpRouteService,
     login_dependencies: Sequence[DependsParam],
 ) -> APIRouter:
@@ -78,7 +83,8 @@ def build_totp_router(
         current_active_user: The app's fastapi-users ``current_active_user``.
         get_user_manager: The app's user manager dependency.
         get_db: The app's ``get_db`` dependency.
-        get_jwt_strategy: The app's strategy factory. Issues the login token.
+        get_jwt_strategy: The app's strategy factory. Issues the login token, and
+            the caller's new token after turning 2FA on or off.
         totp_service: The app's TOTP service module. Its functions are looked
             up on each request.
         login_dependencies: The app's rate limit and lockout checks for login.
@@ -128,6 +134,7 @@ def build_totp_router(
         request: Request,
         user: TotpRouteUser = Depends(released_user),
         user_manager: PlatformBaseUserManager = Depends(get_user_manager),
+        token: str = Depends(bearer_token),
     ) -> TotpVerifyResponse:
         """Confirm enrollment. Recovery codes are returned here, exactly once."""
         if user.totp_enabled:
@@ -136,8 +143,11 @@ def build_totp_router(
         if await guard.begin_attempt(user.id, request=request) is GuardOutcome.LOCKED:
             refuse_as_locked()
 
+        strategy = get_jwt_strategy()
         try:
-            verified, recovery_codes = await totp_service.confirm_totp(user.id, body.code)
+            verified, recovery_codes = await totp_service.confirm_totp(
+                user.id, body.code, keep_session_id=strategy.session_id_of(token),
+            )
         except TotpSetupNotStartedError as exc:
             raise HTTPException(400, "No 2FA setup in progress. Cancel and start again.") from exc
         if not verified:
@@ -151,7 +161,11 @@ def build_totp_router(
                 raise HTTPException(400, "2FA is already enabled")
             raise HTTPException(400, "Invalid verification code")
         await guard.record_success(user.id, events=(AuthEventType.TOTP_ENABLED,), request=request)
-        return TotpVerifyResponse(verified=True, recovery_codes=recovery_codes)
+        return TotpVerifyResponse(
+            verified=True,
+            recovery_codes=recovery_codes,
+            access_token=await strategy.reissue(user, token),
+        )
 
     @router.post("/disable", response_model=TotpDisableResponse)
     async def disable_totp(
@@ -159,6 +173,7 @@ def build_totp_router(
         request: Request,
         user: TotpRouteUser = Depends(released_user),
         user_manager: PlatformBaseUserManager = Depends(get_user_manager),
+        token: str = Depends(bearer_token),
     ) -> TotpDisableResponse:
         """Disable 2FA after verifying a current code."""
         if not user.totp_enabled:
@@ -167,9 +182,12 @@ def build_totp_router(
         if await guard.begin_attempt(user.id, request=request) is GuardOutcome.LOCKED:
             refuse_as_locked()
 
-        if await totp_service.disable_totp(user.id, body.code):
+        strategy = get_jwt_strategy()
+        if await totp_service.disable_totp(
+            user.id, body.code, keep_session_id=strategy.session_id_of(token),
+        ):
             await guard.record_success(user.id, events=(AuthEventType.TOTP_DISABLED,), request=request)
-            return TotpDisableResponse(disabled=True)
+            return TotpDisableResponse(disabled=True, access_token=await strategy.reissue(user, token))
 
         outcome = await guard.record_code_attempt(
             user.id, valid=False, expect_totp_enabled=True, request=request,
