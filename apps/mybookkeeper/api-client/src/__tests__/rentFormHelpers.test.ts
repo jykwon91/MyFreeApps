@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RentReminderFormValues } from "../types/rent/rent-reminder-form-values";
 import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import {
@@ -11,6 +11,7 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "../utils/rentReminderForm";
+import { deviceTimeZone } from "../utils/rentReminderZone";
 import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "../utils/rentScheduleForm";
 
 const PLAN: RentReminderPlan = {
@@ -56,6 +57,7 @@ describe("rent reminder form helpers", () => {
       dueWeekday: 6,
       sendDaysBefore: "1",
       sendTime: "18:00",
+      timezone: deviceTimeZone(),
       emailEnabled: true,
       smsEnabled: false,
       paymentInstructions: "",
@@ -126,8 +128,22 @@ describe("rent reminder form helpers", () => {
     expect(canSaveReminder({ ...good, amountOverride: "-1" }, ".")).toBe(false);
   });
 
+  it("defaults a new plan to the device's time zone, not Central", () => {
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions");
+    spy.mockReturnValue({ timeZone: "America/Los_Angeles" } as Intl.ResolvedDateTimeFormatOptions);
+    const values = reminderFormValues(null, true);
+    expect(values.timezone).toBe("America/Los_Angeles");
+    expect(reminderPlanRequest(values, ".").timezone).toBe("America/Los_Angeles");
+    expect(reminderFormValues(PLAN, true).timezone).toBe("America/Denver");
+    spy.mockRestore();
+  });
+
   it("builds the whole plan for the server", () => {
-    expect(reminderPlanRequest({ ...reminderFormValues(null, true), paymentInstructions: "  Zelle  " }, null, ".")).toEqual({
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions");
+    spy.mockReturnValue({ timeZone: "America/Chicago" } as Intl.ResolvedDateTimeFormatOptions);
+    const values = reminderFormValues(null, true);
+    spy.mockRestore();
+    expect(reminderPlanRequest({ ...values, paymentInstructions: "  Zelle  " }, ".")).toEqual({
       frequency: "weekly",
       due_weekday: 6,
       send_days_before: 1,
@@ -143,13 +159,13 @@ describe("rent reminder form helpers", () => {
 
   it("sends the amount that was checked, not the typed text", () => {
     const values = { ...reminderFormValues(null, true), amountOverride: "1250,50" };
-    expect(reminderPlanRequest(values, null, ",").amount_override).toBe("1250.50");
-    expect(reminderPlanRequest({ ...values, amountOverride: "$1,250" }, null, ".").amount_override).toBe("1250");
-    expect(reminderPlanRequest({ ...values, amountOverride: "  " }, null, ",").amount_override).toBeNull();
+    expect(reminderPlanRequest(values, ",").amount_override).toBe("1250.50");
+    expect(reminderPlanRequest({ ...values, amountOverride: "$1,250" }, ".").amount_override).toBe("1250");
+    expect(reminderPlanRequest({ ...values, amountOverride: "  " }, ",").amount_override).toBeNull();
   });
 
   it("drops the weekday for a monthly plan and keeps a saved plan's time zone", () => {
-    const request = reminderPlanRequest(reminderFormValues(PLAN, true), PLAN, ".");
+    const request = reminderPlanRequest(reminderFormValues(PLAN, true), ".");
     expect(request).toMatchObject({ frequency: "monthly", due_weekday: null, timezone: "America/Denver", amount_override: "900.00", is_active: false });
   });
 });

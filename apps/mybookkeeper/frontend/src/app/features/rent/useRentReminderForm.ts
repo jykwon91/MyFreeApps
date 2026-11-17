@@ -55,7 +55,7 @@ export function useRentReminderForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
-    const body = { applicantId, ...reminderPlanRequest(values, existing, NUMBER_INPUT_DECIMAL_SEPARATOR) };
+    const body = { applicantId, ...reminderPlanRequest(values, NUMBER_INPUT_DECIMAL_SEPARATOR) };
     try {
       if (existing) {
         await update(body).unwrap();

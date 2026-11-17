@@ -13,6 +13,7 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
+import { sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { deviceDecimalSeparator, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
@@ -52,7 +53,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
 
   async function save(): Promise<void> {
     if (!canSaveReminder(values, decimalSeparator)) return;
-    const body = { applicantId, ...reminderPlanRequest(values, plan, decimalSeparator) };
+    const body = { applicantId, ...reminderPlanRequest(values, decimalSeparator) };
     const landed = await submit(() => (plan ? updatePlan(body).unwrap() : createPlan(body).unwrap()), reminderSetupFailure);
     if (!landed) return;
     onClose();
@@ -101,7 +102,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
         value={values.sendDaysBefore}
       />
 
-      <TimeField error={isSendTimeValid(values.sendTime) ? undefined : REMINDER_SETUP_MESSAGES.timeHintBad} label={REMINDER_SETUP_MESSAGES.sendTime} onChange={(time) => change("sendTime", time)} value={values.sendTime} />
+      <TimeField error={isSendTimeValid(values.sendTime) ? undefined : REMINDER_SETUP_MESSAGES.timeHintBad} label={sendTimeLabel(values.timezone)} onChange={(time) => change("sendTime", time)} value={values.sendTime} />
       <Text style={mutedText}>{REMINDER_SETUP_MESSAGES.timeHintOk}</Text>
 
       <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{REMINDER_SETUP_MESSAGES.sendBy}</Text>

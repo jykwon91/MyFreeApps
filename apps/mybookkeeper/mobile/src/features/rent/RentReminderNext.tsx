@@ -72,7 +72,7 @@ export default function RentReminderNext({ applicantId, name, overview, plan, sh
       {outcome}
       {heading}
       <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{dueLine(preview)}</Text>
-      {plan.is_active && !alreadySent ? <Text style={mutedText}>{sendMoment(preview.send_at)}</Text> : null}
+      {plan.is_active && !alreadySent ? <Text style={mutedText}>{sendMoment(preview.send_at, plan.timezone)}</Text> : null}
       <Text
         selectable
         style={{ fontSize: fontSize.sm, color: colors.foreground, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}

@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import { describeReminderError } from "../utils/rentReminderError";
-import { describePlan, formatDueDate, formatSendTime } from "../utils/rentReminderFormat";
+import { describePlan, formatDueDate, formatSendMoment, formatSendTime } from "../utils/rentReminderFormat";
+import { deviceTimeZone, sendTimeLabel } from "../utils/rentReminderZone";
 
 describe("describeReminderError", () => {
   it("never shows a code it doesn't know", () => {
@@ -28,8 +29,30 @@ describe("reminder formatting", () => {
   });
 
   it("summarises a weekly and a monthly plan", () => {
-    const weekly = { frequency: "weekly", due_weekday: 6, send_days_before: 1, send_time: "18:00:00" } as RentReminderPlan;
-    expect(describePlan(weekly)).toBe("Weekly, due every Sunday · reminded the day before at 6:00 PM");
-    expect(describePlan({ ...weekly, frequency: "monthly", due_weekday: null, send_days_before: 3 })).toBe("Monthly, due on the 1st · reminded 3 days before at 6:00 PM");
+    const weekly = { frequency: "weekly", due_weekday: 6, send_days_before: 1, send_time: "18:00:00", timezone: "America/Chicago" } as RentReminderPlan;
+    expect(describePlan(weekly)).toBe("Weekly, due every Sunday · reminded the day before at 6:00 PM CST");
+    expect(describePlan({ ...weekly, frequency: "monthly", due_weekday: null, send_days_before: 3 })).toBe("Monthly, due on the 1st · reminded 3 days before at 6:00 PM CST");
+  });
+
+  it("names the zone the plan is stored in, so a Pacific host isn't misled", () => {
+    const weekly = { frequency: "weekly", due_weekday: 6, send_days_before: 1, send_time: "18:00:00", timezone: "America/Los_Angeles" } as RentReminderPlan;
+    expect(describePlan(weekly)).toMatch(/at 6:00 PM P[SD]T$/);
+  });
+
+  it("labels the send-time field and the send moment with the zone", () => {
+    expect(sendTimeLabel("America/Chicago", new Date("2026-11-20T12:00:00Z"))).toBe("At (CST)");
+    expect(sendTimeLabel("America/Chicago", new Date("2026-07-20T12:00:00Z"))).toBe("At (CDT)");
+    expect(formatSendMoment("2026-11-21T00:00:00Z", "America/Los_Angeles")).toBe("Fri, Nov 20, 4:00 PM PST");
+  });
+
+  it("uses the device zone when it is valid, else the Central default", () => {
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions");
+    spy.mockReturnValue({ timeZone: "America/Denver" } as Intl.ResolvedDateTimeFormatOptions);
+    expect(deviceTimeZone()).toBe("America/Denver");
+    spy.mockReturnValue({ timeZone: "Not/AZone" } as Intl.ResolvedDateTimeFormatOptions);
+    expect(deviceTimeZone()).toBe("America/Chicago");
+    spy.mockReturnValue({ timeZone: undefined } as unknown as Intl.ResolvedDateTimeFormatOptions);
+    expect(deviceTimeZone()).toBe("America/Chicago");
+    spy.mockRestore();
   });
 });
