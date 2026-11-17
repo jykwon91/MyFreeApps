@@ -1,6 +1,7 @@
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { DROP_RECIPE_SORT, type DropRecipeSort } from "@/games/wow-forever/types/dropRecipes/dropRecipeSort";
 import { DROP_RECIPE_SOURCE, type DropRecipeSource } from "@/games/wow-forever/types/dropRecipes/dropRecipeSource";
+import { DROP_RECIPE_TRADE, type DropRecipeTrade } from "@/games/wow-forever/types/dropRecipes/dropRecipeTrade";
 
 export const DROP_RECIPES_PATH = "/wow-forever/recipe-drops";
 
@@ -17,7 +18,7 @@ export const DROP_RECIPE_PROFESSIONS: readonly CraftingProfession[] = [
 
 export const DEFAULT_DROP_RECIPE_PROFESSION: CraftingProfession = "enchanting";
 
-export const DROP_RECIPE_PARAMS = { profession: "p", source: "source", sort: "sort", character: "who" } as const;
+export const DROP_RECIPE_PARAMS = { profession: "p", source: "source", sort: "sort", trade: "trade", character: "who" } as const;
 
 export const DROP_RECIPE_SOURCE_LABELS: Readonly<Record<DropRecipeSource, string>> = {
   [DROP_RECIPE_SOURCE.openWorld]: "Open world",
@@ -27,6 +28,13 @@ export const DROP_RECIPE_SOURCE_LABELS: Readonly<Record<DropRecipeSource, string
 };
 
 export const DROP_RECIPE_SOURCES: readonly DropRecipeSource[] = Object.values(DROP_RECIPE_SOURCE);
+
+export const DROP_RECIPE_TRADE_LABELS: Readonly<Record<DropRecipeTrade, string>> = {
+  [DROP_RECIPE_TRADE.auctionHouse]: "Auction House",
+  [DROP_RECIPE_TRADE.bindOnPickup]: "Bind on pickup",
+};
+
+export const DROP_RECIPE_TRADES: readonly DropRecipeTrade[] = Object.values(DROP_RECIPE_TRADE);
 
 export const DROP_RECIPE_SORT_LABELS: Readonly<Record<DropRecipeSort, string>> = {
   [DROP_RECIPE_SORT.skill]: "Skill",
@@ -45,6 +53,8 @@ export const DROP_RECIPES_TEXT = {
   sourceLabel: "Where it drops",
   allSources: "All",
   sortLabel: "Sort by",
+  tradeLabel: "Can you buy it?",
+  allTrades: "All",
   count: (n: number) => (n === 1 ? "1 recipe" : `${n} recipes`),
   /** "58 recipes · Jason Kwon knows 5" */
   countKnown: (n: number, known: number, who: string) => `${n === 1 ? "1 recipe" : `${n} recipes`} · ${who} knows ${known}`,
@@ -58,7 +68,7 @@ export const DROP_RECIPES_TEXT = {
   knownNotFound: (who: string) => `Blizzard doesn't know a character named ${who}. Check the spelling (US characters only).`,
   knownError: "Couldn't read that character's recipes from Blizzard.",
   showAll: "Clear character",
-  empty: "No drop-only recipe drops there. Pick another place.",
+  empty: "No drop-only recipe matches these filters. Try All on one of them.",
   loadError: "Couldn't load the recipes.",
   bindOnPickup: "Binds when picked up: you have to loot it yourself.",
   tradeable: "Tradeable: someone may be selling it.",

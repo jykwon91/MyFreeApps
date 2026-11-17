@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Drop-only recipes: can you buy it?",
+    "summary": "A new filter on Drop-only recipes shows only the recipes you can buy on the Auction House, or only the bind-on-pickup ones you have to loot yourself.",
+    "to": "/wow-forever/recipe-drops"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Drop-only recipes: cross out what you know",
     "summary": "Type a character's name on Drop-only recipes and every recipe they already know is crossed out and tagged Known, read from Blizzard, so you can see at a glance which formulas are left to farm. The name stays in the link, and names you've looked up before are one tap away.",
     "to": "/wow-forever/recipe-drops"

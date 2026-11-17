@@ -3,6 +3,8 @@ const ROWS = 6;
 const PROFESSION_BUTTONS = 7;
 /** "All" plus the four kinds of source. */
 const SOURCE_BUTTONS = 5;
+/** "All", Auction House, Bind on pickup. */
+const TRADE_BUTTONS = 3;
 const SORT_BUTTONS = 2;
 
 /** The character box, the filters, the count and a few closed recipe rows, while the recipes load. */
@@ -34,6 +36,14 @@ export default function DropRecipesSkeleton() {
             <div className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
               {Array.from({ length: SOURCE_BUTTONS }, (_, i) => (
                 <div key={i} className="h-9 w-20 rounded-md bg-muted" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="h-5 w-32 rounded bg-muted" />
+            <div className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
+              {Array.from({ length: TRADE_BUTTONS }, (_, i) => (
+                <div key={i} className="h-9 w-24 rounded-md bg-muted" />
               ))}
             </div>
           </div>
