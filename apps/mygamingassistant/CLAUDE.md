@@ -1536,6 +1536,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `crafters` to both compute functions, so their best offer per slot shows even where
   a guild mate's would win the dedup (operator, 2026-11-17), with an "N members could
   use something X makes" line. AH prices show per-reagent and total estimated cost.
+  PvE / PvP chips (`?help_mode=pvp`, default PvE) pick the weights: PvP runs the
+  member's PvE weights through `pvpWeights` (Stamina = best main stat x
+  `PVP_STAMINA_SHARE`, never lowered), an estimate built from Classic PvP guides
+  (`data/guild/guildHelpPvp.ts`). WoW Forever has published no stat weights, PvE or
+  PvP, so both modes say the weights are Classic (`GUILD_HELP_TEXT.weightsNote`);
+  swap in Forever numbers when they exist (operator, 2026-11-17).
   Backend: `services/wow/guild/guild_help_service.py`, repo: `guild_repo.member_sheets`.
   Tests: `tests/test_wow_guild_help.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,

@@ -1,4 +1,5 @@
-import { LEVELING_SPEC_ID, roleFor, type WowClassId } from "@/games/wow-forever/data/classes";
+import { LEVELING_SPEC_ID, roleFor, type SpecRole, type WowClassId } from "@/games/wow-forever/data/classes";
+import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
 import {
   CLOSE_SCORE_PCT,
   PRE_RAID_LEVEL,
@@ -56,7 +57,12 @@ export function scorer(settings: Pick<GearSettings, "classId" | "specId">, level
     bracket: leveling ? "leveling" : "level60",
     currentHitPct: null,
   });
-  const ctx = { weights, role: roleFor(settings.classId, specId), currentHitPct: null };
+  return weightsScorer(weights, roleFor(settings.classId, specId));
+}
+
+/** A scorer for weights already picked (e.g. the guild's PvP weights). */
+export function weightsScorer(weights: StatWeights, role: SpecRole): (item: ClientItem, build: string) => number {
+  const ctx = { weights, role, currentHitPct: null };
   return (item, build) => scoreItem(fromClientData(String(item.id), item, build), ctx).total;
 }
 

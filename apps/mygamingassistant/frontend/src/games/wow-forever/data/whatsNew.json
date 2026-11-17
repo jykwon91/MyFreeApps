@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Guild: PvE or PvP upgrades",
+    "summary": "The guild's Help each other tab now has PvE and PvP buttons. PvP scores count Stamina as much as your best main stat, so Stamina enchants and gear show up for PvPers who'd skip them in PvE. Both are estimates built on Classic stat weights, since WoW Forever hasn't published its own.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-17",
     "title": "Guild: who could use what you make?",
     "summary": "The guild's Help each other tab has a new Made by picker. Pick a guild mate who has a profession and it lists everyone in the guild who could use an enchant or a piece of gear they can make, even where someone else could make it too.",
     "to": "/wow-forever/topdeadcenter"

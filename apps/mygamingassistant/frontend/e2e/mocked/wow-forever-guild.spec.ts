@@ -1131,6 +1131,34 @@ test("help tab: Made by someone nobody needs anything from says so", async ({ pa
   await expect(page.getByTestId("help-empty")).toHaveText("Nobody in the guild needs anything Enchanter can make right now.", { timeout: 10_000 });
 });
 
+test("help tab: PvP scores a Stamina enchant for a Balance druid that PvE skips, kept in URL", async ({ page }) => {
+  await stubAll(page);
+  const body = helpResponse();
+  // A 31-point Balance druid: PvE weights rate Stamina far below spell power, PvP raises it.
+  Object.assign(body.members[1], { class_name: "Druid", talents: [{ tree_id: 574, points: 31 }] });
+  await page.route(HELP_PATTERN, (route) => json(route, body));
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+
+  const chips = page.getByTestId("help-mode-chips");
+  await expect(chips.getByRole("button", { name: "PvE" })).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
+  await expect(page.getByTestId("help-weights-note")).toContainText("Classic stat weights");
+  await expect(page.getByTestId("help-empty")).toBeVisible();
+
+  await chips.getByRole("button", { name: "PvP" }).click();
+  await expect(page).toHaveURL(/help_mode=pvp/);
+  await expect(page.getByTestId("help-weights-note")).toContainText("PvP scores are estimates");
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+  await expect(page.getByTestId("guild-match-card")).toContainText("Needy");
+
+  await page.reload();
+  await expect(page.getByTestId("help-mode-chips").getByRole("button", { name: "PvP" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+
+  await page.getByTestId("help-mode-chips").getByRole("button", { name: "PvE" }).click();
+  await expect(page).not.toHaveURL(/help_mode=/);
+  await expect(page.getByTestId("help-empty")).toBeVisible();
+});
+
 test("help tab: skeleton while loading, then shows matches", async ({ page }) => {
   await stubAll(page);
   let release: () => void = () => {};

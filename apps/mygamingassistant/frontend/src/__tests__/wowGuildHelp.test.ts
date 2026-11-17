@@ -23,6 +23,8 @@ import { mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
 import { buildHelpParams, helpFiltersFromParams } from "@/games/wow-forever/lib/guild/guildHelpParams";
+import { pvpWeights } from "@/games/wow-forever/lib/guild/pvpWeights";
+import { PAWN_CLASSIC_WEIGHTS } from "@/games/wow-forever/data/weights/pawnClassicWeights";
 import { resolveHelpSpecId, TALENT_TREE_SPEC_ID } from "@/games/wow-forever/lib/guild/guildHelpSpec";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
@@ -864,15 +866,45 @@ describe("computeEnchantMatches best-pick dedup (single crafter, multiple enchan
 
 describe("help tab URL filters", () => {
   it("reads defaults when no param is set", () => {
-    expect(helpFiltersFromParams(new URLSearchParams())).toEqual({ type: "all", forSlug: null, bySlug: null });
-    expect(helpFiltersFromParams(new URLSearchParams("help_type=bogus"))).toEqual({ type: "all", forSlug: null, bySlug: null });
+    const defaults = { type: "all", mode: "pve", forSlug: null, bySlug: null };
+    expect(helpFiltersFromParams(new URLSearchParams())).toEqual(defaults);
+    expect(helpFiltersFromParams(new URLSearchParams("help_type=bogus&help_mode=bogus"))).toEqual(defaults);
   });
 
-  it("round-trips made by, help for and type, keeping the tab's other params", () => {
-    const filters = { type: "gear", forSlug: "needy", bySlug: "tailor" } as const;
+  it("round-trips made by, help for, PvP and type, keeping the tab's other params", () => {
+    const filters = { type: "gear", mode: "pvp", forSlug: "needy", bySlug: "tailor" } as const;
     const params = buildHelpParams(new URLSearchParams("tab=help"), filters);
-    expect(params.toString()).toBe("tab=help&help_type=gear&help_for=needy&help_by=tailor");
+    expect(params.toString()).toBe("tab=help&help_type=gear&help_mode=pvp&help_for=needy&help_by=tailor");
     expect(helpFiltersFromParams(params)).toEqual(filters);
-    expect(buildHelpParams(params, { type: "all", forSlug: null, bySlug: null }).toString()).toBe("tab=help");
+    expect(buildHelpParams(params, { type: "all", mode: "pve", forSlug: null, bySlug: null }).toString()).toBe("tab=help");
+  });
+});
+
+describe("PvP weights", () => {
+  it("count Stamina as much as the best main stat and leave the rest alone", () => {
+    const balance = PAWN_CLASSIC_WEIGHTS["druid/balance"];
+    const pvp = pvpWeights(balance);
+    expect(pvp.stats.stamina).toBe(mainStatPoint(balance));
+    expect({ ...pvp.stats, stamina: 0 }).toEqual({ ...balance.stats, stamina: 0 });
+    expect(balance.stats.stamina).toBe(0.1); // the PvE table is not changed
+  });
+
+  it("never lower a tank's Stamina", () => {
+    const tank = PAWN_CLASSIC_WEIGHTS["druid/feral-tank"];
+    expect(pvpWeights(tank).stats.stamina).toBe(Math.max(tank.stats.stamina ?? 0, mainStatPoint(tank)));
+    expect(pvpWeights(tank).stats.stamina).toBeGreaterThanOrEqual(tank.stats.stamina ?? 0);
+  });
+
+  it("make a Stamina enchant worth offering in PvP but not in PvE", () => {
+    const stamina = enchantRecipe(7457, "Enchant Bracer - Minor Stamina", "Permanently enchant bracers to give +3 Stamina.");
+    const file = { recipes: [stamina] };
+    const enchanter = makeMember("enchanter", {
+      recipe_ability_ids: [4301],
+      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+    });
+    // A Balance druid's PvE weights value Stamina at 0.1 of a spell power point: below the enchant floor.
+    const boomkin = makeMember("boomkin", { class_name: "Druid", equipped: [wristItem()], talents: [{ tree_id: 574, points: 31 }] });
+    expect(computeEnchantMatches([enchanter, boomkin], file, NO_ITEMS)).toHaveLength(0);
+    expect(computeEnchantMatches([enchanter, boomkin], file, NO_ITEMS, undefined, "pvp").map((m) => m.beneficiary.slug)).toEqual(["boomkin"]);
   });
 });
