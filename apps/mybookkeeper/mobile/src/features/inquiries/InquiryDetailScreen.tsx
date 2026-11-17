@@ -1,10 +1,10 @@
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { Banner, Chip, EmptyState, KeyboardAwareScroll, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INQUIRY_DETAIL_SHEET } from "../../constants/inquiries";
 import type { InquiryDetailSheet } from "../../types/InquiryDetailSheet";
@@ -80,7 +80,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" padForNavigationBar={false} refreshControl={refreshControl}>
         {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
@@ -132,7 +132,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
           </View>
         ) : null}
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       {canWrite ? (
         <View

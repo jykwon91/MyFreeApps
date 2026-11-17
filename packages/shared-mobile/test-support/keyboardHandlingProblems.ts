@@ -11,6 +11,14 @@ const HEADER_KEYBOARD_AVOIDING_VIEW = /<HeaderKeyboardAvoidingView[\s/>]/;
 const SHARED_AVOIDING_VIEW = resolve(__dirname, "..", "src", "components", "HeaderKeyboardAvoidingView.tsx");
 // The one bar that pads for the home indicator under the avoiding view, because it lets go of it as the keyboard opens.
 const SHARED_PINNED_BAR = resolve(__dirname, "..", "src", "components", "PinnedBar.tsx");
+// A raw scroll view that holds a field must keep a tap on a button working while the keyboard is up; KeyboardAwareScroll sets it.
+const RAW_SCROLL_VIEWS = new Set(["ScrollView", "FlatList", "SectionList"]);
+const TAP_PERSIST_PROP = "keyboardShouldPersistTaps";
+const TAP_PROBLEM =
+  `a ${[...RAW_SCROLL_VIEWS].join("/")} that holds a text field must set keyboardShouldPersistTaps="handled" (or be a KeyboardAwareScroll); ` +
+  "without it the first tap on a button only dismisses the keyboard";
+// A sheet draws its own scroll view over the screen, so its fields don't sit in the screen's scroll view.
+const SHEET = /<(?:Modal|FormSheet)\b/;
 const SOURCE_EXTENSIONS = [".tsx", ".ts", "/index.tsx", "/index.ts"];
 // The form's own content, padded for the home indicator, scrolls clear of the keyboard with the rest, so it never
 // floats. A horizontal scroll view is a row inside something else, such as a bar, so its content doesn't count.
@@ -220,6 +228,30 @@ function renderedLocalComponents(path: string, code: string): string[] {
 }
 
 /**
+ * Whether this file, or a component it renders from a relative path (at any depth), draws a text field. A rendered
+ * component that is a sheet is left out: its field is in the sheet's own scroll view, which is checked on its own.
+ */
+function holdsTextField(path: string, codes: Map<string, string>, seen: Set<string> = new Set()): boolean {
+  if (seen.has(path)) return false;
+  seen.add(path);
+  const code = codes.get(path) ?? codeOf(path);
+  codes.set(path, code);
+  if (TEXT_INPUT.test(code)) return true;
+  return renderedLocalComponents(path, code).some((child) => !SHEET.test(codes.get(child) ?? codeOf(child)) && holdsTextField(child, codes, seen));
+}
+
+/** The raw scroll views in a file that holds a text field but don't keep a button tap working with the keyboard up. */
+function tapProblemsIn(path: string, codes: Map<string, string>): string[] {
+  const missing = nodesOf(parse(codes.get(path)!)).filter(
+    (node): node is ts.JsxOpeningLikeElement =>
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      RAW_SCROLL_VIEWS.has(node.tagName.getText()) &&
+      !jsxAttribute(node, TAP_PERSIST_PROP),
+  );
+  return missing.length > 0 && holdsTextField(path, codes) ? [TAP_PROBLEM] : [];
+}
+
+/**
  * Every place under the given directories that would leave a field under the keyboard on Android, as
  * "path: why". Android draws edge to edge, so its window no longer shrinks for the keyboard, and only the
  * keyboard controller's views move a field clear of it.
@@ -227,6 +259,7 @@ function renderedLocalComponents(path: string, code: string): string[] {
 export function keyboardHandlingProblems(root: string, directories: string[]): string[] {
   const files = directories.flatMap((directory) => sourceFiles(join(root, directory)));
   const codes = new Map(files.map((path) => [path, codeOf(path)]));
+  const taps = files.flatMap((path) => tapProblemsIn(path, codes).map((problem) => `${relative(root, path)}: ${problem}`));
   const own = files.flatMap((path) => problemsIn(path, codes.get(path)!).map((problem) => `${relative(root, path)}: ${problem}`));
   // A bar is often its own component, so the screen with the avoiding view never mentions the inset itself.
   const barsElsewhere = files
@@ -239,5 +272,5 @@ export function keyboardHandlingProblems(root: string, directories: string[]): s
           ),
         ),
     );
-  return [...own, ...barsElsewhere];
+  return [...own, ...taps, ...barsElsewhere];
 }

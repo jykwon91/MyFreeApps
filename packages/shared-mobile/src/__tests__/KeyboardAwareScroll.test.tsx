@@ -1,9 +1,13 @@
 import { render, screen } from "@testing-library/react-native";
 import { createRef } from "react";
-import { Text } from "react-native";
+import { BottomTabBarHeightContext } from "expo-router/js-tabs";
+import { Platform, StyleSheet, Text } from "react-native";
 import KeyboardAwareScroll from "../components/KeyboardAwareScroll";
 import { KEYBOARD_FIELD_CLEARANCE } from "../constants/keyboard";
 import type { KeyboardAwareScrollRef } from "../types/KeyboardAwareScrollRef";
+
+const mockInsets = { current: { top: 0, left: 0, right: 0, bottom: 0 } };
+jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => mockInsets.current }));
 
 // Under Jest the keyboard controller's scroll view is the library's mock: a ScrollView given the props.
 describe("KeyboardAwareScroll", () => {
@@ -30,5 +34,54 @@ describe("KeyboardAwareScroll", () => {
     const ref = createRef<KeyboardAwareScrollRef>();
     await render(<KeyboardAwareScroll ref={ref} />);
     expect(typeof ref.current?.scrollTo).toBe("function");
+  });
+
+  it("keeps a tap on a button working while the keyboard is open, unless a screen says otherwise", async () => {
+    await render(<KeyboardAwareScroll testID="form" />);
+    expect(screen.getByTestId("form").props.keyboardShouldPersistTaps).toBe("handled");
+  });
+
+  describe("navigation bar inset", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+      mockInsets.current = { top: 0, left: 0, right: 0, bottom: 0 };
+    });
+
+    const contentPadding = () => StyleSheet.flatten(screen.getByTestId("form").props.contentContainerStyle);
+
+    async function renderScroll(): Promise<void> {
+      mockInsets.current = { top: 0, left: 0, right: 0, bottom: 48 };
+      await render(<KeyboardAwareScroll contentContainerStyle={{ padding: 16 }} testID="form" />);
+    }
+
+    it("pads Android's content below the last control by the navigation bar", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      await renderScroll();
+      expect(contentPadding()).toMatchObject({ padding: 16, paddingBottom: 64 });
+    });
+
+    it("leaves Android alone inside the tab navigator, whose tab bar already clears the navigation bar", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      mockInsets.current = { top: 0, left: 0, right: 0, bottom: 48 };
+      await render(
+        <BottomTabBarHeightContext.Provider value={56}>
+          <KeyboardAwareScroll contentContainerStyle={{ padding: 16 }} testID="form" />
+        </BottomTabBarHeightContext.Provider>,
+      );
+      expect(contentPadding()).toEqual({ padding: 16 });
+    });
+
+    it("leaves Android alone when a bar below already pads for the navigation bar", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      mockInsets.current = { top: 0, left: 0, right: 0, bottom: 48 };
+      await render(<KeyboardAwareScroll contentContainerStyle={{ padding: 16 }} padForNavigationBar={false} testID="form" />);
+      expect(contentPadding()).toEqual({ padding: 16 });
+    });
+
+    it("leaves iOS alone, which insets its content itself", async () => {
+      jest.replaceProperty(Platform, "OS", "ios");
+      await renderScroll();
+      expect(contentPadding()).toEqual({ padding: 16 });
+    });
   });
 });

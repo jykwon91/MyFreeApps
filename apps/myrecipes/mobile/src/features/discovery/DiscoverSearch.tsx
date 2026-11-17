@@ -71,7 +71,7 @@ export default function DiscoverSearch() {
   function renderBody() {
     if (search?.status === "searching") {
       return (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.sm, gap: spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.sm, gap: spacing.md }} keyboardShouldPersistTaps="handled">
           <DiscoveryStatus stages={DISCOVERY_SEARCH_STAGES} startedAt={search.startedAt} />
           <DiscoveryResultsSkeleton />
         </ScrollView>

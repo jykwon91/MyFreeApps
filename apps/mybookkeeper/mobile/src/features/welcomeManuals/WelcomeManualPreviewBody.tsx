@@ -1,8 +1,8 @@
 import { SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { sectionsForScope } from "@mybookkeeper/api-client/utils/welcomeManualScope";
-import { EmptyState, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { EmptyState, KeyboardAwareScroll, OptionSheet, PickerField, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
 import { WELCOME_MANUAL_PREVIEW_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import type { WelcomeManualView } from "../../types/WelcomeManualView";
 import { previewScopeOptions } from "./welcomeManualPreviewOptions";
@@ -23,7 +23,7 @@ export default function WelcomeManualPreviewBody({ manual, refreshControl }: Wel
 
   return (
     <>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         {manual.rooms.length > 0 ? (
           <PickerField label={MESSAGES.scopeLabel} onPress={() => setIsPickerOpen(true)} valueLabel={options.find((option) => option.value === activeScope)?.label ?? ""} />
         ) : null}
@@ -36,7 +36,7 @@ export default function WelcomeManualPreviewBody({ manual, refreshControl }: Wel
           <WelcomeManualSection key={section.id} section={section} />
         ))}
         <WelcomeManualPlaceDirectory places={manual.places} />
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}

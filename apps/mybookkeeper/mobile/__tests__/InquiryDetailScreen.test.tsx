@@ -9,6 +9,8 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { saveReplyDraft } from "../src/features/inquiries/replyDrafts";
+import { nodesOfType } from "@platform/mobile/test-support/renderedNodes";
+import type { RenderedNode } from "@platform/mobile/test-support/types/RenderedNode";
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 import { holdWrites } from "../test-support/holdWrites";
@@ -94,6 +96,17 @@ describe("InquiryDetailScreen", () => {
     expect(screen.getByText("Is the room still open?")).toBeTruthy();
     expect(screen.getByText("Memorial Hospital")).toBeTruthy();
     expect(await screen.findByText("Garden room")).toBeTruthy();
+  });
+
+  // The notes field sits in this scroll view: it has to lift the field above the keyboard, and a tap on Save has to
+  // reach the button instead of only closing the keyboard.
+  it("scrolls the notes field above the keyboard and keeps a tap on Save working", async () => {
+    startInquiryServer([anInquiry()]);
+    await renderScreen();
+    await screen.findByRole("header", { name: "Dana Reed" });
+    const [scroll] = nodesOfType(screen.toJSON() as RenderedNode | null, "RCTScrollView");
+    expect(scroll.props.bottomOffset).toBeGreaterThan(0);
+    expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
   });
 
   it("opens the listing an inquiry came in for", async () => {

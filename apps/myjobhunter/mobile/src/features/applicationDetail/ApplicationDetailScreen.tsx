@@ -3,9 +3,8 @@ import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, KeyboardAwareScroll, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
-import { ScrollView } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
 import type { ApplicationDetailScreenProps } from "../../types/ApplicationDetailScreenProps";
@@ -59,9 +58,10 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   const companyName = company.currentData?.name ?? (company.isError ? APPLICATION_MESSAGES.unknownCompany : null);
 
   return (
-    <ScrollView
+    <KeyboardAwareScroll
       contentContainerStyle={{ gap: spacing.xl, padding: spacing.lg }}
       contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
       refreshControl={refreshControl}
       testID="application-detail"
     >
@@ -94,6 +94,6 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
         total={documents.total}
       />
       <ContactsSection applicationId={id} contacts={application.contacts} />
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

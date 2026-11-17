@@ -1,4 +1,3 @@
-import { ScrollView } from "react-native";
 import { confirmSecurityChange } from "../auth/confirmSecurityChange";
 import { useAccountDisplayName } from "../hooks/useAccountDisplayName";
 import { useDataExport } from "../hooks/useDataExport";
@@ -9,6 +8,7 @@ import { useTheme } from "../theme/useTheme";
 import type { SecurityScreenProps } from "../types/SecurityScreenProps";
 import DataPrivacySection from "./DataPrivacySection";
 import DisplayNameSection from "./DisplayNameSection";
+import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import SecurityIntro from "./SecurityIntro";
 import SettingsCard from "./SettingsCard";
 import TwoStepSection from "./TwoStepSection";
@@ -44,9 +44,10 @@ export default function SecurityScreen({
   const { refreshControl } = useRefresh(reloadAll, displayName.hasFailed || twoStep.failure);
 
   return (
-    <ScrollView
+    <KeyboardAwareScroll
       contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
       contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
       refreshControl={refreshControl}
       style={{ backgroundColor: colors.background }}
     >
@@ -56,6 +57,6 @@ export default function SecurityScreen({
         <TwoStepSection confirmOwner={confirmSecurityChange} onTurnOn={onTurnOn} status={twoStep} whatItProtects={content.whatTwoStepProtects} />
       </SettingsCard>
       <DataPrivacySection exportDescription={content.exportDescription} onDeleteAccount={onDeleteAccount} onExport={exportData} />
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }
