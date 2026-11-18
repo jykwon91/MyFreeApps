@@ -204,8 +204,8 @@ describe("adding photos", () => {
     await fireEvent.press(button("Retry photo 1"));
     await screen.findByText(MESSAGES.uploadedOne);
     expect(server.listings[0].photos).toHaveLength(2);
-    expect(screen.queryByText(MESSAGES.uploadsTitle)).toBeNull();
-    expect(heldFiles()).toHaveLength(0);
+    await waitFor(() => expect(screen.queryByText(MESSAGES.uploadsTitle)).toBeNull());
+    await waitFor(() => expect(heldFiles()).toHaveLength(0));
   });
 
   it.each([
@@ -368,7 +368,7 @@ describe("working with a photo", () => {
   it("shows a photo's caption in its tile and in the viewer", async () => {
     startListingsServer({ listings: [aListing({ photos: [aPhoto("a", 0, { caption: "Living room" }), aPhoto("b", 1)] })] });
     await show(<ListingPhotosScreen id="l1" />);
-    expect(screen.getByText("Living room")).toBeTruthy();
+    expect(await screen.findByText("Living room")).toBeTruthy();
     await open("Photo 1 of 2, Living room, Cover");
     expect(screen.getAllByText("Living room")).toHaveLength(2);
   });

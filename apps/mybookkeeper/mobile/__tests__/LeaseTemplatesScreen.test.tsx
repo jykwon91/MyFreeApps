@@ -296,8 +296,9 @@ describe("LeaseTemplateDetailScreen", () => {
     await screen.findByText("lease.docx");
     server.detail = aTemplate({ files: [aFile({ presigned_url: "https://files.example/fresh" })] });
     await fireEvent.press(screen.getByRole("button", { name: "Open lease.docx" }));
-    await act(async () => undefined);
-    expect(mockOpenFile).toHaveBeenCalledWith("https://files.example/fresh", expect.objectContaining({ id: "f1", filename: "lease.docx" }));
+    await waitFor(() =>
+      expect(mockOpenFile).toHaveBeenCalledWith("https://files.example/fresh", expect.objectContaining({ id: "f1", filename: "lease.docx" })),
+    );
   });
 
   it("holds the other files back and shows progress while one opens", async () => {
@@ -307,8 +308,7 @@ describe("LeaseTemplateDetailScreen", () => {
     await show(<LeaseTemplateDetailScreen id="t1" />);
     await screen.findByText("rider.docx");
     await fireEvent.press(screen.getByRole("button", { name: "Open lease.docx" }));
-    await act(async () => undefined);
-    expect(mockOpenFile).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockOpenFile).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("button", { name: "Open rider.docx" }).props.accessibilityState.disabled).toBe(true);
     await act(async () => finish());
     expect(screen.getByRole("button", { name: "Open rider.docx" }).props.accessibilityState.disabled).toBeFalsy();

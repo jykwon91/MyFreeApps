@@ -138,7 +138,7 @@ describe("ticks follow their rows", () => {
       await screen.getByTestId("transactions-list").props.refreshControl.props.onRefresh();
     });
     await screen.findByText("Acme");
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(await screen.findByText("1 selected")).toBeTruthy();
     expect(isTicked(/Acme/)).toBe(false);
     expect(isTicked(/Bolt/)).toBe(true);
   });

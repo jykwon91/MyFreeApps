@@ -133,8 +133,8 @@ describe("Transactions sort and tax filter", () => {
     await fireEvent.press(screen.getByRole("radio", { name: "Yes" }));
     await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
 
-    await waitFor(() => expect(screen.queryByText("Big")).toBeNull());
-    expect(screen.getByText("Mid")).toBeTruthy();
+    expect(await screen.findByText("Mid")).toBeTruthy();
+    expect(screen.queryByText("Big")).toBeNull();
     expect(listParams(server)).toContainEqual(expect.objectContaining({ tax_relevant: true }));
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
     expect(screen.getByText("In tax report")).toBeTruthy();

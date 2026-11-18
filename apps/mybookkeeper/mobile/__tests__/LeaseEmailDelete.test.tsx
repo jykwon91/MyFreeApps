@@ -249,7 +249,7 @@ describe("emailing and deleting a lease", () => {
 
       expect(server.writes[0].method).toBe("delete");
       expect(server.writes[0].url).toBe("/signed-leases/l1");
-      expect(router.back).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(router.back).toHaveBeenCalledTimes(1));
       expect(await screen.findByText("Lease deleted.")).toBeTruthy();
     });
 
@@ -259,8 +259,8 @@ describe("emailing and deleting a lease", () => {
       await renderScreen();
       await pressAndConfirm(DELETE);
 
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/leases"));
       expect(router.back).not.toHaveBeenCalled();
-      expect(router.replace).toHaveBeenCalledWith("/leases");
     });
 
     it("counts a lease that's already gone as deleted", async () => {
@@ -269,7 +269,7 @@ describe("emailing and deleting a lease", () => {
       await renderScreen();
       await pressAndConfirm(DELETE);
 
-      expect(router.back).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(router.back).toHaveBeenCalledTimes(1));
     });
 
     it("counts it as done when the server deleted it but the answer was an error", async () => {

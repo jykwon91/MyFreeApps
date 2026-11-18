@@ -126,8 +126,8 @@ describe("screening on the applicant page", () => {
       const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
       await renderScreen();
       await fireEvent.press(await screen.findByRole("button", { name: "Open KeyCheck" }));
-      expect(openURL).toHaveBeenCalledWith(SAMPLE_PROVIDER.external_url);
       expect(await screen.findByText("I opened KeyCheck. When the report is ready, upload it here.")).toBeTruthy();
+      expect(openURL).toHaveBeenCalledWith(SAMPLE_PROVIDER.external_url);
     });
 
     it("says when it can't get the link", async () => {

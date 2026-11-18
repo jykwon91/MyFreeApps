@@ -1,7 +1,7 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
 import { Provider } from "react-redux";
 import { NO_FILTERS } from "../src/constants/transactionFilters";
@@ -71,8 +71,8 @@ describe("the custom range in the filter sheet", () => {
     await fireEvent.press(screen.getByLabelText(/^To, /));
     await pick("date-picker", new Date(2026, 1, 28));
     await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
-    await waitFor(() => expect(screen.queryByText("January")).toBeNull());
-    expect(screen.getByText("February")).toBeTruthy();
+    expect(await screen.findByText("February")).toBeTruthy();
+    expect(screen.queryByText("January")).toBeNull();
     expect(screen.queryByText("March")).toBeNull();
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
     expect(screen.getByText(/Feb 1, 2026 to Feb 28, 2026/)).toBeTruthy();

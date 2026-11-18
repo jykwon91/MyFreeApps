@@ -257,8 +257,8 @@ describe("TaxFieldOverrideScreen", () => {
   it("stops a text value at the server's 500 characters and rejects a number over its limits", async () => {
     const server = serve(aTaxField({ type: "text", value: "Acme", label: "Employer" }));
     await show();
-    expect(value().props.maxLength).toBe(500);
     await screen.findByText("Employer");
+    expect(value().props.maxLength).toBe(500);
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 

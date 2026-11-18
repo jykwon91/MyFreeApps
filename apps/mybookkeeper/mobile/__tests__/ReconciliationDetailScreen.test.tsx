@@ -3,7 +3,7 @@ import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconc
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
@@ -90,15 +90,9 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-async function settle(): Promise<void> {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-}
-
 async function showDetail(id = "s1"): Promise<void> {
   await render(<ReconciliationDetailScreen id={id} year={YEAR} />, { wrapper });
-  await settle();
+  await waitFor(() => expect(screen.queryByTestId("reconciliation-detail-skeleton")).toBeNull());
 }
 
 beforeEach(() => {
@@ -184,9 +178,8 @@ describe("a 1099 in full", () => {
     await act(async () => {
       await screen.getByTestId("reconciliation-detail").props.refreshControl.props.onRefresh();
     });
-    await settle();
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
     expect(screen.getByText("1099-K · Airbnb")).toBeTruthy();
-    expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
   });
 });
 
@@ -197,7 +190,7 @@ describe("deleting from the detail", () => {
     await fireEvent.press(screen.getByLabelText("Delete the 1099 from Airbnb"));
     const confirm = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((button) => button.text === DELETE.action);
     await act(async () => confirm?.onPress?.());
-    await settle();
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(server.deletes).toEqual([`/reconciliation/sources/s1`]);
     expect(mockBack).toHaveBeenCalled();
   });
@@ -214,7 +207,7 @@ describe("getting there", () => {
   it("opens from a row on the list", async () => {
     serve([aSource()]);
     await render(<ReconciliationScreen />, { wrapper });
-    await settle();
+    await waitFor(() => expect(screen.queryByTestId("reconciliation-skeleton")).toBeNull());
     await fireEvent.press(screen.getByHintText(MESSAGES.openHint));
     expect(mockPush).toHaveBeenCalledWith(`/reconciliation/s1?year=${YEAR}`);
   });
@@ -222,8 +215,7 @@ describe("getting there", () => {
   it("explains what the list is for", async () => {
     serve([]);
     await render(<ReconciliationScreen />, { wrapper });
-    await settle();
-    expect(screen.getByText(MESSAGES.infoNote)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.infoNote)).toBeTruthy();
   });
 
   it("tells a viewer they can't add one, instead of showing a form", async () => {

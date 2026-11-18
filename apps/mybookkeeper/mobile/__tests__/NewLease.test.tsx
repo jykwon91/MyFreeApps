@@ -354,8 +354,10 @@ describe("what goes in the lease", () => {
     await fireEvent.changeText(await screen.findByDisplayValue("Dana Reed"), "Mine");
     server.fields = [aField("Tenant name", { required: true, value: "Pulled again", provenance: "applicant" })];
     await act(async () => {
-      await testStore.dispatch(leaseTemplatesApi.endpoints.getMultiGenerateDefaults.initiate({ template_ids: ["t1"], applicant_id: "a1" }, { forceRefetch: true }));
-      jest.advanceTimersByTime(100);
+      const reload = testStore.dispatch(leaseTemplatesApi.endpoints.getMultiGenerateDefaults.initiate({ template_ids: ["t1"], applicant_id: "a1" }, { forceRefetch: true }));
+      // The answer comes on this test's fake clock, so time has to move while the reload is out.
+      await jest.advanceTimersByTimeAsync(100);
+      await reload;
     });
     expect(screen.getByDisplayValue("Mine")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.reset }));

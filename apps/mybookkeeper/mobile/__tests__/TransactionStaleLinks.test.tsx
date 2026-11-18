@@ -2,7 +2,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, render, screen } from "@testing-library/react-native";
+import { act, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Provider } from "react-redux";
@@ -42,11 +42,9 @@ function Screen({ children }: { children: ReactNode }) {
   );
 }
 
-async function settle() {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+/** The next record's read has been answered (here, as not found), so what's on screen is its final state. */
+async function waitForRequestsToFinish() {
+  await waitFor(() => expect(Object.values(store.getState().api.queries).filter((query) => query?.status === "pending")).toEqual([]));
 }
 
 function income(applicantId: string): Transaction {
@@ -65,26 +63,23 @@ describe("moving to the next transaction in place", () => {
   it("never shows the previous saved vendor while the next one loads", async () => {
     const releases = serve({ "/vendors/vA": { status: 200, data: { id: "vA", name: "Ace Plumbing" } }, "/vendors/vB": { status: 200, data: { id: "vB", name: "Bolt Electric" } } }, new Set(["/vendors/vB"]));
     const view = await render(<TransactionSavedVendorFact vendorId="vA" />, { wrapper: Screen });
-    await settle();
-    expect(screen.getByText("Ace Plumbing")).toBeTruthy();
+    expect(await screen.findByText("Ace Plumbing")).toBeTruthy();
 
     await view.rerender(<TransactionSavedVendorFact vendorId="vB" />);
     expect(screen.queryByText("Ace Plumbing")).toBeNull();
     expect(screen.getByText(SAVED_VENDOR_MESSAGES.unknown)).toBeTruthy();
 
     await act(async () => releases["/vendors/vB"]());
-    await settle();
-    expect(screen.getByText("Bolt Electric")).toBeTruthy();
+    expect(await screen.findByText("Bolt Electric")).toBeTruthy();
   });
 
   it("shows the unknown vendor, not the previous one, when the next vendor is gone", async () => {
     serve({ "/vendors/vA": { status: 200, data: { id: "vA", name: "Ace Plumbing" } } }, new Set());
     const view = await render(<TransactionSavedVendorFact vendorId="vA" />, { wrapper: Screen });
-    await settle();
-    expect(screen.getByText("Ace Plumbing")).toBeTruthy();
+    expect(await screen.findByText("Ace Plumbing")).toBeTruthy();
 
     await view.rerender(<TransactionSavedVendorFact vendorId="vB" />);
-    await settle();
+    await waitForRequestsToFinish();
     expect(screen.queryByText("Ace Plumbing")).toBeNull();
     expect(screen.getByText(SAVED_VENDOR_MESSAGES.unknown)).toBeTruthy();
   });
@@ -92,26 +87,23 @@ describe("moving to the next transaction in place", () => {
   it("never shows the previous tenant while the next one loads", async () => {
     const releases = serve({ "/applicants/aA": { status: 200, data: { id: "aA", legal_name: "Jane Smith" } }, "/applicants/aB": { status: 200, data: { id: "aB", legal_name: "Omar Reyes" } } }, new Set(["/applicants/aB"]));
     const view = await render(<TransactionTenantLink canWrite={false} transaction={income("aA")} />, { wrapper: Screen });
-    await settle();
-    expect(screen.getByText("Linked to Jane Smith")).toBeTruthy();
+    expect(await screen.findByText("Linked to Jane Smith")).toBeTruthy();
 
     await view.rerender(<TransactionTenantLink canWrite={false} transaction={income("aB")} />);
     expect(screen.queryByText(/Jane Smith/)).toBeNull();
     expect(screen.getByText("Linked to a tenant")).toBeTruthy();
 
     await act(async () => releases["/applicants/aB"]());
-    await settle();
-    expect(screen.getByText("Linked to Omar Reyes")).toBeTruthy();
+    expect(await screen.findByText("Linked to Omar Reyes")).toBeTruthy();
   });
 
   it("shows a generic tenant, not the previous one, when the next tenant is gone", async () => {
     serve({ "/applicants/aA": { status: 200, data: { id: "aA", legal_name: "Jane Smith" } } }, new Set());
     const view = await render(<TransactionTenantLink canWrite={false} transaction={income("aA")} />, { wrapper: Screen });
-    await settle();
-    expect(screen.getByText("Linked to Jane Smith")).toBeTruthy();
+    expect(await screen.findByText("Linked to Jane Smith")).toBeTruthy();
 
     await view.rerender(<TransactionTenantLink canWrite={false} transaction={income("aB")} />);
-    await settle();
+    await waitForRequestsToFinish();
     expect(screen.queryByText(/Jane Smith/)).toBeNull();
     expect(screen.getByText("Linked to a tenant")).toBeTruthy();
   });
