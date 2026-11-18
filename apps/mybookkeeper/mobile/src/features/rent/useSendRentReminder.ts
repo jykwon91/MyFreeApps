@@ -8,6 +8,7 @@ import { LOST_SEND_HOLD_MS, REMINDER_MESSAGES } from "../../constants/rentRemind
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { sendOutcome } from "./rentReminderDisplay";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 function refusal(error: unknown): string | null {
   switch (httpStatus(error)) {
@@ -83,6 +84,7 @@ export function useSendRentReminder(applicantId: string, name: string | null) {
       if (outcome.isProblem) setProblem(outcome.message);
       showToast(outcome.message, outcome.isProblem ? "error" : "success");
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const refused = refusal(error);
       if (httpStatus(error) === 409) setSentDueDate(preview.due_date);
       if (refused) showToast(refused, "error");

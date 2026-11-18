@@ -10,6 +10,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import PolicyAttachmentSheet from "./PolicyAttachmentSheet";
 import { attachmentRemoveFailure } from "./policyFailure";
 import PolicyFileRow from "./PolicyFileRow";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface PolicyAttachmentsSectionProps {
   policyId: string;
@@ -38,6 +39,7 @@ export default function PolicyAttachmentsSection({ policyId, attachments }: Poli
       await removeAttachment({ policyId, attachmentId: file.id }).unwrap();
       showToast(POLICY_ATTACHMENT_MESSAGES.removed);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(attachmentRemoveFailure(error), "error");
     } finally {
       isRemoving.current = false;

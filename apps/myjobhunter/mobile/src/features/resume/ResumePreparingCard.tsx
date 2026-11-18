@@ -8,6 +8,7 @@ import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeSessionCardProps } from "../../types/ResumeSessionCardProps";
 import ResumeCard from "./ResumeCard";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * The background preparation, from the session alone so it's right after leaving and coming back:
@@ -27,6 +28,7 @@ export default function ResumePreparingCard({ session }: ResumeSessionCardProps)
     try {
       await retryPreparation(session.id).unwrap();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(refinementFailure(error), "error");
     }
   }

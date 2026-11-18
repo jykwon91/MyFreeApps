@@ -25,6 +25,7 @@ import { REPLY_SEND_OPTIONS } from "./replySendOptions";
 import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_SEND_LABELS, REPLY_SEND_WORDS, replyBlock, replySendingAnnouncement } from "./replyStatus";
 import { replyToSend } from "./replyToSend";
 import { useReplyDraft } from "./useReplyDraft";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function InquiryReplyBody({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -113,7 +114,8 @@ export default function InquiryReplyBody({ id }: { id: string }) {
       const { subject, body } = await renderTemplate({ inquiryId: id, templateId: choice }).unwrap();
       setRendered({ subject, body });
       change({ subject, body, templateId: choice });
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast("I couldn't build that template. Want to try again?", "error");
     }
   }

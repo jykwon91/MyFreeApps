@@ -16,7 +16,7 @@ export function useAttributeTenant(transactionId: string) {
   async function link(tenant: TenantChoice): Promise<void> {
     const result = await write.run(() => attribute({ transaction_id: transactionId, applicant_id: tenant.id }).unwrap());
     if (result === "done") showToast(`${MESSAGES.linked} ${tenant.name}.`);
-    else if (result !== "busy") showToast(TENANT_LINK_FAILURE[result], "error");
+    else if (result !== "busy" && result !== "cancelled") showToast(TENANT_LINK_FAILURE[result], "error");
   }
 
   function askToLink(tenant: TenantChoice): void {

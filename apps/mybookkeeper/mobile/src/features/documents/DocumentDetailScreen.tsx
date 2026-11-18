@@ -18,6 +18,7 @@ import DocumentReferenceChip from "./DocumentReferenceChip";
 import ReferenceOnlyButton from "./ReferenceOnlyButton";
 import DocumentStatusChip from "./DocumentStatusChip";
 import { useProcessingPoll } from "./useProcessingPoll";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function DocumentDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -62,6 +63,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
     try {
       await reExtract(id).unwrap();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.readAgainFailed));
     }
   }
@@ -78,6 +80,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
       await deleteDocument(id).unwrap();
       goBackOr("/");
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.deleteFailed));
       // Already gone is the outcome the user wanted: the screen has nothing left to show.
       if (httpStatus(error) === 404) goBackOr("/");

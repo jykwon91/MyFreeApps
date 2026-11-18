@@ -3,6 +3,7 @@ import { type FileForUpload, filePart } from "@platform/mobile";
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
 import { useRef, useState } from "react";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Sends the statement once, however many times the button is tapped, and keeps the answer. */
 export function useImportBankCsv() {
@@ -23,6 +24,7 @@ export function useImportBankCsv() {
       const imported = await importBankCsv({ form, propertyId: propertyId ?? undefined }).unwrap();
       setResult(imported);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(bankImportFailure(error));
     } finally {
       isSending.current = false;

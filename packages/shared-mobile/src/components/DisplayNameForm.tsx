@@ -1,4 +1,5 @@
 import { characterCounter } from "@platform/core/utils/characterCounter";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { useState } from "react";
 import { View } from "react-native";
@@ -9,7 +10,7 @@ import type { DisplayNameFormProps } from "../types/DisplayNameFormProps";
 import FormField from "./FormField";
 import LoadingButton from "./LoadingButton";
 
-/** The name, saved with its own button as on the website. A failed save keeps what was typed. */
+/** The name, saved with its own button as on the website. A failed save keeps what was typed; one a cache reset called off says nothing. */
 export default function DisplayNameForm({ initialName, source }: DisplayNameFormProps) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
@@ -29,8 +30,8 @@ export default function DisplayNameForm({ initialName, source }: DisplayNameForm
       await saveName(trimmed);
       setSavedName(trimmed);
       showToast(MESSAGES.displayNameSaved, "success");
-    } catch {
-      showToast(MESSAGES.displayNameSaveFailed, "error");
+    } catch (error) {
+      if (!isCancelledRequest(error)) showToast(MESSAGES.displayNameSaveFailed, "error");
     } finally {
       setIsSaving(false);
     }

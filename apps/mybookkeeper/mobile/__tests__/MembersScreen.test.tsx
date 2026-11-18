@@ -811,6 +811,54 @@ describe("a write that is cancelled or outlives the screen", () => {
     expect(membersGets(server)).toBe(before);
   });
 
+  /** Gives any recheck of the invites time to finish, so whatever it would say has been said. */
+  async function settle(): Promise<void> {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+  }
+
+  it("says nothing when the cache is reset while an invite is on its way", async () => {
+    const server = serve();
+    server.hanging = `POST /organizations/${ORG}/invites`;
+    server.refuse[`POST /organizations/${ORG}/invites`] = { status: 500 };
+    await show();
+    await screen.findByText(MESSAGES.people(2));
+    await press(MESSAGES.inviteSomeone);
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(MESSAGES.email)), "new@example.com");
+    await press(MESSAGES.sendInvite);
+    await waitFor(() => expect(server.release).not.toBeNull());
+
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => server.release?.());
+    await settle();
+
+    expect(screen.queryByText(MESSAGES.couldntSend)).toBeNull();
+    expect(screen.queryByText(MESSAGES.couldntSendServer)).toBeNull();
+    expect(screen.queryByText(MESSAGES.inviteSent("new@example.com"))).toBeNull();
+  });
+
+  it("says nothing when the cache is reset while an invite is being cancelled", async () => {
+    const server = serve({ invites: [anInvite()] });
+    server.hanging = `DELETE /organizations/${ORG}/invites/i1`;
+    server.refuse[`DELETE /organizations/${ORG}/invites/i1`] = { status: 500 };
+    await show();
+    await press(MESSAGES.cancelInvite);
+    await screen.findByText(MESSAGES.cancelling);
+
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => server.release?.());
+    await settle();
+
+    expect(screen.queryByText(MESSAGES.didntGoThrough)).toBeNull();
+    expect(screen.queryByText(MESSAGES.unsure)).toBeNull();
+    expect(screen.queryByText(MESSAGES.inviteCancelled("new@example.com"))).toBeNull();
+  });
+
   it("still looks again and says so when the answer is lost and the screen is open", async () => {
     const server = serve();
     server.refuse[ROLE] = { status: 500 };

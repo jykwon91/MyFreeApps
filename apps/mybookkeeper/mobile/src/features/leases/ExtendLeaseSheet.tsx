@@ -20,6 +20,7 @@ import {
 import DatePicker from "../shell/DatePicker";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { extendLeaseFailure, isMissingTenantEmail } from "./extendLeaseFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface ExtendLeaseSheetProps {
   leaseId: string;
@@ -107,6 +108,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
       const longDate = formatLongDate(newEndsOn);
       finish(emailTenant ? extendedAndEmailing(longDate) : extendedTo(longDate));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const known = extendLeaseFailure(error);
       if (isMissingTenantEmail(error)) {
         setEmailTenant(false);

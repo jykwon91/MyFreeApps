@@ -22,6 +22,7 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 import { ANALYZE_MESSAGES as MESSAGES } from "../../constants/analyze";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { useAnnounceNewVerdict } from "./useAnnounceNewVerdict";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * The website's /analyze page: read a link or pasted text, wait while the AI scores it, then show
@@ -174,7 +175,8 @@ export function useAnalyzeFlow() {
       dispatch(markLastAnalysisApplied({ analysisId, applicationId: application.id }));
       showToast(MESSAGES.added);
       if (isMounted.current) viewApplications();
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(MESSAGES.couldntAdd, "error");
     } finally {
       if (isMounted.current) setIsApplying(false);

@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { leaseImported } from "../../constants/leaseImport";
 import { leaseImportFailure } from "./leaseImportFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Sends the form and its files, then opens the lease it made. */
 export function useImportLease() {
@@ -36,7 +37,7 @@ export function useImportLease() {
       setOpenedId(lease.id);
     } catch (error) {
       isSending.current = false;
-      setFailure(leaseImportFailure(error));
+      if (!isCancelledRequest(error)) setFailure(leaseImportFailure(error));
     } finally {
       setIsBusy(false);
     }

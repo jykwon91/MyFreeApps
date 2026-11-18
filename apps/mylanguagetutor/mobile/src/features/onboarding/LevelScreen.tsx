@@ -26,8 +26,9 @@ export default function LevelScreen() {
   }
 
   async function submit(): Promise<void> {
-    if (await save()) router.dismissTo(PRACTICE_PATH);
-    else showToast(ONBOARDING_COPY.saveFailed, "error");
+    const outcome = await save();
+    if (outcome === "saved") router.dismissTo(PRACTICE_PATH);
+    else if (outcome === "failed") showToast(ONBOARDING_COPY.saveFailed, "error");
   }
 
   return (

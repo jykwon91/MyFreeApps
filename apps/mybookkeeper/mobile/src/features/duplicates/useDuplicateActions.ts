@@ -6,7 +6,7 @@ import {
 } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
-import { isCancelledRequest } from "@mybookkeeper/api-client/utils/isCancelledRequest";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { computeSurvivingId } from "@mybookkeeper/api-client/utils/mergeDefaults";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { useToast } from "@platform/mobile";

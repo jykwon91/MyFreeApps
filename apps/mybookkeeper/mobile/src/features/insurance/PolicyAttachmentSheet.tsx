@@ -13,6 +13,7 @@ import HeldFilesList from "../uploads/HeldFilesList";
 import { useHeldFiles } from "../uploads/useHeldFiles";
 import { useHeldPhotoPicker } from "../uploads/useHeldPhotoPicker";
 import { attachmentUploadFailure } from "./policyFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId: string; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -58,6 +59,8 @@ export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId:
           held.drop(file.uri);
           added += 1;
         } catch (error) {
+          // Called off by a cache reset: the rest would go out for whoever is signed in now.
+          if (isCancelledRequest(error)) return;
           const reason = attachmentUploadFailure(error);
           problems.push(files.length === 1 ? reason : POLICY_ATTACHMENT_MESSAGES.failedNamed(file.name, reason));
         }

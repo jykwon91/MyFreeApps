@@ -2,6 +2,7 @@ import { useAutoReconcileMutation } from "@mybookkeeper/api-client/store/reconci
 import { compareFailureMessage, compareOutcome } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export function useCompareWithRecords(year: number) {
   const { showToast } = useToast();
@@ -15,6 +16,7 @@ export function useCompareWithRecords(year: number) {
       const { message, variant } = compareOutcome(year, await autoReconcile({ tax_year: year }).unwrap());
       showToast(message, variant);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(compareFailureMessage(error), "error");
     } finally {
       isSending.current = false;

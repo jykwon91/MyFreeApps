@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { LEASE_FILE_MESSAGES } from "../../constants/leaseFiles";
 import type { LeaseFileAction } from "../../types/LeaseFileAction";
 import { changeFileTypeFailure, removeFileFailure } from "./leaseFileFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Changes a file's type or removes it, one at a time. The failure is told in fixed words, never the server's. */
 export function useLeaseFileActions(leaseId: string): {
@@ -29,6 +30,7 @@ export function useLeaseFileActions(leaseId: string): {
       await action();
       showToast(success);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       if (isLeaseAttachmentLockedFailure(error)) void refetch();
       showToast(failure(error), "error");
     } finally {

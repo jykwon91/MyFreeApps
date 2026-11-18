@@ -1,7 +1,7 @@
 import { organizationsApi, useCreateOrganizationMutation, useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { isCancelledRequest } from "@mybookkeeper/api-client/utils/isCancelledRequest";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { useToast } from "@platform/mobile";
 import { useDispatch } from "react-redux";

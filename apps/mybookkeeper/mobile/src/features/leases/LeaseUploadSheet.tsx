@@ -11,6 +11,7 @@ import HeldFileButtons from "../uploads/HeldFileButtons";
 import HeldFilesList from "../uploads/HeldFilesList";
 import { useHeldFiles } from "../uploads/useHeldFiles";
 import { leaseUploadFailure } from "./leaseUploadFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface LeaseUploadSheetProps {
   leaseId: string;
@@ -56,6 +57,7 @@ export default function LeaseUploadSheet({ leaseId, initialKind, onClose }: Leas
       }
       onClose();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(leaseUploadFailure(error));
     } finally {
       if (added > 0) showToast(added === 1 ? addedFile(lastName) : addedFiles(added));

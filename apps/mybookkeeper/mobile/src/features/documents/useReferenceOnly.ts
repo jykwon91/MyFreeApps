@@ -6,6 +6,7 @@ import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { askOnce } from "../../lib/askOnce";
 import { referenceOnlyFailureMessage } from "./referenceOnlyFailureMessage";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Marking a document reference-only removes its transactions, so that asks first; unmarking doesn't. */
 export function useReferenceOnly(document: Document) {
@@ -18,6 +19,7 @@ export function useReferenceOnly(document: Document) {
       const result = await toggleEscrow({ id: document.id, is_escrow_paid: isReferenceOnly }).unwrap();
       showToast(isReferenceOnly ? referenceOnlyMarkedMessage(result.transactions_removed) : REFERENCE_ONLY_COPY.unmarked, "success");
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(referenceOnlyFailureMessage(error), "error");
     }
   }

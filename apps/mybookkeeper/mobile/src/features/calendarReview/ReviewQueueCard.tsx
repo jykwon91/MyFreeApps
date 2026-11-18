@@ -13,6 +13,7 @@ import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { addFailure, dismissFailure, ignoreFailure } from "./reviewQueueFailures";
 import { reviewItemChannel, reviewItemDetails, reviewItemListingKey, reviewItemSubject, reviewQueueSpokenLabel } from "./reviewQueueDisplay";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface ReviewQueueCardProps {
   item: ReviewQueueItem;
@@ -36,6 +37,7 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
       await resolve({ itemId: item.id, body: { listing_id: listingId } }).unwrap();
       showToast(REVIEW_MESSAGES.added);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(addFailure(error), "error");
     }
   }
@@ -45,6 +47,7 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
       await ignore({ itemId: item.id, body: { source_listing_id: reviewItemListingKey(item) } }).unwrap();
       showToast(REVIEW_MESSAGES.ignored);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(ignoreFailure(error), "error");
     }
   }
@@ -54,6 +57,7 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
       await dismiss(item.id).unwrap();
       showToast(REVIEW_MESSAGES.dismissed);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(dismissFailure(error), "error");
     }
   }

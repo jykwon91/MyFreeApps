@@ -19,7 +19,8 @@ export default function ResumeDownloadButton({ job }: ResumeDownloadButtonProps)
       if (url) await openLink(url);
       else showToast(MESSAGES.unsafeDownload, "error");
     } catch (error) {
-      showToast(writeFailure(error, MESSAGES.couldntDownloadOriginal, MESSAGES.uploadGone), "error");
+      const message = writeFailure(error, MESSAGES.couldntDownloadOriginal, MESSAGES.uploadGone);
+      if (message) showToast(message, "error");
     }
   }
 

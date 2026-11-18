@@ -10,6 +10,7 @@ import { askOnce } from "../../lib/askOnce";
 import { blockerMessage, gmailMessage, sendExplanation, sendQuestion, sentMessage } from "./receiptDisplay";
 import { sendFailure } from "./receiptFailure";
 import { useDropReceipt } from "./useDropReceipt";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Sends one receipt, after asking. The server sends at most once, so a retry is always safe;
@@ -65,6 +66,7 @@ export function useSendReceipt(reload: () => Promise<PendingReceiptListResponse 
       }).unwrap();
       finish(receipt, sentMessage(receipt, result.receipt_number));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       await explain(receipt, sendFailure(error));
     } finally {
       isActing.current = false;

@@ -6,6 +6,7 @@ import { Alert } from "react-native";
 import { LEASE_MESSAGES, markAs, markedAs } from "../../constants/leases";
 import { leaseStatusIsFinal, leaseStatusLabel, leaseStatusMoves } from "./leaseDisplay";
 import { leaseStatusFailure } from "./leaseStatusFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function LeaseStatusControl({ leaseId, status }: { leaseId: string; status: SignedLeaseStatus }) {
   const { showToast } = useToast();
@@ -22,6 +23,7 @@ export default function LeaseStatusControl({ leaseId, status }: { leaseId: strin
       await updateLease({ leaseId, data: { status: next } }).unwrap();
       showToast(markedAs(leaseStatusLabel(next)));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(leaseStatusFailure(error), "error");
     }
   }

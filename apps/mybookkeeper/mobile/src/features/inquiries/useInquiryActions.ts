@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import { Alert } from "react-native";
 import { stageLabel } from "./inquiryDisplay";
 import { inquiryWriteFailure } from "./inquiryFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export function useInquiryActions(id: string) {
   const { showToast } = useToast();
@@ -30,6 +31,7 @@ export function useInquiryActions(id: string) {
       showToast(success);
       return true;
     } catch (error) {
+      if (isCancelledRequest(error)) return false;
       showToast(inquiryWriteFailure(error, failure), "error");
       return false;
     } finally {

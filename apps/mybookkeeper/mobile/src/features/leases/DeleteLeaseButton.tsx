@@ -6,6 +6,7 @@ import { deleteLeaseLabel, deleteLeaseTitle, LEASE_MESSAGES } from "../../consta
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { askOnce } from "../../lib/askOnce";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface DeleteLeaseButtonProps {
   leaseId: string;
@@ -40,6 +41,7 @@ export default function DeleteLeaseButton({ leaseId, applicantId, tenantName }: 
       await deleteLease({ leaseId, applicantId }).unwrap();
       finish();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const status = httpStatus(error);
       if (status === 404) finish();
       else if (status === 403) showToast(UPLOAD_MESSAGES.notAllowed, "error");

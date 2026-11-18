@@ -56,7 +56,8 @@ export default function CookLogModal({
       reset();
       onClose();
     } catch (error) {
-      showError(recipeWriteErrorMessage(error, "logCook"));
+      const message = recipeWriteErrorMessage(error, "logCook");
+      if (message) showError(message);
     }
   }
 

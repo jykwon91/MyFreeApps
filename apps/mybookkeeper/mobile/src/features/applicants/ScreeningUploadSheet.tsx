@@ -10,6 +10,7 @@ import { screeningOutcomeLabel } from "./applicantDisplay";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import { useHeldFile } from "../uploads/useHeldFile";
 import { screeningUploadFailure } from "./screeningUploadFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: { applicantId: string; isOpen: boolean; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -58,6 +59,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
       onClose();
       showToast(SCREENING_MESSAGES.uploaded);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(screeningUploadFailure(error));
     } finally {
       isSubmitting.current = false;

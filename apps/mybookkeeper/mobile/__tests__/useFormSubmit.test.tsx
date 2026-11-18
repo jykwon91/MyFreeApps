@@ -32,6 +32,20 @@ describe("useFormSubmit", () => {
     expect(result.current.failure).toBeNull();
   });
 
+  it("resolves false and records no failure when a cache reset calls the save off", async () => {
+    const { result } = await renderHook(() => useFormSubmit());
+
+    let landed = true;
+    await act(async () => {
+      // What RTK Query rejects with when a sign-out or workspace switch aborts the request.
+      landed = await result.current.submit(() => Promise.reject({ name: "AbortError", message: "Aborted" }), () => "failed");
+    });
+
+    expect(landed).toBe(false);
+    expect(result.current.failure).toBeNull();
+    expect(result.current.isBusy).toBe(false);
+  });
+
   it("is busy while saving and refuses a second save started in the same moment", async () => {
     const { result } = await renderHook(() => useFormSubmit());
     let finish: () => void = () => undefined;

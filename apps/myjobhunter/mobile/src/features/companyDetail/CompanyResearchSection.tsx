@@ -10,6 +10,7 @@ import type { CompanyResearchSectionProps } from "../../types/CompanyResearchSec
 import SectionHeading from "../applicationDetail/SectionHeading";
 import ResearchBody from "./ResearchBody";
 import ResearchSkeleton from "./ResearchSkeleton";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** The website's AI research panel: run it, see it, run it again. */
 export default function CompanyResearchSection({ companyId, companyName }: CompanyResearchSectionProps) {
@@ -30,6 +31,7 @@ export default function CompanyResearchSection({ companyId, companyName }: Compa
       await triggerResearch(companyId).unwrap();
       showToast(MESSAGES.ready);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(researchFailureMessage(researchRunFailure(error).reason, MESSAGES.couldntRun), "error");
     }
   }

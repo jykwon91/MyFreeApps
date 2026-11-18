@@ -8,6 +8,7 @@ import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWri
 import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import api from "@platform/core/lib/api";
+import { baseApi } from "@platform/core/store/baseApi";
 import { DISCARD_MESSAGES, fieldErrorsSummary, type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
@@ -370,6 +371,26 @@ describe("creating", () => {
     await press(MESSAGES.create);
     await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
     expect(sent.filter((config) => config.method === "post")).toHaveLength(2);
+  });
+
+  it("says nothing about a create that signing out called off, and keeps what was typed", async () => {
+    await show();
+    await fillMinimalRecipe();
+    reply = { status: 500, data: { detail: "boom" } };
+    const open = holdResponses();
+    await press(MESSAGES.create);
+    await waitFor(() => expect(sent.some((config) => config.method === "post")).toBe(true));
+
+    // What signing out or changing account does to the cache: RTK Query aborts the create on its way.
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => open());
+
+    expect(screen.queryByText(RECIPE_WRITE_MESSAGES.serverTrouble)).toBeNull();
+    expect(screen.queryByText(UNSURE)).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Title, required").props.value).toBe("Tomato soup");
   });
 
   it("shows the server's own reason when it refuses the recipe", async () => {

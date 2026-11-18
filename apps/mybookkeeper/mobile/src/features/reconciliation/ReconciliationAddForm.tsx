@@ -13,6 +13,7 @@ import PickerField from "../transactions/PickerField";
 import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
 import { sourceTypeLabel } from "./reconciliationDisplay";
 import { addFailureMessage } from "./reconciliationFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ReconciliationAddForm({ year }: { year: number }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -57,8 +58,8 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
       showToast(MESSAGES.added);
       setIsLeaving(true);
     } catch (error) {
-      setFailure(addFailureMessage(error));
       isSending.current = false;
+      if (!isCancelledRequest(error)) setFailure(addFailureMessage(error));
     }
   }
 

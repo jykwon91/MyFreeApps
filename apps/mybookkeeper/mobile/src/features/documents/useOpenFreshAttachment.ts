@@ -1,6 +1,7 @@
 import { downloadFailureMessage, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { openAttachmentFile } from "./openDocumentFile";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface OpenableFile {
   id: string;
@@ -30,6 +31,7 @@ export function useOpenFreshAttachment<File extends OpenableFile>(
       if (!url) throw new Error("This file has no link");
       await openAttachmentFile(url, file);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(downloadFailureMessage(error, couldntOpenMessage), "error");
     } finally {
       isOpening.current = false;

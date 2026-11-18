@@ -37,6 +37,7 @@ import BoardFields from "./BoardFields";
 import BoldText from "./BoldText";
 import JSearchFields from "./JSearchFields";
 import PrefillSkeleton from "./PrefillSkeleton";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * The website's new and edit saved-search dialogs as one sheet. A new JSearch search is filled in
@@ -89,7 +90,8 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
     if (form.source === "jsearch" && saveAsDefaults) {
       try {
         await updateProfile({ discovery_defaults: discoveryDefaultsFrom(prefill.profile?.discovery_defaults, form.jsearch) }).unwrap();
-      } catch {
+      } catch (error) {
+        if (isCancelledRequest(error)) return;
         // The search was made; this says so, rather than the server's reason the defaults weren't kept.
         showToast(ACTIONS.defaultsFailed, "error");
         onClose();

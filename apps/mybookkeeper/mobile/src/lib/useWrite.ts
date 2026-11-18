@@ -1,8 +1,8 @@
 import type { WriteFailure } from "@mybookkeeper/api-client/types/write/write-failure";
 import { writeFailure } from "@mybookkeeper/api-client/utils/writeFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { useRef, useState } from "react";
-
-type WriteResult = WriteFailure | "done" | "busy";
+import type { WriteResult } from "../types/WriteResult";
 
 interface RunOptions {
   /** For a write after which the screen goes away: it can still be tapped while it slides off. */
@@ -16,7 +16,10 @@ export function useWrite() {
   const [error, setError] = useState<unknown>(null);
   const isSending = useRef(false);
 
-  /** "done" when the write went through, "busy" when one was already in flight (and nothing was sent), or why it failed. */
+  /**
+   * "done" when the write went through, "busy" when one was already in flight (and nothing was sent),
+   * "cancelled" when a cache reset called it off (nothing is recorded, so nothing is shown), or why it failed.
+   */
   async function run(action: () => Promise<unknown>, { staysLocked = false }: RunOptions = {}): Promise<WriteResult> {
     if (isSending.current) return "busy";
     isSending.current = true;
@@ -29,6 +32,7 @@ export function useWrite() {
       return "done";
     } catch (caught) {
       isSending.current = false;
+      if (isCancelledRequest(caught)) return "cancelled";
       const reason = writeFailure(caught);
       setFailure(reason);
       setError(caught);

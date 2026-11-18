@@ -6,6 +6,7 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { storeSession, tokens } from "@platform/mobile/test-support/storedSession";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
@@ -168,5 +169,27 @@ describe("onboarding", () => {
     expect(screen).toHavePathname("/onboarding/level");
     expect(screen.getByRole("radio", { name: "I can hold a conversation" })).toBeChecked();
     expect(sent.filter((request) => request.route === "PUT /profile")).toHaveLength(1);
+  });
+
+  it("says nothing about a save that signing out called off", async () => {
+    let answer: (reply: FakeReply) => void = () => undefined;
+    const sent = serveNewLearner({ "PUT /profile": () => new Promise<FakeReply>((resolve) => (answer = resolve)) });
+    await renderApp();
+    await chooseSpanish();
+
+    await fireEvent.press(screen.getByRole("radio", { name: "I can hold a conversation" }));
+    await fireEvent.press(screen.getByRole("button", { name: ONBOARDING_COPY.continue }));
+    await waitFor(() => expect(sent.some((request) => request.route === "PUT /profile")).toBe(true));
+
+    // What signing out or changing account does to the cache: RTK Query aborts the save on its way.
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => {
+      answer({ status: 500, data: {} });
+    });
+
+    expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveFailed })).toBeNull();
+    expect(screen).toHavePathname("/onboarding/level");
   });
 });

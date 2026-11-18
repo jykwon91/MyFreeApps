@@ -1,6 +1,7 @@
 import { RESUME_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/resumeUploadLimits";
 import { useUploadResumeMutation } from "@myjobhunter/api-client/store/resumesApi";
 import { resumeUploadProblem } from "@myjobhunter/api-client/utils/resumeUploadProblem";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { discardFile, filePart, useToast, type FileForUpload } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
@@ -87,7 +88,8 @@ export function useResumeUpload(): ResumeUploadControls {
     } catch (error) {
       // Only a file the server never answered about is kept: any answer means sending it again won't change it.
       keep(isNoResponse(error) ? file : null);
-      showToast(resumeUploadFailure(null, error), "error");
+      // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
+      if (!isCancelledRequest(error)) showToast(resumeUploadFailure(null, error), "error");
     }
   }
 

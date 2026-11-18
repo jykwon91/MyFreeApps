@@ -4,6 +4,7 @@ import type { DocumentReaderMessages } from "../../types/DocumentReaderMessages"
 import type { DocumentReaders } from "../../types/DocumentReaders";
 import { type HeldFilePick, useHeldFile } from "../uploads/useHeldFile";
 import { documentReadFailure } from "./documentReadFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Reads a document the moment it's picked, as the website does: picking is the whole
@@ -30,6 +31,7 @@ export function useReadDocument<TDraft>(
       setReadName(name);
       if (release) held.forget();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(documentReadFailure(error, messages));
     } finally {
       isBusy.current = false;

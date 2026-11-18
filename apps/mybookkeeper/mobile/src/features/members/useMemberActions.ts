@@ -4,7 +4,7 @@ import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgM
 import { useToast } from "@platform/mobile";
 import { MEMBERS_MESSAGES as MESSAGES, ROLE_WITH_ARTICLE } from "../../constants/members";
 import { OWNER_ONLY_ADMIN_MESSAGE } from "@mybookkeeper/api-client/constants/ownerOnlyRefusal";
-import { isCancelledRequest } from "@mybookkeeper/api-client/utils/isCancelledRequest";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isOwnerOnlyRefusal } from "@mybookkeeper/api-client/utils/isOwnerOnlyRefusal";
 import { useDispatch } from "react-redux";

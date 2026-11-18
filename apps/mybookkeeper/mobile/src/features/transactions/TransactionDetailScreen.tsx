@@ -20,6 +20,7 @@ import TransactionTaxFacts from "./TransactionTaxFacts";
 import TransactionTenantLink from "./TransactionTenantLink";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useApproveTransaction } from "./useApproveTransaction";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function TransactionDetailScreen({ id, reviewQueue }: { id: string; reviewQueue: TransactionListParams | null }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -76,6 +77,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
             showToast("Deleted.");
             goBackOr("/money");
           } catch (deleteError) {
+            if (isCancelledRequest(deleteError)) return;
             if (httpStatus(deleteError) === 404) {
               showToast("That one's already gone.");
               goBackOr("/money");

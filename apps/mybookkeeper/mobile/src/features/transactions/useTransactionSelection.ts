@@ -10,6 +10,7 @@ import { useToast } from "@platform/mobile";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TRANSACTION_SELECTION_MESSAGES as MESSAGES } from "../../constants/transactionSelection";
 import type { ListRowsStatus } from "../../types/ListRowsStatus";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Which transactions are ticked while picking several, as the website keeps them. "Select all" asks the
@@ -55,8 +56,8 @@ export function useTransactionSelection(rows: readonly Transaction[], params: Tr
       .then((matching) => {
         if (!superseded) setTicks((current) => (current === null ? current : intersectTicks(current, matching, checkKey)));
       })
-      .catch(() => {
-        if (superseded) return;
+      .catch((error: unknown) => {
+        if (superseded || isCancelledRequest(error)) return;
         setTicks((current) => (current === null ? current : NO_TICKS));
         showToast(MESSAGES.checkFailed, "error");
       });
@@ -105,7 +106,8 @@ export function useTransactionSelection(rows: readonly Transaction[], params: Tr
       const refs = await fetchSelection(selectionParams).unwrap();
       setTicks((current) => addTicks(current ?? NO_TICKS, refs, checkKey));
       setLastRun({ filterKey, ids: refs.map((ref) => ref.id) });
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(MESSAGES.selectAllFailed, "error");
     } finally {
       setIsSelectingAll(false);

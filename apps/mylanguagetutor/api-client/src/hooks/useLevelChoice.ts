@@ -1,6 +1,8 @@
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { useState } from "react";
 import { useGetProfileQuery, useSaveProfileMutation } from "../store/profileApi";
 import type { LevelChoice } from "../types/onboarding/level-choice";
+import type { LevelSaveOutcome } from "../types/onboarding/level-save-outcome";
 import type { Level } from "../types/tutor/level";
 
 /**
@@ -15,14 +17,14 @@ export function useLevelChoice(languageParam: string | null): LevelChoice {
   const languageCode = languageParam === "" ? null : (languageParam ?? profile?.language_code ?? null);
   const selected = picked ?? profile?.level ?? null;
 
-  async function save(): Promise<boolean> {
-    if (!languageCode || !selected) return false;
+  async function save(): Promise<LevelSaveOutcome> {
+    if (!languageCode || !selected) return "failed";
     try {
       await saveProfile({ language_code: languageCode, level: selected }).unwrap();
-      return true;
-    } catch {
-      // The mutation's isError carries the failure to the screen.
-      return false;
+      return "saved";
+    } catch (error) {
+      // The mutation's isError carries a failure to the screen.
+      return isCancelledRequest(error) ? "cancelled" : "failed";
     }
   }
 

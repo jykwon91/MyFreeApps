@@ -2,6 +2,7 @@ import { useBulkDeleteDocumentsMutation } from "@mybookkeeper/api-client/store/d
 import type { BulkDeleteSummary } from "@mybookkeeper/api-client/types/document/BulkDeleteSummary";
 import { runBulkDelete } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
 import { summariseBulkDelete } from "@mybookkeeper/api-client/utils/bulkDeleteSummary";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { beingReadMessage, confirmDeleteBody, confirmDeleteTitle, deletedMessage, deletedSomeFailedMessage, deletedSomeGoneMessage, DOCUMENT_BULK_MESSAGES as MESSAGES } from "../../constants/documentBulk";
@@ -21,6 +22,8 @@ export function useBulkDeleteDocuments(onSettled: (summary: BulkDeleteSummary) =
   async function remove(ids: readonly string[]): Promise<void> {
     // Same batching as the website: the server takes at most MAX_BULK_DELETE_DOCUMENT_IDS a request.
     const run = await runBulkDelete(ids, (batch) => bulkDelete(batch).unwrap());
+    // Called off by a cache reset (sign-out, workspace switch): there's nobody left to tell.
+    if (isCancelledRequest(run.error)) return;
     const summary = summariseBulkDelete(run);
     if (summary.failedIds.length > 0) {
       showToast(summary.deleted > 0 ? deletedSomeFailedMessage(summary.deleted, summary.failedIds.length) : bulkDeleteFailureMessage(run.error), "error");
