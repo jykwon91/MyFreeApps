@@ -40,7 +40,10 @@ import AnalyzeInputView from "@/features/analyze/AnalyzeInputView";
 import AnalyzeProcessingView from "@/features/analyze/AnalyzeProcessingView";
 import AnalyzeResultView from "@/features/analyze/AnalyzeResultView";
 import { ANALYZE_MESSAGES } from "@/constants/analyze-messages";
+import { JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
+import { useAnalysisApplyRecheck } from "@myjobhunter/api-client/hooks/useAnalysisApplyRecheck";
 import { useIsLongRunning } from "@myjobhunter/api-client/hooks/useIsLongRunning";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { analysisFailureFrom } from "@myjobhunter/api-client/utils/analysisFailureFrom";
 import {
   useAnalyzeJobMutation,
@@ -70,8 +73,10 @@ export default function Analyze() {
   const longRunning = useIsLongRunning(pending?.startedAt ?? null);
 
   const [analyzeJob] = useAnalyzeJobMutation();
-  const [applyFromAnalysis, { isLoading: applying }] =
+  const [applyFromAnalysis, { isLoading: isApplyLoading }] =
     useApplyFromAnalysisMutation();
+  const { recheck: recheckApply, isChecking: isRecheckingApply } = useAnalysisApplyRecheck();
+  const applying = isApplyLoading || isRecheckingApply;
 
   const [chosenMode, setMode] = useState<AnalyzeInputMode>("url");
   const [urlValue, setUrlValue] = useState("");
@@ -140,21 +145,39 @@ export default function Analyze() {
   async function handleAddToApplications(analysis: JobAnalysis) {
     // A sign-in or sign-out meanwhile clears the result: nothing is said to the next account.
     const stillThisAccount = () => store.getState().jobAnalysis.lastResult?.id === analysis.id;
+    let applicationId: string;
     try {
-      const application = await applyFromAnalysis(analysis.id).unwrap();
-      if (!stillThisAccount()) return;
-      // Coming back to this page shows it as saved, not as one to add again.
-      dispatch(
-        markLastAnalysisApplied({
-          analysisId: analysis.id,
-          applicationId: application.id,
-        }),
-      );
-      showSuccess(ANALYZE_MESSAGES.added);
-      navigate("/applications");
+      applicationId = (await applyFromAnalysis(analysis.id).unwrap()).id;
     } catch (err) {
-      if (stillThisAccount()) showError(`${ANALYZE_MESSAGES.couldntSave} ${extractErrorMessage(err)}`);
+      await settleAdd(analysis.id, err, stillThisAccount);
+      return;
     }
+    if (stillThisAccount()) added(analysis.id, applicationId);
+  }
+
+  function added(analysisId: string, applicationId: string) {
+    // Coming back to this page shows it as saved, not as one to add again.
+    dispatch(markLastAnalysisApplied({ analysisId, applicationId }));
+    showSuccess(ANALYZE_MESSAGES.added);
+    navigate("/applications");
+  }
+
+  /**
+   * Adding the same analysis twice returns the application it already made, so after a lost answer the analysis is read
+   * again: if it names an application, that's the one added; if not, trying again is safe, and it says so when it can't tell.
+   */
+  async function settleAdd(analysisId: string, err: unknown, stillThisAccount: () => boolean) {
+    if (!stillThisAccount()) return;
+    const failed = `${ANALYZE_MESSAGES.couldntSave} ${extractErrorMessage(err)}`;
+    if (writeOutcome(err) !== "unknown") {
+      showError(failed);
+      return;
+    }
+    const check = await recheckApply(analysisId);
+    if (!stillThisAccount()) return;
+    if (check.kind === "created") added(analysisId, check.item);
+    else if (check.kind === "notCreated") showError(failed);
+    else if (check.kind === "unknown") showError(JOB_ANALYSIS_APPLY_UNSURE);
   }
 
   // ---------------------------------------------------------------------

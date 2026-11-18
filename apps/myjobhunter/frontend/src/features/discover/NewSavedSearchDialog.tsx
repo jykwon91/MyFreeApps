@@ -3,18 +3,24 @@ import { ConfirmDialog, showError, showSuccess, InlineBoldText, Skeleton } from 
 import { useCreateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import { useDiscoveryDefaultsPrefill } from "@myjobhunter/api-client/hooks/useDiscoveryDefaultsPrefill";
+import { useSavedSearchCreateRecheck } from "@myjobhunter/api-client/hooks/useSavedSearchCreateRecheck";
+import { LOST_CREATE_CHECK_WHERE } from "@myjobhunter/api-client/constants/lostCreateCheckWhere";
 import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
 import { EMPTY_SAVED_SEARCH_FORM_VALUES } from "@myjobhunter/api-client/constants/emptySavedSearchFormValues";
 import { SOURCE_DESCRIPTIONS, SOURCE_KIND_OPTIONS } from "@myjobhunter/api-client/constants/sourceKinds";
+import type { DiscoverySourceCreate } from "@myjobhunter/api-client/types/discovery/discovery-source-create-request";
 import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/jsearch-form-values";
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
 import type { SourceKind } from "@myjobhunter/api-client/types/discovery/source-kind";
 import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { discoveryDefaultsFrom } from "@myjobhunter/api-client/utils/discoveryDefaultsFrom";
+import { lostCreateMessage } from "@myjobhunter/api-client/utils/lostCreateMessage";
 import { savedSearchCreateRequest } from "@myjobhunter/api-client/utils/savedSearchCreateRequest";
 import { savedSearchNameProblem } from "@myjobhunter/api-client/utils/savedSearchNameProblem";
 import { savedSearchProblem } from "@myjobhunter/api-client/utils/savedSearchProblem";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
 import JSearchFields from "./dialog-sections/JSearchFields";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
@@ -30,7 +36,8 @@ interface NewSavedSearchDialogProps {
  * Dialog for creating a new saved search: JSearch (structured filters, prefilled from the
  * profile), Greenhouse (a board token) or Lever (a company slug). The source picker at the top
  * chooses which config form shows. Building, checking and summarising the request is shared with
- * the phone (api-client utils); this dialog holds the form state and renders it.
+ * the phone (api-client utils); this dialog holds the form state and renders it. After a lost
+ * answer the list is read again, and a new search of that kind and name is the one sent.
  */
 export default function NewSavedSearchDialog({ open, onClose }: NewSavedSearchDialogProps) {
   const [values, setValues] = useState<SavedSearchFormValues>(EMPTY_SAVED_SEARCH_FORM_VALUES);
@@ -38,7 +45,8 @@ export default function NewSavedSearchDialog({ open, onClose }: NewSavedSearchDi
 
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
-  const isLoading = isCreating || isUpdatingProfile;
+  const { recheck, isChecking } = useSavedSearchCreateRecheck();
+  const isLoading = isCreating || isChecking || isUpdatingProfile;
 
   function update(patch: Partial<SavedSearchFormValues>) {
     setValues((current) => ({ ...current, ...patch }));
@@ -64,24 +72,40 @@ export default function NewSavedSearchDialog({ open, onClose }: NewSavedSearchDi
       return;
     }
 
-    try {
-      await createSource(savedSearchCreateRequest(values)).unwrap();
+    if (!(await made(savedSearchCreateRequest(values)))) return;
 
-      // Only JSearch has filters worth keeping as the defaults for new searches.
-      if (values.source === "jsearch" && saveAsDefaults) {
-        try {
-          await updateProfile({ discovery_defaults: discoveryDefaultsFrom(profile?.discovery_defaults, values.jsearch) }).unwrap();
-        } catch {
-          // The search was created; say so rather than the server's reason for the defaults.
-          showError(DISCOVER_ACTION_MESSAGES.defaultsFailed);
-        }
+    // Only JSearch has filters worth keeping as the defaults for new searches.
+    if (values.source === "jsearch" && saveAsDefaults) {
+      try {
+        await updateProfile({ discovery_defaults: discoveryDefaultsFrom(profile?.discovery_defaults, values.jsearch) }).unwrap();
+      } catch {
+        // The search was created; say so rather than the server's reason for the defaults.
+        showError(DISCOVER_ACTION_MESSAGES.defaultsFailed);
       }
+    }
 
-      showSuccess(DISCOVER_ACTION_MESSAGES.created);
-      resetAll();
-      onClose();
+    showSuccess(DISCOVER_ACTION_MESSAGES.created);
+    resetAll();
+    onClose();
+  }
+
+  /** Whether the search was made: after a lost answer, whether the list now has it. Otherwise says why not. */
+  async function made(request: DiscoverySourceCreate): Promise<boolean> {
+    try {
+      await createSource(request).unwrap();
+      return true;
     } catch (err) {
-      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.createFailed));
+      if (isCancelledRequest(err)) return false;
+      const failed = discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.createFailed);
+      if (writeOutcome(err) !== "unknown") {
+        showError(failed);
+        return false;
+      }
+      const check = await recheck(request);
+      if (check.kind === "created") return true;
+      const message = lostCreateMessage(check, err, { failed, checkWhere: LOST_CREATE_CHECK_WHERE.savedSearches });
+      if (message) showError(message);
+      return false;
     }
   }
 

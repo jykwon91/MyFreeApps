@@ -24,6 +24,7 @@ import type { JobAnalysisState } from "@myjobhunter/api-client/types/job-analysi
 vi.mock("@myjobhunter/api-client/store/jobAnalysisApi", () => ({
   useAnalyzeJobMutation: vi.fn(),
   useApplyFromAnalysisMutation: vi.fn(),
+  useLazyGetJobAnalysisQuery: vi.fn(),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => {
@@ -61,10 +62,20 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
+  useLazyGetJobAnalysisQuery,
 } from "@myjobhunter/api-client/store/jobAnalysisApi";
+import { JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
 
 const mockUseAnalyzeJobMutation = vi.mocked(useAnalyzeJobMutation);
 const mockUseApplyFromAnalysisMutation = vi.mocked(useApplyFromAnalysisMutation);
+const mockUseLazyGetJobAnalysisQuery = vi.mocked(useLazyGetJobAnalysisQuery);
+
+/** What reading the analysis again answers. */
+function serveReread(reread: () => Promise<JobAnalysis>) {
+  const trigger = vi.fn(() => ({ unwrap: reread }));
+  mockUseLazyGetJobAnalysisQuery.mockReturnValue([trigger] as unknown as ReturnType<typeof useLazyGetJobAnalysisQuery>);
+  return trigger;
+}
 const mockShowError = vi.mocked(showError);
 const mockShowSuccess = vi.mocked(showSuccess);
 
@@ -160,6 +171,7 @@ function renderAnalyze({ store }: RenderOptions = {}) {
 describe("Analyze page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    serveReread(() => Promise.resolve(makeAnalysis()));
   });
 
   it("starts in input mode with the URL panel focused", () => {
@@ -781,5 +793,64 @@ describe("Analyze page", () => {
 
     expect(mockShowSuccess).not.toHaveBeenCalled();
     expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
+  });
+});
+
+describe("Analyze page, adding to applications when the answer is lost", () => {
+  const NO_ANSWER = { status: undefined, data: "Network Error" };
+
+  /** Shows a remembered result and presses Add, whose answer is `answer`. */
+  async function addWith(answer: unknown) {
+    const store = makeTestStore({ lastResult: makeAnalysis() });
+    mockUseAnalyzeJobMutation.mockReturnValue([vi.fn(), { isLoading: false, reset: vi.fn() }] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    const applyMock = vi.fn().mockReturnValue({ requestId: "req-1", unwrap: () => Promise.reject(answer) });
+    mockUseApplyFromAnalysisMutation.mockReturnValue([applyMock, { isLoading: false, reset: vi.fn() }] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+    const user = userEvent.setup();
+    renderAnalyze({ store });
+    await user.click(screen.getByRole("button", { name: /Add to applications/i }));
+    return { store, applyMock };
+  }
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it.each([
+    ["no answer", NO_ANSWER],
+    ["a proxy error", { status: 504, data: "<html>Gateway Timeout</html>" }],
+  ])("reads the analysis again and says it was added when it names the application, after %s", async (_case, answer) => {
+    const reread = serveReread(() => Promise.resolve(makeAnalysis({ applied_application_id: "app-1" })));
+    const { store, applyMock } = await addWith(answer);
+
+    expect(await screen.findByTestId("applications-page")).toBeInTheDocument();
+    expect(reread).toHaveBeenCalledWith("an-1", false);
+    expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBe("app-1");
+    expect(mockShowSuccess).toHaveBeenCalled();
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(applyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("says it couldn't save, so it can be tried again, when the analysis names no application", async () => {
+    serveReread(() => Promise.resolve(makeAnalysis()));
+    const { store } = await addWith(NO_ANSWER);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(expect.stringMatching(/^Couldn't save: /)));
+    expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBeNull();
+    expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
+  });
+
+  it("says it isn't sure, and that trying again won't add it twice, when the analysis can't be read again", async () => {
+    serveReread(() => Promise.reject(NO_ANSWER));
+    await addWith(NO_ANSWER);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(JOB_ANALYSIS_APPLY_UNSURE));
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
+  });
+
+  it("keeps a refusal's wording without reading the analysis again", async () => {
+    const reread = serveReread(() => Promise.resolve(makeAnalysis({ applied_application_id: "app-1" })));
+    await addWith({ status: 404, data: { detail: "Job analysis not found" } });
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Couldn't save: Job analysis not found"));
+    expect(reread).not.toHaveBeenCalled();
   });
 });

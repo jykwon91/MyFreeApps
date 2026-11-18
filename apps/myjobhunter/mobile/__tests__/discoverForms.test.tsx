@@ -241,6 +241,66 @@ describe("a new board saved search", () => {
   });
 });
 
+describe("a new saved search whose answer is lost", () => {
+  const LEVER = discoverySourceRecord({ id: "lever-1", source: "lever", name: "", config: { company_slug: "stripe" } });
+
+  /** Serves the saved searches held in memory; the create stores a new one when `savesAnyway`, then answers with `lostAnswer`. */
+  function serveLost(lostAnswer: FakeRoute, { savesAnyway, listLost = false }: { savesAnyway: boolean; listLost?: boolean }): SentRequest[] {
+    let sources: DiscoverySource[] = [LEVER];
+    let created = false;
+    return serveForm({
+      "GET /discover/sources": () => {
+        if (created && listLost) throw new Error("Network Error");
+        return { status: 200, data: sources };
+      },
+      "POST /discover/sources": (body, params) => {
+        created = true;
+        if (savesAnyway) sources = [...sources, discoverySourceRecord({ id: "new", name: "", ...body })];
+        return lostAnswer(body, params);
+      },
+    });
+  }
+
+  async function createGreenhouse(): Promise<void> {
+    await openNew();
+    await chooseSource("Greenhouse");
+    await fireEvent.changeText(screen.getByLabelText(`${SHEET.boardTokenLabel}, required`), "stripe");
+    await submit(SHEET.create);
+  }
+
+  it.each([
+    ["no answer", (() => { throw new Error("Network Error"); }) as FakeRoute],
+    ["a proxy error", (() => ({ status: 502, data: "<html>Bad Gateway</html>" })) as FakeRoute],
+  ] as const)("says it was created, rather than inviting a second, when it was though %s came back", async (_case, lostAnswer) => {
+    const sent = serveLost(lostAnswer, { savesAnyway: true });
+    await createGreenhouse();
+
+    expect(await toastText()).toBe(ACTIONS.created);
+    await waitFor(() => expect(screen.queryByRole("header", { name: SHEET.newTitle })).toBeNull());
+    expect(bodies(sent, "POST /discover/sources")).toHaveLength(1);
+  });
+
+  it("offers to try again when the list shows it wasn't created; a search of another kind doesn't count", async () => {
+    const sent = serveLost(() => { throw new Error("Network Error"); }, { savesAnyway: false });
+    await createGreenhouse();
+
+    expect(await screen.findByText(ACTIONS.createFailed)).toBeTruthy();
+    expect(screen.getByRole("header", { name: SHEET.newTitle })).toBeTruthy();
+    expect(bodies(sent, "POST /discover/sources")).toHaveLength(1);
+  });
+
+  it("says it isn't sure, rather than inviting a second, when the list can't be read", async () => {
+    serveLost(() => { throw new Error("Network Error"); }, { savesAnyway: true, listLost: true });
+    await createGreenhouse();
+
+    expect(
+      await screen.findByText("I lost the connection, so I'm not sure that saved. Check your saved searches before trying again, so you don't end up with two."),
+    ).toBeTruthy();
+    expect(screen.queryByText(ACTIONS.createFailed)).toBeNull();
+    expect(screen.getByRole("header", { name: SHEET.newTitle })).toBeTruthy();
+  });
+});
+
 describe("editing a saved search", () => {
   const SOURCE = discoverySourceRecord({ id: "src-1", name: "Backend roles", source: "greenhouse", config: { board_token: "stripe" } });
 

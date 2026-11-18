@@ -3,9 +3,12 @@ import { EMPTY_SAVED_SEARCH_FORM_VALUES } from "@myjobhunter/api-client/constant
 import { SAVED_SEARCH_FIELD_HINTS as HINTS } from "@myjobhunter/api-client/constants/savedSearchProblems";
 import { EDIT_SOURCE_DESCRIPTIONS, EDIT_UNKNOWN_SOURCE_DESCRIPTION, SOURCE_DESCRIPTIONS, SOURCE_KIND_OPTIONS } from "@myjobhunter/api-client/constants/sourceKinds";
 import { SAVED_SEARCH_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { LOST_CREATE_CHECK_WHERE } from "@myjobhunter/api-client/constants/lostCreateCheckWhere";
 import { useDiscoveryDefaultsPrefill } from "@myjobhunter/api-client/hooks/useDiscoveryDefaultsPrefill";
+import { useSavedSearchCreateRecheck } from "@myjobhunter/api-client/hooks/useSavedSearchCreateRecheck";
 import { useCreateDiscoverySourceMutation, useUpdateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
+import type { DiscoverySourceCreate } from "@myjobhunter/api-client/types/discovery/discovery-source-create-request";
 import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/jsearch-form-values";
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
 import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
@@ -16,6 +19,7 @@ import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySou
 import { isSourceKind } from "@myjobhunter/api-client/utils/isSourceKind";
 import { isTypedBoardTokenInvalid } from "@myjobhunter/api-client/utils/isTypedBoardTokenInvalid";
 import { isTypedCompanySlugInvalid } from "@myjobhunter/api-client/utils/isTypedCompanySlugInvalid";
+import { lostCreateMessage } from "@myjobhunter/api-client/utils/lostCreateMessage";
 import { savedSearchCreateRequest } from "@myjobhunter/api-client/utils/savedSearchCreateRequest";
 import { savedSearchEditProblem } from "@myjobhunter/api-client/utils/savedSearchEditProblem";
 import { savedSearchFormValues } from "@myjobhunter/api-client/utils/savedSearchFormValues";
@@ -38,11 +42,13 @@ import BoldText from "./BoldText";
 import JSearchFields from "./JSearchFields";
 import PrefillSkeleton from "./PrefillSkeleton";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 
 /**
  * The website's new and edit saved-search dialogs as one sheet. A new JSearch search is filled in
  * from the profile and can keep its filters as the defaults; an edit keeps its source and sends only
- * what changed. Building, checking and summarising the request is shared with the website.
+ * what changed. After a new search's answer is lost the list is read again, and a new search of that
+ * kind and name is the one sent, so it isn't offered to be made twice. Building, checking and summarising the request is shared with the website.
  */
 export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -58,7 +64,8 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const [updateSource, { isLoading: isUpdating }] = useUpdateDiscoverySourceMutation();
-  const isBusy = isCreating || isUpdatingProfile || isUpdating;
+  const { recheck, isChecking } = useSavedSearchCreateRecheck();
+  const isBusy = isCreating || isChecking || isUpdatingProfile || isUpdating;
   // An edit keeps the saved search's own source, even one this build doesn't know.
   const kind = source ? source.source : values.source;
 
@@ -80,13 +87,27 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
   });
   const hasUnsavedChanges = JSON.stringify(values) !== JSON.stringify(baseline) || Object.values(drafts).some((draft) => draft.trim() !== "") || saveAsDefaults;
 
-  async function create(form: SavedSearchFormValues): Promise<void> {
+  /** Whether the search was made: after a lost answer, whether the list now has it. Otherwise says why not. */
+  async function made(request: DiscoverySourceCreate): Promise<boolean> {
     try {
-      await createSource(savedSearchCreateRequest(form)).unwrap();
+      await createSource(request).unwrap();
+      return true;
     } catch (error) {
-      setFailure(discoverFailureMessage(error, ACTIONS.createFailed));
-      return;
+      // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
+      if (isCancelledRequest(error)) return false;
+      if (writeOutcome(error) !== "unknown") {
+        setFailure(discoverFailureMessage(error, ACTIONS.createFailed));
+        return false;
+      }
+      const check = await recheck(request);
+      if (check.kind === "created") return true;
+      setFailure(lostCreateMessage(check, error, { failed: ACTIONS.createFailed, checkWhere: LOST_CREATE_CHECK_WHERE.savedSearches }));
+      return false;
     }
+  }
+
+  async function create(form: SavedSearchFormValues): Promise<void> {
+    if (!(await made(savedSearchCreateRequest(form)))) return;
     if (form.source === "jsearch" && saveAsDefaults) {
       try {
         await updateProfile({ discovery_defaults: discoveryDefaultsFrom(prefill.profile?.discovery_defaults, form.jsearch) }).unwrap();

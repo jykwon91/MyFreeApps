@@ -1,3 +1,4 @@
+import { JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
 import { clearLastAnalysis } from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
@@ -226,6 +227,49 @@ describe("adding it to applications", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
     await waitFor(() => expect(screen).toHavePathname("/applications"));
     expect(requestsTo(sent, APPLY)).toHaveLength(2);
+  });
+});
+
+describe("adding it to applications when the answer is lost", () => {
+  const LOST: FakeRoute = () => {
+    throw new Error("Network Error");
+  };
+  const READ = "GET /jobs/analyze/an-1";
+
+  it.each([
+    ["no answer", LOST],
+    ["a proxy error", (() => ({ status: 504, data: "<html>Gateway Timeout</html>" })) as FakeRoute],
+  ] as const)("reads the analysis again and says it was added when it names the application, though %s came back", async (_case, lostAnswer) => {
+    const sent = await showResult(undefined, {
+      [APPLY]: lostAnswer,
+      [READ]: () => ({ status: 200, data: analysisRecord({ applied_application_id: "app-new" }) }),
+    });
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
+
+    expect(await screen.findByText(MESSAGES.added)).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname("/applications"));
+    expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBe("app-new");
+    expect(requestsTo(sent, APPLY)).toHaveLength(1);
+    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+  });
+
+  it("offers to try again when the analysis, read again, names no application", async () => {
+    await showResult(undefined, { [APPLY]: LOST, [READ]: () => ({ status: 200, data: analysisRecord() }) });
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
+
+    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
+    expect(screen).toHavePathname("/analyze");
+    expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBeNull();
+  });
+
+  it("says it isn't sure, and that trying again won't add it twice, when the analysis can't be read again", async () => {
+    await showResult(undefined, { [APPLY]: LOST, [READ]: LOST });
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
+
+    expect(await screen.findByText(JOB_ANALYSIS_APPLY_UNSURE)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+    expect(screen).toHavePathname("/analyze");
+    expect(screen.getByRole("button", { name: MESSAGES.addToApplications })).toBeEnabled();
   });
 });
 

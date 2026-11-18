@@ -2,7 +2,7 @@ import { RESUME_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/resu
 import { useUploadResumeMutation } from "@myjobhunter/api-client/store/resumesApi";
 import { resumeUploadProblem } from "@myjobhunter/api-client/utils/resumeUploadProblem";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
-import { isNoResponse } from "@platform/core/utils/isNoResponse";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { discardFile, filePart, useToast, type FileForUpload } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
@@ -15,8 +15,9 @@ import type { ResumeUploadControls } from "../../types/ResumeUploadControls";
  * 25 MB, checked before it's sent. The upload list refetches once it's in, and the server reads it.
  * Held by the start panel rather than its buttons: the empty state's button and "Upload another"
  * swap when a read finishes mid-upload, and a second picker must not open from the new one.
- * A file that never reached the server (no connection, or a timeout) is kept, so Retry sends it
- * again without picking it again; it's let go of when discarded, replaced, sent, or the screen is left.
+ * A file whose upload may not have gone through (no answer, or a server failure with no reason) is
+ * kept, so Retry sends it again without picking it again; the uploads list, read again after the
+ * failed upload, shows whether it got there. It's let go of when discarded, replaced, sent, or the screen is left.
  */
 export function useResumeUpload(): ResumeUploadControls {
   const { showToast } = useToast();
@@ -86,8 +87,8 @@ export function useResumeUpload(): ResumeUploadControls {
       setUploadedId(job.id);
       showToast(MESSAGES.uploaded(file.name));
     } catch (error) {
-      // Only a file the server never answered about is kept: any answer means sending it again won't change it.
-      keep(isNoResponse(error) ? file : null);
+      // Only a file that may not have gone through is kept: a refusal means sending it again won't change it.
+      keep(writeOutcome(error) === "unknown" ? file : null);
       // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
       if (!isCancelledRequest(error)) showToast(resumeUploadFailure(null, error), "error");
     }

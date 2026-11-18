@@ -1,3 +1,5 @@
+import { JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
+import { useAnalysisApplyRecheck } from "@myjobhunter/api-client/hooks/useAnalysisApplyRecheck";
 import { useIsLongRunning } from "@myjobhunter/api-client/hooks/useIsLongRunning";
 import { useAnalyzeJobMutation, useApplyFromAnalysisMutation } from "@myjobhunter/api-client/store/jobAnalysisApi";
 import {
@@ -23,6 +25,7 @@ import { ANALYZE_MESSAGES as MESSAGES } from "../../constants/analyze";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { useAnnounceNewVerdict } from "./useAnnounceNewVerdict";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 
 /**
  * The website's /analyze page: read a link or pasted text, wait while the AI scores it, then show
@@ -44,6 +47,7 @@ export function useAnalyzeFlow() {
   const storedFailure = useSelector((state: RootState) => state.jobAnalysis.failure);
   const [analyzeJob] = useAnalyzeJobMutation();
   const [applyFromAnalysis] = useApplyFromAnalysisMutation();
+  const { recheck: recheckApply } = useAnalysisApplyRecheck();
 
   const [chosenSource, setSourceState] = useState<JobAnalysisSource>("url");
   const [urlValue, setUrlValue] = useState("");
@@ -165,22 +169,41 @@ export function useAnalyzeFlow() {
     router.dismissTo("/applications");
   }
 
-  /** Adding's failures are toasted, as on the website, where the button that was pressed is. */
+  /**
+   * Adding's failures are toasted, as on the website, where the button that was pressed is. Adding the same analysis twice
+   * returns the application it already made, so after a lost answer the analysis is read again: if it names an application,
+   * that's the one added; if not, trying again is safe, and it says so when it can't tell.
+   */
   async function addToApplications(): Promise<void> {
     if (!shownResult || isApplying) return;
     const analysisId = shownResult.id;
     setIsApplying(true);
     try {
-      const application = await applyFromAnalysis(analysisId).unwrap();
-      dispatch(markLastAnalysisApplied({ analysisId, applicationId: application.id }));
-      showToast(MESSAGES.added);
-      if (isMounted.current) viewApplications();
+      added(analysisId, (await applyFromAnalysis(analysisId).unwrap()).id);
     } catch (error) {
-      if (isCancelledRequest(error)) return;
-      showToast(MESSAGES.couldntAdd, "error");
+      await settleAdd(analysisId, error);
     } finally {
       if (isMounted.current) setIsApplying(false);
     }
+  }
+
+  function added(analysisId: string, applicationId: string): void {
+    dispatch(markLastAnalysisApplied({ analysisId, applicationId }));
+    showToast(MESSAGES.added);
+    if (isMounted.current) viewApplications();
+  }
+
+  async function settleAdd(analysisId: string, error: unknown): Promise<void> {
+    // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
+    if (isCancelledRequest(error)) return;
+    if (writeOutcome(error) !== "unknown") {
+      showToast(MESSAGES.couldntAdd, "error");
+      return;
+    }
+    const check = await recheckApply(analysisId);
+    if (check.kind === "created") added(analysisId, check.item);
+    else if (check.kind === "notCreated") showToast(MESSAGES.couldntAdd, "error");
+    else if (check.kind === "unknown") showToast(JOB_ANALYSIS_APPLY_UNSURE, "error");
   }
 
   return {

@@ -19,3 +19,9 @@ export const JOB_ANALYSIS_ERRORS = {
   aiFailed: "The AI couldn't score this job right now. Try again in a moment.",
   failed: "AI analysis failed. Try again in a moment.",
 } as const;
+
+/**
+ * When adding an analysis to applications lost its answer and the server couldn't be asked whether it went through. Adding
+ * the same analysis again returns the application it already made, so trying again is safe.
+ */
+export const JOB_ANALYSIS_APPLY_UNSURE = "I'm not sure it was added to your applications. Trying again won't add it twice.";

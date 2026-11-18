@@ -63,5 +63,6 @@ const jobAnalysisApi = baseApi
 export const {
   useAnalyzeJobMutation,
   useGetJobAnalysisQuery,
+  useLazyGetJobAnalysisQuery,
   useApplyFromAnalysisMutation,
 } = jobAnalysisApi;
