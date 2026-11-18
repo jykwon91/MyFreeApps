@@ -71,11 +71,6 @@ export function alertsFailedMessage(failed: HomeAlertFailures): string | null {
   return null;
 }
 
-/** Side axis of the chart: "$4k", or whole dollars below a thousand. */
-export function axisMoney(value: number): string {
-  return Math.abs(value) >= 1000 ? `$${Math.round(value / 1000)}k` : `$${Math.round(value)}`;
-}
-
 export function spokenMonth(month: MonthSummary): string {
   return `Revenue ${spokenSignedMoney(month.revenue)}, expenses ${spokenSignedMoney(month.expenses)}, ${monthName(month.month, "long")}`;
 }

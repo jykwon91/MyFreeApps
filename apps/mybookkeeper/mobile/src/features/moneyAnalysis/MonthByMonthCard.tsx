@@ -1,12 +1,13 @@
 import type { MonthExpenseSummary } from "@mybookkeeper/api-client/types/summary/MonthExpenseSummary";
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 import { GroupedBarChart, useTheme } from "@platform/mobile";
 import { HOME_CHART_HEIGHT } from "../../constants/home";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 import { monthName } from "../../lib/localDate";
 import type { AnalysisScope } from "../../types/AnalysisScope";
 import HomeCard from "../home/HomeCard";
-import { axisMoney, monthlyChartSummary, spokenMonth } from "../home/homeDisplay";
+import { monthlyChartSummary, spokenMonth } from "../home/homeDisplay";
 import MonthRow from "./MonthRow";
 import { monthExpenseRows, monthsNewestFirst, monthsOldestFirst } from "./moneyAnalysisDisplay";
 

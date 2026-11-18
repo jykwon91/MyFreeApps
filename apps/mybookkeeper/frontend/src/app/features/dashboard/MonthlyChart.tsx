@@ -2,6 +2,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveCont
 import { parse, format, startOfMonth, endOfMonth } from "date-fns";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 interface ChartRow extends MonthSummary {
   displayMonth: string;
@@ -40,7 +41,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={chartData} barCategoryGap="30%">
         <XAxis dataKey="displayMonth" tick={{ fontSize: 11 }} />
-        <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+        <YAxis tickFormatter={axisMoney} tick={{ fontSize: 11 }} />
         <Tooltip formatter={(v) => formatCurrency(typeof v === "number" ? v : Number(v))} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar

@@ -25,6 +25,7 @@ import type { DateRange } from "@/shared/types/dashboard/date-range";
 import type { MergedRow } from "@/shared/types/dashboard/merged-row";
 import type { PropertyMonthlySummary } from "@mybookkeeper/api-client/types/summary/PropertyMonthlySummary";
 import { mergeData, buildFilter } from "@/shared/utils/chart-utils";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 export default function MonthlyOverviewChart({
   byMonth,
@@ -130,7 +131,7 @@ export default function MonthlyOverviewChart({
       >
         <XAxis dataKey="displayMonth" tick={{ fontSize: 11 }} />
         <YAxis
-          tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+          tickFormatter={axisMoney}
           tick={{ fontSize: 11 }}
         />
         <Tooltip

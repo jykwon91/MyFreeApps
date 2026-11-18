@@ -1,4 +1,5 @@
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 import { GroupedBarChart, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { HOME_CHART_HEIGHT } from "../../constants/home";
@@ -6,7 +7,7 @@ import { monthName } from "../../lib/localDate";
 import type { AnalysisScope } from "../../types/AnalysisScope";
 import HomeCard from "./HomeCard";
 import { chartMonths } from "./homeCharts";
-import { axisMoney, monthlyChartSummary, spokenMonth } from "./homeDisplay";
+import { monthlyChartSummary, spokenMonth } from "./homeDisplay";
 import { monthLink } from "./homeLinks";
 
 /** Revenue against expenses for the last months of the period. A month opens the rows behind it. */

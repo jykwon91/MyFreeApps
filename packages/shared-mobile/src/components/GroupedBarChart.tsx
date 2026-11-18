@@ -10,6 +10,7 @@ import { useTheme } from "../theme/useTheme";
 import type { GroupedBarChartProps } from "../types/GroupedBarChartProps";
 import { labelRowHeight, visibleLabelIndexes, yAxisWidth } from "../utils/chartTextFit";
 import { groupedBarLayout } from "../utils/groupedBarLayout";
+import { niceAxis } from "../utils/niceAxis";
 
 /**
  * Bars side by side per group, coloured by series, drawn in the theme's colours.
@@ -22,7 +23,8 @@ export default function GroupedBarChart({ series, groups, height, accessibilityL
   const { colors, spacing, fontSize } = useTheme();
   const [width, setWidth] = useState(0);
   const { fontScale } = useWindowDimensions();
-  const maxValue = Math.max(0, ...groups.flatMap((group) => group.values));
+  const dataMax = Math.max(0, ...groups.flatMap((group) => group.values));
+  const { maxValue, stepValue } = niceAxis(dataMax, CHART_SECTIONS);
   const axisWidth = yAxisWidth(formatValue ? formatValue(maxValue) : String(Math.round(maxValue)), fontSize.xs, fontScale);
   const plotWidth = Math.max(width - axisWidth, 0);
   const shownLabels = visibleLabelIndexes(groups.map((group) => group.label), plotWidth / Math.max(groups.length, 1), fontSize.xs, fontScale);
@@ -60,8 +62,10 @@ export default function GroupedBarChart({ series, groups, height, accessibilityL
               formatYLabel={formatValue ? (label) => formatValue(Number(label)) : undefined}
               height={height}
               initialSpacing={layout.initialSpacing}
+              maxValue={maxValue}
               noOfSections={CHART_SECTIONS}
               rulesColor={colors.border}
+              stepValue={stepValue}
               width={plotWidth}
               xAxisColor={colors.border}
               xAxisLabelsHeight={0}
