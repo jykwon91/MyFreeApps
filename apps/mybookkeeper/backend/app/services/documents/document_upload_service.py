@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import uuid
+from collections.abc import Sequence
 
 from app.core.config import settings
 from app.core.context import RequestContext
@@ -48,6 +49,18 @@ def _store_file(
     key = storage.generate_key(str(org_id), filename)
     storage.upload_file(key, content, content_type)
     return None, key
+
+
+def _earlier_batch_result(earlier: Sequence[Document]) -> dict[str, str | int | None]:
+    """The answer the first upload of a zip got, for a resend whose answer was lost."""
+    first = earlier[0]
+    in_batch = [d for d in earlier if d.batch_id == first.batch_id]
+    return {
+        "document_id": str(first.id),
+        "batch_id": first.batch_id,
+        "batch_total": len(in_batch),
+        "duplicate": True,
+    }
 
 
 async def accept_upload(
@@ -116,6 +129,14 @@ async def _save_placeholder_documents(
             raise ValueError("Daily upload limit reached")
 
         if file_type == "zip":
+            zip_hash = hashlib.sha256(content).hexdigest()
+            earlier = await document_repo.list_by_batch_content_hash_for_update(db, ctx.organization_id, zip_hash)
+            if any(d.status != "failed" for d in earlier):
+                return _earlier_batch_result(earlier)
+            # Every file of the earlier batch failed: it is replaced, like a failed single file.
+            await document_repo.soft_delete_by_user(db, [d.id for d in earlier])
+            stale_storage_keys.extend(d.file_storage_key for d in earlier if d.file_storage_key)
+
             extracted = await asyncio.to_thread(extract_zip_files, content)
             if not extracted:
                 raise ValueError("No supported files found in zip")
@@ -143,6 +164,7 @@ async def _save_placeholder_documents(
                     status="processing",
                     is_escrow_paid=reference_only,
                     batch_id=batch_id,
+                    batch_content_hash=zip_hash,
                 )
                 created = await document_repo.create(db, doc)
                 if first_doc_id is None:
