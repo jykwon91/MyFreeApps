@@ -11,6 +11,7 @@ import GmailStatusCard from "./GmailStatusCard";
 import IntegrationsSkeleton from "./IntegrationsSkeleton";
 import QueueSummary from "./QueueSummary";
 import SyncLogRow from "./SyncLogRow";
+import { useConnectGmail } from "./useConnectGmail";
 import { useGmailActions } from "./useGmailActions";
 import { useIntegrationsData } from "./useIntegrationsData";
 
@@ -19,6 +20,7 @@ export default function IntegrationsScreen() {
   const canWrite = useCanWrite();
   const { integrations, gmail, connection, logs, queue, refresh: refreshAll } = useIntegrationsData();
   const actions = useGmailActions();
+  const connect = useConnectGmail();
   const { refresh, refreshControl } = useRefresh(refreshAll, integrations.error ?? logs.error ?? queue.error);
   const history = logs.currentData ?? [];
   const queueItems = queue.currentData;
@@ -57,9 +59,9 @@ export default function IntegrationsScreen() {
       ListHeaderComponent={
         <View style={{ gap: spacing.lg, padding: spacing.lg }}>
           <StaleDataBanner isShown={Boolean(integrations.error || (logs.error && logs.currentData) || (queue.error && queueItems))} />
-          <GmailStatusCard connection={connection} gmail={gmail} runningSync={isSyncing ? latest : null} />
+          <GmailStatusCard connect={canWrite ? connect : null} connection={connection} gmail={gmail} runningSync={isSyncing ? latest : null} />
           {connection === "connected" && canWrite ? <GmailActions actions={actions} isSyncing={isSyncing} latestSyncLogId={latest?.id ?? null} /> : null}
-          {isLinked && !canWrite ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text> : null}
+          {!canWrite ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text> : null}
           {isLinked ? <GmailLabelRow label={gmail?.gmail_label ?? ""} /> : null}
           {isLinked && queueItems ? <QueueSummary actions={actions} queue={queueItems} /> : null}
           {isLinked && !queueItems && queue.error && !queue.isFetching ? (

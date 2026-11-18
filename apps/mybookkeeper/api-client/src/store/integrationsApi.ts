@@ -2,6 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { GMAIL_SYNC_TIMEOUT_MS } from "../constants/gmailSync";
 import { SYNC_INVALIDATED_TAGS } from "../constants/emailDerivedTags";
 import type { EmailQueueItem } from "../types/integration/email-queue-item";
+import type { GmailConnectClient } from "../types/integration/gmail-connect-client";
 import type { Integration } from "../types/integration/integration";
 import type { SyncLog } from "../types/integration/sync-log";
 
@@ -13,8 +14,9 @@ export const integrationsApi = baseApi.enhanceEndpoints({
       query: () => ({ url: "/integrations" }),
       providesTags: ["Integration"],
     }),
-    connectGmail: builder.mutation<{ auth_url: string }, void>({
-      query: () => ({ url: "/integrations/gmail/connect" }),
+    // The website leaves `client` off; the phone says so, and Google's answer comes back to the app.
+    connectGmail: builder.mutation<{ auth_url: string }, GmailConnectClient | void>({
+      query: (client) => ({ url: "/integrations/gmail/connect", params: client ? { client } : undefined }),
     }),
     disconnectGmail: builder.mutation<void, void>({
       query: () => ({ url: "/integrations/gmail", method: "DELETE" }),

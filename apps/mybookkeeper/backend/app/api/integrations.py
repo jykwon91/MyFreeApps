@@ -7,6 +7,8 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.gmail_connect_client import GmailConnectClient
+from app.core.gmail_connect_constants import GMAIL_CONNECT_NO_CODE_DETAIL
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.models.responses.connect_response import ConnectResponse
@@ -24,7 +26,7 @@ from app.services.email.constants import (
     GMAIL_LABEL_NOT_FOUND_MESSAGE,
 )
 from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
-from app.services.integrations import integration_service
+from app.services.integrations import gmail_mobile_connect_service, integration_service
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -39,17 +41,26 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 @router.get("/gmail/connect")
 async def connect_gmail(
+    client: GmailConnectClient = GmailConnectClient.WEB,
     ctx: RequestContext = Depends(reject_demo_org_write),
 ) -> ConnectResponse:
-    auth_url = integration_service.get_gmail_connect_url(ctx)
+    auth_url = integration_service.get_gmail_connect_url(ctx, client)
     return ConnectResponse(auth_url=auth_url)
 
 
 @router.get("/gmail/callback")
 async def gmail_callback(
-    code: str,
     state: str,
+    code: str | None = None,
+    error: str | None = None,
 ) -> RedirectResponse:
+    if integration_service.gmail_connect_client(state) is GmailConnectClient.MOBILE:
+        return RedirectResponse(
+            url=await gmail_mobile_connect_service.finish_mobile_gmail_connect(code, error, state),
+        )
+    if code is None:
+        logger.warning("Gmail OAuth callback without a code: error=%s", error)
+        raise HTTPException(status_code=400, detail=GMAIL_CONNECT_NO_CODE_DETAIL)
     try:
         await integration_service.handle_gmail_callback(code, state)
     except ValueError as e:

@@ -14,7 +14,7 @@ import { runIntegrationWrite } from "./runIntegrationWrite";
 
 const SYNC_COPY = actionFailureCopy("start the sync", { checkFirst: "Pull down to see whether a sync started" }, {
   invalid: "I couldn't find the Gmail label you're filtering by. Change or clear it, then try again.",
-  other: "I couldn't start the sync. If Gmail needs reconnecting, that's done from the website. Want to try again?",
+  other: "I couldn't start the sync. Pull down to see whether Gmail needs reconnecting, then try again.",
 });
 const CANCEL_COPY = actionFailureCopy("cancel the sync", "safe");
 const DISCONNECT_COPY = actionFailureCopy("disconnect Gmail", "safe", { gone: "Gmail was already disconnected. Pull down to refresh." });

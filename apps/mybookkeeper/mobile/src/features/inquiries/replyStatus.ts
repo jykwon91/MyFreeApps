@@ -2,23 +2,24 @@ import { REPLY_SEND_ACTION } from "@mybookkeeper/api-client/constants/replySendA
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { ReplySendAction } from "@mybookkeeper/api-client/types/inquiry/reply-send-action";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
+import { GMAIL_CONNECT_MESSAGES } from "../../constants/gmailConnect";
 import type { ReplyBlock } from "../../types/ReplyBlock";
 
 export const REPLY_BLOCK_WORDS: Record<ReplyBlock, string> = {
-  noGmail: "Connect Gmail to send replies. That part happens on the website.",
-  noSendPermission: "Gmail needs permission to send as you. Reconnect it on the website. Your existing access stays.",
-  gmailDisconnected: "Gmail disconnected. Reconnect on the website to send replies.",
+  noGmail: "Connect Gmail to send replies.",
+  noSendPermission: "Gmail needs permission to send as you. Reconnect it to send replies. Your existing access stays.",
+  gmailDisconnected: "Gmail disconnected. Reconnect it to send replies.",
   noEmailAddress: "This inquiry has no email address, so I can't send a reply. You can call instead.",
 };
 
 /** An earlier attempt went through an account that isn't connected now, so Gmail can't say whether it arrived. */
 export function replySentFromOtherGmailWords(account: string): string {
-  return `This reply may already have gone out from ${account}, which isn't connected any more, so I didn't send it again. Reconnect that account on the website, then reopen this inquiry so I can check, or send it anyway as a new reply. They might get it twice.`;
+  return `This reply may already have gone out from ${account}, which isn't connected any more, so I didn't send it again. Reconnect that account in Integrations, under More, then reopen this inquiry so I can check, or send it anyway as a new reply. They might get it twice.`;
 }
 
 export const REPLY_FAILURE_WORDS: Record<ReplySendFailure, string> = {
-  gmailDisconnected: "Gmail disconnected. Reconnect on the website to send replies.",
-  gmailConnection: "I couldn't send that. Check your Gmail connection on the website.",
+  gmailDisconnected: "Gmail disconnected. Reconnect it in Integrations, under More, to send replies.",
+  gmailConnection: "I couldn't send that. Check your Gmail connection in Integrations, under More.",
   gmailRejected: "Gmail didn't accept that. Nothing was sent. Want me to try again?",
   gone: "I can't find that inquiry anymore.",
   viewOnly: "You have view-only access.",
@@ -28,6 +29,14 @@ export const REPLY_FAILURE_WORDS: Record<ReplySendFailure, string> = {
   inFlight: "An earlier copy of this reply is still going out, and I won't send a second one. If it hasn't finished, check again in a few minutes. It can take up to 15.",
   refused: "I couldn't send that. Want to try again?",
   otherAccount: replySentFromOtherGmailWords("a Gmail account"),
+};
+
+/** The button on a block that connecting Gmail clears: none when there's no address to reply to. */
+export const REPLY_BLOCK_CONNECT_LABELS: Record<ReplyBlock, string | null> = {
+  noGmail: GMAIL_CONNECT_MESSAGES.connect,
+  noSendPermission: GMAIL_CONNECT_MESSAGES.reconnect,
+  gmailDisconnected: GMAIL_CONNECT_MESSAGES.reconnect,
+  noEmailAddress: null,
 };
 
 export const REPLY_SEND_LABELS: Record<ReplySendAction, string> = {

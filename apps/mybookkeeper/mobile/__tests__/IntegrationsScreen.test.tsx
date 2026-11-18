@@ -1,6 +1,7 @@
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { GMAIL_CONNECT_MESSAGES } from "../src/constants/gmailConnect";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../src/constants/integrations";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import IntegrationsScreen from "../src/features/integrations/IntegrationsScreen";
@@ -85,23 +86,25 @@ describe("IntegrationsScreen: a failed refresh of one part", () => {
 });
 
 describe("IntegrationsScreen: Gmail status", () => {
-  it("says honestly that Gmail is not connected, and points to the website, with no sync or history", async () => {
+  it("says honestly that Gmail is not connected, and offers to connect it here, with no sync or history", async () => {
     const server = startIntegrationsServer({ integrations: [], logs: [aSyncLog()] });
     await renderScreen(<IntegrationsScreen />);
     await screen.findByText(MESSAGES.notConnected);
-    expect(screen.getByText(MESSAGES.notConnectedBody)).toBeTruthy();
-    expect(screen.getByRole("link", { name: MESSAGES.openOnWeb })).toBeTruthy();
+    expect(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.connect })).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByText(/website/)).toBeNull();
     expect(screen.queryByRole("button", { name: MESSAGES.syncNow })).toBeNull();
     expect(screen.queryByText(MESSAGES.historyHeading)).toBeNull();
     expect(server.requests).toEqual([]);
   });
 
-  it("asks to reconnect on the website when the sign-in expired, and offers no sync", async () => {
+  it("offers to reconnect here when the sign-in expired, and offers no sync", async () => {
     startIntegrationsServer({ integrations: [aGmail({ needs_reauth: true })], logs: [aSyncLog()] });
     await renderScreen(<IntegrationsScreen />);
     await screen.findByText(MESSAGES.needsReauth);
     expect(screen.getByText(MESSAGES.needsReauthBody)).toBeTruthy();
-    expect(screen.getByRole("link", { name: MESSAGES.openOnWeb })).toBeTruthy();
+    expect(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect })).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("button", { name: MESSAGES.syncNow })).toBeNull();
     expect(screen.queryByRole("button", { name: MESSAGES.disconnect })).toBeNull();
     expect(screen.queryByText(new RegExp(`^${MESSAGES.connected}`))).toBeNull();

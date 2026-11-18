@@ -3,7 +3,7 @@ import { ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
-import { FIX_ON_WEBSITE, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { RECONNECT_IN_INTEGRATIONS, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import ReceiptBlockerNote from "./ReceiptBlockerNote";
 import { dismissActionLabel, periodLabel, receiptAmount, receivedLine, reviewActionLabel, rowLabel, rowName } from "./receiptDisplay";
 import { usePendingReceiptActions } from "./usePendingReceiptActions";
@@ -35,7 +35,7 @@ export default function ReceiptRow({ receipt, canWrite, canSend }: ReceiptRowPro
       </View>
       {isConfirming ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.checkingWithGmail}</Text> : null}
       {otherGmail ? (
-        <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{`${receiptSentFromOtherGmailMessage(otherGmail)} ${FIX_ON_WEBSITE}`}</Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{`${receiptSentFromOtherGmailMessage(otherGmail)} ${RECONNECT_IN_INTEGRATIONS}`}</Text>
       ) : null}
       {blocker ? <ReceiptBlockerNote blocker={blocker} receipt={receipt} /> : null}
       {canWrite ? (

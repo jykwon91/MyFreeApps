@@ -58,7 +58,7 @@ routes:
   /mortgages:
     screen: (app)/mortgages/index
   /oauth-callback:
-    not_on_mobile: Part of connecting Gmail on the website.
+    not_on_mobile: The website's Gmail sign-in popup. The app connects Gmail with its own return path (mybookkeeper://oauth-callback).
   /onboarding:
     not_on_mobile: First-time setup is done once, on the website.
   /payment-review:

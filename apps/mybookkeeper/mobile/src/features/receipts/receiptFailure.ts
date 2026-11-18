@@ -4,7 +4,7 @@ import { RECEIPT_SEND_FINISHED_CODES } from "@mybookkeeper/api-client/constants/
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { receiptSendErrorCode } from "@mybookkeeper/api-client/utils/receiptSendErrorCode";
 import { receiptSendErrorMessage } from "@mybookkeeper/api-client/utils/receiptSendErrorMessage";
-import { FIX_ON_WEBSITE, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { RECONNECT_IN_INTEGRATIONS, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import type { ReceiptDismissFailure } from "../../types/ReceiptDismissFailure";
 import type { ReceiptSendFailure } from "../../types/ReceiptSendFailure";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
@@ -19,8 +19,8 @@ export function sendFailure(error: unknown): ReceiptSendFailure {
   if (status === undefined) return { kind: "unsure" };
   const code = receiptSendErrorCode(serverDetail(error));
   if (code && RECEIPT_SEND_FINISHED_CODES.has(code)) return { kind: "finished", message: RECEIPT_SEND_ERROR_MESSAGES[code] };
-  if (code === "gmail_reauth_required") return { kind: "recheck", fallback: `${RECEIPT_SEND_ERROR_MESSAGES[code]} ${FIX_ON_WEBSITE}` };
-  if (code === "receipt_sent_from_other_gmail") return { kind: "message", message: `${receiptSendErrorMessage(code, serverDetail(error))} ${FIX_ON_WEBSITE}` };
+  if (code === "gmail_reauth_required") return { kind: "recheck", fallback: `${RECEIPT_SEND_ERROR_MESSAGES[code]} ${RECONNECT_IN_INTEGRATIONS}` };
+  if (code === "receipt_sent_from_other_gmail") return { kind: "message", message: `${receiptSendErrorMessage(code, serverDetail(error))} ${RECONNECT_IN_INTEGRATIONS}` };
   if (code) return { kind: "message", message: RECEIPT_SEND_ERROR_MESSAGES[code] };
   // A 5xx without the server's own detail came from the proxy (a restart, a dropped connection), so it may have gone out.
   if (status >= 500 && typeof serverDetail(error) !== "string") return { kind: "unsure" };

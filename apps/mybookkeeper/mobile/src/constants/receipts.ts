@@ -1,6 +1,5 @@
 import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
 import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/receipt-send-blocker";
-import { LINK_MESSAGES } from "@platform/mobile";
 
 /** One load covers every open receipt the server will return, so a deep link finds its row. */
 export const RECEIPTS_LIMIT = 500;
@@ -8,8 +7,8 @@ export const RECEIPTS_SKELETON_ROWS = ["a", "b", "c"];
 /** The first option in the payment method sheet. The send endpoint takes it as no method. */
 export const NO_PAYMENT_METHOD = "";
 
-/** Appended to a Gmail problem: connecting Gmail needs a browser, so it's only on the website. */
-export const FIX_ON_WEBSITE = "You can do that on the website.";
+/** Appended to a Gmail problem shown where there's no button to reconnect it, saying where there is one. */
+export const RECONNECT_IN_INTEGRATIONS = "You can reconnect Gmail in Integrations, under More.";
 
 /** Appended to a reason the phone can fix, saying where. */
 export const BLOCKER_FIX_ON_PHONE: Readonly<Partial<Record<ReceiptSendBlocker, string>>> = {
@@ -39,13 +38,11 @@ export const RECEIPTS_MESSAGES = {
   dismissTitle: "Dismiss this receipt?",
   dismissBody: "I'll take it off your list. The payment stays in your transactions.",
   dismissOtherGmailBody:
-    "I'll take it off your list. Only do this if your tenant got it: if they didn't, reconnect that Gmail account on the website and send it instead.",
+    "I'll take it off your list. Only do this if your tenant got it: if they didn't, reconnect that Gmail account and send it instead.",
   dismissed: "Dismissed. The payment is still in your transactions.",
   checkingWithGmail: "I'm still checking with Gmail whether an earlier send went out. Sending again is safe: I won't email it twice.",
   openPaymentReview: "Open Payment Review",
   addTheirEmail: "Add their email",
-  openWebsite: "Open the website",
-  opensBrowser: LINK_MESSAGES.opensBrowser,
   rentPeriod: "Rent period",
   from: "From",
   to: "To",

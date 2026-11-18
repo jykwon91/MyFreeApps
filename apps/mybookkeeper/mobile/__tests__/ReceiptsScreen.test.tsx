@@ -7,9 +7,11 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-li
 import type { AxiosAdapter } from "axios";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
+import { openAuthSessionAsync } from "expo-web-browser";
 import { Provider } from "react-redux";
-import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { GMAIL_CONNECT_MESSAGES, GMAIL_CONNECT_RETURN_URL } from "../src/constants/gmailConnect";
+import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import {
   blockerMessage,
   dismissActionLabel,
@@ -29,6 +31,7 @@ import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
+jest.mock("expo-web-browser", () => ({ openAuthSessionAsync: jest.fn() }));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -186,7 +189,7 @@ describe("what the list shows", () => {
     await showScreen();
 
     expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${BLOCKER_FIX_ON_PHONE.tenant_no_email}`)).toBeTruthy();
-    expect(screen.queryByText(new RegExp(FIX_ON_WEBSITE))).toBeNull();
+    expect(screen.queryByText(new RegExp(RECONNECT_IN_INTEGRATIONS))).toBeNull();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addTheirEmail }));
     expect(router.push).toHaveBeenCalledWith("/applicants/a7");
@@ -201,18 +204,37 @@ describe("what the list shows", () => {
     expect(router.push).toHaveBeenCalledWith("/payment-review");
   });
 
-  it("turns every Send off while Gmail can't send, and points to the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockImplementation(async () => undefined);
+  it("turns every Send off while Gmail can't send, and turns them back on once it's reconnected here", async () => {
     const server = startReceiptServer([aReceipt(), aReceipt({ id: "pr2", transaction_id: "tx2" })]);
     server.gmailState = "needs_send_permission";
     await showScreen();
 
-    expect(screen.getByText(`${RECEIPT_GMAIL_STATE_MESSAGES.needs_send_permission} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.getByText(RECEIPT_GMAIL_STATE_MESSAGES.needs_send_permission)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
     for (const button of screen.getAllByRole("button", { name: /^Review & send/ })) {
       expect(button.props.accessibilityState.disabled).toBe(true);
     }
-    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.openWebsite }));
-    expect(openURL).toHaveBeenCalledWith("https://mybookkeeper.myfreeapps.org/integrations");
+    jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
+      server.gmailState = "ready";
+      return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}?result=connected` };
+    });
+    await fireEvent.press(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect }));
+
+    expect(server.connectStarts.map((request) => request.params)).toEqual([{ client: "mobile" }]);
+    await waitFor(() => expect(screen.queryByText(RECEIPT_GMAIL_STATE_MESSAGES.needs_send_permission)).toBeNull());
+    for (const button of screen.getAllByRole("button", { name: /^Review & send/ })) {
+      expect(button.props.accessibilityState.disabled).toBe(false);
+    }
+  });
+
+  it("offers to connect Gmail when it isn't connected", async () => {
+    const server = startReceiptServer([aReceipt()]);
+    server.gmailState = "not_connected";
+    await showScreen();
+
+    expect(screen.getByText(RECEIPT_GMAIL_STATE_MESSAGES.not_connected)).toBeTruthy();
+    expect(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.connect })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect })).toBeNull();
   });
 
   it("says an earlier send is being checked, keeps Send, and offers no Dismiss", async () => {
@@ -228,7 +250,7 @@ describe("what the list shows", () => {
     const server = startReceiptServer([aReceipt({ status: "sending", sent_from_other_gmail: "old@gmail.com" })]);
     await showScreen();
 
-    expect(screen.getByText(`${receiptSentFromOtherGmailMessage("old@gmail.com")} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.getByText(`${receiptSentFromOtherGmailMessage("old@gmail.com")} ${RECONNECT_IN_INTEGRATIONS}`)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.checkingWithGmail)).toBeNull();
     expect(screen.queryByText(MESSAGES.reviewAndSend)).toBeNull();
 
@@ -354,13 +376,13 @@ describe("display helpers", () => {
     expect(periodLabel("2025-12-15", "2026-01-14")).toBe("Dec 15, 2025 – Jan 14, 2026");
   });
 
-  it("says where on the phone to fix a blocker, and sends only Gmail to the website", () => {
+  it("says where on the phone to fix a blocker, and gives Gmail's state on its own", () => {
     expect(blockerMessage("tenant_no_email")).toContain(BLOCKER_FIX_ON_PHONE.tenant_no_email);
-    expect(blockerMessage("tenant_no_email")).not.toContain(FIX_ON_WEBSITE);
+    expect(blockerMessage("tenant_no_email")).not.toContain(RECONNECT_IN_INTEGRATIONS);
     expect(blockerMessage("not_attributed")).toBe(RECEIPT_SEND_BLOCKER_MESSAGES.not_attributed);
     expect(blockerMessage("no_lease")).toBe(RECEIPT_SEND_BLOCKER_MESSAGES.no_lease);
     expect(gmailMessage("ready")).toBeNull();
-    expect(gmailMessage("not_connected")).toContain(FIX_ON_WEBSITE);
+    expect(gmailMessage("not_connected")).toBe(RECEIPT_GMAIL_STATE_MESSAGES.not_connected);
   });
 
   it("starts each button's spoken label with its words and names the tenant", () => {

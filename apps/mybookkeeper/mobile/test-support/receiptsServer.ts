@@ -2,6 +2,7 @@ import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pendin
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
 
 export const PENDING_URL = "/rent-receipts/pending";
 
@@ -49,6 +50,8 @@ export interface FakeReceiptServer {
   beforeListRead: (() => void) | null;
   writes: { url: string; body: unknown }[];
   listReads: AxiosRequestConfig[];
+  /** Every request to start connecting Gmail. */
+  connectStarts: AxiosRequestConfig[];
 }
 
 /** Answers the receipts endpoints, so a screen test runs through the real API client. */
@@ -65,6 +68,7 @@ export function startReceiptServer(receipts: PendingReceipt[]): FakeReceiptServe
     beforeListRead: null,
     writes: [],
     listReads: [],
+    connectStarts: [],
   };
   const adapter: AxiosAdapter = async (config) => {
     const url = config.url ?? "";
@@ -80,6 +84,10 @@ export function startReceiptServer(receipts: PendingReceipt[]): FakeReceiptServe
       if (server.pendingCount !== null && server.receipts.length < before) server.pendingCount -= 1;
     };
     if (server.offline) throw noAnswer();
+    if (url === GMAIL_CONNECT_URL) {
+      server.connectStarts.push(config);
+      return respond(200, { auth_url: GOOGLE_AUTH_URL });
+    }
     if (url === PENDING_URL) {
       server.listReads.push(config);
       server.beforeListRead?.();

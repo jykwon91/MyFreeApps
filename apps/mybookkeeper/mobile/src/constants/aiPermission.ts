@@ -14,4 +14,4 @@ export const AI_PERMISSION_NOT_ALLOWED_STATE =
 export const AI_PERMISSION_ALLOWED_STATE =
   "This is allowed on this phone. If you stop, I won't send new files, and that doesn't take back what I've already sent.";
 export const AI_PERMISSION_NOT_COVERED =
-  "This choice doesn't cover two things. If you connected Gmail on the website, I read those emails and attachments with Claude. To stop that, disconnect Gmail there. Messages from your public inquiry form also get a spam check by Claude, with email addresses and phone numbers removed.";
+  "This choice doesn't cover two things. If you connected Gmail, I read those emails and attachments with Claude. To stop that, disconnect Gmail in Integrations. Messages from your public inquiry form also get a spam check by Claude, with email addresses and phone numbers removed.";

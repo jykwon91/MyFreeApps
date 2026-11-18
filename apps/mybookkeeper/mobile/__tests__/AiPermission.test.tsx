@@ -282,7 +282,8 @@ describe("the panel", () => {
 
   it("says what Gmail and the inquiry form do, because this choice doesn't cover them", async () => {
     await render(wrapped(<AiPermissionPanel onNotNow={jest.fn()} />));
-    expect(screen.getByText(/disconnect Gmail there/)).toBeTruthy();
+    expect(screen.getByText(/disconnect Gmail in Integrations/)).toBeTruthy();
+    expect(screen.queryByText(/website/)).toBeNull();
     expect(screen.getByText(/email addresses and phone numbers removed/)).toBeTruthy();
   });
 });

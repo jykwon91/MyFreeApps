@@ -5,14 +5,16 @@ from typing import Any
 
 from google_auth_oauthlib.flow import Flow
 import jwt
-from jwt.exceptions import PyJWTError as JWTError
+from jwt.exceptions import ExpiredSignatureError, PyJWTError as JWTError
 
 from platform_shared.auth.session_invalidation import is_issued_before_cutoff
 from platform_shared.core.auth_events import AuthEventType
 
 from app.core.config import settings
 from app.core.context import RequestContext
+from app.core.gmail_connect_client import GmailConnectClient
 from app.core.gmail_connect_constants import GMAIL_CONNECT_NOT_ALLOWED_DETAIL
+from app.core.gmail_connect_failure import GmailConnectFailure
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.mappers.integration_mapper import to_integration_info
 from app.models.organization.organization_member import OrgRole
@@ -22,6 +24,7 @@ from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
 from app.repositories import email_queue_repo, integration_repo, organization_repo, sync_log_repo, user_repo
 from app.services.email import gmail_mailbox
+from app.services.integrations.gmail_connect_error import GmailConnectError
 from app.services.integrations.gmail_connect_not_allowed_error import GmailConnectNotAllowedError
 from platform_shared.services.auth_event_service import log_auth_event
 
@@ -65,11 +68,15 @@ def _get_flow() -> Flow:
     )
 
 
-def _create_oauth_state(user_id: str, organization_id: str, code_verifier: str) -> str:
+def _create_oauth_state(
+    user_id: str, organization_id: str, code_verifier: str, *, client: GmailConnectClient,
+) -> str:
     return jwt.encode(
         {
             "sub": user_id,
             "org_id": organization_id,
+            # Signed in, so where the callback sends the person can't be changed on the way.
+            "client": client.value,
             # PKCE verifier — Google requires this round-tripped at token-exchange
             # time so the new Flow instance in the callback can reuse the same
             # verifier the original Flow generated. Stuffing it into the state
@@ -92,15 +99,42 @@ def _verify_oauth_state(state: str) -> tuple[str, str, str | None, int]:
     rejects, but we surface a clean ValueError instead of a 500)."""
     try:
         payload: dict[str, Any] = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
-        if payload.get("type") != "oauth_state":
-            raise ValueError("Invalid OAuth state")
-        # A state minted before ``iat`` was added counts as older than any cutoff.
-        return payload["sub"], payload["org_id"], payload.get("cv"), payload.get("iat", 0)
+    except ExpiredSignatureError:
+        raise GmailConnectError(GmailConnectFailure.EXPIRED, "Invalid or expired OAuth state")
     except JWTError:
-        raise ValueError("Invalid or expired OAuth state")
+        raise GmailConnectError(GmailConnectFailure.INVALID_STATE, "Invalid or expired OAuth state")
+    if payload.get("type") != "oauth_state" or _client_claim(payload) is None:
+        raise GmailConnectError(GmailConnectFailure.INVALID_STATE, "Invalid OAuth state")
+    # A state minted before ``iat`` was added counts as older than any cutoff.
+    return payload["sub"], payload["org_id"], payload.get("cv"), payload.get("iat", 0)
 
 
-def get_gmail_connect_url(ctx: RequestContext) -> str:
+def _client_claim(payload: dict[str, Any]) -> GmailConnectClient | None:
+    """The state's client, None when it names one not on the allowlist. States
+    minted before the claim was added came from the website."""
+    try:
+        return GmailConnectClient(payload.get("client", GmailConnectClient.WEB))
+    except ValueError:
+        return None
+
+
+def gmail_connect_client(state: str) -> GmailConnectClient:
+    """Which app started the connection, from its signed state, so the callback
+    knows where to send the answer. The signature is checked but not the expiry, so
+    a phone that took too long is still told so. Anything unreadable is the website's,
+    which then refuses it as before."""
+    try:
+        payload: dict[str, Any] = jwt.decode(
+            state, settings.secret_key, algorithms=["HS256"], options={"verify_exp": False},
+        )
+    except JWTError:
+        return GmailConnectClient.WEB
+    if payload.get("type") != "oauth_state":
+        return GmailConnectClient.WEB
+    return _client_claim(payload) or GmailConnectClient.WEB
+
+
+def get_gmail_connect_url(ctx: RequestContext, client: GmailConnectClient) -> str:
     flow = _get_flow()
     # First call: have the Flow auto-generate ``code_verifier`` and
     # ``code_challenge``. The returned URL is discarded — we only need the
@@ -116,6 +150,7 @@ def get_gmail_connect_url(ctx: RequestContext) -> str:
         str(ctx.user_id),
         str(ctx.organization_id),
         flow.code_verifier or "",
+        client=client,
     )
     # Second call: reuse the same Flow (same verifier/challenge) and pass
     # our JWT state. Single ``state`` parameter, no manual URL splicing.
@@ -134,16 +169,22 @@ async def _require_state_outlives_session_cutoff(user_id: uuid.UUID, issued_at: 
     async with AsyncSessionLocal() as db:
         user = await user_repo.get_by_id(db, user_id)
     if user is None:
-        raise ValueError("Invalid OAuth state")
+        raise GmailConnectError(GmailConnectFailure.INVALID_STATE, "Invalid OAuth state")
     if user.auth_valid_after is not None and is_issued_before_cutoff(issued_at, user.auth_valid_after):
-        raise ValueError("OAuth state predates a password change — restart the connection flow")
+        raise GmailConnectError(
+            GmailConnectFailure.EXPIRED,
+            "OAuth state predates a password change — restart the connection flow",
+        )
 
 
 async def handle_gmail_callback(code: str, state: str) -> None:
-    """Exchange OAuth code for tokens, upsert integration. Raises ValueError on bad state."""
+    """Exchange OAuth code for tokens, upsert integration. Raises GmailConnectError when it refuses."""
     user_id_str, org_id_str, code_verifier, issued_at = _verify_oauth_state(state)
     if not code_verifier:
-        raise ValueError("OAuth state missing PKCE verifier — restart the connection flow")
+        raise GmailConnectError(
+            GmailConnectFailure.INVALID_STATE,
+            "OAuth state missing PKCE verifier — restart the connection flow",
+        )
     await _require_state_outlives_session_cutoff(uuid.UUID(user_id_str), issued_at)
 
     flow = _get_flow()
@@ -153,15 +194,19 @@ async def handle_gmail_callback(code: str, state: str) -> None:
     flow.code_verifier = code_verifier
     try:
         flow.fetch_token(code=code)
-    except Exception:
-        logger.exception("Gmail OAuth token exchange failed (fetch_token)")
+    except Exception as exc:
+        # oauthlib's errors carry Google's code (invalid_grant, redirect_uri_mismatch, ...).
+        logger.exception("Gmail OAuth token exchange failed (fetch_token): error=%s", getattr(exc, "error", None))
         raise
     creds = flow.credentials
     if not creds.refresh_token:
         # The consent prompt always gets one. Without it the connection can't
         # outlive this access token, and a reconnect would keep another account's.
         logger.error("Gmail OAuth connect failed: Google returned no refresh token")
-        raise ValueError("Google didn't return a refresh token. Reconnect Gmail and try again.")
+        raise GmailConnectError(
+            GmailConnectFailure.NO_REFRESH_TOKEN,
+            "Google didn't return a refresh token. Reconnect Gmail and try again.",
+        )
     expiry = creds.expiry or datetime.now(timezone.utc) + timedelta(seconds=3600)
 
     # Google returns the actually-granted scopes (incremental consent may

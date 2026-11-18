@@ -14,7 +14,8 @@ import * as Sharing from "expo-sharing";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { GMAIL_CONNECT_MESSAGES } from "../src/constants/gmailConnect";
+import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import SendReceiptScreen from "../src/features/receipts/SendReceiptScreen";
 import { useSendReceipt } from "../src/features/receipts/useSendReceipt";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
@@ -185,7 +186,8 @@ describe("opening it", () => {
     server.gmailState = "not_connected";
     await showScreen();
 
-    expect(screen.getByText(`${RECEIPT_GMAIL_STATE_MESSAGES.not_connected} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.getByText(RECEIPT_GMAIL_STATE_MESSAGES.not_connected)).toBeTruthy();
+    expect(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.connect })).toBeTruthy();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
   });
 });
@@ -445,7 +447,8 @@ describe("when the send is refused", () => {
     };
     await sendWith(server, { status: 422, detail: "Gmail needs reconnecting." });
 
-    expect(await screen.findByText(`${RECEIPT_GMAIL_STATE_MESSAGES.needs_reconnect} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(await screen.findByText(RECEIPT_GMAIL_STATE_MESSAGES.needs_reconnect)).toBeTruthy();
+    expect(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect })).toBeTruthy();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
   });
 
@@ -458,11 +461,11 @@ describe("when the send is refused", () => {
     expect(screen.queryByText("Something new")).toBeNull();
   });
 
-  it("asks to reconnect Gmail on the website when its sign-in has lapsed", async () => {
+  it("says where to reconnect Gmail when its sign-in has lapsed", async () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status: 503, detail: "gmail_reauth_required" });
 
-    expect(await screen.findByText(`${RECEIPT_SEND_ERROR_MESSAGES.gmail_reauth_required} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(await screen.findByText(`${RECEIPT_SEND_ERROR_MESSAGES.gmail_reauth_required} ${RECONNECT_IN_INTEGRATIONS}`)).toBeTruthy();
   });
 });
 

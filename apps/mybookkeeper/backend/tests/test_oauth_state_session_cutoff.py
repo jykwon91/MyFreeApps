@@ -10,11 +10,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.gmail_connect_client import GmailConnectClient
 from app.services.integrations import integration_service
 
 
 async def _run_callback(user: SimpleNamespace | None, flow: MagicMock) -> None:
-    state = integration_service._create_oauth_state(str(uuid.uuid4()), str(uuid.uuid4()), "verifier")
+    state = integration_service._create_oauth_state(
+        str(uuid.uuid4()), str(uuid.uuid4()), "verifier", client=GmailConnectClient.WEB,
+    )
     with (
         patch.object(integration_service, "AsyncSessionLocal", return_value=AsyncMock()),
         patch.object(integration_service.user_repo, "get_by_id", new=AsyncMock(return_value=user)),
