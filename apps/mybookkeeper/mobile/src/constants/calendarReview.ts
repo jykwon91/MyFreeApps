@@ -1,4 +1,3 @@
-export const REVIEW_QUEUE_LISTINGS_ARGS = { limit: 100, offset: 0 };
 export const REVIEW_QUEUE_SKELETON_ROWS = ["a", "b", "c"];
 
 export const REVIEW_MESSAGES = {

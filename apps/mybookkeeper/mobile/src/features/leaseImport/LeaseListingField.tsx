@@ -1,8 +1,9 @@
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
 import { useMemo, useState } from "react";
-import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
+import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
 import { pickerLoadError } from "../../lib/pickerLoadError";
+import ListingChoicesFooter from "../listings/ListingChoicesFooter";
+import { useListingChoices } from "../listings/useListingChoices";
 import PickerField from "../transactions/PickerField";
 
 interface LeaseListingFieldProps {
@@ -13,12 +14,10 @@ interface LeaseListingFieldProps {
 
 /** Which listing the lease is for, if any. The lease can be imported without one, so a failure to load doesn't block. */
 export default function LeaseListingField({ value, onChange, disabled }: LeaseListingFieldProps) {
-  const { currentData, error, isLoading, refetch } = useGetListingsQuery({ limit: LEASE_IMPORT_CHOICE_LIMIT });
+  const choices = useListingChoices();
+  const { isLoading, hasData, error, refetch, loadMoreIfAny } = choices;
   const [isPicking, setIsPicking] = useState(false);
-  const options = useMemo(
-    () => [{ value: "", label: MESSAGES.listingNone }, ...(currentData?.items ?? []).map((listing) => ({ value: listing.id, label: listing.title }))],
-    [currentData],
-  );
+  const options = useMemo(() => [{ value: "", label: MESSAGES.listingNone }, ...choices.options], [choices.options]);
 
   if (isLoading) {
     return (
@@ -27,11 +26,11 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
       </LoadingRegion>
     );
   }
-  if (!currentData) {
+  if (!hasData) {
     const failure = pickerLoadError({ hasLoaded: false, error, refetch }, MESSAGES.listingsFailed);
     return failure ? <SectionError {...failure} /> : null;
   }
-  if (currentData.items.length === 0) return null;
+  if (choices.options.length === 0) return null;
 
   return (
     <>
@@ -43,8 +42,10 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
         value={options.find((option) => option.value === value)?.label ?? MESSAGES.listingNone}
       />
       <OptionSheet
+        footer={<ListingChoicesFooter choices={choices} />}
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}
+        onEndReached={loadMoreIfAny}
         onSelect={(listingId) => {
           setIsPicking(false);
           onChange(listingId);

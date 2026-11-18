@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 
 const mockListings: ListingSummary[] = [
@@ -24,6 +25,18 @@ const createInquiryMock = vi.fn((_payload: unknown) => ({
   unwrap: () => Promise.resolve({ id: "inq-new" }),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
+  useListListingPagesInfiniteQuery: vi.fn(() => ({
+    ...infiniteQueryData({ items: mockListings, total: mockListings.length, has_more: false }),
+    isLoading: false,
+    isFetching: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    isError: false,
+    refetch: vi.fn(),
+  })),
+}));
+
 vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useCreateInquiryMutation: vi.fn(() => [createInquiryMock, { isLoading: false }]),
 }));
@@ -32,7 +45,7 @@ function renderForm(onClose = vi.fn()) {
   return render(
     <Provider store={store}>
       <MemoryRouter>
-        <InquiryForm listings={mockListings} onClose={onClose} />
+        <InquiryForm onClose={onClose} />
       </MemoryRouter>
     </Provider>,
   );

@@ -43,6 +43,19 @@ describe("OptionSheet", () => {
     expect(onSelect).toHaveBeenCalledWith("oak");
   });
 
+  it("asks for the next page near the end of the options, and shows its footer under them", async () => {
+    const onEndReached = jest.fn();
+    await render(
+      <OptionSheet footer={<Text>Loading more</Text>} isOpen onClose={jest.fn()} onEndReached={onEndReached} onSelect={jest.fn()} options={OPTIONS} title="Property" value="elm" />,
+    );
+    expect(screen.getByText("Loading more")).toBeTruthy();
+
+    for (let node = screen.getAllByRole("radio")[0].parent; node; node = node.parent) {
+      if (node.props?.onEndReached) await act(async () => node?.props.onEndReached());
+    }
+    expect(onEndReached).toHaveBeenCalled();
+  });
+
   it("opens a long list on the current choice, and not at all when it is first", async () => {
     const scroll = jest.spyOn(FlatList.prototype, "scrollToIndex").mockImplementation(() => undefined);
     const many = Array.from({ length: 30 }, (_, i) => ({ value: `v${i}`, label: `Option ${i}` }));

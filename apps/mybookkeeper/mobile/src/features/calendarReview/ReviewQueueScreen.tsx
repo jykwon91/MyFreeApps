@@ -1,9 +1,7 @@
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetReviewQueueQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
-import { useMemo } from "react";
 import { FlatList, Text } from "react-native";
-import { REVIEW_MESSAGES, REVIEW_QUEUE_LISTINGS_ARGS } from "../../constants/calendarReview";
+import { REVIEW_MESSAGES } from "../../constants/calendarReview";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReviewQueueCard from "./ReviewQueueCard";
 import ReviewQueueSkeleton from "./ReviewQueueSkeleton";
@@ -12,11 +10,9 @@ export default function ReviewQueueScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
   const { currentData: items, error, isFetching, refetch } = useGetReviewQueueQuery();
-  const { data: listingsEnvelope } = useGetListingsQuery(REVIEW_QUEUE_LISTINGS_ARGS, { skip: !canWrite });
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
-  const listings = useMemo(() => (listingsEnvelope?.items ?? []).map((listing) => ({ value: listing.id, label: listing.title })), [listingsEnvelope]);
 
   function empty() {
     if (!items && (isFetching || !error)) return <ReviewQueueSkeleton />;
@@ -50,7 +46,7 @@ export default function ReviewQueueScreen() {
       data={items ?? []}
       keyExtractor={(item) => item.id}
       refreshControl={refreshControl}
-      renderItem={({ item }) => <ReviewQueueCard canWrite={canWrite} item={item} listings={listings} />}
+      renderItem={({ item }) => <ReviewQueueCard canWrite={canWrite} item={item} />}
     />
   );
 }

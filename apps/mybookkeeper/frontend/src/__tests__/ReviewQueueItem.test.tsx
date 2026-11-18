@@ -1,3 +1,4 @@
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
@@ -76,15 +77,16 @@ vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
-  useGetListingsQuery: vi.fn(() => ({
-    data: {
-      items: [
+  useListListingPagesInfiniteQuery: vi.fn(() => ({
+    ...infiniteQueryData({ items: [
         { id: "listing-1", title: "Master Bedroom", status: "active", room_type: "private_room", monthly_rate: "1500", property_id: "prop-1", created_at: "2026-01-01" },
-      ],
-      total: 1,
-      has_more: false,
-    },
+      ], total: 1, has_more: false }),
     isLoading: false,
+    isFetching: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    isError: false,
+    refetch: vi.fn(),
   })),
 }));
 

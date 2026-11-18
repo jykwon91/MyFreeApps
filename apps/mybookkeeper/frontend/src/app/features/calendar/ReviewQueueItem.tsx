@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ReviewQueueItem as ReviewQueueItemType } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
 import { LoadingButton } from "@platform/ui";
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import ListingSelect from "@/app/features/listings/ListingSelect";
 import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
@@ -43,12 +43,6 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-
-  const { data: listingsEnvelope } = useGetListingsQuery(
-    { limit: 100, offset: 0 },
-    { skip: !isExpanded },
-  );
-  const listings = listingsEnvelope?.items ?? [];
 
   const [resolveItem, { isLoading: isResolving }] = useResolveQueueItemMutation();
   const [ignoreItem, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
@@ -205,23 +199,17 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <select
+            <ListingSelect
               value={selectedListingId}
               onChange={(e) => {
                 setSelectedListingId(e.target.value);
                 setError(null);
               }}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
               aria-label="Select a listing"
               data-testid="review-queue-listing-select"
-            >
-              <option value="">Select a listing…</option>
-              {listings.map((listing) => (
-                <option key={listing.id} value={listing.id}>
-                  {listing.title}
-                </option>
-              ))}
-            </select>
+              emptyLabel="Select a listing…"
+            />
 
             <LoadingButton
               variant="primary"

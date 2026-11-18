@@ -17,6 +17,10 @@ export interface OptionSheetProps<Value extends string> {
   emptyContent?: ReactNode;
   /** The options couldn't load: says so in place of the list, with a way to try again. */
   loadError?: SectionErrorProps;
+  /** The person scrolled near the end of the options: ask for the next page, when they come a page at a time. */
+  onEndReached?: () => void;
+  /** Under the options, such as the next page loading or failing to load. */
+  footer?: ReactNode;
   /** After it has finished closing. An Alert raised before then can be lost on iOS. */
   onClosed?: () => void;
 }

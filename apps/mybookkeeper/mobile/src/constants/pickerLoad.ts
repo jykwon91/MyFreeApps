@@ -3,4 +3,7 @@ export const PICKER_LOAD_MESSAGES = {
   retry: "Try again",
   propertiesLoading: "I'm loading your properties.",
   propertiesFailed: "I couldn't load your properties.",
+  loadingListings: "Loading your listings",
+  listingsFailed: "I couldn't load your listings.",
+  loadingMoreListings: "Loading more listings",
 } as const;

@@ -1,21 +1,22 @@
 import { INQUIRY_FORM_LABELS as LABELS } from "@mybookkeeper/api-client/constants/inquiryForm";
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { LoadingRegion, SectionError, Skeleton } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, SectionError, Skeleton } from "@platform/mobile";
 import { useMemo } from "react";
-import { INQUIRY_CREATE_MESSAGES as MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
+import { View } from "react-native";
+import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
+import { canLoadMore } from "../../lib/canLoadMore";
 import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { InquiryListingFieldProps } from "../../types/InquiryListingFieldProps";
+import ListingChoicesFooter from "../listings/ListingChoicesFooter";
+import { useListingChoices } from "../listings/useListingChoices";
 import InquiryChoiceGroup from "./InquiryChoiceGroup";
 
 const SKELETON_HEIGHT = 56;
 
 /** Which listing they asked about, if any. Linking is optional, so a failure to load doesn't block adding. */
 export default function InquiryListingField({ value, onChange, disabled }: InquiryListingFieldProps) {
-  const { currentData, error, isLoading, refetch } = useGetListingsQuery({ limit: INQUIRY_LISTING_CHOICE_LIMIT });
-  const choices = useMemo(
-    () => [{ value: "", label: LABELS.noListing }, ...(currentData?.items ?? []).map((listing) => ({ value: listing.id, label: listing.title }))],
-    [currentData],
-  );
+  const choices = useListingChoices();
+  const { options, isLoading, hasData, error, refetch, loadMore } = choices;
+  const choicesWithNone = useMemo(() => [{ value: "", label: LABELS.noListing }, ...options], [options]);
 
   if (isLoading) {
     return (
@@ -24,10 +25,20 @@ export default function InquiryListingField({ value, onChange, disabled }: Inqui
       </LoadingRegion>
     );
   }
-  if (!currentData) {
+  if (!hasData) {
     const failure = pickerLoadError({ hasLoaded: false, error, refetch }, MESSAGES.listingsFailed);
     return failure ? <SectionError {...failure} /> : null;
   }
-  if (currentData.items.length === 0) return null;
-  return <InquiryChoiceGroup choices={choices} disabled={disabled} label={LABELS.listing} onSelect={onChange} value={value} />;
+  if (options.length === 0) return null;
+  return (
+    <View>
+      <InquiryChoiceGroup choices={choicesWithNone} disabled={disabled} label={LABELS.listing} onSelect={onChange} value={value} />
+      <ListingChoicesFooter choices={choices} />
+      {canLoadMore(choices) ? (
+        <LoadingButton disabled={disabled} onPress={loadMore} variant="secondary">
+          {MESSAGES.showMoreListings}
+        </LoadingButton>
+      ) : null}
+    </View>
+  );
 }
