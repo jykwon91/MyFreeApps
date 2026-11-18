@@ -3,6 +3,7 @@ import api from "@platform/core/lib/api";
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { Alert } from "react-native";
+import { POLICY_ATTACHMENT_MESSAGES } from "../src/constants/insuranceForm";
 import PolicyDetailScreen from "../src/features/insurance/PolicyDetailScreen";
 import { formParts, formValue } from "../test-support/applicantsServer";
 import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
@@ -163,7 +164,7 @@ describe("policy documents", () => {
     [404, "That policy isn't there any more."],
     [403, "You have view-only access, so I can't change documents."],
     [500, "I couldn't upload that. Want to try again?"],
-    ["offline" as const, "I can't reach the server, so I couldn't upload that. Want to try again?"],
+    ["offline" as const, POLICY_ATTACHMENT_MESSAGES.uploadUnsure],
   ])("a %s on upload says %s and keeps the file", async (failure, message) => {
     startInsuranceServer({ failures: { "POST /insurance-policies/:id/attachments": failure } });
     await renderInsurance(<PolicyDetailScreen id="p1" />);

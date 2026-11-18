@@ -15,6 +15,7 @@ export const SCREENING_MESSAGES = {
   learnMore: "Learn more",
   uploaded: "Saved the screening result.",
   uploadFailed: "I couldn't upload that. Want me to try again?",
+  uploadUnsure: "I'm not sure that uploaded. Check the screening results before trying again, so you don't end up with two.",
   tooBig: "That file is too big. Try a smaller PDF or a lower-resolution photo.",
   badFile: "I can't read that kind of file. Use a PDF, JPEG, or PNG.",
   needsReason: "I need a reason for that outcome.",

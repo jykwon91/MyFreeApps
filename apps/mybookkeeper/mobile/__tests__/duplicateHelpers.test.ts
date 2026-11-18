@@ -1,3 +1,4 @@
+import { DUPLICATES_MESSAGES } from "../src/constants/duplicates";
 import { duplicateFailureMessage } from "../src/features/duplicates/duplicateFailure";
 import {
   duplicateCountLine,
@@ -69,10 +70,12 @@ describe("duplicate display", () => {
 
 describe("duplicate failures", () => {
   it("words each outcome for the action that failed", () => {
-    expect(duplicateFailureMessage("merge", { status: 500 })).toBe("I couldn't merge those. Want to try again?");
-    expect(duplicateFailureMessage("dismiss", { status: 500 })).toBe("I couldn't mark those as not duplicates. Want to try again?");
-    expect(duplicateFailureMessage({ keep: "a" }, { status: 500 })).toBe("I couldn't resolve that duplicate. Want to try again?");
-    expect(duplicateFailureMessage("merge", {})).toBe("I can't reach the server, so nothing changed. Check your connection.");
+    expect(duplicateFailureMessage("merge", { status: 500, data: { detail: "nope" } })).toBe("I couldn't merge those. Want to try again?");
+    expect(duplicateFailureMessage("dismiss", { status: 500, data: { detail: "nope" } })).toBe("I couldn't mark those as not duplicates. Want to try again?");
+    expect(duplicateFailureMessage({ keep: "a" }, { status: 500, data: { detail: "nope" } })).toBe("I couldn't resolve that duplicate. Want to try again?");
+    // No answer, or a proxy error, can come after the change landed, so it never says nothing changed.
+    expect(duplicateFailureMessage("merge", {})).toBe(DUPLICATES_MESSAGES.unsure);
+    expect(duplicateFailureMessage("dismiss", { status: 502, data: "<html>Bad Gateway</html>" })).toBe(DUPLICATES_MESSAGES.unsure);
   });
 });
 

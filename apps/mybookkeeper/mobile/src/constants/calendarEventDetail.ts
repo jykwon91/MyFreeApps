@@ -34,6 +34,7 @@ export const EVENT_MESSAGES = {
   uploadBadType: "I can only take photos, PDFs, and text files.",
   uploadStorageDown: "File storage isn't available right now. Try again in a little while.",
   uploadFailed: "I couldn't upload that file. Want to try again?",
+  uploadUnsure: "I'm not sure that file uploaded. Check the event's files before trying again, so you don't end up with two.",
   attachmentsFailed: "I couldn't load the attachments.",
   retry: "Try again",
   open: "Open",

@@ -82,6 +82,8 @@ export interface FakeTransactionServer {
   premiumComparison: InsurancePremiumComparison;
   /** What the duplicates list serves. Resolving one takes it off. */
   duplicates: DuplicatePair[];
+  /** Drops the answer to the next duplicate write while set: after the change was saved, or before it was. */
+  duplicateAnswerLost: "afterSaving" | "beforeSaving" | null;
   /** What a bank statement import answers with. Its preview rows land in the list, approved, as the backend saves them. */
   bankImportResult: ImportResult;
   /** Fails bank statement imports while set: with a status, or with no answer at all. */
@@ -150,6 +152,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     rateComparison: noRateComparison(),
     premiumComparison: noPremiumComparison(),
     duplicates: [],
+    duplicateAnswerLost: null,
     bankImportResult: {
       imported: 2,
       skipped_duplicates: 1,
@@ -220,9 +223,12 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/duplicates") return respond({ pairs: server.duplicates, total: server.duplicates.length });
     if (config.url?.startsWith("/transactions/duplicates/")) {
       if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const lost = () => Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      if (server.duplicateAnswerLost === "beforeSaving") return lost();
       const body = JSON.parse(String(config.data)) as { transaction_ids?: string[]; delete_ids?: string[]; transaction_a_id?: string; transaction_b_id?: string };
       const gone = [...(body.transaction_ids ?? []), ...(body.delete_ids ?? []), ...(body.transaction_a_id ? [body.transaction_a_id, body.transaction_b_id] : [])];
       server.duplicates = server.duplicates.filter((pair) => !gone.includes(pair.transaction_a.id) && !gone.includes(pair.transaction_b.id));
+      if (server.duplicateAnswerLost === "afterSaving") return lost();
       if (config.url.endsWith("/keep")) return respond({ kept: 1, deleted: body.delete_ids?.length ?? 0 });
       if (config.url.endsWith("/merge")) return respond({ merged: true, surviving_id: "s1" });
       return respond({ reviewed: body.transaction_ids?.length ?? 0 });

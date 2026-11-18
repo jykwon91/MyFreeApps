@@ -10,6 +10,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
+import { LEASE_MESSAGES } from "../src/constants/leases";
 import LeaseDetailScreen from "../src/features/leases/LeaseDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -91,11 +92,13 @@ interface FakeServer {
   lease: SignedLeaseDetail;
   role: string;
   uploadFailure: number | null;
+  /** Drops the answer to the next upload after the file was stored, while set. */
+  uploadAnswerLost: boolean;
   uploads: AxiosRequestConfig[];
 }
 
 function startServer(attachments: SignedLeaseAttachment[] = []): FakeServer {
-  const server: FakeServer = { lease: aLease(attachments), role: "owner", uploadFailure: null, uploads: [] };
+  const server: FakeServer = { lease: aLease(attachments), role: "owner", uploadFailure: null, uploadAnswerLost: false, uploads: [] };
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data, status, statusText: "", headers: {}, config };
@@ -110,6 +113,10 @@ function startServer(attachments: SignedLeaseAttachment[] = []): FakeServer {
       const name = formParts(config.data).find((part) => part.fieldName === "file")?.name ?? "";
       const added = aFile({ id: `f${server.uploads.length}`, filename: name, kind: formValue(config.data, "kind") as SignedLeaseAttachment["kind"] });
       server.lease = { ...server.lease, attachments: [...server.lease.attachments, added] };
+      if (server.uploadAnswerLost) {
+        server.uploadAnswerLost = false;
+        return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      }
       return respond(added, 201);
     }
     return respond({ detail: "Not found" }, 404);
@@ -218,7 +225,7 @@ describe("adding a file to a lease", () => {
     let calls = 0;
     api.defaults.adapter = (config) => {
       if (config.url === "/signed-leases/l1/attachments" && ++calls === 2) {
-        return Promise.reject(Object.assign(new Error("failed"), { isAxiosError: true, config, response: { data: {}, status: 503, statusText: "", headers: {}, config } }));
+        return Promise.reject(Object.assign(new Error("failed"), { isAxiosError: true, config, response: { data: { detail: "Storage unavailable" }, status: 503, statusText: "", headers: {}, config } }));
       }
       return original(config);
     };
@@ -290,6 +297,18 @@ describe("adding a file to a lease", () => {
     await fireEvent.press(screen.getByRole("button", ADD));
     await screen.findByText("Added paper.pdf.");
     expect(server.uploads).toHaveLength(2);
+  });
+
+  it("says it isn't sure, instead of offering a retry that adds a second copy, when the answer is lost after the file was stored", async () => {
+    const server = startServer();
+    server.uploadAnswerLost = true;
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add the signed copy" }));
+    await chooseFile();
+    await fireEvent.press(screen.getByRole("button", ADD));
+    expect(await screen.findByText(LEASE_MESSAGES.uploadUnsure)).toBeTruthy();
+    expect(screen.queryByText(LEASE_MESSAGES.uploadFailed, SHOWN)).toBeNull();
+    expect(server.uploads).toHaveLength(1);
   });
 
   it("asks before throwing away a chosen file, and leaves nothing behind", async () => {

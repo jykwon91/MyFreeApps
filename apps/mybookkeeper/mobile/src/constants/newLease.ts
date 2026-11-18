@@ -65,6 +65,7 @@ export const NEW_LEASE_MESSAGES = {
   makingFiles: "Making the files…",
   madeFiles: "I made the lease files.",
   makeFilesFailed: "I couldn't make the lease files. Want to try again?",
+  makeFilesUnsure: "I didn't hear back, so I'm not sure the lease files were made. Check the lease's files before trying again.",
   storageDown: "I can't save lease files right now. Try again in a bit.",
   makeAndEmail: "Make and email",
 } as const;

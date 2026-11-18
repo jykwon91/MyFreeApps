@@ -45,6 +45,7 @@ export const LEASE_MESSAGES = {
   uploading: "Uploading…",
   cancel: "Cancel",
   uploadFailed: "I couldn't upload that. Want me to try again?",
+  uploadUnsure: "I'm not sure that uploaded. Check the lease's files before trying again, so you don't end up with two.",
   tooBig: "That file is too big. Try a smaller PDF or a lower-resolution photo.",
   badFile: "I can't read that kind of file. Use a PDF, Word file, JPEG, PNG or WebP.",
   storageDown: "I couldn't save the file just now. It's still here, so try again in a bit.",

@@ -5,6 +5,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
+import { EVENT_MESSAGES } from "../src/constants/calendarEventDetail";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -182,14 +183,15 @@ describe("a booking's attachments", () => {
     expect(await screen.findByText("File added.")).toBeTruthy();
   });
 
-  it("says so when offline while uploading", async () => {
+  it("says it isn't sure the file went up, instead of offering a retry that adds a second copy, when the answer is lost", async () => {
     const server = startCalendarServer({ events: [aBookingThisMonth()] });
     await openBooking();
     await fireEvent.press(await screen.findByRole("button", { name: "Add a file" }));
     await chooseFile();
     server.offline = true;
     await fireEvent.press(screen.getByRole("button", { name: "Upload file" }));
-    expect(await screen.findByText("I couldn't upload that file. Want to try again?")).toBeTruthy();
+    expect(await screen.findByText(EVENT_MESSAGES.uploadUnsure)).toBeTruthy();
+    expect(screen.queryByText("I couldn't upload that file. Want to try again?")).toBeNull();
   });
 
   it("removes a file only after asking", async () => {
