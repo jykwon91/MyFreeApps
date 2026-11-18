@@ -12,6 +12,7 @@ export interface FakeIntegrationsServer {
   role: string;
   /** Reads of a route fail until cleared; "write" fails every request that isn't a read. */
   failures: Partial<Record<IntegrationsRoute, IntegrationsFailure>>;
+  /** Every write, and every request to start connecting Gmail. */
   requests: AxiosRequestConfig[];
   /** Every read of a document list, to see whether finished extraction made it reload. */
   documentReads: number;

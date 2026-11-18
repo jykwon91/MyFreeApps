@@ -3,7 +3,8 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { Alert, Linking } from "react-native";
+import { openAuthSessionAsync } from "expo-web-browser";
+import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import InquiryReplyScreen from "../src/features/inquiries/InquiryReplyScreen";
@@ -21,6 +22,7 @@ const mockSleep = jest.fn(() => Promise.resolve());
 jest.mock("@mybookkeeper/api-client/utils/sleep", () => ({ sleep: () => mockSleep() }));
 let mockIdCount = 0;
 const mockNewId = jest.fn(() => `request-${(mockIdCount += 1)}`);
+jest.mock("expo-web-browser", () => ({ openAuthSessionAsync: jest.fn() }));
 jest.mock("expo-crypto", () => ({ randomUUID: () => mockNewId() }));
 
 const mockBack = jest.fn();
@@ -304,26 +306,33 @@ describe("InquiryReplyScreen", () => {
 
   describe("when Gmail can't send", () => {
     it.each([
-      [[], "Connect Gmail to send replies. That part happens on the website."],
-      [[{ provider: "gmail", has_send_scope: false, needs_reauth: false }], "Gmail needs permission to send as you. Reconnect it on the website. Your existing access stays."],
-      [[{ provider: "gmail", has_send_scope: true, needs_reauth: true }], "Gmail disconnected. Reconnect on the website to send replies."],
-    ])("lets you write, but not send, and points to the website", async (integrations, words) => {
+      [[], "Connect Gmail to send replies.", "Connect Gmail"],
+      [[{ provider: "gmail", has_send_scope: false, needs_reauth: false }], "Gmail needs permission to send as you. Reconnect it to send replies. Your existing access stays.", "Reconnect Gmail"],
+      [[{ provider: "gmail", has_send_scope: true, needs_reauth: true }], "Gmail disconnected. Reconnect it to send replies.", "Reconnect Gmail"],
+    ])("lets you write, connects Gmail here, then lets you send", async (integrations, words, button) => {
       const server = startInquiryServer([anInquiry()]);
       server.integrations = integrations;
-      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+      jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
+        server.integrations = [{ provider: "gmail", has_send_scope: true, needs_reauth: false }];
+        return { type: "success", url: "mybookkeeper://oauth-callback?result=connected" };
+      });
       await renderScreen();
       expect(await screen.findByText(words)).toBeTruthy();
+      expect(screen.queryByText(/website/)).toBeNull();
       await write();
       expect(sendButton().props.accessibilityState.disabled).toBe(true);
-      await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-      expect(openURL.mock.calls[0][0]).toMatch(/\/integrations$/);
+      await fireEvent.press(screen.getByRole("button", { name: button }));
+      expect(server.requests.find((request) => request.url === "/integrations/gmail/connect")?.params).toEqual({ client: "mobile" });
+      await waitFor(() => expect(sendButton().props.accessibilityState.disabled).toBe(false));
+      expect(screen.queryByText(words)).toBeNull();
+      expect(screen.getByLabelText("Message").props.value).toBe("Yes, it's open.");
     });
 
     it("says there's no address to reply to", async () => {
       startInquiryServer([anInquiry({ inquirer_email: null })]);
       await renderScreen();
       expect(await screen.findByText("This inquiry has no email address, so I can't send a reply. You can call instead.")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Open on the website" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Connect Gmail|Reconnect Gmail/ })).toBeNull();
     });
   });
 
@@ -354,7 +363,7 @@ describe("InquiryReplyScreen", () => {
       await write();
       server.integrations = [{ provider: "gmail", has_send_scope: true, needs_reauth: true }];
       await fireEvent.press(sendButton());
-      expect(await screen.findByText("Gmail disconnected. Reconnect on the website to send replies.")).toBeTruthy();
+      expect(await screen.findByText("Gmail disconnected. Reconnect it to send replies.")).toBeTruthy();
       expect(sendButton().props.accessibilityState.disabled).toBe(true);
 
       server.integrations = reconnected;
@@ -363,14 +372,14 @@ describe("InquiryReplyScreen", () => {
         store.dispatch(baseApi.internalActions.onFocus());
       });
       await waitFor(() => expect(sendButton().props.accessibilityState.disabled).toBe(false));
-      expect(screen.queryByText("Gmail disconnected. Reconnect on the website to send replies.")).toBeNull();
+      expect(screen.queryByText("Gmail disconnected. Reconnect it to send replies.")).toBeNull();
     });
 
     it("can still try again if the server says Gmail's gone but the list disagrees", async () => {
       const server = startInquiryServer([anInquiry()]);
       server.sendOutcome = { status: 503, detail: "gmail_reauth_required" };
       await writeAndSend();
-      expect(await screen.findByText("Gmail disconnected. Reconnect on the website to send replies.")).toBeTruthy();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.gmailDisconnected)).toBeTruthy();
       expect(sendButton().props.accessibilityState.disabled).toBe(false);
     });
 
@@ -386,7 +395,7 @@ describe("InquiryReplyScreen", () => {
       const server = startInquiryServer([anInquiry()]);
       server.sendOutcome = { status: 422 };
       await writeAndSend();
-      expect(await screen.findByText("I couldn't send that. Check your Gmail connection on the website.")).toBeTruthy();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.gmailConnection)).toBeTruthy();
       expect(server.requests.filter((request) => request.url === "/integrations").length).toBeGreaterThan(1);
     });
 

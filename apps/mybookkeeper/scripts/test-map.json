@@ -364,6 +364,9 @@
         "backend/app/schemas/integrations/",
         "backend/app/api/integrations.py",
         "backend/app/mappers/integration_mapper.py",
+        "backend/app/core/gmail_connect_client.py",
+        "backend/app/core/gmail_connect_failure.py",
+        "backend/app/core/gmail_connect_constants.py",
         "frontend/src/app/pages/Integrations.tsx",
         "frontend/src/app/features/integrations/",
         "api-client/src/store/integrationsApi.ts",
@@ -378,6 +381,10 @@
         "mobile/app/(app)/integrations/",
         "mobile/src/features/integrations/",
         "mobile/src/constants/integrations.ts",
+        "mobile/src/constants/gmailConnect.ts",
+        "mobile/src/types/GmailConnectOutcome.ts",
+        "mobile/app/+native-intent.tsx",
+        "mobile/test-support/googleAuthUrl.ts",
         "mobile/src/utils/shortDateTime.ts",
         "api-client/src/hooks/useInvalidateOnExtractionComplete.ts",
         "api-client/src/constants/syncPolling.ts",
@@ -406,7 +413,11 @@
         "test_member_removal_gmail.py",
         "test_integration_org_key_migration.py",
         "test_gmail_label_filter.py",
-        "test_gmail_missing_label.py"
+        "test_gmail_missing_label.py",
+        "test_gmail_mobile_connect.py",
+        "test_gmail_oauth_callback.py",
+        "test_oauth_callback_logging.py",
+        "test_oauth_state_session_cutoff.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",

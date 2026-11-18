@@ -6,7 +6,7 @@ import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/re
 import { inferPaymentMethod } from "@mybookkeeper/api-client/utils/inferPaymentMethod";
 import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { BLOCKER_FIX_ON_PHONE, FIX_ON_WEBSITE, NO_PAYMENT_METHOD, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { BLOCKER_FIX_ON_PHONE, NO_PAYMENT_METHOD, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { dateFromIso, fullDateLabel } from "../../lib/localDate";
 import type { ReceiptBlockerAction } from "../../types/ReceiptBlockerAction";
 import { shortDate, spokenDate, spokenMoney } from "../transactions/transactionDisplay";
@@ -64,9 +64,9 @@ export function blockerAction(blocker: ReceiptSendBlocker, receipt: PendingRecei
   return null;
 }
 
-/** Null when Gmail can send. */
+/** Null when Gmail can send. Shown with the button that connects it. */
 export function gmailMessage(state: ReceiptGmailState): string | null {
-  return state === "ready" ? null : `${RECEIPT_GMAIL_STATE_MESSAGES[state]} ${FIX_ON_WEBSITE}`;
+  return state === "ready" ? null : RECEIPT_GMAIL_STATE_MESSAGES[state];
 }
 
 // Each label starts with the button's words, so Voice Control can still find it by what's on screen.

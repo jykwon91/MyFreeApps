@@ -1,7 +1,6 @@
 import type { EmailQueueStatus } from "@mybookkeeper/api-client/types/integration/email-queue-status";
 
 export const INTEGRATIONS_SKELETON_ROWS = ["a", "b", "c"];
-export const INTEGRATIONS_WEB_PATH = "/integrations";
 
 export const EMAIL_QUEUE_STATUS_LABELS: Readonly<Record<EmailQueueStatus, string>> = {
   pending: "Pending",
@@ -24,10 +23,8 @@ export const INTEGRATIONS_MESSAGES = {
     "Connect Gmail and I'll automatically scan your inbox for financial documents (invoices, receipts, 1099s) and import them for you. I only read emails with attachments; I never store your email content.",
   gmail: "Gmail",
   notConnected: "Not connected",
-  notConnectedBody: "Connecting Gmail is done from the website for now, because signing in to Google needs a browser.",
   needsReauth: "Reconnection required: your Gmail sign-in expired.",
-  needsReauthBody: "Reconnecting is done from the website for now. Until then, I can't sync new email.",
-  openOnWeb: "Open Integrations on the website",
+  needsReauthBody: "Until you reconnect it, I can't sync new email.",
   connected: "Connected",
   lastSynced: (when: string | null) => `Last synced ${when ?? "never"}`,
   syncNow: "Sync now",
@@ -44,7 +41,7 @@ export const INTEGRATIONS_MESSAGES = {
   disconnecting: "Disconnecting...",
   disconnectConfirmTitle: "Disconnect Gmail?",
   disconnectConfirmBody:
-    "This disconnects Gmail for everyone in the workspace. Inquiry replies and rent-receipt emails stop sending until someone reconnects it on the website, and the label filter is cleared. Documents already imported stay.",
+    "This disconnects Gmail for everyone in the workspace. Inquiry replies and rent-receipt emails stop sending until someone reconnects it, and the label filter is cleared. Documents already imported stay.",
   disconnectConfirmYes: "Disconnect",
   disconnected: "Disconnected from Gmail. You can reconnect anytime.",
   labelHeading: "Only sync emails with label",

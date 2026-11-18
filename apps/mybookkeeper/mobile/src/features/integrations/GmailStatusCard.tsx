@@ -1,11 +1,12 @@
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
 import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
-import { Banner, useTheme, WebLink } from "@platform/mobile";
+import { Banner, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
-import { INTEGRATIONS_MESSAGES as MESSAGES, INTEGRATIONS_WEB_PATH } from "../../constants/integrations";
+import { GMAIL_CONNECT_MESSAGES } from "../../constants/gmailConnect";
+import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import type { GmailConnection } from "../../types/GmailConnection";
+import type { IntegrationAction } from "../../types/IntegrationAction";
 import { timeSince } from "@platform/core/utils/timeSince";
 import SyncProgressBar from "./SyncProgressBar";
 
@@ -14,10 +15,12 @@ interface GmailStatusCardProps {
   gmail: Integration | undefined;
   /** The newest sync, while it is still running. */
   runningSync: SyncLog | null;
+  /** Null for a viewer, who can't connect it. */
+  connect: IntegrationAction | null;
 }
 
 /** The glance: is Gmail working, when it last ran, and what it is doing right now. */
-export default function GmailStatusCard({ connection, gmail, runningSync }: GmailStatusCardProps) {
+export default function GmailStatusCard({ connection, gmail, runningSync, connect }: GmailStatusCardProps) {
   const { colors, spacing, fontSize } = useTheme();
   const muted = { fontSize: fontSize.sm, color: colors.mutedForeground };
   return (
@@ -29,7 +32,6 @@ export default function GmailStatusCard({ connection, gmail, runningSync }: Gmai
         <>
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{MESSAGES.notConnected}</Text>
           <Text style={muted}>{MESSAGES.intro}</Text>
-          <Text style={muted}>{MESSAGES.notConnectedBody}</Text>
         </>
       ) : null}
       {connection === "reauth" ? (
@@ -49,7 +51,16 @@ export default function GmailStatusCard({ connection, gmail, runningSync }: Gmai
           {runningSync.emails_total > 0 ? <SyncProgressBar done={runningSync.emails_done} total={runningSync.emails_total} /> : null}
         </View>
       ) : null}
-      {connection !== "connected" ? <WebLink label={MESSAGES.openOnWeb} webBaseUrl={WEB_BASE_URL} webPath={INTEGRATIONS_WEB_PATH} /> : null}
+      {connection !== "connected" && connect ? (
+        <LoadingButton
+          accessibilityHint={GMAIL_CONNECT_MESSAGES.opensGoogle}
+          isLoading={connect.isBusy}
+          loadingText={GMAIL_CONNECT_MESSAGES.opening}
+          onPress={() => void connect.run()}
+        >
+          {connection === "none" ? GMAIL_CONNECT_MESSAGES.connect : GMAIL_CONNECT_MESSAGES.reconnect}
+        </LoadingButton>
+      ) : null}
     </View>
   );
 }

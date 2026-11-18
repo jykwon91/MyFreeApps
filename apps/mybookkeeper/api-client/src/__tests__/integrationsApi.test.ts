@@ -84,5 +84,11 @@ describe("integrationsApi writes", () => {
   it("asks for the Google sign-in address", async () => {
     await newStore().dispatch(integrationsApi.endpoints.connectGmail.initiate());
     expect(seen[0]).toMatchObject({ method: "get", url: "/integrations/gmail/connect" });
+    expect(seen[0].params).toBeUndefined();
+  });
+
+  it("says when the phone is the one connecting", async () => {
+    await newStore().dispatch(integrationsApi.endpoints.connectGmail.initiate("mobile"));
+    expect(seen[0]).toMatchObject({ method: "get", url: "/integrations/gmail/connect", params: { client: "mobile" } });
   });
 });

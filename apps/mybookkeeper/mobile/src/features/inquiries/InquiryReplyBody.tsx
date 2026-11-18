@@ -4,12 +4,12 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useOpenWebsite, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
 import { Alert, ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { GMAIL_CONNECT_MESSAGES } from "../../constants/gmailConnect";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
 import type { ReplyBlock } from "../../types/ReplyBlock";
@@ -22,7 +22,8 @@ import InquiryReplySkeleton from "./InquiryReplySkeleton";
 import { deleteReplyDraft } from "./replyDrafts";
 import ReplySendNotice from "./ReplySendNotice";
 import { REPLY_SEND_OPTIONS } from "./replySendOptions";
-import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_SEND_LABELS, REPLY_SEND_WORDS, replyBlock, replySendingAnnouncement } from "./replyStatus";
+import { useConnectGmail } from "../integrations/useConnectGmail";
+import { matchesRendered, REPLY_BLOCK_CONNECT_LABELS, REPLY_BLOCK_WORDS, REPLY_SEND_LABELS, REPLY_SEND_WORDS, replyBlock, replySendingAnnouncement } from "./replyStatus";
 import { replyToSend } from "./replyToSend";
 import { useReplyDraft } from "./useReplyDraft";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
@@ -30,7 +31,7 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 export default function InquiryReplyBody({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const openWebsite = useOpenWebsite();
+  const connectGmail = useConnectGmail();
   const { currentData: inquiry, error: loadError, isFetching, refetch: refetchInquiry } = useGetInquiryByIdQuery(id);
   const { data: integrations, refetch: refetchIntegrations } = useGetIntegrationsQuery();
   const { data: templates, error: templatesError, refetch: refetchTemplates } = useGetReplyTemplatesQuery();
@@ -76,6 +77,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
   const shownFailure = failure ?? (draftOtherGmail ? "otherAccount" : null);
   const sendAction = replySendAction(shownFailure, mightHaveSent, draftIsRetry);
   const block: ReplyBlock | null = replyBlock(integrations, email);
+  const connectLabel = block ? REPLY_BLOCK_CONNECT_LABELS[block] : null;
   const canSend = !block && !isRendering && Boolean(draft.subject.trim()) && Boolean(draft.body.trim());
   const hasOwnWords = Boolean(draft.subject.trim() || draft.body.trim()) && !matchesRendered(draft, rendered);
   const templateOptions = [
@@ -177,7 +179,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
       >
         {block ? (
           <Banner
-            actions={block === "noEmailAddress" ? undefined : [{ label: "Open on the website", onPress: () => openWebsite(WEB_BASE_URL, "/integrations") }]}
+            actions={connectLabel ? [{ label: connectLabel, accessibilityHint: GMAIL_CONNECT_MESSAGES.opensGoogle, onPress: () => connectGmail.run() }] : undefined}
             message={REPLY_BLOCK_WORDS[block]}
           />
         ) : null}

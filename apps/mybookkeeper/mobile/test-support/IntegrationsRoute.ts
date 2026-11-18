@@ -1,1 +1,1 @@
-export type IntegrationsRoute = "integrations" | "logs" | "queue" | "write";
+export type IntegrationsRoute = "integrations" | "logs" | "queue" | "connect" | "write";

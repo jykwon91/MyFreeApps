@@ -88,12 +88,13 @@ describe("sync now", () => {
     await screen.findByText(/couldn't find the Gmail label/);
   });
 
-  it("points to the website when Gmail needs reconnecting", async () => {
+  it("says to check whether Gmail needs reconnecting, never to go to the website", async () => {
     startIntegrationsServer({ failures: { write: { status: 424 } } });
     await renderScreen(<IntegrationsScreen />);
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.syncNow }));
     await confirm();
-    await screen.findByText(/If Gmail needs reconnecting, that's done from the website/);
+    await screen.findByText(/Pull down to see whether Gmail needs reconnecting/);
+    expect(screen.queryByText(/website/)).toBeNull();
   });
 
   it("doesn't call a sync start whose answer was lost a failure, and says where to look before trying again", async () => {
@@ -158,7 +159,8 @@ describe("disconnecting", () => {
     const body = jest.mocked(Alert.alert).mock.calls[0]?.[1] ?? "";
     expect(body).toMatch(/everyone in the workspace/);
     expect(body).toMatch(/inquiry replies and rent-receipt emails stop sending/i);
-    expect(body).toMatch(/on the website/);
+    expect(body).toMatch(/until someone reconnects it/);
+    expect(body).not.toMatch(/website/);
     expect(body).toMatch(/label filter is cleared/);
     expect(body).toMatch(/already imported stay/);
     expect(body).not.toMatch(/revoke/i);
