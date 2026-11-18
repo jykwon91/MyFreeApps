@@ -39,6 +39,9 @@ beforeEach(() => {
   resetSignedInStore();
   jest.clearAllMocks();
   mockCanGoBack.mockReturnValue(true);
+  // Only a mounted form writes to this, so the last test's guard would otherwise still be showing.
+  mockPreventRemove.active = false;
+  mockPreventRemove.callback = null;
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
   shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined });
   (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(true);
@@ -351,6 +354,8 @@ describe("emailing the guide", () => {
   it("asks before throwing away an address that wasn't sent", async () => {
     startWelcomeManualsServer({ manuals: [aManual({ sections: [aSection()] })] });
     await open();
+    // The form, which sets the guard, shows once the manual has loaded, and that can land after render returns.
+    await screen.findByLabelText(`${EMAIL.emailLabel}, required`);
     expect(mockPreventRemove.active).toBe(false);
     await fill("guest@example.com");
     expect(mockPreventRemove.active).toBe(true);
