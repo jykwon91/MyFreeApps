@@ -2063,6 +2063,7 @@
         "test_transaction_document_path_soft_delete.py",
         "test_transaction_schema.py",
         "test_transaction_service.py",
+        "test_capital_improvement_save.py",
         "test_vendor_normalization.py",
         "test_metered_usage_extraction.py",
         "test_cleanup_seed_routes.py",

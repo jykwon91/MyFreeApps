@@ -23,6 +23,7 @@ from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.classification import rule_learning_service
+from app.services.transactions.capital_improvement import placed_in_service_date_for
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.services.transactions.reference_ownership import assert_references_owned
 
@@ -125,6 +126,11 @@ async def create_manual_transaction(
         data["tax_year"] = data["transaction_date"].year
     if data.get("schedule_e_line") is None:
         data["schedule_e_line"] = CATEGORY_TO_SCHEDULE_E.get(data["category"])
+    data["placed_in_service_date"] = placed_in_service_date_for(
+        bool(data.get("is_capital_improvement")),
+        data.get("placed_in_service_date"),
+        data["transaction_date"],
+    )
     async with unit_of_work() as db:
         await assert_references_owned(db, ctx, data)
         created = await transaction_repo.create_transaction(
@@ -172,6 +178,9 @@ async def update_transaction(
         await assert_references_owned(db, ctx, updates)
         for field, value in updates.items():
             setattr(txn, field, value)
+        txn.placed_in_service_date = placed_in_service_date_for(
+            txn.is_capital_improvement, txn.placed_in_service_date, txn.transaction_date,
+        )
 
         retroactive_count = 0
         if "category" in updates and txn.category != old_category:
