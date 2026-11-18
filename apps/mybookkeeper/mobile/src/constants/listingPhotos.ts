@@ -49,6 +49,8 @@ export const LISTING_PHOTO_MESSAGES = {
   caption: "Caption",
   uploadedOne: "Photo added.",
   uploadedMany: "Photos added.",
+  // The answer was lost or the server broke, possibly after it stored the photo, which the refreshed list will show.
+  unsureUploaded: "I'm not sure that photo uploaded. Check the listing's photos before trying again, so you don't end up with two.",
 } as const;
 
 export function removeManyTitle(count: number): string {
@@ -73,25 +75,6 @@ export function selectedCount(count: number): string {
 
 export function photoPosition(index: number, total: number): string {
   return `Photo ${index + 1} of ${total}`;
-}
-
-export function uploadFailureCopy(status: number | undefined, maxMegabytes: number): string {
-  switch (status) {
-    case undefined:
-      return "I couldn't reach the server. Want to try again?";
-    case 413:
-      return `That photo is over ${maxMegabytes} MB, which is more than a listing can hold.`;
-    case 415:
-      return "That kind of file isn't a photo I can use.";
-    case 403:
-      return "You have view-only access, so I can't add photos.";
-    case 404:
-      return "I can't find that listing anymore. It may have been deleted.";
-    case 503:
-      return "Photo storage isn't available right now. Try again in a bit.";
-    default:
-      return "I couldn't upload that photo. Want to try again?";
-  }
 }
 
 /** 0 means no limit: the server has none on how many photos a listing holds. */

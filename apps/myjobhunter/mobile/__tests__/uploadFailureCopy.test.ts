@@ -20,12 +20,20 @@ describe("resumeUploadFailure", () => {
 });
 
 describe("documentUploadFailure", () => {
-  it.each(NO_ANSWER)("says the server can't be reached when no answer came back (%j)", (error) => {
-    expect(documentUploadFailure(null, error)).toBe(DOCUMENT_MESSAGES.couldntReachServer);
+  it.each(NO_ANSWER)("says the upload may have gone through when no answer came back (%j)", (error) => {
+    expect(documentUploadFailure(null, error)).toBe(
+      "I lost the connection, so I'm not sure that saved. Check your documents before trying again, so you don't end up with two.",
+    );
+  });
+
+  it("says the upload may have gone through when the server broke without a reason", () => {
+    expect(documentUploadFailure(null, { status: 502, data: "Bad Gateway" })).toBe(
+      "I'm not sure that saved. Check your documents before trying again, so you don't end up with two.",
+    );
   });
 
   it("keeps its other wording", () => {
-    expect(documentUploadFailure(null, { status: 500 })).toBe(DOCUMENT_MESSAGES.couldntUpload);
+    expect(documentUploadFailure(null, { status: 500, data: { detail: "Storage unavailable" } })).toBe(DOCUMENT_MESSAGES.couldntUpload);
     expect(documentUploadFailure(null, { status: 415 })).toBe(DOCUMENT_MESSAGES.badType);
     expect(documentUploadFailure("empty")).toBe(DOCUMENT_MESSAGES.emptyFile);
   });

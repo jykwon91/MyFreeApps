@@ -14,6 +14,8 @@ import { formParts } from "../test-support/applicantsServer";
 import { fakeDownloads, fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aListing, aPhoto, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
+import { SHOWN } from "@platform/mobile/test-support/shown";
+import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
@@ -220,13 +222,28 @@ describe("adding photos", () => {
     await screen.findByText(message);
   });
 
-  it("says it couldn't reach the server when offline, and keeps the photo", async () => {
+  it("says it may have uploaded when no answer came back, and keeps the photo", async () => {
     const server = startListingsServer();
     await show(<ListingPhotosScreen id="l1" />);
     server.offline = true;
     await addFromLibrary(1);
-    await screen.findByText("I couldn't reach the server. Want to try again?");
+    await screen.findByText(MESSAGES.unsureUploaded);
     expect(heldFiles()).toHaveLength(1);
+  });
+
+  it("refreshes the photos and says to check them before retrying when the upload landed but its answer was lost", async () => {
+    const server = startListingsServer();
+    await show(<ListingPhotosScreen id="l1" />);
+    await screen.findByText(MESSAGES.noneHeading);
+    timeOutPostsTo(/\/photos$/);
+    await addFromLibrary(1);
+    await screen.findByText(MESSAGES.unsureUploaded);
+    // The listing is read again, so the photo the server did store shows up to be checked.
+    await screen.findByRole("button", { name: /^Photo 1 of 1/ });
+    expect(server.listings[0].photos).toHaveLength(1);
+    expect(screen.queryByText("I couldn't upload that photo. Want to try again?", SHOWN)).toBeNull();
+    expect(button("Retry photo 1")).toBeTruthy();
+    expect(writesTo(server, "post", "/photos")).toHaveLength(1);
   });
 
   it("lets a failed photo be removed, and lets go of its file", async () => {

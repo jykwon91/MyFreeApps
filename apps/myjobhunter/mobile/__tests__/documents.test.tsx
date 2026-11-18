@@ -372,7 +372,7 @@ describe("a document's actions", () => {
   });
 
   it("keeps the upload sheet and the chosen file when the upload fails", async () => {
-    serveDocuments([], { "POST /documents/upload": () => ({ status: 500 }) });
+    serveDocuments([], { "POST /documents/upload": () => ({ status: 500, data: { detail: "Storage failed" } }) });
     await showScreen();
     await fireEvent.press(await screen.findByRole("button", { name: DOCUMENTS.upload }));
     pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });
@@ -383,6 +383,19 @@ describe("a document's actions", () => {
     expect(await screen.findByText(DOCUMENTS.couldntUpload)).toBeTruthy();
     expect(screen.getByText("resume.pdf (2.0 KB)")).toBeTruthy();
     expect(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit })).toBeEnabled();
+  });
+
+  it("says to check the documents before uploading again when the server breaks without a reason", async () => {
+    serveDocuments([], { "POST /documents/upload": () => ({ status: 502 }) });
+    await showScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: DOCUMENTS.upload }));
+    pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });
+    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
+    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
+
+    expect(await screen.findByText("I'm not sure that saved. Check your documents before trying again, so you don't end up with two.")).toBeTruthy();
+    expect(screen.getByText("resume.pdf (2.0 KB)")).toBeTruthy();
   });
 
   it("writes a text document for no application, after asking for a title and content", async () => {

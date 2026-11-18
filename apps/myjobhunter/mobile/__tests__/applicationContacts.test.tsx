@@ -209,8 +209,8 @@ describe("adding a contact", () => {
     expect(await screen.findByText(CONTACTS.created)).toBeTruthy();
   });
 
-  it("keeps the sheet and what was typed, with the reason at the top, when the add fails", async () => {
-    serveContacts([], { [`POST /applications/${ID}/contacts`]: () => ({ status: 500 }) });
+  it("keeps the sheet and what was typed, with the reason at the top, when the add is refused", async () => {
+    serveContacts([], { [`POST /applications/${ID}/contacts`]: () => ({ status: 400, data: { detail: "nope" } }) });
     await renderApplicationDetail(ID);
     await openSheet();
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "Sam");
@@ -219,6 +219,17 @@ describe("adding a contact", () => {
     expect(await screen.findByText(CONTACTS.couldntCreate)).toBeTruthy();
     expect(screen.getByLabelText(CONTACTS.nameLabel).props.value).toBe("Sam");
     expect(screen.queryByText(CONTACTS.created)).toBeNull();
+  });
+
+  it("says to check the contacts before trying again when the server breaks without a reason, since it may have saved", async () => {
+    serveContacts([], { [`POST /applications/${ID}/contacts`]: () => ({ status: 500 }) });
+    await renderApplicationDetail(ID);
+    await openSheet();
+    await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "Sam");
+    await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
+
+    expect(await screen.findByText("I'm not sure that saved. Check this application's contacts before trying again, so you don't end up with two.")).toBeTruthy();
+    expect(screen.getByLabelText(CONTACTS.nameLabel).props.value).toBe("Sam");
   });
 });
 

@@ -25,6 +25,7 @@ export const APPLICATION_CONTACT_MESSAGES = {
   creating: "Adding…",
   created: "Contact added.",
   couldntCreate: "I couldn't add that contact. Want to try again?",
+  checkWhere: "this application's contacts",
   checkFields: "I couldn't add that contact. Check the fields marked below.",
   remove: "Remove",
   removing: "Removing…",

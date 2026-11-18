@@ -1,13 +1,12 @@
 import { LISTING_PHOTO_MAX_MB } from "@mybookkeeper/api-client/constants/listingPhotos";
 import { type FileForUpload, filePart } from "@platform/mobile";
 import { useUploadListingPhotosMutation } from "@mybookkeeper/api-client/store/listingsApi";
-import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { nanoid } from "@reduxjs/toolkit";
 import { useEffect, useRef, useState } from "react";
-import { uploadFailureCopy } from "../../constants/listingPhotos";
 import type { ListingPhotoBatch } from "../../types/ListingPhotoBatch";
 import type { ListingPhotoUpload } from "../../types/ListingPhotoUpload";
 import { releaseHeldFile } from "../uploads/heldFile";
+import { listingPhotoUploadFailure } from "./listingPhotoUploadFailure";
 
 const FILES_FIELD = "files";
 
@@ -54,7 +53,7 @@ export function useListingPhotoUploads(listingId: string, onUploaded: (count: nu
       update((current) => current.filter((candidate) => candidate.key !== item.key));
       succeeded.current += 1;
     } catch (error) {
-      setStatus(item.key, "failed", uploadFailureCopy(httpStatus(error), LISTING_PHOTO_MAX_MB));
+      setStatus(item.key, "failed", listingPhotoUploadFailure(error, LISTING_PHOTO_MAX_MB));
     } finally {
       pending.current -= 1;
       if (pending.current === 0) {

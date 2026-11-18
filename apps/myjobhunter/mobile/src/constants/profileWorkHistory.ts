@@ -24,6 +24,7 @@ export const WORK_HISTORY_MESSAGES = {
   created: "Work history added.",
   updated: "Work history updated.",
   couldntCreate: "I couldn't add that role. Want to try again?",
+  checkWhere: "your work history",
   couldntUpdate: "I couldn't save that role. Want to try again?",
   removeTitle: "Delete this role?",
   removeBody: "It will be taken off your work history. This can't be undone.",

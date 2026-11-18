@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
+import { failedBody } from "./failedBody";
 
 export interface UtilityRequest {
   method?: string;
@@ -54,7 +55,7 @@ export function startUtilityServer(overrides: Partial<UtilityServer> = {}): Util
     if (config.url === "/organizations") return reply([{ id: "w1", name: "Mine", org_role: server.role }], config);
     if (config.method?.toLowerCase() !== "get") {
       if (server.write === "offline") return Promise.reject(new Error("Network Error"));
-      if (server.write !== 200) return Promise.reject({ response: { status: server.write, data: { detail: "raw server text" } }, config, isAxiosError: true });
+      if (server.write !== 200) return Promise.reject({ response: { status: server.write, data: failedBody(server.write, "raw server text") }, config, isAxiosError: true });
       return reply(server.detail, config);
     }
     const url = config.url ?? "";

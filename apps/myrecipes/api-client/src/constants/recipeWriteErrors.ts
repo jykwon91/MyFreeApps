@@ -1,5 +1,4 @@
 import type { RecipeWriteAction } from "../types/recipe/recipe-write-action";
-import { CONNECTION_MESSAGES } from "./connectionCopy";
 import { RECIPE_MANAGE_MESSAGES } from "./recipeManage";
 import { COOK_LOG_MESSAGES } from "./cookLog";
 import { TWEAK_MESSAGES } from "./tweak";
@@ -21,12 +20,22 @@ export const RECIPE_WRITE_FALLBACKS: Readonly<Record<RecipeWriteAction, string>>
   logCook: COOK_LOG_MESSAGES.couldntLog,
 };
 
+/**
+ * The writes that make something new, for when it may have saved anyway: no answer came back, or the server broke without
+ * saying why (see writeOutcome). Sending it again could make two, so these say to check first. An update is a PATCH,
+ * which is safe to send again, so it has none.
+ */
+export const RECIPE_WRITE_UNSURE: Readonly<Partial<Record<RecipeWriteAction, string>>> = {
+  create: "We're not sure this recipe was saved. Check your recipes before trying again, so you don't end up with two.",
+  tweak: "We're not sure this tweak was saved. Check the recipe's versions before trying again, so you don't end up with two.",
+  logCook: "We're not sure this cook was logged. Check the recipe's cook log before trying again, so you don't log it twice.",
+};
+
 /** Per-write wording that differs from the shared one. */
 export const RECIPE_WRITE_OVERRIDES: Readonly<
-  Partial<Record<RecipeWriteAction, { offline: string; signedOut: string; invalid: string; changedOrGone: string }>>
+  Partial<Record<RecipeWriteAction, { signedOut: string; invalid: string; changedOrGone: string }>>
 > = {
   tweak: {
-    offline: CONNECTION_MESSAGES.tweak,
     signedOut: TWEAK_MESSAGES.signInAgain,
     invalid: TWEAK_MESSAGES.checkEntries,
     changedOrGone: TWEAK_MESSAGES.changedOrNotYours,

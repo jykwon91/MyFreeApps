@@ -12,6 +12,7 @@ import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aProperty, startTransactionServer } from "../test-support/transactionsServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -32,6 +33,7 @@ jest.mock("@react-native-community/datetimepicker", () => {
 });
 
 const originalAdapter = api.defaults.adapter;
+const UNSURE = "I'm not sure that saved. Check your transactions before trying again, so you don't end up with two.";
 
 beforeEach(() => {
   session.tokenStore.set("token");
@@ -164,15 +166,26 @@ describe("NewTransactionScreen", () => {
     expect(server.requests.some((request) => request.method === "post")).toBe(false);
   });
 
-  it("keeps what was typed and says so when it can't reach the server", async () => {
+  it("keeps what was typed and says it may have saved when no answer came back", async () => {
     const server = startTransactionServer([]);
     await renderScreen();
     await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "12");
     server.offline = true;
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
-    expect(await screen.findByText("I can't reach the server, so I couldn't add that. Your details are still here.")).toBeTruthy();
+    expect(await screen.findByText(UNSURE)).toBeTruthy();
     expect(screen.getByDisplayValue("12")).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it("says to check before trying again when the add saved but its answer timed out", async () => {
+    const server = startTransactionServer([]);
+    timeOutPostsTo(/^\/transactions$/);
+    await renderScreen();
+    await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "12");
+    await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
+    expect(await screen.findByText(UNSURE)).toBeTruthy();
+    expect(server.requests.filter((request) => request.method === "post")).toHaveLength(1);
+    expect(screen.queryByText("I couldn't add that. Want to try again?", SHOWN)).toBeNull();
   });
 
   it("doesn't show the server's wording on a rejected request", async () => {

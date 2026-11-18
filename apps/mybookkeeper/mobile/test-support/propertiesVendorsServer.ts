@@ -3,6 +3,7 @@ import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
+import { failedBody } from "./failedBody";
 
 export interface PropertiesVendorsServer {
   role: string;
@@ -86,7 +87,7 @@ export function startPropertiesVendorsServer(initial: { properties?: Property[];
     if (method === "get" && server.failReadsWith) return respond({ detail: "nope" }, server.failReadsWith);
     if (method !== "get") {
       if (server.role === "viewer") return respond({ detail: "nope" }, 403);
-      if (server.failWritesWith) return respond({ detail: "nope" }, server.failWritesWith);
+      if (server.failWritesWith) return respond(failedBody(server.failWritesWith), server.failWritesWith);
     }
     const sent = config.data ? (JSON.parse(String(config.data)) as Record<string, unknown>) : {};
     const [, resource, id] = (config.url ?? "").split("/");

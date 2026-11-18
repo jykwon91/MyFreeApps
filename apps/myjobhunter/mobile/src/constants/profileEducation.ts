@@ -26,6 +26,7 @@ export const EDUCATION_MESSAGES = {
   created: "Education added.",
   updated: "Education updated.",
   couldntCreate: "I couldn't add that school. Want to try again?",
+  checkWhere: "your education",
   couldntUpdate: "I couldn't save that school. Want to try again?",
   removeTitle: "Delete this school?",
   removeBody: "It will be taken off your education. This can't be undone.",

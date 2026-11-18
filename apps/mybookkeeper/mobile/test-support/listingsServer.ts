@@ -6,6 +6,7 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
 import { formParts } from "./applicantsServer";
+import { failedBody } from "./failedBody";
 
 export interface ListingsServer {
   role: string;
@@ -120,7 +121,7 @@ export function startListingsServer(initial: Partial<Pick<ListingsServer, "role"
     if (method !== "get") {
       if (server.role === "viewer") return respond({ detail: "nope" }, 403);
       const failing = server.failWrites.find((rule) => url.includes(rule.match));
-      if (failing) return respond({ detail: "nope" }, failing.status);
+      if (failing) return respond(failedBody(failing.status), failing.status);
     }
     if (url === "/properties") return respond(server.properties);
     if (url === "/channels") return respond(server.channels);
