@@ -8,6 +8,7 @@ import { GUILD_HELP_SELF_MADE } from "@/games/wow-forever/data/guild/guildHelpCo
 import { professionIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { formatCost } from "@/games/wow-forever/crafting/matPrices";
 import { guideProfession } from "@/games/wow-forever/lib/character/characterProfessions";
+import { upgradeGainLabel } from "@/games/wow-forever/lib/guild/upgradeGainLabel";
 import { recipeProfession } from "@/games/wow-forever/lib/recipes/recipeProfession";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { GuildMatch } from "@/games/wow-forever/types/guild/guildMatch";
@@ -35,7 +36,7 @@ function totalReagentCost(match: GuildMatch, prices: AuctionPrices | null | unde
  * the enchant or crafted item, its reagents with per-item AH prices, and a cost estimate.
  */
 export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
-  const { crafter, beneficiary, slot, worn, proposed, type, upgrade_pct } = match;
+  const { crafter, beneficiary, slot, worn, proposed, type, upgrade } = match;
 
   const guide = guideProfession(crafter.profession_id);
   const prof = recipeProfession(guide);
@@ -43,7 +44,7 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
 
   const isGear = type === "gear";
   const selfMade = crafter.slug === beneficiary.slug;
-  const upgradeLabel = upgrade_pct !== null ? `+${upgrade_pct}% score` : null;
+  const upgradeLabel = upgrade ? upgradeGainLabel(upgrade) : null;
 
   return (
     <li className="rounded-lg border bg-card px-3 py-2 space-y-1.5" data-testid="guild-match-card">

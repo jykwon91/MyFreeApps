@@ -1,4 +1,5 @@
 import type { CraftReagent } from "@/games/wow-forever/types/crafting";
+import type { UpgradeGain } from "@/games/wow-forever/types/guild/upgradeGain";
 
 /** Enchant-missing or gear-upgrade match between a crafter and a beneficiary. */
 export type GuildMatchType = "enchant" | "gear";
@@ -65,8 +66,8 @@ export interface GuildMatch {
   worn: GuildMatchWorn;
   proposed: GuildMatchProposed;
   /**
-   * How much better the proposed item is vs what the beneficiary wears.
+   * How much better the proposed item is vs what the beneficiary wears, in points of their best main stat.
    * Null for enchants (always a net gain on an unenchanted slot).
    */
-  upgrade_pct: number | null;
+  upgrade: UpgradeGain | null;
 }

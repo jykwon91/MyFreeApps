@@ -1542,8 +1542,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   it themselves, then the highest-skill enchanter;
   **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
   that creates an item scoring ≥ `UPGRADE_THRESHOLD_PCT` (2%) better than what
-  the beneficiary wears, using `LEVELING_SPEC_ID` weights for all members, deduped
-  to the best upgrade per (beneficiary, slot). A member's own recipes count
+  the beneficiary wears (`guildHelpWeights`: their spec's weights, else leveling),
+  deduped to the biggest gain per (beneficiary, slot) and listed biggest first.
+  The card tells the gain in points of the wearer's best main stat ("Worth +4
+  Intellect", `bestMainStat` / `mainStatPoint`), never a percent: a percent blows
+  up when the worn item has stats the spec doesn't use (operator, 2026-11-17).
+  Under one point is dropped. A member's own recipes count
   for their own gear ("can make this themselves" on the card); on an equal
   upgrade, making it yourself beats asking a guild mate (operator, 2026-11-16).
   Both use `recipeSpell()` to map

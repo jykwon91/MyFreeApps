@@ -7,9 +7,12 @@
  * are missing or the dominant tree isn't recognised.  The scorer is built once
  * per (classId, specId) pair and cached across all beneficiaries.
  *
+ * The gain is told in points of the beneficiary's best main stat ("+4 Intellect"):
+ * a percentage blows up whenever the worn item has stats the spec doesn't use.
+ *
  * Deduplication: for each (beneficiary_slug, blizzard_slot), only the best
- * upgrade is returned (highest score improvement); on a tie, one the member can
- * make themselves wins, then the crafter's slug (alphabetical). A member's own
+ * upgrade is returned (biggest gain); on a tie, one the member can make
+ * themselves wins, then the crafter's slug (alphabetical). A member's own
  * recipes count for their own gear.
  */
 import { blizzardSlotLabel } from "@/games/wow-forever/lib/guild/blizzardSlotLabel";
@@ -25,13 +28,16 @@ import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessi
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
 import { resolveHelpSpecId } from "@/games/wow-forever/lib/guild/guildHelpSpec";
 import { guildHelpWeights } from "@/games/wow-forever/lib/guild/guildHelpWeights";
+import { bestMainStat, mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { GuildHelpEquippedItem } from "@/games/wow-forever/types/guild/guildHelpEquippedItem";
 import type { GuildHelpMode } from "@/games/wow-forever/types/guild/guildHelpMode";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
+import type { MemberScorer } from "@/games/wow-forever/types/guild/memberScorer";
 import type { GuildMatch, GuildMatchBeneficiary, GuildMatchCrafter } from "@/games/wow-forever/types/guild/guildMatch";
+import type { UpgradeGain } from "@/games/wow-forever/types/guild/upgradeGain";
 
 const PERCENT = 100;
 
@@ -109,9 +115,9 @@ function beneficiaryFor(member: GuildHelpMember): GuildMatchBeneficiary {
  * Whether a new upgrade replaces the best so far: a bigger upgrade; on a tie, one the member can make
  * themselves; then the alphabetically first crafter, so the pick never depends on roster order.
  */
-function beatsExisting(pct: number, crafterSlug: string, beneficiarySlug: string, existing: GuildMatch): boolean {
-  const existingPct = existing.upgrade_pct ?? 0;
-  if (pct !== existingPct) return pct > existingPct;
+function beatsExisting(gain: number, crafterSlug: string, beneficiarySlug: string, existing: GuildMatch): boolean {
+  const existingGain = existing.upgrade?.points ?? 0;
+  if (gain !== existingGain) return gain > existingGain;
   const selfMade = crafterSlug === beneficiarySlug;
   const existingSelfMade = existing.crafter.slug === existing.beneficiary.slug;
   if (selfMade !== existingSelfMade) return selfMade;
@@ -129,7 +135,7 @@ function upgradePct(craftedScore: number, wornScore: number): number {
  * crafting profession's file.
  *
  * Returns one match per (beneficiary_slug, blizzard_slot) — the crafted item
- * with the best score improvement. Items not in items.json are skipped.
+ * with the biggest gain — biggest gain first. Items not in items.json are skipped.
  * `crafters` (default: every member) limits whose recipes count, so one
  * member's best offer per slot shows even when a guild mate's is better.
  * `mode` picks PvE or PvP weights (`guildHelpWeights`).
@@ -157,8 +163,8 @@ export function computeGearMatches(
   // Per-beneficiary scorer, keyed by "{classId}|{specId}" to handle guild mates
   // of the same class who specced differently. Uses the beneficiary's real spec
   // when it can be resolved from their talent trees, else leveling weights (guildHelpWeights).
-  const scorerCache = new Map<string, (item: ClientItem) => number>();
-  function scorerFor(member: GuildHelpMember): ((item: ClientItem) => number) | null {
+  const scorerCache = new Map<string, MemberScorer>();
+  function scorerFor(member: GuildHelpMember): MemberScorer | null {
     const classId = member.class_name ? characterClassId(member.class_name) : null;
     if (!classId) return null;
     const specId = resolveHelpSpecId(member.talents) ?? LEVELING_SPEC_ID;
@@ -166,14 +172,15 @@ export function computeGearMatches(
     const cached = scorerCache.get(cacheKey);
     if (cached) return cached;
     const weights = guildHelpWeights(member, mode);
-    if (!weights) return null;
+    const stat = weights ? bestMainStat(weights) : null;
+    if (!weights || !stat) return null;
     const fn = weightsScorer(weights, roleFor(classId, specId));
-    const wrapped = (item: ClientItem) => fn(item, clientBuild);
-    scorerCache.set(cacheKey, wrapped);
-    return wrapped;
+    const scorer: MemberScorer = { score: (item) => fn(item, clientBuild), point: mainStatPoint(weights), stat };
+    scorerCache.set(cacheKey, scorer);
+    return scorer;
   }
 
-  // Key: "beneficiary_slug|blizzard_slot" → best match so far (highest upgrade_pct).
+  // Key: "beneficiary_slug|blizzard_slot" → best match so far (biggest gain).
   const best = new Map<string, GuildMatch>();
 
   for (const crafter of crafters) {
@@ -193,9 +200,9 @@ export function computeGearMatches(
     if (knownGear.length === 0) continue;
 
     for (const beneficiary of members) {
-      const scoreItem = scorerFor(beneficiary);
+      const scorer = scorerFor(beneficiary);
       const beneficiaryClassId = beneficiary.class_name ? characterClassId(beneficiary.class_name) : null;
-      if (!scoreItem || !beneficiaryClassId) continue; // unknown class — skip scoring
+      if (!scorer || !beneficiaryClassId) continue; // unknown class — skip scoring
 
       // Index the beneficiary's equipped items by Blizzard slot for fast lookup.
       const equippedBySlot = new Map<string, GuildHelpEquippedItem>();
@@ -213,7 +220,7 @@ export function computeGearMatches(
         if (!canWear(craftedClientItem, beneficiaryClassId, beneficiary.level)) continue;
         if (craftedClientItem.requiredLevel > beneficiary.level) continue;
 
-        const candidateScore = scoreItem(craftedClientItem);
+        const candidateScore = scorer.score(craftedClientItem);
         if (candidateScore <= 0) continue; // useless for this class
 
         const blizzardSlots = blizzardSlotsFor(craftedClientItem.slot);
@@ -227,14 +234,15 @@ export function computeGearMatches(
           const wornClientItem = byId.get(worn.item_id);
           // A worn item we can't score (not in items.json, or random stats) would read as a bogus 100% upgrade.
           if (!wornClientItem || wornClientItem.randomSuffix) continue;
-          const wornScore = scoreItem(wornClientItem);
+          const wornScore = scorer.score(wornClientItem);
 
-          const pct = upgradePct(candidateScore, wornScore);
-          if (pct < UPGRADE_THRESHOLD_PCT) continue; // not meaningfully better
+          if (upgradePct(candidateScore, wornScore) < UPGRADE_THRESHOLD_PCT) continue; // not meaningfully better
+          const upgrade: UpgradeGain = { points: Math.round((candidateScore - wornScore) / scorer.point), stat: scorer.stat };
+          if (upgrade.points < 1) continue; // under one main stat point: nothing to show
 
           const key = `${beneficiary.slug}|${blizzardSlot}`;
           const existing = best.get(key);
-          if (existing && !beatsExisting(pct, crafter.slug, beneficiary.slug, existing)) continue;
+          if (existing && !beatsExisting(upgrade.points, crafter.slug, beneficiary.slug, existing)) continue;
 
           const matchCrafter = crafterFor(crafter, professionId);
           if (!matchCrafter) continue;
@@ -253,12 +261,18 @@ export function computeGearMatches(
               reagents: recipe.reagents,
               effect: null,
             },
-            upgrade_pct: pct,
+            upgrade,
           });
         }
       }
     }
   }
 
-  return [...best.values()];
+  // Biggest gain first, so the upgrades worth most lead the list; ties by member, then slot, never roster order.
+  return [...best.values()].sort(
+    (a, b) =>
+      (b.upgrade?.points ?? 0) - (a.upgrade?.points ?? 0) ||
+      a.beneficiary.slug.localeCompare(b.beneficiary.slug) ||
+      a.slot.blizzard_slot.localeCompare(b.slot.blizzard_slot),
+  );
 }
