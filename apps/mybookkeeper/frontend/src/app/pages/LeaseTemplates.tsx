@@ -4,25 +4,19 @@ import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
-import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
-import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { templates, hasData, loadError, error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
-    useLeaseTemplatesPages();
+  const pages = useLeaseTemplatesPages();
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const mode = resolveListLoadMode({
-    hasData,
-    hasError: loadError !== undefined,
-    itemCount: templates.length,
-  });
+  const { mode, rows } = pagedListView(pages, pages.templates);
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -44,20 +38,12 @@ export default function LeaseTemplates() {
         }
       />
 
-      {showsPagedLoadAlert({ loadError, error, hasData, isLoadMoreError }) ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="templates" />
 
-      <LeaseTemplatesListBody mode={mode} templates={templates} />
+      <LeaseTemplatesListBody mode={mode} templates={rows} />
 
       {mode === "list" ? (
-        <LoadMoreFooter
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isLoadMoreError={isLoadMoreError}
-          failureMessage="I couldn't load more templates. Want me to try again?"
-          onLoadMore={loadMore}
-        />
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
       ) : null}
 
       <LeaseTemplateUploadDialog

@@ -97,8 +97,7 @@ let templatesFetching = false;
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useListLeaseTemplatePagesInfiniteQuery: () => ({
     ...queryData(templatesFailed ? undefined : { pages: [{ items: TEMPLATES, total: 2, has_more: false }] }),
-    // RTK reports a retry of a first load that failed as loading again.
-    isLoading: templatesFailed && templatesFetching,
+    isLoading: false,
     ...queryStatus({ failed: templatesFailed, fetching: templatesFetching }),
     hasNextPage: false,
     isFetchingNextPage: false,

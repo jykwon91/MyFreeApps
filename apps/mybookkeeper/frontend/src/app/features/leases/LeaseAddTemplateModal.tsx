@@ -3,8 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@platform/ui";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
-import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import {
   useAddSignedLeaseTemplatesMutation,
   usePrefillAddendumPlaceholdersMutation,
@@ -67,8 +66,8 @@ export default function LeaseAddTemplateModal({
     useAddSignedLeaseTemplatesMutation();
   const [prefill, { isLoading: isPrefilling }] =
     usePrefillAddendumPlaceholdersMutation();
-  const { templates: available, hasData, loadError, error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
-    useLeaseTemplatesPages();
+  const pages = useLeaseTemplatesPages();
+  const { mode: templatesMode, rows: available } = pagedListView(pages, pages.templates);
 
   const linkedSet = useMemo(
     () => new Set(existingTemplateIds),
@@ -78,11 +77,6 @@ export default function LeaseAddTemplateModal({
   const selectedIds = pickedIds.filter(
     (id) => !(isDocumentsLocked && linkedSet.has(id)),
   );
-  const templatesMode = resolveListLoadMode({
-    hasData,
-    hasError: loadError !== undefined,
-    itemCount: available.length,
-  });
 
   function handleToggle(t: LeaseTemplateSummary) {
     setPickedIds((prev) =>
@@ -197,14 +191,8 @@ export default function LeaseAddTemplateModal({
               onToggle={handleToggle}
               isDocumentsLocked={isDocumentsLocked}
               mode={templatesMode}
-              hasError={showsPagedLoadAlert({ loadError, error, hasData, isLoadMoreError })}
-              isRetrying={isLoading}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              isLoadMoreError={isLoadMoreError}
-              onLoadMore={loadMore}
+              pages={pages}
               isPrefilling={isPrefilling}
-              onRetry={() => void refetch()}
               onContinue={() => void handleContinue()}
               onClose={onClose}
             />

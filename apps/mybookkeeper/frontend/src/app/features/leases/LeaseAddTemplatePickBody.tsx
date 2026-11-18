@@ -5,7 +5,7 @@ import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/
 
 export interface LeaseAddTemplatePickBodyProps {
   mode: ListLoadMode;
-  available: LeaseTemplateSummary[];
+  available: readonly LeaseTemplateSummary[];
   linkedSet: Set<string>;
   selectedIds: string[];
   onToggle: (template: LeaseTemplateSummary) => void;

@@ -477,9 +477,10 @@ describe("MultiTemplatePicker", () => {
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
   });
 
-  it("shows the skeleton, not 'No templates yet', while Retry refetches", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: true });
-    expect(screen.getByTestId("multi-template-picker-skeleton")).toBeInTheDocument();
+  it("keeps the error, not 'No templates yet', while Retry refetches", () => {
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: false });
+    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
     expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
   });
 

@@ -1,10 +1,9 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
-import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
-import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 
 export interface MultiTemplatePickerProps {
   selectedIds: string[];
@@ -24,17 +23,9 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { templates, hasData, loadError, error: lastError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
-    useLeaseTemplatesPages();
-  const mode = resolveListLoadMode({
-    hasData,
-    hasError: loadError !== undefined,
-    itemCount: templates.length,
-  });
-
-  const loadAlert = showsPagedLoadAlert({ loadError, error: lastError, hasData, isLoadMoreError }) ? (
-    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
-  ) : null;
+  const pages = useLeaseTemplatesPages();
+  const { mode, rows: templates } = pagedListView(pages, pages.templates);
+  const loadAlert = <ListPagesErrorAlert pages={pages} noun="templates" />;
 
   switch (mode) {
     case "error":
@@ -116,13 +107,7 @@ export default function MultiTemplatePicker({
               );
             })}
           </ul>
-          <LoadMoreFooter
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            isLoadMoreError={isLoadMoreError}
-            failureMessage="I couldn't load more templates. Want me to try again?"
-            onLoadMore={loadMore}
-          />
+          <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
         </div>
       );
   }

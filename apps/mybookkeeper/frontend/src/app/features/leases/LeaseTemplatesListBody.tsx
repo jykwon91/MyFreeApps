@@ -6,7 +6,7 @@ import LeaseTemplateCard from "./LeaseTemplateCard";
 
 export interface LeaseTemplatesListBodyProps {
   mode: ListLoadMode;
-  templates: LeaseTemplateSummary[];
+  templates: readonly LeaseTemplateSummary[];
 }
 
 export default function LeaseTemplatesListBody({ mode, templates }: LeaseTemplatesListBodyProps) {

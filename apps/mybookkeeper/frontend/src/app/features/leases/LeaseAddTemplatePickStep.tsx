@@ -1,26 +1,20 @@
 import { Button, LoadingButton } from "@platform/ui";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
-import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
+import type { LeaseTemplatesPagesState } from "@mybookkeeper/api-client/types/lease/lease-templates-pages-state";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 import LeaseAddTemplatePickBody from "./LeaseAddTemplatePickBody";
 
 export interface LeaseAddTemplatePickStepProps {
-  available: LeaseTemplateSummary[];
+  available: readonly LeaseTemplateSummary[];
   linkedSet: Set<string>;
   selectedIds: string[];
   onToggle: (template: LeaseTemplateSummary) => void;
   isDocumentsLocked: boolean;
   mode: ListLoadMode;
-  /** The latest load failed; items from an earlier load may still show. */
-  hasError: boolean;
-  isRetrying: boolean;
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isLoadMoreError: boolean;
-  onLoadMore: () => void;
+  pages: LeaseTemplatesPagesState;
   isPrefilling: boolean;
-  onRetry: () => void;
   onContinue: () => void;
   onClose: () => void;
 }
@@ -39,22 +33,14 @@ export default function LeaseAddTemplatePickStep({
   onToggle,
   isDocumentsLocked,
   mode,
-  hasError,
-  isRetrying,
-  hasNextPage,
-  isFetchingNextPage,
-  isLoadMoreError,
-  onLoadMore,
+  pages,
   isPrefilling,
-  onRetry,
   onContinue,
   onClose,
 }: LeaseAddTemplatePickStepProps) {
   return (
     <>
-      {hasError ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isRetrying} onRetry={onRetry} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="templates" />
       <LeaseAddTemplatePickBody
         mode={mode}
         available={available}
@@ -64,13 +50,7 @@ export default function LeaseAddTemplatePickStep({
         isDocumentsLocked={isDocumentsLocked}
       />
       {mode === "list" ? (
-        <LoadMoreFooter
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isLoadMoreError={isLoadMoreError}
-          failureMessage="I couldn't load more templates. Want me to try again?"
-          onLoadMore={onLoadMore}
-        />
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
       ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
