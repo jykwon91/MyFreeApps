@@ -325,6 +325,118 @@ describe("MGA Dungeon Quests journal pages", () => {
   });
 });
 
+describe("MGA Dungeon Quests routes", () => {
+  const STORMWIND = "position = { x = -8832.8, y = 478.6, c = 0 }";
+  const SENTINEL_HILL = "position = { x = -10628.9, y = 1036.7, c = 0 }";
+  const TELDRASSIL = "{ giver = 'Someone', where = 'Darnassus', map = 1457, x = 40, y = 50 }";
+
+  function runReal(script: string, setup = ""): string[] {
+    return runAddonLua(
+      [
+        ["Data.lua", addonData],
+        ["setup", setup],
+        ["MGADungeonQuests.lua", addonLua],
+        ["clear", "clear()"],
+        ["test", script],
+      ],
+      WOW_DUNGEON_QUEST_STUBS,
+    );
+  }
+  const chat = (lines: string[]) => lines.filter((l) => l.startsWith("chat: "));
+  const toDoor = 'slash("deadmines"); clickTab(2); clear(); clickDoorRoute()';
+
+  it("routes from where you stand by flight, then on foot, and pins the first leg", () => {
+    const lines = runReal(`${toDoor}; shownRoute()`, STORMWIND);
+    expect(chat(lines).join("\n")).toContain("1. Take the flight to Sentinel Hill, Westfall");
+    expect(chat(lines).join("\n")).toContain("2. Walk to Deadmines entrance, Westfall");
+    expect(lines.find((l) => l.startsWith("route: "))).toContain("1 of 2: Take the flight to Sentinel Hill, Westfall");
+    expect(lines.some((l) => l.startsWith("waypoint: 1436 "))).toBe(true);
+  });
+
+  it("moves to the next leg as you arrive, and ends at the last", () => {
+    const landed = runReal(`${toDoor}; ${SENTINEL_HILL}; clear(); tickRoute(); shownRoute()`, STORMWIND);
+    expect(landed.find((l) => l.startsWith("route: "))).toContain("2 of 2: Walk to Deadmines entrance");
+    const there = runReal(
+      `${toDoor}; local d = MGADungeonQuests.Find("deadmines").door; local s = MGADungeonQuestsTravel.zones[d.map];
+       position = { x = s[3] - d.y / 100 * (s[3] - s[2]), y = s[5] - d.x / 100 * (s[5] - s[4]), c = s[1] };
+       clear(); tickRoute(); shownRoute()`,
+      STORMWIND,
+    );
+    expect(there).toContain("chat: MGA Dungeon Quests: you've reached Deadmines entrance.");
+    expect(there).toContain("route: none");
+    expect(there).toContain("waypoint cleared");
+  });
+
+  it("Stop ends the route and takes the pin away", () => {
+    const lines = runReal(`${toDoor}; clear(); clickRouteStop(); shownRoute()`, STORMWIND);
+    expect(lines).toEqual(["waypoint cleared", "route: none"]);
+  });
+
+  it("crosses the sea on what your faction can ride", () => {
+    const alliance = chat(runReal(`MGADungeonQuests.StartRoute(${TELDRASSIL})`, STORMWIND)).join("\n");
+    expect(alliance).toContain("Take the boat to");
+    const horde = chat(
+      runReal(`MGADungeonQuests.StartRoute(${TELDRASSIL})`, `player.faction = "Horde"; position = { x = 1500, y = 300, c = 0 }`),
+    ).join("\n");
+    expect(horde).toContain("Take the zeppelin to");
+    expect(horde).not.toContain("Take the boat to Auberdine");
+  });
+
+  it("flies only the paths you know, once a flight master has shown them", () => {
+    const taxi = "C_TaxiMap = { GetAllTaxiNodes = function() return { { nodeID = 2, state = 0 }, { nodeID = 4, state = 2 } } end }";
+    const lines = runReal(`fire("TAXIMAP_OPENED"); ${toDoor}`, `${STORMWIND}; ${taxi}`);
+    expect(chat(lines).join("\n")).not.toContain("Take the flight");
+    expect(chat(lines).join("\n")).toContain("1. Walk to Deadmines entrance");
+    const known = "C_TaxiMap = { GetAllTaxiNodes = function() return { { nodeID = 2, state = 0 }, { nodeID = 4, state = 1 } } end }";
+    const flown = chat(runReal(`fire("TAXIMAP_OPENED"); ${toDoor}`, `${STORMWIND}; ${known}`)).join("\n");
+    expect(flown).toContain("1. Take the flight to Sentinel Hill, Westfall");
+    expect(flown).not.toContain("It counts every flight path");
+  });
+
+  it("only warns about flight paths when the route flies", () => {
+    expect(chat(runReal(toDoor, STORMWIND)).join("\n")).toContain("It counts every flight path");
+    const onFoot = `MGADungeonQuests.StartRoute({ giver = 'Near', where = 'Stormwind', map = 1453, x = 66, y = 66 })`;
+    expect(chat(runReal(onFoot, STORMWIND)).join("\n")).not.toContain("It counts every flight path");
+  });
+
+  it("a new route that can only pin ends the one you were on", () => {
+    const lines = runReal(`${toDoor}; position = nil; clear(); MGADungeonQuests.StartRoute(${TELDRASSIL}); shownRoute()`, STORMWIND);
+    expect(lines).toContain("route: none");
+    expect(lines).toContain("chat: MGA Dungeon Quests: map pin on Someone, Darnassus. Open your map (M) to see it.");
+  });
+
+  it("going into an instance ends the route; a loading screen out in the world plans it again", () => {
+    const inside = runReal(`${toDoor}; position = nil; instance = { type = "party", id = 36 }; fire("PLAYER_ENTERING_WORLD"); shownRoute()`, STORMWIND);
+    expect(inside).toContain("route: none");
+    const moved = runReal(`${toDoor}; ${SENTINEL_HILL}; clear(); fire("PLAYER_ENTERING_WORLD"); shownRoute()`, STORMWIND);
+    expect(moved.find((l) => l.startsWith("route: "))).toContain("1 of 1: Walk to Deadmines entrance");
+  });
+
+  it("leaves a pin of your own alone when no route pinned anything", () => {
+    expect(run("MGADungeonQuests.StopRoute()")).not.toContain("waypoint cleared");
+  });
+
+  it("sends you to the giver, then who takes it back, then the dungeon's door", () => {
+    const script = `
+      local d = { name = "Deadmines", door = { map = 1436, x = 42, y = 71, where = "Westfall 42.0, 71.0" } }
+      local step = { giver = "Gryan", where = "W", map = 1436, x = 56, y = 47, dungeon = true, turnIn = "Wilder", turnInWhere = "SW", turnInMap = 1453, turnInX = 65, turnInY = 21 }
+      for _, state in ipairs({ false, true, "complete" }) do out[#out + 1] = "target: " .. MGADungeonQuests.RouteTarget(step, state, d).giver end
+      out[#out + 1] = "no spot: " .. tostring(MGADungeonQuests.RouteTarget({ title = "x" }, "complete", d))`;
+    expect(run(script).filter((l) => /^(target|no spot)/.test(l))).toEqual([
+      "target: Gryan",
+      "target: Deadmines entrance",
+      "target: Wilder",
+      "no spot: nil",
+    ]);
+  });
+
+  it("inside an instance it falls back to a map pin", () => {
+    const lines = runReal(toDoor);
+    expect(chat(lines).join("\n")).toContain("map pin on Deadmines entrance");
+    expect(runReal(`${toDoor}; shownRoute()`).filter((l) => l.startsWith("route: "))).toEqual(["route: none"]);
+  });
+});
+
 describe("MGA Dungeon Quests list and slash command", () => {
   it("the grid shows every dungeon, how many quests to pick up and its art; a button opens one, Home returns", () => {
     const lines = run('slash("list"); shownRows()', "questLog = { { id = 10 } }");

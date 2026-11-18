@@ -4,6 +4,8 @@ import { guideProfession } from "@/games/wow-forever/lib/character/characterProf
 import { professionName } from "@/games/wow-forever/lib/guild/guildRecipes";
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import { objectiveText } from "@/games/wow-forever/lib/dungeonQuestsAddon/objectiveText";
+import { travelDataLua } from "@/games/wow-forever/lib/dungeonQuestsAddon/travelDataLua";
+import { placedGiversByName, turnInGiver } from "@/games/wow-forever/lib/dungeonQuestsAddon/turnInGiver";
 import { questLines } from "@/games/wow-forever/lib/dungeons/questLines";
 import type { BossLootItem } from "@/games/wow-forever/types/dungeons/bossLootItem";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
@@ -17,7 +19,7 @@ import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap"
 
 type AddonDungeon = Pick<
   Dungeon,
-  "slug" | "instanceId" | "name" | "aliases" | "levelMin" | "levelMax" | "quests" | "bosses" | "maxPlayers" | "newInForever"
+  "slug" | "instanceId" | "name" | "aliases" | "levelMin" | "levelMax" | "quests" | "bosses" | "maxPlayers" | "newInForever" | "entrances"
 >;
 
 const DUNGEON_ART: Readonly<Record<string, { button: number; lore: number }>> = journalArt.dungeons;
@@ -46,18 +48,35 @@ function giverLua(giver: QuestGiver | null): string {
   return `, giver = ${luaString(giver.name)}${fromItem}${where ? `, where = ${luaString(where)}` : ""}${pinLua(giver)}`;
 }
 
+/** Everyone who gives one of these quests, for working out who takes a quest back. */
+function allGivers(dungeons: readonly AddonDungeon[]): QuestGiver[] {
+  return dungeons.flatMap((dungeon) =>
+    [FACTION.alliance, FACTION.horde].flatMap((faction) =>
+      questLines(dungeon.quests, faction).flatMap((line) => line.steps.flatMap((step) => step.giver ?? [])),
+    ),
+  );
+}
+
+/** Where the quest goes back to, for the addon's Route button; nothing when we can't tell. */
+function turnInSpotLua(enders: readonly string[], givers: ReadonlyMap<string, QuestGiver | null>): string {
+  const giver = turnInGiver(enders, givers);
+  if (!giver?.place) return "";
+  const { zoneId, x, y } = giver.place;
+  return `, turnInMap = ${zoneId}, turnInX = ${x.toFixed(1)}, turnInY = ${y.toFixed(1)}, turnInWhere = ${luaString(giverWhere(giver) ?? "")}`;
+}
+
 /** A quest's objectives and who takes it back, for the addon's "Next:" line. */
-function turnInLua(quest: QuestTurnIn | undefined): string {
+function turnInLua(quest: QuestTurnIn | undefined, givers: ReadonlyMap<string, QuestGiver | null>): string {
   if (!quest) return "";
   const objectives = quest.objectives.length > 0 ? `, objectives = {${quest.objectives.map((o) => luaString(objectiveText(o))).join(", ")}}` : "";
   const turnIn = quest.enders.length > 0 ? `, turnIn = ${luaString(quest.enders[0])}` : "";
-  return objectives + turnIn;
+  return objectives + turnIn + turnInSpotLua(quest.enders, givers);
 }
 
-function stepLua(s: QuestPickup, details: ReadonlyMap<number, QuestTurnIn>): string {
+function stepLua(s: QuestPickup, details: ReadonlyMap<number, QuestTurnIn>, givers: ReadonlyMap<string, QuestGiver | null>): string {
   return (
     `        {id = ${s.id}, title = ${luaString(s.title)}, level = ${s.level}, minLevel = ${s.minLevel}` +
-    `${s.dungeonQuest ? ", dungeon = true" : ""}${giverLua(s.giver)}${turnInLua(details.get(s.id))}},`
+    `${s.dungeonQuest ? ", dungeon = true" : ""}${giverLua(s.giver)}${turnInLua(details.get(s.id), givers)}},`
   );
 }
 
@@ -67,24 +86,29 @@ function skillName(skillLine: number): string {
   return professionName(skillLine);
 }
 
-function lineLua(line: QuestLine, details: ReadonlyMap<number, QuestTurnIn>): string[] {
+function lineLua(line: QuestLine, details: ReadonlyMap<number, QuestTurnIn>, givers: ReadonlyMap<string, QuestGiver | null>): string[] {
   const classes = line.classes.length > 0 ? `, classes = {${line.classes.map(luaString).join(", ")}}` : "";
   // The profession by its enUS name: what GetSkillLineInfo gives in game.
   const skill = line.skill ? `, skill = {name = ${luaString(skillName(line.skill.skillLine))}, level = ${line.skill.level}}` : "";
   return [
     `      {titles = {${line.titles.map(luaString).join(", ")}}${classes}${skill}, steps = {`,
-    ...line.steps.map((s) => stepLua(s, details)),
+    ...line.steps.map((s) => stepLua(s, details, givers)),
     "      }},",
   ];
 }
 
-function factionLua(dungeon: AddonDungeon, faction: PlayerFaction, details: ReadonlyMap<number, QuestTurnIn>): string[] {
+function factionLua(
+  dungeon: AddonDungeon,
+  faction: PlayerFaction,
+  details: ReadonlyMap<number, QuestTurnIn>,
+  givers: ReadonlyMap<string, QuestGiver | null>,
+): string[] {
   const lines = questLines(dungeon.quests, faction);
   if (lines.length === 0) return [];
   // A dungeon quest's own page data (seen in game when it has been) beats the quest shard's.
   const all = new Map([...details, ...dungeon.quests.map((q) => [q.id, q] as const)]);
   const key = faction === FACTION.alliance ? "alliance" : "horde"; // what UnitFactionGroup gives, lowercased
-  return [`    ${key} = {`, ...lines.flatMap((line) => lineLua(line, all)), "    },"];
+  return [`    ${key} = {`, ...lines.flatMap((line) => lineLua(line, all, givers)), "    },"];
 }
 
 function lootLua(item: BossLootItem): string {
@@ -100,20 +124,30 @@ function bossLua(boss: DungeonBoss): string[] {
   return [`${head}, loot = {`, ...boss.loot.map((item) => `        ${lootLua(item)},`), "      }},"];
 }
 
-/** What the journal shows beyond the quests: group size, its art (the client's file ids) and bosses. */
+/** The dungeon's first door we know of, for the Overview tab's route; nothing when only its area is known. */
+function doorLua(dungeon: AddonDungeon): string {
+  const zone = dungeon.entrances.find((entrance) => entrance.doors.length > 0);
+  if (!zone) return "";
+  const { x, y } = zone.doors[0];
+  const where = `${zone.zoneName} ${x.toFixed(1)}, ${y.toFixed(1)}`;
+  return `door = {map = ${zone.zoneId}, x = ${x.toFixed(1)}, y = ${y.toFixed(1)}, where = ${luaString(where)}},`;
+}
+
+/** What the journal shows beyond the quests: group size, its door, its art (the client's file ids) and bosses. */
 function journalLua(dungeon: AddonDungeon): string[] {
   const art = DUNGEON_ART[dungeon.slug];
   const facts = [
     dungeon.maxPlayers ? `players = ${dungeon.maxPlayers},` : "",
     dungeon.newInForever ? "isNew = true," : "",
     art ? `art = {button = ${art.button}, lore = ${art.lore}},` : "",
+    doorLua(dungeon),
   ].filter(Boolean);
   return [...(facts.length > 0 ? [`    ${facts.join(" ")}`] : []), "    bosses = {", ...dungeon.bosses.flatMap(bossLua), "    },"];
 }
 
-function dungeonLua(dungeon: AddonDungeon, details: ReadonlyMap<number, QuestTurnIn>): string[] {
-  const alliance = factionLua(dungeon, FACTION.alliance, details);
-  const horde = factionLua(dungeon, FACTION.horde, details);
+function dungeonLua(dungeon: AddonDungeon, details: ReadonlyMap<number, QuestTurnIn>, givers: ReadonlyMap<string, QuestGiver | null>): string[] {
+  const alliance = factionLua(dungeon, FACTION.alliance, details, givers);
+  const horde = factionLua(dungeon, FACTION.horde, details, givers);
   return [
     "  {",
     `    key = ${luaString(dungeon.slug)}, instanceId = ${dungeon.instanceId}, name = ${luaString(dungeon.name)},` +
@@ -138,12 +172,14 @@ export function dungeonQuestsAddonDataLua(
   details: ReadonlyMap<number, QuestTurnIn>,
 ): string {
   const sorted = [...dungeons].sort((a, b) => a.levelMin - b.levelMin || a.name.localeCompare(b.name));
+  const givers = placedGiversByName(allGivers(sorted));
   return [
     "-- Generated from MyGamingAssistant's dungeon pages (\"Before you go\").",
     "-- Do not edit: run `npx vitest run src/__tests__/wowDungeonQuestsAddon.test.ts -u` from apps/mygamingassistant/frontend.",
     "MGADungeonQuestsData = {",
-    ...sorted.flatMap((d) => dungeonLua(d, details)),
+    ...sorted.flatMap((d) => dungeonLua(d, details, givers)),
     "}",
+    ...travelDataLua(),
     "",
   ].join("\n");
 }

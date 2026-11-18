@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-18",
+    "title": "MGA Dungeon Quests routes you to your next quest",
+    "summary": "Update the addon and press Route beside a quest in /mgadq. It works out the quickest way from where you stand, on foot, by flight path, boat, zeppelin or tram, then moves your map pin along each leg as you go. It sends you to the quest giver, back to whoever takes the quest, or to the dungeon's entrance, and it only uses the flight paths you know.",
+    "to": "/wow-forever/dungeons?addon=open"
+  },
+  {
+    "date": "2026-11-18",
     "title": "MGA Dungeon Quests is now a dungeon journal",
     "summary": "Type /mgadq in game for a journal laid out like Blizzard's Dungeon Journal, using the game's own art. Every dungeon sits on a grid. Open one for its bosses with portraits, what each drops and how often, and your quest checklist with ticks and map pins. Download the new version from any dungeon page.",
     "to": "/wow-forever/dungeons?addon=open"

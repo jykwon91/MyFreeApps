@@ -31,7 +31,7 @@ export default function DungeonQuestsAddonCard() {
           Type <code>/mgadq</code> to open a dungeon journal in game: every dungeon, with how many of its quests you still need
           to pick up. Open one for its bosses and what they drop, and each quest line in order, ticked from the quests the game
           says you&apos;ve done, with what to do next: who to get it from and where, what to kill or collect, or who to turn it
-          in to. Pin puts a map pin on the next quest giver. It also reminds you in chat when you enter a dungeon with quests you
+          in to. Route shows the quickest way there from where you stand, by foot, flight path, boat or zeppelin, and moves the map pin along as you go. It also reminds you in chat when you enter a dungeon with quests you
           haven&apos;t picked up.
         </p>
         <ol className="list-decimal space-y-1 pl-5">

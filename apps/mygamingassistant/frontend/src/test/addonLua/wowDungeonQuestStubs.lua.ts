@@ -9,7 +9,9 @@
  * `clickBoss(n)`, `clickTab(n)`, `clickBack()` and `clickCrumb()` click them. `C_QuestLog = nil` leaves the older globals.
  * Map pins: `C_Map.SetUserWaypoint` prints "waypoint: <map> <x> <y>" (0-1), map 9999 can't take one,
  * `C_Map = nil` is a client without them; `shownPins()` prints "pins: 1,3" (the lines with a Pin
- * button), `clickPin(n)` clicks line n's.
+ * button), `clickPin(n)` clicks line n's. Routes: `position = { x, y, c }` is where you stand (nil = inside an
+ * instance), `shownRoute()` prints "route: <heading> | <leg>" or "route: none", `tickRoute()` runs the tracker,
+ * `clickRouteStop()` and `clickDoorRoute()` click its Stop and the Overview tab's button.
  */
 export const WOW_DUNGEON_QUEST_STUBS = `
 out = {}
@@ -56,10 +58,16 @@ function GetQuestLogTitle(i)
   return "Quest", 1, nil, false, false, q.complete and 1 or nil, 0, q.id
 end
 function IsQuestFlaggedCompleted(id) return completed[id] == true end
+position = nil
+function GetTaxiMapID() return 1415 end
+function UnitPosition()
+  if position then return position.x, position.y, 0, position.c end
+end
 UiMapPoint = { CreateFromCoordinates = function(map, x, y) return { map = map, x = x, y = y } end }
 C_Map = {
   SetUserWaypoint = function(p) out[#out + 1] = string.format("waypoint: %d %.3f %.3f", p.map, p.x, p.y) end,
   CanSetUserWaypointOnMap = function(map) return map ~= 9999 end,
+  ClearUserWaypoint = function() out[#out + 1] = "waypoint cleared" end,
 }
 C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) out[#out + 1] = "supertrack: " .. tostring(on) end }
 
@@ -157,6 +165,13 @@ function clickRow(n) named["MGADungeonQuestsDungeon" .. n].scripts.OnClick() end
 function clickBoss(n) named["MGADungeonQuestsBoss" .. n].scripts.OnClick() end
 function clickTab(n) named["MGADungeonQuestsTab" .. n].scripts.OnClick() end
 function clickCrumb() named.MGADungeonQuestsCrumbDungeon.scripts.OnClick() end
+function shownRoute()
+  local f = named.MGADungeonQuestsRouteFrame
+  out[#out + 1] = (f and f.shownFlag) and ("route: " .. f.heading.text .. " | " .. f.leg.text) or "route: none"
+end
+function tickRoute() named.MGADungeonQuestsRouteFrame.scripts.OnUpdate(named.MGADungeonQuestsRouteFrame, 1.1) end
+function clickRouteStop() named.MGADungeonQuestsRouteStop.scripts.OnClick() end
+function clickDoorRoute() named.MGADungeonQuestsDoorRoute.scripts.OnClick() end
 -- The Pin buttons on screen, top to bottom, as "line n" numbers; clickPin(n) clicks line n's.
 function shownPins()
   local list = {}
