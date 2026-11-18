@@ -30,7 +30,7 @@ export default function PropertyChoiceField({ messages: MESSAGES, value, onChang
       </View>
     );
   }
-  if (loadError) {
+  if (loadError && !data) {
     return (
       <View style={{ gap: spacing.sm }}>
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text>

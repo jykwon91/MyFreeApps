@@ -36,7 +36,7 @@ export default function ScreeningActions({
     );
   }
   if (isLoading) return <Skeleton height={48} />;
-  if (error || !eligibility) {
+  if (!eligibility) {
     return (
       <Banner
         actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => void refetch() }]}
