@@ -1,4 +1,5 @@
 import { RENTAL_ROI_FEW_MONTHS } from "@mybookkeeper/api-client/constants/rentalRoi";
+import { RENTAL_ROI_BREAKDOWN_MESSAGES } from "@mybookkeeper/api-client/constants/rentalRoiBreakdown";
 import type { RentalRoiProperty } from "@mybookkeeper/api-client/types/analytics/rental-roi-property";
 import { useTheme } from "@platform/mobile";
 import { router } from "expo-router";
@@ -13,7 +14,7 @@ export interface RentalRoiPropertyNotesProps {
 export default function RentalRoiPropertyNotes({ property }: RentalRoiPropertyNotesProps) {
   const { colors, fontSize, spacing } = useTheme();
   const fewMonths = property.months_averaged < RENTAL_ROI_FEW_MONTHS;
-  if (property.mortgage_source === "records" && !fewMonths) return null;
+  if (property.mortgage_source === "records" && !fewMonths && !property.is_personal_home) return null;
   return (
     <View style={{ gap: spacing.xs, flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
       {fewMonths && (
@@ -29,6 +30,9 @@ export default function RentalRoiPropertyNotes({ property }: RentalRoiPropertyNo
         >
           {MESSAGES.basedOnMonths(property.months_averaged)}
         </Text>
+      )}
+      {property.is_personal_home && (
+        <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{RENTAL_ROI_BREAKDOWN_MESSAGES.personalHomeNote}</Text>
       )}
       {property.mortgage_source === "transactions" && (
         <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{MESSAGES.mortgageFromTransactions}</Text>

@@ -5,6 +5,8 @@ import type { RentalRoiMortgageSource } from "./rental-roi-mortgage-source";
 export interface RentalRoiProperty {
   property_id: string;
   property_name: string;
+  /** A home the owner lives in that also collects rent: all of its costs are counted. */
+  is_personal_home: boolean;
   months_averaged: number;
   has_purchase_price: boolean;
   mortgage_source: RentalRoiMortgageSource;

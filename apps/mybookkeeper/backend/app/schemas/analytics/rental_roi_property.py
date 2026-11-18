@@ -10,6 +10,8 @@ from app.schemas.analytics.rental_roi_cost_breakdown import RentalRoiCostBreakdo
 class RentalRoiProperty(BaseModel):
     property_id: uuid.UUID
     property_name: str
+    # A home the owner lives in that also collects rent: all of its costs are counted.
+    is_personal_home: bool
     months_averaged: int
     has_purchase_price: bool
     mortgage_source: Literal["records", "transactions", "none"]

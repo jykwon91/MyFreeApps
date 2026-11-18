@@ -33,6 +33,7 @@ function property(overrides: Partial<RentalRoiProperty>): RentalRoiProperty {
     noi_annual_cents: 2280000,
     cap_rate_pct: "9.12",
     cash_on_cash_pct: "9.60",
+    is_personal_home: false,
     cost_breakdown: {
       debt_service_monthly_cents: 150000,
       operating_monthly_cents: 10000,
