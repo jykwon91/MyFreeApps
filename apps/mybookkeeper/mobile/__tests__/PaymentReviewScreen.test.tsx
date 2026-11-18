@@ -19,6 +19,7 @@ import PaymentReviewScreen from "../src/features/paymentReview/PaymentReviewScre
 import { usePaymentReviewActions } from "../src/features/paymentReview/usePaymentReviewActions";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
+import { queriesSettled } from "../test-support/queriesSettled";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), navigate: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
@@ -97,6 +98,7 @@ interface Server {
   tenantsFail?: boolean;
   noTenants?: boolean;
   noProperties?: boolean;
+  propertiesFail?: boolean;
   queueReads: number;
   tenantReads: number;
   propertyReads: number;
@@ -133,6 +135,7 @@ function serve(queue: AttributionReviewQueueResponse): Server {
     }
     if (url === "/properties") {
       server.propertyReads += 1;
+      if (server.propertiesFail) return respond(500, {});
       if (server.noProperties) return respond(200, []);
       return respond(200, [
         { id: "p1", name: "Sunset Villa", is_active: true },
@@ -455,6 +458,38 @@ describe("picking someone else", () => {
 
     expect(await screen.findByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
     expect(screen.queryByText(TENANT_PICKER_MESSAGES.none)).toBeNull();
+  });
+
+  it("tries the tenants again from the failure message, and then lists them", async () => {
+    const server = serve(aQueue([aRow()]));
+    server.tenantsFail = true;
+    await showScreen();
+    await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
+    expect(await screen.findByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
+
+    await queriesSettled();
+    server.tenantsFail = false;
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Omar Reyes")).toBeTruthy();
+    expect(screen.queryByText(TENANT_PICKER_MESSAGES.failed)).toBeNull();
+  });
+
+  it("says so when the properties won't load, and tries again from the failure message", async () => {
+    const server = serve(aQueue([aPayout({ proposed_property_id: null, proposed_property: null })]));
+    server.propertiesFail = true;
+    await showScreen();
+    await fireEvent.press(screen.getByText(MESSAGES.chooseProperty));
+
+    expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.noProperties)).toBeNull();
+
+    await queriesSettled();
+    server.propertiesFail = false;
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Oak Cottage")).toBeTruthy();
+    expect(screen.queryByText("I couldn't load your properties.")).toBeNull();
   });
 
   it("with no tenants yet, says how someone becomes one and goes to Applicants once the sheet has closed", async () => {

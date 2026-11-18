@@ -11,6 +11,8 @@ export interface WelcomeManualsServer {
   /** Everything asked of the server except the workspace list, in order. */
   requests: AxiosRequestConfig[];
   failReadsWith: number | null;
+  /** The property list fails with this status, while set. */
+  failPropertiesWith: number | null;
   /** A write whose method and url this accepts fails with the status and detail it returns. */
   failWhen: ((method: string, url: string) => { status: number; detail: string } | null) | null;
   /** A write is saved, then the answer is lost. */
@@ -31,7 +33,7 @@ const PAGE = 25;
 /** Answers the whole welcome-manuals API like the server does, and remembers what it was asked. */
 export function startWelcomeManualsServer(initial: { manuals?: WelcomeManualResponse[]; role?: string } = {}): WelcomeManualsServer {
   const server: WelcomeManualsServer = {
-    role: initial.role ?? "owner", manuals: initial.manuals ?? [], requests: [], failReadsWith: null, failWhen: null,
+    role: initial.role ?? "owner", manuals: initial.manuals ?? [], requests: [], failReadsWith: null, failPropertiesWith: null, failWhen: null,
     loseAnswerAfterSaving: false, offline: false, storageConfigured: true, emailStatus: "sent", listChangedElsewhere: false,
   };
   let counter = 0;
@@ -47,7 +49,7 @@ export function startWelcomeManualsServer(initial: { manuals?: WelcomeManualResp
     };
     const url = config.url ?? "";
     if (url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role, is_demo: false }]);
-    if (url === "/properties") return respond([{ id: "pr1", name: "Oak Street" }]);
+    if (url === "/properties") return server.failPropertiesWith ? respond({ detail: "nope" }, server.failPropertiesWith) : respond([{ id: "pr1", name: "Oak Street" }]);
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     const method = (config.method ?? "get").toLowerCase();

@@ -1,9 +1,9 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
 import { useMemo, useState } from "react";
-import { Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
 import { NONE_OPTION_VALUE } from "../../constants/transactionEdit";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import PickerField from "../transactions/PickerField";
 import { selectableProperties } from "../transactions/transactionEditValues";
 
@@ -16,29 +16,19 @@ interface BankImportPropertyFieldProps {
 
 /** Every imported row goes under this property. Importing without one is always allowed. */
 export default function BankImportPropertyField({ value, onChange, disabled }: BankImportPropertyFieldProps) {
-  const { colors, fontSize, spacing } = useTheme();
   const { currentData, error, isLoading, refetch } = useGetPropertiesQuery();
   const [isPicking, setIsPicking] = useState(false);
   const properties = useMemo(() => selectableProperties(currentData ?? [], value), [currentData, value]);
 
-  if (isLoading) {
+  const failure = pickerLoadError({ hasLoaded: currentData !== undefined, error, refetch }, MESSAGES.propertiesFailed);
+  if (failure) return <SectionError {...failure} />;
+  if (isLoading || !currentData) {
     return (
       <LoadingRegion label={MESSAGES.loadingProperties}>
         <Skeleton height={56} />
       </LoadingRegion>
     );
   }
-  if (!currentData) {
-    return (
-      <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{error ? MESSAGES.propertiesFailed : MESSAGES.loadingProperties}</Text>
-        <LoadingButton onPress={() => void refetch()} variant="secondary">
-          {MESSAGES.tryAgain}
-        </LoadingButton>
-      </View>
-    );
-  }
-
   return (
     <>
       <PickerField

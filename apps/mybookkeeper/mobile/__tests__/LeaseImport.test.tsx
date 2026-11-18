@@ -15,6 +15,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { makeStore } from "../src/lib/store";
 import { formParts, formValue } from "../test-support/applicantsServer";
+import { queriesSettled } from "../test-support/queriesSettled";
 import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
 import { type FakeLeaseWritesServer, lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
@@ -263,7 +264,7 @@ describe("importing a signed lease", () => {
     await openImport();
     expect(await screen.findByText(MESSAGES.couldntLoadTenants)).toBeTruthy();
     delete server.failures.applicants;
-    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("button", { name: /^Who signed it\?/ })).toBeTruthy();
   });
 
@@ -276,6 +277,21 @@ describe("importing a signed lease", () => {
     await addFile("lease.pdf");
     await importLease();
     expect(await screen.findByText("lease-page-imported1")).toBeTruthy();
+  });
+
+  it("tries the listings again from the failure message, and then offers them", async () => {
+    const server = startLeaseWritesServer();
+    server.failures.listings = { status: 500 };
+    await openImport();
+    expect(await screen.findByText(MESSAGES.listingsFailed)).toBeTruthy();
+
+    await queriesSettled(testStore);
+    delete server.failures.listings;
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    await fireEvent.press(await screen.findByRole("button", { name: /^Listing/ }));
+    expect(await screen.findByText("Back room")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.listingsFailed)).toBeNull();
   });
 
   it("shows skeletons while the choices load", async () => {

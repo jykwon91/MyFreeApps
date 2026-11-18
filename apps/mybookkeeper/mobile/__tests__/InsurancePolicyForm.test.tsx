@@ -163,7 +163,7 @@ describe("adding a policy", () => {
     await renderInsurance(<NewPolicyScreen />);
     expect(await screen.findByText(POLICY_FORM_MESSAGES.propertiesFailed)).toBeTruthy();
     delete server.failures["GET /properties"];
-    await fireEvent.press(screen.getByRole("button", { name: POLICY_FORM_MESSAGES.propertiesRetry }));
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
     expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
   });

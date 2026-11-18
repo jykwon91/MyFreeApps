@@ -6,5 +6,4 @@ export interface PropertyChoiceMessages {
   addProperty: string;
   propertiesLoading: string;
   propertiesFailed: string;
-  propertiesRetry: string;
 }

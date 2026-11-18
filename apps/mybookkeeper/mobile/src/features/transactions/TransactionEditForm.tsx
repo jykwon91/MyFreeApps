@@ -8,9 +8,11 @@ import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, Loading
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { DEFAULT_CATEGORY, NONE_OPTION_VALUE, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
 import { SAVED_VENDOR_MESSAGES, TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { TransactionEditSheet } from "../../types/TransactionEditSheet";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
 import type { TransactionSaveAction } from "../../types/TransactionSaveAction";
@@ -28,9 +30,11 @@ import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages
 export default function TransactionEditForm({ original }: { original: Transaction }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const { data: properties = [] } = useGetPropertiesQuery();
-  const { data: vendorList, isError: vendorsFailed, isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
+  const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
+  const properties = loadedProperties ?? [];
+  const { data: vendorList, error: vendorsError, isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
   const vendors = vendorList?.items ?? [];
+  const vendorsFailed = vendorList === undefined && Boolean(vendorsError);
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
@@ -65,12 +69,6 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
   function update(change: Partial<TransactionEditValues>): void {
     setValues((current) => ({ ...current, ...change }));
-  }
-
-  function openSavedVendorSheet(): void {
-    // The sheet tells them to try again, so reopening it has to actually try again.
-    if (vendorsFailed) refetchVendors();
-    setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor);
   }
 
   function changeType(type: TransactionType): void {
@@ -120,18 +118,24 @@ export default function TransactionEditForm({ original }: { original: Transactio
       },
     },
     property: {
-      options: [
-        { value: NONE_OPTION_VALUE, label: "No property" },
-        ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
-      ],
+      // Until the properties are here, "No property" would be the only row, and picking it would drop the one this row has.
+      options: loadedProperties
+        ? [
+            { value: NONE_OPTION_VALUE, label: "No property" },
+            ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
+          ]
+        : [],
+      emptyText: PICKER_LOAD_MESSAGES.propertiesLoading,
+      loadError: pickerLoadError({ hasLoaded: loadedProperties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed),
       value: values.propertyId ?? NONE_OPTION_VALUE,
       apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
     },
     savedVendor: {
       options: savedVendorChoices(vendors, !(vendorsFailed && values.vendorId !== null)),
+      loadError: pickerLoadError({ hasLoaded: vendorList !== undefined, error: vendorsError, refetch: refetchVendors }, SAVED_VENDOR_MESSAGES.loadFailed),
       value: values.vendorId ?? NONE_OPTION_VALUE,
       apply: (vendorId) => update({ vendorId: fromChoice(vendorId) || null }),
-      description: vendorsFailed ? SAVED_VENDOR_MESSAGES.loadFailed : SAVED_VENDOR_MESSAGES.sheetDescription,
+      description: SAVED_VENDOR_MESSAGES.sheetDescription,
     },
     channel: {
       options: CHANNEL_OPTIONS,
@@ -174,7 +178,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         <PickerField
           disabled={vendorsLoading}
           label={LABELS.savedVendor}
-          onPress={openSavedVendorSheet}
+          onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor)}
           value={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
         />
         <FormField
@@ -240,7 +244,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
       <OptionSheet
         description={sheet?.description}
+        emptyText={sheet?.emptyText}
         isOpen={sheet !== null}
+        loadError={sheet?.loadError}
         onClose={() => setOpenSheet(null)}
         onSelect={(value) => {
           sheet?.apply(value);

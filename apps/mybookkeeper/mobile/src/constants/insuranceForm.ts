@@ -25,7 +25,6 @@ export const POLICY_FORM_MESSAGES = {
   addProperty: "Add a property",
   propertiesLoading: "Loading your properties",
   propertiesFailed: "I couldn't load your properties.",
-  propertiesRetry: "Try again",
   policyName: "Policy name",
   policyNamePlaceholder: "e.g. Landlord insurance, 123 Main St",
   carrier: "Carrier",

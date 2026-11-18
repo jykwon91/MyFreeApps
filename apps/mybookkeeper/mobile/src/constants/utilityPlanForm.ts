@@ -18,7 +18,6 @@ export const UTILITY_PLAN_FORM_MESSAGES = {
   addProperty: "Add a property",
   propertiesLoading: "Loading your properties",
   propertiesFailed: "I couldn't load your properties.",
-  propertiesRetry: "Try again",
   service: "Service",
   serviceSheetTitle: "Which service is this?",
   rateType: "Rate type",

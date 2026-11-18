@@ -11,6 +11,7 @@ import { store } from "../src/lib/store";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 import { holdWrites } from "../test-support/holdWrites";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { queriesSettled } from "../test-support/queriesSettled";
 
 const mockBack = jest.fn();
 const mockDispatch = jest.fn();
@@ -247,16 +248,16 @@ describe("TransactionEditScreen", () => {
       expect(lastPatch(server)).toEqual({ vendor_id: null });
     });
 
-    it("tries the vendor list again when the sheet is reopened after it failed", async () => {
+    it("tries the vendor list again from the failure message in the sheet", async () => {
       const server = startTransactionServer([aTransaction()]);
       server.vendors = [aSavedVendor()];
       server.failVendorsWith = 500;
       await renderScreen();
       await fireEvent.press(await screen.findByLabelText("Saved vendor, None"));
       expect(await screen.findByText(/couldn't load your saved vendors/)).toBeTruthy();
-      await fireEvent.press(screen.getByRole("button", { name: "Close" }));
+      await queriesSettled();
       server.failVendorsWith = null;
-      await fireEvent.press(screen.getByLabelText("Saved vendor, None"));
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
       expect(await screen.findByRole("radio", { name: "Ace Plumbing" })).toBeTruthy();
     });
 
@@ -374,6 +375,25 @@ describe("TransactionEditScreen", () => {
       await fireEvent.press(screen.getByRole("button", { name: "Save" }));
       await waitFor(() => expect(mockBack).toHaveBeenCalled());
       expect(lastPatch(server)).toEqual({ transaction_date: "2026-01-05", tax_year: 2026 });
+    });
+  });
+
+
+  describe("when the properties can't load", () => {
+    it("says so in the property sheet, and retrying offers the properties", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      server.failPropertiesWith = 500;
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Property, A property"));
+      expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+      expect(screen.queryByRole("radio", { name: "No property" })).toBeNull();
+
+      await queriesSettled();
+      server.failPropertiesWith = null;
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+      expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "No property" })).toBeTruthy();
     });
   });
 });

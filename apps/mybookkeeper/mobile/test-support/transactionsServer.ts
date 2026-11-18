@@ -73,6 +73,8 @@ export interface FakeTransactionServer {
   pendingPayments: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
+  /** The status every property read fails with, while set. */
+  failPropertiesWith: number | null;
   /** The status every saved-vendor read fails with, while set. */
   failVendorsWith: number | null;
   renewalAlerts: UtilityPlanRenewalAlert;
@@ -142,6 +144,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     pendingReceipts: 0,
     pendingPayments: 0,
     failSummary: false,
+    failPropertiesWith: null,
     failVendorsWith: null,
     renewalAlerts: noRenewalAlerts(),
     rateComparison: noRateComparison(),
@@ -169,7 +172,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
-    if (config.url === "/properties") return respond(server.properties);
+    if (config.url === "/properties") return server.failPropertiesWith === null ? respond(server.properties) : respond({ detail: "nope" }, server.failPropertiesWith);
     if (server.failVendorsWith !== null && config.url?.startsWith("/vendors")) return respond({ detail: "nope" }, server.failVendorsWith);
     if (config.url === "/vendors") return respond({ items: server.vendors, total: server.vendors.length, has_more: false });
     if (config.url?.startsWith("/vendors/")) {

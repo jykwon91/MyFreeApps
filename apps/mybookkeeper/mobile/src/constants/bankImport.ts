@@ -15,7 +15,6 @@ export const BANK_IMPORT_MESSAGES = {
   noProperty: "No property",
   loadingProperties: "Loading your properties",
   propertiesFailed: "I couldn't load your properties. You can still import without one.",
-  tryAgain: "Try again",
   submit: "Import statement",
   submitting: "Importing…",
   needFile: "Choose a CSV file first.",

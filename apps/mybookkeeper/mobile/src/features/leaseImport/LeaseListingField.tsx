@@ -1,8 +1,8 @@
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
 import { useMemo, useState } from "react";
-import { Text } from "react-native";
 import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import PickerField from "../transactions/PickerField";
 
 interface LeaseListingFieldProps {
@@ -13,8 +13,7 @@ interface LeaseListingFieldProps {
 
 /** Which listing the lease is for, if any. The lease can be imported without one, so a failure to load doesn't block. */
 export default function LeaseListingField({ value, onChange, disabled }: LeaseListingFieldProps) {
-  const { colors, fontSize } = useTheme();
-  const { currentData, error, isLoading } = useGetListingsQuery({ limit: LEASE_IMPORT_CHOICE_LIMIT });
+  const { currentData, error, isLoading, refetch } = useGetListingsQuery({ limit: LEASE_IMPORT_CHOICE_LIMIT });
   const [isPicking, setIsPicking] = useState(false);
   const options = useMemo(
     () => [{ value: "", label: MESSAGES.listingNone }, ...(currentData?.items ?? []).map((listing) => ({ value: listing.id, label: listing.title }))],
@@ -28,7 +27,10 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
       </LoadingRegion>
     );
   }
-  if (!currentData) return error ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.listingsFailed}</Text> : null;
+  if (!currentData) {
+    const failure = pickerLoadError({ hasLoaded: false, error, refetch }, MESSAGES.listingsFailed);
+    return failure ? <SectionError {...failure} /> : null;
+  }
   if (currentData.items.length === 0) return null;
 
   return (

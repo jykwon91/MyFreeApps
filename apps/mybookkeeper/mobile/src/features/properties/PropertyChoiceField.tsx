@@ -1,8 +1,9 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { FieldError, LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, LoadingRegion, OptionSheet, SectionError, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { PropertyChoiceMessages } from "../../types/PropertyChoiceMessages";
 import PickerField from "../transactions/PickerField";
 
@@ -16,7 +17,7 @@ interface PropertyChoiceFieldProps {
 
 export default function PropertyChoiceField({ messages: MESSAGES, value, onChange, error, disabled }: PropertyChoiceFieldProps) {
   const { colors, fontSize, spacing } = useTheme();
-  const { data, error: loadError, isLoading, isFetching, refetch } = useGetPropertiesQuery();
+  const { data, error: loadError, isLoading, refetch } = useGetPropertiesQuery();
   const [isPicking, setIsPicking] = useState(false);
   const options = useMemo(
     () => [...(data ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((property) => ({ value: property.id, label: property.name })),
@@ -30,16 +31,8 @@ export default function PropertyChoiceField({ messages: MESSAGES, value, onChang
       </LoadingRegion>
     );
   }
-  if (loadError && !data) {
-    return (
-      <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text>
-        <LoadingButton isLoading={isFetching} onPress={() => void refetch()} variant="secondary">
-          {MESSAGES.propertiesRetry}
-        </LoadingButton>
-      </View>
-    );
-  }
+  const failure = pickerLoadError({ hasLoaded: data !== undefined, error: loadError, refetch }, MESSAGES.propertiesFailed);
+  if (failure) return <SectionError {...failure} />;
   if (options.length === 0) {
     return (
       <View style={{ gap: spacing.sm }}>

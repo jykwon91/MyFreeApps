@@ -270,7 +270,7 @@ describe("importing a bank statement", () => {
     await openImport();
     expect(await screen.findByText(MESSAGES.propertiesFailed)).toBeTruthy();
     failing = false;
-    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("button", { name: /^Property/ })).toBeTruthy();
   });
 

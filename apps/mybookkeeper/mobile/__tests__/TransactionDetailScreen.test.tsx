@@ -11,6 +11,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { APPROVAL_PROPERTY_MESSAGES } from "../src/constants/transactionApproval";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
+import { queriesSettled } from "../test-support/queriesSettled";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -309,5 +310,23 @@ describe("TransactionDetailScreen", () => {
     server.offline = false;
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Home Depot")).toBeTruthy();
+  });
+
+
+  it("says the properties couldn't load when approving, and retrying offers them", async () => {
+    const server = startTransactionServer([aTransaction({ status: "pending", property_id: null })]);
+    server.failPropertiesWith = 500;
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Approve" }));
+    expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+    expect(screen.queryByText(APPROVAL_PROPERTY_MESSAGES.none)).toBeNull();
+
+    await queriesSettled();
+    server.failPropertiesWith = null;
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    await fireEvent.press(await screen.findByRole("radio", { name: "Oak Street" }));
+    expect(await screen.findByText("Approved.")).toBeTruthy();
+    expect(lastPatch(server)).toEqual({ status: "approved", property_id: "p1" });
   });
 });

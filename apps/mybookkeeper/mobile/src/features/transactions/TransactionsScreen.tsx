@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
@@ -14,6 +15,7 @@ import { TRANSACTION_LIST_MESSAGES } from "../../constants/transactionList";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import { useRefetchCount } from "../../lib/useRefetchCount";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -62,7 +64,8 @@ export default function TransactionsScreen({
     isLoading,
     refetch,
   } = useListTransactionPagesInfiniteQuery(params);
-  const { data: properties = [], refetch: refetchProperties } = useGetPropertiesQuery();
+  const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
+  const properties = useMemo(() => loadedProperties ?? [], [loadedProperties]);
   const { exportTransactions, isExporting } = useShareTransactionExport(() => refetchProperties().unwrap());
   const listKey = JSON.stringify(params);
   const loadMoreFailed = listThatFailedToLoadMore === listKey;
@@ -317,6 +320,7 @@ export default function TransactionsScreen({
           }}
           onClose={() => setIsFilterSheetOpen(false)}
           properties={properties}
+          propertiesLoadError={pickerLoadError({ hasLoaded: loadedProperties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed)}
         />
       ) : null}
     </View>

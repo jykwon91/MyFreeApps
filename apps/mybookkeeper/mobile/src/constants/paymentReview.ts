@@ -33,8 +33,6 @@ export const PAYMENT_REVIEW_MESSAGES = {
   skipped: "Skipped. The payment is still in your transactions.",
   link: "Link",
   propertySheetTitle: "Which property is this for?",
-  propertiesLoading: "I'm loading your properties.",
-  propertiesFailed: "I couldn't load your properties. Close this and try again.",
   noProperties: "You don't have any properties yet. Add one, then come back to link this payment.",
   addProperty: "Add a property",
   unreachable: "I can't reach the server, so I'm not sure that went through. Trying again is safe.",

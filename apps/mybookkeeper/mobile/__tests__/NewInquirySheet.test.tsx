@@ -9,6 +9,7 @@ import InquiriesScreen from "../src/features/inquiries/InquiriesScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { queriesSettled } from "../test-support/queriesSettled";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
 import { pressAlertButton } from "../test-support/pressAlertButton";
 import { SHOWN } from "@platform/mobile/test-support/shown";
@@ -143,6 +144,20 @@ describe("adding an inquiry by hand", () => {
     await typeName();
     await fireEvent.press(screen.getByRole("button", SAVE));
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/inquiries/new0"));
+  });
+
+  it("tries the listings again from the failure message, and then offers them", async () => {
+    const server = startInquiryServer([]);
+    server.listings = null;
+    await openSheet();
+    expect(await screen.findByText("I couldn't load your listings. You can still add the inquiry and link one later.")).toBeTruthy();
+
+    await queriesSettled();
+    server.listings = [{ id: "l1", title: "Garage Suite A" }];
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("radio", { name: "Garage Suite A" })).toBeTruthy();
+    expect(screen.queryByText("I couldn't load your listings. You can still add the inquiry and link one later.")).toBeNull();
   });
 
   it("shows the busy state and sends once when tapped twice", async () => {
