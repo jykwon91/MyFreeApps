@@ -2,6 +2,7 @@ import { Button, LoadingButton } from "@platform/ui";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
 import LeaseAddTemplatePickBody from "./LeaseAddTemplatePickBody";
 
 export interface LeaseAddTemplatePickStepProps {
@@ -14,6 +15,10 @@ export interface LeaseAddTemplatePickStepProps {
   /** The latest load failed; items from an earlier load may still show. */
   hasError: boolean;
   isRetrying: boolean;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  loadMoreFailed: boolean;
+  onLoadMore: () => void;
   isPrefilling: boolean;
   onRetry: () => void;
   onContinue: () => void;
@@ -36,6 +41,10 @@ export default function LeaseAddTemplatePickStep({
   mode,
   hasError,
   isRetrying,
+  hasMore,
+  isLoadingMore,
+  loadMoreFailed,
+  onLoadMore,
   isPrefilling,
   onRetry,
   onContinue,
@@ -54,6 +63,15 @@ export default function LeaseAddTemplatePickStep({
         onToggle={onToggle}
         isDocumentsLocked={isDocumentsLocked}
       />
+      {mode === "list" ? (
+        <LoadMoreFooter
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          loadMoreFailed={loadMoreFailed}
+          failureMessage="I couldn't load more templates. Want me to try again?"
+          onLoadMore={onLoadMore}
+        />
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" size="sm" onClick={onClose}>

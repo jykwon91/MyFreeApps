@@ -1,5 +1,6 @@
 /**
- * Against the real RTK Query hooks: the Lease Templates page and the new-lease template picker
+ * Against the real RTK Query hooks: the Lease Templates page, the new-lease template picker and the
+ * Add document modal
  * reach templates past the first page with Load more, keep their rows when a Load more fails,
  * and the picker keeps a template picked on page 1 selected after page 2 loads.
  */
@@ -8,6 +9,7 @@ import { useState } from "react";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import LeaseTemplates from "@/app/pages/LeaseTemplates";
+import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import { restoreApi, stubApi } from "@/test/api-stub";
@@ -149,5 +151,48 @@ describe("MultiTemplatePicker paging", () => {
 
     expect(await screen.findByTestId("multi-template-checkbox-tpl-3")).toBeInTheDocument();
     expect(screen.getByTestId("multi-template-checkbox-tpl-1")).toBeChecked();
+  });
+});
+
+describe("LeaseAddTemplateModal paging", () => {
+  function renderModal() {
+    cleanup = renderWithStore(
+      <LeaseAddTemplateModal
+        leaseId="lease-1"
+        existingTemplateIds={[]}
+        isDocumentsLocked={false}
+        onLockedRefusal={vi.fn()}
+        onClose={vi.fn()}
+      />,
+      "/leases/lease-1",
+    );
+  }
+
+  it("lets a template from page 2 be picked, keeping one picked on page 1", async () => {
+    serveTemplates();
+    renderModal();
+    await userEvent.click(await screen.findByTestId("add-template-checkbox-tpl-1"));
+
+    await userEvent.click(screen.getByTestId("load-more-button"));
+    await userEvent.click(await screen.findByTestId("add-template-checkbox-tpl-3"));
+
+    expect(screen.getByTestId("add-template-checkbox-tpl-1")).toBeChecked();
+    expect(screen.getByTestId("add-template-checkbox-tpl-3")).toBeChecked();
+  });
+
+  it("keeps the templates when Load more fails and loads the page on Retry", async () => {
+    serveTemplates(1);
+    renderModal();
+    await screen.findByTestId("add-template-checkbox-tpl-2");
+
+    await userEvent.click(screen.getByTestId("load-more-button"));
+
+    expect(await screen.findByText(LOAD_MORE_ERROR)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load your templates/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("add-template-checkbox-tpl-1")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByTestId("add-template-checkbox-tpl-3")).toBeInTheDocument();
   });
 });
