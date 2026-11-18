@@ -1,4 +1,4 @@
-import { LoadingRegion } from "@platform/mobile";
+import { LoadingRegion, type PressHandler } from "@platform/mobile";
 import type { ReactNode } from "react";
 import LoadMoreFailed from "./LoadMoreFailed";
 
@@ -6,7 +6,7 @@ interface PagedListFooterProps {
   isLoadingMore: boolean;
   loadingLabel: string;
   loadMoreFailed: boolean;
-  onRetry: () => void;
+  onRetry: PressHandler;
   /** One row's worth of skeleton, shown while the next page loads. */
   skeletonRow: ReactNode;
 }

@@ -1,14 +1,14 @@
-import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useTenantsPages } from "@mybookkeeper/api-client/hooks/useTenantsPages";
 import { localToday } from "@platform/core/utils/localToday";
-import { EmptyState, LoadingRegion, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { TENANT_FILTERS, TENANT_MESSAGES } from "../../constants/tenants";
-import { uniqueById } from "../../lib/uniqueById";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { TenantFilter } from "../../types/TenantFilter";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "../applicants/ApplicantsSkeleton";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import PagedListFooter from "../shell/PagedListFooter";
 import TenantRow from "./TenantRow";
 
 export default function TenantsScreen({
@@ -21,24 +21,14 @@ export default function TenantsScreen({
   onSeeApplicants: () => void;
 }) {
   const { spacing } = useTheme();
-  const [filterThatFailedToLoadMore, setFilterThatFailedToLoadMore] = useState<TenantFilter | null>(null);
-  const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } =
-    useListTenantPagesInfiniteQuery({ include_ended: filter === "everyone", today: localToday() });
-  const loadMoreFailed = filterThatFailedToLoadMore === filter;
-  const { refresh, refreshControl } = useRefresh(async () => {
-    setFilterThatFailedToLoadMore(null);
-    await refetch();
-  }, error);
-  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
+  const list = useTenantsPages({ include_ended: filter === "everyone", today: localToday() });
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.tenants : [];
 
-  async function loadMore(): Promise<void> {
-    const result = await fetchNextPage();
-    setFilterThatFailedToLoadMore(result.isError ? filter : null);
-  }
-
-  const emptyList = !currentData && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <ApplicantsSkeleton label={TENANT_MESSAGES.loading} />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState action={{ label: TENANT_MESSAGES.tryAgain, onPress: refresh }} body={TENANT_MESSAGES.wantRetry} heading={TENANT_MESSAGES.couldntLoad} />
   ) : filter === "current" ? (
     <EmptyState
@@ -53,21 +43,25 @@ export default function TenantsScreen({
   return (
     <FlatList
       ListEmptyComponent={emptyList}
-      ListFooterComponent={isFetchingNextPage ? (
-        <LoadingRegion label={TENANT_MESSAGES.loadingMore}>
-          <ApplicantSkeletonRow />
-        </LoadingRegion>
-      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined}
+      ListFooterComponent={
+        <PagedListFooter
+          isLoadingMore={list.isFetchingNextPage}
+          loadMoreFailed={list.isLoadMoreError}
+          loadingLabel={TENANT_MESSAGES.loadingMore}
+          onRetry={list.loadMore}
+          skeletonRow={<ApplicantSkeletonRow />}
+        />
+      }
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+          <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
           <SegmentedControl accessibilityLabel={TENANT_MESSAGES.filterLabel} onChange={onFilterChange} segments={TENANT_FILTERS} value={filter} />
         </View>
       }
       data={rows}
       keyExtractor={(tenant) => tenant.id}
       onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage && !loadMoreFailed) void loadMore();
+        if (canLoadMore(list)) list.loadMore();
       }}
       onEndReachedThreshold={0.5}
       refreshControl={refreshControl}

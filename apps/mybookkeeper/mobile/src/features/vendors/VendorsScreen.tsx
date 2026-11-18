@@ -1,12 +1,13 @@
-import { useListVendorPagesInfiniteQuery } from "@mybookkeeper/api-client/store/vendorsApi";
+import { useVendorsPages } from "@mybookkeeper/api-client/hooks/useVendorsPages";
 import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
-import { EmptyState, LoadingButton, LoadingRegion, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
-import { uniqueById } from "../../lib/uniqueById";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { vendorFilterLabel } from "./vendorDisplay";
 import VendorFilterSheet from "./VendorFilterSheet";
@@ -20,17 +21,12 @@ export default function VendorsScreen() {
   const [category, setCategory] = useState<VendorCategory | null>(null);
   const [preferredOnly, setPreferredOnly] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
-  const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const args = useMemo(() => ({ ...(category ? { category } : {}), ...(preferredOnly ? { preferred: true } : {}) }), [category, preferredOnly]);
-  const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } = useListVendorPagesInfiniteQuery(args);
-  const listKey = JSON.stringify(args);
-  const loadMoreFailed = listThatFailedToLoadMore === listKey;
-  const { refresh, refreshControl } = useRefresh(async () => {
-    setListThatFailedToLoadMore(null);
-    await refetch();
-  }, error);
-  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
+  const list = useVendorsPages(args);
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.vendors : [];
   const isFiltered = category !== null || preferredOnly;
   const addVendor = () => router.push("/vendors/new");
 
@@ -39,14 +35,9 @@ export default function VendorsScreen() {
     setPreferredOnly(false);
   }
 
-  async function loadMore(): Promise<void> {
-    const result = await fetchNextPage();
-    setListThatFailedToLoadMore(result.isError ? listKey : null);
-  }
-
-  const emptyList = !currentData && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <VendorsSkeleton />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState
       action={{ label: VENDOR_MESSAGES.tryAgain, onPress: refresh }}
       body={VENDOR_MESSAGES.tryAgainOffer}
@@ -62,22 +53,22 @@ export default function VendorsScreen() {
     />
   );
 
-  const footer = isFetchingNextPage ? (
-    <LoadingRegion label={VENDOR_MESSAGES.loadingMore}>
-      <VendorSkeletonRow />
-    </LoadingRegion>
-  ) : loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => loadMore()} />
-  ) : undefined;
-
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         ListEmptyComponent={emptyList}
-        ListFooterComponent={footer}
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={list.isFetchingNextPage}
+            loadMoreFailed={list.isLoadMoreError}
+            loadingLabel={VENDOR_MESSAGES.loadingMore}
+            onRetry={list.loadMore}
+            skeletonRow={<VendorSkeletonRow />}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+            <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
             {canWrite && rows.length > 0 ? <LoadingButton onPress={addVendor}>{VENDOR_MESSAGES.add}</LoadingButton> : null}
             <LoadingButton onPress={() => setIsFilterSheetOpen(true)} variant="secondary">
               {vendorFilterLabel(category, preferredOnly)}
@@ -88,7 +79,7 @@ export default function VendorsScreen() {
         data={rows}
         keyExtractor={(vendor) => vendor.id}
         onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage && !loadMoreFailed) void loadMore();
+          if (canLoadMore(list)) list.loadMore();
         }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}

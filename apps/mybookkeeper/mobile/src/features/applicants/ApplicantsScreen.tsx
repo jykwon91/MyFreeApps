@@ -1,14 +1,15 @@
 import { APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
-import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { EmptyState, LoadingButton, LoadingRegion, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { APPLICANT_EMPTY_BODY, APPLICANT_LOADING_MESSAGES } from "../../constants/applicants";
 import { ALL_STAGES_OPTION } from "../../constants/inquiries";
-import { uniqueById } from "../../lib/uniqueById";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
+import PagedListFooter from "../shell/PagedListFooter";
 import { applicantStageLabel } from "./applicantDisplay";
 import ApplicantRow from "./ApplicantRow";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "./ApplicantsSkeleton";
@@ -29,27 +30,16 @@ export default function ApplicantsScreen({
 }) {
   const { spacing } = useTheme();
   const [isStageSheetOpen, setIsStageSheetOpen] = useState(false);
-  const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const args = useMemo(() => (stage ? { stage } : {}), [stage]);
-  const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } =
-    useListApplicantPagesInfiniteQuery(args);
-  const listKey = JSON.stringify(args);
-  const loadMoreFailed = listThatFailedToLoadMore === listKey;
-  const { refresh, refreshControl } = useRefresh(async () => {
-    setListThatFailedToLoadMore(null);
-    await refetch();
-  }, error);
-  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
+  const list = useApplicantsPages(args);
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.applicants : [];
 
-  async function loadMore(): Promise<void> {
-    const result = await fetchNextPage();
-    setListThatFailedToLoadMore(result.isError ? listKey : null);
-  }
-
-  const emptyList = !currentData && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <ApplicantsSkeleton />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your applicants." />
   ) : stage ? (
     <EmptyState action={{ label: "Clear filter", onPress: () => onStageChange(null) }} body="No applicants are at that stage." heading="Nothing matches that" />
@@ -61,20 +51,22 @@ export default function ApplicantsScreen({
     />
   );
 
-  const footer = isFetchingNextPage ? (
-    <LoadingRegion label={APPLICANT_LOADING_MESSAGES.more}>
-      <ApplicantSkeletonRow />
-    </LoadingRegion>
-  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined;
-
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         ListEmptyComponent={emptyList}
-        ListFooterComponent={footer}
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={list.isFetchingNextPage}
+            loadMoreFailed={list.isLoadMoreError}
+            loadingLabel={APPLICANT_LOADING_MESSAGES.more}
+            onRetry={list.loadMore}
+            skeletonRow={<ApplicantSkeletonRow />}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+            <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
             <LoadingButton onPress={() => setIsStageSheetOpen(true)} variant="secondary">
               {`Stage: ${stage ? applicantStageLabel(stage) : "All"}`}
             </LoadingButton>
@@ -83,7 +75,7 @@ export default function ApplicantsScreen({
         data={rows}
         keyExtractor={(applicant) => applicant.id}
         onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage && !loadMoreFailed) void loadMore();
+          if (canLoadMore(list)) list.loadMore();
         }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}

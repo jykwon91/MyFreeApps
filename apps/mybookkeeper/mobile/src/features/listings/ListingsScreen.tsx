@@ -1,15 +1,16 @@
 import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
-import { useListListingPagesInfiniteQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { useListingsPages } from "@mybookkeeper/api-client/hooks/useListingsPages";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { EmptyState, LoadingButton, LoadingRegion, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { ALL_STATUSES_OPTION, LISTING_MESSAGES } from "../../constants/listings";
-import { uniqueById } from "../../lib/uniqueById";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import { useCanWrite } from "../workspace/useCanWrite";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import PagedListFooter from "../shell/PagedListFooter";
 import { noListingsWithStatus, statusFilterLabel } from "./listingDisplay";
 import ListingRow from "./ListingRow";
 import ListingSkeletonRow from "./ListingSkeletonRow";
@@ -25,29 +26,19 @@ export default function ListingsScreen() {
   const canWrite = useCanWrite();
   const [status, setStatus] = useState<ListingStatus | null>(null);
   const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
-  const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const args = useMemo(() => (status ? { status } : {}), [status]);
-  const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } = useListListingPagesInfiniteQuery(args);
+  const list = useListingsPages(args);
   const { data: properties = [] } = useGetPropertiesQuery();
-  const listKey = JSON.stringify(args);
-  const loadMoreFailed = listThatFailedToLoadMore === listKey;
-  const { refresh, refreshControl } = useRefresh(async () => {
-    setListThatFailedToLoadMore(null);
-    await refetch();
-  }, error);
-  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
-
-  async function loadMore(): Promise<void> {
-    const result = await fetchNextPage();
-    setListThatFailedToLoadMore(result.isError ? listKey : null);
-  }
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.listings : [];
 
   const addListing = () => router.push("/listings/new");
 
-  const emptyList = !currentData && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <ListingsSkeleton />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState
       action={{ label: LISTING_MESSAGES.tryAgain, onPress: refresh }}
       body={LISTING_MESSAGES.tryAgainOffer}
@@ -67,20 +58,22 @@ export default function ListingsScreen() {
     />
   );
 
-  const footer = isFetchingNextPage ? (
-    <LoadingRegion label={LISTING_MESSAGES.loadingMore}>
-      <ListingSkeletonRow />
-    </LoadingRegion>
-  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined;
-
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         ListEmptyComponent={emptyList}
-        ListFooterComponent={footer}
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={list.isFetchingNextPage}
+            loadMoreFailed={list.isLoadMoreError}
+            loadingLabel={LISTING_MESSAGES.loadingMore}
+            onRetry={list.loadMore}
+            skeletonRow={<ListingSkeletonRow />}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+            <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
             {canWrite && rows.length > 0 ? <LoadingButton onPress={addListing}>{LISTING_MESSAGES.add}</LoadingButton> : null}
             <LoadingButton onPress={() => setIsStatusSheetOpen(true)} variant="secondary">
               {statusFilterLabel(status)}
@@ -91,7 +84,7 @@ export default function ListingsScreen() {
         data={rows}
         keyExtractor={(listing) => listing.id}
         onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage && !loadMoreFailed) void loadMore();
+          if (canLoadMore(list)) list.loadMore();
         }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
