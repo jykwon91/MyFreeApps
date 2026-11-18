@@ -6,6 +6,8 @@ import type { SelectAllControl } from "./select-all-control";
 export interface TransactionSelection {
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
+  /** Ticks or unticks a row; with ``extendRange``, every row on the page back to the last one toggled. */
+  toggleRow: (id: string, extendRange: boolean) => void;
   selectedRefs: TransactionSelectionRef[];
   /** True while the ticks are checked against new filters: bulk actions wait until it's done. */
   isChecking: boolean;

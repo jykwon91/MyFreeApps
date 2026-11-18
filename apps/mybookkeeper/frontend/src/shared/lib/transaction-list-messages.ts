@@ -10,5 +10,8 @@ export const SELECTING_ALL_LABEL = "Selecting all matching transactions";
 /** When the ticked rows couldn't be checked against new filters; the ticks are cleared rather than kept unchecked. */
 export const SELECTION_CHECK_FAILED = "I couldn't check which selected transactions still match the filters, so I cleared the selection.";
 
+/** Shown in the bulk bar once a row is ticked, when the next tick can extend the selection. */
+export const RANGE_SELECT_HINT = "Shift-click another row to select everything between";
+
 /** Shown in the bulk bar while the ticked rows are checked against new filters. */
 export const CHECKING_SELECTION_LABEL = "Checking selection...";
