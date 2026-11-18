@@ -22,10 +22,10 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
   const url = `${API_BASE_URL}/documents/${document.id}/download`;
   const mimeType = document.file_mime_type ?? "";
 
-  async function openPdf(): Promise<void> {
+  async function openFile(): Promise<void> {
     try {
       await refreshDocument();
-      await openDocumentFile(url, document.id, headers());
+      await openDocumentFile(url, document.id, mimeType, headers());
     } catch (error) {
       if (isCancelledRequest(error)) return;
       onError(downloadFailureMessage(error, "I couldn't open that file. Want to try again?"));
@@ -60,20 +60,23 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
       />
     );
   }
-  if (mimeType === "application/pdf") {
+  if (mimeType && !mimeType.startsWith("image/")) {
     return (
-      <LoadingButton loadingText="Opening…" onPress={openPdf} variant="secondary">
-        Open PDF
+      <LoadingButton loadingText="Opening…" onPress={openFile} variant="secondary">
+        {mimeType === "application/pdf" ? "Open PDF" : "Open file"}
       </LoadingButton>
+    );
+  }
+  if (!mimeType && document.source === "email") {
+    return (
+      <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
+        The original email isn't saved, but what I pulled from it is in your transactions.
+      </Text>
     );
   }
   return (
     <View style={{ gap: spacing.sm }}>
-      <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
-        {document.source === "email" && !mimeType
-          ? "The original email isn't saved, but what I pulled from it is in your transactions."
-          : "I can't show this file on the phone."}
-      </Text>
+      <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>I can't show this file on the phone.</Text>
       <WebLink label="Open on the website" webBaseUrl={WEB_BASE_URL} webPath="/documents" />
     </View>
   );
