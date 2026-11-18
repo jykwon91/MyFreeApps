@@ -1,7 +1,9 @@
 import { useGetRentalRoiQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { RENTAL_ROI_TARGET_PARAM } from "@mybookkeeper/api-client/constants/rentalRoi";
+import { RENTAL_ROI_BREAKDOWN_PARAM } from "@mybookkeeper/api-client/constants/rentalRoiBreakdown";
 import { parseTargetReturnPct } from "@mybookkeeper/api-client/utils/rentalRoi";
 import { LoadingButton, useLiveSearchParams } from "@platform/ui";
+import RentalRoiBreakEvenPanel from "./RentalRoiBreakEvenPanel";
 import RentalRoiCards from "./RentalRoiCards";
 import RentalRoiEmptyState from "./RentalRoiEmptyState";
 import RentalRoiHeadline from "./RentalRoiHeadline";
@@ -18,6 +20,24 @@ export default function RentalRoi() {
     setSearchParams(
       (prev) => {
         prev.set(RENTAL_ROI_TARGET_PARAM, String(pct));
+        return prev;
+      },
+      { replace: true },
+    );
+  }
+
+  // In the URL, so the browser's Back button closes the panel.
+  function showBreakEven(propertyId: string) {
+    setSearchParams((prev) => {
+      prev.set(RENTAL_ROI_BREAKDOWN_PARAM, propertyId);
+      return prev;
+    });
+  }
+
+  function closeBreakEven() {
+    setSearchParams(
+      (prev) => {
+        prev.delete(RENTAL_ROI_BREAKDOWN_PARAM);
         return prev;
       },
       { replace: true },
@@ -62,6 +82,10 @@ export default function RentalRoi() {
     );
   }
 
+  const breakEvenProperty = data.properties.find(
+    (property) => property.property_id === searchParams.get(RENTAL_ROI_BREAKDOWN_PARAM),
+  );
+
   return (
     <div className="space-y-6">
       <RentalRoiHeadline summary={data.summary} />
@@ -69,10 +93,18 @@ export default function RentalRoi() {
         <RentalRoiTargetInput value={targetReturnPct} onChange={handleTargetChange} isUpdating={isFetching} />
         <p className="text-sm text-muted-foreground">Based on your last 12 months of approved transactions.</p>
       </div>
-      <RentalRoiCards properties={data.properties} summary={data.summary} />
-      <RentalRoiTable properties={data.properties} summary={data.summary} />
+      <RentalRoiCards properties={data.properties} summary={data.summary} onShowBreakEven={showBreakEven} />
+      <RentalRoiTable properties={data.properties} summary={data.summary} onShowBreakEven={showBreakEven} />
       {data.unassigned_revenue_monthly_cents > 0 && (
         <RentalRoiUnassignedNote cents={data.unassigned_revenue_monthly_cents} />
+      )}
+      {breakEvenProperty && (
+        <RentalRoiBreakEvenPanel
+          property={breakEvenProperty}
+          windowStart={data.window_start}
+          windowEnd={data.window_end}
+          onClose={closeBreakEven}
+        />
       )}
     </div>
   );

@@ -68,12 +68,14 @@
       "backend_tests": [
         "test_utility_trends.py",
         "test_rental_roi_math.py",
+        "test_rental_roi_break_even_lines.py",
         "test_rental_roi_service.py",
         "test_rental_roi_api.py"
       ],
       "frontend_tests": [
         "Analytics.test.tsx",
         "RentalRoi.test.tsx",
+        "RentalRoiBreakEvenPanel.test.tsx",
         "UtilityTrendsDateRange.test.tsx",
         "CollapsibleFilters.test.tsx",
         "filtersToggleLabel.test.ts",

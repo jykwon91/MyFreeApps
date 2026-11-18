@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { RentalRoiProperty } from "@mybookkeeper/api-client/types/analytics/rental-roi-property";
 import { formatMoneyCents } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import RentalRoiDetails from "./RentalRoiDetails";
@@ -9,9 +10,10 @@ import RentalRoiTargetCell from "./RentalRoiTargetCell";
 
 export interface RentalRoiTableRowProps {
   property: RentalRoiProperty;
+  onShowBreakEven: (propertyId: string) => void;
 }
 
-export default function RentalRoiTableRow({ property }: RentalRoiTableRowProps) {
+export default function RentalRoiTableRow({ property, onShowBreakEven }: RentalRoiTableRowProps) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
   return (
@@ -29,7 +31,17 @@ export default function RentalRoiTableRow({ property }: RentalRoiTableRowProps) 
             />
           </div>
         </th>
-        <td className="py-3 px-4 text-right tabular-nums">{formatMoneyCents(property.break_even_monthly_cents)}</td>
+        <td className="py-3 px-4 text-right tabular-nums">
+          <button
+            type="button"
+            onClick={() => onShowBreakEven(property.property_id)}
+            aria-label={`See how the ${property.property_name} break-even of ${formatMoneyCents(property.break_even_monthly_cents)} is calculated`}
+            className="-my-3 inline-flex min-h-[44px] items-center gap-0.5 font-medium text-primary underline decoration-dotted underline-offset-4 hover:decoration-solid"
+          >
+            {formatMoneyCents(property.break_even_monthly_cents)}
+            <ChevronRight size={14} aria-hidden />
+          </button>
+        </td>
         <td className="py-3 px-4 text-right tabular-nums">
           <RentalRoiTargetCell property={property} />
         </td>

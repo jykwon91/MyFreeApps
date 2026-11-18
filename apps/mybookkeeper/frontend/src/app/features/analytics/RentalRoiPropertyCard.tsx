@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { RentalRoiProperty } from "@mybookkeeper/api-client/types/analytics/rental-roi-property";
 import { formatMoneyCents } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import Card from "@/shared/components/ui/Card";
@@ -10,10 +11,11 @@ import RentalRoiTargetCell from "./RentalRoiTargetCell";
 
 export interface RentalRoiPropertyCardProps {
   property: RentalRoiProperty;
+  onShowBreakEven: (propertyId: string) => void;
 }
 
 /** Phone layout: the number to hit is the big one; actual and gap sit under it. */
-export default function RentalRoiPropertyCard({ property }: RentalRoiPropertyCardProps) {
+export default function RentalRoiPropertyCard({ property, onShowBreakEven }: RentalRoiPropertyCardProps) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
   const hasTarget = property.target_monthly_cents !== null;
@@ -42,6 +44,15 @@ export default function RentalRoiPropertyCard({ property }: RentalRoiPropertyCar
           </div>
         </div>
         <RentalRoiPropertyNotes property={property} />
+        <button
+          type="button"
+          onClick={() => onShowBreakEven(property.property_id)}
+          aria-label={`See how the ${property.property_name} break-even of ${formatMoneyCents(property.break_even_monthly_cents)} is calculated`}
+          className="flex min-h-[44px] w-full items-center justify-between gap-2 text-sm font-medium text-primary"
+        >
+          How is break-even calculated?
+          <ChevronRight size={16} aria-hidden />
+        </button>
         <RentalRoiDetailsToggle
           expanded={expanded}
           controls={detailsId}

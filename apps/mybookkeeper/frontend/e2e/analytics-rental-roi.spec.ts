@@ -48,6 +48,23 @@ test.describe("Analytics — Rental ROI", () => {
     await expect(page.getByTestId("rental-roi-unassigned")).toContainText(SEED.unassigned);
   });
 
+  test("clicking a break-even shows what adds up to it, and Back closes it", async ({ page }) => {
+    await openRentalRoi(page);
+
+    await row(page, SEED.properties.north)
+      .getByRole("button", { name: new RegExp(`See how the ${SEED.properties.north} break-even`) })
+      .click();
+
+    const panel = page.getByRole("dialog");
+    await expect(panel.getByRole("heading", { name: `Break-even: ${SEED.properties.north}` })).toBeVisible();
+    await expect(panel).toContainText(SEED.north.breakEven);
+    await expect(panel.getByRole("region", { name: "Mortgage" })).toContainText("Averaged from the mortgage payments");
+    await expect(panel.getByRole("region", { name: "Operating costs" })).toBeVisible();
+
+    await page.goBack();
+    await expect(panel).toBeHidden();
+  });
+
   test("changing the target return refetches and records it in the URL", async ({ page }) => {
     await openRentalRoi(page);
     const north = row(page, SEED.properties.north);

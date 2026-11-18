@@ -17,8 +17,6 @@ export const RENTAL_ROI_MESSAGES = {
   basedOnMonths: (n: number) => `Based on ${n} month${n === 1 ? "" : "s"}`,
   gapVsBreakEven: (words: string) => `${words} vs. break-even`,
   avgMonths: (n: number) => `Average of ${n} month${n === 1 ? "" : "s"}`,
-  mortgagePayment: "Mortgage payment",
-  operatingCosts: "Operating costs",
   cashOnCash: "Cash-on-cash return",
   capRate: "Cap rate",
   unassigned: (amount: string) => `${amount}/mo of revenue isn't tied to a property.`,
