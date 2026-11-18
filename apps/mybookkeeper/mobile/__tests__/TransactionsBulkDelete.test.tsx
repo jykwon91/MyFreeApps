@@ -128,7 +128,7 @@ describe("deleting several transactions", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Delete 1 selected" }));
     await pressAlertButton(alert, "Delete");
     expect(await screen.findByText("I couldn't delete those. Want to try again?")).toBeTruthy();
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(await screen.findByText("1 selected")).toBeTruthy();
     expect(server.transactions).toHaveLength(5);
   });
 
@@ -140,7 +140,7 @@ describe("deleting several transactions", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Delete 1 selected" }));
     await pressAlertButton(alert, "Delete");
     expect(await screen.findByText("I didn't get an answer, so I'm not sure those were deleted. Trying again is safe.")).toBeTruthy();
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(await screen.findByText("1 selected")).toBeTruthy();
   });
 
   it("says so on a 403, and keeps the selection", async () => {
@@ -151,7 +151,7 @@ describe("deleting several transactions", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Delete 1 selected" }));
     await pressAlertButton(alert, "Delete");
     expect(await screen.findByText("You have read-only access, so I can't delete these.")).toBeTruthy();
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(await screen.findByText("1 selected")).toBeTruthy();
   });
 
   it("asks once however many times Delete is tapped before answering", async () => {

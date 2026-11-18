@@ -157,7 +157,10 @@ describe("picking several transactions", () => {
     server.failWritesWith = 500;
     await fireEvent.press(screen.getByRole("button", { name: "Approve 1 selected" }));
     expect(await screen.findByText("I couldn't approve those. Want to try again?")).toBeTruthy();
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    // A failed write still refetches the list, since the server may have saved some of it, so the
+    // ticks are checked again ("Checking selection…") before the count comes back.
+    expect(await screen.findByText("1 selected")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: /Acme/ }).props.accessibilityState).toMatchObject({ checked: true });
   });
 
   it("says it isn't sure when the answer is lost, and keeps them selected", async () => {
