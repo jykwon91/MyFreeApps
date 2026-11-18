@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
 
@@ -9,13 +9,7 @@ const CARDS = ["a", "b"] as const;
 export default function DuplicateCompareSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View
-      accessible
-      accessibilityLabel={MESSAGES.loadingPair}
-      accessibilityRole="progressbar"
-      style={{ gap: spacing.lg, padding: spacing.lg }}
-      testID="duplicate-compare-skeleton"
-    >
+    <LoadingRegion label={MESSAGES.loadingPair} style={{ gap: spacing.lg, padding: spacing.lg }} testID="duplicate-compare-skeleton">
       <Skeleton height={20} width="60%" />
       {CARDS.map((card) => (
         <View key={card} style={{ gap: spacing.sm }}>
@@ -26,6 +20,6 @@ export default function DuplicateCompareSkeleton() {
           ))}
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

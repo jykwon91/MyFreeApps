@@ -1,7 +1,7 @@
 import { useGetFormFieldsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -26,11 +26,11 @@ export default function TaxFormScreen({ returnId, formName }: { returnId: string
   if (!currentData) {
     if (isFetching) {
       return (
-        <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar" style={{ gap: spacing.md, padding: spacing.lg }} testID="tax-form-skeleton">
+        <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.md, padding: spacing.lg }} testID="tax-form-skeleton">
           {TAX_FORM_SKELETON_ROWS.map((row) => (
             <Skeleton height={56} key={row} width="100%" />
           ))}
-        </View>
+        </LoadingRegion>
       );
     }
     return (

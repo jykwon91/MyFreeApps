@@ -1,5 +1,6 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
+import { APPLICANT_LOADING_MESSAGES } from "../../constants/applicants";
 
 const ROWS = ["a", "b", "c", "d", "e", "f"];
 
@@ -14,12 +15,12 @@ export function ApplicantSkeletonRow() {
   );
 }
 
-export default function ApplicantsSkeleton({ label = "Loading your applicants" }: { label?: string }) {
+export default function ApplicantsSkeleton({ label = APPLICANT_LOADING_MESSAGES.list }: { label?: string }) {
   return (
-    <View accessibilityLabel={label} testID="applicants-skeleton">
+    <LoadingRegion label={label} testID="applicants-skeleton">
       {ROWS.map((row) => (
         <ApplicantSkeletonRow key={row} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

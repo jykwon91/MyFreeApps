@@ -3,12 +3,14 @@ import { Text, View } from "react-native";
 import { useDevices } from "../hooks/useDevices";
 import { useSession } from "../hooks/useSession";
 import { useSignOutThisPhone } from "../hooks/useSignOutThisPhone";
+import { SECURITY_MESSAGES } from "../constants/security";
 import { useTheme } from "../theme/useTheme";
 import type { AccountMessage } from "../types/AccountMessage";
 import type { SignedInDevice } from "../types/SignedInDevice";
 import { deviceDisplayName } from "../utils/deviceName";
 import DeviceRow from "./DeviceRow";
 import LoadingButton from "./LoadingButton";
+import LoadingRegion from "./LoadingRegion";
 import Skeleton from "./Skeleton";
 
 interface AccountSectionProps {
@@ -73,10 +75,10 @@ export default function AccountSection({ appName, devices, onMessage, onDeleteAc
           can stay signed in for up to 30 minutes.
         </Text>
         {devices.devices === null && !devices.hasError ? (
-          <>
+          <LoadingRegion label={SECURITY_MESSAGES.loadingDevices} style={{ gap: spacing.sm }}>
             <Skeleton height={96} testID="device-skeleton" />
             <Skeleton height={96} testID="device-skeleton" />
-          </>
+          </LoadingRegion>
         ) : null}
         {devices.hasError ? (
           <>

@@ -1,11 +1,11 @@
 import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { baseApi } from "@platform/core/store/baseApi";
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
-import { AppState, View } from "react-native";
+import { AppState } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { OFFLINE_RETRY_MS } from "../../constants/workspace";
+import { OFFLINE_RETRY_MS, WORKSPACE_MESSAGES } from "../../constants/workspace";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { uploadsReset } from "../capture/uploadsSlice";
@@ -113,11 +113,11 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
   }
   if (!isActiveKnown) {
     return (
-      <View style={{ flex: 1, gap: spacing.md, padding: spacing.lg, backgroundColor: colors.background }} testID="workspace-skeleton">
+      <LoadingRegion label={WORKSPACE_MESSAGES.loading} style={{ flex: 1, gap: spacing.md, padding: spacing.lg, backgroundColor: colors.background }} testID="workspace-skeleton">
         <Skeleton height={32} />
         <Skeleton height={120} />
         <Skeleton height={120} />
-      </View>
+      </LoadingRegion>
     );
   }
   return children;

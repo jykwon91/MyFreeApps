@@ -1,8 +1,8 @@
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
-import { LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { RENT_MESSAGES } from "../../constants/rent";
 import { RENT_MANAGE_MESSAGES } from "../../constants/rentManage";
 import InquirySection from "../inquiries/InquirySection";
@@ -24,12 +24,12 @@ export default function TenantRent({ applicantId }: { applicantId: string }) {
   if (!ledger && isFetching) {
     return (
       <InquirySection title={RENT_MESSAGES.section}>
-        <View accessible accessibilityLabel={RENT_MESSAGES.loading} accessibilityState={{ busy: true }} style={{ gap: spacing.sm }}>
+        <LoadingRegion label={RENT_MESSAGES.loading} style={{ gap: spacing.sm }}>
           <Skeleton height={24} width="60%" />
           <Skeleton height={72} width="100%" />
           <Skeleton height={24} width="50%" />
           <Skeleton height={56} width="100%" />
-        </View>
+        </LoadingRegion>
       </InquirySection>
     );
   }

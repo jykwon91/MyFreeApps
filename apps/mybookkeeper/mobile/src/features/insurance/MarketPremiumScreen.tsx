@@ -1,5 +1,5 @@
 import { useDeleteInsuranceBenchmarkMutation, useGetInsuranceBenchmarkQuery } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
-import { EmptyState, LoadingButton, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { MARKET_MESSAGES } from "../../constants/insuranceMarket";
@@ -42,11 +42,11 @@ export default function MarketPremiumScreen() {
 
   if (benchmark === undefined && (isFetching || !error)) {
     return (
-      <View accessibilityLabel={MARKET_MESSAGES.loading} accessibilityRole="progressbar" style={{ gap: spacing.md, padding: spacing.lg }} testID="market-premium-skeleton">
+      <LoadingRegion label={MARKET_MESSAGES.loading} style={{ gap: spacing.md, padding: spacing.lg }} testID="market-premium-skeleton">
         <Skeleton height={20} width="40%" />
         <Skeleton height={28} />
         <Skeleton height={44} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (benchmark === undefined) {

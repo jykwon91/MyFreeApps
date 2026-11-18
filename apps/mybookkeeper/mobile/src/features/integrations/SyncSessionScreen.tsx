@@ -1,6 +1,6 @@
 import { integrationsApi, useGetEmailQueueQuery, useGetSyncLogsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useScreenFocused, useTheme, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, LoadingRegion, Skeleton, useRefresh, useScreenFocused, useTheme, goBackOr } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import QueueItemRow from "./QueueItemRow";
@@ -47,9 +47,9 @@ export default function SyncSessionScreen({ id }: { id: number }) {
     queue.error && !queue.isFetching ? (
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.itemsCouldntLoad} />
     ) : (
-      <View style={{ padding: spacing.lg }}>
+      <LoadingRegion label={MESSAGES.itemsLoading} style={{ padding: spacing.lg }}>
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     )
   ) : (
     <Text style={{ padding: spacing.lg, fontSize: fontSize.sm, color: colors.mutedForeground }}>{noItemsMessage(log)}</Text>

@@ -1,11 +1,11 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES, DUPLICATES_SKELETON_ROWS } from "../../constants/duplicates";
 
 export default function DuplicatesSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar" testID="duplicates-skeleton">
+    <LoadingRegion label={MESSAGES.loading} testID="duplicates-skeleton">
       <View style={{ padding: spacing.lg }}>
         <Skeleton height={20} width="50%" />
       </View>
@@ -19,6 +19,6 @@ export default function DuplicatesSkeleton() {
           <Skeleton height={20} width={120} />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

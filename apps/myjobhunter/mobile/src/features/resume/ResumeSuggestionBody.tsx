@@ -1,4 +1,4 @@
-import { LoadingButton, MIN_TOUCH_TARGET, Skeleton, useTheme, useToneColor } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme, useToneColor } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -39,11 +39,11 @@ export default function ResumeSuggestionBody({ clarifyingQuestion, proposal, rat
 
   if (isRegenerating) {
     return (
-      <View style={boxStyle} testID="resume-regenerating">
+      <LoadingRegion label={MESSAGES.rewriting} style={boxStyle} testID="resume-regenerating">
         {caption}
         <Skeleton height={14} width="80%" />
         <Skeleton height={14} width="60%" />
-      </View>
+      </LoadingRegion>
     );
   }
 

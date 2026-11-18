@@ -2,7 +2,7 @@ import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-clien
 import { useListListingPagesInfiniteQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -68,9 +68,9 @@ export default function ListingsScreen() {
   );
 
   const footer = isFetchingNextPage ? (
-    <View accessible accessibilityLabel={LISTING_MESSAGES.loadingMore} accessibilityRole="progressbar">
+    <LoadingRegion label={LISTING_MESSAGES.loadingMore}>
       <ListingSkeletonRow />
-    </View>
+    </LoadingRegion>
   ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined;
 
   return (

@@ -1,7 +1,7 @@
 import { RENT_REMINDER_CHANNEL_LABEL, RENT_REMINDER_STATUS_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import { useGetRentReminderSendsQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
-import { Chip, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { REMINDER_MESSAGES, RENT_REMINDERS_SHOWN_AT_FIRST, showAllReminders } from "../../constants/rentReminders";
@@ -20,10 +20,10 @@ export default function RentReminderHistory({ applicantId }: { applicantId: stri
         {REMINDER_MESSAGES.history}
       </Text>
       {!sends && isFetching ? (
-        <>
+        <LoadingRegion label={REMINDER_MESSAGES.loadingHistory} style={{ gap: spacing.sm }}>
           <Skeleton height={20} width="100%" />
           <Skeleton height={20} width="100%" />
-        </>
+        </LoadingRegion>
       ) : null}
       {!sends && !isFetching ? (
         <>

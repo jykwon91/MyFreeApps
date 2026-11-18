@@ -1,5 +1,5 @@
 import { useGetSignedLeasesQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text } from "react-native";
 import { LEASE_MESSAGES, MOST_LEASES_ONE_PERSON_HAS, noLeaseFor } from "../../constants/leases";
@@ -23,7 +23,11 @@ export default function TenantLeases({ applicantId, name, isTenant }: TenantLeas
 
   return (
     <InquirySection title={LEASE_MESSAGES.section}>
-      {isLoading ? <Skeleton height={64} width="100%" /> : null}
+      {isLoading ? (
+        <LoadingRegion label={LEASE_MESSAGES.loadingTheirs}>
+          <Skeleton height={64} width="100%" />
+        </LoadingRegion>
+      ) : null}
       {!isLoading && !currentData && error ? (
         <>
           <Text style={mutedText}>{LEASE_MESSAGES.couldntLoadTheirs}</Text>

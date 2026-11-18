@@ -3,12 +3,12 @@ import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrat
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, ClampedText, EmptyState, LoadingButton, OptionSheet, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
+import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_LOADING_MESSAGES, INQUIRY_VIEWS } from "../../constants/inquiries";
 import { INQUIRY_CREATE_MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
 import { INTEGRATIONS_LINK } from "../../constants/home";
 import { uniqueById } from "../../lib/uniqueById";
@@ -92,7 +92,13 @@ export default function InquiriesScreen({
   }
 
   function footer(): ReactElement | undefined {
-    if (isFetchingNextPage) return <InquirySkeletonRow />;
+    if (isFetchingNextPage) {
+      return (
+        <LoadingRegion label={INQUIRY_LOADING_MESSAGES.more}>
+          <InquirySkeletonRow />
+        </LoadingRegion>
+      );
+    }
     if (loadMoreFailed) return <LoadMoreFailed onRetry={() => void loadMore()} />;
     return undefined;
   }

@@ -1,5 +1,5 @@
 import { useGetScreeningEligibilityQuery } from "@mybookkeeper/api-client/store/screeningApi";
-import { Banner, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { Text } from "react-native";
 import { SCREENING_MESSAGES } from "../../constants/applicantScreening";
 import CollapsibleSection from "../inquiries/CollapsibleSection";
@@ -35,7 +35,13 @@ export default function ScreeningActions({
       </>
     );
   }
-  if (isLoading) return <Skeleton height={48} />;
+  if (isLoading) {
+    return (
+      <LoadingRegion label={SCREENING_MESSAGES.checkingReady}>
+        <Skeleton height={48} />
+      </LoadingRegion>
+    );
+  }
   if (!eligibility) {
     return (
       <Banner

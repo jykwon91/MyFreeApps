@@ -3,7 +3,7 @@ import { useGetRentReminderPreviewQuery } from "@mybookkeeper/api-client/store/r
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import { formatDueDate } from "@mybookkeeper/api-client/utils/rentReminderFormat";
-import { Banner, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { goesBy, REMINDER_MESSAGES, sentFor } from "../../constants/rentReminders";
 import { channelWords, dueLine, firstNameOf, planChannels, sendMoment, sendReadiness } from "./rentReminderDisplay";
@@ -39,10 +39,10 @@ export default function RentReminderNext({ applicantId, name, overview, plan, sh
         {outcome}
         {heading}
         {isFetching ? (
-          <>
+          <LoadingRegion label={REMINDER_MESSAGES.loadingNext} style={{ gap: spacing.sm }}>
             <Skeleton height={24} width="60%" />
             <Skeleton height={96} width="100%" />
-          </>
+          </LoadingRegion>
         ) : (
           <>
             <Text style={mutedText}>{REMINDER_MESSAGES.couldntLoadNext}</Text>

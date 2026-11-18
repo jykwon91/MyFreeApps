@@ -6,6 +6,7 @@ import { APPLICATION_SORTS } from "./applicationSorts";
 export const COMPANY_APPLICATIONS_MESSAGES = {
   heading: (companyName: string) => `Applications at ${companyName}`,
   loading: "Loading applications at this company",
+  loadingMore: "Loading more applications at this company",
   none: "No applications at this company yet.",
   couldntLoad: "I couldn't load this company's applications.",
   tryAgain: "Try again",

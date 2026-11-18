@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { REPLY_TEMPLATE_MESSAGES, REPLY_TEMPLATE_SKELETON_ROWS } from "../../constants/replyTemplates";
 
@@ -11,7 +11,7 @@ interface ReplyTemplatesSkeletonProps {
 export default function ReplyTemplatesSkeleton({ label = REPLY_TEMPLATE_MESSAGES.loadingList, hasHeader = false }: ReplyTemplatesSkeletonProps) {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={label} accessibilityRole="progressbar" testID="reply-templates-skeleton">
+    <LoadingRegion label={label} testID="reply-templates-skeleton">
       {hasHeader ? (
         <View style={{ gap: spacing.xs, padding: spacing.lg }}>
           <Skeleton height={14} width="95%" />
@@ -25,6 +25,6 @@ export default function ReplyTemplatesSkeleton({ label = REPLY_TEMPLATE_MESSAGES
           <Skeleton height={14} width="70%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

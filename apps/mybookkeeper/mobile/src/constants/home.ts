@@ -27,3 +27,5 @@ export const HOME_TOP_CATEGORIES = 5;
 export const HOME_CATEGORY_BAR_HEIGHT = 8;
 /** One per category row, then one for "See all expenses". */
 export const HOME_CATEGORY_SKELETON_ROWS = ["a", "b", "c", "d", "e", "see-all"];
+
+export const HOME_ALERTS_LOADING = "Loading your alerts";

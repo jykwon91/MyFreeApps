@@ -7,6 +7,8 @@ export const STILL_READING_MESSAGE = "Still working on this one. Pull down to ch
 export const ALL_DOCUMENTS = {};
 
 export const DOCUMENT_LIST_MESSAGES = {
+  loading: "Loading your documents",
+  loadingOne: "Loading this document",
   filters: "Filters",
   clearFilters: "Clear filters",
   nothingMatches: "Nothing matches that.",

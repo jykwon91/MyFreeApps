@@ -1,5 +1,5 @@
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
-import { useTheme } from "@platform/mobile";
+import { LoadingRegion, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { TYPING_DOT_COUNT } from "../../constants/conversation";
 
@@ -8,10 +8,8 @@ export default function TypingDots() {
   const { colors, spacing, radius } = useTheme();
   return (
     <View style={{ alignItems: "flex-start" }}>
-      <View
-        accessibilityLabel={PRACTICE_COPY.tutorThinking}
-        accessibilityRole="progressbar"
-        accessible
+      <LoadingRegion
+        label={PRACTICE_COPY.tutorThinking}
         style={{
           flexDirection: "row",
           gap: spacing.xs,
@@ -26,7 +24,7 @@ export default function TypingDots() {
         {Array.from({ length: TYPING_DOT_COUNT }, (_, index) => (
           <View key={index} style={{ width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: colors.mutedForeground }} />
         ))}
-      </View>
+      </LoadingRegion>
     </View>
   );
 }

@@ -2,7 +2,7 @@ import DuplicatesLink from "../duplicates/DuplicatesLink";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, ClampedText, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SearchField, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, View } from "react-native";
@@ -10,6 +10,7 @@ import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImp
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
+import { TRANSACTION_LIST_MESSAGES } from "../../constants/transactionList";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
@@ -181,7 +182,9 @@ export default function TransactionsScreen({
   );
 
   const footer = isFetchingNextPage ? (
-    <TransactionSkeletonRow />
+    <LoadingRegion label={TRANSACTION_LIST_MESSAGES.loadingMore}>
+      <TransactionSkeletonRow />
+    </LoadingRegion>
   ) : loadMoreFailed ? (
     <LoadMoreFailed onRetry={() => void loadMore()} />
   ) : undefined;

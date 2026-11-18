@@ -1,11 +1,11 @@
 import { APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { APPLICANT_EMPTY_BODY } from "../../constants/applicants";
+import { APPLICANT_EMPTY_BODY, APPLICANT_LOADING_MESSAGES } from "../../constants/applicants";
 import { ALL_STAGES_OPTION } from "../../constants/inquiries";
 import { uniqueById } from "../../lib/uniqueById";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
@@ -61,7 +61,11 @@ export default function ApplicantsScreen({
     />
   );
 
-  const footer = isFetchingNextPage ? <ApplicantSkeletonRow /> : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined;
+  const footer = isFetchingNextPage ? (
+    <LoadingRegion label={APPLICANT_LOADING_MESSAGES.more}>
+      <ApplicantSkeletonRow />
+    </LoadingRegion>
+  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined;
 
   return (
     <View style={{ flex: 1 }}>

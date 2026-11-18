@@ -1,5 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { SECTION_SKELETON_CARDS } from "../../constants/applicationDetailSkeleton";
 import type { SectionSkeletonCardsProps } from "../../types/SectionSkeletonCardsProps";
 
@@ -7,10 +6,10 @@ import type { SectionSkeletonCardsProps } from "../../types/SectionSkeletonCards
 export default function SectionSkeletonCards({ label, testID }: SectionSkeletonCardsProps) {
   const { spacing, radius } = useTheme();
   return (
-    <View accessible accessibilityLabel={label} accessibilityRole="progressbar" style={{ gap: spacing.sm }} testID={testID}>
+    <LoadingRegion label={label} style={{ gap: spacing.sm }} testID={testID}>
       {SECTION_SKELETON_CARDS.map((card) => (
         <Skeleton borderRadius={radius.md} height={88} key={card} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

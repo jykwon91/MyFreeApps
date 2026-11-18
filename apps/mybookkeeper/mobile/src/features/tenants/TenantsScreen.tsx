@@ -1,6 +1,6 @@
 import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@platform/core/utils/localToday";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -53,7 +53,11 @@ export default function TenantsScreen({
   return (
     <FlatList
       ListEmptyComponent={emptyList}
-      ListFooterComponent={isFetchingNextPage ? <ApplicantSkeletonRow /> : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
+      ListFooterComponent={isFetchingNextPage ? (
+        <LoadingRegion label={TENANT_MESSAGES.loadingMore}>
+          <ApplicantSkeletonRow />
+        </LoadingRegion>
+      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}

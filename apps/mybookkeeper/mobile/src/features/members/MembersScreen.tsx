@@ -84,7 +84,7 @@ export default function MembersScreen({ workspace }: { workspace: OrgWithRole })
 
   function body() {
     if (!people) {
-      if (members.isFetching) return <MembersSkeleton isAdmin={isAdmin} />;
+      if (members.isFetching) return <MembersSkeleton isAdmin={isAdmin} label={MESSAGES.loadingPeople} />;
       return (
         <EmptyState
           action={{ label: MESSAGES.tryAgain, onPress: refresh }}
@@ -121,7 +121,7 @@ export default function MembersScreen({ workspace }: { workspace: OrgWithRole })
 
   function pendingSection() {
     if (!pending) {
-      if (invitesQuery.isFetching) return <MembersSkeleton isAdmin={false} />;
+      if (invitesQuery.isFetching) return <MembersSkeleton isAdmin={false} label={MESSAGES.loadingWaiting} />;
       return (
         <View style={{ gap: spacing.sm }}>
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.couldntLoadInvites}</Text>

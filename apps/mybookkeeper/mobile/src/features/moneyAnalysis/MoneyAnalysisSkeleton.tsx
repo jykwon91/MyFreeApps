@@ -1,5 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES, MONEY_ANALYSIS_SKELETON_ROWS } from "../../constants/moneyAnalysis";
 import HomeCard from "../home/HomeCard";
 
@@ -7,7 +6,7 @@ import HomeCard from "../home/HomeCard";
 export default function MoneyAnalysisSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessibilityLabel={MESSAGES.loading} accessible style={{ gap: spacing.lg }} testID="analysis-skeleton">
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.lg }} testID="analysis-skeleton">
       <HomeCard>
         <Skeleton height={14} width="20%" />
         <Skeleton height={36} width="55%" />
@@ -22,6 +21,6 @@ export default function MoneyAnalysisSkeleton() {
           <Skeleton height={20} key={row} width="100%" />
         ))}
       </HomeCard>
-    </View>
+    </LoadingRegion>
   );
 }

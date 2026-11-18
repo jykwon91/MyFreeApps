@@ -2,7 +2,7 @@ import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/stor
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { useGetDuplicatesQuery, useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { DUPLICATES_LINK } from "../../constants/duplicates";
@@ -65,10 +65,10 @@ export default function WaitingCard() {
       (canWrite && receipts.isLoading && !transactionCount && !documentCount) ||
       (canWrite && payments.isLoading && !transactionCount && !documentCount && !receiptCount) ||
       (duplicates.isLoading && !transactionCount && !documentCount && !receiptCount && !paymentCount) ? (
-        <View accessibilityLabel="Loading what's waiting for you" accessible style={{ gap: spacing.sm }}>
+        <LoadingRegion label="Loading what's waiting for you" style={{ gap: spacing.sm }}>
           <Skeleton height={20} width="60%" />
           <Skeleton height={20} width="50%" />
-        </View>
+        </LoadingRegion>
       ) : transactionCount === 0 && documentCount === 0 && receiptCount === 0 && paymentCount === 0 && duplicateCount === 0 && !needsReauth ? (
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>You're all caught up.</Text>
       ) : (

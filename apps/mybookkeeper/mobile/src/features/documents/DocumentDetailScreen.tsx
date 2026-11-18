@@ -4,7 +4,7 @@ import {
   useGetDocumentQuery,
   useReExtractDocumentMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
-import { EmptyState, LoadingButton, Skeleton, Toast, useAnnouncement, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, Skeleton, Toast, useAnnouncement, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -33,10 +33,10 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <View style={{ gap: spacing.md, padding: spacing.lg }} testID="document-skeleton">
+      <LoadingRegion label={DOCUMENT_LIST_MESSAGES.loadingOne} style={{ gap: spacing.md, padding: spacing.lg }} testID="document-skeleton">
         <Skeleton height={28} />
         <Skeleton height={320} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (error && !document) {

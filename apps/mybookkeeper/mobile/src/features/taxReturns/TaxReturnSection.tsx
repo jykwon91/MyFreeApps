@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import type { TaxReturnSectionProps } from "../../types/TaxReturnSectionProps";
@@ -11,9 +11,9 @@ export default function TaxReturnSection({ title, loading, failed, emptyMessage,
   function body() {
     if (loading) {
       return (
-        <View accessible accessibilityLabel={MESSAGES.loadingSection} accessibilityRole="progressbar" style={inset}>
+        <LoadingRegion label={MESSAGES.loadingSection} style={inset}>
           <Skeleton height={48} width="100%" />
-        </View>
+        </LoadingRegion>
       );
     }
     if (note) return <Text style={{ ...inset, fontSize: fontSize.sm, color: colors.mutedForeground }}>{note}</Text>;

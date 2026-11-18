@@ -1,7 +1,7 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_LISTING_LABELS } from "@mybookkeeper/api-client/constants/inquiryListingLabels";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { INQUIRY_LISTING_GONE_STATUSES, INQUIRY_LISTING_MESSAGES } from "../../constants/inquiries";
@@ -15,10 +15,10 @@ export default function InquiryListingRow({ listingId }: InquiryListingRowProps)
   if (!listingId) return <TransactionFact label={INQUIRY_LISTING_LABELS.heading} value={INQUIRY_LISTING_LABELS.notLinked} />;
   if (isLoading) {
     return (
-      <View accessibilityLabel={INQUIRY_LISTING_MESSAGES.loading} style={{ gap: spacing.xs }}>
+      <LoadingRegion label={INQUIRY_LISTING_MESSAGES.loading} style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{INQUIRY_LISTING_LABELS.heading}</Text>
         <Skeleton height={20} width="50%" />
-      </View>
+      </LoadingRegion>
     );
   }
   const status = httpStatus(error);

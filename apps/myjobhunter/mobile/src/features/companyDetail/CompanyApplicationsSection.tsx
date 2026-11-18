@@ -1,4 +1,4 @@
-import { LoadMoreFooter, OptionSheet, PickerField, SectionError, useTheme } from "@platform/mobile";
+import { LoadingRegion, LoadMoreFooter, OptionSheet, PickerField, SectionError, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -20,9 +20,9 @@ export default function CompanyApplicationsSection({ companyName, list, sortKey,
   if (list.isLoading || list.isSorting) {
     // A new sort starts over from its first page; the old order's rows would be wrong.
     body = (
-      <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.loading}>
         <CompanyApplicationSkeletonRows />
-      </View>
+      </LoadingRegion>
     );
   } else if (list.loadError !== undefined) {
     body = (
@@ -42,7 +42,11 @@ export default function CompanyApplicationsSection({ companyName, list, sortKey,
         {list.applications.map((application) => (
           <CompanyApplicationRow application={application} key={application.id} onPress={() => router.push(`/applications/${application.id}`)} />
         ))}
-        {list.isFetchingNextPage ? <CompanyApplicationSkeletonRows /> : null}
+        {list.isFetchingNextPage ? (
+          <LoadingRegion label={MESSAGES.loadingMore}>
+            <CompanyApplicationSkeletonRows />
+          </LoadingRegion>
+        ) : null}
         {list.hasNextPage ? (
           <LoadMoreFooter
             isError={list.isLoadMoreError}

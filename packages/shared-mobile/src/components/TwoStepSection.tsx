@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
+import { SECURITY_MESSAGES } from "../constants/security";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import { useToast } from "../hooks/useToast";
 import { useTheme } from "../theme/useTheme";
@@ -8,6 +9,7 @@ import type { TwoStepTurnOffSettled } from "../types/TwoStepTurnOffSettled";
 import Banner from "./Banner";
 import EmptyState from "./EmptyState";
 import LoadingButton from "./LoadingButton";
+import LoadingRegion from "./LoadingRegion";
 import Skeleton from "./Skeleton";
 import TwoStepTurnOffSheet from "./TwoStepTurnOffSheet";
 
@@ -52,11 +54,11 @@ export default function TwoStepSection({ status, whatItProtects, confirmOwner, o
 
   if (enabled === null && failure === null) {
     return (
-      <View style={{ gap: spacing.md }} testID="two-step-skeleton">
+      <LoadingRegion label={SECURITY_MESSAGES.loadingTwoStep} style={{ gap: spacing.md }} testID="two-step-skeleton">
         <Skeleton height={24} width="50%" />
         <Skeleton height={64} />
         <Skeleton height={48} />
-      </View>
+      </LoadingRegion>
     );
   }
 

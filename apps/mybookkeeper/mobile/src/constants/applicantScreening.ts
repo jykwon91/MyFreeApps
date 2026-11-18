@@ -1,4 +1,6 @@
 export const SCREENING_MESSAGES = {
+  checkingReady: "Checking if screening is ready",
+  loadingProviders: "Loading the screening services",
   nothingYet: "No screening yet.",
   needsMoreDetails: "I need a few more details before screening.",
   waitingOnReport: "Waiting on a report. Have it? Upload it.",

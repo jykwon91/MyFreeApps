@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import type { CardListSkeletonProps } from "../../types/CardListSkeletonProps";
 
@@ -6,7 +6,7 @@ import type { CardListSkeletonProps } from "../../types/CardListSkeletonProps";
 export default function CardListSkeleton({ rows, accessibilityLabel }: CardListSkeletonProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
-    <View accessibilityLabel={accessibilityLabel} accessibilityState={{ busy: true }} accessible style={{ gap: spacing.md, padding: spacing.lg }}>
+    <LoadingRegion label={accessibilityLabel} style={{ gap: spacing.md, padding: spacing.lg }}>
       <Skeleton height={fontSize.xl} width="65%" />
       <Skeleton height={fontSize.sm} width="50%" />
       {Array.from({ length: rows }, (_, index) => (
@@ -26,6 +26,6 @@ export default function CardListSkeleton({ rows, accessibilityLabel }: CardListS
           <Skeleton height={fontSize.sm} width="80%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

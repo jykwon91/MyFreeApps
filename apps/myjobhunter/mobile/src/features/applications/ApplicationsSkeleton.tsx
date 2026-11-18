@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { APPLICATION_MESSAGES, APPLICATION_SKELETON_ROWS } from "../../constants/applications";
 import ApplicationSkeletonRow from "./ApplicationSkeletonRow";
@@ -7,7 +7,7 @@ import ApplicationSkeletonRow from "./ApplicationSkeletonRow";
 export default function ApplicationsSkeleton() {
   const { spacing, radius } = useTheme();
   return (
-    <View accessible accessibilityLabel={APPLICATION_MESSAGES.loadingList} accessibilityRole="progressbar" testID="applications-skeleton">
+    <LoadingRegion label={APPLICATION_MESSAGES.loadingList} testID="applications-skeleton">
       <View style={{ gap: spacing.md, padding: spacing.lg }} testID="applications-header-skeleton">
         <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
         <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
@@ -15,6 +15,6 @@ export default function ApplicationsSkeleton() {
       {APPLICATION_SKELETON_ROWS.map((row) => (
         <ApplicationSkeletonRow key={row} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { COOK_LOG_PHONE_MESSAGES as MESSAGES, COOK_LOG_SKELETON_ROWS } from "../../constants/cookLog";
 import { cookRowFrame } from "../../utils/cookRowFrame";
@@ -9,7 +9,7 @@ export default function CookLogSkeleton() {
   const { spacing, fontSize } = theme;
 
   return (
-    <View accessibilityLabel={MESSAGES.loading} accessible style={{ gap: spacing.md }}>
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.md }}>
       {Array.from({ length: COOK_LOG_SKELETON_ROWS }, (_, index) => (
         <View key={index} style={cookRowFrame(theme)} testID="cook-skeleton-row">
           <View style={{ flex: 1, gap: spacing.xs }}>
@@ -21,6 +21,6 @@ export default function CookLogSkeleton() {
           </View>
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

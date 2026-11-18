@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
 import {
@@ -12,13 +12,7 @@ import {
 export default function ApplicationDetailSkeleton() {
   const { spacing, radius } = useTheme();
   return (
-    <View
-      accessible
-      accessibilityLabel={MESSAGES.loading}
-      accessibilityRole="progressbar"
-      style={{ gap: spacing.xl, padding: spacing.lg }}
-      testID="application-detail-skeleton"
-    >
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.xl, padding: spacing.lg }} testID="application-detail-skeleton">
       <View style={{ gap: spacing.xs }}>
         <Skeleton height={28} width="70%" />
         <Skeleton height={20} width="40%" />
@@ -58,6 +52,6 @@ export default function ApplicationDetailSkeleton() {
           ))}
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

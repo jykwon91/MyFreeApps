@@ -7,7 +7,7 @@ import { useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/stor
 import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { activePropertyIds } from "@mybookkeeper/api-client/utils/activePropertyIds";
 import { ALL_SUMMARY_CATEGORIES, filterSummaryByCategories, isCategoryFilterActive } from "@mybookkeeper/api-client/utils/categoryFilter";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -138,11 +138,11 @@ export default function HomeScreen() {
             </>
           ) : summary.isFetching ? (
             <>
-              <View accessibilityLabel="Loading your numbers" accessible style={{ gap: spacing.sm }} testID="home-numbers-skeleton">
+              <LoadingRegion label="Loading your numbers" style={{ gap: spacing.sm }} testID="home-numbers-skeleton">
                 <Skeleton height={14} width="20%" />
                 <Skeleton height={36} width="55%" />
                 <Skeleton height={44} width="70%" />
-              </View>
+              </LoadingRegion>
               {periodHasMonths(period) ? <MonthlyChartSkeleton /> : null}
               <WhereItWentSkeleton />
             </>

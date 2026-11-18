@@ -1,7 +1,7 @@
 import { useGetListingChannelsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { ScrollView } from "react-native";
 import { LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
 import { LISTING_MESSAGES } from "../../constants/listings";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -19,10 +19,10 @@ function ChannelsBody({ id }: { id: string }) {
 
   if (!channelListings && (isFetching || !error)) {
     return (
-      <View accessible accessibilityLabel={LISTING_MESSAGES.loadingOne} accessibilityRole="progressbar" style={{ gap: spacing.md, padding: spacing.lg }}>
+      <LoadingRegion label={LISTING_MESSAGES.loadingOne} style={{ gap: spacing.md, padding: spacing.lg }}>
         <Skeleton height={120} />
         <Skeleton height={120} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!channelListings) {

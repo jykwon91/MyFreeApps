@@ -3,7 +3,7 @@ import {
   RENTAL_ROI_TARGET_DEBOUNCE_MS,
 } from "@mybookkeeper/api-client/constants/rentalRoi";
 import { parseTargetReturnPct } from "@mybookkeeper/api-client/utils/rentalRoi";
-import { useTheme } from "@platform/mobile";
+import { LoadingRegion, useTheme } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, TextInput, View } from "react-native";
 import { RENTAL_ROI_MESSAGES as MESSAGES } from "../../constants/rentalRoi";
@@ -82,15 +82,10 @@ export default function RentalRoiTargetInput({ value, onChange, isUpdating }: Re
           value={draft}
         />
         {isUpdating && (
-          <View
-            accessible
-            accessibilityLabel={MESSAGES.updatingLabel}
-            accessibilityRole="progressbar"
-            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-          >
+          <LoadingRegion label={MESSAGES.updatingLabel} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <ActivityIndicator color={colors.mutedForeground} size="small" />
             <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{MESSAGES.updatingLabel}</Text>
-          </View>
+          </LoadingRegion>
         )}
       </View>
       <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{MESSAGES.basedOn}</Text>

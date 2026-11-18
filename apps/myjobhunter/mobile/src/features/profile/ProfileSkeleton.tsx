@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, OPTION_SHEET_ROW_HEIGHT, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, OPTION_SHEET_ROW_HEIGHT, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { PREFERENCE_SKELETON_FACTS, PROFILE_SKELETON_SECTIONS, REMOTE_SKELETON_ROWS } from "../../constants/profileSkeleton";
@@ -8,13 +8,7 @@ import SectionSkeletonCards from "../applicationDetail/SectionSkeletonCards";
 export default function ProfileSkeleton() {
   const { colors, spacing, radius } = useTheme();
   return (
-    <View
-      accessible
-      accessibilityLabel={MESSAGES.loading}
-      accessibilityRole="progressbar"
-      style={{ gap: spacing.xl, padding: spacing.lg }}
-      testID="profile-skeleton"
-    >
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.xl, padding: spacing.lg }} testID="profile-skeleton">
       <View style={{ gap: spacing.sm }} testID="skeleton-profile-about">
         <Skeleton height={22} width="35%" />
         <Skeleton height={20} width="45%" />
@@ -56,6 +50,6 @@ export default function ProfileSkeleton() {
           <SectionSkeletonCards label={MESSAGES.loading} testID={`skeleton-profile-${section}-cards`} />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

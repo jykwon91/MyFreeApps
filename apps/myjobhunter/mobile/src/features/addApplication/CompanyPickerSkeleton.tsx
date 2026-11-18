@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, COMPANY_PICKER_SKELETON_ROWS } from "../../constants/addApplication";
 
@@ -6,7 +6,7 @@ import { ADD_APPLICATION_MESSAGES as MESSAGES, COMPANY_PICKER_SKELETON_ROWS } fr
 export default function CompanyPickerSkeleton() {
   const { colors, spacing } = useTheme();
   return (
-    <View accessibilityLabel={MESSAGES.loadingCompanies} accessible testID="company-picker-skeleton">
+    <LoadingRegion label={MESSAGES.loadingCompanies} testID="company-picker-skeleton">
       {COMPANY_PICKER_SKELETON_ROWS.map((key) => (
         <View
           key={key}
@@ -25,6 +25,6 @@ export default function CompanyPickerSkeleton() {
           <Skeleton height={12} width="35%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

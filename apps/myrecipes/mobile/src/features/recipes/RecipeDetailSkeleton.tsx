@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import RecipeSectionHeading from "./RecipeSectionHeading";
 
@@ -9,7 +9,7 @@ export default function RecipeDetailSkeleton() {
   const { spacing, fontSize } = useTheme();
 
   return (
-    <View accessibilityLabel="Loading recipe" accessible style={{ gap: spacing.lg }}>
+    <LoadingRegion label="Loading recipe" style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
         <Skeleton height={fontSize.md} />
         <Skeleton height={fontSize.md} width="85%" />
@@ -30,6 +30,6 @@ export default function RecipeDetailSkeleton() {
           </View>
         ))}
       </View>
-    </View>
+    </LoadingRegion>
   );
 }

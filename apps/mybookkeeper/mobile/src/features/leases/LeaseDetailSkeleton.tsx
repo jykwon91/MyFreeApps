@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { LEASE_MESSAGES } from "../../constants/leases";
 
@@ -7,7 +7,7 @@ const FILES = ["a", "b", "c"];
 export default function LeaseDetailSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessibilityLabel={LEASE_MESSAGES.loadingOne} style={{ gap: spacing.xl, padding: spacing.lg }} testID="lease-skeleton">
+    <LoadingRegion label={LEASE_MESSAGES.loadingOne} style={{ gap: spacing.xl, padding: spacing.lg }} testID="lease-skeleton">
       <View style={{ gap: spacing.sm }}>
         <Skeleton height={28} width="60%" />
         <Skeleton height={20} width="25%" />
@@ -39,6 +39,6 @@ export default function LeaseDetailSkeleton() {
           <Skeleton height={44} width="100%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

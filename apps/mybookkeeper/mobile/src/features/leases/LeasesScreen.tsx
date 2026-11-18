@@ -1,5 +1,5 @@
 import { useListSignedLeasePagesInfiniteQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -65,7 +65,11 @@ export default function LeasesScreen() {
   return (
     <FlatList
       ListEmptyComponent={emptyList()}
-      ListFooterComponent={isFetchingNextPage ? <ApplicantSkeletonRow /> : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
+      ListFooterComponent={isFetchingNextPage ? (
+        <LoadingRegion label={LEASE_MESSAGES.loadingMore}>
+          <ApplicantSkeletonRow />
+        </LoadingRegion>
+      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}

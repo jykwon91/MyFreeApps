@@ -1,9 +1,9 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { RENT_MESSAGES } from "../../constants/rent";
 import { includesDeposits, noPaymentsFrom, PAYMENTS_SHOWN_AT_FIRST, showAllPayments, TENANT_PAYMENT_MESSAGES, totalReceived } from "../../constants/tenantPayments";
 import InquirySection from "../inquiries/InquirySection";
@@ -21,11 +21,11 @@ export default function TenantPayments({ applicantId, name }: { applicantId: str
   if (!payments && isFetching) {
     return (
       <InquirySection title={TENANT_PAYMENT_MESSAGES.section}>
-        <View accessible accessibilityLabel={TENANT_PAYMENT_MESSAGES.loading} accessibilityState={{ busy: true }} style={{ gap: spacing.sm }}>
+        <LoadingRegion label={TENANT_PAYMENT_MESSAGES.loading} style={{ gap: spacing.sm }}>
           <Skeleton height={24} width="60%" />
           <Skeleton height={56} width="100%" />
           <Skeleton height={56} width="100%" />
-        </View>
+        </LoadingRegion>
       </InquirySection>
     );
   }

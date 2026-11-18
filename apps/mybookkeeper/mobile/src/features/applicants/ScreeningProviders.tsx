@@ -1,6 +1,6 @@
 import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import type { ScreeningProviderInfo } from "@mybookkeeper/api-client/types/applicant/screening-provider-info";
-import { Banner, LINK_MESSAGES, LoadingButton, Skeleton, useOpenLink, useTheme, useToast } from "@platform/mobile";
+import { Banner, LINK_MESSAGES, LoadingButton, LoadingRegion, Skeleton, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { couldntOpenProviderMessage, learnMoreLabel, openedProviderMessage, SCREENING_MESSAGES } from "../../constants/applicantScreening";
@@ -29,7 +29,13 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
     }
   }
 
-  if (isLoading) return <Skeleton height={96} />;
+  if (isLoading) {
+    return (
+      <LoadingRegion label={SCREENING_MESSAGES.loadingProviders}>
+        <Skeleton height={96} />
+      </LoadingRegion>
+    );
+  }
   if (!data) {
     return (
       <Banner

@@ -7,6 +7,7 @@ export const TENANT_FILTERS: readonly { value: TenantFilter; label: string }[] =
 
 export const TENANT_MESSAGES = {
   loading: "Loading your tenants",
+  loadingMore: "Loading more tenants",
   filterLabel: "Current tenants or everyone",
   couldntLoad: "I couldn't load your tenants.",
   tryAgain: "Try again",

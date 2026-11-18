@@ -1,5 +1,5 @@
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { DASHBOARD_MESSAGES as MESSAGES, STAGE_TILE_BASIS } from "../../constants/dashboard";
 import { DASHBOARD_SKELETON_CARDS, DASHBOARD_SKELETON_HEIGHTS as HEIGHTS, DASHBOARD_SKELETON_STAGES } from "../../constants/dashboardSkeleton";
@@ -9,7 +9,7 @@ import BoardCardSkeleton from "./BoardCardSkeleton";
 export default function DashboardSkeleton() {
   const { spacing, radius } = useTheme();
   return (
-    <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar" testID="dashboard-skeleton">
+    <LoadingRegion label={MESSAGES.loading} testID="dashboard-skeleton">
       <View style={{ gap: spacing.md, padding: spacing.lg }} testID="dashboard-summary-skeleton">
         <View style={{ gap: spacing.xs }}>
           <Skeleton height={HEIGHTS.summaryTitle} width="30%" />
@@ -37,6 +37,6 @@ export default function DashboardSkeleton() {
           ))}
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

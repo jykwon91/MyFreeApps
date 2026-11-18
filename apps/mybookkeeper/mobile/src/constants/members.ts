@@ -13,6 +13,8 @@ export const ALREADY_MEMBER_DETAIL = "This user is already a member of this orga
 export const NOT_A_MEMBER_DETAIL = "Not a member of this organization";
 
 export const MEMBERS_MESSAGES = {
+  loadingPeople: "Loading the people in this workspace",
+  loadingWaiting: "Loading who's waiting to join",
   people: (count: number) => `People (${count})`,
   waiting: (count: number) => `Waiting to join (${count})`,
   you: "You",

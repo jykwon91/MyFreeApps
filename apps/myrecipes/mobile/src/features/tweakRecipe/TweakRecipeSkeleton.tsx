@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { MULTILINE_MIN_HEIGHT, NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES, TWEAK_SKELETON_INGREDIENTS, TWEAK_SKELETON_STEPS } from "../../constants/tweakRecipe";
@@ -11,12 +11,7 @@ export default function TweakRecipeSkeleton() {
   const card = { gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md };
 
   return (
-    <View
-      accessibilityLabel={MESSAGES.loading}
-      accessible
-      style={{ flex: 1, gap: spacing.md, padding: spacing.lg, backgroundColor: colors.background }}
-      testID="tweak-recipe-skeleton"
-    >
+    <LoadingRegion label={MESSAGES.loading} style={{ flex: 1, gap: spacing.md, padding: spacing.lg, backgroundColor: colors.background }} testID="tweak-recipe-skeleton">
       <View style={{ gap: spacing.xs }}>
         <Skeleton height={fontSize.lg} width="70%" />
         <Skeleton height={fontSize.sm} width="90%" />
@@ -42,6 +37,6 @@ export default function TweakRecipeSkeleton() {
       {Array.from({ length: TWEAK_SKELETON_STEPS }, (_, index) => (
         <Skeleton height={MULTILINE_MIN_HEIGHT} key={index} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }
