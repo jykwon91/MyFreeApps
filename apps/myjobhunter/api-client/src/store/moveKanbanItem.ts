@@ -1,12 +1,16 @@
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import type { ApplicationEvent } from "../types/application-event";
 import type { KanbanCacheDispatch } from "../types/kanban/kanban-cache-dispatch";
 import type { MoveKanbanItemArgs } from "../types/kanban/move-kanban-item-args";
 import { optimisticStage } from "../utils/optimisticStage";
 import { applicationsApi } from "./applicationsApi";
+import { refetchAfterLostMove } from "./refetchAfterLostMove";
 
 /**
  * Moves a card on the board at once, then tells the server. If the server
  * refuses, the card goes back and the error is rethrown for the caller to show.
+ * If the answer was lost, the server may have moved it, so the card isn't put
+ * back on a guess: the board is read again and shows where it really is.
  * The web's drag and drop and the phone's Move sheet both dispatch this.
  */
 export function moveKanbanItem({ applicationId, target, idempotencyKey, occurredAt }: MoveKanbanItemArgs) {
@@ -26,7 +30,8 @@ export function moveKanbanItem({ applicationId, target, idempotencyKey, occurred
         ),
       ).unwrap();
     } catch (error) {
-      patch.undo();
+      if (writeOutcome(error) === "unknown") dispatch(refetchAfterLostMove(applicationId));
+      else patch.undo();
       throw error;
     }
   };

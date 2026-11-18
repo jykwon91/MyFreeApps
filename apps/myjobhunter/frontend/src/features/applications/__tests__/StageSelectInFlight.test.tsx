@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { DASHBOARD_MESSAGES } from "@/constants/dashboard-messages";
 import ApplicationDetail from "@/pages/ApplicationDetail";
 import ApplicationDrawer from "@/features/applications/ApplicationDrawer";
 
@@ -47,12 +48,15 @@ interface Deferred {
   reject: (err: unknown) => void;
 }
 
+const refetch = vi.fn();
+
 function arrangeQuery(isFetching: boolean) {
   vi.mocked(useGetApplicationQuery).mockReturnValue({
     data: APP,
     isLoading: false,
     isError: false,
     isFetching,
+    refetch,
   } as unknown as ReturnType<typeof useGetApplicationQuery>);
 }
 
@@ -157,5 +161,35 @@ describe.each(SURFACES)("stage select on the %s", (_name, surface, getSelect) =>
     await waitFor(() => expect(getSelect()).not.toBeDisabled());
     expect(getSelect()).toHaveValue("applied");
     expect(showError).toHaveBeenCalledWith(expect.stringContaining("Couldn't move"));
+  });
+
+  it("reads the application again and says it's unsure when the answer to the move is lost", async () => {
+    const { deferred } = arrangeTransition();
+    render(surface());
+
+    await userEvent.selectOptions(getSelect(), "interviewing");
+    await act(async () => deferred[0].reject({ status: undefined, data: "Network Error" }));
+
+    await waitFor(() => expect(getSelect()).not.toBeDisabled());
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(showError).toHaveBeenCalledWith(DASHBOARD_MESSAGES.unsureMoved);
+  });
+
+  it("sends the same key when the same move is picked again after a lost answer, and a new one after a refusal", async () => {
+    const { transition, deferred } = arrangeTransition();
+    render(surface());
+    const keys = () => transition.mock.calls.map(([args]) => (args as { idempotency_key: string }).idempotency_key);
+
+    await userEvent.selectOptions(getSelect(), "interviewing");
+    await act(async () => deferred[0].reject({ status: undefined, data: "Network Error" }));
+    await waitFor(() => expect(getSelect()).not.toBeDisabled());
+    await userEvent.selectOptions(getSelect(), "interviewing");
+    await act(async () => deferred[1].reject({ status: 400, data: { detail: "no" } }));
+    await waitFor(() => expect(getSelect()).not.toBeDisabled());
+    await userEvent.selectOptions(getSelect(), "interviewing");
+
+    const [first, retry, afterRefusal] = keys();
+    expect(retry).toBe(first);
+    expect(afterRefusal).not.toBe(first);
   });
 });

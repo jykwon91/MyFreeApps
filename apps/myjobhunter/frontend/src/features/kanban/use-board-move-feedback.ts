@@ -4,6 +4,7 @@
  * button (the card re-renders in another stage's list, which drops focus).
  */
 import { useCallback, useState } from "react";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { extractErrorMessage, showError, showSuccess } from "@platform/ui";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import type { BoardMoveOutcome } from "@myjobhunter/api-client/types/kanban/board-move-outcome";
@@ -25,6 +26,8 @@ export function useBoardMoveFeedback(): BoardMoveFeedback {
   const notify = useCallback((outcome: BoardMoveOutcome) => {
     if (outcome.kind === "moved") {
       showSuccess(`${MESSAGES.movedTo} ${KANBAN_COLUMN_LABELS[outcome.target]}.`);
+    } else if (writeOutcome(outcome.error) === "unknown") {
+      showError(MESSAGES.unsureMoved);
     } else {
       showError(`${MESSAGES.couldntMove}: ${extractErrorMessage(outcome.error)}`);
     }

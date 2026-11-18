@@ -1,14 +1,15 @@
 /**
  * moveKanbanItem, driven through the real endpoints with a fake axios adapter:
  * the card moves before the server answers, stays moved when it agrees, and
- * goes back (with the error rethrown) when it refuses.
+ * goes back (with the error rethrown) when it refuses, and is left for a
+ * refetch to settle when the answer was lost.
  */
 import api from "@platform/core/lib/api";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { applicationsApi } from "../store/applicationsApi";
 import { moveKanbanItem } from "../store/moveKanbanItem";
 import type { KanbanItem } from "../types/kanban/kanban-item";
@@ -32,6 +33,8 @@ const sent: InternalAxiosRequestConfig[] = [];
 type Reply = { status: number; data: unknown };
 let transitionReply: (url: string | undefined) => Promise<Reply> = async () => ({ status: 201, data: { id: "e1" } });
 let boardItems: KanbanItem[] = [CARD];
+/** A reply with no response at all: the connection dropped or timed out before the server answered. */
+const LOST: Reply = { status: 0, data: null };
 
 function makeStore() {
   return configureStore({
@@ -63,6 +66,7 @@ beforeAll(() => {
     sent.push(config);
     if (config.method === "post") {
       const reply = await transitionReply(config.url);
+      if (reply.status === 0) throw Object.assign(new Error("Network Error"), { config, isAxiosError: true });
       const response = { data: reply.data, status: reply.status, statusText: "", headers: {}, config };
       if (reply.status < 400) return response;
       throw Object.assign(new Error(String(reply.status)), { config, response, isAxiosError: true });
@@ -105,6 +109,33 @@ describe("moveKanbanItem", () => {
       store.dispatch(moveKanbanItem({ applicationId: "a1", target: "closed", idempotencyKey: "k2", occurredAt: OCCURRED })),
     ).rejects.toMatchObject({ status: 400 });
     expect(board(store)?.[0]).toEqual(CARD);
+  });
+
+  it("keeps the card where it was moved, and reads the board again, when the answer is lost", async () => {
+    const store = makeStore();
+    await loadBoard(store);
+    transitionReply = async () => LOST;
+    // The server did move it; only the answer was lost.
+    const SERVER_TRUTH: KanbanItem = { ...CARD, latest_event_type: "offer_received", stage_entered_at: "2026-06-01T00:00:01Z" };
+
+    await expect(
+      store.dispatch(moveKanbanItem({ applicationId: "a1", target: "offer", idempotencyKey: "k6", occurredAt: OCCURRED })),
+    ).rejects.toBeDefined();
+    boardItems = [SERVER_TRUTH];
+
+    await vi.waitFor(() => expect(board(store)?.[0]).toEqual(SERVER_TRUTH));
+    expect(sent.filter((config) => config.method === "get").length).toBeGreaterThan(1);
+  });
+
+  it("reads the board again, rather than undoing, when the server fails without saying why", async () => {
+    const store = makeStore();
+    await loadBoard(store);
+    transitionReply = async () => ({ status: 502, data: "<html>Bad Gateway</html>" });
+
+    await expect(
+      store.dispatch(moveKanbanItem({ applicationId: "a1", target: "offer", idempotencyKey: "k7", occurredAt: OCCURRED })),
+    ).rejects.toMatchObject({ status: 502 });
+    await vi.waitFor(() => expect(sent.filter((config) => config.method === "get").length).toBeGreaterThan(1));
   });
 
   it("puts back only the refused card when two move at once", async () => {

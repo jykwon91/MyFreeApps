@@ -1,7 +1,8 @@
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
-import { act, fireEvent, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { randomUUID } from "expo-crypto";
 import { Alert, Linking } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../src/constants/applicationDetail";
 import { APPLICATION_NOTES_MESSAGES as NOTES } from "../src/constants/applicationNotes";
@@ -266,8 +267,43 @@ it("moves the application to another stage from the stage picker", async () => {
 
   expect(await screen.findByText("Moved to Offer.")).toBeTruthy();
   expect(sent.filter(({ route }) => route === `POST /applications/${ID}/transitions`).map(({ body }) => body)).toEqual([
-    // A fresh key per move, as the website's board sends.
+    // One key per move, as the website's board sends.
     { target_column: "offer", idempotency_key: "move-key-1" },
+  ]);
+});
+
+it("reads the application again and says it's unsure when the answer to a move is lost, and a retry reuses the key", async () => {
+  jest.mocked(randomUUID).mockReturnValueOnce("unique-key-1").mockReturnValueOnce("unique-key-2");
+  let lost = true;
+  let loads = 0;
+  const routes = applicationDetailRoutes(STRIPE);
+  const sent = serve({
+    ...routes,
+    [`GET /applications/${ID}`]: (body, params) => {
+      loads += 1;
+      return routes[`GET /applications/${ID}`](body, params);
+    },
+    [`POST /applications/${ID}/transitions`]: () => {
+      if (lost) throw new Error("Network Error");
+      return { status: 201, data: eventRecord({ id: "e-2", application_id: ID, event_type: "offer_received" }) };
+    },
+  });
+  await renderApplicationDetail(ID);
+  await fireEvent.press(await screen.findByRole("button", { name: new RegExp(`^${MESSAGES.stage}`) }));
+  await fireEvent.press(await screen.findByRole("radio", { name: "Offer" }));
+
+  expect(await screen.findByText(MESSAGES.unsureMoved)).toBeTruthy();
+  expect(screen.queryByText(MESSAGES.couldntMove)).toBeNull();
+  // The server may have moved it, so the screen reads it again rather than trusting what it had.
+  await waitFor(() => expect(loads).toBeGreaterThan(1));
+
+  lost = false;
+  await fireEvent.press(await screen.findByRole("button", { name: new RegExp(`^${MESSAGES.stage}`) }));
+  await fireEvent.press(await screen.findByRole("radio", { name: "Offer" }));
+  expect(await screen.findByText("Moved to Offer.")).toBeTruthy();
+  expect(sent.filter(({ route }) => route === `POST /applications/${ID}/transitions`).map(({ body }) => body)).toEqual([
+    { target_column: "offer", idempotency_key: "unique-key-1" },
+    { target_column: "offer", idempotency_key: "unique-key-1" },
   ]);
 });
 

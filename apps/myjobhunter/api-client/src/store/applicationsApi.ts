@@ -16,6 +16,7 @@ import type { JdUrlExtractRequest } from "../types/application/jd-url-extract-re
 import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-response";
 import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
+import { APPLICATION_EVENTS_TAG } from "../constants/applicationEventsTag";
 import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
 import { APPLICATIONS_TAG } from "../constants/applicationsTag";
 import { DISCOVERED_JOB_TAG } from "../constants/discoverTags";
@@ -23,7 +24,6 @@ import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { removalIsDone } from "../utils/removalIsDone";
 
-const APPLICATION_EVENTS_TAG = "ApplicationEvents";
 
 const applicationsApi = baseApi.enhanceEndpoints({
   addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG, DISCOVERED_JOB_TAG],

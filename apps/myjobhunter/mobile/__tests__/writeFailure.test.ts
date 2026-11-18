@@ -1,6 +1,6 @@
 import { APPLICATION_DETAIL_MESSAGES } from "../src/constants/applicationDetail";
 import { WRITE_FAILURE_MESSAGES } from "../src/constants/writeFailure";
-import { createFailure, writeFailure } from "../src/lib/writeFailure";
+import { createFailure, moveFailure, writeFailure } from "../src/lib/writeFailure";
 
 const COPY = { failed: "I couldn't add that contact. Want to try again?", checkWhere: "this application's contacts" };
 
@@ -47,5 +47,19 @@ describe("createFailure, for an add", () => {
   it("says the parent is gone on a 404 only when given the words for it", () => {
     expect(createFailure({ status: 404, data: { detail: "Not Found" } }, COPY)).toBe(COPY.failed);
     expect(createFailure({ status: 404, data: { detail: "Not Found" } }, { ...COPY, gone: APPLICATION_DETAIL_MESSAGES.gone })).toBe(APPLICATION_DETAIL_MESSAGES.gone);
+  });
+});
+
+describe("moveFailure, for moving an application to another stage", () => {
+  it.each([
+    ["no answer came back", { status: undefined, data: "Network Error" }],
+    ["the server broke without a reason", { status: 502, data: "<html>Bad Gateway</html>" }],
+  ])("says it's unsure the move happened when %s", (_, error) => {
+    expect(moveFailure(error)).toBe(APPLICATION_DETAIL_MESSAGES.unsureMoved);
+  });
+
+  it("offers a retry when the server refused the move, and says it's gone on a 404", () => {
+    expect(moveFailure({ status: 400, data: { detail: "not allowed" } })).toBe(APPLICATION_DETAIL_MESSAGES.couldntMove);
+    expect(moveFailure({ status: 404, data: { detail: "Not Found" } })).toBe(APPLICATION_DETAIL_MESSAGES.gone);
   });
 });
