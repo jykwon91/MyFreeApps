@@ -8,6 +8,7 @@ import { SENIORITY_CHOICES } from "../../constants/seniorityChoices";
 import type { AboutSheetProps } from "../../types/AboutSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
+import { repeatableWriteFailure } from "../../lib/writeFailure";
 
 /** Edits your level and summary. A failed save shows at the top and keeps what was typed. */
 export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
@@ -25,8 +26,8 @@ export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
       await updateProfile({ seniority: seniority || null, summary: summary.trim() || null }).unwrap();
       showToast(MESSAGES.aboutSaved);
       onClose();
-    } catch {
-      setFailure(MESSAGES.couldntSaveAbout);
+    } catch (error) {
+      setFailure(repeatableWriteFailure(error, () => MESSAGES.couldntSaveAbout));
     }
   }
 

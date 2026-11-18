@@ -73,9 +73,23 @@ describe("useConfirmedRemoval", () => {
     expect(onRemoved).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["no answer came back", () => Promise.reject({ status: undefined, data: "Network Error" })],
+    ["a proxy error gave no reason", () => Promise.reject({ status: 502, data: "<html>Bad Gateway</html>" })],
+  ])("doesn't call it a failure when %s: it may have gone, and a retry is safe", async (_case, remove) => {
+    const onRemoved = jest.fn();
+    await show(remove, { onRemoved });
+    await act(async () => alertButton(MESSAGES.remove).onPress?.());
+
+    expect(screen.getByRole("alert", { name: "I didn't get an answer, so I'm not sure that was removed. Trying again is safe." })).toBeTruthy();
+    expect(screen.queryByRole("alert", { name: MESSAGES.couldntRemove })).toBeNull();
+    expect(onRemoved).not.toHaveBeenCalled();
+    expect(screen.getByText("idle")).toBeTruthy();
+  });
+
   it("says when it couldn't remove it, and lets it be tried again", async () => {
     const onRemoved = jest.fn();
-    await show(() => Promise.reject(new Error("offline")), { onRemoved });
+    await show(() => Promise.reject({ status: 400, data: { detail: "Bad request" } }), { onRemoved });
     await act(async () => alertButton(MESSAGES.remove).onPress?.());
 
     expect(screen.getByRole("alert", { name: MESSAGES.couldntRemove })).toBeTruthy();

@@ -1,7 +1,6 @@
 import { RECIPE_FORM_PROBLEMS as PROBLEMS, RECIPE_TITLE_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
-import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { RECIPE_MANAGE_MESSAGES as SHARED } from "@myrecipes/api-client/constants/recipeManage";
-import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
+import { RECIPE_WRITE_MESSAGES, RECIPE_WRITE_UNSURE } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -224,7 +223,7 @@ describe("editing a recipe's details", () => {
     expect(titleField().props.value).toBe("Better soup");
   });
 
-  it("says it's the connection when the save can't reach the server", async () => {
+  it("doesn't call a save that got no answer a failure: it may have saved, and saving again is safe", async () => {
     await show(SOUP, {
       "PATCH /recipes/r1": () => {
         throw new Error("Network Error");
@@ -234,12 +233,13 @@ describe("editing a recipe's details", () => {
     await fireEvent.changeText(titleField(), "Better soup");
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByRole("alert", { name: CONNECTION_MESSAGES.write })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: RECIPE_WRITE_UNSURE.update })).toBeTruthy();
+    expect(screen.queryByText(/Couldn't save/)).toBeNull();
   });
 
   it("keeps what was typed when the save fails, says so in the sheet, and can try again", async () => {
     let fail = true;
-    await show(SOUP, { "PATCH /recipes/r1": () => (fail ? reply(500) : reply(200, { ...SOUP, title: "Better soup" })) });
+    await show(SOUP, { "PATCH /recipes/r1": () => (fail ? reply(500, { detail: "Database unavailable" }) : reply(200, { ...SOUP, title: "Better soup" })) });
     await openEdit();
     await fireEvent.changeText(titleField(), "Better soup");
     await fireEvent.press(saveButton());
@@ -366,7 +366,7 @@ describe("deleting a recipe", () => {
   });
 
   it("stays and says so when the delete fails, and can try again", async () => {
-    await show(SOUP, { "DELETE /recipes/r1": () => reply(500) });
+    await show(SOUP, { "DELETE /recipes/r1": () => reply(500, { detail: "Database unavailable" }) });
     await pressDelete();
     await act(async () => alertButton(SHARED.deleteConfirm).onPress?.());
 

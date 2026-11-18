@@ -287,7 +287,7 @@ describe("editing a policy", () => {
   });
 
   it.each([
-    ["offline" as const, "I can't reach the server, so I couldn't save that. Your details are still here."],
+    ["offline" as const, "I didn't get an answer, so I'm not sure the change saved. Trying again is safe."],
     [403, "You have view-only access, so I can't change policies."],
     [404, "That property or policy isn't there any more."],
     [422, "I couldn't save that. Check the details and try again."],

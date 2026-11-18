@@ -12,14 +12,14 @@ import { actionFailureCopy } from "../../lib/writeFailureCopy";
 import type { IntegrationActions } from "../../types/IntegrationActions";
 import { runIntegrationWrite } from "./runIntegrationWrite";
 
-const SYNC_COPY = actionFailureCopy("start the sync", {
+const SYNC_COPY = actionFailureCopy("start the sync", { checkFirst: "Pull down to see whether a sync started" }, {
   invalid: "I couldn't find the Gmail label you're filtering by. Change or clear it, then try again.",
   other: "I couldn't start the sync. If Gmail needs reconnecting, that's done from the website. Want to try again?",
 });
-const CANCEL_COPY = actionFailureCopy("cancel the sync");
-const DISCONNECT_COPY = actionFailureCopy("disconnect Gmail", { gone: "Gmail was already disconnected. Pull down to refresh." });
-const EXTRACT_COPY = actionFailureCopy("start reading those emails");
-const RETRY_ALL_COPY = actionFailureCopy("retry the failed items");
+const CANCEL_COPY = actionFailureCopy("cancel the sync", "safe");
+const DISCONNECT_COPY = actionFailureCopy("disconnect Gmail", "safe", { gone: "Gmail was already disconnected. Pull down to refresh." });
+const EXTRACT_COPY = actionFailureCopy("start reading those emails", { checkFirst: "Pull down to see whether they started" });
+const RETRY_ALL_COPY = actionFailureCopy("retry the failed items", "safe");
 
 /** Everything the Gmail card can ask the server to do, each with its own busy state and outcome toast. */
 export function useGmailActions(): IntegrationActions {

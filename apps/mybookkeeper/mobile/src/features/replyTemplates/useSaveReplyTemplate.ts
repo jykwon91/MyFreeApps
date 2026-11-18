@@ -10,6 +10,7 @@ import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { REPLY_TEMPLATE_AMBIGUOUS_CREATE as AMBIGUOUS_CREATE, REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import type { ReplyTemplateFormValues } from "../../types/ReplyTemplateFormValues";
+import { isLostAnswer } from "./replyTemplateFailure";
 import { changedFields } from "./replyTemplateFormValues";
 import { leaveToList } from "./replyTemplateNavigation";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
@@ -85,7 +86,7 @@ export function useSaveReplyTemplate(original: ReplyTemplate | null) {
       } else if (outcome === "landed") {
         finish(REPLY_TEMPLATE_MESSAGES.templateSaved);
       } else {
-        setFailure(outcome === "unknown" ? "unsure" : reason);
+        setFailure(outcome === "unknown" ? "unsure" : original && isLostAnswer(reason) ? "unsureChange" : reason);
         isSending.current = false;
       }
     } finally {

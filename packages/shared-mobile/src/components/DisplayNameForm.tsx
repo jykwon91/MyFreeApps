@@ -1,6 +1,7 @@
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { useState } from "react";
 import { View } from "react-native";
 import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
@@ -10,7 +11,10 @@ import type { DisplayNameFormProps } from "../types/DisplayNameFormProps";
 import FormField from "./FormField";
 import LoadingButton from "./LoadingButton";
 
-/** The name, saved with its own button as on the website. A failed save keeps what was typed; one a cache reset called off says nothing. */
+/**
+ * The name, saved with its own button as on the website. A failed save keeps what was typed; one a cache reset called off says
+ * nothing. A lost answer can come after the save (see writeOutcome), so it says it isn't sure: saving the same name again is harmless.
+ */
 export default function DisplayNameForm({ initialName, source }: DisplayNameFormProps) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
@@ -31,7 +35,9 @@ export default function DisplayNameForm({ initialName, source }: DisplayNameForm
       setSavedName(trimmed);
       showToast(MESSAGES.displayNameSaved, "success");
     } catch (error) {
-      if (!isCancelledRequest(error)) showToast(MESSAGES.displayNameSaveFailed, "error");
+      if (!isCancelledRequest(error)) {
+        showToast(writeOutcome(error) === "unknown" ? MESSAGES.displayNameSaveUnsure : MESSAGES.displayNameSaveFailed, "error");
+      }
     } finally {
       setIsSaving(false);
     }

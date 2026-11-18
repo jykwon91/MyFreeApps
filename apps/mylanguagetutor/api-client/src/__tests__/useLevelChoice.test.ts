@@ -9,7 +9,7 @@ import type { Profile } from "../types/tutor/profile";
 const api = vi.hoisted(() => ({
   profile: { data: undefined as Profile | null | undefined, isError: false },
   save: vi.fn(),
-  saveState: { isLoading: false, isError: false },
+  saveState: { isLoading: false, error: undefined as unknown },
 }));
 
 vi.mock("../store/profileApi", () => ({
@@ -85,8 +85,24 @@ describe("useLevelChoice", () => {
     expect(api.save).toHaveBeenCalledWith({ language_code: "es", level: "conversational" });
   });
 
+  it.each([
+    ["no answer came back", { status: "FETCH_ERROR" }, "unsure"],
+    ["a proxy error gave no reason", { status: 502, data: "<html>Bad Gateway</html>" }, "unsure"],
+    ["the server refused it", { status: 422, data: { detail: "Unsupported language" } }, "failed"],
+  ])("tells a lost answer, which may have saved, from a real failure: %s", async (_case, error, expected) => {
+    saves(Promise.reject(error));
+    api.profile = { data: PROFILE, isError: false };
+    const { result } = renderHook(() => useLevelChoice(null));
+
+    let saved: LevelSaveOutcome | undefined;
+    await act(async () => {
+      saved = await result.current.save();
+    });
+    expect(saved).toBe(expected);
+  });
+
   it("says when the save failed", async () => {
-    saves(Promise.reject(new Error("down")));
+    saves(Promise.reject({ status: 400, data: { detail: "Bad request" } }));
     api.profile = { data: PROFILE, isError: false };
     const { result } = renderHook(() => useLevelChoice(null));
 

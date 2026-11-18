@@ -218,7 +218,7 @@ it("says when notes are too long, keeps all of them and won't save", async () =>
 });
 
 it("keeps the typed notes and says so when saving them fails", async () => {
-  serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 500 }) });
+  serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 400 }) });
   await renderApplicationDetail(ID);
   await fireEvent.changeText(await screen.findByDisplayValue("Recruiter is Sam."), "New notes");
   await fireEvent.press(screen.getByRole("button", { name: NOTES.save }));
@@ -317,7 +317,7 @@ it("archives the application", async () => {
 });
 
 it("says when archiving fails", async () => {
-  serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 500 }) });
+  serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 400 }) });
   await renderApplicationDetail(ID);
   await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.archive }));
 
@@ -393,7 +393,7 @@ it("goes straight back after a delete, even with unsaved notes, without asking a
 });
 
 it("stays on the application and says so when deleting fails", async () => {
-  serve({ ...applicationDetailRoutes(STRIPE), [`DELETE /applications/${ID}`]: () => ({ status: 500 }) });
+  serve({ ...applicationDetailRoutes(STRIPE), [`DELETE /applications/${ID}`]: () => ({ status: 400 }) });
   await renderApplicationDetail(ID);
   await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.delete }));
   await act(async () => alertButton(MESSAGES.delete).onPress?.());

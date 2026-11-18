@@ -9,5 +9,6 @@ export const LEVEL_LINE_BEGINNER = "Level: Just starting";
 export const LEVEL_LINE_SOME_PHRASES = "Level: I know some phrases";
 export const LEVEL_LINE_CONVERSATIONAL = "Level: I can hold a conversation";
 export const PROFILE_SAVE_FAILED = "Couldn't save your choice. Try again.";
+export const PROFILE_SAVE_UNSURE = "We didn't get an answer, so we're not sure your choice was saved. Trying again is safe.";
 export const LESSONS_LOAD_FAILED = "Couldn't load your lessons.";
 export const NO_LANGUAGES = "No languages are available yet.";

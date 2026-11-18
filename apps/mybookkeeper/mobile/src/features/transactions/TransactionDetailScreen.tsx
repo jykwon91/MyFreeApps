@@ -17,6 +17,7 @@ import { selectableProperties } from "./transactionEditValues";
 import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
 import TransactionFact from "./TransactionFact";
 import TransactionTaxFacts from "./TransactionTaxFacts";
+import { deleteFailureMessage } from "./transactionMessages";
 import TransactionTenantLink from "./TransactionTenantLink";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useApproveTransaction } from "./useApproveTransaction";
@@ -82,7 +83,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
               showToast("That one's already gone.");
               goBackOr("/money");
             } else {
-              showToast("I couldn't delete that. Want to try again?", "error");
+              showToast(deleteFailureMessage(deleteError), "error");
             }
           }
         },

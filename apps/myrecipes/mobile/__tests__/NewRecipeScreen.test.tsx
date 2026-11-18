@@ -5,7 +5,6 @@ import {
   RECIPE_SOURCE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
 import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
-import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -424,7 +423,7 @@ describe("creating", () => {
     await press(MESSAGES.create);
 
     expect(await screen.findByText(UNSURE)).toBeTruthy();
-    expect(screen.queryByText(CONNECTION_MESSAGES.write, SHOWN)).toBeNull();
+    expect(screen.queryByText(/can't reach the server/, SHOWN)).toBeNull();
     expect(mockReplace).not.toHaveBeenCalled();
     expect(sent.filter((config) => config.method === "post")).toHaveLength(1);
   });

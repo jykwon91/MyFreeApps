@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { useDevices } from "../hooks/useDevices";
 import { useSession } from "../hooks/useSession";
 import { useSignOutThisPhone } from "../hooks/useSignOutThisPhone";
-import { SECURITY_MESSAGES } from "../constants/security";
+import { deviceSignOutUnsureMessage, SECURITY_MESSAGES } from "../constants/security";
 import { useTheme } from "../theme/useTheme";
 import type { AccountMessage } from "../types/AccountMessage";
 import type { SignedInDevice } from "../types/SignedInDevice";
@@ -41,11 +41,9 @@ export default function AccountSection({ appName, devices, onMessage, onDeleteAc
     setSigningOutId(device.id);
     try {
       const outcome = await devices.signOutDevice(device.id);
-      onMessage(
-        outcome === "alreadyGone"
-          ? { message: "That device was already signed out.", variant: "success" }
-          : { message: `Signed out ${name}. It may stay signed in for up to 30 minutes.`, variant: "success" },
-      );
+      if (outcome === "unsure") onMessage({ message: deviceSignOutUnsureMessage(name), variant: "error" });
+      else if (outcome === "alreadyGone") onMessage({ message: "That device was already signed out.", variant: "success" });
+      else onMessage({ message: `Signed out ${name}. It may stay signed in for up to 30 minutes.`, variant: "success" });
     } catch {
       onMessage({ message: `Couldn't sign out ${name}. Check your connection and try again.`, variant: "error" });
     } finally {

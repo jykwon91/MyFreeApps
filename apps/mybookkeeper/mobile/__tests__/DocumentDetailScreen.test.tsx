@@ -296,16 +296,16 @@ describe("DocumentDetailScreen", () => {
     alert.mockRestore();
   });
 
-  it("says when marking reference-only fails, and when it can't reach the server", async () => {
+  it("says when marking reference-only fails, and that it isn't sure when the answer is lost", async () => {
     const server = startFakeServer([aDocument({ is_escrow_paid: true })]);
     await renderDetail();
-    server.failWritesWith = 500;
+    server.failWritesWith = 400;
     await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
     expect(await screen.findByText("I couldn't update that document. Want to try again?")).toBeTruthy();
     server.failWritesWith = null;
     server.offline = true;
     await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
-    expect(await screen.findByText("I can't reach the server, so I couldn't update that. Want to try again?")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that document was updated. Trying again is safe.")).toBeTruthy();
   });
 
   it("shows loading on the reference-only button and sends once", async () => {

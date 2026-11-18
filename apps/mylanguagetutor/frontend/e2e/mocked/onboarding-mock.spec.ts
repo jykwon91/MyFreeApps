@@ -1,8 +1,9 @@
 /**
  * No-backend E2E for onboarding (/onboarding/language, /onboarding/level) and
  * "Change level": a new learner picks a language and a level, which is saved
- * with PUT /profile and lands them on their scenarios; a refused save says so
- * and keeps the choice so it can be sent again; Change level starts from the
+ * with PUT /profile and lands them on their scenarios; a save whose answer was
+ * lost says it isn't sure (it may have saved) and keeps the choice so it can be
+ * sent again; a refused save says it couldn't; Change level starts from the
  * saved level; a failed or empty language list says so.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -17,6 +18,7 @@ import {
   LEVEL_STEP,
   NO_LANGUAGES,
   PROFILE_SAVE_FAILED,
+  PROFILE_SAVE_UNSURE,
 } from "./constants/onboardingCopy";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { profileOf } from "./fixtures/tutorFixtures";
@@ -41,14 +43,27 @@ test("a new learner picks a language and a level, which is saved, and lands on t
   expect(api.writes).toEqual([{ method: "PUT", path: "/profile", body: { language_code: "es", level: "some_phrases" } }]);
 });
 
-test("a refused save says so, keeps the choice, and sending it again works", async ({ page }) => {
+test("a refused save says it couldn't save the choice", async ({ page }) => {
+  await signedInTutor(page, { profile: null });
+
+  await page.goto("/onboarding/level?language=xx");
+  await page.getByRole("radio", { name: /^Just starting/ }).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByText(PROFILE_SAVE_FAILED)).toBeVisible();
+  await expect(page.getByText(PROFILE_SAVE_UNSURE)).toHaveCount(0);
+  await expect(page).toHaveURL(/\/onboarding\/level\?language=xx$/);
+});
+
+test("a server error with no reason says it isn't sure, keeps the choice, and sending it again works", async ({ page }) => {
   const api = await signedInTutor(page, { profile: null, failWith: [SAVE_PROFILE] });
 
   await page.goto("/onboarding/level?language=es");
   await page.getByRole("radio", { name: /^Just starting/ }).check();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText(PROFILE_SAVE_FAILED)).toBeVisible();
+  await expect(page.getByText(PROFILE_SAVE_UNSURE)).toBeVisible();
+  await expect(page.getByText(PROFILE_SAVE_FAILED)).toHaveCount(0);
   await expect(page).toHaveURL(/\/onboarding\/level\?language=es$/);
   await expect(page.getByRole("radio", { name: /^Just starting/ })).toBeChecked();
 

@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { COOK_LOG_MESSAGES } from "../constants/cookLog";
-import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { RECIPE_MANAGE_MESSAGES } from "../constants/recipeManage";
 import { RECIPE_WRITE_MESSAGES, RECIPE_WRITE_UNSURE } from "../constants/recipeWriteErrors";
 import { TWEAK_MESSAGES } from "../constants/tweak";
 import { recipeWriteErrorMessage } from "../utils/recipeWriteErrorMessage";
 
 describe("recipeWriteErrorMessage", () => {
-  it("says the server can't be reached when an update got no answer, which is safe to send again", () => {
-    expect(recipeWriteErrorMessage({ status: undefined }, "update")).toBe(CONNECTION_MESSAGES.write);
-    expect(recipeWriteErrorMessage({ status: "FETCH_ERROR" }, "update")).toBe(CONNECTION_MESSAGES.write);
-  });
+  it.each([{ status: undefined }, { status: "FETCH_ERROR" }, { status: 502, data: "<html>Bad Gateway</html>" }])(
+    "doesn't call an update whose answer was lost a failure, and says saving again is safe (%j)",
+    (error) => {
+      expect(recipeWriteErrorMessage(error, "update")).toBe(
+        "We didn't get an answer, so we're not sure your changes were saved. Saving again is safe.",
+      );
+    },
+  );
 
   it.each([
     ["no answer came back", { status: undefined, data: "Network Error" }],
@@ -36,7 +39,7 @@ describe("recipeWriteErrorMessage", () => {
     expect(recipeWriteErrorMessage({ status: 403 }, "update")).toBe(RECIPE_WRITE_MESSAGES.forbidden);
     expect(recipeWriteErrorMessage({ status: 413 }, "create")).toBe(RECIPE_WRITE_MESSAGES.tooLarge);
     expect(recipeWriteErrorMessage({ status: 429 }, "logCook")).toBe(RECIPE_WRITE_MESSAGES.slowDown);
-    expect(recipeWriteErrorMessage({ status: 500 }, "update")).toBe(RECIPE_WRITE_MESSAGES.serverTrouble);
+    expect(recipeWriteErrorMessage({ status: 500, data: { detail: "boom" } }, "update")).toBe(RECIPE_WRITE_MESSAGES.serverTrouble);
   });
 
   it("shows the server's own reason for a 422, plain or a list", () => {
@@ -51,7 +54,7 @@ describe("recipeWriteErrorMessage", () => {
     expect(recipeWriteErrorMessage({ status: 422 }, "create")).toBe(RECIPE_MANAGE_MESSAGES.couldntCreate);
     expect(recipeWriteErrorMessage({ status: 404 }, "update")).toBe(RECIPE_MANAGE_MESSAGES.couldntUpdate);
     expect(recipeWriteErrorMessage({ status: 418 }, "logCook")).toBe(COOK_LOG_MESSAGES.couldntLog);
-    expect(recipeWriteErrorMessage(new Error("boom"), "update")).toBe(RECIPE_MANAGE_MESSAGES.couldntUpdate);
+    expect(recipeWriteErrorMessage({ status: 418 }, "update")).toBe(RECIPE_MANAGE_MESSAGES.couldntUpdate);
   });
 
   it("keeps a tweak's own wording", () => {

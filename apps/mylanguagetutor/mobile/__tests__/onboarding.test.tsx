@@ -157,8 +157,21 @@ describe("onboarding", () => {
     expect(screen.getByRole("button", { name: "Spanish Latin American" })).toBeTruthy();
   });
 
+  it("doesn't call a level save whose answer was lost a failure, and says trying again is safe", async () => {
+    serveNewLearner({ "PUT /profile": () => ({ status: 502, data: "<html>Bad Gateway</html>" }) });
+    await renderApp();
+    await chooseSpanish();
+
+    await fireEvent.press(screen.getByRole("radio", { name: "I can hold a conversation" }));
+    await fireEvent.press(screen.getByRole("button", { name: ONBOARDING_COPY.continue }));
+
+    expect(await screen.findByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toBeTruthy();
+    expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveFailed })).toBeNull();
+    expect(screen).toHavePathname("/onboarding/level");
+  });
+
   it("says when the level couldn't be saved, and keeps the choice to try again", async () => {
-    const sent = serveNewLearner({ "PUT /profile": () => ({ status: 500, data: {} }) });
+    const sent = serveNewLearner({ "PUT /profile": () => ({ status: 422, data: { detail: "Unsupported language" } }) });
     await renderApp();
     await chooseSpanish();
 
@@ -190,6 +203,7 @@ describe("onboarding", () => {
     });
 
     expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveFailed })).toBeNull();
+    expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toBeNull();
     expect(screen).toHavePathname("/onboarding/level");
   });
 });

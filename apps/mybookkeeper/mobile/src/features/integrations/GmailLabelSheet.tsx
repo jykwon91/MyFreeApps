@@ -5,7 +5,7 @@ import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations"
 import { useWrite } from "../../lib/useWrite";
 import { actionFailureCopy } from "../../lib/writeFailureCopy";
 
-const COPY = actionFailureCopy("save the label", { invalid: "Gmail didn't accept that label. Check the name and try again." });
+const COPY = actionFailureCopy("save the label", "safe", { invalid: "Gmail didn't accept that label. Check the name and try again." });
 
 interface GmailLabelSheetProps {
   /** The label saved now; empty means all email. */

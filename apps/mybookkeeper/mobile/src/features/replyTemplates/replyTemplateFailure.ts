@@ -10,6 +10,8 @@ export function saveBanner(failure: ReplyTemplateFailure): string | null {
       return REPLY_TEMPLATE_MESSAGES.saveViewOnly;
     case "unsure":
       return REPLY_TEMPLATE_MESSAGES.saveUnsure;
+    case "unsureChange":
+      return REPLY_TEMPLATE_MESSAGES.changeUnsure;
     case "serverError":
     case "other":
       return REPLY_TEMPLATE_MESSAGES.saveFailed;
@@ -17,4 +19,9 @@ export function saveBanner(failure: ReplyTemplateFailure): string | null {
     case "gone":
       return null;
   }
+}
+
+/** A lost answer or a proxy error can come after the save (see writeOutcome). A change is safe to send again; a create is checked against the list. */
+export function isLostAnswer(reason: ReplyTemplateFailure): boolean {
+  return reason === "noResponse" || reason === "serverError";
 }

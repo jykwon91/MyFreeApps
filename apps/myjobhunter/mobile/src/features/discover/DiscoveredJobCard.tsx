@@ -20,7 +20,7 @@ import { Text, View } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as MESSAGES, DISMISS_SHEET_OPTIONS, SKIP_DISMISS_REASON } from "../../constants/discoveredJob";
 import type { DiscoveredJobCardProps } from "../../types/DiscoveredJobCardProps";
 import DismissedJobActions from "./DismissedJobActions";
-import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { repeatableWriteFailure } from "../../lib/writeFailure";
 
 /**
  * A discovered posting as the website's card shows it, with Open, Apply, Save and Dismiss (with a
@@ -52,8 +52,8 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await promote(job.id).unwrap();
       showToast(ACTIONS.promoted);
     } catch (error) {
-      if (isCancelledRequest(error)) return;
-      showToast(discoverFailureMessage(error, ACTIONS.promoteFailed), "error");
+      const message = repeatableWriteFailure(error, (refusal) => discoverFailureMessage(refusal, ACTIONS.promoteFailed));
+      if (message) showToast(message, "error");
     }
   }
 
@@ -62,8 +62,8 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await save(job.id).unwrap();
       showToast(ACTIONS.saved);
     } catch (error) {
-      if (isCancelledRequest(error)) return;
-      showToast(triageFailureMessage(error, ACTIONS.saveFailed), "error");
+      const message = repeatableWriteFailure(error, (refusal) => triageFailureMessage(refusal, ACTIONS.saveFailed));
+      if (message) showToast(message, "error");
     }
   }
 
@@ -72,8 +72,8 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await dispatch(undoDismissDiscoveredJob(job.id));
       showToast(ACTIONS.undone);
     } catch (error) {
-      if (isCancelledRequest(error)) return;
-      showToast(undoDismissFailureMessage(error, ACTIONS.undoFailed), "error");
+      const message = repeatableWriteFailure(error, (refusal) => undoDismissFailureMessage(refusal, ACTIONS.undoFailed));
+      if (message) showToast(message, "error");
     }
   }
 
@@ -82,8 +82,8 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await dismiss({ jobId: job.id, reason }).unwrap();
       showToast(ACTIONS.dismissed, "success", { label: ACTIONS.undo, accessibilityHint: ACTIONS.undoHint, onPress: () => void undo() });
     } catch (error) {
-      if (isCancelledRequest(error)) return;
-      showToast(triageFailureMessage(error, ACTIONS.dismissFailed), "error");
+      const message = repeatableWriteFailure(error, (refusal) => triageFailureMessage(refusal, ACTIONS.dismissFailed));
+      if (message) showToast(message, "error");
     }
   }
 

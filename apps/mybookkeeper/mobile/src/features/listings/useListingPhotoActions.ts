@@ -9,7 +9,7 @@ import { useWrite } from "../../lib/useWrite";
 import { actionFailureCopy, deleteFailureCopy } from "../../lib/writeFailureCopy";
 
 const DELETE_COPY = deleteFailureCopy("photo");
-const ORDER_COPY = actionFailureCopy("change the order", { conflict: MESSAGES.orderStale });
+const ORDER_COPY = actionFailureCopy("change the order", "safe", { conflict: MESSAGES.orderStale });
 
 /** Removing and reordering a listing's photos. */
 export function useListingPhotoActions(listing: ListingResponse) {

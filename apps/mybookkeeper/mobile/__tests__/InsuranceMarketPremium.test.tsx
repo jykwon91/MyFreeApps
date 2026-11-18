@@ -143,7 +143,7 @@ describe("market premium", () => {
     [403, "You have view-only access, so I can't change the market premium."],
     [422, "I couldn't save that. Check the details and try again."],
     [500, "I couldn't save that. Want to try again?"],
-    ["offline" as const, "I can't reach the server, so I couldn't save that. Your details are still here."],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
   ])("a %s on save says %s and keeps the form", async (failure, message) => {
     startInsuranceServer({ failures: { "PUT /insurance-benchmarks": failure } });
     await renderInsurance(<MarketPremiumScreen />);
@@ -177,7 +177,7 @@ describe("market premium", () => {
     [403, "You have view-only access, so I can't change the market premium."],
     [404, "That market premium is already gone."],
     [500, "I couldn't remove that. Want to try again?"],
-    ["offline" as const, "I can't reach the server, so I couldn't remove it. Want to try again?"],
+    ["offline" as const, "I didn't get an answer, so I'm not sure it was removed. Trying again is safe."],
   ])("a %s on remove says %s", async (failure, message) => {
     startInsuranceServer({ benchmark: aBenchmark(), failures: { "DELETE /insurance-benchmarks": failure } });
     choose("Remove the market premium");

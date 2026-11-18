@@ -16,15 +16,18 @@ export const TENANT_LINK_MESSAGES = {
   linked: "Linked.",
 } as const;
 
+// Linking also approves the payment and matches later ones, so after a lost answer it says to look first.
+const LINK_UNSURE = "I didn't get an answer, so I'm not sure that linked. Check the transaction before trying again.";
+
 /** Fixed wording only: the server's own text is never shown. */
 export const TENANT_LINK_FAILURE: WriteFailureCopy = {
-  noResponse: "I can't reach the server, so I couldn't link that.",
+  noResponse: LINK_UNSURE,
   viewOnly: "You have view-only access, so I can't link this.",
   demo: DEMO_WORKSPACE_REFUSED,
   gone: "I can't find that transaction or tenant anymore. It may have been deleted.",
   conflict: "That clashes with how this is already linked. Refresh and try again.",
   invalid: "I can't link that payment. Check that it's income and try again.",
-  serverError: "I couldn't link that. Want to try again?",
+  serverError: LINK_UNSURE,
   other: "I couldn't link that. Want to try again?",
   rateLimited: WRITE_RATE_LIMITED_MESSAGE,
   tooLarge: WRITE_TOO_LARGE_MESSAGE,

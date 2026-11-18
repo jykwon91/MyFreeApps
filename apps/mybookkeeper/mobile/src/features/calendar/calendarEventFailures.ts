@@ -33,7 +33,9 @@ export function attachmentUploadFailure(error: unknown): string {
   }
 }
 
+/** A lost answer or a proxy error can come after the file was removed (see writeOutcome); removing it again is harmless. */
 export function attachmentRemoveFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return EVENT_MESSAGES.removeUnsure;
   switch (httpStatus(error)) {
     case 403:
       return EVENT_MESSAGES.notAllowed;

@@ -14,6 +14,7 @@ import EndTenancySheet from "./EndTenancySheet";
 import ExpiredTenancyActions from "./ExpiredTenancyActions";
 import { tenancyLine, tenancyStateLabel } from "./tenantDisplay";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 
 export default function TenancySection({ applicant }: { applicant: ApplicantDetailResponse }) {
   const { colors, fontSize } = useTheme();
@@ -44,7 +45,8 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
         showToast(TENANT_MESSAGES.changed, "error");
         return null;
       }
-      return status === undefined ? TENANT_MESSAGES.noConnection : TENANT_MESSAGES.endFailed;
+      // A lost answer can come after it ended (see writeOutcome); ending it again answers "changed".
+      return writeOutcome(error) === "unknown" ? TENANT_MESSAGES.unsure : TENANT_MESSAGES.endFailed;
     }
   }
 
@@ -57,7 +59,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
     } catch (error) {
       if (isCancelledRequest(error)) return;
       const status = httpStatus(error);
-      const message = status === 409 ? TENANT_MESSAGES.changed : status === undefined ? TENANT_MESSAGES.noConnection : TENANT_MESSAGES.restartFailed;
+      const message = status === 409 ? TENANT_MESSAGES.changed : writeOutcome(error) === "unknown" ? TENANT_MESSAGES.unsure : TENANT_MESSAGES.restartFailed;
       showToast(message, "error");
     } finally {
       isRestartingNow.current = false;

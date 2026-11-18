@@ -6,7 +6,7 @@ import { memo } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { documentMeta } from "../../lib/documentMeta";
-import { writeFailure } from "../../lib/writeFailure";
+import { readFailure } from "../../lib/writeFailure";
 import type { DocumentCardProps } from "../../types/DocumentCardProps";
 import DocumentApplicationLink from "./DocumentApplicationLink";
 
@@ -34,7 +34,7 @@ function DocumentCard({ document, onEdit, onOpenApplication }: DocumentCardProps
       if (url) await openLink(url);
       else showToast(MESSAGES.unsafeLink, "error");
     } catch (error) {
-      const message = writeFailure(error, MESSAGES.couldntOpen);
+      const message = readFailure(error, MESSAGES.couldntOpen);
       if (message) showToast(message, "error");
     }
   }

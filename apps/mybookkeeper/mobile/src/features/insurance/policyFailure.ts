@@ -16,11 +16,10 @@ export function policyAddFailure(error: unknown): string {
   return POLICY_FORM_MESSAGES.saveFailed;
 }
 
-/** Saving the same edit twice is harmless, so an edit can simply be tried again. */
+/** Saving the same edit twice is harmless, so after a lost answer (see writeOutcome) an edit can simply be tried again. */
 export function policyEditFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return POLICY_FORM_MESSAGES.saveChangeUnsure;
   switch (httpStatus(error)) {
-    case undefined:
-      return POLICY_FORM_MESSAGES.saveOffline;
     case 403:
       return INSURANCE_MESSAGES.notAllowed;
     case 404:
@@ -33,9 +32,8 @@ export function policyEditFailure(error: unknown): string {
 }
 
 export function policyDeleteFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return INSURANCE_MESSAGES.deleteUnsure;
   switch (httpStatus(error)) {
-    case undefined:
-      return INSURANCE_MESSAGES.deleteOffline;
     case 403:
       return INSURANCE_MESSAGES.notAllowed;
     case 404:
@@ -63,6 +61,7 @@ export function attachmentUploadFailure(error: unknown): string {
 }
 
 export function attachmentRemoveFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return POLICY_ATTACHMENT_MESSAGES.removeUnsure;
   switch (httpStatus(error)) {
     case 403:
       return POLICY_ATTACHMENT_MESSAGES.notAllowed;

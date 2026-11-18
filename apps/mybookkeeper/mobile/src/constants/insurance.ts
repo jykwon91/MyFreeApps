@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 export const POLICY_LIST_LIMIT = 100;
 /** How far ahead the "running out" filter looks — the same 30 days the website uses. */
 export const EXPIRING_FILTER_DAYS = 30;
@@ -27,7 +28,7 @@ export const INSURANCE_MESSAGES = {
   deleteTitle: "Delete this policy?",
   deleteGone: "That policy is already gone.",
   deleteFailed: "I couldn't delete that policy. Want to try again?",
-  deleteOffline: "I can't reach the server, so I couldn't delete it. Want to try again?",
+  deleteUnsure: unsureRepeatableMessage("that policy was deleted"),
   notAllowedBody: "Ask an owner or admin if you need something changed.",
   notAllowed: "You have view-only access, so I can't change policies.",
   filter: "Filter",

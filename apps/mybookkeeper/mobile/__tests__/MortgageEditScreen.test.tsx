@@ -195,7 +195,7 @@ describe("editing a mortgage", () => {
     [415, MESSAGES.retry],
     [422, MESSAGES.invalid],
     [500, MESSAGES.retry],
-    ["offline", MESSAGES.lostConnection],
+    ["offline", MESSAGES.changeUnsure],
   ] as const)("keeps the typing and shows fixed copy for %s", async (write, copy) => {
     startServer({ write });
     await show(<MortgageEditScreen id="m1" />);

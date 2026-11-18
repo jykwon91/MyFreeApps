@@ -274,7 +274,7 @@ describe("a saved search's schedule", () => {
   });
 
   it("says when it couldn't change it", async () => {
-    serveSources({ "PATCH /discover/sources/src-1": () => ({ status: 500 }) });
+    serveSources({ "PATCH /discover/sources/src-1": () => ({ status: 400 }) });
     await showRow();
 
     await fireEvent.press(screen.getByRole("button", { name: SAVED.editFrequency("Daily") }));
@@ -303,7 +303,7 @@ describe("removing a saved search", () => {
   });
 
   it("says when it couldn't remove it", async () => {
-    serveSources({ "DELETE /discover/sources/src-1": () => ({ status: 500 }) });
+    serveSources({ "DELETE /discover/sources/src-1": () => ({ status: 400 }) });
     await showRow();
 
     await fireEvent.press(screen.getByRole("button", { name: name(SAVED.remove) }));

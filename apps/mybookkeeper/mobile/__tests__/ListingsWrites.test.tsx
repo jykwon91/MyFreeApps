@@ -109,7 +109,7 @@ describe("a listing's own screen", () => {
     const server = startListingsServer();
     await show(<ListingDetailScreen id="l1" />);
     await fireEvent.press(await screen.findByRole("button", { name: LISTING_MESSAGES.changeStatus }));
-    server.failWrites.push({ match: "/listings/l1", status: 500 });
+    server.failWrites.push({ match: "/listings/l1", status: 400 });
     await fireEvent.press(await screen.findByRole("radio", { name: "Archived" }));
     await screen.findByText("I couldn't save that. Want to try again?");
     expect(screen.getByLabelText("Status: Active")).toBeTruthy();
@@ -135,7 +135,8 @@ describe("a listing's own screen", () => {
 
   it.each([
     [403, "You have view-only access, so I can't delete this."],
-    [500, "I couldn't delete that listing. Want to try again?"],
+    [400, "I couldn't delete that listing. Want to try again?"],
+    [500, "I didn't get an answer, so I'm not sure that listing was deleted. Trying again is safe."],
   ])("says so in fixed words when deleting fails with %s, and stays", async (status, message) => {
     const server = startListingsServer();
     await show(<ListingDetailScreen id="l1" />);

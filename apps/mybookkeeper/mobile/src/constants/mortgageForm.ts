@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { documentReaderMessages } from "./documentReader";
 import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 
@@ -58,7 +59,7 @@ export const MORTGAGE_FORM_MESSAGES = {
   gone: "That mortgage is gone, so I can't save changes to it.",
   goneProperty: "That property is gone, so I can't add a loan to it.",
   viewOnly: "You have view-only access, so I can't save this.",
-  lostConnection: "I couldn't reach the server. Nothing was lost on this screen. Check your connection and try again.",
+  changeUnsure: unsureRepeatableMessage("the change saved"),
   createUnsure: "I couldn't reach the server, so I'm not sure this saved. Check your mortgages list before saving again, or it may be added twice.",
   invalid: "The server didn't accept some of those numbers. Check the figures and try again.",
   retry: "I couldn't save that. Want me to try again?",

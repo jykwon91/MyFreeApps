@@ -373,7 +373,7 @@ describe("deleting a cook", () => {
   });
 
   it("keeps the cook and says so when the delete fails, and can try again", async () => {
-    await show({ "GET /recipes/r1/cooks": () => reply(200, [OLDER]), "DELETE /recipes/r1/cooks/c1": () => reply(500) });
+    await show({ "GET /recipes/r1/cooks": () => reply(200, [OLDER]), "DELETE /recipes/r1/cooks/c1": () => reply(500, { detail: "Database unavailable" }) });
     await screen.findByTestId("cook-c1");
 
     await fireEvent.press(deleteButton());

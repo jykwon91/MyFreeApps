@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { BLACKOUT_ATTACHMENT_MIME_TYPES } from "@mybookkeeper/api-client/constants/blackoutAttachments";
 
 export const CALENDAR_ATTACHMENT_SKELETON_ROWS = ["a", "b"];
@@ -47,6 +48,7 @@ export const EVENT_MESSAGES = {
   removeBody: "It will be gone from this booking.",
   removed: "File removed.",
   removeFailed: "I couldn't remove that file. Want to try again?",
+  removeUnsure: unsureRepeatableMessage("that file was removed"),
   attachmentGone: "That file is already gone.",
   notAllowed: "You have view-only access.",
 } as const;

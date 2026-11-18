@@ -102,6 +102,17 @@ describe("AccountSection", () => {
     expect(onMessage).toHaveBeenCalledWith({ message: "That device was already signed out.", variant: "success" });
   });
 
+  it("says it isn't sure, as an error, when a lost answer couldn't be settled", async () => {
+    const { view, onMessage } = setUp({ signOutDevice: jest.fn().mockResolvedValue("unsure") });
+    await render(view);
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out Old Pixel" }));
+    await confirmAlert();
+    expect(onMessage).toHaveBeenCalledWith({
+      message: "I didn't get an answer, so I'm not sure Old Pixel was signed out. Trying again is safe.",
+      variant: "error",
+    });
+  });
+
   it("reports a failure", async () => {
     const { view, onMessage } = setUp({ signOutDevice: jest.fn().mockRejectedValue(new Error("offline")) });
     await render(view);
