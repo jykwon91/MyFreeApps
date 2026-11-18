@@ -1,21 +1,9 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { LoadingButton } from "@platform/ui";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
-import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-
-/**
- * Stages where generating a new lease makes sense:
- * - ``approved`` — landlord said yes, lease not yet sent
- * - ``lease_sent`` — lease sent but not yet counter-signed (may need a revision)
- *
- * Excluded stages:
- * - ``lease_signed`` — already has a fully executed lease
- * - ``lead`` / ``screening_*`` / ``video_call_done`` — too early in the funnel
- * - ``declined`` — no longer in consideration
- */
-const LEASE_ELIGIBLE_STAGES: ApplicantStage[] = ["approved", "lease_sent"];
+import { useLeaseApplicantPages } from "./useLeaseApplicantPages";
 
 export interface ApplicantPickerProps {
   selectedId: string | null;
@@ -23,26 +11,31 @@ export interface ApplicantPickerProps {
 }
 
 /**
- * Renders a pick-list of applicants eligible for lease generation.
- * Filters to ``approved`` and ``lease_sent`` stages; excludes ``lease_signed``.
+ * Renders a pick-list of applicants eligible for lease generation: ``approved`` and
+ * ``lease_sent`` stages, fetched by stage from the server and paged with "Load more".
  */
 export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPickerProps) {
-  const { data, error, isFetching, refetch } = useGetApplicantsQuery();
-  const allApplicants = data?.items ?? [];
-  const eligible = allApplicants.filter((a) =>
-    LEASE_ELIGIBLE_STAGES.includes(a.stage),
-  );
+  const pages = useLeaseApplicantPages();
+  const { applicants, hasNextPage, isLoading, isFetchingNextPage, loadMoreFailed, loadMore, retry } = pages;
 
   const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: eligible.length,
+    hasData: pages.hasData,
+    hasError: pages.hasError,
+    itemCount: applicants.length,
   });
 
-  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // Decided on `hasError`, not `isError`: RTK clears `isError` while Retry
   // refetches, which would flash "No applicants at the right stage" mid-retry.
-  const loadError = error ? (
-    <LoadErrorAlert message="I couldn't load your applicants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
+  const loadError = pages.hasError ? (
+    <LoadErrorAlert
+      message={
+        loadMoreFailed
+          ? "I couldn't load more applicants. Want me to try again?"
+          : "I couldn't load your applicants. Want me to try again?"
+      }
+      isRetrying={isLoading || isFetchingNextPage}
+      onRetry={retry}
+    />
   ) : null;
 
   switch (mode) {
@@ -70,7 +63,7 @@ export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPicke
           {/* Items from an earlier load stay usable; this says the latest one failed. */}
           {loadError}
           <ul className="space-y-2" data-testid="applicant-picker-list">
-            {eligible.map((a) => (
+            {applicants.map((a) => (
               <li key={a.id}>
                 <button
                   type="button"
@@ -93,6 +86,19 @@ export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPicke
               </li>
             ))}
           </ul>
+          {hasNextPage ? (
+            <div className="flex justify-center">
+              <LoadingButton
+                variant="secondary"
+                onClick={loadMore}
+                isLoading={isFetchingNextPage}
+                loadingText="Loading..."
+                data-testid="applicant-picker-load-more"
+              >
+                Load more
+              </LoadingButton>
+            </div>
+          ) : null}
         </div>
       );
   }

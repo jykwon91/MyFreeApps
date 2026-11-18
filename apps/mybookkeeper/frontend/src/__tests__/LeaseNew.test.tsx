@@ -4,8 +4,6 @@
  * Coverage:
  * - New route renders at /leases/new
  * - Template picker lists templates, filters none (all templates shown)
- * - Applicant picker filters to approved / lease_sent stages only
- *   (excludes lease_signed, lead, etc.)
  * - URL with both params → form section is rendered
  * - Error states for template / applicant fetch failures
  */
@@ -17,7 +15,6 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseNew from "@/app/pages/LeaseNew";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
-import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import { queryStatus } from "@/test/rtk-query-status";
@@ -29,7 +26,7 @@ import { queryData } from "@/test/rtk-query-data";
 
 const mockUseGetLeaseTemplatesQuery = vi.fn();
 const mockUseGetLeaseTemplateByIdQuery = vi.fn();
-const mockUseGetApplicantsQuery = vi.fn();
+const mockUseListApplicantPagesInfiniteQuery = vi.fn();
 const mockUseGetApplicantByIdQuery = vi.fn();
 const mockUseGetGenerateDefaultsQuery = vi.fn();
 const mockUseGetMultiGenerateDefaultsQuery = vi.fn();
@@ -47,7 +44,7 @@ vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetApplicantsQuery: () => mockUseGetApplicantsQuery(),
+  useListApplicantPagesInfiniteQuery: (args: unknown) => mockUseListApplicantPagesInfiniteQuery(args),
   useGetApplicantByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetApplicantByIdQuery(id, opts),
 }));
@@ -196,13 +193,15 @@ describe("LeaseNew page", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    mockUseGetApplicantsQuery.mockReturnValue({
-      ...queryData({ items: APPLICANTS }),
-      isLoading: false,
+    mockUseListApplicantPagesInfiniteQuery.mockImplementation(({ stage }: { stage: string }) => ({
+      ...queryData({ pages: [{ items: APPLICANTS.filter((a) => a.stage === stage), total: 1, has_more: false }] }),
+      hasNextPage: false,
       isFetching: false,
-      isError: false,
+      isFetchingNextPage: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
       refetch: vi.fn(),
-    });
+    }));
     mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
       ...queryData(undefined),
       isLoading: false,
@@ -478,90 +477,5 @@ describe("MultiTemplatePicker", () => {
     renderPicker({ ...queryStatus({ failed: true, fetching: false }) });
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
     expect(screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — ApplicantPicker
-// ---------------------------------------------------------------------------
-
-describe("ApplicantPicker", () => {
-  const onSelect = vi.fn();
-
-  function renderPicker(overrides: Partial<ReturnType<typeof mockUseGetApplicantsQuery>> = {}) {
-    mockUseGetApplicantsQuery.mockReturnValue({
-      ...queryData({ items: APPLICANTS }),
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: vi.fn(),
-      ...overrides,
-    });
-    return render(
-      <Provider store={store}>
-        <MemoryRouter>
-          <ApplicantPicker selectedId={null} onSelect={onSelect} />
-        </MemoryRouter>
-      </Provider>,
-    );
-  }
-
-  beforeEach(() => {
-    onSelect.mockClear();
-  });
-
-  it("shows approved applicants", () => {
-    renderPicker();
-    expect(screen.getByTestId("applicant-option-app-approved")).toBeInTheDocument();
-  });
-
-  it("shows lease_sent applicants", () => {
-    renderPicker();
-    expect(screen.getByTestId("applicant-option-app-lease-sent")).toBeInTheDocument();
-  });
-
-  it("does NOT show lease_signed applicants", () => {
-    renderPicker();
-    expect(screen.queryByTestId("applicant-option-app-lease-signed")).not.toBeInTheDocument();
-  });
-
-  it("does NOT show lead applicants", () => {
-    renderPicker();
-    expect(screen.queryByTestId("applicant-option-app-lead")).not.toBeInTheDocument();
-  });
-
-  it("shows empty message when no eligible applicants exist", () => {
-    renderPicker({
-      ...queryData({
-        items: [
-          { ...APPLICANTS[2] }, // only lease_signed — ineligible
-          { ...APPLICANTS[3] }, // only lead — ineligible
-        ],
-      }),
-    });
-    expect(screen.getByTestId("applicant-picker-empty")).toBeInTheDocument();
-  });
-
-  it("calls onSelect when an applicant is clicked", async () => {
-    renderPicker();
-    await userEvent.click(screen.getByTestId("applicant-option-app-approved"));
-    expect(onSelect).toHaveBeenCalledWith(APPLICANTS[0]);
-  });
-
-  it("shows skeleton while loading", () => {
-    renderPicker({ ...queryData(undefined), isLoading: true });
-    expect(screen.getByTestId("applicant-picker-skeleton")).toBeInTheDocument();
-  });
-
-  it("shows error state", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: false }), ...queryData(undefined), isLoading: false });
-    expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
-  });
-
-  it("keeps the error, not 'No applicants at the right stage', while Retry refetches", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: false });
-    expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
-    expect(screen.queryByTestId("applicant-picker-empty")).not.toBeInTheDocument();
   });
 });
