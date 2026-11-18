@@ -5,9 +5,10 @@ import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgM
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, type RenderResult, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { Alert, Text } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, Text } from "react-native";
 import { Provider, useSelector } from "react-redux";
 import { ALREADY_MEMBER_DETAIL, MEMBERS_MESSAGES as MESSAGES, NOT_A_MEMBER_DETAIL } from "../src/constants/members";
 import { inviteStatusLine, memberFirstName, memberName } from "../src/features/members/membersDisplay";
@@ -132,8 +133,8 @@ function serve(partial: Partial<Server> = {}): Server {
   return server;
 }
 
-async function show(workspace: OrgWithRole = ACME): Promise<void> {
-  await render(
+async function show(workspace: OrgWithRole = ACME): Promise<RenderResult> {
+  return render(
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
         <MembersScreen workspace={workspace} />
@@ -722,5 +723,102 @@ describe("losing access", () => {
     server.refuse[`GET /organizations/${ORG}/members`] = { status: 403, detail: NOT_A_MEMBER_DETAIL };
     await show();
     await waitFor(() => expect(calledWith(server, "GET").filter((url) => url === "/organizations").length).toBeGreaterThan(0));
+  });
+});
+
+describe("a write that is cancelled or outlives the screen", () => {
+  const ROLE = `PATCH /organizations/${ORG}/members/u2/role`;
+  const REMOVE = `DELETE /organizations/${ORG}/members/u2`;
+  const membersGets = (server: Server): number => calledWith(server, "GET").filter((url) => url === `/organizations/${ORG}/members`).length;
+
+  async function openSam(): Promise<void> {
+    await screen.findByText(MESSAGES.people(2));
+    await fireEvent.press(screen.getByTestId("member-u2"));
+  }
+
+  /** The Members screen with a way to leave it while the toasts, which live above every screen, stay. */
+  function Host() {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <Pressable onPress={() => setOpen(false)}><Text>leave</Text></Pressable>
+        {open ? <MembersScreen workspace={ACME} /> : null}
+      </>
+    );
+  }
+
+  async function startRoleChange(server: Server): Promise<void> {
+    server.hanging = ROLE;
+    await openSam();
+    await press("Viewer");
+    await screen.findByText(MESSAGES.saving);
+  }
+
+  async function startRemoval(server: Server): Promise<void> {
+    server.hanging = REMOVE;
+    await openSam();
+    await press(MESSAGES.removeFrom("Acme"));
+    await pressAlertButton(MESSAGES.removeConfirm("Sam"));
+    await screen.findByText(MESSAGES.removing);
+  }
+
+  it.each([
+    ["a role change", ROLE, startRoleChange],
+    ["a removal", REMOVE, startRemoval],
+  ])("still looks again and says so when the screen closes during %s that then fails", async (_name, key, start) => {
+    const server = serve();
+    server.refuse[key] = { status: 500 };
+    const view = await render(
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <Host />
+        </ToastProvider>
+      </Provider>,
+    );
+    await start(server);
+    const before = membersGets(server);
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("leave"));
+    });
+    expect(screen.queryByTestId("member-u2")).toBeNull();
+    await act(async () => server.release?.());
+
+    expect(await screen.findByText(MESSAGES.didntGoThrough)).toBeTruthy();
+    expect(membersGets(server)).toBe(before + 1);
+    view.unmount();
+  });
+
+  it.each([
+    ["a role change", ROLE, startRoleChange],
+    ["a removal", REMOVE, startRemoval],
+  ])("says nothing when the cache is reset during %s", async (_name, _key, start) => {
+    const server = serve();
+    await show();
+    await start(server);
+
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    // The open screen reloads its own list after a reset; the write itself must add nothing.
+    const before = membersGets(server);
+    await act(async () => server.release?.());
+
+    expect(screen.queryByText(MESSAGES.unsure)).toBeNull();
+    expect(screen.queryByText(MESSAGES.didntGoThrough)).toBeNull();
+    expect(screen.queryByText(MESSAGES.roleChanged("Sam Lee", "a viewer"))).toBeNull();
+    expect(screen.queryByText(MESSAGES.removed("Sam Lee"))).toBeNull();
+    expect(membersGets(server)).toBe(before);
+  });
+
+  it("still looks again and says so when the answer is lost and the screen is open", async () => {
+    const server = serve();
+    server.refuse[ROLE] = { status: 500 };
+    await show();
+    await openSam();
+    const before = membersGets(server);
+    await press("Viewer");
+    expect(await screen.findByText(MESSAGES.didntGoThrough)).toBeTruthy();
+    expect(membersGets(server)).toBe(before + 1);
   });
 });
