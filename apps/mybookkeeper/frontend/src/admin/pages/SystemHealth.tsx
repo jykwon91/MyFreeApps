@@ -16,7 +16,6 @@ import StatsGrid from "@/admin/features/health/StatsGrid";
 import EventsSection from "@/admin/features/health/EventsSection";
 import type { HealthSummary } from "@/shared/types/health/health-summary";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
 
 type SeverityFilter = "all" | "info" | "warning" | "error" | "critical";
 type TypeFilter = string;
@@ -44,7 +43,7 @@ export default function SystemHealth() {
     pollingInterval: 30000,
     skipPollingIfUnfocused: true,
   });
-  const eventsData = currentListData(eventsQuery, false);
+  const eventsData = eventsQuery.currentData;
   const events = eventsData ?? [];
   const eventsMode = resolveListLoadMode({
     hasData: eventsData !== undefined,

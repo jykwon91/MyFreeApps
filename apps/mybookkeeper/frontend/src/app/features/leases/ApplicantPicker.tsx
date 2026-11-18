@@ -16,7 +16,7 @@ export interface ApplicantPickerProps {
  */
 export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPickerProps) {
   const pages = useLeaseApplicantPages();
-  const { applicants, hasNextPage, isLoading, isFetchingNextPage, loadMoreFailed, loadMore, retry } = pages;
+  const { applicants, hasNextPage, isFetching, isFetchingNextPage, loadMoreFailed, loadMore, retry } = pages;
 
   const mode = resolveListLoadMode({
     hasData: pages.hasData,
@@ -33,7 +33,7 @@ export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPicke
           ? "I couldn't load more applicants. Want me to try again?"
           : "I couldn't load your applicants. Want me to try again?"
       }
-      isRetrying={isLoading || isFetchingNextPage}
+      isRetrying={isFetching}
       onRetry={retry}
     />
   ) : null;

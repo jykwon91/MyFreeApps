@@ -7,7 +7,7 @@ export interface ApplicantsListProps {
   applicants: readonly ApplicantSummary[];
   showStageBadge: boolean;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
 }
 
@@ -15,7 +15,7 @@ export default function ApplicantsList({
   applicants,
   showStageBadge,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
 }: ApplicantsListProps) {
   return (
@@ -57,7 +57,7 @@ export default function ApplicantsList({
           <LoadingButton
             variant="secondary"
             onClick={onLoadMore}
-            isLoading={isFetching}
+            isLoading={isLoadingMore}
             loadingText="Loading..."
           >
             Load more

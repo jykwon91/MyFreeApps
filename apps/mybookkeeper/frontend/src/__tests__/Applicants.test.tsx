@@ -47,23 +47,25 @@ const mockEnvelope: ApplicantListResponse = {
 };
 
 const defaultApplicantsState = {
-  ...queryData(mockEnvelope),
+  ...infiniteQueryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isError: false,
   refetch: vi.fn(),
 };
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetApplicantsQuery: vi.fn(() => defaultApplicantsState),
+  useListApplicantPagesInfiniteQuery: vi.fn(() => defaultApplicantsState),
   useGetApplicantByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 
-import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
-type ListQueryReturn = ReturnType<typeof useGetApplicantsQuery>;
+type ListQueryReturn = ReturnType<typeof useListApplicantPagesInfiniteQuery>;
 
 function renderApplicants(initialEntry = "/applicants") {
   return render(
@@ -77,7 +79,7 @@ function renderApplicants(initialEntry = "/applicants") {
 
 describe("Applicants page", () => {
   beforeEach(() => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValue(
+    vi.mocked(useListApplicantPagesInfiniteQuery).mockReturnValue(
       defaultApplicantsState as unknown as ListQueryReturn,
     );
   });
@@ -90,9 +92,9 @@ describe("Applicants page", () => {
   });
 
   it("renders the loading skeleton while fetching", () => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
+    vi.mocked(useListApplicantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       isLoading: true,
     } as unknown as ListQueryReturn);
     renderApplicants();
@@ -100,27 +102,27 @@ describe("Applicants page", () => {
   });
 
   it("renders the empty state when there are no applicants", () => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
+    vi.mocked(useListApplicantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderApplicants();
     expect(screen.getByText(/No applicants yet/i)).toBeInTheDocument();
   });
 
   it("renders the filtered empty state when a stage filter has no matches", () => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
+    vi.mocked(useListApplicantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderApplicants("/applicants?stage=approved");
     expect(screen.getByText(/No applicants in this stage/i)).toBeInTheDocument();
   });
 
   it("renders an error AlertBox when the query errors", () => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
+    vi.mocked(useListApplicantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderApplicants();

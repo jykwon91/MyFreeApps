@@ -1,40 +1,17 @@
 import { useMemo, useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { useTenantsPages } from "@mybookkeeper/api-client/hooks/useTenantsPages";
 import { localToday } from "@platform/core/utils/localToday";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
-import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 
 export default function Tenants() {
   const [includeEnded, setIncludeEnded] = useState(false);
-  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([includeEnded]));
 
-  const queryArgs = useMemo(
-    () => ({
-      include_ended: includeEnded,
-      today: localToday(),
-      limit: APPLICANT_PAGE_SIZE * pageCount,
-      offset: 0,
-    }),
-    [includeEnded, pageCount],
-  );
-
-  const query = useGetTenantsQuery(queryArgs);
-  const { isFetching, error, refetch } = query;
-  const data = currentListData(query, pageCount > 1);
-
-  const tenants = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
-
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: tenants.length,
-  });
+  const queryArgs = useMemo(() => ({ include_ended: includeEnded, today: localToday() }), [includeEnded]);
+  const pages = useTenantsPages(queryArgs);
+  const { mode, rows } = pagedListView(pages, pages.tenants);
 
   function handleToggleEnded() {
     setIncludeEnded((prev) => !prev);
@@ -60,17 +37,15 @@ export default function Tenants() {
         </label>
       </div>
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your tenants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="tenants" />
 
       <TenantsListBody
         mode={mode}
-        tenants={tenants}
+        tenants={rows}
         includeEnded={includeEnded}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={loadMore}
+        hasMore={pages.hasNextPage}
+        isLoadingMore={pages.isFetchingNextPage}
+        onLoadMore={pages.loadMore}
       />
     </div>
   );

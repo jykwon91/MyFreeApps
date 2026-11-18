@@ -37,7 +37,7 @@ export function useLeaseApplicantPages(): LeaseApplicantPages {
     applicants,
     hasData: stages.every((s) => s.hasData),
     hasError: stages.some((s) => s.error !== undefined),
-    isLoading: stages.some((s) => s.isLoading),
+    isFetching: stages.some((s) => s.isFetching),
     hasNextPage: stages.some((s) => s.hasNextPage),
     isFetchingNextPage: stages.some((s) => s.isFetchingNextPage),
     loadMoreFailed,

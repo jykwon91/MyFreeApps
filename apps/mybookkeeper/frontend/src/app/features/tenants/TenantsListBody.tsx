@@ -8,10 +8,10 @@ import TenantRow from "./TenantRow";
 
 export interface TenantsListBodyProps {
   mode: ListLoadMode;
-  tenants: ApplicantSummary[];
+  tenants: readonly ApplicantSummary[];
   includeEnded: boolean;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
 }
 
@@ -20,7 +20,7 @@ export default function TenantsListBody({
   tenants,
   includeEnded,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
 }: TenantsListBodyProps) {
   switch (mode) {
@@ -78,7 +78,7 @@ export default function TenantsListBody({
               <LoadingButton
                 variant="secondary"
                 onClick={onLoadMore}
-                isLoading={isFetching}
+                isLoading={isLoadingMore}
                 loadingText="Loading..."
               >
                 Load more

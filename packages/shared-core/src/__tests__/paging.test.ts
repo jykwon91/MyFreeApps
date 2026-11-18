@@ -78,6 +78,7 @@ describe("describeInfinitePages", () => {
       loadError: undefined,
       error: undefined,
       hasNextPage: false,
+      isFetching: true,
       isFetchingNextPage: false,
       isLoadMoreError: false,
     });
@@ -116,5 +117,11 @@ describe("describeInfinitePages", () => {
     const patched = held(page(["a"], 1));
     const state = describeInfinitePages(query({ data: stale, currentData: patched, isError: true, error: new Error("down") }), []);
     expect(state.total).toBe(1);
+  });
+
+  it("says a request is in flight while a shown list refreshes, and not once it settles", () => {
+    const current = held(page(["a"], 1));
+    expect(describeInfinitePages(query({ data: current, currentData: current, isFetching: true }), []).isFetching).toBe(true);
+    expect(describeInfinitePages(query({ data: current, currentData: current }), []).isFetching).toBe(false);
   });
 });

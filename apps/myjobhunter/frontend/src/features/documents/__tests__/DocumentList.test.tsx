@@ -121,6 +121,7 @@ function pagesState(overrides: Partial<DocumentsPagesState> = {}): DocumentsPage
     loadError: undefined,
     error: undefined,
     hasNextPage: false,
+    isFetching: false,
     isFetchingNextPage: false,
     isLoadMoreError: false,
     loadMore: vi.fn(),

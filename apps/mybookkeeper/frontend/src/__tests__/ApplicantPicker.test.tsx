@@ -204,4 +204,14 @@ describe("ApplicantPicker", () => {
     expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
     expect(screen.queryByTestId("applicant-picker-empty")).not.toBeInTheDocument();
   });
+
+  it("shows Retry as busy while a failed refresh of the shown applicants is retried", () => {
+    showStages({
+      approved: stageQuery({ pages: [[APPROVED_1]], failed: true, fetching: true }),
+      lease_sent: stageQuery({ pages: [[LEASE_SENT_1]] }),
+    });
+    render(<Picker onSelect={vi.fn()} />);
+    expect(screen.getByTestId("applicant-option-app-approved")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+  });
 });
