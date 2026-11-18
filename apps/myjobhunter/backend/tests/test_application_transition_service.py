@@ -17,9 +17,11 @@ import datetime as _dt
 import uuid
 
 import pytest
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.core.enums import EventType
+from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.services.application.application_transition_service import (
     TransitionNotAllowedError,
@@ -178,24 +180,45 @@ class TestIdempotency:
 
     @pytest.mark.asyncio
     async def test_same_key_sent_twice_at_once_writes_one_event(
-        self, db: AsyncSession, user_factory, as_user,
+        self, db: AsyncSession, db_engine: AsyncEngine, user_factory, as_user,
     ) -> None:
-        """A retry of a move whose answer was lost can arrive while the first is still running."""
+        """A retry of a move whose answer was lost can arrive while the first is still running.
+
+        Each move runs in its own session and connection, as two real requests
+        do; the application's row lock makes the second wait for the first's
+        commit and then find its event. The sessions commit for real, and the
+        ``db`` fixture empties every table afterwards.
+        """
         user = await user_factory()
-        company = await _create_company(db, uuid.UUID(user["id"]), "Acme")
-
+        user_id = uuid.UUID(user["id"])
+        company = await _create_company(db, user_id, "Acme")
         async with await as_user(user) as authed:
-            app_id = await _create_application(authed, company.id)
-            body = {"target_column": "interviewing", "idempotency_key": uuid.uuid4().hex}
+            app_id = uuid.UUID(await _create_application(authed, company.id))
+        key = uuid.uuid4().hex
+        sessions = async_sessionmaker(db_engine, expire_on_commit=False)
 
-            first, second = await asyncio.gather(
-                authed.post(f"/applications/{app_id}/transitions", json=body),
-                authed.post(f"/applications/{app_id}/transitions", json=body),
-            )
+        async def move() -> uuid.UUID:
+            async with sessions() as session:
+                event = await transition_application(
+                    session,
+                    application_id=app_id,
+                    target_column="interviewing",
+                    user_id=user_id,
+                    idempotency_key=key,
+                )
+                assert event is not None
+                return event.id
 
-        assert first.status_code == 201
-        assert second.status_code == 201
-        assert first.json()["id"] == second.json()["id"]
+        first, second = await asyncio.gather(move(), move())
+
+        assert first == second
+        written = await db.execute(
+            select(func.count()).select_from(ApplicationEvent).where(
+                ApplicationEvent.application_id == app_id,
+                ApplicationEvent.event_type == EventType.INTERVIEW_SCHEDULED,
+            ),
+        )
+        assert written.scalar_one() == 1
 
     @pytest.mark.asyncio
     async def test_different_idempotency_keys_create_separate_events(
