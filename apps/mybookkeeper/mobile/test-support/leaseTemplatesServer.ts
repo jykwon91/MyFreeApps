@@ -19,6 +19,8 @@ export interface LeaseTemplatesServer {
   uploadGate: Promise<void> | null;
   suggestGate: Promise<void> | null;
   listReads: number;
+  /** A list read starting at or after this offset fails with a server error. */
+  failListFromOffset: number | null;
 }
 
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -70,6 +72,7 @@ export function startLeaseTemplatesServer(templates: LeaseTemplateDetail[] = [aS
     loseNextAnswer: false,
     suggestions: { suggestions: [], truncated: false, pages_note: null },
     listReads: 0,
+    failListFromOffset: null,
     uploadGate: null,
     suggestGate: null,
   };
@@ -85,7 +88,11 @@ export function startLeaseTemplatesServer(templates: LeaseTemplateDetail[] = [aS
     if (method === "get") {
       if (url === "/lease-templates") {
         server.listReads += 1;
-        return respond({ items: server.templates.map(summaryOf), total: server.templates.length, has_more: false });
+        const params = (config.params ?? {}) as { limit?: number; offset?: number };
+        const offset = Number(params.offset ?? 0);
+        if (server.failListFromOffset !== null && offset >= server.failListFromOffset) return respond({ detail: "nope" }, 500);
+        const limit = Number(params.limit ?? server.templates.length);
+        return respond({ items: server.templates.slice(offset, offset + limit).map(summaryOf), total: server.templates.length, has_more: offset + limit < server.templates.length });
       }
       const found = server.templates.find((template) => url === `/lease-templates/${template.id}`);
       return found ? respond(found) : respond({ detail: "Not found" }, 404);

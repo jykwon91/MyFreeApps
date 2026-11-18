@@ -10,6 +10,7 @@ export const LEASE_TEMPLATE_FILE_KINDS: Readonly<Record<string, string>> = {
 
 export const LEASE_TEMPLATE_MESSAGES = {
   loadingList: "Loading your lease templates",
+  loadingMore: "Loading more templates",
   loadingOne: "Loading this template",
   couldntLoadList: "I couldn't load your lease templates.",
   couldntLoadOne: "I couldn't load this template.",

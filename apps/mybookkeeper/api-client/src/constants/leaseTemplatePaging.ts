@@ -1,0 +1,1 @@
+export const LEASE_TEMPLATE_PAGE_SIZE = 25;
