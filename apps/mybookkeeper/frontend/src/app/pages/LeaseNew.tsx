@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { useLeaseTemplatePages } from "@/app/features/leases/useLeaseTemplatePages";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
@@ -59,16 +59,14 @@ export default function LeaseNew() {
 
   const resolvedApplicantId = pickedApplicantId ?? urlApplicantId;
 
-  // Fetch all templates once (lightweight) so we can map IDs → labels for the
-  // generate form's "Used by" hint.
-  const { data: templatesData } = useGetLeaseTemplatesQuery();
+  // The templates the picker has loaded so far (same cache entry), so every picked one has its name.
+  const { templates: loadedTemplates } = useLeaseTemplatePages();
   const templateById = useMemo(() => {
-    const items = templatesData?.items ?? [];
-    return items.reduce<Record<string, LeaseTemplateSummary>>((acc, t) => {
+    return loadedTemplates.reduce<Record<string, LeaseTemplateSummary>>((acc, t) => {
       acc[t.id] = t;
       return acc;
     }, {});
-  }, [templatesData]);
+  }, [loadedTemplates]);
 
   const templateLabels = useMemo<Record<string, string>>(() => {
     return selectedTemplateIds.reduce<Record<string, string>>((acc, id) => {

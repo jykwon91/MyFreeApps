@@ -2,24 +2,24 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
+import { useLeaseTemplatePages } from "@/app/features/leases/useLeaseTemplatePages";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { data, isFetching, error, refetch } =
-    useGetLeaseTemplatesQuery();
+  const { templates, hasData, loadError, isFetching, hasMore, isLoadingMore, loadMoreFailed, loadMore, reload } =
+    useLeaseTemplatePages();
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const templates = data?.items ?? [];
   const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
+    hasData,
+    hasError: loadError !== undefined,
     itemCount: templates.length,
   });
 
@@ -43,11 +43,21 @@ export default function LeaseTemplates() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
+      {loadError ? (
+        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => void reload()} />
       ) : null}
 
       <LeaseTemplatesListBody mode={mode} templates={templates} />
+
+      {mode === "list" ? (
+        <LoadMoreFooter
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          loadMoreFailed={loadMoreFailed}
+          failureMessage="I couldn't load more templates. Want me to try again?"
+          onLoadMore={() => void loadMore()}
+        />
+      ) : null}
 
       <LeaseTemplateUploadDialog
         open={uploadOpen}

@@ -36,7 +36,17 @@ const mockUseCanWrite = vi.fn();
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetGenerateDefaultsQuery(args, opts),
-  useGetLeaseTemplatesQuery: () => mockUseGetLeaseTemplatesQuery(),
+  // The paged hook over the same fixture: one page holding everything the test sets up.
+  useListLeaseTemplatePagesInfiniteQuery: () => {
+    const result = mockUseGetLeaseTemplatesQuery();
+    return {
+      ...result,
+      data: result.data && { pages: [result.data] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    };
+  },
   useGetLeaseTemplateByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetLeaseTemplateByIdQuery(id, opts),
   useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>

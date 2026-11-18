@@ -1,7 +1,8 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
+import { useLeaseTemplatePages } from "./useLeaseTemplatePages";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 
 export interface MultiTemplatePickerProps {
@@ -22,10 +23,10 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { data, error, isFetching, refetch } = useGetLeaseTemplatesQuery();
-  const templates = data?.items ?? [];
+  const { templates, hasData, loadError: error, isFetching, hasMore, isLoadingMore, loadMoreFailed, loadMore, reload } =
+    useLeaseTemplatePages();
   const mode = resolveListLoadMode({
-    hasData: data !== undefined,
+    hasData,
     hasError: error !== undefined,
     itemCount: templates.length,
   });
@@ -33,7 +34,7 @@ export default function MultiTemplatePicker({
   // Decided on `error`, not `isError`: RTK clears `isError` while Retry
   // refetches, which would flash "No templates yet" mid-retry.
   const loadError = error ? (
-    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
+    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => void reload()} />
   ) : null;
 
   switch (mode) {
@@ -116,6 +117,13 @@ export default function MultiTemplatePicker({
               );
             })}
           </ul>
+          <LoadMoreFooter
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            loadMoreFailed={loadMoreFailed}
+            failureMessage="I couldn't load more templates. Want me to try again?"
+            onLoadMore={() => void loadMore()}
+          />
         </div>
       );
   }
