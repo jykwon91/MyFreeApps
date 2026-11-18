@@ -151,7 +151,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                   onClick={() => onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 border-b">
+                    <td key={cell.id} className={cn("border-b", cell.column.id === "select" ? "p-0" : "px-4 py-3")}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

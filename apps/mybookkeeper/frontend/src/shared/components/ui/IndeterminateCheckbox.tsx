@@ -6,9 +6,10 @@ export interface IndeterminateCheckboxProps {
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   onClick?: React.MouseEventHandler<HTMLInputElement>;
   "aria-label"?: string;
+  className?: string;
 }
 
-export default function IndeterminateCheckbox({ checked, indeterminate, onChange, onClick, "aria-label": ariaLabel }: IndeterminateCheckboxProps) {
+export default function IndeterminateCheckbox({ checked, indeterminate, onChange, onClick, "aria-label": ariaLabel, className = "cursor-pointer" }: IndeterminateCheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = !!indeterminate;
@@ -20,7 +21,7 @@ export default function IndeterminateCheckbox({ checked, indeterminate, onChange
       checked={checked}
       onChange={onChange ?? (() => {})}
       onClick={onClick}
-      className="cursor-pointer"
+      className={className}
       aria-label={ariaLabel}
     />
   );

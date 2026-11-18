@@ -15,6 +15,7 @@ import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
+import TransactionRowCheckbox from "@/app/features/transactions/TransactionRowCheckbox";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
 
 interface ColumnActions {
@@ -25,13 +26,14 @@ interface ColumnActions {
   canWrite?: boolean;
   /** The header checkbox ticks every row the filters match, on every page, which the server is asked for. */
   selectAll: SelectAllControl;
+  onToggleRow: (id: string, extendRange: boolean) => void;
 }
 
 const columnHelper = createColumnHelper<AppTableFeatures, Transaction>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<AppTableFeatures, Transaction, any>[] {
-  const { onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll } = actions;
+  const { onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll, onToggleRow } = actions;
 
   return useMemo(() => [
     columnHelper.display({
@@ -41,20 +43,22 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         selectAll.isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" role="status" aria-label={SELECTING_ALL_LABEL} />
         ) : (
-          <IndeterminateCheckbox
-            checked={selectAll.checked}
-            indeterminate={selectAll.indeterminate}
-            onChange={selectAll.onToggle}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select all transactions"
-          />
+          <label className="flex min-h-[44px] cursor-pointer items-center">
+            <IndeterminateCheckbox
+              checked={selectAll.checked}
+              className="h-5 w-5 cursor-pointer"
+              indeterminate={selectAll.indeterminate}
+              onChange={selectAll.onToggle}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Select all transactions"
+            />
+          </label>
         ),
       cell: ({ row }) => (
-        <IndeterminateCheckbox
+        <TransactionRowCheckbox
           checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Select ${row.original.vendor ?? "transaction"}`}
+          label={`Select ${row.original.vendor ?? "transaction"}`}
+          onToggle={(extendRange) => onToggleRow(row.original.id, extendRange)}
         />
       ),
     }),
@@ -167,5 +171,5 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         );
       },
     }),
-  ], [propertyMap, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll]);
+  ], [propertyMap, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll, onToggleRow]);
 }

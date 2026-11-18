@@ -1,6 +1,6 @@
 import { CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
-import { CHECKING_SELECTION_LABEL } from "@/shared/lib/transaction-list-messages";
+import { CHECKING_SELECTION_LABEL, RANGE_SELECT_HINT } from "@/shared/lib/transaction-list-messages";
 
 export interface TransactionBulkBarProps {
   selectedCount: number;
@@ -51,8 +51,9 @@ export default function TransactionBulkBar({ selectedCount, hasApprovable, isApp
         <Trash2 size={14} className="mr-1.5" />
         Delete
       </LoadingButton>
+      <span className="ml-auto hidden text-xs text-muted-foreground lg:inline">{RANGE_SELECT_HINT}</span>
       <button
-        className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+        className="ml-auto text-xs lg:ml-0 text-muted-foreground hover:text-foreground"
         onClick={onClearSelection}
         disabled={busy}
       >

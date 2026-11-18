@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { functionalUpdate, type RowSelectionState, type Updater } from "@tanstack/react-table";
 import { useLazyListTransactionSelectionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -6,6 +6,7 @@ import type { TransactionListParams } from "@mybookkeeper/api-client/types/trans
 import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import { useToast } from "@/shared/hooks/useToast";
+import { idsBetween } from "@/shared/utils/rowRange";
 import { SELECT_ALL_FAILED, SELECTION_CHECK_FAILED } from "@/shared/lib/transaction-list-messages";
 import { refsById, toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
 import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/transactionTicks";
@@ -97,6 +98,26 @@ export function useTransactionSelection(
     [pageRefs, rows.isCurrent, checkKey],
   );
 
+  const rangeAnchor = useRef<string | null>(null);
+
+  const toggleRow = useCallback(
+    (id: string, extendRange: boolean) => {
+      const anchor = extendRange ? rangeAnchor.current : null;
+      const ids = anchor ? idsBetween(pageRows.map((row) => row.id), anchor, id) : [id];
+      rangeAnchor.current = id;
+      onRowSelectionChange((current) => {
+        const next = { ...current };
+        const tick = !current[id];
+        for (const rowId of ids) {
+          if (tick) next[rowId] = true;
+          else delete next[rowId];
+        }
+        return next;
+      });
+    },
+    [pageRows, onRowSelectionChange],
+  );
+
   const remove = useCallback((ids: readonly string[]) => setTicks((current) => removeTicks(current, ids)), []);
 
   const clear = useCallback(() => setTicks(NO_TICKS), []);
@@ -132,5 +153,5 @@ export function useTransactionSelection(
     [checked, indeterminate, isSelectingAll, onToggle],
   );
 
-  return { rowSelection, onRowSelectionChange, selectedRefs, isChecking, selectAll, clear, remove };
+  return { rowSelection, onRowSelectionChange, toggleRow, selectedRefs, isChecking, selectAll, clear, remove };
 }

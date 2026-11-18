@@ -103,6 +103,7 @@ export default function Transactions() {
     duplicateIds: duplicateIdSet,
     canWrite,
     selectAll: selection.selectAll,
+    onToggleRow: selection.toggleRow,
   });
 
   const filterOptions = useMemo(() => transactionFilterOptions(categories, properties), [categories, properties]);
