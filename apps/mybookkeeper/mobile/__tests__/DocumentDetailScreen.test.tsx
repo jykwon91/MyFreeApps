@@ -140,10 +140,34 @@ describe("DocumentDetailScreen", () => {
     expect(mockDelete).toHaveBeenCalled();
   });
 
-  it("explains an email with no saved file", async () => {
+  it("explains an email with no saved file, with no link to the website", async () => {
     startFakeServer([aDocument({ source: "email", file_mime_type: null })]);
     await renderDetail();
     expect(screen.getByText(/The original email isn't saved/)).toBeTruthy();
+    expect(screen.queryByText("Open on the website")).toBeNull();
+  });
+
+  it.each([
+    ["Word", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "d1.docx"],
+    ["Excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "d1.xlsx"],
+    ["CSV", "text/csv; charset=utf-8", "d1.csv"],
+    ["text", "text/plain", "d1.txt"],
+  ])("opens a %s file through the share sheet, then removes the copy", async (_label, mimeType, copyName) => {
+    startFakeServer([aDocument({ file_name: "../../evil", file_mime_type: mimeType })]);
+    await renderDetail();
+    await fireEvent.press(screen.getByRole("button", { name: "Open file" }));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(`file:///cache/${copyName}`));
+    expect(mockShare.mock.calls[0][0]).toBe(`file:///cache/${copyName}`);
+    expect(mockShare.mock.calls[0][1].mimeType).toBe(mimeType);
+  });
+
+  it("says so when a Word file can't be downloaded, and still removes the copy", async () => {
+    mockDownload.mockRejectedValue(new Error("network down"));
+    startFakeServer([aDocument({ file_mime_type: "application/msword" })]);
+    await renderDetail();
+    await fireEvent.press(screen.getByRole("button", { name: "Open file" }));
+    expect(await screen.findByText(/couldn't/i)).toBeTruthy();
+    expect(mockShare).not.toHaveBeenCalled();
   });
 
   it("deletes only after confirming, then goes back", async () => {

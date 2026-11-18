@@ -1,6 +1,7 @@
 import { clearDownloadCopies, shareDownloadedFile, type ShareDownloadOptions } from "@platform/mobile";
 import { Directory, File, Paths } from "expo-file-system";
 import { DOCUMENT_FILES_DIRECTORY } from "../../constants/documentFiles";
+import { DOCUMENT_FILE_TYPES } from "../../constants/documentFileTypes";
 
 const PDF_MIME_TYPE = "application/pdf";
 const PDF_UTI = "com.adobe.pdf";
@@ -12,15 +13,18 @@ function documentFiles(): Directory {
 }
 
 /**
- * Downloads a PDF to a file named by id, never by the document's own name, opens the
- * system's viewer, and removes the copy afterwards: it's someone's financial record.
+ * Downloads a document to a file named by id, never by the document's own name, with an
+ * extension from its content type so Files, Word or Excel know what it is. Opens the share
+ * sheet, then removes the copy: it's someone's financial record.
  */
 export async function openDocumentFile(
   url: string,
   documentId: string,
+  mimeType: string,
   headers: Record<string, string>,
 ): Promise<void> {
-  await openCopy(url, `${documentId}.pdf`, { headers, share: { mimeType: PDF_MIME_TYPE, UTI: PDF_UTI } });
+  const type = DOCUMENT_FILE_TYPES[mimeType.split(";")[0].trim().toLowerCase()];
+  await openCopy(url, `${documentId}${type?.extension ?? ""}`, { headers, share: { mimeType, UTI: type?.UTI } });
 }
 
 /** The same for a file on a signed link, which needs no sign-in. The extension tells the viewer what it is. */
