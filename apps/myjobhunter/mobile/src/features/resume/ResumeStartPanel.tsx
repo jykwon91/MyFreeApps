@@ -14,6 +14,7 @@ import ResumeStartSkeleton from "./ResumeStartSkeleton";
 import ResumeUnsentCard from "./ResumeUnsentCard";
 import ResumeUploadStatusRow from "./ResumeUploadStatusRow";
 import { useResumeUpload } from "./useResumeUpload";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Picks which parsed upload to refine and starts a session on it, with the website Profile's
@@ -78,6 +79,7 @@ export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
       const session = await startSession({ source_resume_job_id: selected }).unwrap();
       onStarted(session.id);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(refinementFailure(error, MESSAGES.couldntStart), "error");
     }
   }

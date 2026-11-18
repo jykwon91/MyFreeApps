@@ -9,6 +9,7 @@ import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { askOnce } from "../../lib/askOnce";
 import { leaseEmailsOnGenerate } from "./leaseDisplay";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDetail }) {
   const { showToast } = useToast();
@@ -21,6 +22,7 @@ export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDeta
       await generate(lease.id).unwrap();
       showToast(MESSAGES.madeFiles);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       if (isLeaseDocumentsLockedFailure(error)) {
         showToast(LEASE_DOCUMENTS_LOCKED_MESSAGE, "error");
         void refetch();

@@ -217,8 +217,9 @@ export function useAddApplicationFlow() {
   }
 
   /** Saving's failures are toasted, as on the website, where the button that was pressed is. */
-  function saveFailed(message: string): void {
-    showToast(message, "error");
+  /** Null is a save a cache reset called off, which has nobody left to tell. */
+  function saveFailed(message: string | null): void {
+    if (message) showToast(message, "error");
   }
 
   async function save(): Promise<void> {

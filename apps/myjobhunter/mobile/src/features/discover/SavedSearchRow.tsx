@@ -19,6 +19,7 @@ import { Alert, Text, View } from "react-native";
 import { REFRESH_FREQUENCY_OPTIONS } from "../../constants/refreshFrequency";
 import { SAVED_SEARCH_MESSAGES as MESSAGES } from "../../constants/savedSearches";
 import type { SavedSearchRowProps } from "../../types/SavedSearchRowProps";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** A saved search as the website lists it: its name and query, schedule and last error, with Refresh, Edit and Remove. */
 export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSearchRowProps) {
@@ -39,6 +40,7 @@ export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSea
       showToast(message, isError ? "error" : "success");
       if (addedPostings) onRefreshed(source.id);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(describeRefreshError(error), "error");
     }
   }
@@ -49,6 +51,7 @@ export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSea
       await updateSource({ sourceId: source.id, patch: { fetch_interval_minutes: minutes } }).unwrap();
       showToast(ACTIONS.frequencyUpdated);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(discoverFailureMessage(error, ACTIONS.frequencyFailed), "error");
     }
   }
@@ -58,6 +61,7 @@ export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSea
       await deactivate(source.id).unwrap();
       showToast(ACTIONS.removed);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(discoverFailureMessage(error, ACTIONS.removeFailed), "error");
     }
   }

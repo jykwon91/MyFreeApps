@@ -19,6 +19,7 @@ import { categoryLabel, propertyLabel } from "./transactionDisplay";
 import { blankCreateValues, choiceLabel, createAmountError, createPayload, fromChoice } from "./transactionCreateValues";
 import { categoryChoices, selectableProperties } from "./transactionEditValues";
 import { createFailureMessage } from "./transactionMessages";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 type SheetName = "category" | "property" | "channel" | "paymentMethod";
 
@@ -68,6 +69,7 @@ export default function NewTransactionForm() {
       showToast("Added.");
       setIsLeaving(true);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(createFailureMessage(error), "error");
     }
   }

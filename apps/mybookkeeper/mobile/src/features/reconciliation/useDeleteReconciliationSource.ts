@@ -4,6 +4,7 @@ import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconc
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { askOnce } from "../../lib/askOnce";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** `onDeleted` lets a screen about this one form leave once it is gone. */
 export function useDeleteReconciliationSource(source: ReconciliationSource, onDeleted?: () => void) {
@@ -16,7 +17,8 @@ export function useDeleteReconciliationSource(source: ReconciliationSource, onDe
       await deleteSource(source.id).unwrap();
       showToast(DELETE.deleted);
       onDeleted?.();
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(DELETE.failed, "error");
     }
   }

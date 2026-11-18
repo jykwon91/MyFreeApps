@@ -8,6 +8,7 @@ import type { AppDispatch } from "../../lib/store";
 import type { InviteRequest } from "../../types/InviteRequest";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isInviteExpired } from "@mybookkeeper/api-client/utils/isInviteExpired";
 import { isSameEmail } from "./membersDisplay";
 import { useAccessRefused } from "./useAccessRefused";
@@ -48,6 +49,8 @@ export function useInviteActions(orgId: string, orgName: string) {
   }
 
   async function inviteFailure(error: unknown, email: string, knownIds: ReadonlySet<string>): Promise<string | null> {
+    // Cancelled by a cache reset (sign-out, workspace switch): the form was for a workspace that's been left.
+    if (isCancelledRequest(error)) return null;
     const status = httpStatus(error);
     if (status === 403) {
       accessRefused(error);
@@ -74,6 +77,8 @@ export function useInviteActions(orgId: string, orgName: string) {
         await cancel({ orgId, inviteId: invite.id }).unwrap();
         showToast(success);
       } catch (error) {
+        // Cancelled by a cache reset (sign-out, workspace switch): nothing was lost, and nobody is left to tell.
+        if (isCancelledRequest(error)) return;
         const status = httpStatus(error);
         if (status === 403) {
           accessRefused(error);

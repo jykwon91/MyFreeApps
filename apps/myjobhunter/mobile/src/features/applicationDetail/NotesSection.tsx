@@ -42,7 +42,8 @@ export default function NotesSection({ applicationId, notes, isLeaving }: NotesS
       showToast(MESSAGES.saved);
       return true;
     } catch (error) {
-      showToast(writeFailure(error, MESSAGES.couldntSave), "error");
+      const message = writeFailure(error, MESSAGES.couldntSave);
+      if (message) showToast(message, "error");
       return false;
     }
   }

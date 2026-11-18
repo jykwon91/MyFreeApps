@@ -5,6 +5,7 @@ import { Modal, ScrollView, Text } from "react-native";
 import { isoFromDate } from "../../lib/localDate";
 import DatePicker from "../shell/DatePicker";
 import { contractStartFailure } from "./applicantFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ContractStartSheet({
   applicantId,
@@ -43,6 +44,7 @@ export default function ContractStartSheet({
       setPicked(null);
       onClose();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(contractStartFailure(error));
     } finally {
       isSaving.current = false;

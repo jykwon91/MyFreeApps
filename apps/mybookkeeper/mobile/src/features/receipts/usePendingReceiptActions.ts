@@ -6,6 +6,7 @@ import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { askOnce } from "../../lib/askOnce";
 import { dismissFailure } from "./receiptFailure";
 import { useDropReceipt } from "./useDropReceipt";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export function usePendingReceiptActions(receipt: PendingReceipt) {
   const { showToast } = useToast();
@@ -22,6 +23,7 @@ export function usePendingReceiptActions(receipt: PendingReceipt) {
       dropReceipt(receipt.transaction_id);
       showToast(MESSAGES.dismissed);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const failure = dismissFailure(error);
       if (failure.isFinished) dropReceipt(receipt.transaction_id);
       showToast(failure.message, failure.isFinished ? "success" : "error");

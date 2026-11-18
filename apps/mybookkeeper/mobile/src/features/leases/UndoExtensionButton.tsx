@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Alert, Text } from "react-native";
 import { LEASE_MESSAGES, undoBody, undoDone, undoUntil } from "../../constants/leases";
 import { undoExtensionFailure } from "./undoExtensionFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function UndoExtensionButton({ leaseId, extension }: { leaseId: string; extension: LeaseExtensionSummary }) {
   const { colors, fontSize } = useTheme();
@@ -21,6 +22,7 @@ export default function UndoExtensionButton({ leaseId, extension }: { leaseId: s
       await undo({ leaseId, versionId: extension.id }).unwrap();
       showToast(undoDone(previous));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const known = undoExtensionFailure(error);
       if (known) {
         showToast(known, "error");

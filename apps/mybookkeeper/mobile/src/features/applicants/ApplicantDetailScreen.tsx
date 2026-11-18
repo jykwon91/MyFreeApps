@@ -4,7 +4,7 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
-import { Chip, EmptyState, goBackOr, KeyboardAwareScroll, LoadingButton, LoadingRegion, OptionSheet, Skeleton, StaleDataBanner, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Chip, EmptyState, goBackOr, KeyboardAwareScroll, LoadingButton, LoadingRegion, OptionSheet, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
@@ -45,7 +45,6 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const isGone = httpStatus(error) === 404;
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
-  const { showToast } = useToast();
   const move = useMoveApplicantStage(id, refetch);
   const [openSheet, setOpenSheet] = useState<"stage" | "contract" | null>(null);
   // Outlives the note sheet closing, so it doesn't slide away empty.
@@ -79,12 +78,6 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const isContractLocked = applicant.stage === CONTRACT_LOCKED_STAGE;
   const isReadyForLease = STAGES_READY_FOR_LEASE.includes(applicant.stage);
   const isTenant = applicant.stage === CONTRACT_LOCKED_STAGE;
-
-  async function moveAndConfirm(stage: ApplicantStage, note: string): Promise<string | null> {
-    const problem = await move(stage, note);
-    if (!problem) showToast(`Moved to ${applicantStageLabel(stage)}.`);
-    return problem;
-  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -190,7 +183,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
         isOpen={isNoteOpen}
         name={applicantName(applicant.legal_name)}
         onClose={() => setIsNoteOpen(false)}
-        onMove={moveAndConfirm}
+        onMove={move}
         stage={noteForStage}
       />
       <ContractStartSheet applicantId={id} isOpen={openSheet === "contract"} onClose={() => setOpenSheet(null)} value={applicant.contract_start} />

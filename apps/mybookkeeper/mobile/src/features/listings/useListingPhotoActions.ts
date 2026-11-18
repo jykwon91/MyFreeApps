@@ -1,6 +1,7 @@
 import { useDeleteListingPhotoMutation, useGetListingByIdQuery, useReorderListingPhotosMutation } from "@mybookkeeper/api-client/store/listingsApi";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import { writeFailure } from "@mybookkeeper/api-client/utils/writeFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { useToast } from "@platform/mobile";
 import { useState } from "react";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, partialRemoveNote } from "../../constants/listingPhotos";
@@ -23,7 +24,7 @@ export function useListingPhotoActions(listing: ListingResponse) {
   /**
    * Tries every photo, one request each: one that fails doesn't keep the rest from going. A photo the
    * server no longer has counts as removed. Returns the ids that are still there (empty when all went),
-   * or null when a removal was already under way and nothing was sent.
+   * or null when a removal was already under way and nothing was sent, or a cache reset called it off.
    */
   async function remove(photoIds: readonly string[]): Promise<string[] | null> {
     setPartial(null);
@@ -35,6 +36,8 @@ export function useListingPhotoActions(listing: ListingResponse) {
         try {
           await deletePhoto({ listingId: listing.id, photoId, refresh: false }).unwrap();
         } catch (error) {
+          // Called off by a cache reset: the rest would go out for whoever is signed in now.
+          if (isCancelledRequest(error)) throw error;
           if (writeFailure(error) === "gone") {
             missing += 1;
           } else {
@@ -47,7 +50,7 @@ export function useListingPhotoActions(listing: ListingResponse) {
       void refetch();
       if (firstError) throw firstError.error;
     });
-    if (result === "busy") return null;
+    if (result === "busy" || result === "cancelled") return null;
     if (result === "done") {
       showToast(missing === photoIds.length ? MESSAGES.alreadyRemoved : photoIds.length === 1 ? MESSAGES.removed : MESSAGES.removedMany);
     } else if (stillThere.length < photoIds.length) {

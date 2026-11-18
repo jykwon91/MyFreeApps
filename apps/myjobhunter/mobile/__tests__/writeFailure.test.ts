@@ -63,3 +63,14 @@ describe("moveFailure, for moving an application to another stage", () => {
     expect(moveFailure({ status: 404, data: { detail: "Not Found" } })).toBe(APPLICATION_DETAIL_MESSAGES.gone);
   });
 });
+
+describe("a write a cache reset called off", () => {
+  // What RTK Query rejects with when signing out or changing account aborts the request.
+  const aborted = { name: "AbortError", message: "Aborted" };
+
+  it("has nothing to say, for a change, an add or a move", () => {
+    expect(writeFailure(aborted, "failed")).toBeNull();
+    expect(createFailure(aborted, COPY)).toBeNull();
+    expect(moveFailure(aborted)).toBeNull();
+  });
+});

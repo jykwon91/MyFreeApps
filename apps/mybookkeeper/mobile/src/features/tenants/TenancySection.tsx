@@ -13,6 +13,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import EndTenancySheet from "./EndTenancySheet";
 import ExpiredTenancyActions from "./ExpiredTenancyActions";
 import { tenancyLine, tenancyStateLabel } from "./tenantDisplay";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function TenancySection({ applicant }: { applicant: ApplicantDetailResponse }) {
   const { colors, fontSize } = useTheme();
@@ -37,6 +38,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
       showToast(endedToast(name));
       return null;
     } catch (error) {
+      if (isCancelledRequest(error)) return null;
       const status = httpStatus(error);
       if (status === 409) {
         showToast(TENANT_MESSAGES.changed, "error");
@@ -53,6 +55,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
       await restartTenancy(applicant.id).unwrap();
       showToast(restartedToast(name));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const status = httpStatus(error);
       const message = status === 409 ? TENANT_MESSAGES.changed : status === undefined ? TENANT_MESSAGES.noConnection : TENANT_MESSAGES.restartFailed;
       showToast(message, "error");

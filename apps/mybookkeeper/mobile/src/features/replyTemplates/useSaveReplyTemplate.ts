@@ -12,6 +12,7 @@ import { REPLY_TEMPLATE_AMBIGUOUS_CREATE as AMBIGUOUS_CREATE, REPLY_TEMPLATE_MES
 import type { ReplyTemplateFormValues } from "../../types/ReplyTemplateFormValues";
 import { changedFields } from "./replyTemplateFormValues";
 import { leaveToList } from "./replyTemplateNavigation";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Creates a template, or saves what changed on `original`, and leaves when it's done. */
 export function useSaveReplyTemplate(original: ReplyTemplate | null) {
@@ -71,6 +72,10 @@ export function useSaveReplyTemplate(original: ReplyTemplate | null) {
     try {
       await send(values);
     } catch (error) {
+      if (isCancelledRequest(error)) {
+        isSending.current = false;
+        return;
+      }
       const reason = saveFailure(error);
       const outcome = !original && AMBIGUOUS_CREATE.has(reason) ? await whatHappened(values) : "missing";
       if (reason === "gone") {

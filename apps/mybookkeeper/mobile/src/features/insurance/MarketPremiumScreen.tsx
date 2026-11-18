@@ -7,6 +7,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { marketRemoveFailure } from "./marketFailure";
 import MarketPremiumSheet from "./MarketPremiumSheet";
 import MarketPremiumSummary from "./MarketPremiumSummary";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function MarketPremiumScreen() {
   const { colors, spacing, fontSize } = useTheme();
@@ -27,6 +28,7 @@ export default function MarketPremiumScreen() {
       await removeBenchmark().unwrap();
       showToast(MARKET_MESSAGES.removed);
     } catch (failure) {
+      if (isCancelledRequest(failure)) return;
       showToast(marketRemoveFailure(failure), "error");
     } finally {
       isRemovingNow.current = false;

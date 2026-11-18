@@ -10,6 +10,7 @@ import type { TenantChoice } from "../../types/TenantChoice";
 import { askOnce } from "../../lib/askOnce";
 import { linkExplanation, linkQuestion, propertyBookedMessage, tenantLinkedMessage } from "./paymentReviewDisplay";
 import { reviewFailureMessage, wasAlreadyHandled } from "./paymentReviewFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export function usePaymentReviewActions(item: AttributionReviewItem) {
   const { showToast } = useToast();
@@ -25,6 +26,7 @@ export function usePaymentReviewActions(item: AttributionReviewItem) {
       await send().unwrap();
       showToast(doneMessage);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(reviewFailureMessage(error), wasAlreadyHandled(error) ? "success" : "error");
     } finally {
       isActing.current = false;

@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeNavButtonsProps } from "../../types/ResumeNavButtonsProps";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Moves between suggestions without accepting, skipping or rewriting this one. */
 export default function ResumeNavButtons({ sessionId, targetIndex, totalTargets, isPending }: ResumeNavButtonsProps) {
@@ -17,6 +18,7 @@ export default function ResumeNavButtons({ sessionId, targetIndex, totalTargets,
     try {
       await navigate({ id: sessionId, direction }).unwrap();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(refinementFailure(error), "error");
     }
   }

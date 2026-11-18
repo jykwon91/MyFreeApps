@@ -1,3 +1,4 @@
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { useState } from "react";
 import { Alert } from "react-native";
@@ -8,7 +9,8 @@ import { useToast } from "./useToast";
 /**
  * Asks first, then removes, says how it went, and reports the removal in flight. A 404 means it's
  * already gone (removed elsewhere, or a double tap), which is what was asked for. Once it's gone it
- * stays "removing" until it leaves the screen; any other failure lets it be tried again.
+ * stays "removing" until it leaves the screen; any other failure lets it be tried again. A removal a
+ * cache reset called off (sign-out, account change) says nothing: whoever asked has been moved on from.
  */
 export function useConfirmedRemoval(remove: () => Promise<unknown>, messages: RemovalMessages, options: RemovalOptions = {}) {
   const { showToast } = useToast();
@@ -21,6 +23,10 @@ export function useConfirmedRemoval(remove: () => Promise<unknown>, messages: Re
       showToast(messages.removed);
       options.onRemoved?.();
     } catch (error) {
+      if (isCancelledRequest(error)) {
+        setIsRemoving(false);
+        return;
+      }
       if (isNotFound(error)) {
         showToast(messages.gone ?? messages.removed);
         options.onRemoved?.();

@@ -17,7 +17,7 @@ export function useSuggestionStatus(returnId: string, suggestionId: string) {
     const result = await write.run(() => updateStatus({ returnId, suggestionId, status }).unwrap());
     setPending(null);
     // The advisor reloads on success and the card moves with it, so only a failure needs saying.
-    if (result !== "done" && result !== "busy") showToast(MESSAGES.couldntUpdate, "error");
+    if (result !== "done" && result !== "busy" && result !== "cancelled") showToast(MESSAGES.couldntUpdate, "error");
   }
 
   return { update, pending, isBusy: write.isBusy };

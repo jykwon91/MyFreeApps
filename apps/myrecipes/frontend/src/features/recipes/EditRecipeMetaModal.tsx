@@ -41,7 +41,8 @@ export default function EditRecipeMetaModal({ open, onClose, recipe }: Props) {
       showSuccess(MESSAGES.updated);
       onClose();
     } catch (error) {
-      showError(recipeWriteErrorMessage(error, "update"));
+      const message = recipeWriteErrorMessage(error, "update");
+      if (message) showError(message);
     }
   }
 

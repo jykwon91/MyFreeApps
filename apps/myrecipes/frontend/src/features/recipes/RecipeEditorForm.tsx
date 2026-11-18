@@ -140,7 +140,8 @@ export default function RecipeEditorForm(props: Props) {
         navigate(`/recipes/${props.recipeId}`, { replace: true });
       }
     } catch (error) {
-      showError(recipeWriteErrorMessage(error, isTweak ? "tweak" : "create"));
+      const message = recipeWriteErrorMessage(error, isTweak ? "tweak" : "create");
+      if (message) showError(message);
     }
   }
 

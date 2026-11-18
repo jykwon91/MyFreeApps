@@ -8,6 +8,7 @@ import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { REMOTE_CHOICES } from "../../constants/remoteChoices";
 import type { RemotePreferenceFieldProps } from "../../types/RemotePreferenceFieldProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Saves as soon as a choice is tapped. The tapped choice shows at once and stays until the saved
@@ -34,9 +35,9 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
       showToast(MESSAGES.remoteSaved);
       // The cache holds what the server saved; if that isn't the tapped choice, show what was saved.
       if (updated.remote_preference !== next) setPending(null);
-    } catch {
+    } catch (error) {
       setPending(null);
-      showToast(MESSAGES.couldntSaveRemote, "error");
+      if (!isCancelledRequest(error)) showToast(MESSAGES.couldntSaveRemote, "error");
     } finally {
       isSaving.current = false;
     }

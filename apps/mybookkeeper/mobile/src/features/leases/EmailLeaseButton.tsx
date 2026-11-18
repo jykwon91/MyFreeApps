@@ -7,6 +7,7 @@ import { emailingLease, emailLeaseLabel, emailLeaseTitle, LEASE_MESSAGES, noEmai
 import { isMissingTenantEmail } from "./extendLeaseFailure";
 import { askOnce } from "../../lib/askOnce";
 import { emailLeaseFailure } from "./emailLeaseFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface EmailLeaseButtonProps {
   leaseId: string;
@@ -28,6 +29,7 @@ export default function EmailLeaseButton({ leaseId, applicantId, tenantName }: E
       await emailLease(leaseId).unwrap();
       showToast(emailingLease(tenantName));
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       if (isMissingTenantEmail(error)) void refetchApplicant();
       showToast(emailLeaseFailure(error, tenantName), "error");
     } finally {

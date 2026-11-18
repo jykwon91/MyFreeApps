@@ -1,10 +1,14 @@
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { useRef, useState } from "react";
 
 export interface FormSubmit {
   isBusy: boolean;
   failure: string | null;
   clearFailure: () => void;
-  /** Runs one save at a time. Resolves true when it landed; on a failure it sets the message and resolves false. */
+  /**
+   * Runs one save at a time. Resolves true when it landed; on a failure it sets the message and resolves false.
+   * A save a cache reset called off (sign-out, workspace switch) also resolves false, with no message.
+   */
   submit: (save: () => Promise<unknown>, describeFailure: (error: unknown) => string) => Promise<boolean>;
 }
 
@@ -23,7 +27,7 @@ export function useFormSubmit(): FormSubmit {
       await save();
       return true;
     } catch (error) {
-      setFailure(describeFailure(error));
+      if (!isCancelledRequest(error)) setFailure(describeFailure(error));
       return false;
     } finally {
       isSubmitting.current = false;

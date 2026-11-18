@@ -60,4 +60,9 @@ describe("recipeWriteErrorMessage", () => {
     expect(recipeWriteErrorMessage({ status: 422 }, "tweak")).toBe(TWEAK_MESSAGES.checkEntries);
     expect(recipeWriteErrorMessage({ status: 401 }, "tweak")).toBe(TWEAK_MESSAGES.signInAgain);
   });
+
+  it("has nothing to say about a write a cache reset called off", () => {
+    // What RTK Query rejects with when signing out or changing account aborts the request.
+    expect(recipeWriteErrorMessage({ name: "AbortError", message: "Aborted" }, "create")).toBeNull();
+  });
 });

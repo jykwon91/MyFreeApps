@@ -104,7 +104,8 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
       showToast(MESSAGES.created);
       if (isMounted.current) setCreated({ id: recipe.id, title: recipe.title, owner: recipe.owner_display_name });
     } catch (error) {
-      if (isMounted.current) showToast(recipeWriteErrorMessage(error, "create"), "error");
+      const message = recipeWriteErrorMessage(error, "create");
+      if (message && isMounted.current) showToast(message, "error");
     }
   }
 

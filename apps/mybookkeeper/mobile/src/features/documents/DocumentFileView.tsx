@@ -5,6 +5,7 @@ import { Image, Text, View } from "react-native";
 import { API_BASE_URL, WEB_BASE_URL } from "../../constants/api";
 import { openDocumentFile } from "./openDocumentFile";
 import { useFileRequestHeaders } from "./useFileRequestHeaders";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface DocumentFileViewProps {
   document: Document;
@@ -26,6 +27,7 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
       await refreshDocument();
       await openDocumentFile(url, document.id, headers());
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       onError(downloadFailureMessage(error, "I couldn't open that file. Want to try again?"));
     }
   }

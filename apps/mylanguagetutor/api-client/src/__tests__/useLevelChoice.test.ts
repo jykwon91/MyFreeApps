@@ -3,6 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useLevelChoice } from "../hooks/useLevelChoice";
+import type { LevelSaveOutcome } from "../types/onboarding/level-save-outcome";
 import type { Profile } from "../types/tutor/profile";
 
 const api = vi.hoisted(() => ({
@@ -75,12 +76,12 @@ describe("useLevelChoice", () => {
 
     act(() => result.current.pick("conversational"));
     expect(result.current.selected).toBe("conversational");
-    let saved: boolean | undefined;
+    let saved: LevelSaveOutcome | undefined;
     await act(async () => {
       saved = await result.current.save();
     });
 
-    expect(saved).toBe(true);
+    expect(saved).toBe("saved");
     expect(api.save).toHaveBeenCalledWith({ language_code: "es", level: "conversational" });
   });
 
@@ -89,22 +90,35 @@ describe("useLevelChoice", () => {
     api.profile = { data: PROFILE, isError: false };
     const { result } = renderHook(() => useLevelChoice(null));
 
-    let saved: boolean | undefined;
+    let saved: LevelSaveOutcome | undefined;
     await act(async () => {
       saved = await result.current.save();
     });
-    expect(saved).toBe(false);
+    expect(saved).toBe("failed");
+  });
+
+  it("says a save a cache reset called off was cancelled, not failed", async () => {
+    // RTK Query rejects a request it aborts when the cache is reset (sign-out, account change) like this.
+    saves(Promise.reject({ name: "AbortError", message: "Aborted" }));
+    api.profile = { data: PROFILE, isError: false };
+    const { result } = renderHook(() => useLevelChoice(null));
+
+    let saved: LevelSaveOutcome | undefined;
+    await act(async () => {
+      saved = await result.current.save();
+    });
+    expect(saved).toBe("cancelled");
   });
 
   it("sends nothing until a level is picked", async () => {
     api.profile = { data: null, isError: false };
     const { result } = renderHook(() => useLevelChoice("es"));
 
-    let saved: boolean | undefined;
+    let saved: LevelSaveOutcome | undefined;
     await act(async () => {
       saved = await result.current.save();
     });
-    expect(saved).toBe(false);
+    expect(saved).toBe("failed");
     expect(api.save).not.toHaveBeenCalled();
   });
 });

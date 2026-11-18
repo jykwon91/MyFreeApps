@@ -17,6 +17,7 @@ import type { PromoteValues } from "../../types/PromoteValues";
 import OptionalDateField from "../shell/OptionalDateField";
 import { promoteFailure } from "./applicantFailures";
 import { isOldEnough, promoteRequest, promoteValuesFrom } from "./promoteValues";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -64,6 +65,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
       showToast(PROMOTE_MESSAGES.success);
       setLeaveTo(created.id);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const conflict = promoteConflictDetail(error);
       if (conflict?.code === "already_promoted") {
         // Also how a retry lands when the first try worked but its answer was lost.

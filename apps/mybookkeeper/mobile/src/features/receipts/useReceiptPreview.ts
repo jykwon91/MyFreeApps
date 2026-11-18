@@ -7,6 +7,7 @@ import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import type { ReceiptSendValues } from "../../types/ReceiptSendValues";
 import { shareExportFile } from "../documents/openDocumentFile";
 import { useFileRequestHeaders } from "../documents/useFileRequestHeaders";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Opens the receipt as it would go out, in the system's viewer. The download skips the API
@@ -27,6 +28,7 @@ export function useReceiptPreview(renewSession: () => Promise<unknown>): { isPre
       // Named by the payment's id, never the tenant's name: it's someone's record.
       await shareExportFile(`${API_BASE_URL}${receiptPreviewPath(receipt.transaction_id, values)}`, `receipt-${receipt.transaction_id}.pdf`, headers());
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(downloadFailureMessage(error, MESSAGES.previewFailed), "error");
     } finally {
       isBusy.current = false;

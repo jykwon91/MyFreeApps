@@ -1,4 +1,5 @@
 import type { Level } from "../tutor/level";
+import type { LevelSaveOutcome } from "./level-save-outcome";
 
 /** What ``useLevelChoice`` gives the level step. */
 export interface LevelChoice {
@@ -13,6 +14,6 @@ export interface LevelChoice {
   isFirstTime: boolean;
   isSaving: boolean;
   isSaveError: boolean;
-  /** Saves the language and level; resolves true once saved, false if it couldn't be. */
-  save: () => Promise<boolean>;
+  /** Saves the language and level, resolving to how that ended. */
+  save: () => Promise<LevelSaveOutcome>;
 }

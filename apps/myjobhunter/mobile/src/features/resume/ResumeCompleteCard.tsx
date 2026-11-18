@@ -9,6 +9,7 @@ import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeCompleteCardProps } from "../../types/ResumeCompleteCardProps";
 import ResumeCard from "./ResumeCard";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Once every suggestion is through: mark the resume done, then download it as a PDF or a Word file. */
 export default function ResumeCompleteCard({ session, exports }: ResumeCompleteCardProps) {
@@ -24,6 +25,7 @@ export default function ResumeCompleteCard({ session, exports }: ResumeCompleteC
       await completeSession(session.id).unwrap();
       showToast(REFINEMENT_TOASTS.markedDone);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(refinementFailure(error, MESSAGES.couldntMarkDone), "error");
     }
   }

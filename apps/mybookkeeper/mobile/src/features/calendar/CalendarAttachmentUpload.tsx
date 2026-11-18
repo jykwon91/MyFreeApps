@@ -7,6 +7,7 @@ import { CALENDAR_ATTACHMENT_FILE_TYPES, CALENDAR_ATTACHMENT_PHOTO_NAME, EVENT_M
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import { useHeldFile } from "../uploads/useHeldFile";
 import { attachmentUploadFailure } from "./calendarEventFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Closed, it's one button. Open, it picks a file and sends it. */
 export default function CalendarAttachmentUpload({ blackoutId }: { blackoutId: string }) {
@@ -39,6 +40,7 @@ export default function CalendarAttachmentUpload({ blackoutId }: { blackoutId: s
       close();
       showToast(EVENT_MESSAGES.uploaded);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       setFailure(attachmentUploadFailure(error));
     } finally {
       isSubmitting.current = false;

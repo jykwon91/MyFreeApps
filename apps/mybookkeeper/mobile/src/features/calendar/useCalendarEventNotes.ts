@@ -4,6 +4,7 @@ import { useToast } from "@platform/mobile";
 import { useState } from "react";
 import { EVENT_MESSAGES } from "../../constants/calendarEventDetail";
 import { notesFailure } from "./calendarEventFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export interface CalendarEventNotes {
   draft: string;
@@ -38,6 +39,7 @@ export function useCalendarEventNotes(event: CalendarEvent | null): CalendarEven
       showToast(EVENT_MESSAGES.notesSaved);
       return true;
     } catch (error) {
+      if (isCancelledRequest(error)) return false;
       showToast(notesFailure(error), "error");
       return false;
     }

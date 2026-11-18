@@ -7,6 +7,7 @@ import { chargeActionLabel, RENT_MANAGE_MESSAGES } from "../../constants/rentMan
 import { askOnce } from "../../lib/askOnce";
 import { chargeTitle } from "./rentDisplay";
 import { rentWriteFailure } from "./rentWriteFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface RentChargeActionsProps {
   applicantId: string;
@@ -37,6 +38,7 @@ export default function RentChargeActions({ applicantId, charge, onWaive }: Rent
       else await remove({ chargeId: charge.id, applicantId }).unwrap();
       showToast(action === "restore" ? RENT_MANAGE_MESSAGES.chargeRestored : RENT_MANAGE_MESSAGES.chargeRemoved);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(rentWriteFailure(error, "other"), "error");
     } finally {
       isWorking.current = false;

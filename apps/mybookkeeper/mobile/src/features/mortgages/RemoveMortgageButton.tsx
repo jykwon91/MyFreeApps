@@ -5,6 +5,7 @@ import { MORTGAGE_MESSAGES as MESSAGES } from "../../constants/mortgages";
 import { askOnce } from "../../lib/askOnce";
 import { leaveToMortgages } from "./mortgageNavigation";
 import { mortgageRemoveFailure } from "./mortgageRemoveFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface RemoveMortgageButtonProps {
   mortgageId: string;
@@ -25,6 +26,7 @@ export default function RemoveMortgageButton({ mortgageId, title, onRemoved }: R
       showToast(MESSAGES.removed);
       leaveToMortgages();
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       const outcome = mortgageRemoveFailure(error);
       if (outcome === "gone") {
         onRemoved();

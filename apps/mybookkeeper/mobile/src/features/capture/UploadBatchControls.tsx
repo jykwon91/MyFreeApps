@@ -15,6 +15,7 @@ import {
 } from "../../constants/capture";
 import type { AppDispatch } from "../../lib/store";
 import { uploadBatchCancelled, uploadBatchRead } from "./uploadsSlice";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface UploadBatchControlsProps {
   uri: string;
@@ -37,7 +38,8 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   async function cancel(): Promise<void> {
     try {
       await cancelBatch(batchId).unwrap();
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(CANCEL_BATCH_FAILED, "error");
       return;
     }

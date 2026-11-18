@@ -26,6 +26,7 @@ import { choiceLabel, fromChoice } from "./transactionCreateValues";
 import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, taxYearError, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function TransactionEditForm({ original }: { original: Transaction }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -102,6 +103,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
       showToast(`Saved.${learned}${othersUpdatedSentence(result, vendor || null)}`);
       setIsLeaving(true);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(saveFailureMessage(error), "error");
     } finally {
       setSavingAction(null);

@@ -5,6 +5,7 @@ import { LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { Alert, Text, View } from "react-native";
 import { EVENT_MESSAGES } from "../../constants/calendarEventDetail";
 import { attachmentRemoveFailure } from "./calendarEventFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface CalendarAttachmentRowProps {
   file: ListingBlackoutAttachment;
@@ -35,6 +36,7 @@ export default function CalendarAttachmentRow({ file, canWrite, isOpening, isOpe
       await deleteAttachment({ blackoutId: file.listing_blackout_id, attachmentId: file.id }).unwrap();
       showToast(EVENT_MESSAGES.removed);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(attachmentRemoveFailure(error), "error");
     }
   }

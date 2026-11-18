@@ -83,6 +83,17 @@ describe("useConfirmedRemoval", () => {
     expect(screen.getByText("idle")).toBeTruthy();
   });
 
+  it("says nothing when a cache reset calls the removal off, and lets it be tried again", async () => {
+    const onRemoved = jest.fn();
+    // What RTK Query rejects with when the cache reset of a sign-out or account change aborts the request.
+    await show(() => Promise.reject({ name: "AbortError", message: "Aborted" }), { onRemoved });
+    await act(async () => alertButton(MESSAGES.remove).onPress?.());
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(onRemoved).not.toHaveBeenCalled();
+    expect(screen.getByText("idle")).toBeTruthy();
+  });
+
   it("shows the server's refusal instead, and reports it", async () => {
     const onRefused = jest.fn();
     await show(() => Promise.reject(new Error("409")), { refusalMessage: () => "It's still in use.", onRefused });

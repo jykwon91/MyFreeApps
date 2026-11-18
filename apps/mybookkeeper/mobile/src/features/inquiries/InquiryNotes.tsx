@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { inquiryWriteFailure } from "./inquiryFailures";
 import CollapsibleSection from "./CollapsibleSection";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function InquiryNotes({ id, notes, canWrite }: { id: string; notes: string | null; canWrite: boolean }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -23,6 +24,7 @@ export default function InquiryNotes({ id, notes, canWrite }: { id: string; note
       showToast("Notes saved.");
       return true;
     } catch (error) {
+      if (isCancelledRequest(error)) return false;
       showToast(inquiryWriteFailure(error, "I couldn't save those notes. Want to try again?"), "error");
       return false;
     }

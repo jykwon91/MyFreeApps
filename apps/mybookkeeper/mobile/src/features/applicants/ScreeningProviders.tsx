@@ -4,6 +4,7 @@ import { Banner, LINK_MESSAGES, LoadingButton, LoadingRegion, Skeleton, useOpenL
 import { useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { couldntOpenProviderMessage, learnMoreLabel, openedProviderMessage, SCREENING_MESSAGES } from "../../constants/applicantScreening";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ScreeningProviders({ applicantId }: { applicantId: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -22,7 +23,8 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
       const { redirect_url: url } = await fetchRedirect({ applicantId, provider: provider.name }).unwrap();
       await Linking.openURL(url);
       setOpened(provider.label);
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(couldntOpenProviderMessage(provider.label), "error");
     } finally {
       setOpeningName(null);

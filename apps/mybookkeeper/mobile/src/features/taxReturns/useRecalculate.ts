@@ -4,6 +4,7 @@ import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { Alert } from "react-native";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export function useRecalculate(taxReturn: TaxReturn | undefined): { recalculate: () => Promise<void> | void; isRecalculating: boolean } {
   const { showToast } = useToast();
@@ -15,7 +16,8 @@ export function useRecalculate(taxReturn: TaxReturn | undefined): { recalculate:
     try {
       await recompute(id).unwrap();
       showToast(MESSAGES.recalculated, "success");
-    } catch {
+    } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(MESSAGES.couldntRecalculate, "error");
     }
   }

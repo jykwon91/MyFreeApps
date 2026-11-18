@@ -13,6 +13,7 @@ import PolicyDetailSkeleton from "./PolicyDetailSkeleton";
 import PolicyFacts from "./PolicyFacts";
 import PolicyAttachmentsSection from "./PolicyAttachmentsSection";
 import { policyDeleteFailure } from "./policyFailure";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function PolicyDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -34,8 +35,8 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
       showToast(INSURANCE_MESSAGES.deleted);
       goBackOr("/insurance");
     } catch (failure) {
-      showToast(policyDeleteFailure(failure), "error");
       setIsDeleting(false);
+      if (!isCancelledRequest(failure)) showToast(policyDeleteFailure(failure), "error");
     }
   }
 

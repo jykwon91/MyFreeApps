@@ -1,9 +1,10 @@
 import { _resetPlatformForTests, configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
 import { configureStore } from "@reduxjs/toolkit";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Provider } from "react-redux";
 import { nodesOfType } from "../../test-support/renderedNodes";
+import type { FakeReply } from "../../test-support/types/FakeReply";
 import type { RenderedNode } from "../../test-support/types/RenderedNode";
 import { serve } from "../../test-support/fakeServer";
 import { fetchTwoFactorEnabled } from "../auth/mobileAuthApi";
@@ -105,4 +106,42 @@ it("saves the name when the keyboard's return key is pressed", async () => {
   await fireEvent(field, "submitEditing");
   await screen.findByText(MESSAGES.displayNameSaved);
   expect(saved).toEqual([{ display_name: "Jane Smith" }]);
+});
+
+it("says when the name couldn't be saved", async () => {
+  serve({
+    "GET /users/me": () => ({ status: 200, data: USER }),
+    "PATCH /users/me": () => ({ status: 500, data: {} }),
+  });
+  await render(<Security store={makeStore()} />);
+  await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "Jane Smith");
+  await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+  expect(await screen.findByRole("alert", { name: MESSAGES.displayNameSaveFailed })).toBeTruthy();
+});
+
+it("says nothing about a name save that signing out called off", async () => {
+  const sent: unknown[] = [];
+  let answer: (reply: FakeReply) => void = () => undefined;
+  serve({
+    "GET /users/me": () => ({ status: 200, data: USER }),
+    "PATCH /users/me": (body) => {
+      sent.push(body);
+      return new Promise<FakeReply>((resolve) => (answer = resolve));
+    },
+  });
+  const store = makeStore();
+  await render(<Security store={store} />);
+  await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "Jane Smith");
+  await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+  await waitFor(() => expect(sent).toHaveLength(1));
+
+  // What signing out or changing account does to the cache: RTK Query aborts the save on its way.
+  await act(async () => {
+    store.dispatch(baseApi.util.resetApiState());
+  });
+  await act(async () => {
+    answer({ status: 500, data: {} });
+  });
+
+  expect(screen.queryByRole("alert", { name: MESSAGES.displayNameSaveFailed })).toBeNull();
 });

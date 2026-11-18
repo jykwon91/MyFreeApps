@@ -316,6 +316,33 @@ it("archives the application", async () => {
   expect(sent.filter(({ route }) => route === `PATCH /applications/${ID}`).map(({ body }) => body)).toEqual([{ archived: true }]);
 });
 
+it("says when archiving fails", async () => {
+  serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 500 }) });
+  await renderApplicationDetail(ID);
+  await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.archive }));
+
+  expect(await screen.findByText(MESSAGES.couldntArchive)).toBeTruthy();
+});
+
+it("says nothing about an archive that signing out called off", async () => {
+  let answer: (reply: FakeReply) => void = () => undefined;
+  const sent = serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => new Promise<FakeReply>((resolve) => (answer = resolve)) });
+  await renderApplicationDetail(ID);
+  await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.archive }));
+  await waitFor(() => expect(sent.some(({ route }) => route === `PATCH /applications/${ID}`)).toBe(true));
+
+  // What signing out or changing account does to the cache: RTK Query aborts the archive on its way.
+  await act(async () => {
+    store.dispatch(baseApi.util.resetApiState());
+  });
+  await act(async () => {
+    answer({ status: 500 });
+  });
+
+  expect(screen.queryByText(MESSAGES.couldntArchive)).toBeNull();
+  expect(screen.queryByText(MESSAGES.archivedToast)).toBeNull();
+});
+
 it("restores an archived application", async () => {
   const archived = { ...STRIPE, archived: true };
   const sent = serve({ ...applicationDetailRoutes(archived), [`PATCH /applications/${ID}`]: () => ({ status: 200, data: STRIPE }) });

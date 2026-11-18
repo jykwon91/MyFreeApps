@@ -1,4 +1,5 @@
 import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
@@ -9,8 +10,10 @@ import { requestErrorStatus } from "./requestErrorStatus";
 /**
  * What to tell the user when saving a recipe, a tweak or a cook log fails: that a new one may have saved anyway,
  * offline, signed out, not allowed, too large, slowed down, the server's own reason for refusing (422), or server trouble.
+ * Null when a cache reset (sign-out, account change) called the request off: there's nobody left to tell.
  */
-export function recipeWriteErrorMessage(error: unknown, action: RecipeWriteAction): string {
+export function recipeWriteErrorMessage(error: unknown, action: RecipeWriteAction): string | null {
+  if (isCancelledRequest(error)) return null;
   const fallback = RECIPE_WRITE_FALLBACKS[action];
   const override = RECIPE_WRITE_OVERRIDES[action];
   const unsure = RECIPE_WRITE_UNSURE[action];

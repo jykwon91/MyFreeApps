@@ -16,8 +16,12 @@ export function useBoardMoves(): BoardMoveState {
     // A new key per move; the board reuses it when the same move is retried after a lost answer.
     newKey: randomUUID,
     notify: (outcome) => {
-      if (outcome.kind === "moved") showToast(`${APPLICATION_DETAIL_MESSAGES.movedTo} ${KANBAN_COLUMN_LABELS[outcome.target]}.`);
-      else showToast(moveFailure(outcome.error), "error");
+      if (outcome.kind === "moved") {
+        showToast(`${APPLICATION_DETAIL_MESSAGES.movedTo} ${KANBAN_COLUMN_LABELS[outcome.target]}.`);
+        return;
+      }
+      const message = moveFailure(outcome.error);
+      if (message) showToast(message, "error");
     },
   });
 }

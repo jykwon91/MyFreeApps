@@ -6,6 +6,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import InquiryContact from "../inquiries/InquiryContact";
 import { contactEmailFailure } from "./applicantFailures";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface ApplicantContactProps {
   applicantId: string;
@@ -41,6 +42,7 @@ export default function ApplicantContact({ applicantId, name, email, phone, canW
       setDraft(null);
       showToast(next ? MESSAGES.saved : MESSAGES.removed);
     } catch (failure) {
+      if (isCancelledRequest(failure)) return;
       if (httpStatus(failure) === 422) setError(MESSAGES.invalid);
       else showToast(contactEmailFailure(failure), "error");
     }

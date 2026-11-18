@@ -34,7 +34,8 @@ function DocumentCard({ document, onEdit, onOpenApplication }: DocumentCardProps
       if (url) await openLink(url);
       else showToast(MESSAGES.unsafeLink, "error");
     } catch (error) {
-      showToast(writeFailure(error, MESSAGES.couldntOpen), "error");
+      const message = writeFailure(error, MESSAGES.couldntOpen);
+      if (message) showToast(message, "error");
     }
   }
 

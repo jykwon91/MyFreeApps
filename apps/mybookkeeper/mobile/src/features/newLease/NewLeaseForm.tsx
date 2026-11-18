@@ -13,6 +13,7 @@ import PlaceholderField from "./PlaceholderField";
 import type { PlaceholderEdits } from "@mybookkeeper/api-client/types/lease/placeholder-edits";
 import { hasChanges, leaseValues, missingRequired, placeholderProvenance, placeholderValue, unreadableNumbers } from "@mybookkeeper/api-client/utils/leaseFormValues";
 import { useLeaveNewLeaseFlow } from "./useLeaveNewLeaseFlow";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface NewLeaseFormProps {
   flow: NewLeaseFlow;
@@ -100,6 +101,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
       showToast(draftMade(flow.templateIds.length));
       setLeaveTo(created.id);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       if (flow.parentLeaseId && leaseConflictCode(error) === "SUCCESSOR_ALREADY_EXISTS") {
         await openNewerLease(flow.parentLeaseId);
       } else if (isOutOfDateForm(error)) {

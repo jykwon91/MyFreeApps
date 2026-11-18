@@ -38,7 +38,7 @@ export default function ApplicationActions({ application, column, isLeaving, onD
     work: () => Promise<unknown>,
     done: string,
     failed: string,
-    describeFailure: (error: unknown) => string = (error) => writeFailure(error, failed),
+    describeFailure: (error: unknown) => string | null = (error) => writeFailure(error, failed),
   ): Promise<boolean> {
     setBusy(action);
     try {
@@ -46,7 +46,8 @@ export default function ApplicationActions({ application, column, isLeaving, onD
       showToast(done);
       return true;
     } catch (error) {
-      showToast(describeFailure(error), "error");
+      const message = describeFailure(error);
+      if (message) showToast(message, "error");
       return false;
     } finally {
       setBusy(null);

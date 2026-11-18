@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 import { nextToReview } from "./nextToReview";
 import { isWholeReviewQueue } from "./transactionFilters";
 import { approveFailureMessage, othersUpdatedSentence } from "./transactionMessages";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /** Approving, and in review mode moving on to the next one still waiting in the same list. */
 export function useApproveTransaction(id: string, queueParams: TransactionListParams | null) {
@@ -54,6 +55,7 @@ export function useApproveTransaction(id: string, queueParams: TransactionListPa
       if (isReview) await moveToNext("Approved. ", others);
       else showToast(`Approved.${others}`);
     } catch (error) {
+      if (isCancelledRequest(error)) return;
       showToast(approveFailureMessage(error), "error");
     } finally {
       setIsApproving(false);

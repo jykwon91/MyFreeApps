@@ -23,7 +23,7 @@ export default function OnboardingLevel() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (await save()) navigate("/scenarios", { replace: true });
+    if ((await save()) === "saved") navigate("/scenarios", { replace: true });
   };
 
   return (

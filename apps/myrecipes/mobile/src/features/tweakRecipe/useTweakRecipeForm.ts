@@ -91,7 +91,8 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
     } catch (error) {
       // Only a failure can be tried again; a saved tweak is on its way out.
       isSending.current = false;
-      if (isMounted.current) showToast(recipeWriteErrorMessage(error, "tweak"), "error");
+      const message = recipeWriteErrorMessage(error, "tweak");
+      if (message && isMounted.current) showToast(message, "error");
     }
   }
 
