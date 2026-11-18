@@ -1,5 +1,5 @@
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
 import { RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -42,7 +42,7 @@ export default function ReceiptsScreen() {
       ListHeaderComponent={
         rows.length > 0 || (error && currentData) ? (
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error)} />
             {rows.length > 0 ? (
               <>
                 {canWrite ? <ReceiptGmailBanner state={gmailState} /> : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}

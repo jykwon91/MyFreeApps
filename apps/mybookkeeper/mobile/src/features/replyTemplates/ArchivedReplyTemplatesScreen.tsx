@@ -1,5 +1,5 @@
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
@@ -38,7 +38,7 @@ export default function ArchivedReplyTemplatesScreen() {
       ListHeaderComponent={
         rows.length > 0 ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {showsBanner ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={showsBanner} />
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
               {canWrite ? REPLY_TEMPLATE_MESSAGES.archivedHeader : REPLY_TEMPLATE_MESSAGES.archivedHeaderViewer}
             </Text>

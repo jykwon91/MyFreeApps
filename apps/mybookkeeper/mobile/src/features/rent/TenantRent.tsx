@@ -1,6 +1,6 @@
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
-import { LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { RENT_MESSAGES } from "../../constants/rent";
@@ -49,7 +49,7 @@ export default function TenantRent({ applicantId }: { applicantId: string }) {
     return (
       <>
         <InquirySection title={RENT_MESSAGES.section}>
-          {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
+          <StaleDataBanner isShown={Boolean(error)} variant="note" />
           <Text style={mutedText}>{RENT_MESSAGES.notSetUp}</Text>
           {canWrite ? (
             <LoadingButton onPress={() => setEditing({ schedule: null })} variant="secondary">
@@ -65,7 +65,7 @@ export default function TenantRent({ applicantId }: { applicantId: string }) {
   return (
     <>
       <InquirySection title={RENT_MESSAGES.section}>
-        {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
+        <StaleDataBanner isShown={Boolean(error)} variant="note" />
         {ledger.schedules.map((schedule) => (
           <RentScheduleLine key={schedule.id} onEdit={canWrite ? () => setEditing({ schedule }) : undefined} schedule={schedule} />
         ))}

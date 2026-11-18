@@ -1,6 +1,6 @@
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
 import { LEASE_MESSAGES } from "../../constants/leases";
@@ -25,7 +25,7 @@ export default function LeaseValuesScreen({ id }: { id: string }) {
   const rows = leaseValueRows(lease.values);
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="lease-values">
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       {rows.length === 0 ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.noDetails}</Text> : null}
       {rows.map((row) => (
         <View accessible key={row.key} style={{ gap: spacing.xs }}>

@@ -1,5 +1,5 @@
 import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -46,7 +46,7 @@ export default function MortgagesScreen() {
       ListHeaderComponent={
         rows.length > 0 ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error)} />
             {canWrite ? (
               <LoadingButton onPress={addOne} variant="secondary">
                 {MORTGAGE_MESSAGES.add}

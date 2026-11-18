@@ -7,7 +7,7 @@ import {
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { advisorCtaState } from "@mybookkeeper/api-client/utils/taxAdvisorView";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { TAX_ADVISOR_MESSAGES as MESSAGES, TAX_ADVISOR_SKELETON_ROWS } from "../../constants/taxAdvisor";
 import { isServerAnswer } from "../../utils/isServerAnswer";
@@ -24,8 +24,12 @@ export default function TaxAdvisorScreen({ returnId }: { returnId: string }) {
   const advisor = useGetAdvisorSuggestionsQuery(returnId);
   const [generate, { isLoading: isGenerating, error: generateError, data: generated }] = useGenerateAdvisorSuggestionsMutation();
   const queries = [forms, validation, advisor];
-  const firstError = queries.find((query) => query.error)?.error;
-  const { refresh, refreshControl } = useRefresh(() => Promise.all(queries.map((query) => query.refetch())), firstError);
+  // Nothing on file answers 404, which is "ask for advice", not a failure.
+  const hasNoAdvice = isNotFound(advisor.error);
+  const { hasError, refresh, refreshControl } = useRefresh(
+    () => Promise.all(queries.map((query) => query.refetch())),
+    [forms.error, validation.error, hasNoAdvice ? undefined : advisor.error],
+  );
   const request = () => generate(returnId).unwrap().then(() => undefined, () => undefined);
 
   const skeleton = (label: string) => (
@@ -55,8 +59,7 @@ export default function TaxAdvisorScreen({ returnId }: { returnId: string }) {
 
   // Right after asking, the advice just written stands in until the refetch lands, so the first-ask prompt never flashes back.
   const cached = advisor.currentData ?? generated;
-  // Nothing on file answers 404, which is "ask for advice", not a failure.
-  const hasNone = isNotFound(advisor.error) && !generated;
+  const hasNone = hasNoAdvice && !generated;
   if (!cached && !hasNone) {
     if (advisor.isFetching) return skeleton(MESSAGES.loading);
     return failed(MESSAGES.couldntLoad, advisor.error);
@@ -65,7 +68,7 @@ export default function TaxAdvisorScreen({ returnId }: { returnId: string }) {
   const state = advisorCtaState(generateError);
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} refreshControl={refreshControl} testID="tax-advisor">
-      {advisor.error && cached ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={hasError} />
       {cached && !hasNone && cached.suggestions.length === 0 ? (
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>

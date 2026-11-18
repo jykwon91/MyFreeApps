@@ -1,5 +1,5 @@
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -43,7 +43,7 @@ export default function ApplicantPickerList({ flow }: { flow: NewLeaseFlow }) {
       ListFooterComponent={hasMore ? <MoreOnWebsite path="/applicants" /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-          {error && isLoaded ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && isLoaded)} />
           <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
             {MESSAGES.whoFor}
           </Text>

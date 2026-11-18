@@ -2,7 +2,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
@@ -41,7 +41,7 @@ export default function DrillDownScreen() {
       ListEmptyComponent={emptyList}
       ListHeaderComponent={
         <View style={{ gap: spacing.xs, padding: spacing.lg }}>
-          {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && currentData)} />
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {filter.label}
           </Text>

@@ -1,6 +1,6 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
-import { Banner, Chip, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SwitchRow, useOpenLink, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, StaleDataBanner, SwitchRow, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useRef } from "react";
 import { Platform, type RefreshControlProps, ScrollView, Text, View } from "react-native";
@@ -30,7 +30,7 @@ export default function VendorDetailBody({ vendor, canWrite, hasStaleData, refre
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {hasStaleData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={hasStaleData} />
       {actions.failure ? <Banner message={actions.failure} /> : null}
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>

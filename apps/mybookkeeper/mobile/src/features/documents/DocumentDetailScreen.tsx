@@ -4,7 +4,7 @@ import {
   useGetDocumentQuery,
   useReExtractDocumentMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
-import { EmptyState, LoadingButton, LoadingRegion, Skeleton, Toast, useAnnouncement, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, Toast, useAnnouncement, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -86,7 +86,8 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="document-detail">
+        <StaleDataBanner isShown={Boolean(error)} />
         <View style={{ gap: spacing.sm }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {name}

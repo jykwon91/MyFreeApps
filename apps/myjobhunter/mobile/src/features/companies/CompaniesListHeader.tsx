@@ -1,4 +1,4 @@
-import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
+import { LoadingButton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
 import type { CompaniesListHeaderProps } from "../../types/CompaniesListHeaderProps";
@@ -7,7 +7,7 @@ export default function CompaniesListHeader({ isStale, hasRows, sortLabel, onAdd
   const { spacing } = useTheme();
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       {hasRows ? (
         <>
           <LoadingButton onPress={onAdd}>{MESSAGES.add}</LoadingButton>

@@ -1,5 +1,5 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -44,7 +44,7 @@ export default function ReplyTemplateDetailScreen({ id }: { id: string }) {
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <ReplyTemplateBody template={template} />
       {canWrite ? (
         <View style={{ gap: spacing.sm }}>

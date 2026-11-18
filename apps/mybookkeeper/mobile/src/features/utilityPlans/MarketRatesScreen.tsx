@@ -1,6 +1,6 @@
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import { UTILITY_SERVICE_TYPES } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text } from "react-native";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
@@ -23,7 +23,7 @@ export default function MarketRatesScreen() {
   }
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <Text style={{ padding: spacing.lg, fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.listIntro}</Text>
       {UTILITY_SERVICE_TYPES.map((serviceType) => (
         <MarketRateRow

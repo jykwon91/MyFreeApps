@@ -1,6 +1,6 @@
 import type { TaxSummaryResponse } from "@mybookkeeper/api-client/types/summary/TaxSummaryResponse";
 import { TAX_REPORT_VIEWS } from "../../constants/taxReport";
-import { Banner, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
@@ -36,7 +36,7 @@ export default function TaxReportHeader({
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
       <PickerField hint={MESSAGES.yearHint} label={MESSAGES.year} onPress={onChooseYear} value={String(year)} />
-      {showLastLoaded ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={showLastLoaded} />
       {uncategorized > 0 ? <Banner message={MESSAGES.uncategorized(formatCurrency(uncategorized / 100))} /> : null}
       {summary && hasTaxData(summary) ? (
         <>

@@ -1,7 +1,7 @@
 import { useListApplicationsKanbanQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
-import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -76,11 +76,9 @@ export default function DashboardScreen() {
     <View onLayout={onHeaderLayout} testID="dashboard-header">
       <DashboardSummary counts={counts} isStale={isStale} onShowStage={showStage} total={items.length} />
     </View>
-  ) : isStale ? (
-    <View style={{ padding: spacing.lg }}>
-      <Banner message={SHOWING_LAST_LOADED_MESSAGE} />
-    </View>
-  ) : undefined;
+  ) : (
+    <StaleDataBanner isShown={isStale} style={{ margin: spacing.lg }} />
+  );
 
   return (
     <View style={{ flex: 1 }}>

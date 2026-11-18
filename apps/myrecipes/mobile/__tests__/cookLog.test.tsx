@@ -2,6 +2,7 @@ import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWri
 import { COOK_LOG_MESSAGES as SHARED, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
+import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { baseApi } from "@platform/core/store/baseApi";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { ToastProvider } from "@platform/mobile";
@@ -181,6 +182,21 @@ describe("the cook log on the recipe screen", () => {
     fail = false;
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
     expect(await screen.findByTestId("cook-c1")).toBeTruthy();
+  });
+
+  it("keeps the cooks it has when asking again fails, and says they may be out of date", async () => {
+    let fail = false;
+    await show({ "GET /recipes/r1/cooks": () => (fail ? reply(500) : reply(200, [OLDER])) });
+    expect(await screen.findByTestId("cook-c1")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.updateFailed)).toBeNull();
+
+    fail = true;
+    await act(async () => {
+      await store.dispatch(recipesApi.endpoints.listRecipeCooks.initiate("r1", { forceRefetch: true }));
+    });
+
+    expect(await screen.findByText(MESSAGES.updateFailed)).toBeTruthy();
+    expect(screen.getByTestId("cook-c1")).toBeTruthy();
   });
 
   it("isn't shown on someone else's recipe, and isn't asked for", async () => {

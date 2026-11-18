@@ -2,7 +2,7 @@ import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-clien
 import { useListListingPagesInfiniteQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -80,7 +80,7 @@ export default function ListingsScreen() {
         ListFooterComponent={footer}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
             {canWrite && rows.length > 0 ? <LoadingButton onPress={addListing}>{LISTING_MESSAGES.add}</LoadingButton> : null}
             <LoadingButton onPress={() => setIsStatusSheetOpen(true)} variant="secondary">
               {statusFilterLabel(status)}

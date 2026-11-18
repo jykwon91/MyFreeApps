@@ -1,5 +1,5 @@
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
-import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -70,7 +70,7 @@ export default function TaxDocumentsScreen() {
             {checklist.length > 0 ? (
               <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.checklistCount(checklist.length - missingCount, missingCount)}</Text>
             ) : null}
-            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && currentData)} />
           </View>
         }
         contentInsetAdjustmentBehavior="automatic"

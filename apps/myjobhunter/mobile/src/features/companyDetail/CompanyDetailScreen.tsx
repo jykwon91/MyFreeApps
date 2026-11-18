@@ -2,7 +2,7 @@ import { useApplicationsPages } from "@myjobhunter/api-client/hooks/useApplicati
 import { useGetCompanyQuery, useGetCompanyResearchQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { companyDeleteState } from "@myjobhunter/api-client/utils/companyDeleteState";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { APPLICATION_SORTS, DEFAULT_APPLICATION_SORT } from "../../constants/applicationSorts";
@@ -64,7 +64,7 @@ export default function CompanyDetailScreen({ id }: CompanyDetailScreenProps) {
       refreshControl={refreshControl}
       testID="company-detail"
     >
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <CompanyHeader company={company} />
       <CompanyOverviewSection company={company} />
       <CompanyResearchSection companyId={id} companyName={company.name} />

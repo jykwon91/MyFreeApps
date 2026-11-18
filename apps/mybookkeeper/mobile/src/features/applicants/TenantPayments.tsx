@@ -1,7 +1,7 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { RENT_MESSAGES } from "../../constants/rent";
@@ -52,7 +52,7 @@ export default function TenantPayments({ applicantId, name }: { applicantId: str
   const shown = isShowingAll ? payments : payments.slice(0, PAYMENTS_SHOWN_AT_FIRST);
   return (
     <InquirySection title={TENANT_PAYMENT_MESSAGES.section}>
-      {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
+      <StaleDataBanner isShown={Boolean(error)} variant="note" />
       <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{totalReceived(formatCurrency(received))}</Text>
       {deposits !== 0 ? <Text style={mutedText}>{includesDeposits(formatCurrency(deposits))}</Text> : null}
       {!ledger && ledgerError ? <Text style={mutedText}>{RENT_MESSAGES.couldntLoadApplied}</Text> : null}

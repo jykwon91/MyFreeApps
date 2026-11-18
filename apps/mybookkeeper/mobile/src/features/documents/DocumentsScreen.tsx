@@ -3,7 +3,7 @@ import { DEFAULT_DOCUMENT_VIEW } from "@mybookkeeper/api-client/constants/docume
 import type { DocumentListView } from "@mybookkeeper/api-client/types/document/DocumentListView";
 import { activeDocumentFilterCount, isDefaultDocumentView, viewDocuments } from "@mybookkeeper/api-client/utils/documentListView";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, Text, View } from "react-native";
@@ -171,7 +171,7 @@ export default function DocumentsScreen({
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             <UploadStatus />
-            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error)} />
             {gaveUp ? (
               <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
                 {STILL_READING_MESSAGE}

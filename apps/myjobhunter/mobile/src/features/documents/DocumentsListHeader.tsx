@@ -1,4 +1,4 @@
-import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
+import { LoadingButton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES } from "../../constants/documents";
 import { DOCUMENTS_SCREEN_MESSAGES as MESSAGES, SUBTITLE_LINE_HEIGHT } from "../../constants/documentsScreen";
@@ -9,7 +9,7 @@ export default function DocumentsListHeader({ isStale, kindLabel, onUpload, onWr
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.md, paddingBottom: spacing.md }}>
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <Text style={{ fontSize: fontSize.sm, lineHeight: SUBTITLE_LINE_HEIGHT, color: colors.mutedForeground }}>{MESSAGES.subtitle}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton onPress={onUpload} style={{ flex: 1 }}>

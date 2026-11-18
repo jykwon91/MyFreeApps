@@ -1,7 +1,7 @@
 import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, Chip, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, OptionSheet, StaleDataBanner, useOpenWebsite, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useMemo, useRef, useState } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
@@ -41,7 +41,7 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {hasStaleData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={hasStaleData} />
       {actions.failure ? <Banner message={actions.failure} /> : null}
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>

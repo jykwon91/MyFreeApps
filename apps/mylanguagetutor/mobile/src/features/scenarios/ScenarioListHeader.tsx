@@ -2,7 +2,7 @@ import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy"
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
-import { Banner, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
+import { Banner, MIN_TOUCH_TARGET, StaleDataBanner, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import type { ScenarioListHeaderProps } from "../../types/ScenarioListHeaderProps";
@@ -12,7 +12,7 @@ export default function ScenarioListHeader({ profile, languageName, isCapReached
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.xs, paddingBottom: spacing.md }}>
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} style={{ marginBottom: spacing.sm }} /> : null}
+      <StaleDataBanner isShown={isStale} style={{ marginBottom: spacing.sm }} />
       <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.xl, fontWeight: "600" }}>
         {`${CATALOG_COPY.practicePrefix} ${languageName}`}
       </Text>

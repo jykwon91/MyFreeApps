@@ -4,7 +4,7 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
-import { Banner, Chip, EmptyState, goBackOr, KeyboardAwareScroll, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Chip, EmptyState, goBackOr, KeyboardAwareScroll, LoadingButton, LoadingRegion, OptionSheet, Skeleton, StaleDataBanner, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
@@ -89,7 +89,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   return (
     <View style={{ flex: 1 }}>
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" padForNavigationBar={false} refreshControl={refreshControl} testID="applicant-detail">
-        {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <StaleDataBanner isShown={Boolean(error)} />
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {applicantName(applicant.legal_name)}

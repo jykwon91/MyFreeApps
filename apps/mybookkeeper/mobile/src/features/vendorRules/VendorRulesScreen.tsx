@@ -1,7 +1,7 @@
 import { useListClassificationRulesQuery } from "@mybookkeeper/api-client/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { filterRulesByMatchType, groupRulesByMatchType } from "@mybookkeeper/api-client/utils/classificationRules";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -55,7 +55,7 @@ export default function VendorRulesScreen() {
         ListEmptyComponent={emptyList}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && currentData)} />
             {hasRules && !isAdmin ? <Banner message={VENDOR_RULE_MESSAGES.viewOnly} /> : null}
             {hasRules ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{rulesTotalText(currentData?.length ?? 0)}</Text> : null}
             {hasRules ? (

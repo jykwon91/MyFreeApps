@@ -2,7 +2,7 @@ import { useDraftLinePicker } from "@myjobhunter/api-client/hooks/useDraftLinePi
 import { useRefinementProposal } from "@myjobhunter/api-client/hooks/useRefinementProposal";
 import type { PickedDraftLine } from "@myjobhunter/api-client/types/resume-refinement/picked-draft-line";
 import { SuggestionMode } from "@myjobhunter/api-client/types/resume-refinement/suggestion-mode";
-import { Banner, type KeyboardAwareScrollRef, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useToast } from "@platform/mobile";
+import { type KeyboardAwareScrollRef, SegmentedControl, StaleDataBanner, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { RESUME_PANES } from "../../constants/resumePanes";
@@ -64,7 +64,7 @@ export default function ResumeSessionView({ session, onStartNew, isStale, renewS
   return (
     <ResumeScroll ref={scroll} testID="resume">
       <ResumeSessionHeader label={session.status === "preparing" ? MESSAGES.cancel : MESSAGES.startDifferent} onStartNew={onStartNew} />
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <SegmentedControl accessibilityLabel={MESSAGES.panesLabel} onChange={show} segments={RESUME_PANES} value={pane} />
       {pane === "review" ? (
         <>

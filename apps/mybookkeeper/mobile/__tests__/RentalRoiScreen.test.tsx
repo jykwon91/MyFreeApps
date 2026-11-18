@@ -1,7 +1,7 @@
 import type { RentalRoiResponse } from "@mybookkeeper/api-client/types/analytics/rental-roi-response";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
@@ -237,6 +237,19 @@ describe("RentalRoiScreen", () => {
       await screen.getByTestId("rental-roi-scroll").props.refreshControl.props.onRefresh();
     });
     expect(server.reads.length).toBeGreaterThan(readsBefore);
+  });
+
+  it("keeps the figures and says so when a refresh fails", async () => {
+    const server = serve();
+    await render(tree());
+    await screen.findByTestId("rental-roi-headline");
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+    server.status = 500;
+    await act(async () => {
+      await screen.getByTestId("rental-roi-scroll").props.refreshControl.props.onRefresh();
+    });
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+    expect(screen.getByTestId("rental-roi-headline")).toBeTruthy();
   });
 
   it("shows the mortgage source note when estimated from transactions", async () => {

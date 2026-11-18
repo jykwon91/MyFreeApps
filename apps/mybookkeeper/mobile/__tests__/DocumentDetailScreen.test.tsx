@@ -1,7 +1,7 @@
 import { REFERENCE_ONLY_COPY } from "@mybookkeeper/api-client/constants/documentReferenceOnly";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Alert } from "react-native";
@@ -233,6 +233,18 @@ describe("DocumentDetailScreen", () => {
     expect(await screen.findByText("I can't find that document.")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Back" }));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("keeps the document and says so when a refresh fails", async () => {
+    const server = startFakeServer([aDocument()]);
+    await renderDetail();
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+    server.offline = true;
+    await act(async () => {
+      await screen.getByTestId("document-detail").props.refreshControl.props.onRefresh();
+    });
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+    expect(screen.getByRole("header")).toBeTruthy();
   });
 
   it("shows a deleted document as deleted, with no file and no actions", async () => {

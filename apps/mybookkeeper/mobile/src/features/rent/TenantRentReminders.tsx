@@ -1,7 +1,7 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
-import { Chip, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { REMINDER_MESSAGES } from "../../constants/rentReminders";
@@ -72,7 +72,7 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
     const needsSchedule = ledger?.schedules.length === 0;
     return (
       <InquirySection title={REMINDER_MESSAGES.section}>
-        {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
+        <StaleDataBanner isShown={Boolean(error)} variant="note" />
         <Text style={mutedText}>{needsSchedule ? REMINDER_MESSAGES.needsSchedule : REMINDER_MESSAGES.notSending}</Text>
         {canWrite ? (
           <LoadingButton onPress={() => setIsEditing(true)} variant="secondary">
@@ -86,7 +86,7 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
 
   return (
     <InquirySection title={REMINDER_MESSAGES.section}>
-      {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
+      <StaleDataBanner isShown={Boolean(error)} variant="note" />
       <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{describePlan(plan)}</Text>
       {plan.is_active ? null : (
         <>

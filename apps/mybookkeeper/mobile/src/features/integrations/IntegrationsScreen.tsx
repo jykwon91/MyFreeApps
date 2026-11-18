@@ -1,5 +1,5 @@
 import { groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
-import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -56,7 +56,7 @@ export default function IntegrationsScreen() {
       }
       ListHeaderComponent={
         <View style={{ gap: spacing.lg, padding: spacing.lg }}>
-          {integrations.error || (logs.error && logs.currentData) || (queue.error && queueItems) ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(integrations.error || (logs.error && logs.currentData) || (queue.error && queueItems))} />
           <GmailStatusCard connection={connection} gmail={gmail} runningSync={isSyncing ? latest : null} />
           {connection === "connected" && canWrite ? <GmailActions actions={actions} isSyncing={isSyncing} latestSyncLogId={latest?.id ?? null} /> : null}
           {isLinked && !canWrite ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text> : null}

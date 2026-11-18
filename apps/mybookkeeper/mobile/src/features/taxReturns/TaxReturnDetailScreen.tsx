@@ -7,7 +7,7 @@ import {
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, WebLink, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, StaleDataBanner, WebLink, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
@@ -71,7 +71,7 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
       <View style={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>{taxReturnTitle(current)}</Text>
         <Text style={muted}>{`${statusLine} · ${filingStatus}`}</Text>
-        {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <StaleDataBanner isShown={isStale} />
         {current.needs_recompute ? <Banner message={MESSAGES.outOfDateDetail} /> : null}
         {isAdmin ? (
           <LoadingButton

@@ -3,7 +3,7 @@ import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
 import { useListScreeningAnswersQuery } from "@myjobhunter/api-client/store/screeningAnswersApi";
 import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 import { useListWorkHistoryQuery } from "@myjobhunter/api-client/store/workHistoryApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { profileListState } from "../../lib/profileListState";
@@ -52,7 +52,7 @@ export default function ProfileScreen() {
       refreshControl={refreshControl}
       testID="profile"
     >
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <AboutSection profile={profile} />
       <PreferencesSection profile={profile} />
       <WorkHistorySection state={profileListState(workHistory)} />

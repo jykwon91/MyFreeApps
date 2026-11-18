@@ -1,6 +1,6 @@
 import { useGetWelcomeManualByIdQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, goBackOr } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, goBackOr } from "@platform/mobile";
 import { View } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
 import type { WelcomeManualLoaderProps } from "../../types/WelcomeManualLoaderProps";
@@ -27,7 +27,7 @@ export default function WelcomeManualContent({ id, isLeaving = false, children }
   }
   return (
     <View style={{ flex: 1 }}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       {children({ manual, refreshControl, refresh })}
     </View>
   );

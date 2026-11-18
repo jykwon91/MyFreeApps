@@ -1,7 +1,7 @@
 import { COOK_LOG_MESSAGES as SHARED } from "@myrecipes/api-client/constants/cookLog";
 import { useListRecipeCooksQuery } from "@myrecipes/api-client/store/recipesApi";
 import { cooksNewestFirst } from "@myrecipes/api-client/utils/cooksNewestFirst";
-import { SectionError, useTheme } from "@platform/mobile";
+import { SectionError, StaleDataBanner, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COOK_LOG_PHONE_MESSAGES as MESSAGES } from "../../constants/cookLog";
 import type { CookLogSectionProps } from "../../types/CookLogSectionProps";
@@ -42,6 +42,7 @@ export default function CookLogSection({ recipeId, versionId, versionNumber, ver
     <View style={{ gap: spacing.md }}>
       <RecipeSectionHeading>{SHARED.historyTitle}</RecipeSectionHeading>
       <LogCookButton recipeId={recipeId} versionId={versionId} versionNumber={versionNumber} />
+      <StaleDataBanner isShown={isError && cooks !== undefined} message={MESSAGES.updateFailed} variant="note" />
       {renderCooks()}
     </View>
   );

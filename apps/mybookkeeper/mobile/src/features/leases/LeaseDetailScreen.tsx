@@ -2,7 +2,7 @@ import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signe
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, Chip, EmptyState, LoadingButton, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { Chip, EmptyState, LoadingButton, MIN_TOUCH_TARGET, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -66,7 +66,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
         style={{ flex: 1 }}
         testID="lease-detail"
       >
-        {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <StaleDataBanner isShown={Boolean(error)} />
         <View style={{ gap: spacing.sm, alignItems: "flex-start" }}>
           <Pressable
             accessibilityHint="Opens their page"

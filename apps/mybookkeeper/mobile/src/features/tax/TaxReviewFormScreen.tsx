@@ -1,6 +1,6 @@
 import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { TAX_REVIEW_MESSAGES as MESSAGES } from "../../constants/taxReview";
 import { isServerAnswer } from "../../utils/isServerAnswer";
@@ -43,7 +43,7 @@ export default function TaxReviewFormScreen({ year, formName, instance, copy }: 
       <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>
         {reviewFormTitle(form)}
       </Text>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <TaxReviewProgress form={form} />
       {form.highlights.length > 0 ? (
         <View style={{ gap: spacing.xs }}>

@@ -1,5 +1,5 @@
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -57,7 +57,7 @@ export default function UtilityPlansScreen() {
         }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && allRows.length > 0 ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && allRows.length > 0)} />
             {canWrite && allRows.length > 0 ? <LoadingButton onPress={addPlan}>{MESSAGES.add}</LoadingButton> : null}
             <UtilityPlansGlance hasPlans={allRows.length > 0} />
             <LoadingButton onPress={() => setIsFilterSheetOpen(true)} variant="secondary">
