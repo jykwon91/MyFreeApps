@@ -126,7 +126,7 @@ describe("Home filters", () => {
     const server = startTransactionServer([], TWO_PROPERTIES);
     server.summary = { revenue: 9000, expenses: 1500, profit: 7500, by_category: SPENDING };
     await renderHome();
-    await screen.findByText("Where it went");
+    await screen.findByRole("button", { name: "Utilities, 300 dollars" });
     await chooseProperty("Oak Ave");
     await fireEvent.press(await screen.findByRole("button", { name: "Utilities, 300 dollars" }));
     const filter = openedDrillDown();
@@ -161,7 +161,7 @@ describe("Home filters", () => {
     const server = startTransactionServer([], TWO_PROPERTIES);
     server.summary = { revenue: 9000, expenses: 1500, profit: 7500, by_category: SPENDING };
     await renderHome();
-    await screen.findByText("Where it went");
+    await screen.findByRole("button", { name: "Utilities, 300 dollars" });
     await chooseProperty("Oak Ave");
     await chooseProperty("Elm St");
     await waitFor(() => expect(summaryUrls(server).at(-1)).toMatch(/property_ids=p2&property_ids=p1$/));

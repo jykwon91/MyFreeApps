@@ -39,7 +39,7 @@ describe("Home where it went", () => {
     server.summary = { by_category: SPENDING };
     await renderHome();
     await screen.findByText("Where it went");
-    const rows = screen.getAllByRole("button", { name: /dollars$/ }).map((row) => row.props.accessibilityLabel);
+    const rows = (await screen.findAllByRole("button", { name: /dollars$/ })).map((row) => row.props.accessibilityLabel);
     expect(rows).toEqual([
       "Maintenance, 1,200 dollars",
       "Mortgage Interest, 800 dollars",
@@ -57,7 +57,7 @@ describe("Home where it went", () => {
     server.summary = { by_category: { maintenance: 1000, utilities: 250 } };
     await renderHome();
     await screen.findByText("Where it went");
-    const widths = screen.getAllByTestId("category-bar").map((bar) => bar.props.style.width);
+    const widths = (await screen.findAllByTestId("category-bar")).map((bar) => bar.props.style.width);
     expect(widths).toEqual(["100%", "25%"]);
   });
 
@@ -107,7 +107,7 @@ describe("Home where it went", () => {
     const server = startTransactionServer([]);
     server.summary = { by_category: SPENDING };
     await renderHome();
-    await screen.findByText("Where it went");
+    await screen.findByRole("button", { name: "Maintenance, 1,200 dollars" });
     server.failSummary = true;
     await pull();
     expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();

@@ -117,8 +117,8 @@ describe("TransactionsScreen", () => {
     await renderScreen();
     await screen.findByText("Done");
     await fireEvent.press(screen.getByRole("tab", { name: "To review" }));
-    await waitFor(() => expect(screen.queryByText("Done")).toBeNull());
-    expect(screen.getByText("Waiting")).toBeTruthy();
+    expect(await screen.findByText("Waiting")).toBeTruthy();
+    expect(screen.queryByText("Done")).toBeNull();
     expect(server.requests.some((request) => (request.params as { to_review?: boolean } | undefined)?.to_review === true)).toBe(true);
   });
 

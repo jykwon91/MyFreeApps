@@ -5,7 +5,7 @@ import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/ty
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, renderHook, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
@@ -167,6 +167,7 @@ async function showScreen() {
   await act(async () => {
     await store.dispatch(attributionApi.endpoints.getAttributionReviewQueue.initiate(undefined, { forceRefetch: true }));
   });
+  await waitFor(() => expect(screen.queryByTestId("payment-review-skeleton")).toBeNull());
 }
 
 async function settle() {
@@ -232,8 +233,7 @@ describe("what the list shows", () => {
 
     server.queueStatus = undefined;
     await fireEvent.press(screen.getByText(MESSAGES.tryAgain));
-    await settle();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("keeps the list and says so when a refresh fails", async () => {
@@ -255,10 +255,9 @@ describe("what the list shows", () => {
     server.queueStatus = 500;
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
+    expect(await screen.findByText(MESSAGES.couldntLoad)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.noneHeading)).toBeNull();
-    expect(screen.getByText(MESSAGES.couldntLoad)).toBeTruthy();
   });
 
   it("shows the payment, the guess and the count, and no ids or raw confidence", async () => {
@@ -326,13 +325,12 @@ describe("confirming a guess", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     expect(server.sent).toEqual([{ url: `${QUEUE_URL}/r1/confirm`, body: { applicant_id: "a1", property_id: null } }]);
     expect(Alert.alert).not.toHaveBeenCalled();
     expect(screen.getByText("Linked to Jane Smith. I'll remember that Jane S. pays for them.")).toBeTruthy();
     expect(screen.queryByText("Yes, it's Jane Smith")).toBeNull();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("takes the row off even when the reload after it fails, so it can't be tapped again", async () => {
@@ -341,8 +339,8 @@ describe("confirming a guess", () => {
     server.queueStatus = 500;
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
+    expect(await screen.findByText("1 payment to review")).toBeTruthy();
     expect(screen.queryByText("Yes, it's Jane Smith")).toBeNull();
     expect(screen.getByText("Assign to Sunset Villa")).toBeTruthy();
     expect(screen.getByText("1 payment to review")).toBeTruthy();
@@ -354,13 +352,12 @@ describe("confirming a guess", () => {
     await act(async () => {
       store.dispatch(transactionsApi.endpoints.getTransaction.initiate("tx1"));
     });
-    await settle();
+    await waitFor(() => expect(server.otherReads).toContain("/transactions/tx1"));
     server.otherReads.length = 0;
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
-    expect(server.otherReads).toContain("/transactions/tx1");
+    await waitFor(() => expect(server.otherReads).toContain("/transactions/tx1"));
   });
 
   it("doesn't promise to remember a payer it doesn't have", async () => {
@@ -369,9 +366,8 @@ describe("confirming a guess", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
-    expect(screen.getByText("Linked to Jane Smith.")).toBeTruthy();
+    expect(await screen.findByText("Linked to Jane Smith.")).toBeTruthy();
   });
 
   it("assigns a payout to the property it showed", async () => {
@@ -380,10 +376,9 @@ describe("confirming a guess", () => {
 
     expect(screen.getByText("Looks like a payout for Sunset Villa.")).toBeTruthy();
     await fireEvent.press(screen.getByText("Assign to Sunset Villa"));
-    await settle();
 
+    expect(await screen.findByText("Booked to Sunset Villa.")).toBeTruthy();
     expect(server.sent[0]).toEqual({ url: `${QUEUE_URL}/r2/confirm`, body: { applicant_id: null, property_id: "p1" } });
-    expect(screen.getByText("Booked to Sunset Villa.")).toBeTruthy();
   });
 
   it("sends one request when tapped twice before the button can disable itself", async () => {
@@ -407,10 +402,9 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
-    await settle();
+    expect(await screen.findByText("Past Person (ended)")).toBeTruthy();
     expect(screen.getByText(TENANT_PICKER_MESSAGES.title)).toBeTruthy();
     expect(screen.getByText("$1,200.00 from Jane S. on Mar 3.")).toBeTruthy();
-    expect(screen.getByText("Past Person (ended)")).toBeTruthy();
 
     await fireEvent.press(screen.getByText("Omar Reyes"));
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -422,8 +416,8 @@ describe("picking someone else", () => {
     expect(server.sent).toEqual([]);
 
     await pressAlert(MESSAGES.link);
+    expect(await screen.findByText("Linked to Omar Reyes. I'll remember that Jane S. pays for them.")).toBeTruthy();
     expect(server.sent[0].body).toEqual({ applicant_id: "a2", property_id: null });
-    expect(screen.getByText("Linked to Omar Reyes. I'll remember that Jane S. pays for them.")).toBeTruthy();
   });
 
   it("sends nothing when the question is cancelled", async () => {
@@ -431,8 +425,7 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
-    await settle();
-    await fireEvent.press(screen.getByText("Omar Reyes"));
+    await fireEvent.press(await screen.findByText("Omar Reyes"));
     await finishClosing();
     await pressAlert("Cancel");
 
@@ -445,7 +438,7 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
-    await settle();
+    await screen.findByText("Omar Reyes");
     await fireEvent.press(screen.getByText("Close"));
     await finishClosing();
 
@@ -459,9 +452,8 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
-    await settle();
 
-    expect(screen.getByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
+    expect(await screen.findByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
     expect(screen.queryByText(TENANT_PICKER_MESSAGES.none)).toBeNull();
   });
 
@@ -471,8 +463,7 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
-    await settle();
-    expect(screen.getByText(TENANT_PICKER_MESSAGES.none)).toBeTruthy();
+    expect(await screen.findByText(TENANT_PICKER_MESSAGES.none)).toBeTruthy();
     expect(screen.queryByText(/website/)).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: TENANT_PICKER_MESSAGES.seeApplicants }));
     expect(screen.queryByText(TENANT_PICKER_MESSAGES.title)).toBeNull();
@@ -490,8 +481,7 @@ describe("picking someone else", () => {
     await showScreen();
 
     await fireEvent.press(screen.getByText(MESSAGES.chooseProperty));
-    await settle();
-    expect(screen.getByText(MESSAGES.noProperties)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.noProperties)).toBeTruthy();
     expect(screen.queryByText(/website/)).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addProperty }));
     expect(router.push).not.toHaveBeenCalled();
@@ -507,16 +497,16 @@ describe("picking someone else", () => {
 
     expect(screen.getByText(MESSAGES.noPropertyGuess)).toBeTruthy();
     await fireEvent.press(screen.getByText(MESSAGES.chooseProperty));
-    await settle();
+    expect(await screen.findByText("Oak Cottage")).toBeTruthy();
     expect(screen.getByText(MESSAGES.propertySheetTitle)).toBeTruthy();
     expect(screen.queryByText("Sold House")).toBeNull();
 
     await fireEvent.press(screen.getByText("Oak Cottage"));
     await finishClosing();
 
+    expect(await screen.findByText("Booked to Oak Cottage.")).toBeTruthy();
     expect(Alert.alert).not.toHaveBeenCalled();
     expect(server.sent[0].body).toEqual({ applicant_id: null, property_id: "p2" });
-    expect(screen.getByText("Booked to Oak Cottage.")).toBeTruthy();
   });
 });
 
@@ -531,9 +521,9 @@ describe("skipping", () => {
 
     await pressAlert(MESSAGES.skip);
 
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     expect(server.sent).toEqual([{ url: `${QUEUE_URL}/r1/reject`, body: {} }]);
     expect(screen.getByText(MESSAGES.skipped)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 });
 
@@ -542,14 +532,13 @@ describe("when the server refuses", () => {
     server.reply = reply;
     await showScreen();
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
   }
 
   it("keeps the row when the save fails, and never shows the server's words", async () => {
     const server = serve(aQueue([aRow()]));
     await tapYes(server, refusal(500, "Traceback secret"));
 
-    expect(screen.getByText(MESSAGES.couldntSave)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.couldntSave)).toBeTruthy();
     expect(screen.queryByText(/Traceback/, SHOWN)).toBeNull();
     expect(screen.getByText("Yes, it's Jane Smith")).toBeTruthy();
   });
@@ -561,10 +550,9 @@ describe("when the server refuses", () => {
     server.queue = aQueue([]);
 
     await fireEvent.press(screen.getByText("Yes, it's Jane Smith"));
-    await settle();
 
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     expect(screen.getByText(MESSAGES.alreadyHandled)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it.each([

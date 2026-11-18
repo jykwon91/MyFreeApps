@@ -133,7 +133,7 @@ describe("selecting every matching transaction", () => {
     await screen.findByText("5 selected");
     await fireEvent.press(screen.getByRole("tab", { name: "All" }));
     await waitFor(() => expect(screen.queryByText(/selected$/)).toBeNull());
-    expect(screen.getByRole("button", { name: "Select several transactions" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Select several transactions" })).toBeTruthy();
   });
 
   it("unticks a row not loaded on screen that's gone after a refresh", async () => {

@@ -122,6 +122,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   api.defaults.adapter = originalAdapter;
+  jest.useRealTimers();
 });
 
 describe("what the section shows", () => {
@@ -377,24 +378,17 @@ describe("Send now", () => {
   it("holds Send for a while when it can't tell, then lets go", async () => {
     await renderReminders(startServer({ sendAnswer: "lost" }));
     await screen.findByText(SEND_BUTTON);
-    const realSetTimeout = globalThis.setTimeout;
-    const delays: number[] = [];
-    let release: () => void = () => undefined;
-    jest.spyOn(globalThis, "setTimeout").mockImplementation(((callback: () => void, delay?: number) => {
-      delays.push(delay ?? 0);
-      if (delay === LOST_SEND_HOLD_MS) {
-        release = callback;
-        return 0 as never;
-      }
-      return realSetTimeout(callback, delay);
-    }) as never);
+    // On the fake clock the hold can be timed exactly. Spying on setTimeout instead makes the
+    // testing library think the clock is fake while it isn't, so its waits stop waiting.
+    jest.useFakeTimers();
 
     await sendAndConfirm();
 
     expect(await screen.findByText(REMINDER_MESSAGES.lostUnknown)).toBeTruthy();
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: true })).toBeTruthy());
-    expect(delays).toContain(LOST_SEND_HOLD_MS);
-    await act(async () => release());
+    await act(async () => jest.advanceTimersByTime(LOST_SEND_HOLD_MS / 2));
+    expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: true })).toBeTruthy();
+    await act(async () => jest.advanceTimersByTime(LOST_SEND_HOLD_MS));
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
 

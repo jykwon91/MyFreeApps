@@ -3,7 +3,7 @@ import { rentReceiptsApi } from "@mybookkeeper/api-client/store/rentReceiptsApi"
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, renderHook, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
@@ -45,7 +45,7 @@ async function showScreen() {
   await act(async () => {
     await store.dispatch(rentReceiptsApi.endpoints.getPendingReceipts.initiate({ limit: RECEIPTS_LIMIT }, { forceRefetch: true }));
   });
-  await settle();
+  await waitFor(() => expect(screen.queryByTestId("receipts-skeleton")).toBeNull());
 }
 
 async function settle() {
@@ -108,8 +108,7 @@ describe("what the list shows", () => {
 
     server.listStatus = null;
     await fireEvent.press(screen.getByText(MESSAGES.tryAgain));
-    await settle();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("keeps the list and says so when a refresh fails", async () => {
@@ -237,8 +236,8 @@ describe("what the list shows", () => {
     expect(jest.mocked(Alert.alert).mock.calls[0].slice(0, 2)).toEqual([MESSAGES.dismissTitle, MESSAGES.dismissOtherGmailBody]);
     await pressAlert(MESSAGES.dismiss);
 
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/dismiss", body: {} }]);
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("gives a viewer the list and no buttons", async () => {
@@ -264,9 +263,9 @@ describe("dismissing", () => {
 
     await pressAlert(MESSAGES.dismiss);
 
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/dismiss", body: {} }]);
     expect(screen.getByText(MESSAGES.dismissed)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("sends nothing when the question is cancelled", async () => {
@@ -288,9 +287,9 @@ describe("dismissing", () => {
     await fireEvent.press(screen.getByRole("button", { name: dismissActionLabel(aReceipt()) }));
     await pressAlert(MESSAGES.dismiss);
 
+    expect(await screen.findByText("1 receipt waiting to send")).toBeTruthy();
     expect(screen.queryByText("Jane Smith")).toBeNull();
     expect(screen.getByText("Omar Reyes")).toBeTruthy();
-    expect(screen.getByText("1 receipt waiting to send")).toBeTruthy();
   });
 
   it.each([
@@ -305,8 +304,8 @@ describe("dismissing", () => {
     await fireEvent.press(screen.getByText(MESSAGES.dismiss));
     await pressAlert(MESSAGES.dismiss);
 
-    expect(screen.getByText(message)).toBeTruthy();
-    expect(screen.queryByText("Jane Smith")).toBeNull();
+    expect(await screen.findByText(message)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Jane Smith")).toBeNull());
   });
 
   it("keeps the row and explains when a send is still being confirmed", async () => {
@@ -317,7 +316,7 @@ describe("dismissing", () => {
     await fireEvent.press(screen.getByText(MESSAGES.dismiss));
     await pressAlert(MESSAGES.dismiss);
 
-    expect(screen.getByText(MESSAGES.dismissWhileSending)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.dismissWhileSending)).toBeTruthy();
     expect(screen.getByText("Jane Smith")).toBeTruthy();
   });
 
@@ -329,7 +328,7 @@ describe("dismissing", () => {
     await fireEvent.press(screen.getByText(MESSAGES.dismiss));
     await pressAlert(MESSAGES.dismiss);
 
-    expect(screen.getByText(MESSAGES.couldntDismiss)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.couldntDismiss)).toBeTruthy();
     expect(screen.queryByText(/Traceback/, SHOWN)).toBeNull();
     expect(screen.getByText("Jane Smith")).toBeTruthy();
   });

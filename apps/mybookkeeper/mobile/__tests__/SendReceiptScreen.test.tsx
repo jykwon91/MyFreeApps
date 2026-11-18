@@ -132,8 +132,7 @@ describe("opening it", () => {
 
     server.listStatus = null;
     await fireEvent.press(screen.getByText(MESSAGES.tryAgain));
-    await settle();
-    expect(screen.getByText("Jane Smith")).toBeTruthy();
+    expect(await screen.findByText("Jane Smith")).toBeTruthy();
   });
 
   it("says a receipt that isn't in the list isn't waiting anymore", async () => {
@@ -357,10 +356,11 @@ describe("sending", () => {
     server.listStatus = 500;
 
     await sendAndConfirm();
+    await screen.findByText(SENT);
+    await waitFor(() => expect(router.back).toHaveBeenCalledTimes(1));
 
     expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/send", body: { period_start: "2026-06-01", period_end: "2026-06-30", payment_method: "zelle", today: localToday() } }]);
     expect(screen.getByText(SENT)).toBeTruthy();
-    expect(router.back).toHaveBeenCalledTimes(1);
     expect(cachedList()?.items.map((item) => item.transaction_id)).toEqual(["tx2"]);
     expect(cachedList()?.pending_count).toBe(1);
     // Still the form, not "isn't waiting anymore", while the screen goes.
@@ -394,7 +394,7 @@ describe("when the send is refused", () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status: 409, detail });
 
-    expect(screen.getByText(message)).toBeTruthy();
+    expect(await screen.findByText(message)).toBeTruthy();
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 
@@ -402,7 +402,7 @@ describe("when the send is refused", () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status: 404, detail: "Not found" });
 
-    expect(screen.getByText(MESSAGES.gone)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.gone)).toBeTruthy();
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 
@@ -418,7 +418,7 @@ describe("when the send is refused", () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status, detail });
 
-    expect(screen.getByText(message)).toBeTruthy();
+    expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.queryByText(detail)).toBeNull();
     expect(router.back).not.toHaveBeenCalled();
     expect(sendButton().props.accessibilityState.disabled).toBe(false);
@@ -431,7 +431,7 @@ describe("when the send is refused", () => {
     };
     await sendWith(server, { status: 422, detail: "This tenant has no email on file." });
 
-    expect(screen.getByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${BLOCKER_FIX_ON_PHONE.tenant_no_email}`)).toBeTruthy();
+    expect(await screen.findByText(`${RECEIPT_SEND_BLOCKER_MESSAGES.tenant_no_email} ${BLOCKER_FIX_ON_PHONE.tenant_no_email}`)).toBeTruthy();
     expect(screen.queryByText("This tenant has no email on file.")).toBeNull();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addTheirEmail }));
@@ -445,7 +445,7 @@ describe("when the send is refused", () => {
     };
     await sendWith(server, { status: 422, detail: "Gmail needs reconnecting." });
 
-    expect(screen.getByText(`${RECEIPT_GMAIL_STATE_MESSAGES.needs_reconnect} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(await screen.findByText(`${RECEIPT_GMAIL_STATE_MESSAGES.needs_reconnect} ${FIX_ON_WEBSITE}`)).toBeTruthy();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
   });
 
@@ -453,8 +453,8 @@ describe("when the send is refused", () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status: 422, detail: "Something new" });
 
+    expect(await screen.findByText(MESSAGES.couldntSend)).toBeTruthy();
     expect(server.listReads.length).toBeGreaterThan(1);
-    expect(screen.getByText(MESSAGES.couldntSend)).toBeTruthy();
     expect(screen.queryByText("Something new")).toBeNull();
   });
 
@@ -462,7 +462,7 @@ describe("when the send is refused", () => {
     const server = startReceiptServer([aReceipt()]);
     await sendWith(server, { status: 503, detail: "gmail_reauth_required" });
 
-    expect(screen.getByText(`${RECEIPT_SEND_ERROR_MESSAGES.gmail_reauth_required} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(await screen.findByText(`${RECEIPT_SEND_ERROR_MESSAGES.gmail_reauth_required} ${FIX_ON_WEBSITE}`)).toBeTruthy();
   });
 });
 
@@ -475,7 +475,7 @@ describe("when no answer comes back", () => {
 
     await sendAndConfirm();
 
-    expect(screen.getByText(MESSAGES.offList)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.offList)).toBeTruthy();
     expect(screen.queryByText(/^Sent\./)).toBeNull();
     expect(router.back).toHaveBeenCalledTimes(1);
   });
@@ -487,7 +487,7 @@ describe("when no answer comes back", () => {
 
     await sendAndConfirm();
 
-    expect(screen.getByText(MESSAGES.sendUnsure)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.sendUnsure)).toBeTruthy();
     expect(router.back).not.toHaveBeenCalled();
     expect(sendButton().props.accessibilityState.disabled).toBe(false);
   });
@@ -501,7 +501,7 @@ describe("when no answer comes back", () => {
 
     await sendAndConfirm();
 
-    expect(screen.getByText(MESSAGES.sendUnsure)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.sendUnsure)).toBeTruthy();
     expect(router.back).not.toHaveBeenCalled();
   });
 });

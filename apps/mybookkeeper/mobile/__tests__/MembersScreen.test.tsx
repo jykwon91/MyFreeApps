@@ -259,6 +259,7 @@ describe("loading and failing", () => {
     await show();
     expect(screen.getByTestId("members-skeleton")).toBeTruthy();
     await act(async () => server.release?.());
+    await screen.findByText(MESSAGES.people(2));
   });
 
   it("doesn't read as empty when it can't reach the server, and recovers", async () => {
@@ -354,6 +355,7 @@ describe("changing a role", () => {
     expect(screen.queryByText(MESSAGES.removeFrom("Acme"))).toBeNull();
     expect(calledWith(server, "PATCH")).toHaveLength(1);
     await act(async () => server.release?.());
+    await screen.findByText(MESSAGES.roleChanged("Sam Lee", "a viewer"));
   });
 
   it("treats a lost answer as done when the role did change", async () => {
@@ -605,6 +607,7 @@ describe("inviting someone", () => {
     await fireEvent.press(screen.getByTestId("member-u3"));
     expect(screen.queryByText(MESSAGES.removeFrom("Acme"))).toBeNull();
     await act(async () => server.release?.());
+    await screen.findByText(MESSAGES.roleChanged("Sam Lee", "a viewer"));
   });
 
   it("sends once however many times it's pressed", async () => {
@@ -618,6 +621,7 @@ describe("inviting someone", () => {
     await fireEvent.press(screen.getByText(MESSAGES.sending));
     expect(calledWith(server, "POST")).toHaveLength(1);
     await act(async () => server.release?.());
+    await screen.findByText(MESSAGES.inviteSent("new@example.com"));
   });
 
   it("fills in the form again from an expired invite and lets it through", async () => {
@@ -666,6 +670,7 @@ describe("cancelling an invite", () => {
     await fireEvent.press(screen.getByText(MESSAGES.cancelling));
     expect(calledWith(server, "DELETE")).toHaveLength(1);
     await act(async () => server.release?.());
+    await screen.findByText(MESSAGES.inviteCancelled("new@example.com"));
   });
 });
 

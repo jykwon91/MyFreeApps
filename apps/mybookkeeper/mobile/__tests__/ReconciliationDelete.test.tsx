@@ -2,7 +2,7 @@ import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconc
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert, type AlertButton } from "react-native";
@@ -73,7 +73,7 @@ async function settle(): Promise<void> {
 
 async function showList(): Promise<void> {
   await render(<ReconciliationScreen />, { wrapper });
-  await settle();
+  await screen.findByText("1099-K · Typo Inc");
 }
 
 function lastAlertButton(text: string): AlertButton {
@@ -103,11 +103,10 @@ describe("deleting a 1099 on the phone", () => {
     expect(server.deletes).toEqual([]);
     expect(jest.mocked(Alert.alert).mock.calls[0][0]).toBe("Delete this 1099?");
     await act(async () => lastAlertButton("Delete").onPress?.());
-    await settle();
 
+    expect(await screen.findByText("Deleted that 1099.")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("1099-K · Typo Inc")).toBeNull());
     expect(server.deletes).toEqual(["/reconciliation/sources/s1"]);
-    expect(screen.getByText("Deleted that 1099.")).toBeTruthy();
-    expect(screen.queryByText("1099-K · Typo Inc")).toBeNull();
   });
 
   it("leaves it alone when the host cancels", async () => {
@@ -128,9 +127,8 @@ describe("deleting a 1099 on the phone", () => {
 
     await fireEvent.press(screen.getByLabelText(LABEL));
     await act(async () => lastAlertButton("Delete").onPress?.());
-    await settle();
 
-    expect(screen.getByText("I couldn't delete that 1099. Want to try again?")).toBeTruthy();
+    expect(await screen.findByText("I couldn't delete that 1099. Want to try again?")).toBeTruthy();
     expect(screen.getByText("1099-K · Typo Inc")).toBeTruthy();
   });
 

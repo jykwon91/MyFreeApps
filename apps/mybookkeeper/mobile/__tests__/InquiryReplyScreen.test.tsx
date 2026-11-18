@@ -199,7 +199,7 @@ describe("InquiryReplyScreen", () => {
       await act(async () => {
         await jest.mocked(Alert.alert).mock.calls[0][2]?.find((button) => button.text === "Replace")?.onPress?.();
       });
-      expect(screen.getByLabelText("Message").props.value).toBe("Hello from the template");
+      await waitFor(() => expect(screen.getByLabelText("Message").props.value).toBe("Hello from the template"));
     });
 
     it("clears a template's words for writing your own, without asking when they're untouched", async () => {

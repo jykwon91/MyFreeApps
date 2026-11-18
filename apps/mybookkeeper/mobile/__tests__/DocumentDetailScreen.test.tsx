@@ -106,6 +106,8 @@ describe("DocumentDetailScreen", () => {
       screen.getByLabelText(/^Photo of/).props.onError();
     });
     await waitFor(() => expect(server.requests.length).toBeGreaterThan(before));
+    // The retry only happens once the renewal has been answered.
+    await waitFor(() => expect(Object.values(store.getState().api.queries).filter((query) => query?.status === "pending")).toEqual([]));
     await waitFor(() => expect(screen.getByLabelText(/^Photo of/).props.source.headers.Authorization).toBe("Bearer newer-token"));
     await act(async () => {
       screen.getByLabelText(/^Photo of/).props.onError();

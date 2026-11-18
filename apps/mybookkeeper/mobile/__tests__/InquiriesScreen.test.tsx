@@ -172,7 +172,8 @@ describe("InquiriesScreen", () => {
     server.failListFromOffset = null;
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(server.requests.filter((request) => request.params?.offset === 25).length).toBeGreaterThan(1));
-    expect(screen.queryByText("I couldn't load more.")).toBeNull();
+    // The retry has gone out; its answer is what clears the message.
+    await waitFor(() => expect(screen.queryByText("I couldn't load more.")).toBeNull());
   });
 
   it("keeps what it has when a refresh fails", async () => {

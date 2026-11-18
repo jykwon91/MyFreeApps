@@ -127,13 +127,13 @@ async function settle(): Promise<void> {
 
 async function showList(): Promise<void> {
   await render(<ReconciliationScreen />, { wrapper });
-  await settle();
+  await waitFor(() => expect(screen.queryByTestId("reconciliation-skeleton")).toBeNull());
 }
 
 async function chooseYear(year: number): Promise<void> {
   await fireEvent.press(screen.getByLabelText(`${MESSAGES.taxYear}, ${LAST_YEAR}`));
   await fireEvent.press(screen.getByText(String(year)));
-  await settle();
+  await waitFor(() => expect(screen.queryByTestId("reconciliation-skeleton")).toBeNull());
 }
 
 beforeEach(() => {
@@ -220,7 +220,8 @@ describe("the list", () => {
   it("shows the skeleton on the first load", async () => {
     const server = serve({});
     server.never = true;
-    await showList();
+    await render(<ReconciliationScreen />, { wrapper });
+    await settle();
     expect(screen.getByTestId("reconciliation-skeleton")).toBeTruthy();
     expect(screen.queryByText(MESSAGES.couldntLoad)).toBeNull();
   });
@@ -243,8 +244,7 @@ describe("the list", () => {
 
     server.listStatus = undefined;
     await fireEvent.press(screen.getByText(MESSAGES.tryAgain));
-    await settle();
-    expect(screen.getByText("1099-K · Vrbo")).toBeTruthy();
+    expect(await screen.findByText("1099-K · Vrbo")).toBeTruthy();
   });
 
   it("keeps the rows and says so when a refresh fails", async () => {
@@ -335,12 +335,11 @@ describe("comparing", () => {
     server.byYear[EARLIER_YEAR] = [{ ...matches, status: "partial", matched_amount: "1.00", discrepancy: "11999.00" }];
 
     await fireEvent.press(screen.getByText(MESSAGES.compare));
-    await settle();
+    expect(await screen.findByText(`${EARLIER_YEAR}: 1 matched, 1 differs.`)).toBeTruthy();
+    expect(await screen.findByText("$11,999.00 more on the form")).toBeTruthy();
 
     expect(server.sent).toEqual([{ url: "/reconciliation/auto-reconcile", body: undefined, params: { tax_year: EARLIER_YEAR } }]);
-    expect(screen.getByText(`${EARLIER_YEAR}: 1 matched, 1 differs.`)).toBeTruthy();
     expect(server.reads).toEqual([EARLIER_YEAR]);
-    expect(screen.getByText("$11,999.00 more on the form")).toBeTruthy();
   });
 
   it("reports a failure and keeps the rows", async () => {
@@ -348,8 +347,7 @@ describe("comparing", () => {
     await showList();
     server.replyStatus = 500;
     await fireEvent.press(screen.getByText(MESSAGES.compare));
-    await settle();
-    expect(screen.getByText(MESSAGES.compareFailed)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.compareFailed)).toBeTruthy();
     expect(screen.getByText("1099-K · Vrbo")).toBeTruthy();
   });
 
@@ -378,7 +376,7 @@ describe("adding", () => {
     await typeInto(MESSAGES.amount, " 84.20 ");
 
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
+    expect(await screen.findByText(MESSAGES.added)).toBeTruthy();
 
     expect(server.sent).toEqual([
       {
@@ -387,7 +385,6 @@ describe("adding", () => {
         params: undefined,
       },
     ]);
-    expect(screen.getByText(MESSAGES.added)).toBeTruthy();
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockPreventRemove.active).toBe(false);
   });
@@ -397,7 +394,7 @@ describe("adding", () => {
     await showForm();
     await typeInto(MESSAGES.amount, "10");
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
     expect(server.sent).toHaveLength(1);
 
     await fireEvent.press(screen.getByText(MESSAGES.add));
@@ -411,12 +408,11 @@ describe("adding", () => {
     await showForm();
     await typeInto(MESSAGES.amount, "10");
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
-    expect(screen.getByText(MESSAGES.addFailed)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.addFailed)).toBeTruthy();
 
     server.replyStatus = undefined;
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
     expect(server.sent).toHaveLength(2);
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
@@ -447,9 +443,8 @@ describe("adding", () => {
     await showForm();
     await typeInto(MESSAGES.amount, "0");
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
     expect(server.sent[0]?.body).toEqual({ source_type: "1099_k", tax_year: LAST_YEAR, reported_amount: "0" });
-    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
   it("refuses a negative 1099 amount with the server's wording", async () => {
@@ -479,8 +474,7 @@ describe("adding", () => {
     await showForm();
     await typeInto(MESSAGES.amount, "10");
     await fireEvent.press(screen.getByText(MESSAGES.add));
-    await settle();
-    expect(screen.getByText(MESSAGES.addUnreachable)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.addUnreachable)).toBeTruthy();
     expect(screen.getByLabelText(MESSAGES.amount).props.value).toBe("10");
     expect(mockBack).not.toHaveBeenCalled();
   });

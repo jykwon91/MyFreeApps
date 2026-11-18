@@ -104,7 +104,7 @@ describe("property profit and loss", () => {
   it("shows the totals and a card for each property", async () => {
     serve();
     await show();
-    expect(screen.getByText("Oak Street")).toBeTruthy();
+    expect(await screen.findByText("Oak Street")).toBeTruthy();
     expect(screen.getByText("Elm Court")).toBeTruthy();
     expect(screen.getByText("+$1,799.50")).toBeTruthy();
     expect(screen.getByText(MESSAGES.approvedOnly)).toBeTruthy();
@@ -113,7 +113,7 @@ describe("property profit and loss", () => {
   it("shows four categories and counts the rest", async () => {
     serve();
     await show();
-    expect(screen.getByText("Maintenance")).toBeTruthy();
+    expect(await screen.findByText("Maintenance")).toBeTruthy();
     expect(screen.queryByText("Advertising")).toBeNull();
     expect(screen.getByText(moreCategoriesLine(1))).toBeTruthy();
   });
@@ -121,7 +121,7 @@ describe("property profit and loss", () => {
   it("opens the approved transactions behind a card", async () => {
     serve();
     await show();
-    await fireEvent.press(screen.getAllByHintText(MESSAGES.opensTransactions)[0]);
+    await fireEvent.press((await screen.findAllByHintText(MESSAGES.opensTransactions))[0]);
     const month = propertyPnlRange("this_month", new Date());
     expect(mockNavigate).toHaveBeenCalledWith(
       transactionsLink({ ...NO_FILTERS, period: "custom", startDate: month.since, endDate: month.until, propertyId: "p1", approvedOnly: true }),
@@ -170,7 +170,7 @@ describe("property profit and loss", () => {
   it("says there are no numbers, and offers the year so far, when the period is empty", async () => {
     const server = serve(aReport({ properties: [], total_revenue_cents: 0, total_expenses_cents: 0, total_net_cents: 0 }));
     await show();
-    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.noneHeading)).toBeTruthy();
     await fireEvent.press(screen.getByText(MESSAGES.showYearToDate));
     await settle();
     expect(server.asked.at(-1)).toEqual({ since: propertyPnlRange("ytd", new Date()).since, until: propertyPnlRange("ytd", new Date()).until });
@@ -180,12 +180,11 @@ describe("property profit and loss", () => {
     const server = serve();
     server.status = 500;
     await show();
-    expect(screen.getByText(MESSAGES.couldntLoad)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.couldntLoad)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.noneHeading)).toBeNull();
     server.status = 200;
     await fireEvent.press(screen.getByText(MESSAGES.tryAgain));
-    await settle();
-    expect(screen.getByText("Oak Street")).toBeTruthy();
+    expect(await screen.findByText("Oak Street")).toBeTruthy();
   });
 
   it("shows a skeleton while it loads", async () => {
@@ -198,12 +197,12 @@ describe("property profit and loss", () => {
   it("keeps the cards and says so when a refresh fails", async () => {
     const server = serve();
     await show();
+    await screen.findByText("Oak Street");
     server.status = 500;
     await act(async () => {
       await screen.getByTestId("property-pnl-list").props.refreshControl.props.onRefresh();
     });
-    await settle();
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
     expect(screen.getByText("Oak Street")).toBeTruthy();
-    expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
   });
 });
