@@ -6,6 +6,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { VERSION_DIFF_MESSAGES as MESSAGES } from "../../constants/versions";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
+import { isDiffRetryable } from "../../utils/isDiffRetryable";
 import { diffBackTitle } from "../../utils/diffBackTitle";
 import { goBackOrOpenRecipe } from "../../utils/goBackOrOpenRecipe";
 import VersionDiffContent from "./VersionDiffContent";
@@ -18,7 +19,7 @@ import VersionDiffSkeleton from "./VersionDiffSkeleton";
 export default function VersionDiffScreen() {
   const { colors, spacing } = useTheme();
   const params = useLocalSearchParams<{ id: string; vid: string; against?: string; from?: string }>();
-  const { currentData: diff, error, isError, refetch } = useGetDiffQuery(
+  const { currentData: diff, error, isError, isFetching, refetch } = useGetDiffQuery(
     { recipeId: params.id, versionId: params.vid, against: params.against || undefined },
     { refetchOnMountOrArgChange: true },
   );
@@ -27,7 +28,9 @@ export default function VersionDiffScreen() {
   const { dismissError, isErrorDismissed, refreshControl } = useRefresh(refetch, error);
 
   const hasFailed = useErrorSinceOpening(error, isError);
-  const isLoadFailed = hasFailed && !diff;
+  // The error stays through a retry, so the failure panel (and its busy button) holds until it settles.
+  const hasLoadFailed = useErrorSinceOpening(error, error !== undefined);
+  const isLoadFailed = hasLoadFailed && !diff;
   useAnnouncement(isLoadFailed ? VERSION_COPY.loadFailedHeading : undefined);
 
   function renderBody() {
@@ -35,7 +38,11 @@ export default function VersionDiffScreen() {
     if (isLoadFailed) {
       return (
         <EmptyState
-          action={{ label: MESSAGES.goBack, onPress: () => goBackOrOpenRecipe(params.id) }}
+          action={
+            isDiffRetryable(error)
+              ? { label: MESSAGES.tryAgain, onPress: () => void refetch(), isLoading: isFetching }
+              : { label: MESSAGES.goBack, onPress: () => goBackOrOpenRecipe(params.id) }
+          }
           body={diffErrorMessage(error)}
           heading={VERSION_COPY.loadFailedHeading}
         />
