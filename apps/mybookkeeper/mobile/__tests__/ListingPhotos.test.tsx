@@ -139,6 +139,24 @@ describe("adding photos", () => {
     expect(mockPreventRemove.active).toBe(false);
   });
 
+  it("says photos were added once, after the last one, when the first goes up before the next is ready", async () => {
+    const server = startListingsServer();
+    const finish = deferPreparing(2);
+    await show(<ListingPhotosScreen id="l1" />);
+    await addFromLibrary(2);
+    await screen.findByText("Preparing 1 of 2");
+    await act(async () => finish[0]());
+    // The first photo is on the listing, so its upload has finished while the second is still being prepared.
+    await screen.findByRole("button", { name: "Photo 1 of 1, Cover" });
+    expect(screen.getByText("Preparing 2 of 2")).toBeTruthy();
+    await act(async () => finish[1]());
+    expect(screen.queryByText(MESSAGES.uploadedOne, SHOWN)).toBeNull();
+    expect(await screen.findAllByText(MESSAGES.uploadedMany, SHOWN)).toHaveLength(1);
+    expect(screen.queryByText(MESSAGES.uploadedOne, SHOWN)).toBeNull();
+    await screen.findByRole("button", { name: "Photo 2 of 2" });
+    expect(writesTo(server, "post", "/photos")).toHaveLength(2);
+  });
+
   it("guards leaving while photos are being prepared, before any is ready", async () => {
     startListingsServer();
     deferPreparing(1);

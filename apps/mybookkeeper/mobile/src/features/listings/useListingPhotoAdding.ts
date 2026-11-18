@@ -24,8 +24,9 @@ export function useListingPhotoAdding(listingId: string) {
 
   useEffect(() => {
     isPicking.current = picker.isBusy;
-    if (!picker.isBusy) announce();
-    // announce only reads refs and the toast function
+    // A photo prepared last may still be on its way; the uploads finishing announces it, counted with the rest.
+    if (!picker.isBusy && !uploads.hasPending()) announce();
+    // announce and hasPending only read refs and the toast function
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picker.isBusy]);
 
