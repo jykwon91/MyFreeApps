@@ -7,6 +7,7 @@ import type { LeaseTemplateListResponse } from "../types/lease/lease-template-li
 import type { MultiGenerateDefaultsRequest } from "../types/lease/multi-generate-defaults-request";
 import type { MultiGenerateDefaultsResponse } from "../types/lease/multi-generate-defaults-response";
 import type { SuggestPlaceholdersResponse } from "../types/lease/suggest-placeholders-response";
+import { LEASE_TEMPLATE_PAGE_SIZE } from "../constants/leaseTemplatePaging";
 import { LEASE_TEMPLATE_SUGGEST_TIMEOUT_MS, LEASE_TEMPLATE_UPLOAD_TIMEOUT_MS } from "../constants/leaseTemplateUpload";
 import { localToday } from "@platform/core/utils/localToday";
 
@@ -37,6 +38,21 @@ export const leaseTemplatesApi = baseApi.enhanceEndpoints({
               { type: "LeaseTemplate" as const, id: "LIST" },
             ]
           : [{ type: "LeaseTemplate" as const, id: "LIST" }],
+    }),
+    listLeaseTemplatePages: builder.infiniteQuery<LeaseTemplateListResponse, void, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + LEASE_TEMPLATE_PAGE_SIZE : undefined,
+      },
+      query: ({ pageParam }) => ({
+        url: "/lease-templates",
+        params: { limit: LEASE_TEMPLATE_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((template) => ({ type: "LeaseTemplate" as const, id: template.id })) ?? []),
+        { type: "LeaseTemplate" as const, id: "LIST" },
+      ],
     }),
     getLeaseTemplateById: builder.query<LeaseTemplateDetail, string>({
       query: (id) => ({ url: `/lease-templates/${id}` }),
@@ -85,6 +101,7 @@ export const leaseTemplatesApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetLeaseTemplatesQuery,
+  useListLeaseTemplatePagesInfiniteQuery,
   useGetLeaseTemplateByIdQuery,
   useLazyGetLeaseTemplateByIdQuery,
   useGetGenerateDefaultsQuery,

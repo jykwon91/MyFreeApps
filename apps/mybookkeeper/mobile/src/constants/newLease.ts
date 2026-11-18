@@ -1,7 +1,6 @@
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 import type { KeyboardTypeOptions } from "react-native";
 
-export const NEW_LEASE_APPLICANT_LIMIT = 100;
 export const NEW_LEASE_SKELETON_FIELDS = ["a", "b", "c", "d", "e"];
 /** Route names of the flow's screens, for leaving all of them at once. */
 export const NEW_LEASE_SCREEN_PREFIX = "leases/new/";
@@ -35,8 +34,7 @@ export const NEW_LEASE_MESSAGES = {
   cantFindBody: "They may have been deleted.",
   tryAgain: "Try again",
   goBack: "Go back",
-  moreThanShown: "There are more than I can show here.",
-  seeAllOnWebsite: "See them all on the website",
+  loadingMoreApplicants: "Loading more applicants",
   seeEarlier: "See the earlier lease",
   followsEarlier: "I'm making a new lease to follow the earlier one.",
   nothingToFill: "There's nothing for me to fill in. I'll make the draft as is.",

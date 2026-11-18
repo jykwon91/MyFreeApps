@@ -1,4 +1,3 @@
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
@@ -8,9 +7,10 @@ import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { continueWithDocuments, LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/leaseDocuments";
-import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
-import LeaseTemplatesSkeleton from "../leaseTemplates/LeaseTemplatesSkeleton";
-import MoreOnWebsite from "../newLease/MoreOnWebsite";
+import { LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
+import LeaseTemplatesSkeleton, { LeaseTemplateSkeletonRow } from "../leaseTemplates/LeaseTemplatesSkeleton";
+import { useLeaseTemplatePages } from "../leaseTemplates/useLeaseTemplatePages";
+import PagedListFooter from "../shell/PagedListFooter";
 import TemplatePickerRow from "../newLease/TemplatePickerRow";
 import { addDocumentDetailsPath } from "./addDocumentFlow";
 
@@ -20,10 +20,10 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
   const insets = useSafeAreaInsets();
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const lease = useGetSignedLeaseByIdQuery(leaseId);
-  const templates = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
+  const templates = useLeaseTemplatePages();
   const error = lease.error ?? templates.error;
-  const { refresh, refreshControl } = useRefresh(() => Promise.all([lease.refetch(), templates.refetch()]), error);
-  const rows = templates.currentData?.items ?? [];
+  const { refresh, refreshControl } = useRefresh(() => Promise.all([lease.refetch(), templates.reload()]), error);
+  const { rows } = templates;
   const onLease = new Set(lease.currentData?.templates.map((template) => template.id));
   const isLocked = lease.currentData?.documents_locked ?? false;
   // A pick that the lease has since locked out is dropped, so it is never sent.
@@ -37,7 +37,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
     setPickedIds(picked.includes(id) ? picked.filter((other) => other !== id) : [...picked, id]);
   }
 
-  const isLoaded = Boolean(templates.currentData && lease.currentData);
+  const isLoaded = templates.isLoaded && Boolean(lease.currentData);
   const emptyList = !isLoaded && !error ? (
     <LeaseTemplatesSkeleton />
   ) : !isLoaded ? (
@@ -54,10 +54,18 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
     <View style={{ flex: 1 }}>
       <FlatList
         ListEmptyComponent={emptyList}
-        ListFooterComponent={templates.currentData?.has_more ? <MoreOnWebsite path="/lease-templates" /> : undefined}
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={templates.isFetchingNextPage}
+            loadMoreFailed={templates.loadMoreFailed}
+            loadingLabel={LEASE_TEMPLATE_MESSAGES.loadingMore}
+            onRetry={() => void templates.loadMore()}
+            skeletonRow={<LeaseTemplateSkeletonRow />}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && isLoaded)} />
+            <StaleDataBanner isShown={Boolean(error && isLoaded && !templates.loadMoreFailed)} />
             <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.pickTitle}
             </Text>
@@ -67,6 +75,8 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
         contentInsetAdjustmentBehavior="automatic"
         data={isLoaded ? rows : []}
         keyExtractor={(template) => template.id}
+        onEndReached={templates.loadMoreIfAny}
+        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         renderItem={({ item }) => {
           const index = picked.indexOf(item.id);
@@ -75,6 +85,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
           return <TemplatePickerRow isDisabled={isBlocked} note={note} onPress={() => toggle(item.id)} position={index === -1 ? null : index + 1} template={item} />;
         }}
         style={{ flex: 1 }}
+        testID="add-document-template-list"
       />
       {picked.length > 0 ? (
         <View
