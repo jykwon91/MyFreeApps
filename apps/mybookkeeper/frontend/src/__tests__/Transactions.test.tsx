@@ -126,6 +126,7 @@ vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useCreateTransactionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useBulkApproveTransactionsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useBulkDeleteTransactionsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useBulkSetCapitalImprovementMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateTransactionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteTransactionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useKeepDuplicateMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

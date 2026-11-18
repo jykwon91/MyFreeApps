@@ -80,6 +80,7 @@ interface ServerState {
   approved: Set<string>;
   recategorized: Map<string, string>;
   deleted: Set<string>;
+  capital: Set<string>;
   selectionResponse: (query: URLSearchParams) => Promise<TransactionSelectionRef[]>;
   /** GET /transactions/page; a rejection answers with a 500. */
   pageResponse: (query: URLSearchParams) => Promise<TransactionListPage>;
@@ -89,6 +90,7 @@ export const server: ServerState = {
   approved: new Set(),
   recategorized: new Map(),
   deleted: new Set(),
+  capital: new Set(),
   selectionResponse: async (query) => selectionFor(query),
   pageResponse: async (query) => pageFor(query),
 };
@@ -102,6 +104,7 @@ function matchingRows(query: URLSearchParams): Transaction[] {
       ...row,
       category: server.recategorized.get(row.id) ?? row.category,
       status: server.approved.has(row.id) ? "approved" : row.status,
+      is_capital_improvement: server.capital.has(row.id),
     }))
     .filter((row) => !server.deleted.has(row.id))
     .filter((row) => !pending || row.status === "pending")
@@ -121,6 +124,10 @@ export function selectionFor(query: URLSearchParams): TransactionSelectionRef[] 
 
 function isIdsBody(body: unknown): body is { ids: string[] } {
   return typeof body === "object" && body !== null && "ids" in body && Array.isArray(body.ids);
+}
+
+function isCapitalBody(body: unknown): body is { ids: string[]; is_capital_improvement: boolean } {
+  return isIdsBody(body) && "is_capital_improvement" in body && typeof body.is_capital_improvement === "boolean";
 }
 
 function isKeepBody(body: unknown): body is { keep_id: string; delete_ids: string[] } {
@@ -153,6 +160,13 @@ export const adapter: AxiosAdapter = async (config) => {
   if (url.pathname === "/transactions/bulk-approve" && isIdsBody(body)) {
     for (const id of body.ids) server.approved.add(id);
     data = { approved: body.ids.length, skipped: 0 };
+  }
+  if (url.pathname === "/transactions/bulk-capital-improvement" && isCapitalBody(body)) {
+    for (const id of body.ids) {
+      if (body.is_capital_improvement) server.capital.add(id);
+      else server.capital.delete(id);
+    }
+    data = { updated: body.ids.length, skipped: 0 };
   }
   if (url.pathname === "/transactions/duplicates/keep" && isKeepBody(body)) {
     for (const id of body.delete_ids) server.deleted.add(id);
@@ -190,6 +204,7 @@ export function resetServer(): void {
   requests.length = 0;
   server.approved.clear();
   server.recategorized.clear();
+  server.capital.clear();
   server.deleted.clear();
   server.selectionResponse = async (query) => selectionFor(query);
   server.pageResponse = async (query) => pageFor(query);

@@ -29,6 +29,7 @@ vi.mock("@mybookkeeper/api-client/store/transactionsApi", async () => {
     useGetDuplicatesQuery: () => ({ data: undefined, isLoading: false }),
     useBulkApproveTransactionsMutation: () => [(batch: string[]) => ({ unwrap: () => mockBulkApprove(batch) })],
     useBulkDeleteTransactionsMutation: () => [(batch: string[]) => ({ unwrap: () => mockBulkDelete(batch) })],
+    useBulkSetCapitalImprovementMutation: () => [vi.fn()],
     useUpdateTransactionMutation: idle,
     useDeleteTransactionMutation: idle,
     useKeepDuplicateMutation: idle,

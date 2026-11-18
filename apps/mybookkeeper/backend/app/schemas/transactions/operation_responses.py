@@ -20,6 +20,11 @@ class BulkApproveResponse(BaseModel):
     skipped: int
 
 
+class BulkCapitalImprovementResponse(BaseModel):
+    updated: int
+    skipped: int
+
+
 class BulkDeleteResponse(BaseModel):
     deleted: int
     skipped: int

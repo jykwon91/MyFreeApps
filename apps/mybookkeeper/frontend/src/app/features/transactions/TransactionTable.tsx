@@ -13,6 +13,7 @@ import { PAGE_SIZE_OPTIONS, TAG_COLORS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { SortIndicator, ColumnFilter } from "@/shared/components/table";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
+import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
@@ -100,6 +101,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                   >
                     {formatTag(t.category)}
                   </span>
+                  {t.is_capital_improvement ? <CapitalImprovementBadge /> : null}
                   {propertyName && (
                     <span className="text-xs text-muted-foreground">{propertyName}</span>
                   )}
