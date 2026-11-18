@@ -171,9 +171,9 @@ describe("what the section shows", () => {
   it("says when a paused plan can't send, and offers no Send", async () => {
     await renderReminders(startServer({ overview: aReminderOverview({ plan: aReminderPlan({ is_active: false }) }) }));
 
-    expect(await screen.findByText(REMINDER_MESSAGES.nextWhenBack)).toBeTruthy();
+    expect(await screen.findByText(REMINDER_MESSAGES.pausedCantSend)).toBeTruthy();
+    expect(screen.getByText(REMINDER_MESSAGES.nextWhenBack)).toBeTruthy();
     expect(screen.getByText(REMINDER_MESSAGES.pausedNote)).toBeTruthy();
-    expect(screen.getByText(REMINDER_MESSAGES.pausedCantSend)).toBeTruthy();
     expect(screen.queryByText(SEND_BUTTON)).toBeNull();
     expect(screen.queryByText("Goes out Sat, Nov 2 at 6:00 PM")).toBeNull();
   });
