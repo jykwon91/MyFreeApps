@@ -21,7 +21,7 @@ export default function CalendarEventAttachments({ blackoutId, canWrite }: { bla
         return (
           <View style={{ gap: spacing.sm }}>
             <Text style={muted}>{EVENT_MESSAGES.attachmentsFailed}</Text>
-            <LoadingButton isLoading={isFetching} onPress={() => void refetch()} variant="secondary">
+            <LoadingButton isLoading={isFetching} onPress={() => refetch()} variant="secondary">
               {EVENT_MESSAGES.retry}
             </LoadingButton>
           </View>

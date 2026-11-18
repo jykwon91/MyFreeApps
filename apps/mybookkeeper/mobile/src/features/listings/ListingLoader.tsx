@@ -14,7 +14,7 @@ export default function ListingLoader({ id, children }: Omit<ListingGateProps, "
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => goBackOr("/listings") } : { label: LISTING_MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => goBackOr("/listings") } : { label: LISTING_MESSAGES.tryAgain, onPress: () => refetch() }}
       body={isGone ? LISTING_MESSAGES.maybeDeleted : LISTING_MESSAGES.tryAgainOffer}
       heading={isGone ? LISTING_MESSAGES.cantFind : LISTING_MESSAGES.couldntLoadOne}
     />

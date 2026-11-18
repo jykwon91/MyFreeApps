@@ -26,7 +26,7 @@ function ChannelsBody({ id }: { id: string }) {
     );
   }
   if (!channelListings) {
-    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoad} />;
+    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoad} />;
   }
   if (channelListings.length === 0) {
     return (

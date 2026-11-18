@@ -44,7 +44,7 @@ export default function VendorRuleDetailScreen({ id }: { id: string }) {
       canDelete={canDelete}
       hasStaleData={Boolean(error)}
       onDeleted={leave}
-      onRetryProperties={() => void refetchProperties()}
+      onRetryProperties={() => refetchProperties()}
       propertyNames={propertyNames}
       propertyState={propertyState}
       refreshControl={refreshControl}

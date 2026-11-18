@@ -67,7 +67,7 @@ export default function VendorsScreen() {
       <VendorSkeletonRow />
     </LoadingRegion>
   ) : loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => void loadMore()} />
+    <LoadMoreFailed onRetry={() => loadMore()} />
   ) : undefined;
 
   return (

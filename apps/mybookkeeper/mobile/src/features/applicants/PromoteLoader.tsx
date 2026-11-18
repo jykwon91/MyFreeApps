@@ -12,7 +12,7 @@ export default function PromoteLoader({ id }: { id: string }) {
   if (!isGone && (isFetching || !error)) return <PromoteSkeleton />;
   return (
     <EmptyState
-      action={isGone ? { label: "Back", onPress: () => goBackOr(`/inquiries/${id}`) } : { label: "Try again", onPress: () => void refetch() }}
+      action={isGone ? { label: "Back", onPress: () => goBackOr(`/inquiries/${id}`) } : { label: "Try again", onPress: () => refetch() }}
       body={isGone ? "It may have been archived." : "Want me to try again?"}
       heading={isGone ? "I can't find that inquiry." : "I couldn't load that inquiry."}
     />

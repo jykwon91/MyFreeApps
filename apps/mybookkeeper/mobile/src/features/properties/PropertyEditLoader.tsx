@@ -20,7 +20,7 @@ export default function PropertyEditLoader({ id }: { id: string }) {
   if (!currentData) {
     return (
       <EmptyState
-        action={{ label: PROPERTY_MESSAGES.tryAgain, onPress: () => void refetch() }}
+        action={{ label: PROPERTY_MESSAGES.tryAgain, onPress: () => refetch() }}
         body={PROPERTY_MESSAGES.tryAgainOffer}
         heading={PROPERTY_MESSAGES.couldntLoadOne}
       />

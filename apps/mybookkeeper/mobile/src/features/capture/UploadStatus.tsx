@@ -26,7 +26,7 @@ export default function UploadStatus() {
     return () => clearTimeout(timer);
   }, [dispatch, phase, hasSettledFiles]);
 
-  const dismiss = { label: "OK", onPress: () => dispatch(uploadStatusDismissed()) };
+  const dismiss = { label: "OK", onPress: () => void dispatch(uploadStatusDismissed()) };
   const removeBlocked = () => {
     if (workspaceId) discardPendingUploads(workspaceId);
     dispatch(uploadStatusDismissed());
@@ -40,7 +40,7 @@ export default function UploadStatus() {
       {rejections.length > 0 ? <Banner actions={[dismiss]} message={rejections.join("\n")} /> : null}
       {phase === "unreachable" ? (
         <Banner
-          actions={[{ label: "Try again", onPress: () => void dispatch(drainUploadQueue()) }]}
+          actions={[{ label: "Try again", onPress: () => dispatch(drainUploadQueue()) }]}
           message="I couldn't send that. It's saved here, and I'll try again when you come back. Want me to try now?"
         />
       ) : null}
@@ -48,7 +48,7 @@ export default function UploadStatus() {
         <Banner
           actions={[
             { label: REMOVE_BLOCKED_FILES_LABEL, onPress: removeBlocked },
-            { label: KEEP_BLOCKED_FILES_LABEL, onPress: () => dispatch(uploadStatusDismissed()) },
+            { label: KEEP_BLOCKED_FILES_LABEL, onPress: () => void dispatch(uploadStatusDismissed()) },
           ]}
           message={blockedReason}
         />

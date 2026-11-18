@@ -45,7 +45,7 @@ export default function ScreeningActions({
   if (!eligibility) {
     return (
       <Banner
-        actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => void refetch() }]}
+        actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => refetch() }]}
         message={httpStatus(error) === undefined ? SCREENING_MESSAGES.needsConnection : SCREENING_MESSAGES.couldntCheck}
       />
     );

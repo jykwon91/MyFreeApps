@@ -17,7 +17,7 @@ export default function InquirySpamChecks({ id }: { id: string }) {
   }
   if (error && !data) {
     return (
-      <LoadingButton onPress={() => void refetch()} variant="secondary">
+      <LoadingButton onPress={() => refetch()} variant="secondary">
         I couldn't load those. Try again
       </LoadingButton>
     );

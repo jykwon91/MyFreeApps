@@ -1,4 +1,5 @@
 import type { Document } from "@myjobhunter/api-client/types/document/document";
+import type { PressHandler } from "@platform/mobile";
 
 export interface DocumentsSectionProps {
   applicationId: string;
@@ -12,5 +13,5 @@ export interface DocumentsSectionProps {
   isLoadingMore: boolean;
   isLoadMoreError: boolean;
   onLoadMore: () => void;
-  onRetry: () => void | Promise<void>;
+  onRetry: PressHandler;
 }

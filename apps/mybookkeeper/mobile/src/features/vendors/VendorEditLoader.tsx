@@ -13,7 +13,7 @@ export default function VendorEditLoader({ id }: { id: string }) {
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: VENDOR_MESSAGES.back, onPress: () => goBackOr("/vendors") } : { label: VENDOR_MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: VENDOR_MESSAGES.back, onPress: () => goBackOr("/vendors") } : { label: VENDOR_MESSAGES.tryAgain, onPress: () => refetch() }}
       body={isGone ? VENDOR_MESSAGES.maybeDeleted : VENDOR_MESSAGES.tryAgainOffer}
       heading={isGone ? VENDOR_MESSAGES.cantFind : VENDOR_MESSAGES.couldntLoadOne}
     />

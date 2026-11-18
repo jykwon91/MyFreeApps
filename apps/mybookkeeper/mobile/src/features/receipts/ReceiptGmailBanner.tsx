@@ -12,7 +12,7 @@ export default function ReceiptGmailBanner({ state }: { state: ReceiptGmailState
   if (!message) return null;
   return (
     <Banner
-      actions={[{ label: MESSAGES.openWebsite, accessibilityHint: MESSAGES.opensBrowser, onPress: () => void openWebsite(WEB_BASE_URL, INTEGRATIONS_WEB_PATH) }]}
+      actions={[{ label: MESSAGES.openWebsite, accessibilityHint: MESSAGES.opensBrowser, onPress: () => openWebsite(WEB_BASE_URL, INTEGRATIONS_WEB_PATH) }]}
       message={message}
     />
   );

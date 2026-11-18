@@ -60,7 +60,7 @@ export default function CookScreen() {
     if (isLoadFailed) {
       return (
         <EmptyState
-          action={{ label: "Try again", onPress: () => void refetch() }}
+          action={{ label: "Try again", onPress: () => refetch() }}
           body="Check your connection and try again."
           heading="Can't load this recipe"
         />

@@ -1,10 +1,10 @@
-import { LoadingButton, useSignOutThisPhone, useTheme, useToast } from "@platform/mobile";
+import { LoadingButton, useSignOutThisPhone, useTheme, useToast, type PressHandler } from "@platform/mobile";
 import { Text, View } from "react-native";
 
 interface WorkspaceMessageProps {
   heading: string;
   body: string;
-  action: { label: string; onPress: () => void | Promise<void> };
+  action: { label: string; onPress: PressHandler };
   canSignOut?: boolean;
 }
 

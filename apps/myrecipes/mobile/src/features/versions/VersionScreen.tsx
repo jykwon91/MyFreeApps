@@ -53,7 +53,7 @@ export default function VersionScreen() {
     if (isLoadFailed) {
       return (
         <EmptyState
-          action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }}
+          action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }}
           body={MESSAGES.loadFailedBody}
           heading={MESSAGES.loadFailedHeading}
         />

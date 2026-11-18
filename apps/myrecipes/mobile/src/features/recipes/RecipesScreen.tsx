@@ -83,7 +83,7 @@ export default function RecipesScreen() {
       return (
         <View style={{ gap: spacing.lg }}>
           <EmptyState
-            action={{ label: "Try again", onPress: () => void refresh() }}
+            action={{ label: "Try again", onPress: () => refresh() }}
             body="Check your connection and try again."
             heading="Can't load recipes"
           />

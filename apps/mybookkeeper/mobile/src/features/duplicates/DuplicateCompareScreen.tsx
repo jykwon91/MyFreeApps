@@ -20,7 +20,7 @@ export default function DuplicateCompareScreen({ id }: { id: string }) {
     return data ? (
       <EmptyState action={{ label: MESSAGES.back, onPress: () => goBackOr("/duplicates") }} body={MESSAGES.pairGoneBody} heading={MESSAGES.pairGoneHeading} />
     ) : (
-      <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />
+      <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />
     );
   }
 

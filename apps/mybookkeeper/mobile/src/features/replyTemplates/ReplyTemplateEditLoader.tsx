@@ -14,7 +14,7 @@ export default function ReplyTemplateEditLoader({ id }: { id: string }) {
   if (!currentData) {
     return (
       <EmptyState
-        action={{ label: REPLY_TEMPLATE_MESSAGES.tryAgain, onPress: () => void refetch() }}
+        action={{ label: REPLY_TEMPLATE_MESSAGES.tryAgain, onPress: () => refetch() }}
         body={REPLY_TEMPLATE_MESSAGES.tryAgainOffer}
         heading={REPLY_TEMPLATE_MESSAGES.couldntLoadOne}
       />

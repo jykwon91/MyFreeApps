@@ -251,6 +251,38 @@ describe("InquiryReplyScreen", () => {
       expect(await screen.findByRole("button", { name: "Choose a template" })).toBeTruthy();
       expect(screen.queryByText(REPLY_TEMPLATE_MESSAGES.templatesLoadFailed)).toBeNull();
     });
+
+    it("shows the retry is working and ignores a second tap while the templates load again", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.templates = TEMPLATES;
+      const answer = api.defaults.adapter as AxiosAdapter;
+      let failing = true;
+      let retries = 0;
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      api.defaults.adapter = (config) => {
+        if (config.url !== "/reply-templates") return answer(config);
+        if (failing) return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
+        retries += 1;
+        return gate.then(() => answer(config));
+      };
+      await renderScreen();
+      await screen.findByText(REPLY_TEMPLATE_MESSAGES.templatesLoadFailed);
+      failing = false;
+      const retry = screen.getByRole("button", { name: REPLY_TEMPLATE_MESSAGES.tryAgain });
+      expect(retry).not.toBeBusy();
+
+      await fireEvent.press(retry);
+      await waitFor(() => expect(screen.getByRole("button", { name: REPLY_TEMPLATE_MESSAGES.tryAgain })).toBeBusy());
+      expect(screen.getByTestId("banner-action-spinner")).toBeTruthy();
+      await fireEvent.press(screen.getByRole("button", { name: REPLY_TEMPLATE_MESSAGES.tryAgain }));
+      expect(retries).toBe(1);
+
+      release();
+      expect(await screen.findByRole("button", { name: "Choose a template" })).toBeTruthy();
+    });
   });
 
   describe("pet disclosure note", () => {

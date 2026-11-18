@@ -8,8 +8,6 @@ export function pickerLoadError({ hasLoaded, error, refetch }: PickerLoadState, 
   return {
     message,
     retryLabel: PICKER_LOAD_MESSAGES.retry,
-    onRetry: async () => {
-      await refetch();
-    },
+    onRetry: () => refetch(),
   };
 }

@@ -2,5 +2,5 @@
 export interface PickerLoadState {
   hasLoaded: boolean;
   error: unknown;
-  refetch: () => unknown;
+  refetch: () => PromiseLike<unknown>;
 }

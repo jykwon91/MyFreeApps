@@ -36,7 +36,7 @@ export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
   if (!jobs.data) {
     return (
       <EmptyState
-        action={{ label: MESSAGES.tryAgain, onPress: () => void jobs.refetch(), isLoading: jobs.isFetching }}
+        action={{ label: MESSAGES.tryAgain, onPress: () => jobs.refetch(), isLoading: jobs.isFetching }}
         body={MESSAGES.couldntLoadResumesBody}
         heading={MESSAGES.couldntLoadResumes}
       />

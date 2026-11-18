@@ -23,7 +23,7 @@ export default function CookLogSection({ recipeId, versionId, versionNumber, ver
 
   function renderCooks() {
     if (cooks === undefined && isError) {
-      return <SectionError message={MESSAGES.loadFailed} onRetry={() => void refetch()} retryLabel={MESSAGES.tryAgain} />;
+      return <SectionError message={MESSAGES.loadFailed} onRetry={() => refetch()} retryLabel={MESSAGES.tryAgain} />;
     }
     if (cooks === undefined) return <CookLogSkeleton />;
     if (cooks.length === 0) {

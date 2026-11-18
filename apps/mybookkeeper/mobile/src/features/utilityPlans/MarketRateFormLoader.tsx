@@ -22,5 +22,5 @@ export default function MarketRateFormLoader({ serviceType }: { serviceType: str
     return <MarketRateForm key={serviceType} existing={currentData.find((benchmark) => benchmark.service_type === serviceType)} serviceType={serviceType} />;
   }
   if (!error || isFetching) return <UtilityPlanDetailSkeleton />;
-  return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoad} />;
+  return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoad} />;
 }

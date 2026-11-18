@@ -61,7 +61,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
     const isGone = httpStatus(loadError) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => goBackOr(`/inquiries/${id}`) } : { label: "Try again", onPress: () => void refetchInquiry() }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr(`/inquiries/${id}`) } : { label: "Try again", onPress: () => refetchInquiry() }}
         body={isGone ? "It may have been archived." : "Want me to try again?"}
         heading={isGone ? "I can't find that inquiry." : "I couldn't load that inquiry."}
       />
@@ -177,7 +177,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
       >
         {block ? (
           <Banner
-            actions={block === "noEmailAddress" ? undefined : [{ label: "Open on the website", onPress: () => void openWebsite(WEB_BASE_URL, "/integrations") }]}
+            actions={block === "noEmailAddress" ? undefined : [{ label: "Open on the website", onPress: () => openWebsite(WEB_BASE_URL, "/integrations") }]}
             message={REPLY_BLOCK_WORDS[block]}
           />
         ) : null}
@@ -212,7 +212,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
           </LoadingButton>
         ) : templatesError ? (
           <Banner
-            actions={[{ label: REPLY_TEMPLATE_MESSAGES.tryAgain, onPress: () => void refetchTemplates() }]}
+            actions={[{ label: REPLY_TEMPLATE_MESSAGES.tryAgain, onPress: () => refetchTemplates() }]}
             message={REPLY_TEMPLATE_MESSAGES.templatesLoadFailed}
           />
         ) : null}

@@ -41,7 +41,7 @@ export default function PremiumCheckCard() {
     return (
       <View style={{ gap: spacing.sm }}>
         <Banner message={INSURANCE_MESSAGES.couldntCompare} />
-        <LoadingButton isLoading={isFetching} onPress={() => void refetch()} variant="secondary">
+        <LoadingButton isLoading={isFetching} onPress={() => refetch()} variant="secondary">
           {INSURANCE_MESSAGES.tryAgain}
         </LoadingButton>
       </View>

@@ -189,7 +189,7 @@ export default function TransactionsScreen({
       <TransactionSkeletonRow />
     </LoadingRegion>
   ) : loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => void loadMore()} />
+    <LoadMoreFailed onRetry={() => loadMore()} />
   ) : undefined;
 
   return (

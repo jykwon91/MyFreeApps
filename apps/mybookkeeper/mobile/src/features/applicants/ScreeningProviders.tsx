@@ -41,7 +41,7 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
   if (!data) {
     return (
       <Banner
-        actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => void refetch() }]}
+        actions={[{ label: SCREENING_MESSAGES.tryAgain, onPress: () => refetch() }]}
         message={SCREENING_MESSAGES.couldntLoadProviders}
       />
     );

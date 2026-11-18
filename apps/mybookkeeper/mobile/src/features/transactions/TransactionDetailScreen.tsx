@@ -52,7 +52,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => goBackOr("/money") } : { label: "Try again", onPress: async () => { await refetch(); } }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/money") } : { label: "Try again", onPress: () => refetch() }}
         body={isGone ? "It may have been deleted." : "Want me to try again?"}
         heading={isGone ? "I can't find that transaction." : "I couldn't load that transaction."}
       />

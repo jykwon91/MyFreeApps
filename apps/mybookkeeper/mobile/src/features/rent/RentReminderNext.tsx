@@ -46,7 +46,7 @@ export default function RentReminderNext({ applicantId, name, overview, plan, sh
         ) : (
           <>
             <Text style={mutedText}>{REMINDER_MESSAGES.couldntLoadNext}</Text>
-            <LoadingButton onPress={() => void refetch()} variant="ghost">
+            <LoadingButton onPress={() => refetch()} variant="ghost">
               {REMINDER_MESSAGES.tryAgain}
             </LoadingButton>
           </>
