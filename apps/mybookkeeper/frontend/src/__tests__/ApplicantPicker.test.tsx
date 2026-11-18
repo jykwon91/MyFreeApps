@@ -43,6 +43,8 @@ interface StageQueryOptions {
   pages?: ApplicantSummary[][];
   hasNextPage?: boolean;
   failed?: boolean;
+  /** The failure was a "Load more" (RTK's `direction` is "forward"). */
+  loadMoreFailed?: boolean;
   fetching?: boolean;
   isFetchingNextPage?: boolean;
   fetchNextPage?: ReturnType<typeof vi.fn>;
@@ -53,13 +55,24 @@ function stageQuery({
   pages = [[]],
   hasNextPage = false,
   failed = false,
+  loadMoreFailed = false,
   fetching = false,
   isFetchingNextPage = false,
   fetchNextPage = vi.fn(),
   refetch = vi.fn(),
 }: StageQueryOptions = {}) {
   const loaded = pages.length > 0 ? queryData({ pages: pages.map((items) => ({ items, total: items.length, has_more: hasNextPage })) }) : queryData(undefined);
-  return { ...loaded, ...queryStatus({ failed, fetching }), hasNextPage, isFetchingNextPage, fetchNextPage, refetch };
+  return {
+    ...loaded,
+    ...queryStatus({ failed: failed || loadMoreFailed, fetching }),
+    isLoading: fetching && pages.length === 0,
+    direction: loadMoreFailed ? "forward" : "backward",
+    originalArgs: { stage: "approved" },
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  };
 }
 
 type Stage = "approved" | "lease_sent";
@@ -111,7 +124,7 @@ describe("ApplicantPicker", () => {
 
   it("loads the next page only for stages that have more, and an applicant from page 2 can be picked", async () => {
     const onSelect = vi.fn();
-    const approvedFetch = vi.fn().mockResolvedValue({ isError: false });
+    const approvedFetch = vi.fn();
     const leaseSentFetch = vi.fn();
     showStages({
       approved: stageQuery({ pages: [[APPROVED_1]], hasNextPage: true, fetchNextPage: approvedFetch }),
@@ -143,8 +156,8 @@ describe("ApplicantPicker", () => {
   });
 
   it("keeps loaded applicants when Load more fails, and Retry fetches again only the failed stage", async () => {
-    const approvedFetch = vi.fn().mockResolvedValueOnce({ isError: true }).mockResolvedValueOnce({ isError: false });
-    const leaseSentFetch = vi.fn().mockResolvedValue({ isError: false });
+    const approvedFetch = vi.fn();
+    const leaseSentFetch = vi.fn();
     const loaded = {
       approved: stageQuery({ pages: [[APPROVED_1]], hasNextPage: true, fetchNextPage: approvedFetch }),
       lease_sent: stageQuery({ pages: [[LEASE_SENT_1]], hasNextPage: true, fetchNextPage: leaseSentFetch }),
@@ -154,7 +167,7 @@ describe("ApplicantPicker", () => {
     await userEvent.click(screen.getByTestId("applicant-picker-load-more"));
     expect(leaseSentFetch).toHaveBeenCalledTimes(1);
 
-    showStages({ ...loaded, approved: stageQuery({ pages: [[APPROVED_1]], hasNextPage: true, failed: true, fetchNextPage: approvedFetch }) });
+    showStages({ ...loaded, approved: stageQuery({ pages: [[APPROVED_1]], hasNextPage: true, loadMoreFailed: true, fetchNextPage: approvedFetch }) });
     rerender(<Picker onSelect={vi.fn()} />);
     expect(screen.getByText(/couldn't load more applicants/i)).toBeInTheDocument();
     expect(screen.getByTestId("applicant-option-app-approved")).toBeInTheDocument();
