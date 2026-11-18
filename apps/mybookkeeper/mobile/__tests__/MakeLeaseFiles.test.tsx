@@ -28,7 +28,7 @@ jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({
 const originalAdapter = api.defaults.adapter;
 const alert = jest.spyOn(Alert, "alert");
 
-function startServer(lease: SignedLeaseDetail, options: { role?: string; generateStatus?: number; generateDetail?: unknown } = {}) {
+function startServer(lease: SignedLeaseDetail, options: { role?: string; generateStatus?: number; generateDetail?: unknown; generateLost?: boolean } = {}) {
   const generates: AxiosRequestConfig[] = [];
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
@@ -40,11 +40,12 @@ function startServer(lease: SignedLeaseDetail, options: { role?: string; generat
     if (config.url === "/applicants/a1") return respond({ id: "a1", has_contact_email: true });
     if (config.url === `/signed-leases/${lease.id}/generate`) {
       generates.push(config);
+      if (options.generateLost) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
       if (options.generateDetail) return respond({ detail: options.generateDetail }, options.generateStatus ?? 409);
       return respond({ ...lease, status: "generated", attachments: [{ id: "f1", lease_id: lease.id, filename: "lease.pdf", storage_key: "k", content_type: "application/pdf", size_bytes: 10, kind: "rendered_original", uploaded_by_user_id: "u1", uploaded_at: "2026-02-01T12:00:00Z", presigned_url: null, is_available: true }] }, options.generateStatus ?? 200);
     }
     // The reload after making files never answers, so the screen has to go by the generate's own answer.
-    if (config.url === `/signed-leases/${lease.id}`) return generates.length > 0 && !options.generateStatus ? new Promise(() => undefined) : respond(lease);
+    if (config.url === `/signed-leases/${lease.id}`) return generates.length > 0 && !options.generateStatus && !options.generateLost ? new Promise(() => undefined) : respond(lease);
     return respond({ detail: "no" }, 404);
   };
   api.defaults.adapter = adapter;
@@ -118,11 +119,24 @@ describe("making a draft's files", () => {
   it.each([
     [500, MESSAGES.makeFilesFailed],
     [503, MESSAGES.storageDown],
-  ])("explains a %i", async (status, message) => {
-    startServer(aDraft(), { generateStatus: status });
+  ])("explains a %i the server answered on purpose", async (status, message) => {
+    startServer(aDraft(), { generateStatus: status, generateDetail: "server words" });
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.makeFiles }));
     expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.queryByText("server words", SHOWN)).toBeNull();
+  });
+
+  it.each([
+    ["no answer", { generateLost: true }],
+    ["a proxy error", { generateStatus: 502 }],
+  ] as const)("says it isn't sure, instead of offering a retry that makes a second set, after %s", async (_case, failure) => {
+    const generates = startServer(aDraft(), failure);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.makeFiles }));
+    expect(await screen.findByText(MESSAGES.makeFilesUnsure)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.makeFilesFailed, SHOWN)).toBeNull();
+    expect(generates).toHaveLength(1);
   });
 
   it("isn't offered to someone with view-only access", async () => {

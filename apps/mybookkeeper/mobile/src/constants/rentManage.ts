@@ -67,7 +67,7 @@ export const RENT_MANAGE_MESSAGES = {
   viewOnly: "You have view-only access.",
   demo: "Demo accounts can't change rent.",
   gone: "I can't find that anymore. Pull down to refresh.",
-  lostConnection: "I lost the connection, so I'm not sure that saved. Check the rent section, then try again if it didn't.",
+  unsure: "I'm not sure that saved. Check the rent section before trying again, so you don't end up with two.",
   retry: "I couldn't save that. Want to try again?",
   scheduleOverlaps: "That overlaps a rent schedule already set up for this tenant. End the earlier one first.",
   scheduleBadDates: "I couldn't save that. Check the dates and amounts.",

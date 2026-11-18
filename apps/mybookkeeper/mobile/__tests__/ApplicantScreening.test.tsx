@@ -10,6 +10,7 @@ import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { SCREENING_UPLOAD_TIMEOUT_MS } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
+import { SCREENING_MESSAGES } from "../src/constants/applicantScreening";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
 import { clearHeldFiles } from "../src/features/uploads/heldFile";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -309,7 +310,7 @@ describe("screening on the applicant page", () => {
       expect(heldFiles()).toHaveLength(0);
     });
 
-    it("explains no connection and keeps the file", async () => {
+    it("says it isn't sure the result went up when the answer is lost, and keeps the file", async () => {
       const server = startApplicantServer([anApplicant()]);
       await renderScreen();
       await openSheet();
@@ -317,7 +318,8 @@ describe("screening on the applicant page", () => {
       await fireEvent.press(screen.getByRole("radio", { name: "Passed" }));
       server.offline = true;
       await fireEvent.press(screen.getByRole("button", SAVE));
-      expect(await screen.findByText("I couldn't upload that. Want me to try again?")).toBeTruthy();
+      expect(await screen.findByText(SCREENING_MESSAGES.uploadUnsure)).toBeTruthy();
+      expect(screen.queryByText("I couldn't upload that. Want me to try again?")).toBeNull();
       expect(heldFiles()).toHaveLength(1);
     });
   });

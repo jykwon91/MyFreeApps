@@ -42,4 +42,5 @@ export const WORKSPACE_MESSAGES = {
   demoRefused: "Demo accounts can't create workspaces.",
   couldntCreate: "I couldn't create that. Check your connection and try again.",
   couldntCreateServer: "I couldn't create that. Try again in a moment.",
+  createUnsure: "I'm not sure that was created. Check your workspaces in More before trying again, so you don't end up with two.",
 } as const;

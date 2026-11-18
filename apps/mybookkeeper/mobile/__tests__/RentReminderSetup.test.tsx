@@ -247,7 +247,7 @@ describe("setting reminders up", () => {
     [403, RENT_MANAGE_MESSAGES.viewOnly],
     [404, RENT_MANAGE_MESSAGES.gone],
     [500, RENT_MANAGE_MESSAGES.retry],
-    ["lost" as const, RENT_MANAGE_MESSAGES.lostConnection],
+    ["lost" as const, RENT_MANAGE_MESSAGES.unsure],
   ])("explains a %s answer and keeps the sheet open", async (answer, message) => {
     const server = await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);

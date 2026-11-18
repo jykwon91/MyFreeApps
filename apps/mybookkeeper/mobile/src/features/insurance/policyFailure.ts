@@ -1,4 +1,5 @@
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
 import { POLICY_ATTACHMENT_MESSAGES, POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 
@@ -44,10 +45,10 @@ export function policyDeleteFailure(error: unknown): string {
   }
 }
 
+/** A lost answer or a proxy error can come after the file was stored (see writeOutcome), and sending it again adds a second copy. */
 export function attachmentUploadFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return POLICY_ATTACHMENT_MESSAGES.uploadUnsure;
   switch (httpStatus(error)) {
-    case undefined:
-      return POLICY_ATTACHMENT_MESSAGES.uploadOffline;
     case 403:
       return POLICY_ATTACHMENT_MESSAGES.notAllowed;
     case 404:

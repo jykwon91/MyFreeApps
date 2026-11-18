@@ -90,6 +90,6 @@ export const POLICY_ATTACHMENT_MESSAGES = {
   gone: "That policy isn't there any more.",
   removeGone: "That document is already gone.",
   uploadFailed: "I couldn't upload that. Want to try again?",
-  uploadOffline: "I can't reach the server, so I couldn't upload that. Want to try again?",
+  uploadUnsure: "I'm not sure that uploaded. Check the policy's documents before trying again, so you don't end up with two.",
   removeFailed: "I couldn't remove that. Want to try again?",
 } as const;

@@ -6,6 +6,7 @@ import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { MAKE_AND_EMAIL_BODY, makeAndEmailTitle, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { askOnce } from "../../lib/askOnce";
 import { leaseEmailsOnGenerate } from "./leaseDisplay";
 
@@ -25,7 +26,10 @@ export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDeta
         void refetch();
         return;
       }
-      showToast(httpStatus(error) === 503 ? MESSAGES.storageDown : MESSAGES.makeFilesFailed, "error");
+      // A lost answer or a proxy error can come after the files were made, and making them again adds a second set (or emails the tenant twice).
+      // The failed write reloads the lease, so its files are there to check.
+      if (writeOutcome(error) === "unknown") showToast(MESSAGES.makeFilesUnsure, "error");
+      else showToast(httpStatus(error) === 503 ? MESSAGES.storageDown : MESSAGES.makeFilesFailed, "error");
     }
   }
 

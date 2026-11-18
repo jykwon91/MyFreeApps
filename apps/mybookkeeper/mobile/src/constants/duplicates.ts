@@ -32,6 +32,7 @@ export const DUPLICATES_MESSAGES = {
   merged: "Transactions merged successfully",
   dismissed: "Marked as not duplicates",
   keptAndRemoved: (removed: number) => `Kept 1 transaction, removed ${removed}`,
+  unsure: "I'm not sure that went through. Pull down to refresh and check before trying again.",
   confirmMergeTitle: "Merge these two?",
   confirmMergeBody: "They become one transaction with the values you picked. This can't be undone.",
   confirmKeepTitle: "Keep only this one?",

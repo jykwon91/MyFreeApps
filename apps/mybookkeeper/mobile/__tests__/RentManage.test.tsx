@@ -161,7 +161,7 @@ describe("setting rent up", () => {
     [403, M.viewOnly],
     [404, M.gone],
     [500, M.retry],
-    ["lost" as const, M.lostConnection],
+    ["lost" as const, M.unsure],
   ])("explains a %s answer in its own words and keeps what was typed", async (answer, message) => {
     const server = await openNewSchedule();
     server.answer = answer;
@@ -175,6 +175,19 @@ describe("setting rent up", () => {
     expect(screen.queryByText("server wording that must not show", SHOWN)).toBeNull();
     expect(field(M.amount).props.value).toBe("1200");
     expect(screen.getByRole("header", { name: M.scheduleTitleNew })).toBeTruthy();
+  });
+
+  it("doesn't offer a retry that could set rent up twice when a proxy error hides whether it saved", async () => {
+    const server = await openNewSchedule();
+    server.answer = 504;
+    server.detail = "";
+    await typeInto(M.amount, "1200");
+    await pickDate(M.start, new Date(2026, 3, 1));
+
+    await pressLast(M.saveNew);
+
+    expect(await screen.findByText(M.unsure)).toBeTruthy();
+    expect(screen.queryByText(M.retry, SHOWN)).toBeNull();
   });
 
   it("says demo accounts can't change rent", async () => {
@@ -389,7 +402,7 @@ describe("adding a charge", () => {
   it.each([
     [422, M.chargeInvalid],
     [403, M.viewOnly],
-    ["lost" as const, M.lostConnection],
+    ["lost" as const, M.unsure],
     [500, M.retry],
   ])("explains a %s answer and keeps the sheet open", async (answer, message) => {
     const server = await openCharge();
@@ -401,6 +414,19 @@ describe("adding a charge", () => {
 
     expect(await screen.findByText(message)).toBeTruthy();
     expect(field(M.chargeAmount).props.value).toBe("50");
+  });
+
+  it("doesn't offer a retry that could add the charge twice when a proxy error hides whether it saved", async () => {
+    const server = await openCharge();
+    server.answer = 502;
+    server.detail = "";
+    await typeInto(M.chargeAmount, "50");
+    await pickDate(M.chargeDue, new Date(2026, 3, 5));
+
+    await pressLast(M.addCharge);
+
+    expect(await screen.findByText(M.unsure)).toBeTruthy();
+    expect(screen.queryByText(M.retry, SHOWN)).toBeNull();
   });
 
   it("asks before discarding a half-filled charge", async () => {
@@ -484,7 +510,7 @@ describe("waiving, restoring and removing a charge", () => {
 
     await fireEvent.press(screen.getByLabelText(/^Restore, /));
 
-    expect(await screen.findByText(M.lostConnection)).toBeTruthy();
+    expect(await screen.findByText(M.unsure)).toBeTruthy();
   });
 
   it("removes a one-off charge only after confirming", async () => {

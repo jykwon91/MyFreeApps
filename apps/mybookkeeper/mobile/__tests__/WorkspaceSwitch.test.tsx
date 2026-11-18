@@ -35,6 +35,10 @@ interface FakeServer {
   /** What a create is answered with. The new workspace joins the list when it succeeds and `listsCreated` holds. */
   create: Reply;
   listsCreated: boolean;
+  /** Saves the new workspace even when the create is answered with a failure: a lost answer or a proxy error after the commit. */
+  savesAnyway: boolean;
+  /** Fails list reads while set, with no answer at all. */
+  listsLost: boolean;
   created: unknown[];
   sentFor: Record<string, unknown>;
 }
@@ -52,10 +56,11 @@ const adapter: AxiosAdapter = (config) => {
   server.sentFor[config.url ?? ""] = config.headers["X-Organization-Id"];
   if (config.url === "/organizations" && config.method === "post") {
     server.created.push(JSON.parse(config.data as string));
-    if (server.create !== "offline" && server.create.status < 400 && server.listsCreated) server.workspaces = [...server.workspaces, CREATED];
+    const succeeded = server.create !== "offline" && server.create.status < 400;
+    if ((succeeded || server.savesAnyway) && server.listsCreated) server.workspaces = [...server.workspaces, CREATED];
     return reply(config, server.create);
   }
-  if (config.url === "/organizations") return reply(config, { status: 200, data: server.workspaces });
+  if (config.url === "/organizations") return server.listsLost && server.created.length > 0 ? reply(config, "offline") : reply(config, { status: 200, data: server.workspaces });
   return reply(config, { status: 200, data: [] });
 };
 
@@ -96,7 +101,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  server = { workspaces: [MINE, OTHER], create: { status: 201, data: { ...CREATED, created_by: "u" } }, listsCreated: true, created: [], sentFor: {} };
+  server = { workspaces: [MINE, OTHER], create: { status: 201, data: { ...CREATED, created_by: "u" } }, listsCreated: true, savesAnyway: false, listsLost: false, created: [], sentFor: {} };
   api.defaults.adapter = adapter;
 });
 
@@ -165,8 +170,9 @@ describe("creating a workspace", () => {
 
   it.each([
     ["a demo account", { status: 403, data: { detail: "This feature is not available for demo accounts" } }, MESSAGES.demoRefused],
-    ["the server failing", { status: 500 }, MESSAGES.couldntCreateServer],
-    ["no connection", "offline", MESSAGES.couldntCreate],
+    ["the server refusing", { status: 500, data: { detail: "Something broke" } }, MESSAGES.couldntCreateServer],
+    ["a proxy error that didn't save it", { status: 502 }, MESSAGES.couldntCreateServer],
+    ["no answer, and it didn't save", "offline", MESSAGES.couldntCreate],
   ] as const)("keeps the form open and says why on %s", async (_case, answer, message) => {
     server.create = answer;
     await show();
@@ -176,6 +182,32 @@ describe("creating a workspace", () => {
     expect(screen.getByRole("button", { name: MESSAGES.create })).toBeTruthy();
     expect(store.getState().workspace.activeId).toBe("w1");
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no answer", "offline"],
+    ["a proxy error", { status: 504 }],
+  ] as const)("finds and opens a workspace that was created though %s came back, instead of offering to create it again", async (_case, answer) => {
+    server.create = answer;
+    server.savesAnyway = true;
+    await show();
+    await createNamed("New Co");
+
+    await waitFor(() => expect(store.getState().workspace.activeId).toBe("w3"));
+    expect(await screen.findByText(MESSAGES.created("New Co"))).toBeTruthy();
+    expect(server.created).toHaveLength(1);
+    expect(screen.queryByText(MESSAGES.couldntCreate, SHOWN)).toBeNull();
+  });
+
+  it("says it isn't sure, rather than inviting a second create, when the answer is lost and the list can't be checked", async () => {
+    server.create = "offline";
+    server.listsLost = true;
+    await show();
+    await createNamed("New Co");
+
+    expect(await screen.findByText(MESSAGES.createUnsure)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntCreate, SHOWN)).toBeNull();
+    expect(store.getState().workspace.activeId).toBe("w1");
   });
 
   it("stays where it is, and says so, when the new workspace can't be found yet", async () => {

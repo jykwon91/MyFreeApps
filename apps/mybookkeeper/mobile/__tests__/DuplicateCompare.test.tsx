@@ -4,6 +4,7 @@ import { ToastProvider } from "@platform/mobile";
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
+import { DUPLICATES_MESSAGES } from "../src/constants/duplicates";
 import DuplicateCompareScreen from "../src/features/duplicates/DuplicateCompareScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -157,6 +158,41 @@ describe("comparing a suspected duplicate", () => {
     expect(await screen.findByText("I couldn't mark those as not duplicates. Want to try again?")).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Mark these two as not duplicates" }).props.accessibilityState).not.toMatchObject({ disabled: true });
+  });
+
+  it("checks the list after a lost answer, and goes back when the merge landed", async () => {
+    const server = serve();
+    server.duplicateAnswerLost = "afterSaving";
+    answerAlert("Merge");
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Merge these two into one transaction" }));
+    expect(await screen.findByText("Transactions merged successfully")).toBeTruthy();
+    expect(screen.queryByText(/nothing changed/)).toBeNull();
+    expect(writes(server)).toHaveLength(1);
+    expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("checks the list after a lost answer, and offers a retry only when the pair is still there", async () => {
+    const server = serve();
+    server.duplicateAnswerLost = "beforeSaving";
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Mark these two as not duplicates" }));
+    expect(await screen.findByText("I couldn't mark those as not duplicates. Want to try again?")).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it("says it isn't sure when the answer is lost and the list can't be checked either", async () => {
+    const server = serve();
+    server.duplicateAnswerLost = "afterSaving";
+    answerAlert("Keep only this one");
+    await renderScreen();
+    await screen.findByRole("button", { name: "Keep only record B and delete the other" });
+    const adapter = api.defaults.adapter as (config: { url?: string; method?: string }) => Promise<unknown>;
+    api.defaults.adapter = ((config: { url?: string; method?: string }) =>
+      config.url === "/transactions/duplicates" ? Promise.reject(Object.assign(new Error("Network Error"), { config })) : adapter(config)) as typeof api.defaults.adapter;
+    await fireEvent.press(screen.getByRole("button", { name: "Keep only record B and delete the other" }));
+    expect(await screen.findByText(DUPLICATES_MESSAGES.unsure)).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it.each([
