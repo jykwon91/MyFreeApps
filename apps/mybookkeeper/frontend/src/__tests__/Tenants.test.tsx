@@ -47,22 +47,24 @@ const defaultEnvelope: TenantListResponse = {
 };
 
 const defaultQueryState = {
-  ...queryData(defaultEnvelope),
+  ...infiniteQueryData(defaultEnvelope),
   isLoading: false,
   isFetching: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isError: false,
   refetch: vi.fn(),
 };
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetTenantsQuery: vi.fn(() => defaultQueryState),
+  useListTenantPagesInfiniteQuery: vi.fn(() => defaultQueryState),
 }));
 
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
-type QueryReturn = ReturnType<typeof useGetTenantsQuery>;
+type QueryReturn = ReturnType<typeof useListTenantPagesInfiniteQuery>;
 
 function renderTenants() {
   return render(
@@ -76,7 +78,7 @@ function renderTenants() {
 
 describe("Tenants page", () => {
   beforeEach(() => {
-    vi.mocked(useGetTenantsQuery).mockReturnValue(
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue(
       defaultQueryState as unknown as QueryReturn,
     );
   });
@@ -92,9 +94,9 @@ describe("Tenants page", () => {
   });
 
   it("renders the skeleton while loading", () => {
-    vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       isLoading: true,
     } as unknown as QueryReturn);
     renderTenants();
@@ -102,9 +104,9 @@ describe("Tenants page", () => {
   });
 
   it("renders empty state for active when no tenants and toggle is off", () => {
-    vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as QueryReturn);
     renderTenants();
     expect(
@@ -114,9 +116,9 @@ describe("Tenants page", () => {
 
   it("renders 'No tenants found' empty state when toggle is on and no tenants", () => {
     // Mock returns empty for all calls (both initial render and after toggle)
-    vi.mocked(useGetTenantsQuery).mockReturnValue({
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue({
       ...defaultQueryState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as QueryReturn);
     renderTenants();
     // Toggle on — now includeEnded=true, shows different empty message
@@ -125,9 +127,9 @@ describe("Tenants page", () => {
   });
 
   it("renders error alert when query errors", () => {
-    vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as QueryReturn);
     renderTenants();
@@ -138,7 +140,7 @@ describe("Tenants page", () => {
 
   it("calls query with include_ended=false by default", () => {
     renderTenants();
-    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith(
+    expect(vi.mocked(useListTenantPagesInfiniteQuery)).toHaveBeenCalledWith(
       expect.objectContaining({ include_ended: false }),
     );
   });
@@ -146,7 +148,7 @@ describe("Tenants page", () => {
   it("calls query with include_ended=true after toggling", () => {
     renderTenants();
     fireEvent.click(screen.getByTestId("tenants-show-ended-toggle"));
-    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith(
+    expect(vi.mocked(useListTenantPagesInfiniteQuery)).toHaveBeenCalledWith(
       expect.objectContaining({ include_ended: true }),
     );
   });

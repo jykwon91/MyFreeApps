@@ -4,7 +4,6 @@ import { Button } from "@platform/ui";
 import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
@@ -29,7 +28,7 @@ export default function InsurancePolicies() {
     expiringBefore ? { expiring_before: expiringBefore } : {},
   );
   const { error, refetch, isFetching } = query;
-  const data = currentListData(query, false);
+  const data = query.currentData;
 
   const policies = data?.items ?? [];
   const mode = resolveListLoadMode({

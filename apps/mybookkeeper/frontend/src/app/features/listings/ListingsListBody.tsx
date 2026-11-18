@@ -9,10 +9,10 @@ import ListingTableRow from "./ListingTableRow";
 
 export interface ListingsListBodyProps {
   mode: ListLoadMode;
-  listings: ListingSummary[];
+  listings: readonly ListingSummary[];
   propertyName: (l: ListingSummary) => string;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
   canWrite: boolean;
 }
@@ -22,7 +22,7 @@ export default function ListingsListBody({
   listings,
   propertyName,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
   canWrite,
 }: ListingsListBodyProps) {
@@ -77,7 +77,7 @@ export default function ListingsListBody({
               <LoadingButton
                 variant="secondary"
                 onClick={onLoadMore}
-                isLoading={isFetching}
+                isLoading={isLoadingMore}
                 loadingText="Loading..."
               >
                 Load more

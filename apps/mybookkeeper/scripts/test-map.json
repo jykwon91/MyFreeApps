@@ -619,7 +619,12 @@
         "mobile/src/types/HeldPhotoSource.ts",
         "mobile/src/types/PhotoPreparing.ts",
         "mobile/src/features/uploads/useHeldPhotoPicker.ts",
-        "mobile/src/features/uploads/chooseLibraryAssets.ts"
+        "mobile/src/features/uploads/chooseLibraryAssets.ts",
+        "api-client/src/hooks/useListingsPages.ts",
+        "frontend/src/shared/lib/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-status.ts",
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -661,7 +666,8 @@
         "ChannelListingFormModal.test.tsx",
         "Markdown.test.tsx",
         "list-load-mode.test.ts",
-        "detail-load-mode.test.ts"
+        "detail-load-mode.test.ts",
+        "ListPagesPaging.test.tsx"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
@@ -784,7 +790,12 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "api-client/src/hooks/useInquiriesPages.ts",
+        "frontend/src/shared/lib/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-status.ts",
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_encrypted_string_type.py",
@@ -828,7 +839,9 @@
         "ReplyTemplatesManager.test.tsx",
         "reply-template-renderer.test.ts",
         "list-load-mode.test.ts",
-        "detail-load-mode.test.ts"
+        "detail-load-mode.test.ts",
+        "ListPagesPaging.test.tsx",
+        "InquiriesFilterChange.test.tsx"
       ],
       "e2e_specs": [
         "inquiries.spec.ts",
@@ -863,7 +876,12 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "api-client/src/hooks/useApplicantsPages.ts",
+        "frontend/src/shared/lib/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-status.ts",
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_applicant_repo.py",
@@ -895,14 +913,17 @@
         "ContractDatesEditor.test.tsx",
         "useLinkedLeaseDocumentsMode.test.ts",
         "list-load-mode.test.ts",
-        "detail-load-mode.test.ts"
+        "detail-load-mode.test.ts",
+        "ListPagesPaging.test.tsx",
+        "ApplicantsFilterChange.test.tsx"
       ],
       "e2e_specs": [
         "applicants.spec.ts",
         "applicants-layout.spec.ts",
         "applicant-promote.spec.ts",
         "applicant-contract-dates.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/list-pages-load-more-mock.spec.ts"
       ]
     },
     "tenants": {
@@ -919,7 +940,12 @@
         "api-client/src/types/applicant/tenancy-end-request.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "api-client/src/hooks/useTenantsPages.ts",
+        "frontend/src/shared/lib/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-status.ts",
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_tenancy_api.py",
@@ -930,7 +956,8 @@
         "Tenants.test.tsx",
         "TenantStatusBadge.test.tsx",
         "EndTenancyDialog.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "ListPagesPaging.test.tsx"
       ],
       "e2e_specs": [
         "mocked/list-pages-retry-mock.spec.ts"
@@ -1705,7 +1732,12 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "api-client/src/hooks/useVendorsPages.ts",
+        "frontend/src/shared/lib/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-view.ts",
+        "frontend/src/shared/types/paged-list-status.ts",
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_vendor_repo.py",
@@ -1719,7 +1751,8 @@
         "VendorDetail.test.tsx",
         "VendorForm.test.tsx",
         "list-load-mode.test.ts",
-        "detail-load-mode.test.ts"
+        "detail-load-mode.test.ts",
+        "ListPagesPaging.test.tsx"
       ],
       "e2e_specs": [
         "vendors-api.spec.ts",

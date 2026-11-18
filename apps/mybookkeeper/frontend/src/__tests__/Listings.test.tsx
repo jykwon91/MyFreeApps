@@ -51,19 +51,12 @@ const mockProperties: Property[] = [
   },
 ];
 
-interface QueryState<T> {
-  data: T;
-  currentData: T;
-  isLoading: boolean;
-  isFetching: boolean;
-  isError: boolean;
-  refetch: () => void;
-}
-
-const defaultListingsState: QueryState<ListingListResponse> = {
-  ...queryData(mockEnvelope),
+const defaultListingsState = {
+  ...infiniteQueryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isError: false,
   refetch: vi.fn(),
 };
@@ -82,7 +75,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useUploadListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useReorderListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useGetListingsQuery: vi.fn(() => defaultListingsState),
+  useListListingPagesInfiniteQuery: vi.fn(() => defaultListingsState),
   useGetListingByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 
@@ -93,11 +86,11 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
 
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { useListListingPagesInfiniteQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
 function renderListings(initialEntries: string[] = ["/listings"]) {
   return render(
@@ -112,8 +105,8 @@ function renderListings(initialEntries: string[] = ["/listings"]) {
 describe("Listings page", () => {
   beforeEach(() => {
     vi.mocked(useCanWrite).mockReturnValue(true);
-    vi.mocked(useGetListingsQuery).mockReturnValue(
-      defaultListingsState as unknown as ReturnType<typeof useGetListingsQuery>,
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValue(
+      defaultListingsState as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>,
     );
   });
 
@@ -170,32 +163,32 @@ describe("Listings page", () => {
   });
 
   it("renders the skeleton when loading", () => {
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       isLoading: true,
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getByTestId("listings-skeleton")).toBeInTheDocument();
   });
 
   it("renders the empty state message when no listings exist", () => {
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getByText(/No listings yet/i)).toBeInTheDocument();
   });
 
   it("renders an inline error banner with a retry button on error", async () => {
     const refetchMock = vi.fn();
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
       refetch: refetchMock,
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getByText(/I couldn't load your listings/i)).toBeInTheDocument();
     const retryBtn = screen.getByRole("button", { name: /retry/i });
@@ -211,10 +204,10 @@ describe("Listings page", () => {
       property_id: "missing",
       title: "Orphan Listing",
     };
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData({ items: [orphan], total: 1, has_more: false }),
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+      ...infiniteQueryData({ items: [orphan], total: 1, has_more: false }),
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getAllByText(/Unknown property/i).length).toBeGreaterThan(0);
   });
@@ -238,10 +231,10 @@ describe("Listings page", () => {
 
   it("tells a viewer listings will show up once someone adds one", () => {
     vi.mocked(useCanWrite).mockReturnValue(false);
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getByText(LISTING_MESSAGES.noListingsViewer)).toBeInTheDocument();
   });
@@ -253,10 +246,10 @@ describe("Listings page", () => {
   });
 
   it("shows the Load more button when has_more is true", () => {
-    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+    vi.mocked(useListListingPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      ...queryData({ items: mockListings, total: 50, has_more: true }),
-    } as unknown as ReturnType<typeof useGetListingsQuery>);
+      ...infiniteQueryData({ items: mockListings, total: 50, has_more: true }),
+    } as unknown as ReturnType<typeof useListListingPagesInfiniteQuery>);
     renderListings();
     expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
   });

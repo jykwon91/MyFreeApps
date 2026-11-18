@@ -11,7 +11,7 @@ import type { ListLoadModeArgs } from "@/shared/types/list-load-mode-args";
  *
  * Items that loaded earlier for the same filters still show under the error (a
  * failed refresh or a failed "Load more" shouldn't wipe what's on screen). Pages
- * pass `currentListData`'s answer, so another filter's items never count here.
+ * pass their query's `currentData`, so another filter's items never count here.
  */
 export function resolveListLoadMode({ hasData, hasError, itemCount }: ListLoadModeArgs): ListLoadMode {
   if (!hasData) return hasError ? "error" : "loading";

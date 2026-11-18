@@ -24,6 +24,7 @@ export function describeInfinitePages<T extends { id: string }>(
     loadError: query.isError && !hasCurrent ? query.error : undefined,
     error: query.error,
     hasNextPage: hasCurrent && query.hasNextPage,
+    isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
     // The last fetch failed and it was a next page. Any later fetch that succeeds clears it.
     isLoadMoreError: query.isError && query.direction === "forward",

@@ -3,21 +3,18 @@ import { FileText, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { LoadingButton, useLiveSearchParams } from "@platform/ui";
-import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useInquiriesPages } from "@mybookkeeper/api-client/hooks/useInquiriesPages";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
-import { INQUIRY_PAGE_SIZE } from "@mybookkeeper/api-client/constants/inquiryPaging";
 import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import InquiryStageFilter from "@/app/features/inquiries/InquiryStageFilter";
 import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
-import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 
 const STAGE_PARAM = "stage";
 const SPAM_PARAM = "spam";
@@ -53,7 +50,6 @@ export default function Inquiries() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
   const spamFilter = parseSpamParam(searchParams.get(SPAM_PARAM));
-  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([stage, spamFilter]));
   const [showForm, setShowForm] = useState(false);
   const canWrite = useCanWrite();
 
@@ -65,19 +61,13 @@ export default function Inquiries() {
         : spamFilter
           ? { spam_status: spamFilter }
           : {}),
-      limit: INQUIRY_PAGE_SIZE * pageCount,
-      offset: 0,
     }),
-    [stage, spamFilter, pageCount],
+    [stage, spamFilter],
   );
 
-  const query = useGetInquiriesQuery(queryArgs);
-  const { isFetching, error, refetch } = query;
-  const data = currentListData(query, pageCount > 1);
+  const pages = useInquiriesPages(queryArgs);
+  const { mode, rows } = pagedListView(pages, pages.inquiries);
   const { data: listingsData } = useGetListingsQuery();
-
-  const inquiries = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
 
   // Memoize the listings array reference so the downstream useMemo deps
   // remain stable across renders when listingsData hasn't changed (the
@@ -131,12 +121,6 @@ export default function Inquiries() {
   const showStageBadge = !stage;
   const isFiltered = !!stage;
 
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: inquiries.length,
-  });
-
   return (
     <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
@@ -170,19 +154,17 @@ export default function Inquiries() {
 
       <InquiryStageFilter value={stage} onChange={handleFilterChange} />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your inquiries. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="inquiries" />
 
       <InquiriesListBody
         mode={mode}
-        inquiries={inquiries}
+        inquiries={rows}
         isFiltered={isFiltered}
         showStageBadge={showStageBadge}
         listingTitleById={listingTitleById}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={loadMore}
+        hasMore={pages.hasNextPage}
+        isLoadingMore={pages.isFetchingNextPage}
+        onLoadMore={pages.loadMore}
         canWrite={canWrite}
       />
 

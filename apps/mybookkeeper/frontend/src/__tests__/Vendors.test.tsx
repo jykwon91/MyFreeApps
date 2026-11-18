@@ -43,9 +43,11 @@ const mockEnvelope: VendorListResponse = {
 };
 
 const defaultVendorsState = {
-  ...queryData(mockEnvelope),
+  ...infiniteQueryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isError: false,
   refetch: vi.fn(),
 };
@@ -55,18 +57,18 @@ const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteVendor = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
-  useGetVendorsQuery: vi.fn(() => defaultVendorsState),
+  useListVendorPagesInfiniteQuery: vi.fn(() => defaultVendorsState),
   useGetVendorByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useCreateVendorMutation: () => [createVendor, { isLoading: false }],
   useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],
   useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
 }));
 
-import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
+import { useListVendorPagesInfiniteQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
-type ListQueryReturn = ReturnType<typeof useGetVendorsQuery>;
+type ListQueryReturn = ReturnType<typeof useListVendorPagesInfiniteQuery>;
 
 function renderVendors(initialEntry = "/vendors") {
   return render(
@@ -80,7 +82,7 @@ function renderVendors(initialEntry = "/vendors") {
 
 describe("Vendors page", () => {
   beforeEach(() => {
-    vi.mocked(useGetVendorsQuery).mockReturnValue(
+    vi.mocked(useListVendorPagesInfiniteQuery).mockReturnValue(
       defaultVendorsState as unknown as ListQueryReturn,
     );
   });
@@ -93,9 +95,9 @@ describe("Vendors page", () => {
   });
 
   it("renders the loading skeleton while fetching", () => {
-    vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
+    vi.mocked(useListVendorPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       isLoading: true,
     } as unknown as ListQueryReturn);
     renderVendors();
@@ -103,27 +105,27 @@ describe("Vendors page", () => {
   });
 
   it("renders the empty state when there are no vendors", () => {
-    vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
+    vi.mocked(useListVendorPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderVendors();
     expect(screen.getByText(/No vendors yet/i)).toBeInTheDocument();
   });
 
   it("renders the filtered empty state when a category filter has no matches", () => {
-    vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
+    vi.mocked(useListVendorPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderVendors("/vendors?category=hvac");
     expect(screen.getByText(/No vendors match this filter/i)).toBeInTheDocument();
   });
 
   it("renders an error AlertBox when the query errors", () => {
-    vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
+    vi.mocked(useListVendorPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderVendors();

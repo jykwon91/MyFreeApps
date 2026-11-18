@@ -15,6 +15,8 @@ export interface InfinitePagesState<T> {
   /** The latest request's error, including a failed refresh of a list already shown. */
   error: unknown;
   hasNextPage: boolean;
+  /** Any request for this list is in flight: the first page, a refresh, a retry or the next page. */
+  isFetching: boolean;
   isFetchingNextPage: boolean;
   /** Loading the next page failed; the rows already loaded stay. */
   isLoadMoreError: boolean;

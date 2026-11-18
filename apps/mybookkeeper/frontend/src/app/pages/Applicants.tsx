@@ -1,14 +1,12 @@
 import { useMemo } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
+import { APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
-import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { pagedListView } from "@/shared/lib/paged-list-view";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 import { useLiveSearchParams } from "@platform/ui";
 
 const STAGE_PARAM = "stage";
@@ -23,31 +21,13 @@ function parseStageParam(value: string | null): ApplicantStage | null {
 export default function Applicants() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
-  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([stage]));
 
-  const queryArgs = useMemo(
-    () => ({
-      ...(stage ? { stage } : {}),
-      limit: APPLICANT_PAGE_SIZE * pageCount,
-      offset: 0,
-    }),
-    [stage, pageCount],
-  );
+  const queryArgs = useMemo(() => (stage ? { stage } : {}), [stage]);
+  const pages = useApplicantsPages(queryArgs);
+  const { mode, rows } = pagedListView(pages, pages.applicants);
 
-  const query = useGetApplicantsQuery(queryArgs);
-  const { isFetching, error, refetch } = query;
-  const data = currentListData(query, pageCount > 1);
-
-  const applicants = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
   const isFiltered = !!stage;
   const showStageBadge = !stage;
-
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: applicants.length,
-  });
 
   function handleFilterChange(next: ApplicantStage | null) {
     setSearchParams(
@@ -73,18 +53,16 @@ export default function Applicants() {
 
       <ApplicantStageFilter value={stage} onChange={handleFilterChange} />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your applicants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="applicants" />
 
       <ApplicantsListBody
         mode={mode}
-        applicants={applicants}
+        applicants={rows}
         showStageBadge={showStageBadge}
         isFiltered={isFiltered}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={loadMore}
+        hasMore={pages.hasNextPage}
+        isLoadingMore={pages.isFetchingNextPage}
+        onLoadMore={pages.loadMore}
       />
     </div>
   );

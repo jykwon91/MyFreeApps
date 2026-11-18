@@ -70,9 +70,11 @@ const mockListings: ListingListResponse = {
 };
 
 const defaultInquiriesState = {
-  ...queryData(mockEnvelope),
+  ...infiniteQueryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isError: false,
   refetch: vi.fn(),
 };
@@ -90,7 +92,7 @@ const createInquiryMock = vi.fn(() => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
-  useGetInquiriesQuery: vi.fn(() => defaultInquiriesState),
+  useListInquiryPagesInfiniteQuery: vi.fn(() => defaultInquiriesState),
   useGetInquiryByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useCreateInquiryMutation: vi.fn(() => [createInquiryMock, { isLoading: false }]),
   useUpdateInquiryMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -103,12 +105,12 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
 
-import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
-type InquiriesQueryReturn = ReturnType<typeof useGetInquiriesQuery>;
+type InquiriesQueryReturn = ReturnType<typeof useListInquiryPagesInfiniteQuery>;
 
 function renderInquiries(initialEntries: string[] = ["/inquiries"]) {
   return render(
@@ -122,7 +124,7 @@ function renderInquiries(initialEntries: string[] = ["/inquiries"]) {
 
 describe("Inquiries page", () => {
   beforeEach(() => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValue(
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValue(
       defaultInquiriesState as unknown as InquiriesQueryReturn,
     );
     createInquiryMock.mockClear();
@@ -131,16 +133,16 @@ describe("Inquiries page", () => {
 
   it("asks for the inbox by default, so email inquiries with no spam score show", () => {
     renderInquiries();
-    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).toMatchObject({ inbox_only: true });
-    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).not.toHaveProperty("spam_status");
+    expect(vi.mocked(useListInquiryPagesInfiniteQuery).mock.lastCall?.[0]).toMatchObject({ inbox_only: true });
+    expect(vi.mocked(useListInquiryPagesInfiniteQuery).mock.lastCall?.[0]).not.toHaveProperty("spam_status");
   });
 
   it("asks for one spam status on the Flagged tab, and none on All", () => {
     const { unmount } = renderInquiries(["/inquiries?spam=flagged"]);
-    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).toMatchObject({ spam_status: "flagged" });
+    expect(vi.mocked(useListInquiryPagesInfiniteQuery).mock.lastCall?.[0]).toMatchObject({ spam_status: "flagged" });
     unmount();
     renderInquiries(["/inquiries?spam=all"]);
-    const args = vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0];
+    const args = vi.mocked(useListInquiryPagesInfiniteQuery).mock.lastCall?.[0];
     expect(args).not.toHaveProperty("spam_status");
     expect(args).not.toHaveProperty("inbox_only");
   });
@@ -154,9 +156,9 @@ describe("Inquiries page", () => {
   });
 
   it("shows the loading skeleton while fetching", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       isLoading: true,
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
@@ -164,18 +166,18 @@ describe("Inquiries page", () => {
   });
 
   it("renders the unfiltered empty state when there are no inquiries", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     expect(screen.getByText(/No inquiries yet/i)).toHaveTextContent('Use "New inquiry" to log one manually.');
   });
 
   it("renders the filtered empty state when no inquiries match the active stage", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries(["/inquiries?stage=approved"]);
     expect(screen.getByText(/No inquiries in this stage/i)).toBeInTheDocument();
@@ -195,9 +197,9 @@ describe("Inquiries page", () => {
   });
 
   it("renders an error AlertBox + retry button when the query errors", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      ...queryData(undefined),
+      ...infiniteQueryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
@@ -211,9 +213,9 @@ describe("Inquiries page", () => {
   });
 
   it("shows 'Load more' when has_more is true", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      ...queryData({ ...mockEnvelope, has_more: true }),
+      ...infiniteQueryData({ ...mockEnvelope, has_more: true }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     expect(screen.getByRole("button", { name: /Load more/i })).toBeInTheDocument();
@@ -234,7 +236,7 @@ describe("Inquiries page for a viewer", () => {
   });
 
   it("hides New inquiry and keeps the Templates link", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValue(
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValue(
       defaultInquiriesState as unknown as InquiriesQueryReturn,
     );
     renderInquiries();
@@ -243,9 +245,9 @@ describe("Inquiries page for a viewer", () => {
   });
 
   it("doesn't point a viewer at New inquiry when the list is empty", () => {
-    vi.mocked(useGetInquiriesQuery).mockReturnValue({
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValue({
       ...defaultInquiriesState,
-      ...queryData({ items: [], total: 0, has_more: false }),
+      ...infiniteQueryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     const empty = screen.getByText(/No inquiries yet/i);

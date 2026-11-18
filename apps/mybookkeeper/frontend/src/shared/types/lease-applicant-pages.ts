@@ -8,8 +8,8 @@ export interface LeaseApplicantPages {
   hasData: boolean;
   /** Set while any stage's latest load has failed, and stays set through a retry. */
   hasError: boolean;
-  /** A stage's first load, or a retry of it, is in flight. */
-  isLoading: boolean;
+  /** Any stage has a request in flight: a first load, a refresh, a retry or the next page. */
+  isFetching: boolean;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   /** The latest "Load more" failed; the applicants already shown are still good. */

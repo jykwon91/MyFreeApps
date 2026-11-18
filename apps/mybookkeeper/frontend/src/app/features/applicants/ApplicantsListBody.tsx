@@ -10,7 +10,7 @@ export interface ApplicantsListBodyProps {
   showStageBadge: boolean;
   isFiltered: boolean;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
 }
 
@@ -20,7 +20,7 @@ export default function ApplicantsListBody({
   showStageBadge,
   isFiltered,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
 }: ApplicantsListBodyProps) {
   switch (mode) {
@@ -37,7 +37,7 @@ export default function ApplicantsListBody({
           applicants={applicants}
           showStageBadge={showStageBadge}
           hasMore={hasMore}
-          isFetching={isFetching}
+          isLoadingMore={isLoadingMore}
           onLoadMore={onLoadMore}
         />
       );

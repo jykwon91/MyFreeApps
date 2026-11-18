@@ -12,6 +12,7 @@ import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { restoreApi, stubApi } from "@/test/api-stub";
 import { deferred } from "@/test/deferred";
+import { answerListPage } from "@/test/paged-list-server";
 import { renderWithStore } from "@/test/render-with-store";
 
 function anApplicant(n: number): ApplicantSummary {
@@ -34,6 +35,7 @@ function anApplicant(n: number): ApplicantSummary {
 
 const LEADS = { items: [anApplicant(1)], total: 1, has_more: false };
 const ERROR_MESSAGE = /I couldn't load your applicants/i;
+const LOAD_MORE_ERROR_MESSAGE = /I couldn't load more applicants/i;
 
 let cleanup: () => void = () => undefined;
 
@@ -62,31 +64,30 @@ describe("Applicants after a filter change", () => {
   });
 
   it("keeps the rows already shown when 'Load more' fails", async () => {
-    const firstPage = Array.from({ length: APPLICANT_PAGE_SIZE }, (_, i) => anApplicant(i + 1));
+    const rows = Array.from({ length: APPLICANT_PAGE_SIZE + 1 }, (_, i) => anApplicant(i + 1));
     stubApi((_path, params) => {
-      if (Number(params.limit) > APPLICANT_PAGE_SIZE) throw new Error("server down");
-      return { items: firstPage, total: APPLICANT_PAGE_SIZE + 1, has_more: true };
+      if (Number(params.offset) > 0) throw new Error("server down");
+      return answerListPage(rows, params);
     });
     cleanup = renderWithStore(<Applicants />, "/applicants");
     expect((await screen.findAllByText("Lead Applicant 1")).length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getAllByRole("button", { name: "Load more" })[0]);
 
-    expect(await screen.findByText(ERROR_MESSAGE)).toBeInTheDocument();
+    expect(await screen.findByText(LOAD_MORE_ERROR_MESSAGE)).toBeInTheDocument();
     expect(screen.getAllByText("Lead Applicant 1").length).toBeGreaterThan(0);
   });
 
   it("drops the loaded pages when a link changes the stage after 'Load more'", async () => {
-    const pageOf = (count: number) => Array.from({ length: count }, (_, i) => anApplicant(i + 1));
+    const leads = Array.from({ length: APPLICANT_PAGE_SIZE * 3 }, (_, i) => anApplicant(i + 1));
     const approved = deferred<unknown>();
-    const approvedLimits: unknown[] = [];
+    const approvedOffsets: unknown[] = [];
     stubApi((_path, params) => {
       if (params.stage === "approved") {
-        approvedLimits.push(params.limit);
+        approvedOffsets.push(params.offset);
         return approved.promise;
       }
-      const limit = Number(params.limit);
-      return { items: pageOf(limit), total: APPLICANT_PAGE_SIZE * 3, has_more: true };
+      return answerListPage(leads, params);
     });
     cleanup = renderWithStore(
       <>
@@ -103,7 +104,7 @@ describe("Applicants after a filter change", () => {
 
     expect(await screen.findByTestId("applicants-skeleton")).toBeInTheDocument();
     expect(screen.queryByText("Lead Applicant 1")).not.toBeInTheDocument();
-    expect(approvedLimits).toEqual([APPLICANT_PAGE_SIZE]);
+    expect(approvedOffsets).toEqual([0]);
 
     approved.reject(new Error("server down"));
 

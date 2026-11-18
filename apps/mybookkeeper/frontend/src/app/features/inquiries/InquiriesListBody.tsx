@@ -8,12 +8,12 @@ import InquiryRow from "./InquiryRow";
 
 export interface InquiriesListBodyProps {
   mode: ListLoadMode;
-  inquiries: InquirySummary[];
+  inquiries: readonly InquirySummary[];
   isFiltered: boolean;
   showStageBadge: boolean;
   listingTitleById: Map<string, string>;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
   canWrite: boolean;
 }
@@ -25,7 +25,7 @@ export default function InquiriesListBody({
   showStageBadge,
   listingTitleById,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
   canWrite,
 }: InquiriesListBodyProps) {
@@ -88,7 +88,7 @@ export default function InquiriesListBody({
               <LoadingButton
                 variant="secondary"
                 onClick={onLoadMore}
-                isLoading={isFetching}
+                isLoading={isLoadingMore}
                 loadingText="Loading..."
               >
                 Load more

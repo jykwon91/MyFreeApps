@@ -8,11 +8,11 @@ import VendorRow from "./VendorRow";
 
 export interface VendorsListBodyProps {
   mode: ListLoadMode;
-  vendors: VendorSummary[];
+  vendors: readonly VendorSummary[];
   isFiltered: boolean;
   showCategoryBadge: boolean;
   hasMore: boolean;
-  isFetching: boolean;
+  isLoadingMore: boolean;
   onLoadMore: () => void;
 }
 
@@ -22,7 +22,7 @@ export default function VendorsListBody({
   isFiltered,
   showCategoryBadge,
   hasMore,
-  isFetching,
+  isLoadingMore,
   onLoadMore,
 }: VendorsListBodyProps) {
   switch (mode) {
@@ -80,7 +80,7 @@ export default function VendorsListBody({
               <LoadingButton
                 variant="secondary"
                 onClick={onLoadMore}
-                isLoading={isFetching}
+                isLoading={isLoadingMore}
                 loadingText="Loading..."
               >
                 Load more

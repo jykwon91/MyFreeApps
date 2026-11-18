@@ -25,7 +25,6 @@ import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
 import { useLiveSearchParams } from "@platform/ui";
 import { localToday } from "@platform/core/utils/localToday";
 
@@ -88,7 +87,7 @@ export default function Calendar() {
 
   const eventsQuery = useGetCalendarEventsQuery(queryArgs);
   const { error, isFetching, refetch } = eventsQuery;
-  const events = currentListData(eventsQuery, false);
+  const events = eventsQuery.currentData;
   const { data: properties = [] } = useGetPropertiesQuery();
   const { data: listingsEnvelope } = useGetListingsQuery({ limit: 100, offset: 0 });
 

@@ -2,20 +2,15 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, useLiveSearchParams } from "@platform/ui";
-import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
-import {
-  VENDOR_CATEGORIES,
-  VENDOR_PAGE_SIZE,
-} from "@mybookkeeper/api-client/constants/vendorLabels";
+import { useVendorsPages } from "@mybookkeeper/api-client/hooks/useVendorsPages";
+import { VENDOR_CATEGORIES } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
 import VendorForm from "@/app/features/vendors/VendorForm";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
-import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import VendorsListBody from "@/app/features/vendors/VendorsListBody";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 
 const CATEGORY_PARAM = "category";
 const PREFERRED_PARAM = "preferred";
@@ -35,33 +30,20 @@ export default function Vendors() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const category = parseCategoryParam(searchParams.get(CATEGORY_PARAM));
   const preferredOnly = parsePreferredParam(searchParams.get(PREFERRED_PARAM));
-  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([category, preferredOnly]));
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const queryArgs = useMemo(
     () => ({
       ...(category ? { category } : {}),
       ...(preferredOnly ? { preferred: true } : {}),
-      limit: VENDOR_PAGE_SIZE * pageCount,
-      offset: 0,
     }),
-    [category, preferredOnly, pageCount],
+    [category, preferredOnly],
   );
+  const pages = useVendorsPages(queryArgs);
+  const { mode, rows } = pagedListView(pages, pages.vendors);
 
-  const query = useGetVendorsQuery(queryArgs);
-  const { isFetching, error, refetch } = query;
-  const data = currentListData(query, pageCount > 1);
-
-  const vendors = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
   const isFiltered = !!category || preferredOnly;
   const showCategoryBadge = !category;
-
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: vendors.length,
-  });
 
   function handleCategoryChange(next: VendorCategory | null) {
     setSearchParams(
@@ -119,18 +101,16 @@ export default function Vendors() {
         />
       </div>
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your vendors. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="vendors" />
 
       <VendorsListBody
         mode={mode}
-        vendors={vendors}
+        vendors={rows}
         isFiltered={isFiltered}
         showCategoryBadge={showCategoryBadge}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={loadMore}
+        hasMore={pages.hasNextPage}
+        isLoadingMore={pages.isFetchingNextPage}
+        onLoadMore={pages.loadMore}
       />
 
       {showCreateForm ? (

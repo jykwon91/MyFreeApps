@@ -43,6 +43,7 @@ function pages(overrides: Partial<DiscoveredJobsPagesState> = {}): DiscoveredJob
     loadError: undefined,
     error: undefined,
     hasNextPage: false,
+    isFetching: false,
     isFetchingNextPage: false,
     isLoadMoreError: false,
     loadMore,

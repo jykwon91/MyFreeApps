@@ -2,19 +2,17 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { LoadingButton, useLiveSearchParams } from "@platform/ui";
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { useListingsPages } from "@mybookkeeper/api-client/hooks/useListingsPages";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
+import { LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
 import ListingForm from "@/app/features/listings/ListingForm";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
-import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 
 const STATUS_PARAM = "status";
 
@@ -26,26 +24,13 @@ function parseStatusParam(value: string | null): ListingStatus | null {
 export default function Listings() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const status = parseStatusParam(searchParams.get(STATUS_PARAM));
-  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([status]));
   const [showForm, setShowForm] = useState(false);
   const canWrite = useCanWrite();
 
-  const queryArgs = useMemo(
-    () => ({
-      ...(status ? { status } : {}),
-      limit: LISTING_PAGE_SIZE * pageCount,
-      offset: 0,
-    }),
-    [status, pageCount],
-  );
-
-  const query = useGetListingsQuery(queryArgs);
-  const { isFetching, error, refetch } = query;
-  const data = currentListData(query, pageCount > 1);
+  const queryArgs = useMemo(() => (status ? { status } : {}), [status]);
+  const pages = useListingsPages(queryArgs);
+  const { mode, rows } = pagedListView(pages, pages.listings);
   const { data: properties = [] } = useGetPropertiesQuery();
-
-  const listings = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
 
   const propertyById = useMemo(() => {
     const map = new Map<string, string>();
@@ -72,12 +57,6 @@ export default function Listings() {
 
   const propertyName = (l: ListingSummary) => propertyById.get(l.property_id) ?? "Unknown property";
 
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: listings.length,
-  });
-
   return (
     <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
@@ -99,17 +78,15 @@ export default function Listings() {
 
       <ListingStatusFilter value={status} onChange={handleFilterChange} />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your listings. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="listings" />
 
       <ListingsListBody
         mode={mode}
-        listings={listings}
+        listings={rows}
         propertyName={propertyName}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={loadMore}
+        hasMore={pages.hasNextPage}
+        isLoadingMore={pages.isFetchingNextPage}
+        onLoadMore={pages.loadMore}
         canWrite={canWrite}
       />
 

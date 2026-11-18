@@ -43,7 +43,6 @@ import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactio
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { currentListData } from "@/shared/utils/current-list-data";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 
 export interface TransactionPageState {
@@ -206,9 +205,7 @@ export function useTransactionPageState(): TransactionPageState {
     () => ({ ...queryParams, limit: pagination.pageSize, offset: pagination.pageIndex * pagination.pageSize }),
     [queryParams, pagination],
   );
-  const pageQuery = useGetTransactionPageQuery(pageArgs, { skip });
-  const { currentData, fulfilledTimeStamp, isLoading, isFetching, error, refetch } = pageQuery;
-  const page = currentListData(pageQuery, false);
+  const { currentData, fulfilledTimeStamp, isLoading, isFetching, error, refetch } = useGetTransactionPageQuery(pageArgs, { skip });
   // Bumped when an edit (or coming back to the tab) refetches the same page, so the ticks are
   // checked again: the edit may have moved ticked rows out of the filters, or deleted them.
   const rowsVersion = useRefetchCount(
@@ -216,13 +213,13 @@ export function useTransactionPageState(): TransactionPageState {
     currentData ? fulfilledTimeStamp : undefined,
   );
   const { data: categories = [] } = useListTransactionCategoriesQuery(filterBarParams, { skip });
-  const transactions = useMemo(() => page?.items ?? [], [page]);
+  const transactions = useMemo(() => currentData?.items ?? [], [currentData]);
   // While another page loads, the total last seen keeps the pager and select-all as they were.
-  const total = page?.total ?? knownTotal ?? 0;
+  const total = currentData?.total ?? knownTotal ?? 0;
   // Kept in state because the page asked for depends on it; React re-renders straight away.
-  if (page && page.total !== knownTotal) setKnownTotal(page.total);
+  if (currentData && currentData.total !== knownTotal) setKnownTotal(currentData.total);
   const pageCount = Math.ceil(total / pagination.pageSize);
-  const listMode = resolveListLoadMode({ hasData: page !== undefined, hasError: error !== undefined, itemCount: transactions.length });
+  const listMode = resolveListLoadMode({ hasData: currentData !== undefined, hasError: error !== undefined, itemCount: transactions.length });
   const loadFailed = error !== undefined;
   const retryLoad = useCallback(() => void refetch(), [refetch]);
 
