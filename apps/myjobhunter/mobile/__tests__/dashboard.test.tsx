@@ -26,10 +26,10 @@ jest.mock("react-native-safe-area-context", () => jest.requireActual("react-nati
 jest.mock("expo-crypto", () => ({ randomUUID: jest.fn(() => "move-key-1") }));
 
 const BOARD = "GET /applications?view=kanban";
-const MOVE_STRIPE = "POST /applications/app-stripe/transitions";
+const MOVE_STRIPE = "POST /applications/00000000-0000-4000-8000-000000000001/transitions";
 
 const STRIPE = kanbanRecord({
-  id: "app-stripe",
+  id: "00000000-0000-4000-8000-000000000001",
   role_title: "Staff Engineer",
   company_name: "Stripe",
   company_logo_url: "https://logo.example.com/stripe.png",
@@ -38,7 +38,7 @@ const STRIPE = kanbanRecord({
   stage_entered_at: daysAgo(15),
 });
 const AIRBNB = kanbanRecord({
-  id: "app-airbnb",
+  id: "00000000-0000-4000-8000-000000000002",
   role_title: "Senior Engineer",
   company_name: "Airbnb",
   company_logo_url: "javascript:alert(1)",
@@ -47,14 +47,14 @@ const AIRBNB = kanbanRecord({
   stage_entered_at: daysAgo(3),
 });
 const LYFT = kanbanRecord({
-  id: "app-lyft",
+  id: "00000000-0000-4000-8000-000000000003",
   role_title: "Principal Engineer",
   company_name: "Lyft",
   latest_event_type: "interview_scheduled",
   stage_entered_at: daysAgo(7),
 });
 const ZILLOW = kanbanRecord({
-  id: "app-zillow",
+  id: "00000000-0000-4000-8000-000000000005",
   role_title: "Engineer",
   company_name: "Zillow",
   latest_event_type: "rejected",
@@ -389,13 +389,13 @@ it("shows a company's logo only from a web address", async () => {
 });
 
 it("opens an application's own screen on the phone when its card is tapped", async () => {
-  const detail = applicationDetailRecord({ id: "app-stripe", role_title: "Staff Engineer" });
+  const detail = applicationDetailRecord({ id: "00000000-0000-4000-8000-000000000001", role_title: "Staff Engineer" });
   serve({ "POST /auth/mobile/refresh": refreshed, [BOARD]: boardOf(STRIPE), ...applicationDetailRoutes(detail) });
   await renderApp();
 
   await fireEvent.press(await screen.findByRole("link", { name: /^Staff Engineer, Stripe/ }));
 
-  expect(screen).toHavePathname("/applications/app-stripe");
+  expect(screen).toHavePathname("/applications/00000000-0000-4000-8000-000000000001");
   expect(await screen.findByRole("header", { name: "Staff Engineer" })).toBeTruthy();
   expect(openURL).not.toHaveBeenCalled();
 });
@@ -426,7 +426,7 @@ it("moves a card to another stage at once, with a spinner on its Move button unt
 
   // The server has it in Offer from now on, so reloading the board after the move keeps it there.
   board = boardOf({ ...STRIPE, latest_event_type: "offer_received" }, AIRBNB, LYFT, ZILLOW);
-  await act(async () => answer({ status: 201, data: eventRecord({ id: "e-2", application_id: "app-stripe", event_type: "offer_received" }) }));
+  await act(async () => answer({ status: 201, data: eventRecord({ id: "e-2", application_id: "00000000-0000-4000-8000-000000000001", event_type: "offer_received" }) }));
 
   expect(await screen.findByText("Moved to Offer.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Offer, 1 application" })).toBeTruthy();

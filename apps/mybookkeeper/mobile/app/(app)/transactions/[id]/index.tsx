@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import TransactionDetailScreen from "../../../../src/features/transactions/TransactionDetailScreen";
 import { reviewQueueParams } from "../../../../src/features/transactions/transactionFilters";
+import ValidRoute from "../../../../src/features/routing/ValidRoute";
 
 export default function TransactionRoute() {
   const { id, review, ...filters } = useLocalSearchParams<{
@@ -16,7 +17,9 @@ export default function TransactionRoute() {
     <>
       <Stack.Screen options={{ headerShown: true, title: "Transaction", headerBackTitle: "Money" }} />
       {/* The review queue moves on with setParams, so the id keys the screen: every per-transaction state starts fresh. */}
-      <TransactionDetailScreen key={id} id={id} reviewQueue={review === "1" ? reviewQueueParams(filters, new Date()) : null} />
+      <ValidRoute uuids={["id"]}>
+        <TransactionDetailScreen key={id} id={id} reviewQueue={review === "1" ? reviewQueueParams(filters, new Date()) : null} />
+      </ValidRoute>
     </>
   );
 }

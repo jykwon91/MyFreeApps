@@ -37,7 +37,7 @@ jest.mock("react-native-safe-area-context", () => jest.requireActual("react-nati
 // The server's order (name A to Z). Each is missing something: Umbrella's domain is blank, which counts as missing.
 const ACME = companyRecord({ id: "c1", name: "Acme Corp", primary_domain: "acme.com", industry: "SaaS", hq_location: "Chicago, IL" });
 const GLOBEX = companyRecord({ id: "c2", name: "Globex", hq_location: "Austin, TX" });
-const INITECH = companyRecord({ id: "c3", name: "Initech", primary_domain: "initech.com", industry: "Fintech" });
+const INITECH = companyRecord({ id: "00000000-0000-4000-8000-000000000013", name: "Initech", primary_domain: "initech.com", industry: "Fintech" });
 const UMBRELLA = companyRecord({ id: "c4", name: "Umbrella", primary_domain: "", industry: "Biotech", hq_location: "Boston, MA" });
 const SERVER_ORDER = [ACME, GLOBEX, INITECH, UMBRELLA] as const;
 
@@ -159,7 +159,7 @@ describe("the Companies list", () => {
     expect(row.props.accessibilityHint).toBe(MESSAGES.opensCompany);
     await fireEvent.press(row);
 
-    expect(screen).toHavePathname("/companies/c3");
+    expect(screen).toHavePathname("/companies/00000000-0000-4000-8000-000000000013");
     expect(await screen.findByRole("header", { name: "Initech" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "initech.com" })).toBeTruthy();
     expect(openURL).not.toHaveBeenCalled();
