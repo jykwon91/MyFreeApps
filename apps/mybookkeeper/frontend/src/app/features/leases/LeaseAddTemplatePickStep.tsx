@@ -15,9 +15,9 @@ export interface LeaseAddTemplatePickStepProps {
   /** The latest load failed; items from an earlier load may still show. */
   hasError: boolean;
   isRetrying: boolean;
-  hasMore: boolean;
-  isLoadingMore: boolean;
-  loadMoreFailed: boolean;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoadMoreError: boolean;
   onLoadMore: () => void;
   isPrefilling: boolean;
   onRetry: () => void;
@@ -41,9 +41,9 @@ export default function LeaseAddTemplatePickStep({
   mode,
   hasError,
   isRetrying,
-  hasMore,
-  isLoadingMore,
-  loadMoreFailed,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoadMoreError,
   onLoadMore,
   isPrefilling,
   onRetry,
@@ -65,9 +65,9 @@ export default function LeaseAddTemplatePickStep({
       />
       {mode === "list" ? (
         <LoadMoreFooter
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          loadMoreFailed={loadMoreFailed}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoadMoreError={isLoadMoreError}
           failureMessage="I couldn't load more templates. Want me to try again?"
           onLoadMore={onLoadMore}
         />

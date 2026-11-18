@@ -2,7 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
-import { useLeaseTemplatePages } from "./useLeaseTemplatePages";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 
 export interface MultiTemplatePickerProps {
@@ -23,8 +23,8 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { templates, hasData, loadError: error, isFetching, hasMore, isLoadingMore, loadMoreFailed, loadMore, reload } =
-    useLeaseTemplatePages();
+  const { templates, hasData, loadError: error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+    useLeaseTemplatesPages();
   const mode = resolveListLoadMode({
     hasData,
     hasError: error !== undefined,
@@ -34,7 +34,7 @@ export default function MultiTemplatePicker({
   // Decided on `error`, not `isError`: RTK clears `isError` while Retry
   // refetches, which would flash "No templates yet" mid-retry.
   const loadError = error ? (
-    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => void reload()} />
+    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
   ) : null;
 
   switch (mode) {
@@ -118,11 +118,11 @@ export default function MultiTemplatePicker({
             })}
           </ul>
           <LoadMoreFooter
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            loadMoreFailed={loadMoreFailed}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isLoadMoreError={isLoadMoreError}
             failureMessage="I couldn't load more templates. Want me to try again?"
-            onLoadMore={() => void loadMore()}
+            onLoadMore={loadMore}
           />
         </div>
       );

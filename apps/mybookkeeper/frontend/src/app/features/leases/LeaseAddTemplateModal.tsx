@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@platform/ui";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import {
   useAddSignedLeaseTemplatesMutation,
@@ -13,7 +14,6 @@ import { prefillProblems } from "@mybookkeeper/api-client/utils/leasePrefill";
 import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
-import { useLeaseTemplatePages } from "./useLeaseTemplatePages";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 
@@ -66,8 +66,8 @@ export default function LeaseAddTemplateModal({
     useAddSignedLeaseTemplatesMutation();
   const [prefill, { isLoading: isPrefilling }] =
     usePrefillAddendumPlaceholdersMutation();
-  const { templates: available, hasData, loadError, isFetching, hasMore, isLoadingMore, loadMoreFailed, loadMore, reload } =
-    useLeaseTemplatePages();
+  const { templates: available, hasData, loadError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+    useLeaseTemplatesPages();
 
   const linkedSet = useMemo(
     () => new Set(existingTemplateIds),
@@ -197,13 +197,13 @@ export default function LeaseAddTemplateModal({
               isDocumentsLocked={isDocumentsLocked}
               mode={templatesMode}
               hasError={loadError !== undefined}
-              isRetrying={isFetching}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              loadMoreFailed={loadMoreFailed}
-              onLoadMore={() => void loadMore()}
+              isRetrying={isLoading}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              isLoadMoreError={isLoadMoreError}
+              onLoadMore={loadMore}
               isPrefilling={isPrefilling}
-              onRetry={() => void reload()}
+              onRetry={() => void refetch()}
               onContinue={() => void handleContinue()}
               onClose={onClose}
             />

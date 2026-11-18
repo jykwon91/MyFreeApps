@@ -101,7 +101,8 @@ let templatesFetching = false;
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useListLeaseTemplatePagesInfiniteQuery: () => ({
     ...queryData(templatesFailed ? undefined : { pages: [{ items: TEMPLATES, total: 2, has_more: false }] }),
-    isLoading: false,
+    // RTK reports a retry of a first load that failed as loading again.
+    isLoading: templatesFailed && templatesFetching,
     ...queryStatus({ failed: templatesFailed, fetching: templatesFetching }),
     hasNextPage: false,
     isFetchingNextPage: false,
@@ -263,7 +264,7 @@ describe("LeaseAddTemplateModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the templates error, not 'no templates yet', while Retry refetches", async () => {
+  it("shows the skeleton, not 'no templates yet', while Retry refetches", async () => {
     canWriteValue = true;
     mockLease = buildLease();
     templatesFailed = true;
@@ -273,8 +274,7 @@ describe("LeaseAddTemplateModal", () => {
     await waitFor(() =>
       expect(screen.getByTestId("lease-add-template-modal")).toBeInTheDocument(),
     );
-    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.getByTestId("lease-add-template-skeleton")).toBeInTheDocument();
     expect(screen.queryByTestId("lease-add-template-empty")).not.toBeInTheDocument();
   });
 

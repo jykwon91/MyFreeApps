@@ -8,13 +8,13 @@ import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
-import { useLeaseTemplatePages } from "@/app/features/leases/useLeaseTemplatePages";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { templates, hasData, loadError, isFetching, hasMore, isLoadingMore, loadMoreFailed, loadMore, reload } =
-    useLeaseTemplatePages();
+  const { templates, hasData, loadError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+    useLeaseTemplatesPages();
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const mode = resolveListLoadMode({
@@ -44,18 +44,18 @@ export default function LeaseTemplates() {
       />
 
       {loadError ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => void reload()} />
+        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
       ) : null}
 
       <LeaseTemplatesListBody mode={mode} templates={templates} />
 
       {mode === "list" ? (
         <LoadMoreFooter
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          loadMoreFailed={loadMoreFailed}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoadMoreError={isLoadMoreError}
           failureMessage="I couldn't load more templates. Want me to try again?"
-          onLoadMore={() => void loadMore()}
+          onLoadMore={loadMore}
         />
       ) : null}
 

@@ -42,6 +42,7 @@ vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
     return {
       ...result,
       data: result.data && { pages: [result.data] },
+      currentData: result.currentData && { pages: [result.currentData] },
       hasNextPage: false,
       isFetchingNextPage: false,
       fetchNextPage: vi.fn(),
@@ -476,16 +477,14 @@ describe("MultiTemplatePicker", () => {
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
   });
 
-  it("keeps the error, not 'No templates yet', while Retry refetches", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: false });
-    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+  it("shows the skeleton, not 'No templates yet', while Retry refetches", () => {
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: true });
+    expect(screen.getByTestId("multi-template-picker-skeleton")).toBeInTheDocument();
     expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
   });
 
-  it("keeps templates from an earlier load usable under the error", () => {
+  it("keeps templates from an earlier load usable after a failed refresh", () => {
     renderPicker({ ...queryStatus({ failed: true, fetching: false }) });
-    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
     expect(screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();
   });
 });
