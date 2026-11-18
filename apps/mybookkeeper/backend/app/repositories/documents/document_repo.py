@@ -228,6 +228,23 @@ async def find_by_content_hash(
     return result.scalar_one_or_none()
 
 
+async def list_by_batch_content_hash_for_update(
+    db: AsyncSession, organization_id: uuid.UUID, batch_content_hash: str
+) -> Sequence[Document]:
+    """Lock the live documents unpacked from a zip with this hash, oldest first."""
+    result = await db.execute(
+        select(Document)
+        .where(
+            Document.organization_id == organization_id,
+            Document.batch_content_hash == batch_content_hash,
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.created_at, Document.id)
+        .with_for_update(key_share=True)
+    )
+    return result.scalars().all()
+
+
 async def claim_next_processing(
     db: AsyncSession, user_id: uuid.UUID | None = None
 ) -> Document | None:

@@ -35,6 +35,8 @@ class Document(Base):
 
     document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # SHA-256 of the zip a batch was unpacked from, so sending the same zip again finds it.
+    batch_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -47,6 +49,7 @@ class Document(Base):
         UniqueConstraint("external_id", "external_source", name="uq_document_external"),
         Index("ix_documents_status_created", "status", "created_at"),
         Index("ix_documents_content_hash", "organization_id", "content_hash"),
+        Index("ix_documents_batch_content_hash", "organization_id", "batch_content_hash"),
     )
 
     user = relationship("User", back_populates="documents")
