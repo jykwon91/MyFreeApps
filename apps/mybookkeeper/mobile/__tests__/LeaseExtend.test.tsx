@@ -42,6 +42,8 @@ interface FakeServer {
   writes: AxiosRequestConfig[];
   workspaceReads: number;
   tenantHasEmail: boolean | null;
+  /** Holds every write until it resolves. */
+  writeGate: Promise<void> | null;
 }
 
 function anExtension(overrides: Partial<LeaseExtensionSummary> = {}): LeaseExtensionSummary {
@@ -59,7 +61,7 @@ function anExtension(overrides: Partial<LeaseExtensionSummary> = {}): LeaseExten
 }
 
 function startServer(lease: SignedLeaseDetail = aLease()): FakeServer {
-  const server: FakeServer = { lease, role: "owner", writeFailure: null, commitsThenFails: false, readsFail: false, writes: [], workspaceReads: 0, tenantHasEmail: true };
+  const server: FakeServer = { lease, role: "owner", writeFailure: null, commitsThenFails: false, readsFail: false, writes: [], workspaceReads: 0, tenantHasEmail: true, writeGate: null };
   const adapter: AxiosAdapter = async (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data, status, statusText: "", headers: {}, config };
@@ -77,6 +79,7 @@ function startServer(lease: SignedLeaseDetail = aLease()): FakeServer {
     if (config.method !== "post") return server.readsFail ? offline() : respond(server.lease);
 
     server.writes.push(config);
+    if (server.writeGate) await server.writeGate;
     if (server.writeFailure === "offline") return offline();
     if (server.writeFailure) return respond({ detail: server.writeFailure.detail ?? "nope" }, server.writeFailure.status);
     if (config.url === "/signed-leases/l1/extend") {
@@ -268,7 +271,7 @@ describe("extending a lease", () => {
 
     async function pickDateAndSwitchOn() {
       await pickDate(2027, 8, 31);
-      await fireEvent(await screen.findByLabelText(SWITCH), "valueChange", true);
+      await fireEvent.press(await screen.findByRole("switch", { name: SWITCH }));
     }
 
     it("asks first, then sends it and says so", async () => {
@@ -283,6 +286,35 @@ describe("extending a lease", () => {
       await act(async () => alertButtons()[1].onPress?.());
       expect(await screen.findByText("Lease extended to August 31, 2027. I'll email the addendum shortly.")).toBeTruthy();
       expect(JSON.parse(String(server.writes[0].data)).email_tenant).toBe(true);
+    });
+
+    it("is one switch row: tapping it flips the value, and it says whether it's on", async () => {
+      startServer();
+      await renderScreen();
+      await openSheet();
+      expect((await screen.findByRole("switch", { name: SWITCH })).props.accessibilityState).toMatchObject({ checked: false, disabled: false });
+      await fireEvent.press(screen.getByText(SWITCH));
+      expect(screen.getByRole("switch", { name: SWITCH }).props.accessibilityState).toMatchObject({ checked: true });
+      await fireEvent.press(screen.getByText(SWITCH));
+      expect(screen.getByRole("switch", { name: SWITCH }).props.accessibilityState).toMatchObject({ checked: false });
+    });
+
+    it("is switched off while the extension is being saved", async () => {
+      const server = startServer();
+      let release = () => {};
+      server.writeGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await renderScreen();
+      await openSheet();
+      await pickDateAndSwitchOn();
+      await fireEvent.press(submitButton());
+      await act(async () => alertButtons()[1].onPress?.());
+      await waitFor(() => expect(screen.getByRole("switch", { name: SWITCH }).props.accessibilityState).toMatchObject({ disabled: true }));
+      await fireEvent.press(screen.getByText(SWITCH));
+      expect(screen.getByRole("switch", { name: SWITCH }).props.accessibilityState).toMatchObject({ checked: true });
+      await act(async () => release());
+      await waitFor(() => expect(screen.queryByTestId("date-picker")).toBeNull());
     });
 
     it("sends nothing when the question is cancelled, and can be asked again", async () => {
