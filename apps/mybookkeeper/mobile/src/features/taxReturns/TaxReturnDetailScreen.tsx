@@ -7,7 +7,7 @@ import {
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
@@ -22,6 +22,7 @@ import { isNotFound } from "@platform/core/utils/isNotFound";
 import { bySeverity, taxReturnTitle } from "./taxReturnDisplay";
 import TaxAdvisorRow from "./TaxAdvisorRow";
 import TaxFormRow from "./TaxFormRow";
+import TaxRecalculateControl from "./TaxRecalculateControl";
 import TaxReturnSection from "./TaxReturnSection";
 import TaxReturnsSkeleton from "./TaxReturnsSkeleton";
 import { useRecalculate } from "./useRecalculate";
@@ -72,19 +73,13 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
         <Text style={muted}>{`${statusLine} · ${filingStatus}`}</Text>
         <StaleDataBanner isShown={isStale} />
         {current.needs_recompute ? <Banner message={MESSAGES.outOfDateDetail} /> : null}
-        {isAdmin ? (
-          <LoadingButton
-            disabled={Boolean(taxReturn.error)}
-            isLoading={isRecalculating}
-            loadingText={MESSAGES.recalculating}
-            onPress={recalculate}
-            variant="secondary"
-          >
-            {MESSAGES.recalculate}
-          </LoadingButton>
-        ) : current.needs_recompute ? (
-          <Text style={muted}>{MESSAGES.adminsOnly}</Text>
-        ) : null}
+        <TaxRecalculateControl
+          disabled={Boolean(taxReturn.error)}
+          isAdmin={isAdmin}
+          isRecalculating={isRecalculating}
+          needsRecompute={current.needs_recompute}
+          onRecalculate={recalculate}
+        />
       </View>
 
       <TaxReturnSection
