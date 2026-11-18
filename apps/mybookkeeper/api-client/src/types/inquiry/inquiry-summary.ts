@@ -14,6 +14,7 @@ export interface InquirySummary {
   id: string;
   source: InquirySource;
   listing_id: string | null;
+  listing_title: string | null;
   stage: InquiryStage;
 
   inquirer_name: string | null;

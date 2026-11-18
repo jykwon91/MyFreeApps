@@ -66,6 +66,7 @@ function inquiry(id: string, name: string): InquirySummary {
     id,
     source: "FF",
     listing_id: null,
+    listing_title: null,
     stage: "new",
     inquirer_name: name,
     inquirer_employer: null,

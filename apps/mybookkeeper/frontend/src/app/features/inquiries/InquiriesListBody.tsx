@@ -11,7 +11,6 @@ export interface InquiriesListBodyProps {
   inquiries: readonly InquirySummary[];
   isFiltered: boolean;
   showStageBadge: boolean;
-  listingTitleById: Map<string, string>;
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
@@ -23,7 +22,6 @@ export default function InquiriesListBody({
   inquiries,
   isFiltered,
   showStageBadge,
-  listingTitleById,
   hasMore,
   isLoadingMore,
   onLoadMore,
@@ -46,7 +44,7 @@ export default function InquiriesListBody({
               <li key={inquiry.id}>
                 <InquiryCard
                   inquiry={inquiry}
-                  listingTitle={inquiry.listing_id ? listingTitleById.get(inquiry.listing_id) ?? null : null}
+                  listingTitle={inquiry.listing_title}
                   showStageBadge={showStageBadge}
                 />
               </li>
@@ -76,7 +74,7 @@ export default function InquiriesListBody({
                   <InquiryRow
                     key={inquiry.id}
                     inquiry={inquiry}
-                    listingTitle={inquiry.listing_id ? listingTitleById.get(inquiry.listing_id) ?? null : null}
+                    listingTitle={inquiry.listing_title}
                   />
                 ))}
               </tbody>

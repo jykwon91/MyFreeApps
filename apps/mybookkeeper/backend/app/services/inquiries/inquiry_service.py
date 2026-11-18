@@ -61,6 +61,7 @@ def _to_summary(row) -> InquirySummary:
         id=row.id,
         source=row.source,
         listing_id=row.listing_id,
+        listing_title=row.listing_title,
         stage=row.stage,
         inquirer_name=row.inquirer_name,
         inquirer_employer=row.inquirer_employer,

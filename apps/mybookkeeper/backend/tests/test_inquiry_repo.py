@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -20,8 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
+from app.models.listings.listing import Listing
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
+from app.models.properties.property import Property
 from app.models.user.user import User
 from app.repositories import inquiry_repo
 
@@ -669,3 +672,43 @@ class TestInboxOnly:
 
         assert [r.inquirer_name for r in rows] == ["new-unscored"]
         assert total == 1
+
+
+class TestListWithLastMessageListingTitle:
+    @pytest.mark.asyncio
+    async def test_carries_title_for_listing_beyond_first_page_of_listings(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = Property(
+            organization_id=test_org.id, user_id=test_user.id,
+            name="House", address="100 Med Center Dr",
+        )
+        db.add(prop)
+        await db.flush()
+        listings = [
+            Listing(
+                id=uuid.uuid4(), organization_id=test_org.id, user_id=test_user.id,
+                property_id=prop.id, title=f"Room {i}", monthly_rate=Decimal("1500.00"),
+                room_type="private_room", status="active",
+            )
+            for i in range(60)
+        ]
+        db.add_all(listings)
+        await db.flush()
+        linked = _make_inquiry(
+            organization_id=test_org.id, user_id=test_user.id,
+            inquirer_name="Linked", listing_id=listings[59].id,
+        )
+        unlinked = _make_inquiry(
+            organization_id=test_org.id, user_id=test_user.id,
+            inquirer_name="Unlinked",
+        )
+        db.add_all([linked, unlinked])
+        await db.commit()
+
+        results = await inquiry_repo.list_with_last_message(db, test_org.id)
+
+        titles = {r.id: r.listing_title for r in results}
+        assert titles[linked.id] == "Room 59"
+        assert titles[unlinked.id] is None
+        assert len(results) == 2

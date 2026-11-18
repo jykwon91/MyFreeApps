@@ -8,6 +8,7 @@ export const INQUIRY_SUMMARY = {
   id: INQUIRY_ID,
   source: "FF",
   listing_id: null,
+  listing_title: null,
   stage: "new",
   inquirer_name: "Alice Nguyen",
   inquirer_employer: "Texas Children's Hospital",
