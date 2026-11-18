@@ -10,8 +10,10 @@ from decimal import ROUND_HALF_UP, Decimal
 from app.core.rental_roi_enums import GAP_BASIS_BREAK_EVEN, GAP_BASIS_TARGET
 from app.models.mortgage.mortgage import Mortgage
 from app.schemas.analytics.rental_roi_cost_breakdown import RentalRoiCostBreakdown
+from app.schemas.analytics.rental_roi_cost_line import RentalRoiCostLine as RentalRoiCostLineResponse
 from app.schemas.analytics.rental_roi_property import RentalRoiProperty
 from app.schemas.analytics.rental_roi_summary import RentalRoiSummary
+from app.services.analytics.rental_roi_cost_line import RentalRoiCostLine
 from app.services.analytics.rental_roi_figures import RentalRoiFigures
 from app.services.analytics.rental_roi_loan import RentalRoiLoan
 
@@ -27,6 +29,24 @@ def _optional_cents(dollars: Decimal | None) -> int | None:
     return None if dollars is None else to_cents(dollars)
 
 
+def _line_response(line: RentalRoiCostLine, monthly_cents: int) -> RentalRoiCostLineResponse:
+    return RentalRoiCostLineResponse(
+        category=line.category,
+        monthly_cents=monthly_cents,
+        window_total_cents=_optional_cents(line.window_total),
+    )
+
+
+def _lines_adding_up_to(
+    lines: Sequence[RentalRoiCostLine], total_cents: int,
+) -> list[RentalRoiCostLineResponse]:
+    """Round each line so the column adds up to ``total_cents``; the last line takes the odd cent."""
+    rounded = [to_cents(line.monthly) for line in lines]
+    if rounded:
+        rounded[-1] += total_cents - sum(rounded)
+    return [_line_response(line, cents) for line, cents in zip(lines, rounded, strict=True)]
+
+
 def loan_from_mortgage(mortgage: Mortgage) -> RentalRoiLoan:
     return RentalRoiLoan(
         monthly_principal_cents=mortgage.monthly_principal_cents,
@@ -39,13 +59,17 @@ def loan_from_mortgage(mortgage: Mortgage) -> RentalRoiLoan:
 def to_property_response(
     property_id: uuid.UUID, property_name: str, figures: RentalRoiFigures,
 ) -> RentalRoiProperty:
+    break_even_cents = to_cents(figures.break_even_monthly)
+    debt_service_cents = to_cents(figures.debt_service_monthly)
+    # Derived, not rounded on its own: the two parts must add up to the break-even shown.
+    operating_cents = break_even_cents - debt_service_cents
     return RentalRoiProperty(
         property_id=property_id,
         property_name=property_name,
         months_averaged=figures.months_averaged,
         has_purchase_price=figures.has_purchase_price,
         mortgage_source=figures.mortgage_source,
-        break_even_monthly_cents=to_cents(figures.break_even_monthly),
+        break_even_monthly_cents=break_even_cents,
         target_monthly_cents=_optional_cents(figures.target_monthly),
         actual_revenue_monthly_cents=to_cents(figures.actual_revenue_monthly),
         gap_monthly_cents=to_cents(figures.gap_monthly),
@@ -55,8 +79,13 @@ def to_property_response(
         cap_rate_pct=figures.cap_rate_pct,
         cash_on_cash_pct=figures.cash_on_cash_pct,
         cost_breakdown=RentalRoiCostBreakdown(
-            debt_service_monthly_cents=to_cents(figures.debt_service_monthly),
-            operating_monthly_cents=to_cents(figures.operating_monthly),
+            debt_service_monthly_cents=debt_service_cents,
+            operating_monthly_cents=operating_cents,
+            mortgage_lines=_lines_adding_up_to(figures.mortgage_lines, debt_service_cents),
+            operating_lines=_lines_adding_up_to(figures.operating_lines, operating_cents),
+            escrow_covered_lines=[
+                _line_response(line, to_cents(line.monthly)) for line in figures.escrow_covered_lines
+            ],
         ),
     )
 

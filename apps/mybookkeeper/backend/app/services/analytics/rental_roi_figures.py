@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from app.services.analytics.rental_roi_cost_line import RentalRoiCostLine
+
 
 @dataclass(frozen=True)
 class RentalRoiFigures:
@@ -19,3 +21,7 @@ class RentalRoiFigures:
     noi_annual: Decimal
     cap_rate_pct: Decimal | None
     cash_on_cash_pct: Decimal | None
+    mortgage_lines: tuple[RentalRoiCostLine, ...]
+    operating_lines: tuple[RentalRoiCostLine, ...]
+    # Bills the loan's escrow already pays, so they are not part of break-even.
+    escrow_covered_lines: tuple[RentalRoiCostLine, ...]

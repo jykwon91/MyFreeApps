@@ -10,6 +10,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from app.core.rental_roi_enums import (
     GAP_BASIS_BREAK_EVEN,
     GAP_BASIS_TARGET,
+    LOAN_LINE_ESCROW,
+    LOAN_LINE_INTEREST,
+    LOAN_LINE_PRINCIPAL,
     MORTGAGE_SOURCE_NONE,
     MORTGAGE_SOURCE_RECORDS,
     MORTGAGE_SOURCE_TRANSACTIONS,
@@ -21,6 +24,7 @@ from app.core.tags import (
     RENTAL_ROI_OPERATING_TAGS,
     RENTAL_ROI_REVENUE_TAGS,
 )
+from app.services.analytics.rental_roi_cost_line import RentalRoiCostLine
 from app.services.analytics.rental_roi_figures import RentalRoiFigures
 from app.services.analytics.rental_roi_loan import RentalRoiLoan
 
@@ -60,6 +64,31 @@ def _cents_to_dollars(cents: int | None) -> Decimal:
 
 def _sum_tags(totals: Mapping[str, Decimal], tags: Iterable[str]) -> Decimal:
     return sum((totals.get(tag, _ZERO) for tag in tags), _ZERO)
+
+
+def _category_lines(
+    totals: Mapping[str, Decimal], tags: Iterable[str], divisor: Decimal,
+) -> tuple[RentalRoiCostLine, ...]:
+    """The tags that have an amount, biggest first, then by name so the order is stable."""
+    amounts = [(tag, totals[tag]) for tag in tags if totals.get(tag, _ZERO) != _ZERO]
+    return tuple(
+        RentalRoiCostLine(category=tag, monthly=amount / divisor, window_total=amount)
+        for tag, amount in sorted(amounts, key=lambda item: (-item[1], item[0]))
+    )
+
+
+def _loan_lines(loans: Sequence[RentalRoiLoan]) -> tuple[RentalRoiCostLine, ...]:
+    """Principal, interest and escrow across the loans, leaving out any part that is zero."""
+    parts = (
+        (LOAN_LINE_PRINCIPAL, sum((_cents_to_dollars(loan.monthly_principal_cents) for loan in loans), _ZERO)),
+        (LOAN_LINE_INTEREST, sum((_cents_to_dollars(loan.monthly_interest_cents) for loan in loans), _ZERO)),
+        (LOAN_LINE_ESCROW, sum((_cents_to_dollars(loan.monthly_escrow_cents) for loan in loans), _ZERO)),
+    )
+    return tuple(
+        RentalRoiCostLine(category=category, monthly=amount, window_total=None)
+        for category, amount in parts
+        if amount != _ZERO
+    )
 
 
 def _percentage(numerator: Decimal, denominator: Decimal | None) -> Decimal | None:
@@ -119,9 +148,13 @@ def compute_property_figures(
         mortgage_source = MORTGAGE_SOURCE_TRANSACTIONS if debt_service_total > 0 else MORTGAGE_SOURCE_NONE
         debt_service = debt_service_total / divisor
 
-    operating_tags = RENTAL_ROI_OPERATING_TAGS
-    if escrow_monthly > 0:
-        operating_tags = operating_tags - RENTAL_ROI_ESCROW_COVERED_TAGS
+    mortgage_lines = (
+        _loan_lines(paying_loans)
+        if paying_loans
+        else _category_lines(category_totals, RENTAL_ROI_DEBT_SERVICE_TAGS, divisor)
+    )
+    escrow_covered_tags = RENTAL_ROI_ESCROW_COVERED_TAGS if escrow_monthly > 0 else frozenset[str]()
+    operating_tags = RENTAL_ROI_OPERATING_TAGS - escrow_covered_tags
     operating = _sum_tags(category_totals, operating_tags) / divisor
 
     break_even = debt_service + operating
@@ -151,4 +184,7 @@ def compute_property_figures(
         noi_annual=noi_annual,
         cap_rate_pct=_percentage(noi_annual, purchase_price),
         cash_on_cash_pct=_percentage((actual - break_even) * _MONTHS_PER_YEAR, invested),
+        mortgage_lines=mortgage_lines,
+        operating_lines=_category_lines(category_totals, operating_tags, divisor),
+        escrow_covered_lines=_category_lines(category_totals, escrow_covered_tags, divisor),
     )

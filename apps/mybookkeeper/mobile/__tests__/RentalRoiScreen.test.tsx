@@ -2,7 +2,7 @@ import type { RentalRoiResponse } from "@mybookkeeper/api-client/types/analytics
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
 import { RENTAL_ROI_MESSAGES as MESSAGES } from "../src/constants/rentalRoi";
@@ -33,7 +33,13 @@ function aProperty(overrides: Partial<RentalRoiResponse["properties"][0]> = {}):
     noi_annual_cents: 1800000,
     cap_rate_pct: "11.52",
     cash_on_cash_pct: "21.60",
-    cost_breakdown: { debt_service_monthly_cents: 100000, operating_monthly_cents: 50000 },
+    cost_breakdown: {
+      debt_service_monthly_cents: 100000,
+      operating_monthly_cents: 50000,
+      mortgage_lines: [{ category: "mortgage_interest", monthly_cents: 100000, window_total_cents: null }],
+      operating_lines: [{ category: "utilities", monthly_cents: 50000, window_total_cents: 600000 }],
+      escrow_covered_lines: [],
+    },
     ...overrides,
   };
 }
@@ -215,6 +221,17 @@ describe("RentalRoiScreen", () => {
     expect(screen.queryByRole("link", { name: MESSAGES.addPurchasePrice })).toBeNull();
     await fireEvent.press(screen.getByRole("link", { name: MESSAGES.addLoanOriginalAmount }));
     expect(mockPush).toHaveBeenCalledWith("/mortgages");
+  });
+
+  it("lists what adds up to break-even in the details", async () => {
+    serve();
+    await render(tree());
+    await screen.findByTestId("rental-roi-headline");
+    await fireEvent.press(screen.getByTestId("rental-roi-toggle-p1"));
+    const breakdown = within(screen.getByTestId("rental-roi-break-even-breakdown"));
+    expect(breakdown.getByText("Interest")).toBeTruthy();
+    expect(breakdown.getByText("Utilities")).toBeTruthy();
+    expect(breakdown.getByText("From your loan record.")).toBeTruthy();
   });
 
   it("toggles the details panel for a property", async () => {

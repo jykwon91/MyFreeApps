@@ -9,9 +9,10 @@ import RentalRoiTotalTarget from "./RentalRoiTotalTarget";
 export interface RentalRoiTableProps {
   properties: RentalRoiProperty[];
   summary: RentalRoiSummary;
+  onShowBreakEven: (propertyId: string) => void;
 }
 
-export default function RentalRoiTable({ properties, summary }: RentalRoiTableProps) {
+export default function RentalRoiTable({ properties, summary, onShowBreakEven }: RentalRoiTableProps) {
   return (
     <Card className="hidden md:block p-0 overflow-x-auto">
       <table className="w-full text-sm" aria-label="Monthly numbers by property">
@@ -26,7 +27,7 @@ export default function RentalRoiTable({ properties, summary }: RentalRoiTablePr
         </thead>
         <tbody className="[&_th]:pl-6 [&_td:last-child]:pr-6">
           {properties.map((property) => (
-            <RentalRoiTableRow key={property.property_id} property={property} />
+            <RentalRoiTableRow key={property.property_id} property={property} onShowBreakEven={onShowBreakEven} />
           ))}
         </tbody>
         <tfoot>

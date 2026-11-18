@@ -10,6 +10,11 @@ MORTGAGE_SOURCE_RECORDS = "records"
 MORTGAGE_SOURCE_TRANSACTIONS = "transactions"
 MORTGAGE_SOURCE_NONE = "none"
 
+# Cost-line categories for the parts of a loan payment.
+LOAN_LINE_PRINCIPAL = "mortgage_principal"
+LOAN_LINE_INTEREST = "mortgage_interest"
+LOAN_LINE_ESCROW = "mortgage_escrow"
+
 # What a gap is measured against: the target (needs a purchase price) or break-even.
 GAP_BASIS_TARGET = "target"
 GAP_BASIS_BREAK_EVEN = "break_even"
