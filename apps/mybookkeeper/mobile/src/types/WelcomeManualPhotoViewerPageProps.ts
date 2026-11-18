@@ -5,4 +5,5 @@ export interface WelcomeManualPhotoViewerPageProps {
   index: number;
   total: number;
   width: number;
+  onRetry?: () => void;
 }

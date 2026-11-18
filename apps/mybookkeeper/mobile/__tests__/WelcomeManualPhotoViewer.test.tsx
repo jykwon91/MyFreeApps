@@ -84,4 +84,14 @@ describe("the photo viewer", () => {
     expect(pageAtOffset(9999, 400, 3)).toBe(2);
     expect(pageAtOffset(10, 0, 3)).toBe(0);
   });
+
+  it("says a photo couldn't load, and asks for fresh links when tapped to retry", async () => {
+    const onRetry = jest.fn();
+    await render(<WelcomeManualPhotoViewer images={images} onClose={jest.fn()} onRetry={onRetry} startIndex={0} />);
+    await fireEvent(screen.getAllByTestId("welcome-manual-photo-image")[0], "error", { nativeEvent: { error: "expired" } });
+    expect(screen.getByText(MESSAGES.couldntLoad)).toBeTruthy();
+    await fireEvent.press(button(MESSAGES.couldntLoad));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });

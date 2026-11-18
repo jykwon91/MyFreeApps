@@ -160,6 +160,7 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
         onIndexChange={(i) => setViewingId(photos[i]?.id ?? null)}
         onMove={(from, to) => void move(photos[from], to)}
         onRemove={(photo) => void removeOne(photo)}
+        onRetryPhoto={actions.refresh}
         photos={photos}
       />
       {addSheet}

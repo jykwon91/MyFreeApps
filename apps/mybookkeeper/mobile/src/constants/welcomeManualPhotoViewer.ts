@@ -4,6 +4,7 @@ export const WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES = {
   next: "Next photo",
   noCaption: "No caption",
   unavailable: "This photo is missing from storage.",
+  couldntLoad: "Photo couldn't load",
 } as const;
 
 export const WELCOME_MANUAL_PHOTO_VIEWER_GLYPHS = {

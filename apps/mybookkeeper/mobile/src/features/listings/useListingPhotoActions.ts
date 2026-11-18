@@ -70,5 +70,5 @@ export function useListingPhotoActions(listing: ListingResponse) {
     partial ??
     (removal.failure && removal.failure !== "gone" ? DELETE_COPY[removal.failure] : null) ??
     (ordering.failure ? ORDER_COPY[ordering.failure] : null);
-  return { remove, reorder, isRemoving: removal.isBusy, isReordering: ordering.isBusy, isRefreshing: isFetching, failure };
+  return { remove, reorder, refresh: () => void refetch(), isRemoving: removal.isBusy, isReordering: ordering.isBusy, isRefreshing: isFetching, failure };
 }

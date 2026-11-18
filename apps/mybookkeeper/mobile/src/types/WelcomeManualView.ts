@@ -6,4 +6,6 @@ import type { RefreshControlProps } from "react-native";
 export interface WelcomeManualView {
   manual: WelcomeManualResponse;
   refreshControl: ReactElement<RefreshControlProps>;
+  /** Reads the manual again, which also mints fresh photo links. */
+  refresh: () => Promise<void>;
 }

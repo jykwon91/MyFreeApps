@@ -11,7 +11,7 @@ import WelcomeManualPlaceDirectory from "./WelcomeManualPlaceDirectory";
 import WelcomeManualSection from "./WelcomeManualSection";
 
 /** The manual as a guest reads it. A by-the-room manual is previewed one scope at a time. */
-export default function WelcomeManualPreviewBody({ manual, refreshControl }: WelcomeManualView) {
+export default function WelcomeManualPreviewBody({ manual, refreshControl, refresh }: WelcomeManualView) {
   const { colors, spacing, fontSize } = useTheme();
   const [scope, setScope] = useState(SHARED_ROOM_OPTION);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -33,7 +33,7 @@ export default function WelcomeManualPreviewBody({ manual, refreshControl }: Wel
         {manual.intro_text ? <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>{plainFromMarkdown(manual.intro_text)}</Text> : null}
         {isEmpty ? <EmptyState body="" heading={MESSAGES.noSections} /> : null}
         {sections.map((section) => (
-          <WelcomeManualSection key={section.id} section={section} />
+          <WelcomeManualSection key={section.id} onRetryPhoto={refresh} section={section} />
         ))}
         <WelcomeManualPlaceDirectory places={manual.places} />
       </KeyboardAwareScroll>

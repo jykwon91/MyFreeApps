@@ -1,7 +1,7 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import { Banner, downloadFailureMessage, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, downloadFailureMessage, LoadingButton, Thumbnail, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Image, Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
@@ -20,10 +20,12 @@ interface ListingPhotoViewerProps {
   onClose: () => void;
   onMove: (from: number, to: number) => void;
   onRemove: (photo: ListingPhoto) => void;
+  /** Asks for fresh photo links, for a photo that couldn't load. */
+  onRetryPhoto: () => void;
 }
 
 /** One photo, large, with a way to step through the rest and what can be done to it. */
-export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, failure, onIndexChange, onClose, onMove, onRemove }: ListingPhotoViewerProps) {
+export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, failure, onIndexChange, onClose, onMove, onRemove, onRetryPhoto }: ListingPhotoViewerProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -53,7 +55,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
         </Text>
         {failure ? <Banner message={failure} /> : null}
         {url ? (
-          <Image accessibilityIgnoresInvertColors accessibilityLabel={photoLabel(index, photos.length, photo.caption, [])} accessibilityRole="image" accessible resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
+          <Thumbnail accessibilityIgnoresInvertColors accessibilityLabel={photoLabel(index, photos.length, photo.caption, [])} accessibilityRole="image" accessible failedMessage={MESSAGES.couldntLoad} onRetry={onRetryPhoto} resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
         ) : (
           <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.unavailableDetail}</Text>
         )}

@@ -112,6 +112,7 @@ export const WELCOME_MANUAL_PHOTO_MESSAGES = {
   reorder: "Reorder photos",
   reorderTitle: "Reorder photos",
   unavailable: "This photo is missing from storage.",
+  couldntLoad: "Photo couldn't load",
   noCaption: "No caption",
   loading: "Loading photos",
 } as const;

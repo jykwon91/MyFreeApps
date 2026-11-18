@@ -15,7 +15,7 @@ import WelcomeManualPhotoViewerPage from "./WelcomeManualPhotoViewerPage";
 import WelcomeManualViewerButton from "./WelcomeManualViewerButton";
 
 /** Every photo of a section, full screen: swipe or use the buttons to page, with a count and each caption. */
-export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, onEdit }: WelcomeManualPhotoViewerProps) {
+export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, onEdit, onRetry }: WelcomeManualPhotoViewerProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const list = useRef<FlatList>(null);
@@ -45,7 +45,7 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
           keyExtractor={(image) => image.id}
           onMomentumScrollEnd={onSettled}
           pagingEnabled
-          renderItem={({ item, index: i }) => <WelcomeManualPhotoViewerPage image={item} index={i} total={total} width={width} />}
+          renderItem={({ item, index: i }) => <WelcomeManualPhotoViewerPage image={item} index={i} onRetry={onRetry} total={total} width={width} />}
           showsHorizontalScrollIndicator={false}
           testID="welcome-manual-photo-pager"
         />
