@@ -14,7 +14,6 @@ export const LEASE_IMPORT_MESSAGES = {
   loadingTenants: "Loading your applicants",
   couldntLoadTenants: "I couldn't load your applicants. Want me to try again?",
   noTenants: "You don't have any applicants yet. Add one first, then import their lease.",
-  tryAgain: "Try again",
   moreTenants: "Only your first 100 applicants are listed here.",
   listing: "Listing",
   listingNone: "No listing",

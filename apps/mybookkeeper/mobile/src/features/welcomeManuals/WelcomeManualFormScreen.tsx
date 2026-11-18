@@ -8,6 +8,8 @@ import { type ComponentRef, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 
 import { WELCOME_MANUAL_FORM_MESSAGES as MESSAGES, WELCOME_MANUAL_INTRO_MIN_HEIGHT } from "../../constants/welcomeManualForms";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { NO_PROPERTY_VALUE, propertyOptions } from "./welcomeManualPropertyOptions";
 import { useSaveWelcomeManual } from "./useSaveWelcomeManual";
@@ -15,7 +17,7 @@ import { useSaveWelcomeManual } from "./useSaveWelcomeManual";
 /** Makes a manual (`original` null) or changes one. The snapshot is taken as the form opens, so a reload can't overwrite what's typed. */
 export default function WelcomeManualFormScreen({ original }: { original: WelcomeManualResponse | null }) {
   const { spacing } = useTheme();
-  const { currentData: properties } = useGetPropertiesQuery();
+  const { currentData: properties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
   const [seed, setSeed] = useState(true);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const form = useSnapshotForm<WelcomeManualFormValues>(
@@ -27,7 +29,9 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
   const locked = isBusy || isLeaving;
   const introInput = useRef<ComponentRef<typeof TextInput>>(null);
   const options = propertyOptions(properties);
-  const propertyLabel = options.find((option) => option.value === (values.property_id || NO_PROPERTY_VALUE))?.label ?? MESSAGES.noProperty;
+  const chosenProperty = values.property_id || NO_PROPERTY_VALUE;
+  // A manual with a property must never read as having none while the properties load.
+  const propertyLabel = options.find((option) => option.value === chosenProperty)?.label ?? (values.property_id ? MESSAGES.aProperty : MESSAGES.noProperty);
 
   useDiscardPrompt(form.isDirty && !isLeaving, isBusy);
 
@@ -72,7 +76,9 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
         </LoadingButton>
       </KeyboardAwareScroll>
       <OptionSheet
+        emptyText={PICKER_LOAD_MESSAGES.propertiesLoading}
         isOpen={isPickerOpen}
+        loadError={pickerLoadError({ hasLoaded: properties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed)}
         onClose={() => setIsPickerOpen(false)}
         onSelect={(value) => {
           setIsPickerOpen(false);

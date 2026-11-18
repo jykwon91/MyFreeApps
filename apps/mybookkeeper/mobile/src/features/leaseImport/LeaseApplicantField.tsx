@@ -1,8 +1,9 @@
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { FieldError, LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingRegion, OptionSheet, SectionError, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import { applicantName } from "../applicants/applicantDisplay";
 import PickerField from "../transactions/PickerField";
 
@@ -15,7 +16,7 @@ interface LeaseApplicantFieldProps {
 
 /** Who signed the lease. Like the website, it lists the first hundred applicants. */
 export default function LeaseApplicantField({ value, onChange, error, disabled }: LeaseApplicantFieldProps) {
-  const { colors, fontSize, spacing } = useTheme();
+  const { colors, fontSize } = useTheme();
   const { currentData, error: loadError, isLoading, refetch } = useGetApplicantsQuery({ limit: LEASE_IMPORT_CHOICE_LIMIT });
   const [isPicking, setIsPicking] = useState(false);
   const options = useMemo(
@@ -23,21 +24,13 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
     [currentData],
   );
 
-  if (isLoading) {
+  const failure = pickerLoadError({ hasLoaded: currentData !== undefined, error: loadError, refetch }, MESSAGES.couldntLoadTenants);
+  if (failure) return <SectionError {...failure} />;
+  if (isLoading || !currentData) {
     return (
       <LoadingRegion label={MESSAGES.loadingTenants}>
         <Skeleton height={56} />
       </LoadingRegion>
-    );
-  }
-  if (!currentData) {
-    return (
-      <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{loadError ? MESSAGES.couldntLoadTenants : MESSAGES.loadingTenants}</Text>
-        <LoadingButton onPress={() => void refetch()} variant="secondary">
-          {MESSAGES.tryAgain}
-        </LoadingButton>
-      </View>
     );
   }
   if (options.length === 0) return <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.noTenants}</Text>;

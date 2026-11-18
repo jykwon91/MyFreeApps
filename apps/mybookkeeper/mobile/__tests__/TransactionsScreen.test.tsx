@@ -12,6 +12,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aProperty, aTransaction, startTransactionServer } from "../test-support/transactionsServer";
+import { queriesSettled } from "../test-support/queriesSettled";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -305,5 +306,23 @@ describe("TransactionsScreen", () => {
     await fireEvent.changeText(field(), "ve");
     expect(field().props.value).toBe("ve");
     expect(mockRowDraw).not.toHaveBeenCalled();
+  });
+
+
+  it("says the properties couldn't load in the filters, and retrying lists them", async () => {
+    const server = startTransactionServer([aTransaction()]);
+    server.failPropertiesWith = 500;
+    await renderScreen();
+    await screen.findByText("Home Depot");
+    await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+    expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: "Oak Street" })).toBeNull();
+
+    await queriesSettled();
+    server.failPropertiesWith = null;
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
+    expect(screen.queryByText("I couldn't load your properties.")).toBeNull();
   });
 });

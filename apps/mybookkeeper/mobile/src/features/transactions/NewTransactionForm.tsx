@@ -5,9 +5,11 @@ import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, 
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import { TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
@@ -24,7 +26,8 @@ type SheetName = "category" | "property" | "channel" | "paymentMethod";
 export default function NewTransactionForm() {
   const { spacing } = useTheme();
   const { showToast } = useToast();
-  const { data: properties = [] } = useGetPropertiesQuery();
+  const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
+  const properties = loadedProperties ?? [];
   const [createTransaction, { isLoading: isSaving }] = useCreateTransactionMutation();
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [initial] = useState(() => blankCreateValues(new Date()));
@@ -69,10 +72,10 @@ export default function NewTransactionForm() {
     }
   }
 
-  const propertyChoices: TransactionChoice[] = [
-    { value: NONE_OPTION_VALUE, label: "No property" },
-    ...selectableProperties(properties, null).map((property) => ({ value: property.id, label: property.name })),
-  ];
+  // Until the properties are here, "No property" would be the only row, and picking it would read as "you have none".
+  const propertyChoices: TransactionChoice[] = loadedProperties
+    ? [{ value: NONE_OPTION_VALUE, label: "No property" }, ...selectableProperties(properties, null).map((property) => ({ value: property.id, label: property.name }))]
+    : [];
   const sheets: Record<SheetName, TransactionSheetConfig> = {
     category: {
       options: categoryChoices(values.type, values.category).map((category) => ({ value: category, label: categoryLabel(category) })),
@@ -81,6 +84,8 @@ export default function NewTransactionForm() {
     },
     property: {
       options: propertyChoices,
+      emptyText: PICKER_LOAD_MESSAGES.propertiesLoading,
+      loadError: pickerLoadError({ hasLoaded: loadedProperties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed),
       value: values.propertyId ?? NONE_OPTION_VALUE,
       apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
     },
@@ -141,7 +146,9 @@ export default function NewTransactionForm() {
       </KeyboardAwareScroll>
 
       <OptionSheet
+        emptyText={sheet?.emptyText}
         isOpen={sheet !== null}
+        loadError={sheet?.loadError}
         onClose={() => setOpenSheet(null)}
         onSelect={(value) => {
           sheet?.apply(value);

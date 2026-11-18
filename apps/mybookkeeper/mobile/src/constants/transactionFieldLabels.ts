@@ -31,7 +31,7 @@ export const SAVED_VENDOR_MESSAGES = {
   unknown: "A saved vendor",
   loading: "Loading your vendors…",
   sheetDescription: "Link this to one of your saved vendors. None takes the link off.",
-  loadFailed: "I couldn't load your saved vendors. Close this and try again.",
+  loadFailed: "I couldn't load your saved vendors.",
   lookupFailed: "Couldn't load. Tap to retry.",
   retryLabel: "Retry loading the saved vendor",
 } as const;

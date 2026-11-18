@@ -8,6 +8,7 @@ export const WELCOME_MANUAL_FORM_MESSAGES = {
   introPlaceholder: "A short welcome for your guests",
   propertyLabel: "Property",
   noProperty: "No property",
+  aProperty: "A property",
   chooseProperty: "Choose a property",
   seedLabel: "Start with the usual sections",
   seedNote: "Wi-Fi, parking, trash and recycling, laundry and check-out.",

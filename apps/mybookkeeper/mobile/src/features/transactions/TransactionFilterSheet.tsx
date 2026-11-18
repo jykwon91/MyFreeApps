@@ -2,7 +2,7 @@ import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRele
 import { INCOME_CATEGORIES, EXPENSE_CATEGORY_LIST } from "@mybookkeeper/api-client/constants/transactionCategories";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, SectionError, type SectionErrorProps, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
@@ -29,11 +29,14 @@ function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters
 export default function TransactionFilterSheet({
   filters,
   properties,
+  propertiesLoadError,
   onApply,
   onClose,
 }: {
   filters: TransactionFilters;
   properties: readonly Property[];
+  /** Set when the properties couldn't load, so the list below isn't mistaken for all of them. */
+  propertiesLoadError?: SectionErrorProps;
   onApply: (filters: TransactionFilters) => void;
   onClose: () => void;
 }) {
@@ -108,6 +111,7 @@ export default function TransactionFilterSheet({
           </FilterSheetSection>
           <FilterSheetSection title="Property">
             <OptionRow isSelected={draft.propertyId === null} label="All properties" onPress={() => update({ propertyId: null })} />
+            {propertiesLoadError ? <SectionError {...propertiesLoadError} /> : null}
             {properties.map((property) => (
               <OptionRow
                 isSelected={draft.propertyId === property.id}

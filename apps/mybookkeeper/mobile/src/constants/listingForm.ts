@@ -45,5 +45,4 @@ export const LISTING_PROPERTY_CHOICE: PropertyChoiceMessages = {
   addProperty: "Add a property",
   propertiesLoading: "Loading your properties",
   propertiesFailed: "I couldn't load your properties.",
-  propertiesRetry: "Try again",
 };

@@ -17,7 +17,6 @@ const MESSAGES = {
   propertySheetTitle: "Choose a property",
   propertiesLoading: "Loading your properties",
   propertiesFailed: "I couldn't load your properties.",
-  propertiesRetry: "Try again",
   noProperties: "You have no properties yet.",
   addProperty: "Add a property",
 } as unknown as PropertyChoiceMessages;
@@ -50,6 +49,6 @@ describe("PropertyChoiceField when a refresh fails", () => {
     await showField();
 
     expect(screen.getByText(MESSAGES.propertiesFailed)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.propertiesRetry)).toBeTruthy();
+    expect(screen.getByText("Try again")).toBeTruthy();
   });
 });

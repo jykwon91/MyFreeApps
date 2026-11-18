@@ -84,6 +84,28 @@ describe("OptionSheet", () => {
     expect(screen.queryByText("Nothing here.")).toBeNull();
   });
 
+  it("says the options couldn't load, with a retry, instead of an empty list", async () => {
+    const onRetry = jest.fn();
+    await render(
+      <OptionSheet
+        emptyText="Nothing here."
+        isOpen
+        loadError={{ message: "I couldn't load your properties.", retryLabel: "Try again", onRetry }}
+        onClose={jest.fn()}
+        onSelect={jest.fn()}
+        options={OPTIONS}
+        title="Property"
+        value={null}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("I couldn't load your properties.");
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByText("Nothing here.")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   describe("onClosed", () => {
     const openOrClosed = (isOpen: boolean, onClosed: () => void) => (
       <OptionSheet isOpen={isOpen} onClose={jest.fn()} onClosed={onClosed} onSelect={jest.fn()} options={OPTIONS} title="Property" value="elm" />

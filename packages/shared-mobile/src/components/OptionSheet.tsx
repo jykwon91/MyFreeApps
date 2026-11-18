@@ -4,6 +4,7 @@ import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { OptionSheetProps } from "../types/OptionSheetProps";
 import OptionRow from "./OptionRow";
+import SectionError from "./SectionError";
 
 /** A list to pick one thing from, sliding up over the current screen. */
 export default function OptionSheet<Value extends string>({
@@ -16,6 +17,7 @@ export default function OptionSheet<Value extends string>({
   onClose,
   emptyText,
   emptyContent,
+  loadError,
   onClosed,
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
@@ -54,24 +56,30 @@ export default function OptionSheet<Value extends string>({
             {description}
           </Text>
         ) : null}
-        <FlatList
-          ListEmptyComponent={
-            emptyContent ? (
-              <>{emptyContent}</>
-            ) : emptyText ? (
-              <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>{emptyText}</Text>
-            ) : undefined
-          }
-          accessibilityRole="radiogroup"
-          data={options}
-          keyExtractor={(option) => option.value}
-          onLayout={showSelected}
-          onScrollToIndexFailed={({ index, averageItemLength }) => list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false })}
-          ref={list}
-          renderItem={({ item }) => (
-            <OptionRow isSelected={item.value === value} label={item.label} onPress={() => onSelect(item.value)} />
-          )}
-        />
+        {loadError ? (
+          <View style={{ padding: spacing.lg }}>
+            <SectionError {...loadError} />
+          </View>
+        ) : (
+          <FlatList
+            ListEmptyComponent={
+              emptyContent ? (
+                <>{emptyContent}</>
+              ) : emptyText ? (
+                <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>{emptyText}</Text>
+              ) : undefined
+            }
+            accessibilityRole="radiogroup"
+            data={options}
+            keyExtractor={(option) => option.value}
+            onLayout={showSelected}
+            onScrollToIndexFailed={({ index, averageItemLength }) => list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false })}
+            ref={list}
+            renderItem={({ item }) => (
+              <OptionRow isSelected={item.value === value} label={item.label} onPress={() => onSelect(item.value)} />
+            )}
+          />
+        )}
       </View>
     </Modal>
   );

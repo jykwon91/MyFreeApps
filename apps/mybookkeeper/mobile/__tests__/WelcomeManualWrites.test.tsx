@@ -11,6 +11,7 @@ import { aManual, aSection } from "../test-support/aWelcomeManual";
 import { holdWrites } from "../test-support/holdWrites";
 import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
+import { queriesSettled } from "../test-support/queriesSettled";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
 import { SHOWN } from "@platform/mobile/test-support/shown";
@@ -140,6 +141,25 @@ describe("making a manual", () => {
   });
 });
 
+describe("choosing a manual's property when the properties can't load", () => {
+  it("says so in the sheet instead of offering only 'No property', and retrying offers them", async () => {
+    const server = startWelcomeManualsServer();
+    server.failPropertiesWith = 500;
+    await renderScreen(<WelcomeManualCreateScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: `Property, ${FORM.noProperty}` }));
+
+    expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: FORM.noProperty })).toBeNull();
+
+    await queriesSettled();
+    server.failPropertiesWith = null;
+    await fireEvent.press(button("Try again"));
+
+    expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: FORM.noProperty })).toBeTruthy();
+  });
+});
+
 describe("changing a manual", () => {
   const manual = () => aManual({ title: "Beach House guide", intro_text: "Hello", property_id: "pr1" });
 
@@ -160,6 +180,14 @@ describe("changing a manual", () => {
     await screen.findByText(FORM.saved);
     expect(writesTo(server)).toEqual([{ method: "put", url: "/welcome-manuals/m1", body: { title: "Lake guide", intro_text: null } }]);
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it("doesn't call a manual with a property 'No property' while the properties can't load", async () => {
+    const server = startWelcomeManualsServer({ manuals: [manual()] });
+    server.failPropertiesWith = 500;
+    await renderScreen(<WelcomeManualEditScreen id="m1" />);
+    expect(await screen.findByRole("button", { name: `Property, ${FORM.aProperty}` })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: `Property, ${FORM.noProperty}` })).toBeNull();
   });
 
   it("goes back without sending anything when nothing changed", async () => {

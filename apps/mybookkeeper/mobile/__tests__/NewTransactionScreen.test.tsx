@@ -13,6 +13,7 @@ import { holdWrites } from "../test-support/holdWrites";
 import { aProperty, startTransactionServer } from "../test-support/transactionsServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
+import { queriesSettled } from "../test-support/queriesSettled";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -245,5 +246,35 @@ describe("NewTransactionScreen", () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
     expect(server.requests.filter((request) => request.method === "post" && request.url === "/transactions")).toHaveLength(1);
+  });
+
+
+  describe("when the properties can't load", () => {
+    it("says so in the property sheet, and retrying offers the properties", async () => {
+      const server = startTransactionServer([]);
+      server.failPropertiesWith = 500;
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Property, No property"));
+      expect(await screen.findByText("I couldn't load your properties.")).toBeTruthy();
+      expect(screen.queryByRole("radio", { name: "No property" })).toBeNull();
+
+      await queriesSettled();
+      server.failPropertiesWith = null;
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+      expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "No property" })).toBeTruthy();
+      expect(screen.queryByText("I couldn't load your properties.")).toBeNull();
+    });
+
+    it("offers no property to choose while they are still loading", async () => {
+      startTransactionServer([]);
+      const answer = api.defaults.adapter as AxiosAdapter;
+      api.defaults.adapter = (config) => (config.url === "/properties" ? new Promise(() => undefined) : answer(config));
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Property, No property"));
+      expect(await screen.findByText("I'm loading your properties.")).toBeTruthy();
+      expect(screen.queryByRole("radio", { name: "No property" })).toBeNull();
+    });
   });
 });

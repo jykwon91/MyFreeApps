@@ -24,7 +24,6 @@ export const MORTGAGE_FORM_MESSAGES = {
   addProperty: "Add a property",
   propertiesLoading: "Loading your properties",
   propertiesFailed: "I couldn't load your properties.",
-  propertiesRetry: "Try again",
   lender: "Lender",
   lenderHint: "For example Chase.",
   rate: "Interest rate (%)",

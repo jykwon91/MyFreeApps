@@ -7,7 +7,9 @@ import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DUPLICATES_LINK } from "../../constants/duplicates";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { APPROVAL_PROPERTY_MESSAGES } from "../../constants/transactionApproval";
+import { pickerLoadError } from "../../lib/pickerLoadError";
 import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -25,7 +27,8 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
   const canWrite = useCanWrite();
   const { showToast } = useToast();
   const { currentData, error, isFetching, refetch } = useGetTransactionQuery(id);
-  const { data: properties = [], isError: propertiesFailed, isLoading: propertiesLoading } = useGetPropertiesQuery();
+  const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
+  const properties = loadedProperties ?? [];
   const { approve, goToNext, isAdvancing, isApproving, queueRow, waitingCount } = useApproveTransaction(id, reviewQueue);
   const [deleteTransaction, { isLoading: isDeleting }] = useDeleteTransactionMutation();
   const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
@@ -188,16 +191,17 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
       <OptionSheet
         description={APPROVAL_PROPERTY_MESSAGES.description}
         emptyContent={
-          propertiesFailed || propertiesLoading ? undefined : (
+          loadedProperties ? (
             <SheetEmptyAction
               actionLabel={APPROVAL_PROPERTY_MESSAGES.addProperty}
               message={APPROVAL_PROPERTY_MESSAGES.none}
               onPress={() => propertySheet.closeThen(() => router.push("/properties/new"))}
             />
-          )
+          ) : undefined
         }
-        emptyText={propertiesFailed ? APPROVAL_PROPERTY_MESSAGES.failed : APPROVAL_PROPERTY_MESSAGES.loading}
+        emptyText={PICKER_LOAD_MESSAGES.propertiesLoading}
         isOpen={isPropertySheetOpen}
+        loadError={pickerLoadError({ hasLoaded: loadedProperties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed)}
         onClose={() => setIsPropertySheetOpen(false)}
         onClosed={propertySheet.handleClosed}
         onSelect={(propertyId) => {
