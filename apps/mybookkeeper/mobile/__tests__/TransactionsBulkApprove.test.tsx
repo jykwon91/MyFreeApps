@@ -81,7 +81,7 @@ describe("approving several transactions at once", () => {
     await selectAll();
     await fireEvent.press(screen.getByRole("button", { name: "Approve 4 selected" }));
     expect(await screen.findByText("I couldn't approve those. Want to try again?")).toBeTruthy();
-    expect(screen.getByText("6 selected")).toBeTruthy();
+    expect(await screen.findByText("6 selected")).toBeTruthy();
     for (const vendor of [/Acme/, /Bolt/, /Cog/, /Done/, /Echo/, /Fern/]) expect(isTicked(vendor)).toBe(true);
   });
 
