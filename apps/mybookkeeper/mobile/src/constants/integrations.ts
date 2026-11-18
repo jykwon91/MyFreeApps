@@ -13,6 +13,8 @@ export const EMAIL_QUEUE_STATUS_LABELS: Readonly<Record<EmailQueueStatus, string
 };
 
 export const INTEGRATIONS_MESSAGES = {
+  syncProgress: "Sync progress",
+  syncProgressValue: (done: number, total: number) => `${done} of ${total}`,
   loading: "Loading your integrations",
   couldntLoad: "I couldn't load your integrations.",
   tryAgainOffer: "Want me to try again?",

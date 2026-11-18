@@ -2,13 +2,12 @@ import { IMPROVEMENT_SEVERITY_LABELS } from "@myjobhunter/api-client/constants/i
 import { IMPROVEMENT_SEVERITY_TONES } from "@myjobhunter/api-client/constants/improvementSeverityTones";
 import { useRetryPreparationMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { refinementPreparation } from "@myjobhunter/api-client/utils/refinementPreparation";
-import { Chip, LoadingButton, useAnnouncement, useTheme, useToast } from "@platform/mobile";
+import { Chip, LoadingButton, ProgressBar, useAnnouncement, useTheme, useToast } from "@platform/mobile";
 import { ActivityIndicator, Text, View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeSessionCardProps } from "../../types/ResumeSessionCardProps";
 import ResumeCard from "./ResumeCard";
-import ResumeProgressBar from "./ResumeProgressBar";
 
 /**
  * The background preparation, from the session alone so it's right after leaving and coming back:
@@ -70,7 +69,7 @@ export default function ResumePreparingCard({ session }: ResumeSessionCardProps)
           <Chip key={severity} label={MESSAGES.severityCount(count, IMPROVEMENT_SEVERITY_LABELS[severity])} tone={IMPROVEMENT_SEVERITY_TONES[severity]} />
         ))}
       </View>
-      <ResumeProgressBar accessibilityLabel={MESSAGES.draftedProgress(ready, total)} completed={ready} total={total} />
+      <ProgressBar accessibilityLabel={MESSAGES.draftedProgress(ready, total)} completed={ready} total={total} />
       {body(MESSAGES.draftingBody(ready, total))}
     </ResumeCard>
   );

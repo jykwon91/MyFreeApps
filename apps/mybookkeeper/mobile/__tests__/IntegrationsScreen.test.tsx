@@ -135,7 +135,7 @@ describe("IntegrationsScreen: Gmail status", () => {
   it("shows how far a running sync has got", async () => {
     startIntegrationsServer({ logs: [aSyncLog({ id: 4, status: "running", emails_total: 20, emails_fetched: 8, emails_done: 5, completed_at: null })] });
     await renderScreen(<IntegrationsScreen />);
-    await screen.findByText("5 / 20");
+    expect(await screen.findByRole("progressbar", { name: MESSAGES.syncProgress })).toHaveProp("accessibilityValue", { min: 0, max: 20, now: 5, text: MESSAGES.syncProgressValue(5, 20) });
     expect(screen.getAllByText("Syncing… 8 of 20 fetched, 5 extracted").length).toBeGreaterThan(0);
   });
 });
