@@ -5,6 +5,7 @@
  * - The dialog renders CompanyForm when open
  * - Successful submit calls createCompany mutation, shows success toast, closes
  * - Error from mutation shows error toast and keeps dialog open
+ * - A lost answer reads the list again: a new company with the name counts as added
  * - Cancel closes without calling the mutation
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -17,6 +18,7 @@ import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/company
 
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useCreateCompanyMutation: vi.fn(),
+  useListCompaniesQuery: vi.fn(),
 }));
 
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
@@ -52,10 +54,20 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
+import { useCreateCompanyMutation, useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { showSuccess, showError } from "@platform/ui";
 
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
+const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
+const ACME = { id: "c1", name: "Acme Corp" };
+const listOf = (...items: { id: string; name: string }[]) => ({ items, total: items.length });
+
+/** The companies list as the dialog holds it, and what reading it again answers. */
+function serveList(held: ReturnType<typeof listOf>, reread: () => Promise<ReturnType<typeof listOf>>) {
+  const refetch = vi.fn(() => ({ unwrap: reread }));
+  mockUseListCompaniesQuery.mockReturnValue({ currentData: held, refetch } as unknown as ReturnType<typeof useListCompaniesQuery>);
+  return refetch;
+}
 const mockShowSuccess = vi.mocked(showSuccess);
 const mockShowError = vi.mocked(showError);
 
@@ -64,6 +76,7 @@ describe("AddCompanyDialog", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    serveList(listOf(ACME), () => Promise.resolve(listOf(ACME)));
   });
 
   function renderDialog(open = true) {
@@ -108,10 +121,10 @@ describe("AddCompanyDialog", () => {
     });
   });
 
-  it("shows showError and keeps dialog open when mutation throws", async () => {
+  it("shows showError and keeps dialog open when the server refuses it", async () => {
     const user = userEvent.setup();
     const mockCreate = vi.fn().mockReturnValue({
-      unwrap: () => Promise.reject(new Error("Duplicate domain")),
+      unwrap: () => Promise.reject({ status: 500, data: { detail: "Database unavailable" } }),
     });
     const stubMutation = [mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>;
     mockUseCreateCompanyMutation.mockReturnValue(stubMutation);
@@ -122,8 +135,70 @@ describe("AddCompanyDialog", () => {
     await user.click(screen.getByRole("button", { name: /add company/i }));
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalled();
+      expect(mockShowError).toHaveBeenCalledWith("Couldn't create company: Database unavailable");
       expect(mockOnOpenChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("when the answer is lost", () => {
+    const NO_ANSWER = { status: undefined, data: "Network Error" };
+
+    async function addHooli(answer: unknown, onCreated = vi.fn()) {
+      const user = userEvent.setup();
+      const mockCreate = vi.fn().mockReturnValue({ unwrap: () => Promise.reject(answer) });
+      mockUseCreateCompanyMutation.mockReturnValue([mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>);
+      render(<AddCompanyDialog open onOpenChange={mockOnOpenChange} onCreated={onCreated} />);
+      await user.type(screen.getByLabelText(/name/i), "Hooli");
+      await user.click(screen.getByRole("button", { name: /add company/i }));
+      return mockCreate;
+    }
+
+    it.each([
+      ["no answer", NO_ANSWER],
+      ["a proxy error", { status: 504, data: "<html>Gateway Timeout</html>" }],
+    ])("says it was added, rather than inviting a second, when the list has a new one with the name after %s", async (_case, answer) => {
+      // One already tracked under the name doesn't count; the new one does.
+      const OLD = { id: "c-old", name: "Hooli" };
+      const NEW = { id: "c-new", name: "Hooli" };
+      serveList(listOf(ACME, OLD), () => Promise.resolve(listOf(ACME, OLD, NEW)));
+      const onCreated = vi.fn();
+      const mockCreate = await addHooli(answer, onCreated);
+
+      await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Company "Hooli" added'));
+      expect(onCreated).toHaveBeenCalledWith(NEW);
+      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+      expect(mockShowError).not.toHaveBeenCalled();
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("says it couldn't, so it can be tried again, when the list shows it wasn't added", async () => {
+      serveList(listOf(ACME, { id: "c-old", name: "Hooli" }), () => Promise.resolve(listOf(ACME, { id: "c-old", name: "Hooli" })));
+      await addHooli(NO_ANSWER);
+
+      await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(expect.stringMatching(/^Couldn't create company: /)));
+      expect(mockShowSuccess).not.toHaveBeenCalled();
+      expect(mockOnOpenChange).not.toHaveBeenCalled();
+    });
+
+    it("says it isn't sure, rather than inviting a second, when the list can't be read", async () => {
+      serveList(listOf(ACME), () => Promise.reject(NO_ANSWER));
+      await addHooli(NO_ANSWER);
+
+      await waitFor(() =>
+        expect(mockShowError).toHaveBeenCalledWith(
+          "I lost the connection, so I'm not sure that saved. Check your companies before trying again, so you don't end up with two.",
+        ),
+      );
+      expect(mockShowSuccess).not.toHaveBeenCalled();
+      expect(mockOnOpenChange).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when signing out called it off", async () => {
+      await addHooli({ name: "AbortError", message: "Aborted" });
+
+      await waitFor(() => expect(screen.getByRole("button", { name: /add company/i })).toBeEnabled());
+      expect(mockShowError).not.toHaveBeenCalled();
+      expect(mockShowSuccess).not.toHaveBeenCalled();
     });
   });
 

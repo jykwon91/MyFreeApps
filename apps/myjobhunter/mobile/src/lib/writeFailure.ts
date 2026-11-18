@@ -1,9 +1,10 @@
+import { unsureSavedMessage } from "@myjobhunter/api-client/utils/unsureSavedMessage";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { APPLICATION_DETAIL_MESSAGES } from "../constants/applicationDetail";
-import { unsureSavedMessage, WRITE_FAILURE_MESSAGES } from "../constants/writeFailure";
+import { WRITE_FAILURE_MESSAGES } from "../constants/writeFailure";
 import type { CreateFailureCopy } from "../types/CreateFailureCopy";
 
 /**

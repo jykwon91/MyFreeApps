@@ -10,6 +10,11 @@ import {
   useLazyGetResumeDownloadUrlQuery,
 } from "@myjobhunter/api-client/store/resumesApi";
 import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
+import { LOST_CREATE_CHECK_WHERE } from "@myjobhunter/api-client/constants/lostCreateCheckWhere";
+import { unsureSavedMessage } from "@myjobhunter/api-client/utils/unsureSavedMessage";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import {
   RESUME_UPLOAD_EXTENSIONS,
   RESUME_UPLOAD_MAX_BYTES,
@@ -50,7 +55,13 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
       await uploadResume(formData).unwrap();
       showSuccess(`"${file.name}" uploaded and queued for processing`);
     } catch (err) {
-      showError(aiActionErrorMessage(err, "resumeUpload", "Upload failed: "));
+      if (isCancelledRequest(err)) return;
+      // The file may have been stored before the answer was lost or the proxy failed; the list below, read again, shows it if so.
+      showError(
+        writeOutcome(err) === "unknown"
+          ? unsureSavedMessage(LOST_CREATE_CHECK_WHERE.resumes, isNoResponse(err))
+          : aiActionErrorMessage(err, "resumeUpload", "Upload failed: "),
+      );
     }
   }
 

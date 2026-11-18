@@ -1,12 +1,17 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
+import { LOST_CREATE_CHECK_WHERE } from "@myjobhunter/api-client/constants/lostCreateCheckWhere";
+import { useCompanyCreateRecheck } from "@myjobhunter/api-client/hooks/useCompanyCreateRecheck";
 import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
 import type { CompanyFormProblems } from "@myjobhunter/api-client/types/company/company-form-problems";
 import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
+import { lostCreateMessage } from "@myjobhunter/api-client/utils/lostCreateMessage";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import CompanyForm from "./CompanyForm";
 
 export interface AddCompanyDialogProps {
@@ -22,21 +27,45 @@ export interface AddCompanyDialogProps {
 }
 
 export default function AddCompanyDialog({ open, onOpenChange, onCreated }: AddCompanyDialogProps) {
-  const [createCompany, { isLoading }] = useCreateCompanyMutation();
+  const [createCompany, { isLoading: isCreating }] = useCreateCompanyMutation();
+  const { recheck, isChecking } = useCompanyCreateRecheck();
+
+  function added(company: Company): void {
+    showSuccess(`Company "${company.name}" added`);
+    onCreated?.(company);
+    onOpenChange(false);
+  }
 
   // A domain another company already has is said on the domain field, as on the phone.
   const handleSubmit = async (request: CompanyCreateRequest): Promise<CompanyFormProblems | undefined> => {
+    let created: Company;
     try {
-      const created = await createCompany(request).unwrap();
-      showSuccess(`Company "${created.name}" added`);
-      onCreated?.(created);
-      onOpenChange(false);
+      created = await createCompany(request).unwrap();
     } catch (err) {
       if (isDuplicateCompanyDomainError(err)) return { primary_domain: COMPANY_FORM_PROBLEMS.duplicateDomain };
-      showError(`Couldn't create company: ${extractErrorMessage(err)}`);
+      await settle(request.name, err);
+      return undefined;
     }
+    added(created);
     return undefined;
   };
+
+  /** The server commits before it answers, so after a lost answer a new company with the name is the one sent: it isn't offered twice. */
+  async function settle(name: string, err: unknown): Promise<void> {
+    if (isCancelledRequest(err)) return;
+    const failed = `Couldn't create company: ${extractErrorMessage(err)}`;
+    if (writeOutcome(err) !== "unknown") {
+      showError(failed);
+      return;
+    }
+    const check = await recheck(name);
+    if (check.kind === "created") {
+      added(check.item);
+      return;
+    }
+    const message = lostCreateMessage(check, err, { failed, checkWhere: LOST_CREATE_CHECK_WHERE.companies });
+    if (message) showError(message);
+  }
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -62,7 +91,7 @@ export default function AddCompanyDialog({ open, onOpenChange, onCreated }: AddC
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
             submitLabel="Add company"
-            submitting={isLoading}
+            submitting={isCreating || isChecking}
           />
         </Dialog.Content>
       </Dialog.Portal>

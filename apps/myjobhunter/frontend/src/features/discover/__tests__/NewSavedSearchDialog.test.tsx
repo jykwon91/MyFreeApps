@@ -14,6 +14,7 @@
  * - Greenhouse: calls createSource with source="greenhouse" + config
  * - Lever: calls createSource with source="lever" + config
  * - JSearch: still requires roles (existing behaviour preserved)
+ * - A lost answer reads the list again: a new search of the kind and name counts as created
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -90,12 +91,18 @@ vi.mock("@platform/ui", async (importOriginal) => {
 // ---------------------------------------------------------------------------
 const mockCreateSource = vi.fn();
 const mockUpdateProfile = vi.fn();
+// The saved searches the dialog holds, and what reading them again answers.
+const savedSearches: { held: { id: string; source: string; name: string }[]; reread: () => Promise<unknown> } = {
+  held: [],
+  reread: () => Promise.resolve([]),
+};
 
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useCreateDiscoverySourceMutation: () => [
     mockCreateSource,
     { isLoading: false },
   ],
+  useListDiscoverySourcesQuery: () => ({ currentData: savedSearches.held, refetch: () => ({ unwrap: savedSearches.reread }) }),
 }));
 
 vi.mock("@myjobhunter/api-client/store/profileApi", () => ({
@@ -532,7 +539,11 @@ describe("NewSavedSearchDialog — Greenhouse excluded_keywords payload", () => 
 });
 
 describe("NewSavedSearchDialog — create failures", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    savedSearches.held = [];
+    savedSearches.reread = () => Promise.resolve([]);
+  });
 
   function rejected(error: unknown) {
     return { unwrap: () => Promise.reject(error) };
@@ -552,9 +563,51 @@ describe("NewSavedSearchDialog — create failures", () => {
   });
 
   it("falls back to its own message when the server gives no reason", async () => {
-    mockCreateSource.mockReturnValue(rejected({ status: "FETCH_ERROR", data: undefined }));
+    mockCreateSource.mockReturnValue(rejected({ status: 400, data: {} }));
     await createGreenhouse();
     await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Failed to create saved search"));
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no answer", { status: "FETCH_ERROR", data: undefined }],
+    ["a proxy error", { status: 502, data: "<html>Bad Gateway</html>" }],
+  ])("says it was created, rather than inviting a second, when the list has a new one of the kind after %s", async (_case, answer) => {
+    // A Lever search with the same blank name is another kind, so it doesn't count.
+    savedSearches.held = [{ id: "lever-1", source: "lever", name: "" }];
+    savedSearches.reread = () => Promise.resolve([...savedSearches.held, { id: "new", source: "greenhouse", name: "" }]);
+    mockCreateSource.mockReturnValue(rejected(answer));
+    const { onClose } = renderDialog();
+    await userEvent.selectOptions(getSourceSelect(), "greenhouse");
+    await userEvent.type(screen.getByLabelText("Greenhouse board token"), "stripe");
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Saved search created"));
+    expect(onClose).toHaveBeenCalled();
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(mockCreateSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("says it failed, so it can be tried again, when the list shows it wasn't created", async () => {
+    savedSearches.held = [{ id: "lever-1", source: "lever", name: "" }];
+    savedSearches.reread = () => Promise.resolve(savedSearches.held);
+    mockCreateSource.mockReturnValue(rejected({ status: "FETCH_ERROR", data: undefined }));
+    await createGreenhouse();
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Failed to create saved search"));
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+
+  it("says it isn't sure, rather than inviting a second, when the list can't be read", async () => {
+    savedSearches.reread = () => Promise.reject({ status: "FETCH_ERROR", data: undefined });
+    mockCreateSource.mockReturnValue(rejected({ status: "FETCH_ERROR", data: undefined }));
+    await createGreenhouse();
+
+    await waitFor(() =>
+      expect(mockShowError).toHaveBeenCalledWith(
+        "I lost the connection, so I'm not sure that saved. Check your saved searches before trying again, so you don't end up with two.",
+      ),
+    );
     expect(mockShowSuccess).not.toHaveBeenCalled();
   });
 });

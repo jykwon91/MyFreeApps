@@ -222,9 +222,9 @@ describe("ResumeUploadSection", () => {
     expect(mockShowError).not.toHaveBeenCalled();
   });
 
-  it("shows an error toast when the upload fails", async () => {
+  it("shows an error toast when the server refuses the upload", async () => {
     const uploadTrigger = vi.fn().mockReturnValue({
-      unwrap: vi.fn().mockRejectedValue(new Error("413 Payload Too Large")),
+      unwrap: vi.fn().mockRejectedValue(Object.assign(new Error("413 Payload Too Large"), { status: 413 })),
     });
     setupDefaultMocks();
     mockUseUploadResume.mockReturnValue(
@@ -241,6 +241,39 @@ describe("ResumeUploadSection", () => {
       expect(mockShowError).toHaveBeenCalledWith("Upload failed: Error: 413 Payload Too Large");
     });
     expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no answer", { status: undefined, data: "Network Error" }, "I lost the connection, so I'm not sure that saved."],
+    ["a proxy error", { status: 504, data: "<html>Gateway Timeout</html>" }, "I'm not sure that saved."],
+  ])("says the upload may have gone through after %s, rather than inviting a second", async (_case, answer, unsure) => {
+    const uploadTrigger = vi.fn().mockReturnValue({ unwrap: vi.fn().mockRejectedValue(answer) });
+    setupDefaultMocks();
+    mockUseUploadResume.mockReturnValue(
+      [uploadTrigger, { isLoading: false }] as unknown as ReturnType<typeof useUploadResumeMutation>,
+    );
+
+    render(<ResumeUploadSection profileId="profile-1" />);
+    await userEvent.upload(screen.getByTestId("file-input"), new File(["%PDF-1.4 test"], "resume.pdf", { type: "application/pdf" }));
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalledWith(`${unsure} Check your uploaded resumes before trying again, so you don't end up with two.`);
+    });
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+
+  it("says nothing about an upload that signing out called off", async () => {
+    const uploadTrigger = vi.fn().mockReturnValue({ unwrap: vi.fn().mockRejectedValue({ name: "AbortError", message: "Aborted" }) });
+    setupDefaultMocks();
+    mockUseUploadResume.mockReturnValue(
+      [uploadTrigger, { isLoading: false }] as unknown as ReturnType<typeof useUploadResumeMutation>,
+    );
+
+    render(<ResumeUploadSection profileId="profile-1" />);
+    await userEvent.upload(screen.getByTestId("file-input"), new File(["%PDF-1.4 test"], "resume.pdf", { type: "application/pdf" }));
+
+    await waitFor(() => expect(uploadTrigger).toHaveBeenCalled());
+    expect(mockShowError).not.toHaveBeenCalled();
   });
 
   it("renders the skeleton while the job list is loading", () => {

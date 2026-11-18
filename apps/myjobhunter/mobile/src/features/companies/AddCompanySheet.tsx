@@ -1,12 +1,18 @@
 import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import { EMPTY_COMPANY_FORM_VALUES } from "@myjobhunter/api-client/constants/emptyCompanyFormValues";
+import { LOST_CREATE_CHECK_WHERE } from "@myjobhunter/api-client/constants/lostCreateCheckWhere";
+import { useCompanyCreateRecheck } from "@myjobhunter/api-client/hooks/useCompanyCreateRecheck";
 import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import type { CompanyFormValues } from "@myjobhunter/api-client/types/company/company-form-values";
 import { companyCreateRequest } from "@myjobhunter/api-client/utils/companyCreateRequest";
 import { companyFormCounters } from "@myjobhunter/api-client/utils/companyFormCounters";
 import { companyFormProblems } from "@myjobhunter/api-client/utils/companyFormProblems";
 import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
+import { lostCreateMessage } from "@myjobhunter/api-client/utils/lostCreateMessage";
+import type { Company } from "@myjobhunter/api-client/types/company";
+import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
@@ -16,12 +22,15 @@ import SheetButtons from "../../components/forms/SheetButtons";
 /**
  * The website's Add company dialog: name, domain, industry and HQ. Problems show under their
  * fields once Save is pressed; a domain another company already has is said on that field; any
- * other failure shows at the top and keeps what was typed. No `maxLength`: a pasted value over
+ * other failure shows at the top and keeps what was typed. After a lost answer the list is read again: a new company with the
+ * name is the one sent, so it's said to be added rather than inviting a second. No `maxLength`: a pasted value over
  * the backend's limit would be cut silently, so the validator says so instead.
  */
 export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   const { showToast } = useToast();
-  const [createCompany, { isLoading }] = useCreateCompanyMutation();
+  const [createCompany, { isLoading: isCreating }] = useCreateCompanyMutation();
+  const { recheck, isChecking } = useCompanyCreateRecheck();
+  const isLoading = isCreating || isChecking;
   const [values, setValues] = useState<CompanyFormValues>(EMPTY_COMPANY_FORM_VALUES);
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -41,14 +50,37 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
     setHasTried(true);
     if (Object.keys(companyFormProblems(values)).length > 0) return;
     setFailure(null);
+    const request = companyCreateRequest(values);
+    let created: Company;
     try {
-      const created = await createCompany(companyCreateRequest(values)).unwrap();
-      showToast(MESSAGES.added(created.name));
-      onClose();
+      created = await createCompany(request).unwrap();
     } catch (error) {
-      if (isDuplicateCompanyDomainError(error)) setIsDuplicateDomain(true);
-      else setFailure(MESSAGES.couldntAdd);
+      await settle(request.name, error);
+      return;
     }
+    added(created);
+  }
+
+  function added(company: Company): void {
+    showToast(MESSAGES.added(company.name));
+    onClose();
+  }
+
+  async function settle(name: string, error: unknown): Promise<void> {
+    // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
+    if (isCancelledRequest(error)) return;
+    if (isDuplicateCompanyDomainError(error)) {
+      setIsDuplicateDomain(true);
+      return;
+    }
+    if (writeOutcome(error) !== "unknown") {
+      setFailure(MESSAGES.couldntAdd);
+      return;
+    }
+    // The server commits before it answers, so a lost answer may mean it was added.
+    const check = await recheck(name);
+    if (check.kind === "created") added(check.item);
+    else setFailure(lostCreateMessage(check, error, { failed: MESSAGES.couldntAdd, checkWhere: LOST_CREATE_CHECK_WHERE.companies }));
   }
 
   return (

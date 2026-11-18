@@ -375,6 +375,70 @@ describe("adding a company", () => {
     expect(posts(sent)).toHaveLength(2);
   });
 
+  it.each([
+    ["no answer", (): FakeReply => { throw new Error("Network Error"); }],
+    ["a proxy error", (): FakeReply => ({ status: 504, data: "<html>Gateway Timeout</html>" })],
+  ] as const)("says a company was added, rather than inviting a second add, when it was though %s came back", async (_case, lostAnswer) => {
+    let companies: Company[] = [ACME, companyRecord({ id: "c-old", name: "Hooli" })];
+    const sent = serve({
+      "GET /companies": () => listOf(...companies)(),
+      "POST /companies": () => {
+        companies = [...companies, companyRecord({ id: "c-new", name: "Hooli" })];
+        return lostAnswer();
+      },
+    });
+    await showScreen();
+    await openAddSheet();
+
+    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), " Hooli ");
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByText(MESSAGES.added("Hooli"))).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("header", { name: MESSAGES.addTitle })).toBeNull());
+    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+    expect(posts(sent)).toHaveLength(1);
+  });
+
+  it("offers to try again when the answer is lost and the list shows the company wasn't added", async () => {
+    // A company already tracked under that name isn't the one sent.
+    const sent = serveCompanies([ACME, companyRecord({ id: "c-old", name: "Hooli" })], { "POST /companies": () => { throw new Error("Network Error"); } });
+    await showScreen();
+    await openAddSheet();
+
+    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
+    expect(screen.getByRole("header", { name: MESSAGES.addTitle })).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.added("Hooli"))).toBeNull();
+    expect(posts(sent)).toHaveLength(1);
+  });
+
+  it("says it isn't sure, rather than inviting a second add, when the answer is lost and the list can't be read", async () => {
+    let listLost = false;
+    serveCompanies([ACME], {
+      "GET /companies": () => {
+        if (listLost) throw new Error("Network Error");
+        return listOf(ACME)();
+      },
+      "POST /companies": () => {
+        listLost = true;
+        throw new Error("Network Error");
+      },
+    });
+    await showScreen();
+    await openAddSheet();
+
+    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.press(saveButton());
+
+    expect(
+      await screen.findByText("I lost the connection, so I'm not sure that saved. Check your companies before trying again, so you don't end up with two."),
+    ).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe("Hooli");
+  });
+
   it("says on the domain field when another company already has it, until the domain changes", async () => {
     serveCompanies([ACME], { "POST /companies": () => ({ status: 409, data: { detail: "A company with primary_domain='acme.com' already exists." } }) });
     await showScreen();

@@ -238,23 +238,32 @@ describe("uploading a resume on Resume", () => {
     await waitFor(() => expect(uploadsSent(sent)).toHaveLength(2));
   });
 
-  it("says the server can't be reached, keeps the file, and sends the same one again on Retry without picking it again", async () => {
+  it.each([
+    ["no answer", "I lost the connection, so I'm not sure that saved."],
+    ["a server failure with no reason", "I'm not sure that saved."],
+  ] as const)("says the upload may have gone through after %s, reads the uploads again, keeps the file, and sends the same one again on Retry", async (lostBy, unsure) => {
     let calls = 0;
     const { sent } = serveUploads([], {
       "POST /resumes": (): FakeReply => {
         calls += 1;
-        if (calls === 1) throw new Error("Network Error");
-        return { status: 201, data: QUEUED };
+        if (calls > 1) return { status: 201, data: QUEUED };
+        if (lostBy === "no answer") throw new Error("Network Error");
+        return { status: 504, data: "<html>Gateway Timeout</html>" };
       },
     });
     await openResume();
+    const listed = () => sent.filter(({ route }) => route === "GET /resume-upload-jobs").length;
+    await screen.findByText(MESSAGES.noResumeHeading);
+    const listedBefore = listed();
 
     pick({ name: "ada.pdf", mimeType: PDF, size: 2048 });
-    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.uploadResume }));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.uploadResume }));
 
-    expect(await screen.findByText(MESSAGES.couldntReachServer)).toBeTruthy();
+    expect(await screen.findByText(`${unsure} Check your uploaded resumes before trying again, so you don't end up with two.`)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.couldntUpload)).toBeNull();
-    expect(screen.getByText(MESSAGES.notUploaded("ada.pdf"))).toBeTruthy();
+    expect(screen.getByText(MESSAGES.mayNotHaveUploaded("ada.pdf"))).toBeTruthy();
+    // The list that would show it, had it gone through, is read again.
+    await waitFor(() => expect(listed()).toBeGreaterThan(listedBefore));
 
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.retryUploadOf("ada.pdf") }));
 
@@ -264,7 +273,7 @@ describe("uploading a resume on Resume", () => {
     await waitFor(() => expect(screen.queryByTestId("resume-unsent")).toBeNull());
   });
 
-  it("lets go of a file that didn't reach the server when it's discarded, and keeps nothing after a server refusal", async () => {
+  it("lets go of a file that may not have uploaded when it's discarded, and keeps nothing after a server refusal", async () => {
     serveUploads([], { "POST /resumes": (): FakeReply => { throw new Error("Network Error"); } });
     await openResume();
 
@@ -273,7 +282,7 @@ describe("uploading a resume on Resume", () => {
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.discardUploadOf("ada.pdf") }));
     expect(screen.queryByTestId("resume-unsent")).toBeNull();
 
-    serveUploads([], { "POST /resumes": (): FakeReply => ({ status: 500, data: {} }) });
+    serveUploads([], { "POST /resumes": (): FakeReply => ({ status: 500, data: { detail: "Storage unavailable" } }) });
     pick({ name: "ada.pdf", mimeType: PDF, size: 2048 });
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.uploadResume }));
     expect(await screen.findByText(MESSAGES.couldntUpload)).toBeTruthy();
