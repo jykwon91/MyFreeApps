@@ -141,7 +141,7 @@ describe("TransactionEditScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText("Vendor"), "Lowes");
     server.offline = true;
     await fireEvent.press(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("I can't reach the server, so I couldn't save that. Your changes are still here.")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that saved. Trying again is safe.")).toBeTruthy();
     expect(screen.getByDisplayValue("Lowes")).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
   });

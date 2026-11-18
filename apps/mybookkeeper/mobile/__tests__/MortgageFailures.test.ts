@@ -11,7 +11,7 @@ function failed(status?: number, detail: unknown = "raw server text") {
 describe("mortgageWriteFailure", () => {
   it.each([
     [undefined, "create", MORTGAGE_FORM_MESSAGES.createUnsure],
-    [undefined, "update", MORTGAGE_FORM_MESSAGES.lostConnection],
+    [undefined, "update", MORTGAGE_FORM_MESSAGES.changeUnsure],
     [403, "update", MORTGAGE_FORM_MESSAGES.viewOnly],
     [404, "create", MORTGAGE_FORM_MESSAGES.goneProperty],
     [404, "update", MORTGAGE_FORM_MESSAGES.gone],
@@ -21,6 +21,11 @@ describe("mortgageWriteFailure", () => {
     [409, "update", MORTGAGE_FORM_MESSAGES.retry],
   ] as const)("status %s on %s", (status, write, expected) => {
     expect(mortgageWriteFailure(failed(status), write)).toBe(expected);
+  });
+
+  it("doesn't call a proxy error with no reason a failure: the change may have saved", () => {
+    expect(mortgageWriteFailure({ status: 502, data: "<html>Bad Gateway</html>" }, "update")).toBe(MORTGAGE_FORM_MESSAGES.changeUnsure);
+    expect(mortgageWriteFailure({ status: 502, data: "<html>Bad Gateway</html>" }, "create")).toBe(MORTGAGE_FORM_MESSAGES.createUnsure);
   });
 
   it("never shows the server's own text", () => {
@@ -50,7 +55,8 @@ describe("mortgageRemoveFailure", () => {
   });
 
   it("maps the rest to fixed copy", () => {
-    expect(mortgageRemoveFailure(failed(undefined))).toEqual({ message: MORTGAGE_MESSAGES.removeLostConnection });
+    expect(mortgageRemoveFailure(failed(undefined))).toEqual({ message: MORTGAGE_MESSAGES.removeUnsure });
+    expect(mortgageRemoveFailure({ status: 504, data: undefined })).toEqual({ message: MORTGAGE_MESSAGES.removeUnsure });
     expect(mortgageRemoveFailure(failed(403))).toEqual({ message: MORTGAGE_MESSAGES.removeViewOnly });
     expect(mortgageRemoveFailure(failed(500))).toEqual({ message: MORTGAGE_MESSAGES.removeFailed });
   });

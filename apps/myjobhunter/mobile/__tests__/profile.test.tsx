@@ -211,7 +211,7 @@ describe("editing About you", () => {
   });
 
   it("keeps the sheet and what was typed, with the reason at the top, when the save fails", async () => {
-    serve({ ...profileRoutes({ profile: FILLED }), "PATCH /profile": () => ({ status: 500 }) });
+    serve({ ...profileRoutes({ profile: FILLED }), "PATCH /profile": () => ({ status: 400 }) });
     await renderProfile();
     await openSheet();
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.summaryLabel), "New summary");
@@ -346,12 +346,21 @@ describe("the remote preference", () => {
   });
 
   it("goes back to the saved choice and says so when the save fails", async () => {
-    serve({ ...profileRoutes({ profile: FILLED }), "PATCH /profile": () => ({ status: 500 }) });
+    serve({ ...profileRoutes({ profile: FILLED }), "PATCH /profile": () => ({ status: 400 }) });
     await renderProfile();
     await fireEvent.press(await screen.findByRole("radio", { name: "On-site" }));
 
     expect(await screen.findByText(MESSAGES.couldntSaveRemote)).toBeTruthy();
     expect(isChecked("Hybrid")).toBe(true);
     expect(isChecked("On-site")).toBe(false);
+  });
+
+  it("doesn't call a save whose answer was lost a failure: it may have saved, and trying again is safe", async () => {
+    serve({ ...profileRoutes({ profile: FILLED }), "PATCH /profile": () => ({ status: 502, data: "<html>Bad Gateway</html>" }) });
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("radio", { name: "On-site" }));
+
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that went through. Trying again is safe.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntSaveRemote)).toBeNull();
   });
 });

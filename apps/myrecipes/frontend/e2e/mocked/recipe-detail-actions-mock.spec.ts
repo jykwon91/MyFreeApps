@@ -99,6 +99,23 @@ test.describe("Edit", () => {
     await expect(page.getByRole("heading", { name: "Tomato soup", exact: true, includeHidden: true })).toBeVisible();
     expect(sent).toHaveLength(1);
   });
+
+  test("a save whose answer was lost says it isn't sure and that saving again is safe", async ({ page }) => {
+    await stubSignedInShell(page);
+    await stubRecipeApi(page, RECIPE_ID);
+    // Registered last, so it answers first: the change is dropped on the way back, as when the connection goes.
+    await page.route(`**/api/recipes/${RECIPE_ID}`, (route) => (route.request().method() === "PATCH" ? route.abort("failed") : route.fallback()));
+
+    await page.goto(`/recipes/${RECIPE_ID}`);
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit recipe details" });
+    await dialog.getByLabel("Title").fill("Roasted tomato soup");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    await expect(toastAboveModal(page, "We didn't get an answer, so we're not sure your changes were saved. Saving again is safe.")).toBeVisible();
+    await expect(dialog.getByLabel("Title")).toHaveValue("Roasted tomato soup");
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
 });
 
 test.describe("Delete", () => {

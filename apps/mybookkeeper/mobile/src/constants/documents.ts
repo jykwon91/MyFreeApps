@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { DOCUMENT_LIST_LIMIT } from "@mybookkeeper/api-client/constants/documentListLimit";
 
 export const POLL_INTERVAL_MS = 5000;
@@ -61,7 +62,7 @@ export const REFERENCE_ONLY_MESSAGES = {
   marking: "Marking…",
   unmark: "Unmark as reference-only",
   unmarking: "Unmarking…",
-  offlineFailure: "I can't reach the server, so I couldn't update that. Want to try again?",
+  unsure: unsureRepeatableMessage("that document was updated"),
   otherFailure: "I couldn't update that document. Want to try again?",
 } as const;
 
@@ -69,5 +70,7 @@ export const DOCUMENT_ACTION_MESSAGES = {
   alreadyGone: "That document is already gone.",
   stillBeingRead: "That document is still being read. Try again once it's done.",
   deleteFailed: "I couldn't delete that. Want to try again?",
+  deleteUnsure: unsureRepeatableMessage("that document was deleted"),
   readAgainFailed: "I couldn't start over on that. Want to try again?",
+  readAgainUnsure: "I didn't get an answer, so I'm not sure I started over on that. Pull down to see whether it's being read again before trying again.",
 } as const;

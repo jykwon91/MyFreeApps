@@ -353,7 +353,7 @@ describe("working with a photo", () => {
     const server = withTwo();
     await show(<ListingPhotosScreen id="l1" />);
     await open("Photo 2 of 2");
-    server.failWrites.push({ match: "/photos/order", status: 500 });
+    server.failWrites.push({ match: "/photos/order", status: 400 });
     await fireEvent.press(button(MESSAGES.makeCover));
     await screen.findByText("I couldn't change the order. Want to try again?");
     expect(server.listings[0].photos.map((photo) => photo.id)).toEqual(["a", "b"]);
@@ -416,7 +416,7 @@ describe("working with a photo", () => {
     await show(<ListingPhotosScreen id="l1" />);
     await open("Photo 1 of 2, Cover");
     await fireEvent.press(button(MESSAGES.remove));
-    server.failWrites.push({ match: "/photos/a", status: 500 });
+    server.failWrites.push({ match: "/photos/a", status: 400 });
     await pressAlertButton(alertSpy, MESSAGES.remove, act);
     await screen.findByText("I couldn't delete that photo. Want to try again?");
     expect(screen.getByText("Photo 1 of 2")).toBeTruthy();

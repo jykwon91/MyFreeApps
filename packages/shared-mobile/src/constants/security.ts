@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 /** The Security screen's words that are the same in every app; SecurityScreenContent has the rest. */
 export const SECURITY_MESSAGES = {
   screenTitle: "Security",
@@ -11,6 +12,7 @@ export const SECURITY_MESSAGES = {
   saving: "Saving…",
   displayNameSaved: "Display name saved.",
   displayNameSaveFailed: "Couldn't save your name. Try again.",
+  displayNameSaveUnsure: unsureRepeatableMessage("your name saved"),
   displayNameLoadFailed: "I couldn't load your display name.",
   tryAgain: "Try again",
   loadingDisplayName: "Loading your display name",
@@ -27,3 +29,8 @@ export const SECURITY_MESSAGES = {
   deleteBody: "Permanently delete your account and all associated data. This can't be undone.",
   deleteButton: "Delete my account",
 } as const;
+
+/** Signing a device out again after a lost answer is harmless: one that already went answers "already signed out". */
+export function deviceSignOutUnsureMessage(name: string): string {
+  return unsureRepeatableMessage(`${name} was signed out`);
+}

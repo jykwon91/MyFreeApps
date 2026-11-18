@@ -10,7 +10,7 @@ import { useDispatch } from "react-redux";
 import { Text, View } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as MESSAGES } from "../../constants/discoveredJob";
 import type { DismissedJobActionsProps } from "../../types/DismissedJobActionsProps";
-import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
+import { repeatableWriteFailure } from "../../lib/writeFailure";
 
 /**
  * A dismissed posting's footer in the Dismissed view, as the website's: when (and why) it was
@@ -35,7 +35,8 @@ export default function DismissedJobActions({ job }: DismissedJobActionsProps) {
       // Stays disabled: the card goes once the refetched list drops it, and a second tap would 404.
     } catch (error) {
       setIsRestoring(false);
-      if (!isCancelledRequest(error)) showToast(undoDismissFailureMessage(error, ACTIONS.restoreFailed), "error");
+      const message = repeatableWriteFailure(error, (refusal) => undoDismissFailureMessage(refusal, ACTIONS.restoreFailed));
+      if (message) showToast(message, "error");
     }
   }
 

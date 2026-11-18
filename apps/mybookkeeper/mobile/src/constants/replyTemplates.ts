@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import type { ReplyTemplateWriteOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-write-outcome";
 import type { ReplyTemplateFailure } from "@mybookkeeper/api-client/types/inquiry/reply-template-failure";
 import type { ReplyTemplateField } from "../types/ReplyTemplateField";
@@ -71,6 +72,7 @@ export const REPLY_TEMPLATE_MESSAGES = {
   templateSaved: "Template saved.",
   changesSaved: "Changes saved.",
   couldntReach: "I can't reach the server, so I couldn't save that. Your template is still here.",
+  changeUnsure: unsureRepeatableMessage("your changes saved"),
   saveViewOnly: "You have view-only access, so I can't save this.",
   saveFailed: "I couldn't save that. Want to try again?",
   saveUnsure: "I'm not sure that saved. Check your templates before trying again, so you don't end up with two.",

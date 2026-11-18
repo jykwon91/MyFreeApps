@@ -1,21 +1,50 @@
 import { APPLICATION_DETAIL_MESSAGES } from "../src/constants/applicationDetail";
 import { WRITE_FAILURE_MESSAGES } from "../src/constants/writeFailure";
-import { createFailure, moveFailure, writeFailure } from "../src/lib/writeFailure";
+import { createFailure, moveFailure, readFailure, repeatableWriteFailure, writeFailure } from "../src/lib/writeFailure";
 
 const COPY = { failed: "I couldn't add that contact. Want to try again?", checkWhere: "this application's contacts" };
 
-describe("writeFailure, for a change or delete", () => {
-  it.each([{ status: undefined, data: "Network Error" }, { status: "FETCH_ERROR" }, { status: "TIMEOUT_ERROR" }])(
-    "says the server can't be reached when no answer came back (%j)",
-    (error) => {
-      expect(writeFailure(error, "failed")).toBe(WRITE_FAILURE_MESSAGES.offline);
-    },
-  );
+const UNSURE = "I didn't get an answer, so I'm not sure that went through. Trying again is safe.";
 
-  it("says the thing is gone on a 404, and offers a retry otherwise", () => {
+describe("writeFailure, for a change or delete", () => {
+  it.each([
+    { status: undefined, data: "Network Error" },
+    { status: "FETCH_ERROR" },
+    { status: "TIMEOUT_ERROR" },
+    { status: 500, data: "Internal Server Error" },
+    { status: 502, data: "<html>Bad Gateway</html>" },
+  ])("doesn't call it a failure when the answer was lost (%j): it may have gone through, and trying again is safe", (error) => {
+    expect(writeFailure(error, "failed")).toBe(UNSURE);
+  });
+
+  it("says the thing is gone on a 404, and offers a retry on a real refusal", () => {
     expect(writeFailure({ status: 404, data: { detail: "Not Found" } }, "failed")).toBe(APPLICATION_DETAIL_MESSAGES.gone);
-    expect(writeFailure({ status: 500, data: "Internal Server Error" }, "failed")).toBe("failed");
     expect(writeFailure({ status: 422, data: { detail: "nope" } }, "failed")).toBe("failed");
+    expect(writeFailure({ status: 503, data: { detail: "Storage unavailable" } }, "failed")).toBe("failed");
+  });
+
+  it("says nothing when signing out called it off", () => {
+    expect(writeFailure({ name: "AbortError", message: "Aborted" }, "failed")).toBeNull();
+  });
+});
+
+describe("repeatableWriteFailure", () => {
+  it("leaves a real refusal to the caller's wording", () => {
+    expect(repeatableWriteFailure({ status: 400, data: { detail: "Bad" } }, () => "Couldn't save this posting")).toBe("Couldn't save this posting");
+  });
+
+  it("calls a lost answer unsure, without asking for the caller's wording", () => {
+    const describe = jest.fn(() => "Couldn't save this posting");
+    expect(repeatableWriteFailure({ status: "FETCH_ERROR" }, describe)).toBe(UNSURE);
+    expect(describe).not.toHaveBeenCalled();
+  });
+});
+
+describe("readFailure, for opening something", () => {
+  it("says the server can't be reached when no answer came back, since nothing changed", () => {
+    expect(readFailure({ status: "FETCH_ERROR" }, "failed")).toBe(WRITE_FAILURE_MESSAGES.offline);
+    expect(readFailure({ status: 404, data: { detail: "Not Found" } }, "failed")).toBe(APPLICATION_DETAIL_MESSAGES.gone);
+    expect(readFailure({ status: 500, data: "Internal Server Error" }, "failed")).toBe("failed");
   });
 });
 

@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 export const MARKET_MESSAGES = {
   title: "Market premium",
   blurb: "This is the yardstick I measure your policies against. Record what a similar policy costs today.",
@@ -31,10 +32,10 @@ export const MARKET_MESSAGES = {
   removeBody: "I'll stop checking your policies for overpaying until you record another.",
   cancel: "Cancel",
   notAllowed: "You have view-only access, so I can't change the market premium.",
-  saveOffline: "I can't reach the server, so I couldn't save that. Your details are still here.",
+  saveUnsure: unsureRepeatableMessage("that saved"),
   saveRejected: "I couldn't save that. Check the details and try again.",
   saveFailed: "I couldn't save that. Want to try again?",
   removeGone: "That market premium is already gone.",
-  removeOffline: "I can't reach the server, so I couldn't remove it. Want to try again?",
+  removeUnsure: unsureRepeatableMessage("it was removed"),
   removeFailed: "I couldn't remove that. Want to try again?",
 } as const;

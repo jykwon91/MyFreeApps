@@ -149,7 +149,7 @@ describe("a discovered posting's actions", () => {
     await fireEvent.press(screen.getByRole("button", { name: label(JOB.apply) }));
     expect(await screen.findByText("Already an application for this posting")).toBeTruthy();
 
-    reply = { status: 500 };
+    reply = { status: 400 };
     await fireEvent.press(screen.getByRole("button", { name: label(JOB.apply) }));
     expect(await screen.findByText(ACTIONS.promoteFailed)).toBeTruthy();
   });
@@ -190,7 +190,7 @@ describe("a discovered posting's actions", () => {
   });
 
   it("says when it couldn't save it", async () => {
-    serveJobs([POSTING], { "POST /discover/j1/save": () => ({ status: 500 }) });
+    serveJobs([POSTING], { "POST /discover/j1/save": () => ({ status: 400 }) });
     await showPosting();
 
     await fireEvent.press(screen.getByRole("button", { name: label(JOB.save) }));
@@ -246,10 +246,10 @@ describe("a discovered posting's actions", () => {
   });
 
   it("says when it couldn't dismiss it, or undo the dismiss", async () => {
-    let dismissReply: FakeReply = { status: 500 };
+    let dismissReply: FakeReply = { status: 400 };
     serveJobs([POSTING], {
       "POST /discover/j1/dismiss": () => dismissReply,
-      "POST /discover/j1/undo-dismiss": () => ({ status: 500 }),
+      "POST /discover/j1/undo-dismiss": () => ({ status: 400 }),
     });
     await showPosting();
 

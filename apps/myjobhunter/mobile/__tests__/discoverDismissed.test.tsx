@@ -184,7 +184,7 @@ describe("the Dismissed tab", () => {
   });
 
   it("a Restore the server fails says it couldn't, keeps the posting, and offers Restore again", async () => {
-    serveJobs([NEWER], { "POST /discover/j-newer/undo-dismiss": () => ({ status: 500 }) });
+    serveJobs([NEWER], { "POST /discover/j-newer/undo-dismiss": () => ({ status: 400 }) });
     await openDismissed();
 
     await fireEvent.press(await screen.findByRole("button", { name: restoreLabel }));

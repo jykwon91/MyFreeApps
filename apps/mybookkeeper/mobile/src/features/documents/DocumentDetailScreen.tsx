@@ -64,7 +64,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
       await reExtract(id).unwrap();
     } catch (error) {
       if (isCancelledRequest(error)) return;
-      setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.readAgainFailed));
+      setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.readAgainFailed, DOCUMENT_ACTION_MESSAGES.readAgainUnsure));
     }
   }
 
@@ -81,7 +81,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
       goBackOr("/");
     } catch (error) {
       if (isCancelledRequest(error)) return;
-      setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.deleteFailed));
+      setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.deleteFailed, DOCUMENT_ACTION_MESSAGES.deleteUnsure));
       // Already gone is the outcome the user wanted: the screen has nothing left to show.
       if (httpStatus(error) === 404) goBackOr("/");
     }

@@ -3,7 +3,7 @@ import { documentDownloadUrl } from "@myjobhunter/api-client/utils/documentDownl
 import { resumeJobFileName } from "@myjobhunter/api-client/utils/resumeJobFileName";
 import { LoadingButton, useOpenLink, useToast } from "@platform/mobile";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
-import { writeFailure } from "../../lib/writeFailure";
+import { readFailure } from "../../lib/writeFailure";
 import type { ResumeDownloadButtonProps } from "../../types/ResumeDownloadButtonProps";
 
 /** Opens the file as it was uploaded, from a short-lived signed link fetched on each press. */
@@ -19,7 +19,7 @@ export default function ResumeDownloadButton({ job }: ResumeDownloadButtonProps)
       if (url) await openLink(url);
       else showToast(MESSAGES.unsafeDownload, "error");
     } catch (error) {
-      const message = writeFailure(error, MESSAGES.couldntDownloadOriginal, MESSAGES.uploadGone);
+      const message = readFailure(error, MESSAGES.couldntDownloadOriginal, MESSAGES.uploadGone);
       if (message) showToast(message, "error");
     }
   }

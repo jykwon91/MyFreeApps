@@ -1,4 +1,5 @@
 import type { Level } from "../tutor/level";
+import type { LevelSaveFailure } from "./level-save-failure";
 import type { LevelSaveOutcome } from "./level-save-outcome";
 
 /** What ``useLevelChoice`` gives the level step. */
@@ -13,7 +14,8 @@ export interface LevelChoice {
   /** No saved profile, so this is the second onboarding step rather than "Change level". */
   isFirstTime: boolean;
   isSaving: boolean;
-  isSaveError: boolean;
+  /** How the last save failed, while that's the latest word on it; null otherwise. */
+  saveFailure: LevelSaveFailure | null;
   /** Saves the language and level, resolving to how that ended. */
   save: () => Promise<LevelSaveOutcome>;
 }

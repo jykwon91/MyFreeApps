@@ -15,21 +15,21 @@ vi.mock("@mylanguagetutor/api-client/store/profileApi", async () => {
     useGetProfileQuery: () => profile,
     // Holds the save's failure in state, as RTK Query does, so the page re-renders with it.
     useSaveProfileMutation: () => {
-      const [isError, setIsError] = useState(false);
+      const [error, setError] = useState<unknown>(undefined);
       const trigger = (update: ProfileUpdate) => ({
         unwrap: () =>
           save(update).then(
             (saved) => {
-              setIsError(false);
+              setError(undefined);
               return saved;
             },
-            (error: unknown) => {
-              setIsError(true);
-              throw error;
+            (failure: unknown) => {
+              setError(failure);
+              throw failure;
             },
           ),
       });
-      return [trigger, { isLoading: false, isError }];
+      return [trigger, { isLoading: false, error }];
     },
   };
 });
@@ -94,8 +94,19 @@ describe("OnboardingLevel page", () => {
     expect(screen.getByText("Language step")).toBeInTheDocument();
   });
 
+  it("doesn't call a save whose answer was lost a failure, and says trying again is safe", async () => {
+    save.mockRejectedValueOnce({ status: "FETCH_ERROR", error: "TypeError: Failed to fetch" });
+    renderPage("/onboarding/level?language=es");
+
+    fireEvent.click(screen.getByRole("radio", { name: /I can hold a conversation/ }));
+    fireEvent.click(screen.getByRole("button", { name: ONBOARDING_COPY.continue }));
+
+    expect(await screen.findByText(ONBOARDING_COPY.saveUnsure)).toBeInTheDocument();
+    expect(screen.queryByText(ONBOARDING_COPY.saveFailed)).not.toBeInTheDocument();
+  });
+
   it("says when the level couldn't be saved, keeps the choice, and saves on a second try", async () => {
-    save.mockRejectedValueOnce(new Error("down")).mockImplementation(async (update) => ({ ...update, updated_at: PROFILE.updated_at }));
+    save.mockRejectedValueOnce({ status: 422, data: { detail: "Unsupported language" } }).mockImplementation(async (update) => ({ ...update, updated_at: PROFILE.updated_at }));
     renderPage("/onboarding/level?language=es");
 
     fireEvent.click(screen.getByRole("radio", { name: /I can hold a conversation/ }));

@@ -157,7 +157,7 @@ describe("work history", () => {
 
     await fireEvent.press(screen.getByRole("button", { name: PROFILE.saveChanges }));
     expect(screen.queryByTestId(`${WORK.startLabel}-picker`)).toBeNull();
-    await held.answer(0, { status: 500 });
+    await held.answer(0, { status: 400 });
 
     expect(await screen.findByText(WORK.couldntUpdate)).toBeTruthy();
     expect(screen.queryByTestId(`${WORK.startLabel}-picker`)).toBeNull();
@@ -198,7 +198,7 @@ describe("work history", () => {
 
     expect(await screen.findByText(PROFILE.saving)).toBeTruthy();
     expect(screen.getByRole("button", { name: PROFILE.cancel }).props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
-    await held.answer(0, { status: 500 });
+    await held.answer(0, { status: 400 });
 
     expect(await screen.findByText(WORK.couldntUpdate)).toBeTruthy();
     expect(screen.getByLabelText(`${WORK.titleLabel}, required`).props.value).toBe("CTO");
@@ -240,7 +240,7 @@ describe("work history", () => {
   });
 
   it("keeps a role when Keep is chosen, and when the delete fails", async () => {
-    const sent = serve({ ...profileRoutes({ workHistory: [ACME] }), "DELETE /work-history/wh-1": () => ({ status: 500 }) });
+    const sent = serve({ ...profileRoutes({ workHistory: [ACME] }), "DELETE /work-history/wh-1": () => ({ status: 400 }) });
     await renderProfile();
     await fireEvent.press(await screen.findByRole("button", { name: `${PROFILE.remove} Acme Corp` }));
     await act(async () => alertButton(PROFILE.keep).onPress?.());

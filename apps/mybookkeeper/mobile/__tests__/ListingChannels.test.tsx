@@ -101,7 +101,7 @@ describe("a listing's channels", () => {
     const server = channelsServer();
     await show(<ListingChannelsScreen id="l1" />);
     await fireEvent.press(await screen.findByRole("button", { name: "Remove Furnished" }));
-    server.failWrites.push({ match: "/channel-listings", status: 500 });
+    server.failWrites.push({ match: "/channel-listings", status: 400 });
     await pressAlertButton(alertSpy, MESSAGES.remove, act);
     await screen.findByText("I couldn't delete that channel. Want to try again?");
     expect(screen.getByText("Furnished")).toBeTruthy();

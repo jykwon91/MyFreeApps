@@ -96,12 +96,14 @@ describe("sync now", () => {
     await screen.findByText(/If Gmail needs reconnecting, that's done from the website/);
   });
 
-  it("says when the server can't be reached", async () => {
+  it("doesn't call a sync start whose answer was lost a failure, and says where to look before trying again", async () => {
     startIntegrationsServer({ failures: { write: "offline" } });
     await renderScreen(<IntegrationsScreen />);
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.syncNow }));
     await confirm();
-    await screen.findByText(/can't reach the server/);
+    await screen.findByText(
+      "I didn't get an answer, so I'm not sure I managed to start the sync. Pull down to see whether a sync started before trying again.",
+    );
   });
 });
 

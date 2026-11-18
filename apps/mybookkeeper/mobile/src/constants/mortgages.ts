@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 export const MORTGAGE_LIST_LIMIT = 100;
 export const MORTGAGE_SKELETON_ROWS = ["a", "b", "c", "d"];
 
@@ -25,7 +26,7 @@ export const MORTGAGE_MESSAGES = {
   alreadyRemoved: "That mortgage was already gone.",
   removeFailed: "I couldn't remove that mortgage. Want me to try again?",
   removeViewOnly: "You have view-only access, so I can't remove it.",
-  removeLostConnection: "I couldn't reach the server, so I'm not sure it was removed. Check your connection and the list before trying again.",
+  removeUnsure: unsureRepeatableMessage("that mortgage was removed"),
   firstOnly: `I'm showing the first ${MORTGAGE_LIST_LIMIT} mortgages.`,
   unassigned: "Unassigned property",
   adjustable: "Adjustable",

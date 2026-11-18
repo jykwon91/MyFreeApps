@@ -312,14 +312,14 @@ describe("deleting the selected documents", () => {
     expect(await screen.findByText("Deleted 1 document")).toBeTruthy();
   });
 
-  it("says when it can't reach the server", async () => {
+  it("says it isn't sure when the answer is lost, and keeps them selected", async () => {
     const server = startFakeServer([A, B]);
     await renderScreen();
     await startPicking();
     server.offline = true;
     await fireEvent.press(screen.getByRole("button", { name: "Delete 1 selected" }));
     await confirmDeletion();
-    expect(await screen.findByText("I can't reach the server, so I couldn't delete those. They're still selected.")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure those were deleted. Trying again is safe.")).toBeTruthy();
     expect(screen.getByText("1 selected")).toBeTruthy();
   });
 

@@ -448,7 +448,7 @@ describe("a document's actions", () => {
   });
 
   it("keeps the edit sheet and says so when saving fails", async () => {
-    serveDocuments([RESUME], { "PATCH /documents/d-resume": () => ({ status: 500 }) });
+    serveDocuments([RESUME], { "PATCH /documents/d-resume": () => ({ status: 400 }) });
     await showScreen();
     await fireEvent.press(await screen.findByRole("button", { name: `${DOCUMENTS.edit} Stripe resume` }));
 
@@ -533,7 +533,7 @@ describe("a document's actions", () => {
   });
 
   it("says so and keeps the document when deleting fails", async () => {
-    serveDocuments([LETTER], { "DELETE /documents/d-letter": () => ({ status: 500 }) });
+    serveDocuments([LETTER], { "DELETE /documents/d-letter": () => ({ status: 400 }) });
     await showScreen();
 
     await fireEvent.press(await screen.findByRole("button", { name: `${DOCUMENTS.delete} General cover letter` }));

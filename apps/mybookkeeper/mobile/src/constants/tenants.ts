@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import type { TenantFilter } from "../types/TenantFilter";
 
 export const TENANT_FILTERS: readonly { value: TenantFilter; label: string }[] = [
@@ -32,7 +33,7 @@ export const TENANT_MESSAGES = {
   restarting: "Restarting…",
   restartFailed: "I couldn't restart the tenancy. Want me to try again?",
   endFailed: "I couldn't end the tenancy. Want me to try again?",
-  noConnection: "I couldn't reach the server. Check your connection and try again.",
+  unsure: unsureRepeatableMessage("that went through"),
   changed: "That tenancy changed since you opened it. I've refreshed it.",
   expiredBody: "If they're staying, a new or extended lease will bring them back.",
   openLeaseInProgress: "Open the new lease",

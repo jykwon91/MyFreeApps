@@ -81,7 +81,7 @@ describe("a listing's links to other sites", () => {
     const server = linked(aLink("k1"));
     await show(<ListingLinksScreen id="l1" />);
     await fireEvent.press(await screen.findByRole("button", { name: "Remove Furnished Finder link" }));
-    server.failWrites.push({ match: "/external-ids", status: 500 });
+    server.failWrites.push({ match: "/external-ids", status: 400 });
     await pressAlertButton(alertSpy, MESSAGES.remove, act);
     await screen.findByText("I couldn't delete that link. Want to try again?");
     expect(screen.getByText("ID: 12345")).toBeTruthy();

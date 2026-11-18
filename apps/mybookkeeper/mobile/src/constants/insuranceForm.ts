@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { BLACKOUT_ATTACHMENT_MAX_LABEL } from "@mybookkeeper/api-client/constants/blackoutAttachments";
 import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
@@ -51,9 +52,8 @@ export const POLICY_FORM_MESSAGES = {
   saving: "Saving…",
   added: "Policy added.",
   updated: "Policy updated.",
-  saveOffline: "I can't reach the server, so I couldn't save that. Your details are still here.",
+  saveChangeUnsure: unsureRepeatableMessage("the change saved"),
   saveUnsure: "I lost the connection before I heard back, so the policy may have saved. Check your policies before you try again.",
-  saveUnsureEdit: "I lost the connection before I heard back, so the change may have saved. Check the policy before you try again.",
   saveRejected: "I couldn't save that. Check the details and try again.",
   saveGone: "That property or policy isn't there any more.",
   saveFailed: "I couldn't save that. Want to try again?",
@@ -92,4 +92,5 @@ export const POLICY_ATTACHMENT_MESSAGES = {
   uploadFailed: "I couldn't upload that. Want to try again?",
   uploadUnsure: "I'm not sure that uploaded. Check the policy's documents before trying again, so you don't end up with two.",
   removeFailed: "I couldn't remove that. Want to try again?",
+  removeUnsure: unsureRepeatableMessage("that document was removed"),
 } as const;

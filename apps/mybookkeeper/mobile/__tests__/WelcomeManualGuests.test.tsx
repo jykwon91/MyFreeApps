@@ -341,13 +341,13 @@ describe("emailing the guide", () => {
     await screen.findByText(EMAIL.demo);
   });
 
-  it("says it may not have gone out when the phone is offline", async () => {
+  it("says it isn't sure the guide went out when the phone is offline, and where to check", async () => {
     const server = startWelcomeManualsServer({ manuals: [aManual({ sections: [aSection()] })] });
     await open();
     await fill("guest@example.com");
     server.offline = true;
     await fireEvent.press(button(EMAIL.send));
-    await screen.findByText(/may not have gone out/i);
+    await screen.findByText("I didn't get an answer, so I'm not sure the guide went out. Check with your guest before sending it again.");
     expect(screen.getByRole("button", { name: EMAIL.send })).toBeTruthy();
   });
 

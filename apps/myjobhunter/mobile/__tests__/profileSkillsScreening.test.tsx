@@ -131,7 +131,7 @@ describe("skills", () => {
 
     expect(await screen.findByLabelText(PROFILE.removing)).toBeTruthy();
     expect(screen.getByTestId("skill-sk-1").props.accessibilityState).toEqual(expect.objectContaining({ disabled: true, busy: true }));
-    await held.answer(0, { status: 500 });
+    await held.answer(0, { status: 400 });
 
     expect(await screen.findByText(SKILLS.couldntRemove)).toBeTruthy();
     expect(screen.getByTestId("skill-sk-1")).toBeTruthy();
@@ -200,7 +200,7 @@ describe("screening answers", () => {
   });
 
   it("keeps the answer typed and says why when saving it fails", async () => {
-    serve({ ...profileRoutes({ answers: [SPONSORSHIP] }), "PATCH /screening-answers/sa-1": () => ({ status: 500 }) });
+    serve({ ...profileRoutes({ answers: [SPONSORSHIP] }), "PATCH /screening-answers/sa-1": () => ({ status: 400 }) });
     await renderProfile();
     await fireEvent.press(await screen.findByRole("button", { name: `${PROFILE.edit} Requires visa sponsorship` }));
     await fireEvent.changeText(screen.getByLabelText(SCREENING.answerLabel), "Maybe");

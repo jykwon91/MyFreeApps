@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 
 export const RATE_SKELETON_CARDS = ["a", "b"];
@@ -36,5 +37,5 @@ export const MORTGAGE_RATE_MESSAGES = {
   occupancySaved: "Property updated. Checking this loan now.",
   occupancyFailed: "I couldn't update the property. Want me to try again?",
   occupancyViewOnly: "You have view-only access, so I can't change the property.",
-  occupancyLostConnection: "I couldn't reach the server. Check your connection and try again.",
+  occupancyUnsure: unsureRepeatableMessage("the property was updated"),
 } as const;

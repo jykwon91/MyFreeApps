@@ -211,12 +211,12 @@ describe("MarketRateFormScreen", () => {
     const label = new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`);
     await fireEvent.changeText(await screen.findByLabelText(label), "12");
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText("I couldn't save that. Want to try again?")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that saved. Trying again is safe.")).toBeTruthy();
     server.write = 403;
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.remove }));
     await (alert.mock.calls[0][2] ?? []).find((button) => button.text === MARKET_RATE_MESSAGES.confirmRemove)?.onPress?.();
     expect(await screen.findByText("You have view-only access, so I can't delete this.")).toBeTruthy();
-    expect(screen.queryByText("I couldn't save that. Want to try again?")).toBeNull();
+    expect(screen.queryByText("I didn't get an answer, so I'm not sure that saved. Trying again is safe.")).toBeNull();
   });
 
   it("guards leaving once something changed", async () => {
@@ -231,7 +231,7 @@ describe("MarketRateFormScreen", () => {
   it.each([
     [403, "You have view-only access, so I can't save this."],
     [422, "Something in there isn't right. Check the fields and try again."],
-    [500, "I couldn't save that. Want to try again?"],
+    [500, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
   ] as const)("keeps the typing and shows fixed copy for %s", async (write, copy) => {
     startUtilityServer({ benchmarks: [aBenchmark()], write });
     await show(<MarketRateFormScreen serviceType="electricity" />);

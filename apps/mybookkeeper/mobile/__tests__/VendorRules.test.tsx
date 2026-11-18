@@ -254,13 +254,13 @@ describe("a rule's own screen", () => {
     expect(screen.queryByText(VENDOR_RULE_MESSAGES.deleted)).toBeNull();
   });
 
-  it("shows a banner and stays when the connection is lost", async () => {
+  it("shows a banner that it isn't sure, and stays, when the answer is lost", async () => {
     const server = startClassificationRulesServer({ rules });
     await show(<VendorRuleDetailScreen id="r1" />);
     await fireEvent.press(await screen.findByRole("button", { name: VENDOR_RULE_MESSAGES.delete }));
     server.deletesLoseConnection = true;
     await confirmDelete();
-    await screen.findByText("I can't reach the server, so I couldn't delete that rule.");
+    await screen.findByText("I didn't get an answer, so I'm not sure that rule was deleted. Trying again is safe.");
     expect(mockBack).not.toHaveBeenCalled();
   });
 

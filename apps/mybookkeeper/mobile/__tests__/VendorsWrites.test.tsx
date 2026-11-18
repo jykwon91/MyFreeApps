@@ -149,10 +149,24 @@ describe("a vendor's own screen", () => {
     const server = serverWith();
     await show(<VendorDetailScreen id="v1" />);
     const row = await screen.findByLabelText(VENDOR_MESSAGES.preferred);
-    server.failWritesWith = 500;
+    server.failWritesWith = 400;
     await fireEvent.press(row);
     await screen.findByText("I couldn't save that. Want to try again?");
     expect(screen.getByLabelText(VENDOR_MESSAGES.preferred).props.accessibilityState.checked).toBe(false);
+  });
+
+  it.each([
+    ["no answer came back", "offline"],
+    ["the server broke without a reason", "500"],
+  ])("doesn't call a star whose answer was lost a failure, and says trying again is safe: %s", async (_case, how) => {
+    const server = serverWith();
+    await show(<VendorDetailScreen id="v1" />);
+    const row = await screen.findByLabelText(VENDOR_MESSAGES.preferred);
+    if (how === "offline") server.offline = true;
+    else server.failWritesWith = 500;
+    await fireEvent.press(row);
+    await screen.findByText("I didn't get an answer, so I'm not sure that saved. Trying again is safe.");
+    expect(screen.queryByText("I couldn't save that. Want to try again?")).toBeNull();
   });
 
   it("asks before deleting, and does nothing if cancelled", async () => {
@@ -176,7 +190,8 @@ describe("a vendor's own screen", () => {
   it.each([
     [403, "You have view-only access, so I can't delete this."],
     [409, "Something still depends on that vendor, so I couldn't delete it."],
-    [500, "I couldn't delete that vendor. Want to try again?"],
+    [400, "I couldn't delete that vendor. Want to try again?"],
+    [500, "I didn't get an answer, so I'm not sure that vendor was deleted. Trying again is safe."],
     [429, "I'm getting too many requests right now. Give it a minute, then try again."],
     [413, "That's too big for me to take. Try something smaller."],
   ])("says so in fixed words when deleting fails with %s, and stays", async (status, message) => {
@@ -189,13 +204,15 @@ describe("a vendor's own screen", () => {
     expect(mockBack).not.toHaveBeenCalled();
   });
 
-  it("says it can't reach the server when offline", async () => {
+  it("doesn't call a delete that got no answer a failure, since it may have gone, and stays so it can be sent again", async () => {
     const server = serverWith();
     await show(<VendorDetailScreen id="v1" />);
     await fireEvent.press(await screen.findByRole("button", { name: VENDOR_MESSAGES.delete }));
     server.offline = true;
     await confirmDelete();
-    await screen.findByText("I can't reach the server, so I couldn't delete that vendor.");
+    await screen.findByText("I didn't get an answer, so I'm not sure that vendor was deleted. Trying again is safe.");
+    expect(screen.queryByText(/couldn't delete/)).toBeNull();
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it("treats a vendor someone else already deleted as done", async () => {

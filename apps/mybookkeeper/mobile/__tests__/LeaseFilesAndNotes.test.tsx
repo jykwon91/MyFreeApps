@@ -196,10 +196,11 @@ describe("changing what a file is", () => {
   });
 
   it.each([
-    [{ status: 500 }, "I couldn't save that. Want to try again?"],
+    [{ status: 400 }, "I couldn't save that. Want to try again?"],
+    [{ status: 500 }, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
     [{ status: 404 }, "I can't find that file anymore. It may have been deleted."],
     [{ status: 403 }, "You have view-only access, so I can't save this."],
-    ["offline" as const, "I can't reach the server, so I couldn't save that. Your changes are still here."],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
     [{ status: 409, detail: { code: "ATTACHMENT_BACKS_EXTENSION" } }, "This addendum is the record of an extension. Undo the extension first."],
   ])("tells it in fixed words when the change fails (%j)", async (failure, message) => {
     const server = startLeaseWritesServer({ lease: aLease({ attachments: [NOTICE] }) });
@@ -306,10 +307,11 @@ describe("removing a file", () => {
   });
 
   it.each([
-    [{ status: 500 }, "I couldn't delete that file. Want to try again?"],
+    [{ status: 400 }, "I couldn't delete that file. Want to try again?"],
+    [{ status: 500 }, "I didn't get an answer, so I'm not sure that file was deleted. Trying again is safe."],
     [{ status: 404 }, "That file was already deleted."],
     [{ status: 409, detail: { code: "ATTACHMENT_BACKS_EXTENSION" } }, "This addendum is the record of an extension. Undo the extension first."],
-    ["offline" as const, "I can't reach the server, so I couldn't delete that file."],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that file was deleted. Trying again is safe."],
   ])("tells it in fixed words when removing fails (%j) and keeps the file", async (failure, message) => {
     const server = startLeaseWritesServer({ lease: aLease({ attachments: [NOTICE] }) });
     server.failures.attachmentDelete = failure;
@@ -385,10 +387,11 @@ describe("the lease's notes", () => {
   });
 
   it.each([
-    [{ status: 500 }, "I couldn't save that. Want to try again?"],
+    [{ status: 400 }, "I couldn't save that. Want to try again?"],
+    [{ status: 500 }, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
     [{ status: 403 }, "You have view-only access, so I can't save this."],
     [{ status: 404 }, "I can't find that lease anymore. It may have been deleted."],
-    ["offline" as const, "I can't reach the server, so I couldn't save that. Your changes are still here."],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
   ])("tells it in fixed words when saving fails (%j) and keeps what was typed", async (failure, message) => {
     const server = startLeaseWritesServer();
     server.failures.patch = failure;

@@ -4,6 +4,7 @@ import { useGetProfileQuery, useSaveProfileMutation } from "../store/profileApi"
 import type { LevelChoice } from "../types/onboarding/level-choice";
 import type { LevelSaveOutcome } from "../types/onboarding/level-save-outcome";
 import type { Level } from "../types/tutor/level";
+import { levelSaveFailure } from "../utils/levelSaveFailure";
 
 /**
  * Onboarding step 2 (and "Change level" later), shared by the web page and the phone screen.
@@ -12,7 +13,7 @@ import type { Level } from "../types/tutor/level";
  */
 export function useLevelChoice(languageParam: string | null): LevelChoice {
   const { data: profile, isError: isProfileError } = useGetProfileQuery();
-  const [saveProfile, { isLoading: isSaving, isError: isSaveError }] = useSaveProfileMutation();
+  const [saveProfile, { isLoading: isSaving, error: saveError }] = useSaveProfileMutation();
   const [picked, setPicked] = useState<Level | null>(null);
   const languageCode = languageParam === "" ? null : (languageParam ?? profile?.language_code ?? null);
   const selected = picked ?? profile?.level ?? null;
@@ -23,8 +24,8 @@ export function useLevelChoice(languageParam: string | null): LevelChoice {
       await saveProfile({ language_code: languageCode, level: selected }).unwrap();
       return "saved";
     } catch (error) {
-      // The mutation's isError carries a failure to the screen.
-      return isCancelledRequest(error) ? "cancelled" : "failed";
+      // The mutation's error also carries a failure to the screen, as saveFailure.
+      return isCancelledRequest(error) ? "cancelled" : levelSaveFailure(error);
     }
   }
 
@@ -35,7 +36,7 @@ export function useLevelChoice(languageParam: string | null): LevelChoice {
     isProfilePending: profile === undefined && !isProfileError,
     isFirstTime: !profile,
     isSaving,
-    isSaveError,
+    saveFailure: saveError === undefined ? null : levelSaveFailure(saveError),
     save,
   };
 }

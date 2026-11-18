@@ -128,7 +128,7 @@ describe("deleting a policy", () => {
     [403, "You have view-only access, so I can't change policies."],
     [404, "That policy is already gone."],
     [500, "I couldn't delete that policy. Want to try again?"],
-    ["offline" as const, "I can't reach the server, so I couldn't delete it. Want to try again?"],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that policy was deleted. Trying again is safe."],
   ])("a %s says %s and stays on the page", async (failure, message) => {
     startInsuranceServer({ failures: { "DELETE /insurance-policies/:id": failure } });
     confirmAlert("Delete this policy");
@@ -196,7 +196,7 @@ describe("policy documents", () => {
     [404, "That document is already gone."],
     [403, "You have view-only access, so I can't change documents."],
     [500, "I couldn't remove that. Want to try again?"],
-    ["offline" as const, "I couldn't remove that. Want to try again?"],
+    ["offline" as const, "I didn't get an answer, so I'm not sure that document was removed. Trying again is safe."],
   ])("a %s on remove says %s", async (failure, message) => {
     startInsuranceServer({ failures: { "DELETE /insurance-policies/:id/attachments/:id": failure } });
     confirmAlert("Remove");

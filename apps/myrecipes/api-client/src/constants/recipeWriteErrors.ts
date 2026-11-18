@@ -21,12 +21,13 @@ export const RECIPE_WRITE_FALLBACKS: Readonly<Record<RecipeWriteAction, string>>
 };
 
 /**
- * The writes that make something new, for when it may have saved anyway: no answer came back, or the server broke without
- * saying why (see writeOutcome). Sending it again could make two, so these say to check first. An update is a PATCH,
- * which is safe to send again, so it has none.
+ * What each write says when it may have saved anyway: no answer came back, or the server broke without saying why (see
+ * writeOutcome). A new recipe, tweak or cook could end up twice if sent again, so those say where to check first. An update
+ * is a PATCH, which is safe to send again, so it says so.
  */
-export const RECIPE_WRITE_UNSURE: Readonly<Partial<Record<RecipeWriteAction, string>>> = {
+export const RECIPE_WRITE_UNSURE: Readonly<Record<RecipeWriteAction, string>> = {
   create: "We're not sure this recipe was saved. Check your recipes before trying again, so you don't end up with two.",
+  update: "We didn't get an answer, so we're not sure your changes were saved. Saving again is safe.",
   tweak: "We're not sure this tweak was saved. Check the recipe's versions before trying again, so you don't end up with two.",
   logCook: "We're not sure this cook was logged. Check the recipe's cook log before trying again, so you don't log it twice.",
 };

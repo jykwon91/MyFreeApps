@@ -46,9 +46,8 @@ describe("syncStatusColor", () => {
 
 describe("actionFailureCopy", () => {
   it("names the action in each failure, and lets one be replaced", () => {
-    const copy = actionFailureCopy("start the sync", { conflict: "Already running." });
-    expect(copy.noResponse).toBe("I can't reach the server, so I couldn't start the sync.");
-    expect(copy.serverError).toBe("I couldn't start the sync. Want to try again?");
+    const copy = actionFailureCopy("start the sync", "safe", { conflict: "Already running." });
+    expect(copy.invalid).toBe("I couldn't start the sync. Want to try again?");
     expect(copy.conflict).toBe("Already running.");
   });
 });

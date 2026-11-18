@@ -6,8 +6,8 @@ import { actionFailureCopy } from "../../lib/writeFailureCopy";
 import type { QueueItemActions } from "../../types/QueueItemActions";
 import { runIntegrationWrite } from "./runIntegrationWrite";
 
-const RETRY_COPY = actionFailureCopy("retry that email", { gone: "That email is no longer in the queue. Pull down to refresh." });
-const DISMISS_COPY = actionFailureCopy("dismiss that email", { gone: "That email was already dismissed. Pull down to refresh." });
+const RETRY_COPY = actionFailureCopy("retry that email", { checkFirst: "Pull down to see whether it's being read again" }, { gone: "That email is no longer in the queue. Pull down to refresh." });
+const DISMISS_COPY = actionFailureCopy("dismiss that email", "safe", { gone: "That email was already dismissed. Pull down to refresh." });
 
 export function useQueueItemActions(itemId: string): QueueItemActions {
   const { showToast } = useToast();

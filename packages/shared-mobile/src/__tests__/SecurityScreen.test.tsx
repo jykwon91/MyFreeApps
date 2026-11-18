@@ -111,12 +111,26 @@ it("saves the name when the keyboard's return key is pressed", async () => {
 it("says when the name couldn't be saved", async () => {
   serve({
     "GET /users/me": () => ({ status: 200, data: USER }),
-    "PATCH /users/me": () => ({ status: 500, data: {} }),
+    "PATCH /users/me": () => ({ status: 400, data: { detail: "UPDATE_USER_INVALID" } }),
   });
   await render(<Security store={makeStore()} />);
   await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "Jane Smith");
   await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
   expect(await screen.findByRole("alert", { name: MESSAGES.displayNameSaveFailed })).toBeTruthy();
+});
+
+it("doesn't call a name save whose answer was lost a failure: it may have saved, and saving again is safe", async () => {
+  serve({
+    "GET /users/me": () => ({ status: 200, data: USER }),
+    "PATCH /users/me": () => ({ status: 502, data: "<html>Bad Gateway</html>" }),
+  });
+  await render(<Security store={makeStore()} />);
+  await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "Jane Smith");
+  await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+  expect(await screen.findByRole("alert", { name: MESSAGES.displayNameSaveUnsure })).toBeTruthy();
+  expect(screen.queryByRole("alert", { name: MESSAGES.displayNameSaveFailed })).toBeNull();
+  // What was typed stays, ready to save again.
+  expect(screen.getByRole("button", { name: MESSAGES.save })).toBeEnabled();
 });
 
 it("says nothing about a name save that signing out called off", async () => {

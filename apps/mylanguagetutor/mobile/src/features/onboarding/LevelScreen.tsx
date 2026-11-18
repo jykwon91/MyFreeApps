@@ -1,5 +1,5 @@
 import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOptions";
-import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
+import { LEVEL_SAVE_FAILURE_COPY, ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useLevelChoice } from "@mylanguagetutor/api-client/hooks/useLevelChoice";
 import { LoadingButton, useTheme, useToast } from "@platform/mobile";
@@ -28,7 +28,7 @@ export default function LevelScreen() {
   async function submit(): Promise<void> {
     const outcome = await save();
     if (outcome === "saved") router.dismissTo(PRACTICE_PATH);
-    else if (outcome === "failed") showToast(ONBOARDING_COPY.saveFailed, "error");
+    else if (outcome !== "cancelled") showToast(LEVEL_SAVE_FAILURE_COPY[outcome], "error");
   }
 
   return (

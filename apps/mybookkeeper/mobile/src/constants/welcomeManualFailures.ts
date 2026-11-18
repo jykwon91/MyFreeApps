@@ -8,9 +8,8 @@ export const WELCOME_MANUAL_FAILURE_MESSAGES = {
   tryAgain: "Want to try again?",
 } as const;
 
-export function offlineMessage(doing: string): string {
-  return `I can't reach the server, so I couldn't ${doing}.`;
-}
+/** For an email whose answer was lost: it may have gone out, and sending it again makes two. */
+export const GUIDE_EMAIL_UNSURE = "I didn't get an answer, so I'm not sure the guide went out. Check with your guest before sending it again.";
 
 export function goneMessage(noun: string): string {
   return `I can't find that ${noun} anymore. It may have been deleted.`;

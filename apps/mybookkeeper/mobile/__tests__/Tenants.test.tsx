@@ -243,13 +243,13 @@ describe("tenants", () => {
       expect(await screen.findByText("Tenancy ended for Dana Reed.")).toBeTruthy();
     });
 
-    it("explains no connection", async () => {
+    it("says it isn't sure when the answer is lost", async () => {
       const server = startApplicantServer([aTenant()]);
       await renderDetail();
       await fireEvent.press(await screen.findByRole("button", { name: "End tenancy" }));
       server.offline = true;
       await fireEvent.press(screen.getAllByRole("button", { name: "End tenancy" }).at(-1)!);
-      expect(await screen.findByText("I couldn't reach the server. Check your connection and try again.")).toBeTruthy();
+      expect(await screen.findByText("I didn't get an answer, so I'm not sure that went through. Trying again is safe.")).toBeTruthy();
     });
 
     it("refreshes the list too on a conflict", async () => {
@@ -310,13 +310,13 @@ describe("tenants", () => {
       expect(await screen.findByText(message)).toBeTruthy();
     });
 
-    it("explains no connection on restart", async () => {
+    it("says it isn't sure when a restart's answer is lost", async () => {
       const server = startApplicantServer([ended()]);
       await renderDetail();
       const restart = await screen.findByRole("button", { name: "Restart tenancy" });
       server.offline = true;
       await act(async () => { fireEvent.press(restart); });
-      expect(await screen.findByText("I couldn't reach the server. Check your connection and try again.")).toBeTruthy();
+      expect(await screen.findByText("I didn't get an answer, so I'm not sure that went through. Trying again is safe.")).toBeTruthy();
     });
   });
 

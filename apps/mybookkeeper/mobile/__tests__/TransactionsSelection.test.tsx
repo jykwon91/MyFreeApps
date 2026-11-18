@@ -160,13 +160,13 @@ describe("picking several transactions", () => {
     expect(screen.getByText("1 selected")).toBeTruthy();
   });
 
-  it("says when it can't reach the server", async () => {
+  it("says it isn't sure when the answer is lost, and keeps them selected", async () => {
     const server = startTransactionServer(waiting);
     await renderScreen();
     await fireEvent(await screen.findByLabelText(/Acme/), "longPress");
     server.offline = true;
     await fireEvent.press(screen.getByRole("button", { name: "Approve 1 selected" }));
-    expect(await screen.findByText("I can't reach the server, so I couldn't approve those. They're still selected.")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure those were approved. Trying again is safe.")).toBeTruthy();
   });
 
   it("stops picking on Cancel", async () => {

@@ -316,8 +316,33 @@ describe("deleting a company", () => {
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
+  it("doesn't call a delete whose answer was lost a failure, and lets it be sent again", async () => {
+    let isOffline = true;
+    serve({
+      ...companyDetailRoutes(ACME),
+      [`DELETE /companies/${ID}`]: () => {
+        if (isOffline) throw new Error("Network Error");
+        return { status: 404, data: { detail: "Not Found" } };
+      },
+    });
+    await renderCompanyDetail(ID);
+    await waitFor(() => expect(deleteButton()).toBeEnabled());
+
+    await fireEvent.press(deleteButton());
+    await act(async () => alertButton(MESSAGES.delete).onPress?.());
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that was removed. Trying again is safe.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntDelete)).toBeNull();
+    expect(deleteButton()).toBeEnabled();
+
+    // It went the first time: the second send finds it gone, which is the same as done.
+    isOffline = false;
+    await fireEvent.press(deleteButton());
+    await act(async () => alertButton(MESSAGES.delete).onPress?.());
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalledTimes(1));
+  });
+
   it("stays and offers a retry when the delete fails", async () => {
-    let reply: FakeReply = { status: 500 };
+    let reply: FakeReply = { status: 400 };
     serve({ ...companyDetailRoutes(ACME), [`DELETE /companies/${ID}`]: () => reply });
     await renderCompanyDetail(ID);
     await waitFor(() => expect(deleteButton()).toBeEnabled());

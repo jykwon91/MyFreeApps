@@ -197,7 +197,8 @@ describe("a property's own screen", () => {
   it.each([
     [403, "You have view-only access, so I can't delete this."],
     [409, "Something still depends on that property, so I couldn't delete it."],
-    [500, "I couldn't delete that property. Want to try again?"],
+    [400, "I couldn't delete that property. Want to try again?"],
+    [500, "I didn't get an answer, so I'm not sure that property was deleted. Trying again is safe."],
   ])("says so in fixed words when deleting fails with %s, and stays", async (status, message) => {
     const server = serverWith();
     await show(<PropertyDetailScreen id="p1" />);
@@ -209,13 +210,13 @@ describe("a property's own screen", () => {
     expect(screen.getByRole("button", { name: PROPERTY_MESSAGES.delete }).props.accessibilityState.disabled).toBeFalsy();
   });
 
-  it("says it can't reach the server when offline", async () => {
+  it("doesn't call a delete that got no answer a failure, since it may have gone", async () => {
     const server = serverWith();
     await show(<PropertyDetailScreen id="p1" />);
     await fireEvent.press(await screen.findByRole("button", { name: PROPERTY_MESSAGES.delete }));
     server.offline = true;
     await confirmDelete();
-    await screen.findByText("I can't reach the server, so I couldn't delete that property.");
+    await screen.findByText("I didn't get an answer, so I'm not sure that property was deleted. Trying again is safe.");
   });
 
   it("treats a property someone else already deleted as done", async () => {

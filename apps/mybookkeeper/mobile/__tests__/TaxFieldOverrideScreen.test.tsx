@@ -277,7 +277,8 @@ describe("TaxFieldOverrideScreen", () => {
     [404, "I can't find that value anymore. It may have been deleted."],
     [409, MESSAGES.saveFailed],
     [422, "Something in there isn't right. Check the fields and try again."],
-    [500, "I couldn't save that. Want to try again?"],
+    [400, "I couldn't save that. Want to try again?"],
+    [500, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
   ] as const)("keeps what was typed and shows fixed copy for %s", async (status, copy) => {
     serve(aTaxField(), () => ({ status }));
     await show();

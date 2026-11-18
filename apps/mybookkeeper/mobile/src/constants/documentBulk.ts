@@ -1,3 +1,4 @@
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { deleteDocumentsBody } from "./documents";
 
 export const DOCUMENT_BULK_MESSAGES = {
@@ -10,7 +11,7 @@ export const DOCUMENT_BULK_MESSAGES = {
   delete: "Delete",
   deleting: "Deleting…",
   hintLongPress: "Press and hold to select several",
-  offlineFailure: "I can't reach the server, so I couldn't delete those. They're still selected.",
+  unsure: unsureRepeatableMessage("those were deleted"),
   viewOnlyFailure: "You have read-only access, so I can't delete these.",
   otherFailure: "I couldn't delete those. Want to try again?",
 } as const;

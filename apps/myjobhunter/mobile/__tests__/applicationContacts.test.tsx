@@ -302,7 +302,7 @@ describe("removing a contact", () => {
   });
 
   it("says so and keeps them when the removal fails", async () => {
-    serveContacts([SAM], { [`DELETE /applications/${ID}/contacts/k-1`]: () => ({ status: 500 }) });
+    serveContacts([SAM], { [`DELETE /applications/${ID}/contacts/k-1`]: () => ({ status: 400 }) });
     await renderApplicationDetail(ID);
     await fireEvent.press(await removeButton());
     await act(async () => alertButton(CONTACTS.remove).onPress?.());

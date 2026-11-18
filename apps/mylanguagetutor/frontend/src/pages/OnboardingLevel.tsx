@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertBox, LoadingButton, cn } from "@platform/ui";
 import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOptions";
-import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
+import { LEVEL_SAVE_FAILURE_COPY, ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useLevelChoice } from "@mylanguagetutor/api-client/hooks/useLevelChoice";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
@@ -11,7 +11,7 @@ import PageSkeleton from "@/features/onboarding/PageSkeleton";
 export default function OnboardingLevel() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { languageCode, selected, pick, isProfilePending, isFirstTime, isSaving, isSaveError, save } = useLevelChoice(
+  const { languageCode, selected, pick, isProfilePending, isFirstTime, isSaving, saveFailure, save } = useLevelChoice(
     params.get("language"),
   );
 
@@ -60,7 +60,7 @@ export default function OnboardingLevel() {
           </label>
         ))}
       </fieldset>
-      {isSaveError && <AlertBox variant="error">{ONBOARDING_COPY.saveFailed}</AlertBox>}
+      {saveFailure && <AlertBox variant="error">{LEVEL_SAVE_FAILURE_COPY[saveFailure]}</AlertBox>}
       <LoadingButton type="submit" isLoading={isSaving} loadingText={ONBOARDING_COPY.saving} disabled={!selected}>
         {ONBOARDING_COPY.continue}
       </LoadingButton>

@@ -7,7 +7,7 @@ import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, taxYearError, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
-import { approveFailureMessage, bulkDeleteConfirmBody, createFailureMessage, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
+import { approveFailureMessage, bulkDeleteConfirmBody, createFailureMessage, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, deleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aSavedVendor, aTransaction } from "../test-support/transactionsServer";
 
@@ -247,8 +247,17 @@ describe("messages", () => {
     expect(approveFailureMessage(failure)).toBe("I couldn't approve that one. Want to try again?");
   });
 
-  it("says when the server can't be reached", () => {
-    expect(saveFailureMessage({ data: "Network Error" })).toContain("can't reach the server");
+  it.each([{ data: "Network Error" }, { status: 502, data: "<html>Bad Gateway</html>" }])(
+    "doesn't call a change or approval whose answer was lost a failure, and says trying again is safe (%j)",
+    (error) => {
+      expect(saveFailureMessage(error)).toBe("I didn't get an answer, so I'm not sure that saved. Trying again is safe.");
+      expect(approveFailureMessage(error)).toBe("I didn't get an answer, so I'm not sure that was approved. Trying again is safe.");
+      expect(deleteFailureMessage(error)).toBe("I didn't get an answer, so I'm not sure that was deleted. Trying again is safe.");
+    },
+  );
+
+  it("keeps calling a refused delete a failure", () => {
+    expect(deleteFailureMessage({ status: 409, data: { detail: "Linked" } })).toBe("I couldn't delete that. Want to try again?");
   });
 
   describe("adding a transaction", () => {
@@ -378,9 +387,9 @@ describe("bulk approve", () => {
     expect(bulkDeleteConfirmTitle(12)).toBe("Delete 12 transactions?");
     expect(bulkDeleteConfirmBody(1)).toBe("It'll be removed from your books. This can't be undone.");
     expect(bulkDeleteConfirmBody(2)).toBe("They'll be removed from your books. This can't be undone.");
-    expect(bulkDeleteFailureMessage(undefined)).toContain("can't reach the server");
+    expect(bulkDeleteFailureMessage(undefined)).toBe("I didn't get an answer, so I'm not sure those were deleted. Trying again is safe.");
     expect(bulkDeleteFailureMessage({ status: 403 })).toContain("read-only");
-    expect(bulkDeleteFailureMessage({ status: 500 })).toBe("I couldn't delete those. Want to try again?");
+    expect(bulkDeleteFailureMessage({ status: 500, data: { detail: "boom" } })).toBe("I couldn't delete those. Want to try again?");
   });
 
 });

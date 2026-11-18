@@ -275,8 +275,8 @@ describe("editing a utility plan", () => {
     [403, "You have view-only access, so I can't save this."],
     [404, "I can't find that utility plan anymore. It may have been deleted."],
     [422, "Something in there isn't right. Check the fields and try again."],
-    [500, "I couldn't save that. Want to try again?"],
-    ["offline", "I can't reach the server, so I couldn't save that. Your changes are still here."],
+    [500, "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
+    ["offline", "I didn't get an answer, so I'm not sure that saved. Trying again is safe."],
   ] as const)("keeps the typing and shows fixed copy for %s", async (write, copy) => {
     startUtilityServer({ detail: aUtilityPlanDetail(), write });
     await show(<UtilityPlanEditScreen id="u1" />);
@@ -328,13 +328,13 @@ describe("the plan screen's actions", () => {
     expect(await screen.findByText(UTILITY_PLAN_MESSAGES.alreadyRemoved)).toBeTruthy();
   });
 
-  it("keeps the plan and shows fixed copy when removing fails", async () => {
+  it("keeps the plan and says it isn't sure when the remove's answer is lost", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
     startUtilityServer({ detail: aUtilityPlanDetail(), write: 500 });
     await show(<UtilityPlanDetailScreen id="u1" />);
     await fireEvent.press(await screen.findByRole("button", { name: UTILITY_PLAN_MESSAGES.remove }));
     await (alert.mock.calls[0][2] ?? []).find((button) => button.text === "Remove")?.onPress?.();
-    expect(await screen.findByText("I couldn't delete that utility plan. Want to try again?")).toBeTruthy();
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that utility plan was deleted. Trying again is safe.")).toBeTruthy();
     expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(mockBack).not.toHaveBeenCalled();
   });

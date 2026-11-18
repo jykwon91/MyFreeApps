@@ -2,12 +2,17 @@ import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import type { TransactionUpdateResult } from "@mybookkeeper/api-client/types/transaction/TransactionUpdateResult";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { unsureSavedMessage } from "../../lib/writeFailureCopy";
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 
-/** The server's own wording can be a developer string, so it's never shown. */
+/*
+ * The server's own wording can be a developer string, so it's never shown. A lost answer or a proxy error can come after the
+ * write landed (see writeOutcome), so it's never called a failure. Saving a change, approving and deleting are safe to send
+ * again; adding one isn't.
+ */
+
 export function saveFailureMessage(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return unsureRepeatableMessage("that saved");
   switch (httpStatus(error)) {
-    case undefined:
-      return "I can't reach the server, so I couldn't save that. Your changes are still here.";
     case 403:
       return "You have read-only access, so I can't change this.";
     case 404:
@@ -18,9 +23,8 @@ export function saveFailureMessage(error: unknown): string {
 }
 
 export function approveFailureMessage(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return unsureRepeatableMessage("that was approved");
   switch (httpStatus(error)) {
-    case undefined:
-      return "I can't reach the server, so I couldn't approve that.";
     case 403:
       return "You have read-only access, so I can't change this.";
     case 404:
@@ -43,9 +47,8 @@ export function createFailureMessage(error: unknown): string {
 }
 
 export function bulkApproveFailureMessage(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return unsureRepeatableMessage("those were approved");
   switch (httpStatus(error)) {
-    case undefined:
-      return "I can't reach the server, so I couldn't approve those. They're still selected.";
     case 403:
       return "You have read-only access, so I can't change these.";
     default:
@@ -60,14 +63,18 @@ export const BULK_TRANSACTION_MESSAGES = {
 } as const;
 
 export function bulkDeleteFailureMessage(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return unsureRepeatableMessage("those were deleted");
   switch (httpStatus(error)) {
-    case undefined:
-      return "I can't reach the server, so I couldn't delete those. They're still selected.";
     case 403:
       return "You have read-only access, so I can't delete these.";
     default:
       return "I couldn't delete those. Want to try again?";
   }
+}
+
+/** A 404 is handled by the caller: the transaction is already gone. */
+export function deleteFailureMessage(error: unknown): string {
+  return writeOutcome(error) === "unknown" ? unsureRepeatableMessage("that was deleted") : "I couldn't delete that. Want to try again?";
 }
 
 export function bulkDeleteConfirmTitle(count: number): string {
