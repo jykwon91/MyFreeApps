@@ -1,7 +1,7 @@
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
 import PickerField from "../transactions/PickerField";
 
@@ -23,9 +23,9 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
 
   if (isLoading) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.loadingListings} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.loadingListings}>
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!currentData) return error ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.listingsFailed}</Text> : null;

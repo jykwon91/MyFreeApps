@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { VERSION_HISTORY_MESSAGES as MESSAGES, VERSION_SKELETON_ROWS } from "../../constants/versions";
 
@@ -7,7 +7,7 @@ export default function VersionListSkeleton() {
   const { colors, spacing, radius, fontSize } = useTheme();
 
   return (
-    <View accessibilityLabel={MESSAGES.loading} accessible style={{ gap: spacing.md }}>
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.md }}>
       {Array.from({ length: VERSION_SKELETON_ROWS }, (_, index) => (
         <View
           key={index}
@@ -26,6 +26,6 @@ export default function VersionListSkeleton() {
           <Skeleton height={fontSize.xs} width="45%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

@@ -1,13 +1,20 @@
 import { useGetInquirySpamAssessmentsQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
+import { INQUIRY_LOADING_MESSAGES } from "../../constants/inquiries";
 import { spamCheckLabel, spamCheckResult } from "./inquiryDisplay";
 import InquiryLine from "./InquiryLine";
 
 export default function InquirySpamChecks({ id }: { id: string }) {
   const { spacing } = useTheme();
   const { data, error, isLoading, refetch } = useGetInquirySpamAssessmentsQuery(id);
-  if (isLoading) return <Skeleton height={60} />;
+  if (isLoading) {
+    return (
+      <LoadingRegion label={INQUIRY_LOADING_MESSAGES.spamChecks}>
+        <Skeleton height={60} />
+      </LoadingRegion>
+    );
+  }
   if (error && !data) {
     return (
       <LoadingButton onPress={() => void refetch()} variant="secondary">

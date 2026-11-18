@@ -1,7 +1,6 @@
 import { useGetFormFieldsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { EmptyState, Skeleton, useRefresh, useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { EmptyState, LoadingRegion, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES } from "../../constants/taxFieldOverride";
 import { TAX_FORM_SKELETON_ROWS } from "../../constants/taxForm";
 import { isServerAnswer } from "../../utils/isServerAnswer";
@@ -27,11 +26,11 @@ export default function TaxFieldOverrideScreen({ returnId, formName, fieldRowId 
   if (!currentData) {
     if (isFetching) {
       return (
-        <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar" style={{ gap: spacing.md, padding: spacing.lg }} testID="tax-override-skeleton">
+        <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.md, padding: spacing.lg }} testID="tax-override-skeleton">
           {TAX_FORM_SKELETON_ROWS.slice(0, 3).map((row) => (
             <Skeleton height={56} key={row} width="100%" />
           ))}
-        </View>
+        </LoadingRegion>
       );
     }
     return (

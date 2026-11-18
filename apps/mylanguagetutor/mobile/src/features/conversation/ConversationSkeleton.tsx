@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { CONVERSATION_MESSAGES } from "../../constants/conversation";
 
@@ -6,12 +6,7 @@ import { CONVERSATION_MESSAGES } from "../../constants/conversation";
 export default function ConversationSkeleton() {
   const { colors, spacing, fontSize, radius } = useTheme();
   return (
-    <View
-      accessibilityLabel={CONVERSATION_MESSAGES.loading}
-      accessibilityState={{ busy: true }}
-      accessible
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
+    <LoadingRegion label={CONVERSATION_MESSAGES.loading} style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1, gap: spacing.sm, padding: spacing.lg }} testID="conversation-skeleton-header">
         <Skeleton height={fontSize.xl} width="60%" />
         <Skeleton height={fontSize.sm} width="85%" />
@@ -21,6 +16,6 @@ export default function ConversationSkeleton() {
         <Skeleton height={fontSize.xs} width="30%" />
         <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} width="100%" />
       </View>
-    </View>
+    </LoadingRegion>
   );
 }

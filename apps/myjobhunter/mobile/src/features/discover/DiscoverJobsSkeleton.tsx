@@ -1,5 +1,4 @@
-import { useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { LoadingRegion, useTheme } from "@platform/mobile";
 import { DISCOVER_SCREEN_MESSAGES as MESSAGES, DISCOVERED_JOB_SKELETON_CARDS } from "../../constants/discoverScreen";
 import type { DiscoverJobsSkeletonProps } from "../../types/DiscoverJobsSkeletonProps";
 import DiscoveredJobSkeletonCard from "./DiscoveredJobSkeletonCard";
@@ -8,10 +7,10 @@ import DiscoveredJobSkeletonCard from "./DiscoveredJobSkeletonCard";
 export default function DiscoverJobsSkeleton({ view }: DiscoverJobsSkeletonProps) {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={MESSAGES.loadingJobs} accessibilityRole="progressbar" style={{ gap: spacing.md }} testID="discover-jobs-skeleton">
+    <LoadingRegion label={MESSAGES.loadingJobs} style={{ gap: spacing.md }} testID="discover-jobs-skeleton">
       {DISCOVERED_JOB_SKELETON_CARDS.map((card) => (
         <DiscoveredJobSkeletonCard key={card} view={view} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

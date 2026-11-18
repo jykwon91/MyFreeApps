@@ -1,5 +1,5 @@
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { FieldError, LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
@@ -25,9 +25,9 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
 
   if (isLoading) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.loadingTenants} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.loadingTenants}>
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!currentData) {

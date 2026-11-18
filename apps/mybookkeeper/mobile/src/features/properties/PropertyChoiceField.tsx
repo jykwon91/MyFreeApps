@@ -1,5 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { FieldError, LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
@@ -25,9 +25,9 @@ export default function PropertyChoiceField({ messages: MESSAGES, value, onChang
 
   if (isLoading) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.propertiesLoading} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.propertiesLoading}>
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (loadError && !data) {

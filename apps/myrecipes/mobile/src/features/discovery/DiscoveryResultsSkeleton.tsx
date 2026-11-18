@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { DISCOVERY_CARD_IMAGE_ASPECT, DISCOVERY_SKELETON_CARD_COUNT } from "../../constants/discovery";
 
@@ -7,7 +7,7 @@ export default function DiscoveryResultsSkeleton() {
   const { colors, spacing, radius, fontSize } = useTheme();
 
   return (
-    <View accessibilityLabel="Searching the web for recipes" accessible style={{ gap: spacing.md }}>
+    <LoadingRegion label="Searching the web for recipes" style={{ gap: spacing.md }}>
       {Array.from({ length: DISCOVERY_SKELETON_CARD_COUNT }, (_, index) => (
         <View
           key={index}
@@ -24,6 +24,6 @@ export default function DiscoveryResultsSkeleton() {
           </View>
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

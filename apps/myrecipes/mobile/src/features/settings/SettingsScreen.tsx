@@ -1,6 +1,7 @@
-import { AccountSettings, AppVersion, LoadingButton, MoreRow, Skeleton, ThemeSettings, UnreadableSession, useSession, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, LoadingButton, LoadingRegion, MoreRow, Skeleton, ThemeSettings, UnreadableSession, useSession, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
+import { SESSION_RESTORING_LABEL } from "../../constants/account";
 import { WEB_BASE_URL } from "../../constants/api";
 import { APP_NAME } from "../../constants/app";
 import { DELETE_ACCOUNT_ROUTE, SECURITY_MENU_ITEM, SECURITY_ROUTE } from "../../constants/security";
@@ -17,7 +18,11 @@ export default function SettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
-        {state.status === "restoring" ? <Skeleton height={120} testID="account-skeleton" /> : null}
+        {state.status === "restoring" ? (
+          <LoadingRegion label={SESSION_RESTORING_LABEL}>
+            <Skeleton height={120} testID="account-skeleton" />
+          </LoadingRegion>
+        ) : null}
         {state.status === "unreadable" ? <UnreadableSession onSignInInstead={() => router.push("/sign-in")} /> : null}
         {state.status === "signedOut" ? (
           <View style={{ gap: spacing.sm }}>

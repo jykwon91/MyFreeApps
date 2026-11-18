@@ -1,6 +1,6 @@
 import { useListVendorPagesInfiniteQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -63,9 +63,9 @@ export default function VendorsScreen() {
   );
 
   const footer = isFetchingNextPage ? (
-    <View accessible accessibilityLabel={VENDOR_MESSAGES.loadingMore} accessibilityRole="progressbar">
+    <LoadingRegion label={VENDOR_MESSAGES.loadingMore}>
       <VendorSkeletonRow />
-    </View>
+    </LoadingRegion>
   ) : loadMoreFailed ? (
     <LoadMoreFailed onRetry={() => void loadMore()} />
   ) : undefined;

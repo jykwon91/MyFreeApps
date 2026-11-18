@@ -13,6 +13,7 @@ export const WORKSPACE_HOME_ROUTE: Href = "/";
 export const OFFLINE_RETRY_MS = 15_000;
 
 export const WORKSPACE_MESSAGES = {
+  loading: "Loading your workspace",
   section: "Workspace",
   current: (name: string, role: string) => `${name}, ${role}`,
   currentOffline: (name: string) => `${name}, offline`,

@@ -1,6 +1,7 @@
-import { LoadingButton, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
+import { SESSION_RESTORING_LABEL } from "../../constants/account";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import type { SignInPromptProps } from "../../types/SignInPromptProps";
 
@@ -15,7 +16,11 @@ export default function SignInPrompt({ heading, body, skeletonTestID }: SignInPr
 
   return (
     <View style={{ flex: 1, gap: spacing.sm, padding: spacing.lg, backgroundColor: colors.background }}>
-      {state.status === "restoring" ? <Skeleton height={120} testID={skeletonTestID} /> : null}
+      {state.status === "restoring" ? (
+        <LoadingRegion label={SESSION_RESTORING_LABEL}>
+          <Skeleton height={120} testID={skeletonTestID} />
+        </LoadingRegion>
+      ) : null}
       {state.status === "unreadable" ? <UnreadableSession onSignInInstead={() => router.push("/sign-in")} /> : null}
       {state.status === "signedOut" ? (
         <>

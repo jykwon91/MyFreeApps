@@ -4,11 +4,13 @@ import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
 import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
+import { SECURITY_MESSAGES } from "../constants/security";
 import { useTheme } from "../theme/useTheme";
 import Banner from "./Banner";
 import FormField from "./FormField";
 import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
+import LoadingRegion from "./LoadingRegion";
 import SecondFactorCodeField from "./SecondFactorCodeField";
 import Skeleton from "./Skeleton";
 
@@ -151,7 +153,11 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
           value={password}
         />
         {showsCode ? <SecondFactorCodeField error={fieldErrors.code} ref={codeInput} secondFactor={secondFactor} /> : null}
-        {twoFactor.enabled === null && twoFactor.failure === null ? <Skeleton height={48} testID="two-factor-skeleton" /> : null}
+        {twoFactor.enabled === null && twoFactor.failure === null ? (
+          <LoadingRegion label={SECURITY_MESSAGES.loadingTwoStep}>
+            <Skeleton height={48} testID="two-factor-skeleton" />
+          </LoadingRegion>
+        ) : null}
         {twoFactor.failure !== null ? (
           <View style={{ gap: spacing.sm }}>
             <Banner message="We couldn't check your account's security settings. Check your connection and try again." />

@@ -15,6 +15,7 @@ export const RESUME_MESSAGES = {
   noResumeBody: "Refinement works on a resume I've read. Upload a PDF, DOCX, or plain text file up to 25 MB and I'll read it here.",
   readingHeading: "Reading your resume",
   readingBody: "This usually takes under a minute. It shows up here to pick once it's read.",
+  loadingResumes: "Loading your resumes",
   couldntLoadResumes: "I couldn't load your resumes",
   couldntLoadResumesBody: "Check your connection and try again.",
   // Uploading
@@ -48,6 +49,7 @@ export const RESUME_MESSAGES = {
   discardUploadOf: (name: string) => `Discard ${name}`,
   couldntStart: "I couldn't start a session. Try again.",
   // Loading the session
+  loadingSession: "Loading your session",
   couldntLoadSession: "I couldn't load that session",
   couldntLoadSessionBody: "Check your connection and try again, or start a new one.",
   sessionGoneHeading: "That session is gone",
@@ -72,6 +74,7 @@ export const RESUME_MESSAGES = {
   yourPick: "Your pick",
   currently: "Currently",
   proposed: "Proposed rewrite",
+  rewriting: "Writing a new proposed rewrite",
   why: "Why?",
   hideWhy: "Hide why",
   thinking: "Hmm, let me think. Working on a suggestion…",

@@ -1,11 +1,11 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { CALENDAR_MESSAGES, CALENDAR_SKELETON_GROUPS } from "../../constants/calendar";
 
 export default function CalendarSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={CALENDAR_MESSAGES.loading} accessibilityRole="progressbar" testID="calendar-skeleton">
+    <LoadingRegion label={CALENDAR_MESSAGES.loading} testID="calendar-skeleton">
       {CALENDAR_SKELETON_GROUPS.map((group) => (
         <View key={group.key}>
           <View style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
@@ -20,6 +20,6 @@ export default function CalendarSkeleton() {
           ))}
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

@@ -1,5 +1,5 @@
 import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
-import { Banner, EmptyState, Skeleton, useAnnouncement, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, Skeleton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -70,11 +70,11 @@ export default function CookScreen() {
       return <EmptyState body="This recipe doesn't have any steps yet." heading="Nothing to cook yet" />;
     }
     return (
-      <View accessibilityLabel="Loading recipe" accessible style={{ padding: spacing.lg, gap: spacing.md }}>
+      <LoadingRegion label="Loading recipe" style={{ padding: spacing.lg, gap: spacing.md }}>
         <Skeleton height={fontSize.xl} />
         <Skeleton height={fontSize.xl} width="85%" />
         <Skeleton height={fontSize.xl} width="60%" />
-      </View>
+      </LoadingRegion>
     );
   }
 

@@ -1,7 +1,7 @@
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_TONES } from "@myjobhunter/api-client/constants/kanbanColumnTones";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
-import { Chip, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
 import type { ApplicationHeaderProps } from "../../types/ApplicationHeaderProps";
@@ -16,7 +16,9 @@ export default function ApplicationHeader({ application, column, companyName }: 
         {application.role_title}
       </Text>
       {companyName === null ? (
-        <Skeleton height={20} testID="company-skeleton" width="40%" />
+        <LoadingRegion label={MESSAGES.loadingCompany}>
+          <Skeleton height={20} testID="company-skeleton" width="40%" />
+        </LoadingRegion>
       ) : (
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{companyName}</Text>
       )}

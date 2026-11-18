@@ -1,4 +1,4 @@
-import { Banner, useTheme } from "@platform/mobile";
+import { Banner, LoadingRegion, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { APPLICATION_FOOTER_SKELETON_ROWS, APPLICATION_MESSAGES as MESSAGES } from "../../constants/applications";
 import type { ApplicationsListFooterProps } from "../../types/ApplicationsListFooterProps";
@@ -9,11 +9,11 @@ export default function ApplicationsListFooter({ isLoadingMore, isLoadMoreError,
   const { spacing } = useTheme();
   if (isLoadingMore) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.loadingMore} accessibilityRole="progressbar" testID="applications-footer-skeleton">
+      <LoadingRegion label={MESSAGES.loadingMore} testID="applications-footer-skeleton">
         {APPLICATION_FOOTER_SKELETON_ROWS.map((row) => (
           <ApplicationSkeletonRow key={row} />
         ))}
-      </View>
+      </LoadingRegion>
     );
   }
   if (isLoadMoreError) {

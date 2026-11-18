@@ -14,6 +14,8 @@ export const SECURITY_MESSAGES = {
   displayNameLoadFailed: "I couldn't load your display name.",
   tryAgain: "Try again",
   loadingDisplayName: "Loading your display name",
+  loadingDevices: "Loading your signed-in devices",
+  loadingTwoStep: "Checking two-step verification",
 
   dataHeading: "Data & Privacy",
   exportHeading: "Export your data",

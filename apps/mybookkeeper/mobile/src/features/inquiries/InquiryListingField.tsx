@@ -1,8 +1,8 @@
 import { INQUIRY_FORM_LABELS as LABELS } from "@mybookkeeper/api-client/constants/inquiryForm";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
 import type { InquiryListingFieldProps } from "../../types/InquiryListingFieldProps";
 import InquiryChoiceGroup from "./InquiryChoiceGroup";
@@ -20,9 +20,9 @@ export default function InquiryListingField({ value, onChange, disabled }: Inqui
 
   if (isLoading) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.loadingListings} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.loadingListings}>
         <Skeleton height={SKELETON_HEIGHT} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!currentData) return error ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.listingsFailed}</Text> : null;

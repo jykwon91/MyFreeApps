@@ -1,4 +1,4 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { COMPANY_MESSAGES, COMPANY_SKELETON_ROWS } from "../../constants/companies";
 import CompanySkeletonRow from "./CompanySkeletonRow";
@@ -7,7 +7,7 @@ import CompanySkeletonRow from "./CompanySkeletonRow";
 export default function CompaniesSkeleton() {
   const { spacing, radius } = useTheme();
   return (
-    <View accessible accessibilityLabel={COMPANY_MESSAGES.loadingList} accessibilityRole="progressbar" testID="companies-skeleton">
+    <LoadingRegion label={COMPANY_MESSAGES.loadingList} testID="companies-skeleton">
       <View style={{ gap: spacing.md, padding: spacing.lg }} testID="companies-header-skeleton">
         <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
         <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
@@ -15,6 +15,6 @@ export default function CompaniesSkeleton() {
       {COMPANY_SKELETON_ROWS.map((row) => (
         <CompanySkeletonRow key={row} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

@@ -1,5 +1,5 @@
 import { groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -39,10 +39,10 @@ export default function IntegrationsScreen() {
     logs.error && !logs.isFetching ? (
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.historyCouldntLoad} />
     ) : (
-      <View accessible accessibilityLabel={MESSAGES.historyLoading} accessibilityRole="progressbar" style={{ gap: spacing.md, padding: spacing.lg }} testID="sync-history-skeleton">
+      <LoadingRegion label={MESSAGES.historyLoading} style={{ gap: spacing.md, padding: spacing.lg }} testID="sync-history-skeleton">
         <Skeleton height={56} />
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     )
   ) : (
     <Text style={{ padding: spacing.lg, fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.historyNone}</Text>
@@ -65,7 +65,11 @@ export default function IntegrationsScreen() {
           {isLinked && !queueItems && queue.error && !queue.isFetching ? (
             <Banner actions={[{ label: MESSAGES.tryAgain, onPress: refresh }]} message={MESSAGES.queueCouldntLoad} />
           ) : null}
-          {isLinked && !queueItems && !queue.error ? <Skeleton height={44} /> : null}
+          {isLinked && !queueItems && !queue.error ? (
+            <LoadingRegion label={MESSAGES.queueLoading}>
+              <Skeleton height={44} />
+            </LoadingRegion>
+          ) : null}
           {isLinked ? (
             <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.historyHeading}

@@ -1,5 +1,5 @@
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import {
   VERSION_VIEW_MESSAGES as MESSAGES,
@@ -14,7 +14,7 @@ export default function VersionSkeleton({ buttonCount }: VersionSkeletonProps) {
   const { spacing, fontSize } = useTheme();
 
   return (
-    <View accessibilityLabel={MESSAGES.loading} accessible style={{ gap: spacing.lg }}>
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.xs }}>
         <Skeleton height={fontSize.xl} width="20%" />
         <Skeleton height={fontSize.sm} width="60%" />
@@ -39,6 +39,6 @@ export default function VersionSkeleton({ buttonCount }: VersionSkeletonProps) {
           </View>
         ))}
       </View>
-    </View>
+    </LoadingRegion>
   );
 }

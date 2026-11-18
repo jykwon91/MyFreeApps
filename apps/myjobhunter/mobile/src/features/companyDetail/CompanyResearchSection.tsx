@@ -2,7 +2,7 @@ import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { SectionError, useTheme, useToast } from "@platform/mobile";
+import { LoadingRegion, SectionError, useTheme, useToast } from "@platform/mobile";
 import { View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import { researchFailureMessage } from "../../lib/researchFailureMessage";
@@ -43,9 +43,9 @@ export default function CompanyResearchSection({ companyId, companyName }: Compa
     <View style={{ gap: spacing.md }} testID="company-research">
       <SectionHeading title={MESSAGES.heading} />
       {isFirstLoad ? (
-        <View accessible accessibilityLabel={MESSAGES.loading} accessibilityRole="progressbar">
+        <LoadingRegion label={MESSAGES.loading}>
           <ResearchSkeleton />
-        </View>
+        </LoadingRegion>
       ) : couldntLoad ? (
         <SectionError
           message={MESSAGES.couldntLoad}

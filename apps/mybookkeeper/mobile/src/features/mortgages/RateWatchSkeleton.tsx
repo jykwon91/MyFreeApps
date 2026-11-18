@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { MORTGAGE_RATE_MESSAGES, RATE_SKELETON_CARDS } from "../../constants/mortgageRates";
 
@@ -6,7 +6,7 @@ import { MORTGAGE_RATE_MESSAGES, RATE_SKELETON_CARDS } from "../../constants/mor
 export default function RateWatchSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={MORTGAGE_RATE_MESSAGES.loadingLabel} accessibilityRole="progressbar" style={{ gap: spacing.lg }} testID="rate-watch-skeleton">
+    <LoadingRegion label={MORTGAGE_RATE_MESSAGES.loadingLabel} style={{ gap: spacing.lg }} testID="rate-watch-skeleton">
       <Skeleton height={72} />
       <Skeleton height={14} width="70%" />
       {RATE_SKELETON_CARDS.map((card) => (
@@ -17,6 +17,6 @@ export default function RateWatchSkeleton() {
           <Skeleton height={16} />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

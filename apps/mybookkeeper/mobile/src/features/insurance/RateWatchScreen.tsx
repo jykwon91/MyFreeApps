@@ -1,7 +1,7 @@
 import { useLazyGetInsuranceRateWatchQuery } from "@mybookkeeper/api-client/store/insuranceMarketApi";
 import { resolveRateWatchMode } from "@mybookkeeper/api-client/utils/rateWatchMode";
-import { Banner, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
-import { ScrollView, Text, View } from "react-native";
+import { Banner, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
+import { ScrollView, Text } from "react-native";
 import { RATE_WATCH_MESSAGES } from "../../constants/insuranceRateWatch";
 import RateWatchResults from "./RateWatchResults";
 
@@ -24,11 +24,11 @@ export default function RateWatchScreen() {
       {mode === "error" ? <Banner message={RATE_WATCH_MESSAGES.error} /> : null}
       {mode === "empty" ? <Text style={body}>{RATE_WATCH_MESSAGES.empty}</Text> : null}
       {mode === "loading" ? (
-        <View accessibilityLabel={RATE_WATCH_MESSAGES.loading} accessibilityRole="progressbar" style={{ gap: spacing.md }} testID="rate-watch-skeleton">
+        <LoadingRegion label={RATE_WATCH_MESSAGES.loading} style={{ gap: spacing.md }} testID="rate-watch-skeleton">
           <Skeleton height={64} />
           <Skeleton height={96} />
           <Skeleton height={96} />
-        </View>
+        </LoadingRegion>
       ) : null}
       {mode === "results" && data ? <RateWatchResults data={data} /> : null}
     </ScrollView>

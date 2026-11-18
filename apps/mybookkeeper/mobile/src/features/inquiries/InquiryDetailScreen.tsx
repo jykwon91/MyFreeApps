@@ -1,7 +1,7 @@
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, Chip, EmptyState, KeyboardAwareScroll, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { Banner, Chip, EmptyState, goBackOr, KeyboardAwareScroll, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
@@ -47,12 +47,12 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   if (actions.hasArchived) return <View style={{ flex: 1 }} />;
   if (!isGone && !inquiry && (isFetching || !error)) {
     return (
-      <View accessibilityLabel="Loading this inquiry" style={{ gap: spacing.md, padding: spacing.lg }}>
+      <LoadingRegion label="Loading this inquiry" style={{ gap: spacing.md, padding: spacing.lg }}>
         <Skeleton height={28} width="60%" />
         <Skeleton height={16} width="40%" />
         <Skeleton height={160} />
         <Skeleton height={80} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (isGone || !inquiry) {

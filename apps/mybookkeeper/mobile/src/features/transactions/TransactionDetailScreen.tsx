@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { useDeleteTransactionMutation, useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, goBackOr, LoadingButton, LoadingRegion, OptionSheet, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -37,11 +37,11 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
 
   if (!transaction && (isFetching || !error)) {
     return (
-      <View accessibilityLabel="Loading this transaction" style={{ gap: spacing.md, padding: spacing.lg }} testID="transaction-skeleton">
+      <LoadingRegion label="Loading this transaction" style={{ gap: spacing.md, padding: spacing.lg }} testID="transaction-skeleton">
         <Skeleton height={28} width="60%" />
         <Skeleton height={40} width="40%" />
         <Skeleton height={200} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!transaction) {

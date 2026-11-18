@@ -1,11 +1,11 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES, PAYMENT_REVIEW_SKELETON_ROWS } from "../../constants/paymentReview";
 
 export default function PaymentReviewSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View accessible accessibilityLabel={PAYMENT_REVIEW_MESSAGES.loading} accessibilityRole="progressbar" testID="payment-review-skeleton">
+    <LoadingRegion label={PAYMENT_REVIEW_MESSAGES.loading} testID="payment-review-skeleton">
       <View style={{ padding: spacing.lg }}>
         <Skeleton height={20} width="50%" />
       </View>
@@ -18,6 +18,6 @@ export default function PaymentReviewSkeleton() {
           <Skeleton height={44} />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

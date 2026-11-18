@@ -1,17 +1,11 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { RENTAL_ROI_MESSAGES as MESSAGES, RENTAL_ROI_SKELETON_CARDS } from "../../constants/rentalRoi";
 
 export default function RentalRoiSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View
-      accessible
-      accessibilityLabel={MESSAGES.loading}
-      accessibilityRole="progressbar"
-      style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
-      testID="rental-roi-skeleton"
-    >
+    <LoadingRegion label={MESSAGES.loading} style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }} testID="rental-roi-skeleton">
       {/* Headline */}
       <Skeleton height={28} width="75%" />
       <Skeleton height={14} width="55%" />
@@ -35,6 +29,6 @@ export default function RentalRoiSkeleton() {
           <Skeleton height={14} width="100%" />
         </View>
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

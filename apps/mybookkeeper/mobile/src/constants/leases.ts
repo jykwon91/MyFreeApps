@@ -11,6 +11,8 @@ export const LEASE_MESSAGES = {
   filterLabel: "Current, ended or all leases",
   loading: "Loading your leases",
   loadingOne: "Loading this lease",
+  loadingMore: "Loading more leases",
+  loadingTheirs: "Loading their leases",
   couldntLoad: "I couldn't load your leases.",
   couldntLoadOne: "I couldn't load this lease.",
   couldntLoadTheirs: "I couldn't load their leases.",

@@ -1,6 +1,6 @@
 import { useListSourcesQuery } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
-import { ScrollView, View } from "react-native";
+import { Banner, EmptyState, goBackOr, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { ScrollView } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReconciliationDetailBody from "./ReconciliationDetailBody";
@@ -16,11 +16,11 @@ export default function ReconciliationDetailScreen({ id, year }: { id: string; y
   if (!currentData) {
     if (isFetching || !error) {
       return (
-        <View accessibilityLabel={MESSAGES.detailLoading} style={{ gap: spacing.md, padding: spacing.lg }} testID="reconciliation-detail-skeleton">
+        <LoadingRegion label={MESSAGES.detailLoading} style={{ gap: spacing.md, padding: spacing.lg }} testID="reconciliation-detail-skeleton">
           <Skeleton height={28} width="60%" />
           <Skeleton height={40} width="40%" />
           <Skeleton height={200} />
-        </View>
+        </LoadingRegion>
       );
     }
     return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: async () => void (await refetch()) }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;

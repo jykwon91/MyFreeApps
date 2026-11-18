@@ -1,5 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, LoadingRegion, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
@@ -23,9 +23,9 @@ export default function BankImportPropertyField({ value, onChange, disabled }: B
 
   if (isLoading) {
     return (
-      <View accessible accessibilityLabel={MESSAGES.loadingProperties} accessibilityRole="progressbar">
+      <LoadingRegion label={MESSAGES.loadingProperties}>
         <Skeleton height={56} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (!currentData) {

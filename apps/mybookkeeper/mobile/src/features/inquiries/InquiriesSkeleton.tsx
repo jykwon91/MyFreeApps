@@ -1,5 +1,6 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
+import { INQUIRY_LOADING_MESSAGES } from "../../constants/inquiries";
 
 const ROWS = ["a", "b", "c", "d", "e", "f"];
 
@@ -18,10 +19,10 @@ export function InquirySkeletonRow() {
 
 export default function InquiriesSkeleton() {
   return (
-    <View accessibilityLabel="Loading your inquiries" testID="inquiries-skeleton">
+    <LoadingRegion label={INQUIRY_LOADING_MESSAGES.list} testID="inquiries-skeleton">
       {ROWS.map((row) => (
         <InquirySkeletonRow key={row} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

@@ -1,9 +1,9 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
-import { Chip, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { REMINDER_MESSAGES } from "../../constants/rentReminders";
 import { REMINDER_SETUP_MESSAGES } from "../../constants/rentReminderSetup";
 import InquirySection from "../inquiries/InquirySection";
@@ -30,13 +30,13 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
   if (!overview && isFetching) {
     return (
       <InquirySection title={REMINDER_MESSAGES.section}>
-        <View accessible accessibilityLabel={REMINDER_MESSAGES.loading} accessibilityState={{ busy: true }} style={{ gap: spacing.sm }}>
+        <LoadingRegion label={REMINDER_MESSAGES.loading} style={{ gap: spacing.sm }}>
           <Skeleton height={24} width="70%" />
           <Skeleton height={96} width="100%" />
           <Skeleton height={56} width="100%" />
           <Skeleton height={20} width="100%" />
           <Skeleton height={20} width="100%" />
-        </View>
+        </LoadingRegion>
       </InquirySection>
     );
   }
@@ -63,7 +63,9 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
     if (!ledger && isLedgerFetching) {
       return (
         <InquirySection title={REMINDER_MESSAGES.section}>
-          <Skeleton height={56} width="100%" />
+          <LoadingRegion label={REMINDER_MESSAGES.loading}>
+            <Skeleton height={56} width="100%" />
+          </LoadingRegion>
         </InquirySection>
       );
     }

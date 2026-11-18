@@ -1,5 +1,6 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
+import { TRANSACTION_LIST_MESSAGES } from "../../constants/transactionList";
 
 const ROWS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
@@ -18,10 +19,10 @@ export function TransactionSkeletonRow() {
 
 export default function TransactionsSkeleton() {
   return (
-    <View accessibilityLabel="Loading your transactions" testID="transactions-skeleton">
+    <LoadingRegion label={TRANSACTION_LIST_MESSAGES.loading} testID="transactions-skeleton">
       {ROWS.map((row) => (
         <TransactionSkeletonRow key={row} />
       ))}
-    </View>
+    </LoadingRegion>
   );
 }

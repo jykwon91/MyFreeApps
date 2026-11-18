@@ -1,4 +1,4 @@
-import { Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { VENDOR_RULE_DETAIL_SKELETON_FACTS, VENDOR_RULE_MESSAGES } from "../../constants/vendorRules";
 
@@ -6,13 +6,7 @@ import { VENDOR_RULE_DETAIL_SKELETON_FACTS, VENDOR_RULE_MESSAGES } from "../../c
 export default function VendorRuleDetailSkeleton() {
   const { spacing } = useTheme();
   return (
-    <View
-      accessible
-      accessibilityLabel={VENDOR_RULE_MESSAGES.loadingOne}
-      accessibilityRole="progressbar"
-      style={{ gap: spacing.lg, padding: spacing.lg }}
-      testID="vendor-rule-detail-skeleton"
-    >
+    <LoadingRegion label={VENDOR_RULE_MESSAGES.loadingOne} style={{ gap: spacing.lg, padding: spacing.lg }} testID="vendor-rule-detail-skeleton">
       <View style={{ gap: spacing.xs }}>
         <Skeleton height={28} width="65%" />
         <Skeleton height={20} width="30%" />
@@ -24,6 +18,6 @@ export default function VendorRuleDetailSkeleton() {
         </View>
       ))}
       <Skeleton height={44} />
-    </View>
+    </LoadingRegion>
   );
 }

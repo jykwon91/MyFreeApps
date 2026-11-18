@@ -1,7 +1,7 @@
 import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { INSURANCE_COMPARISON_CARD_MODES } from "@mybookkeeper/api-client/types/insurance/insurance-comparison-card-mode";
 import { resolveInsuranceComparisonCardMode } from "@mybookkeeper/api-client/utils/insuranceComparisonCardMode";
-import { Banner, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
@@ -31,10 +31,10 @@ export default function PremiumCheckCard() {
   if (mode === INSURANCE_COMPARISON_CARD_MODES.HIDDEN) return null;
   if (mode === INSURANCE_COMPARISON_CARD_MODES.LOADING) {
     return (
-      <View accessibilityLabel={INSURANCE_MESSAGES.premiumCheck} accessibilityRole="progressbar" style={box} testID="premium-check-skeleton">
+      <LoadingRegion label={INSURANCE_MESSAGES.premiumCheck} style={box} testID="premium-check-skeleton">
         <Skeleton height={20} width="40%" />
         <Skeleton height={14} />
-      </View>
+      </LoadingRegion>
     );
   }
   if (mode === INSURANCE_COMPARISON_CARD_MODES.ERROR) {

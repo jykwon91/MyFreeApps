@@ -5,6 +5,8 @@ export const LOST_SEND_HOLD_MS = 30_000;
 export const REMINDER_MESSAGES = {
   section: "Rent reminders",
   loading: "Loading rent reminders",
+  loadingNext: "Loading the next reminder",
+  loadingHistory: "Loading the reminders sent",
   couldntLoad: "I couldn't load the rent reminders.",
   couldntLoadNext: "I couldn't load the next reminder.",
   couldntLoadHistory: "I couldn't load the history.",
