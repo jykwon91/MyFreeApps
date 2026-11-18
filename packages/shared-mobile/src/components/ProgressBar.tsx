@@ -1,9 +1,9 @@
-import { useTheme } from "@platform/mobile";
 import { View } from "react-native";
-import type { ResumeProgressBarProps } from "../../types/ResumeProgressBarProps";
+import { useTheme } from "../theme/useTheme";
+import type { ProgressBarProps } from "../types/ProgressBarProps";
 
-/** How far through the suggestions the session is, read out as a count. */
-export default function ResumeProgressBar({ completed, total, accessibilityLabel }: ResumeProgressBarProps) {
+/** A thin determinate bar that a screen reader treats as one labelled progress bar with a spoken value. */
+export default function ProgressBar({ completed, total, accessibilityLabel, valueText }: ProgressBarProps) {
   const { colors, radius } = useTheme();
   const share = total > 0 ? Math.min(completed / total, 1) : 0;
   return (
@@ -11,7 +11,7 @@ export default function ResumeProgressBar({ completed, total, accessibilityLabel
       accessible
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: total, now: completed }}
+      accessibilityValue={{ min: 0, max: total, now: completed, text: valueText }}
       style={{ height: 6, borderRadius: radius.full, backgroundColor: colors.muted, overflow: "hidden" }}
     >
       <View style={{ width: `${share * 100}%`, height: "100%", backgroundColor: colors.primary }} />

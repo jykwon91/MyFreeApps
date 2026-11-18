@@ -4,7 +4,7 @@ import { IMPROVEMENT_TYPE_LABELS } from "@myjobhunter/api-client/constants/impro
 import { SuggestionMode } from "@myjobhunter/api-client/types/resume-refinement/suggestion-mode";
 import { activeRefinementTarget } from "@myjobhunter/api-client/utils/activeRefinementTarget";
 import { plainDraftText } from "@myjobhunter/api-client/utils/plainDraftText";
-import { Chip, LoadingButton, useAnnouncement, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, ProgressBar, useAnnouncement, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import type { ResumeSuggestionCardProps } from "../../types/ResumeSuggestionCardProps";
@@ -12,7 +12,6 @@ import ResumeCard from "./ResumeCard";
 import ResumeComposer from "./ResumeComposer";
 import ResumeCustomSheet from "./ResumeCustomSheet";
 import ResumeNavButtons from "./ResumeNavButtons";
-import ResumeProgressBar from "./ResumeProgressBar";
 import ResumeSuggestionBody from "./ResumeSuggestionBody";
 
 /** The website's suggestion card: where the session is, the line, the rewrite, and every way to answer it. */
@@ -40,7 +39,7 @@ export default function ResumeSuggestionCard({ session, proposal, customFailure 
         {/* A picked line's placeholder type says nothing next to "Your pick". */}
         {target && !isUserTarget ? <Chip label={IMPROVEMENT_TYPE_LABELS[target.improvement_type]} tone="info" /> : null}
       </View>
-      <ResumeProgressBar accessibilityLabel={MESSAGES.suggestionProgress(session.target_index, total)} completed={session.target_index} total={total} />
+      <ProgressBar accessibilityLabel={MESSAGES.suggestionProgress(session.target_index, total)} completed={session.target_index} total={total} />
       {target ? (
         <View style={{ gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.muted }}>
           <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs, fontWeight: "600" }}>{`${MESSAGES.currently} · ${target.section}`}</Text>

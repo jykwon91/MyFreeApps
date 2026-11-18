@@ -94,7 +94,7 @@ describe("SyncSessionScreen: the sync", () => {
   it("shows progress for a running sync and cancels it", async () => {
     const server = startIntegrationsServer({ logs: [aSyncLog({ id: 5, status: "running", completed_at: null, emails_total: 10, emails_done: 4 })] });
     await renderScreen(<SyncSessionScreen id={5} />);
-    await screen.findByText("4 / 10");
+    expect(await screen.findByRole("progressbar", { name: MESSAGES.syncProgress })).toHaveProp("accessibilityValue", { min: 0, max: 10, now: 4, text: MESSAGES.syncProgressValue(4, 10) });
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.cancelThisSync }));
     await screen.findByText(MESSAGES.cancelled);
     expect(writesMade(server)).toEqual(["POST /integrations/gmail/sync/cancel"]);
