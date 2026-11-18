@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-18",
+    "title": "MGA Dungeon Quests is now a dungeon journal",
+    "summary": "Type /mgadq in game for a journal laid out like Blizzard's Dungeon Journal, using the game's own art. Every dungeon sits on a grid. Open one for its bosses with portraits, what each drops and how often, and your quest checklist with ticks and map pins. Download the new version from any dungeon page.",
+    "to": "/wow-forever/dungeons?addon=open"
+  },
+  {
     "date": "2026-11-17",
     "title": "Guild: gear upgrades say what they're worth",
     "summary": "Gear upgrades on the guild's Help each other tab now say what they're worth in the wearer's top stat, like \"Worth +4 Intellect\", instead of a percentage that ran wild when the old item had stats the spec doesn't use. The biggest upgrades are listed first.",

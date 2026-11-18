@@ -3,6 +3,20 @@
 MGADungeonQuestsData = {
   {
     key = "ragefire-chasm", instanceId = 389, name = "Ragefire Chasm", levelMin = 13, levelMax = 13, aliases = {"RFC"},
+    players = 10, art = {button = 608211, lore = 608250},
+    bosses = {
+      {name = "Oggleflint", portrait = 607730},
+      {name = "Taragaman the Hungerer", portrait = 607781, loot = {
+        {id = 14148, name = "Crystalline Cuffs", slot = "Wrist", kind = "Cloth", chance = 40},
+        {id = 14149, name = "Subterranean Cape", slot = "Back", chance = 40},
+      }},
+      {name = "Jergosh the Invoker", portrait = 607668, loot = {
+        {id = 14147, name = "Cavedweller Bracers", slot = "Wrist", kind = "Mail", chance = 40},
+        {id = 14150, name = "Robe of Evocation", slot = "Chest", kind = "Cloth", chance = 40},
+        {id = 14151, name = "Chanting Blade", slot = "One-Hand", kind = "Dagger", chance = 20},
+      }},
+      {name = "Bazzalan", portrait = 607554},
+    },
     horde = {
       {titles = {"Testing an Enemy's Strength"}, steps = {
         {id = 5723, title = "Testing an Enemy's Strength", level = 15, minLevel = 9, dungeon = true, giver = "Rahauro", where = "Thunder Bluff 70.1, 29.5", map = 1456, x = 70.1, y = 29.5, objectives = {"Kill 8 Ragefire Trogg", "Kill 8 Ragefire Shaman"}, turnIn = "Rahauro"},
@@ -25,7 +39,69 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "the-hall-of-thanes", instanceId = 3065, name = "The Hall of Thanes", levelMin = 13, levelMax = 13,
+    isNew = true,
+    bosses = {
+      {name = "Faldrim Anvilmar"},
+      {name = "Infurnus"},
+      {name = "Plunder"},
+      {name = "Durgen Dirgehammer"},
+    },
+  },
+  {
+    key = "ruins-of-lordaeron", instanceId = 2999, name = "Ruins of Lordaeron", levelMin = 15, levelMax = 15,
+    isNew = true,
+    bosses = {
+      {name = "Witherfang"},
+      {name = "The Abandoned"},
+      {name = "The Butcher", portrait = 1044375},
+      {name = "Lordaeron Captain"},
+      {name = "Viktor the Vile"},
+      {name = "Bjork"},
+      {name = "Rath'mael"},
+    },
+  },
+  {
     key = "deadmines", instanceId = 36, name = "Deadmines", levelMin = 16, levelMax = 16, aliases = {"The Deadmines", "VC"},
+    players = 10, art = {button = 522352, lore = 526404},
+    bosses = {
+      {name = "Rhahk'Zor", portrait = 5875511, loot = {
+        {id = 5187, name = "Rhahk'Zor's Hammer", slot = "Two-Hand", kind = "Mace", chance = 95},
+        {id = 872, name = "Rockslicer", slot = "Two-Hand", kind = "Axe", chance = 5},
+      }},
+      {name = "Sneed", portrait = 5875512, loot = {
+        {id = 5195, name = "Gold-flecked Gloves", slot = "Hands", kind = "Cloth", chance = 65},
+        {id = 5194, name = "Taskmaster Axe", slot = "Two-Hand", kind = "Axe", chance = 35},
+      }},
+      {name = "Miner Johnson", loot = {
+        {id = 5443, name = "Gold-plated Buckler", slot = "Off Hand", kind = "Shield", chance = 49.2},
+        {id = 5444, name = "Miner's Cape", slot = "Back", chance = 49.2},
+      }},
+      {name = "Gilnid", portrait = 5875508, loot = {
+        {id = 5199, name = "Smelting Pants", slot = "Legs", kind = "Leather", chance = 55},
+        {id = 1156, name = "Lavishly Jeweled Ring", slot = "Finger", chance = 45},
+      }},
+      {name = "Captain Greenskin", portrait = 5875505, loot = {
+        {id = 5201, name = "Emberstone Staff", slot = "Two-Hand", kind = "Staff", chance = 40},
+        {id = 5200, name = "Impaling Harpoon", slot = "Two-Hand", kind = "Polearm", chance = 30},
+        {id = 10403, name = "Blackened Defias Belt", slot = "Waist", kind = "Leather", chance = 30},
+      }},
+      {name = "Mr. Smite", portrait = 5875509, loot = {
+        {id = 5192, name = "Thief's Blade", slot = "One-Hand", kind = "Sword", chance = 40},
+        {id = 5196, name = "Smite's Reaver", slot = "One-Hand", kind = "Axe", chance = 40},
+        {id = 7230, name = "Smite's Mighty Hammer", slot = "Two-Hand", kind = "Mace", chance = 20},
+      }},
+      {name = "Cookie", portrait = 5875506, loot = {
+        {id = 5197, name = "Cookie's Tenderizer", slot = "One-Hand", kind = "Mace", chance = 65},
+        {id = 11982, name = "Viridian Band", slot = "Finger", chance = 6},
+      }},
+      {name = "Edwin VanCleef", portrait = 5875507, loot = {
+        {id = 5193, name = "Cape of the Brotherhood", slot = "Back", chance = 30},
+        {id = 5202, name = "Corsair's Overshirt", slot = "Chest", kind = "Cloth", chance = 30},
+        {id = 5191, name = "Cruel Barb", slot = "One-Hand", kind = "Sword", chance = 20},
+        {id = 10399, name = "Blackened Defias Armor", slot = "Chest", kind = "Leather", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"Red Silk Bandanas", "The Defias Brotherhood"}, steps = {
         {id = 65, title = "The Defias Brotherhood", level = 18, minLevel = 14, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)", map = 1436, x = 56.3, y = 47.5, turnIn = "Wiley the Black"},
@@ -62,6 +138,44 @@ MGADungeonQuestsData = {
   },
   {
     key = "wailing-caverns", instanceId = 43, name = "Wailing Caverns", levelMin = 17, levelMax = 17, aliases = {"WC"},
+    players = 10, art = {button = 608229, lore = 608313},
+    bosses = {
+      {name = "Lady Anacondra", portrait = 607680, loot = {
+        {id = 5404, name = "Serpent's Shoulders", slot = "Shoulder", kind = "Leather", chance = 40},
+        {id = 10412, name = "Belt of the Fang", slot = "Waist", kind = "Leather", chance = 10},
+      }},
+      {name = "Lord Cobrahn", portrait = 607693, loot = {
+        {id = 6465, name = "Robe of the Moccasin", slot = "Chest", kind = "Cloth", chance = 60},
+        {id = 6460, name = "Cobrahn's Grasp", slot = "Waist", kind = "Mail", chance = 20},
+        {id = 10410, name = "Leggings of the Fang", slot = "Legs", kind = "Leather", chance = 20},
+      }},
+      {name = "Kresh", portrait = 607676, loot = {
+        {id = 6447, name = "Worn Turtle Shell Shield", slot = "Off Hand", kind = "Shield", chance = 90},
+        {id = 13245, name = "Kresh's Back", slot = "Off Hand", kind = "Shield", chance = 10},
+      }},
+      {name = "Lord Pythas", portrait = 607696, loot = {
+        {id = 6473, name = "Armor of the Fang", slot = "Chest", kind = "Leather", chance = 60},
+      }},
+      {name = "Skum", portrait = 607775, loot = {
+        {id = 6448, name = "Tail Spike", slot = "One-Hand", kind = "Dagger", chance = 50},
+        {id = 6449, name = "Glowing Lizardscale Cloak", slot = "Back", chance = 50},
+      }},
+      {name = "Lord Serpentis", portrait = 607698, loot = {
+        {id = 5970, name = "Serpent Gloves", slot = "Hands", kind = "Cloth", chance = 25},
+        {id = 6459, name = "Savage Trodders", slot = "Feet", kind = "Mail", chance = 25},
+        {id = 10411, name = "Footpads of the Fang", slot = "Feet", kind = "Leather", chance = 25},
+      }},
+      {name = "Verdan the Everliving", portrait = 607805, loot = {
+        {id = 6630, name = "Seedcloud Buckler", slot = "Off Hand", kind = "Shield", chance = 40},
+        {id = 6631, name = "Living Root", slot = "Two-Hand", kind = "Staff", chance = 40},
+        {id = 6629, name = "Sporid Cape", slot = "Back", chance = 20},
+      }},
+      {name = "Mutanus the Devourer", portrait = 607721, loot = {
+        {id = 6461, name = "Slime-encrusted Pads", slot = "Shoulder", kind = "Cloth", chance = 33.3},
+        {id = 6463, name = "Deep Fathom Ring", slot = "Finger", chance = 33.3},
+        {id = 6627, name = "Mutant Scale Breastplate", slot = "Chest", kind = "Mail", chance = 33.3},
+      }},
+    },
     alliance = {
       {titles = {"Deviate Hides"}, steps = {
         {id = 1486, title = "Deviate Hides", level = 17, minLevel = 13, dungeon = true, giver = "Nalpak", where = "The Barrens 46.0, 35.7 (Lushwater Oasis)", map = 1413, x = 46.0, y = 35.7, objectives = {"Collect 20 Deviate Hide"}, turnIn = "Nalpak"},
@@ -113,6 +227,42 @@ MGADungeonQuestsData = {
   },
   {
     key = "shadowfang-keep", instanceId = 33, name = "Shadowfang Keep", levelMin = 18, levelMax = 18, aliases = {"SFK"},
+    players = 10, art = {button = 522358, lore = 526410},
+    bosses = {
+      {name = "Rethilgore", loot = {
+        {id = 5254, name = "Rugged Spaulders", slot = "Shoulder", kind = "Leather", chance = 100},
+      }},
+      {name = "Razorclaw the Butcher", loot = {
+        {id = 6226, name = "Bloody Apron", slot = "Chest", kind = "Cloth", chance = 45},
+        {id = 6633, name = "Butcher's Slicer", slot = "One-Hand", kind = "Sword", chance = 45},
+        {id = 1292, name = "Butcher's Cleaver", slot = "One-Hand", kind = "Axe", chance = 10},
+      }},
+      {name = "Baron Silverlaine", portrait = 522206, loot = {
+        {id = 6323, name = "Baron's Scepter", slot = "Main Hand", kind = "Mace", chance = 70},
+        {id = 6321, name = "Silverlaine's Family Seal", slot = "Finger", chance = 30},
+      }},
+      {name = "Commander Springvale", portrait = 522213, loot = {
+        {id = 3191, name = "Arced War Axe", slot = "Two-Hand", kind = "Axe", chance = 50},
+        {id = 6320, name = "Commander's Crest", slot = "Off Hand", kind = "Shield", chance = 50},
+      }},
+      {name = "Odo the Blindwatcher", loot = {
+        {id = 6319, name = "Girdle of the Blindwatcher", slot = "Waist", kind = "Leather", chance = 60},
+        {id = 6318, name = "Odo's Ley Staff", slot = "Two-Hand", kind = "Staff", chance = 40},
+      }},
+      {name = "Fenrus the Devourer", loot = {
+        {id = 6340, name = "Fenrus' Hide", slot = "Back", chance = 70},
+        {id = 3230, name = "Black Wolf Bracers", slot = "Wrist", kind = "Leather", chance = 30},
+      }},
+      {name = "Wolf Master Nandos", loot = {
+        {id = 3748, name = "Feline Mantle", slot = "Shoulder", kind = "Cloth", chance = 60},
+        {id = 6314, name = "Wolfmaster Cape", slot = "Back", chance = 40},
+      }},
+      {name = "Archmage Arugal", loot = {
+        {id = 6324, name = "Robes of Arugal", slot = "Chest", kind = "Cloth", chance = 40},
+        {id = 6392, name = "Belt of Arugal", slot = "Waist", kind = "Cloth", chance = 40},
+        {id = 6220, name = "Meteor Shard", slot = "One-Hand", kind = "Dagger", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"The Test of Righteousness"}, classes = {"paladin"}, steps = {
         {id = 1649, title = "The Tome of Valor", level = 20, minLevel = 20, giver = "Tome of Valor", item = true, turnIn = "Duthorian Rall"},
@@ -143,6 +293,33 @@ MGADungeonQuestsData = {
   },
   {
     key = "blackfathom-deeps", instanceId = 48, name = "Blackfathom Deeps", levelMin = 22, levelMax = 22, aliases = {"BFD"},
+    players = 10, art = {button = 608195, lore = 608234},
+    bosses = {
+      {name = "Ghamoo-ra", portrait = 1064179, loot = {
+        {id = 6908, name = "Ghamoo-ra's Bind", slot = "Waist", kind = "Cloth", chance = 60},
+      }},
+      {name = "Lady Sarevess", portrait = 607682, loot = {
+        {id = 888, name = "Naga Battle Gloves", slot = "Hands", kind = "Leather", chance = 40},
+      }},
+      {name = "Geilhast", loot = {
+        {id = 6905, name = "Reef Axe", slot = "Two-Hand", kind = "Axe", chance = 50},
+        {id = 6906, name = "Algae Fists", slot = "Hands", kind = "Mail", chance = 50},
+      }},
+      {name = "Lorgus Jett", portrait = 607701},
+      {name = "Old Serra'kis", portrait = 607733, loot = {
+        {id = 6901, name = "Glowing Thresher Cape", slot = "Back", chance = 40},
+        {id = 6902, name = "Bands of Serra'kis", slot = "Wrist", kind = "Leather", chance = 30},
+        {id = 6904, name = "Bite of Serra'kis", slot = "One-Hand", kind = "Dagger", chance = 30},
+      }},
+      {name = "Twilight Lord Kelris", portrait = 607800, loot = {
+        {id = 1155, name = "Rod of the Sleepwalker", slot = "Two-Hand", kind = "Staff", chance = 60},
+        {id = 6903, name = "Gaze Dreamer Pants", slot = "Legs", kind = "Cloth", chance = 40},
+      }},
+      {name = "Aku'mai", portrait = 607532, loot = {
+        {id = 6910, name = "Leech Pants", slot = "Legs", kind = "Cloth", chance = 40},
+        {id = 6911, name = "Moss Cinch", slot = "Waist", kind = "Leather", chance = 40},
+      }},
+    },
     alliance = {
       {titles = {"Knowledge in the Deeps"}, steps = {
         {id = 971, title = "Knowledge in the Deeps", level = 23, minLevel = 18, dungeon = true, giver = "Gerrig Bonegrip", where = "Ironforge 50.8, 5.6", map = 1455, x = 50.8, y = 5.6, objectives = {"Collect Lorgalis Manuscript"}, turnIn = "Gerrig Bonegrip"},
@@ -184,6 +361,16 @@ MGADungeonQuestsData = {
   },
   {
     key = "stormwind-stockade", instanceId = 34, name = "Stormwind Stockade", levelMin = 23, levelMax = 23, aliases = {"The Stockade", "Stockades", "Stocks"},
+    players = 10, art = {button = 608223, lore = 608262},
+    bosses = {
+      {name = "Targorr the Dread"},
+      {name = "Kam Deepfury", loot = {
+        {id = 2280, name = "Kam's Walking Stick", slot = "Two-Hand", kind = "Staff", chance = 1.2},
+      }},
+      {name = "Hamhock"},
+      {name = "Dextren Ward"},
+      {name = "Bazil Thredd"},
+    },
     alliance = {
       {titles = {"What Comes Around..."}, steps = {
         {id = 386, title = "What Comes Around...", level = 25, minLevel = 22, dungeon = true, giver = "Guard Berton", where = "Redridge Mountains 21.2, 46.6 (Lakeshire)", map = 1433, x = 21.2, y = 46.6, objectives = {"Collect Head of Targorr"}, turnIn = "Guard Berton"},
@@ -210,6 +397,29 @@ MGADungeonQuestsData = {
   },
   {
     key = "razorfen-kraul", instanceId = 47, name = "Razorfen Kraul", levelMin = 24, levelMax = 24, aliases = {"RFK"},
+    players = 10, art = {button = 608213, lore = 608252},
+    bosses = {
+      {name = "Roogug", portrait = 607760},
+      {name = "Aggem Thorncurse", portrait = 607531},
+      {name = "Death Speaker Jargba", portrait = 607584, loot = {
+        {id = 6682, name = "Death Speaker Robes", slot = "Chest", kind = "Cloth", chance = 40},
+        {id = 6685, name = "Death Speaker Mantle", slot = "Shoulder", kind = "Cloth", chance = 40},
+        {id = 2816, name = "Death Speaker Scepter", slot = "Main Hand", kind = "Mace", chance = 20},
+      }},
+      {name = "Overlord Ramtusk", portrait = 607736, loot = {
+        {id = 6686, name = "Tusken Helm", slot = "Head", kind = "Mail", chance = 60},
+        {id = 6687, name = "Corpsemaker", slot = "Two-Hand", kind = "Axe", chance = 40},
+      }},
+      {name = "Agathelos the Raging", portrait = 607530, loot = {
+        {id = 6690, name = "Ferine Leggings", slot = "Legs", kind = "Leather", chance = 60},
+        {id = 6691, name = "Swinetusk Shank", slot = "Main Hand", kind = "Dagger", chance = 40},
+      }},
+      {name = "Charlga Razorflank", portrait = 607563, loot = {
+        {id = 6693, name = "Agamaggan's Clutch", slot = "Finger", chance = 40},
+        {id = 6694, name = "Heart of Agamaggan", slot = "Off Hand", kind = "Shield", chance = 40},
+        {id = 6692, name = "Pronged Reaver", slot = "One-Hand", kind = "Axe", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"Blueleaf Tubers"}, steps = {
         {id = 1221, title = "Blueleaf Tubers", level = 26, minLevel = 20, dungeon = true, giver = "Mebok Mizzyrix", where = "The Barrens 62.4, 37.6 (Ratchet)", map = 1413, x = 62.4, y = 37.6, objectives = {"Collect 6 Blueleaf Tuber", "Collect Crate With Holes", "Collect Snufflenose Owner's Manual", "Collect Snufflenose Command Stick"}, turnIn = "Mebok Mizzyrix"},
@@ -257,6 +467,30 @@ MGADungeonQuestsData = {
   },
   {
     key = "gnomeregan", instanceId = 90, name = "Gnomeregan", levelMin = 25, levelMax = 25, aliases = {"Gnomer"},
+    players = 10, art = {button = 608202, lore = 608241},
+    bosses = {
+      {name = "Grubbis", portrait = 607628, loot = {
+        {id = 9445, name = "Grubbis Paws", slot = "Hands", kind = "Mail", chance = 10},
+      }},
+      {name = "Viscous Fallout", portrait = 607808, loot = {
+        {id = 9454, name = "Acidic Walkers", slot = "Feet", kind = "Cloth", chance = 55},
+        {id = 9452, name = "Hydrocane", slot = "Two-Hand", kind = "Staff", chance = 20},
+      }},
+      {name = "Electrocutioner 6000", portrait = 607594, loot = {
+        {id = 9447, name = "Electrocutioner Lagnut", slot = "Finger", chance = 40},
+        {id = 9448, name = "Spidertank Oilrag", slot = "Wrist", kind = "Cloth", chance = 40},
+      }},
+      {name = "Crowd Pummeler 9-60", portrait = 607572, loot = {
+        {id = 9450, name = "Gnomebot Operating Boots", slot = "Feet", kind = "Leather", chance = 60},
+        {id = 9449, name = "Manual Crowd Pummeler", slot = "Two-Hand", kind = "Mace", chance = 40},
+      }},
+      {name = "Mekgineer Thermaplugg", portrait = 607714, loot = {
+        {id = 9458, name = "Thermaplugg's Central Core", slot = "Off Hand", kind = "Shield", chance = 30},
+        {id = 9461, name = "Charged Gear", slot = "Finger", chance = 30},
+        {id = 9459, name = "Thermaplugg's Left Arm", slot = "Two-Hand", kind = "Axe", chance = 25},
+        {id = 9492, name = "Electromagnetic Gigaflux Reactivator", slot = "Head", kind = "Cloth", chance = 15},
+      }},
+    },
     alliance = {
       {titles = {"Save Techbot's Brain!"}, steps = {
         {id = 2923, title = "Tinkmaster Overspark", level = 26, minLevel = 20, giver = "Brother Sarno", where = "Stormwind City 51.1, 48.4", map = 1453, x = 51.1, y = 48.4, turnIn = "Tinkmaster Overspark"},
@@ -315,7 +549,68 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "excavation-site-wetlands", instanceId = 2998, name = "Excavation Site: Wetlands", levelMin = 26, levelMax = 26,
+    isNew = true,
+    bosses = {
+      {name = "Saltspine"},
+      {name = "Shadetooth"},
+      {name = "Highland Horror"},
+      {name = "Relic Guardian"},
+    },
+  },
+  {
+    key = "city-of-dalaran", instanceId = 2959, name = "City of Dalaran", levelMin = 28, levelMax = 28,
+    isNew = true,
+    bosses = {
+      {name = "Arcane Anomaly"},
+      {name = "Fel Ancient"},
+      {name = "Mana Devourer", portrait = 1536492},
+      {name = "Mana Elemental"},
+      {name = "Unstable Sentinel"},
+      {name = "Lyn the Ignored"},
+      {name = "Atrexis the Grave Knight"},
+      {name = "Mana Wraith"},
+      {name = "Shade of the Archmage"},
+    },
+  },
+  {
     key = "scarlet-monastery", instanceId = 189, name = "Scarlet Monastery", levelMin = 30, levelMax = 30, aliases = {"SM"},
+    players = 10, art = {button = 608214, lore = 608253},
+    bosses = {
+      {name = "Interrogator Vishas", portrait = 607662, loot = {
+        {id = 7683, name = "Bloody Brass Knuckles", slot = "One-Hand", kind = "Fist Weapon", chance = 90},
+      }},
+      {name = "Bloodmage Thalnos", portrait = 607557, loot = {
+        {id = 7684, name = "Bloodmage Mantle", slot = "Shoulder", kind = "Cloth", chance = 50},
+        {id = 7685, name = "Orb of the Forgotten Seer", slot = "Held In Off-hand", chance = 50},
+      }},
+      {name = "Houndmaster Loksey", portrait = 607648, loot = {
+        {id = 7756, name = "Dog Training Gloves", slot = "Hands", kind = "Leather", chance = 60},
+        {id = 3456, name = "Dog Whistle", slot = "Trinket", chance = 30},
+        {id = 7710, name = "Loksey's Training Stick", slot = "Two-Hand", kind = "Staff", chance = 10},
+      }},
+      {name = "Arcanist Doan", portrait = 607545, loot = {
+        {id = 7711, name = "Robe of Doan", slot = "Chest", kind = "Cloth", chance = 25},
+        {id = 7712, name = "Mantle of Doan", slot = "Shoulder", kind = "Cloth", chance = 25},
+        {id = 7713, name = "Illusionary Rod", slot = "Two-Hand", kind = "Staff", chance = 25},
+        {id = 7714, name = "Hypnotic Blade", slot = "Main Hand", kind = "Dagger", chance = 25},
+      }},
+      {name = "Herod", portrait = 607640, loot = {
+        {id = 7718, name = "Herod's Shoulder", slot = "Shoulder", kind = "Mail", chance = 35},
+        {id = 7719, name = "Raging Berserker's Helm", slot = "Head", kind = "Mail", chance = 35},
+        {id = 10330, name = "Scarlet Leggings", slot = "Legs", kind = "Mail", chance = 15},
+      }},
+      {name = "High Inquisitor Fairbanks", portrait = 607642, loot = {
+        {id = 19507, name = "Inquisitor's Shawl", slot = "Shoulder", kind = "Cloth", chance = 33.3},
+        {id = 19508, name = "Branded Leather Bracers", slot = "Wrist", kind = "Leather", chance = 33.3},
+        {id = 19509, name = "Dusty Mail Boots", slot = "Feet", kind = "Mail", chance = 33.3},
+      }},
+      {name = "High Inquisitor Whitemane", portrait = 607643, loot = {
+        {id = 7720, name = "Whitemane's Chapeau", slot = "Head", kind = "Cloth", chance = 40},
+        {id = 7722, name = "Triune Amulet", slot = "Neck", chance = 40},
+        {id = 7721, name = "Hand of Righteousness", slot = "Main Hand", kind = "Mace", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"Mythology of the Titans"}, steps = {
         {id = 1050, title = "Mythology of the Titans", level = 38, minLevel = 28, dungeon = true, giver = "Librarian Mae Paledust", where = "Ironforge 75.0, 12.5", map = 1455, x = 75.0, y = 12.5, objectives = {"Collect Mythology of the Titans"}, turnIn = "Librarian Mae Paledust"},
@@ -367,6 +662,38 @@ MGADungeonQuestsData = {
   },
   {
     key = "razorfen-downs", instanceId = 129, name = "Razorfen Downs", levelMin = 34, levelMax = 34, aliases = {"RFD"},
+    players = 10, art = {button = 608212, lore = 608251},
+    bosses = {
+      {name = "Tuten'kash", portrait = 607799, loot = {
+        {id = 10775, name = "Carapace of Tuten'kash", slot = "Chest", kind = "Plate", chance = 33.3},
+        {id = 10776, name = "Silky Spider Cape", slot = "Back", chance = 33.3},
+        {id = 10777, name = "Arachnid Gloves", slot = "Hands", kind = "Leather", chance = 33.3},
+      }},
+      {name = "Plaguemaw the Rotting", loot = {
+        {id = 10760, name = "Swine Fists", slot = "Hands", kind = "Leather", chance = 60},
+        {id = 10766, name = "Plaguerot Sprig", slot = "Ranged", kind = "Wand", chance = 40},
+      }},
+      {name = "Mordresh Fire Eye", portrait = 607718, loot = {
+        {id = 10769, name = "Glowing Eye of Mordresh", slot = "Neck", chance = 33.3},
+        {id = 10770, name = "Mordresh's Lifeless Skull", slot = "Held In Off-hand", chance = 33.3},
+        {id = 10771, name = "Deathmage Sash", slot = "Waist", kind = "Cloth", chance = 33.3},
+      }},
+      {name = "Ragglesnout", loot = {
+        {id = 10767, name = "Savage Boar's Guard", slot = "Off Hand", kind = "Shield", chance = 40},
+        {id = 10768, name = "Boar Champion's Belt", slot = "Waist", kind = "Mail", chance = 40},
+        {id = 10758, name = "X'caliboar", slot = "Two-Hand", kind = "Sword", chance = 20},
+      }},
+      {name = "Glutton", portrait = 607617, loot = {
+        {id = 10774, name = "Fleshhide Shoulders", slot = "Shoulder", kind = "Leather", chance = 50},
+      }},
+      {name = "Amnennar the Coldbringer", portrait = 607537, loot = {
+        {id = 10761, name = "Coldrage Dagger", slot = "One-Hand", kind = "Dagger", chance = 20},
+        {id = 10762, name = "Robes of the Lich", slot = "Chest", kind = "Cloth", chance = 20},
+        {id = 10763, name = "Icemetal Barbute", slot = "Head", kind = "Plate", chance = 20},
+        {id = 10764, name = "Deathchill Armor", slot = "Chest", kind = "Mail", chance = 20},
+        {id = 10765, name = "Bonefingers", slot = "Hands", kind = "Leather", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"A Host of Evil"}, steps = {
         {id = 6626, title = "A Host of Evil", level = 35, minLevel = 28, dungeon = true, giver = "Myriam Moonsinger", where = "The Barrens 49.0, 94.9 (Razorfen Downs)", map = 1413, x = 49.0, y = 94.9, objectives = {"Kill 8 Razorfen Battleguard", "Kill 8 Razorfen Thornweaver", "Kill 8 Death's Head Cultist"}, turnIn = "Myriam Moonsinger"},
@@ -397,7 +724,59 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "the-drowned-city", instanceId = 2970, name = "The Drowned City", levelMin = 35, levelMax = 35,
+    isNew = true,
+    bosses = {
+      {name = "Zul'Alai"},
+      {name = "Var'Taka"},
+      {name = "Captain Dreadrise"},
+      {name = "Deathless Guardians"},
+      {name = "Primeval Elemental"},
+      {name = "Min'loth the Serpent"},
+    },
+  },
+  {
     key = "uldaman", instanceId = 70, name = "Uldaman", levelMin = 35, levelMax = 35, aliases = {"Ulda"},
+    players = 10, art = {button = 608225, lore = 608264},
+    bosses = {
+      {name = "Revelosh", portrait = 607757, loot = {
+        {id = 9387, name = "Revelosh's Boots", slot = "Feet", kind = "Plate", chance = 25},
+        {id = 9388, name = "Revelosh's Armguards", slot = "Wrist", kind = "Mail", chance = 25},
+        {id = 9389, name = "Revelosh's Spaulders", slot = "Shoulder", kind = "Leather", chance = 25},
+        {id = 9390, name = "Revelosh's Gloves", slot = "Hands", kind = "Cloth", chance = 25},
+      }},
+      {name = "The Lost Dwarves", portrait = 4741530, loot = {
+        {id = 9400, name = "Baelog's Shortbow", slot = "Ranged", kind = "Bow", chance = 90},
+        {id = 9394, name = "Horned Viking Helmet", slot = "Head", kind = "Plate", chance = 50},
+        {id = 9398, name = "Worn Running Boots", slot = "Feet", kind = "Leather", chance = 50},
+        {id = 9403, name = "Battered Viking Shield", slot = "Off Hand", kind = "Shield", chance = 50},
+        {id = 9404, name = "Olaf's All Purpose Shield", slot = "Off Hand", kind = "Shield", chance = 50},
+        {id = 9401, name = "Nordic Longshank", slot = "One-Hand", kind = "Sword", chance = 10},
+      }},
+      {name = "Ironaya", portrait = 607664, loot = {
+        {id = 9407, name = "Stoneweaver Leggings", slot = "Legs", kind = "Cloth", chance = 40},
+        {id = 9409, name = "Ironaya's Bracers", slot = "Wrist", kind = "Mail", chance = 40},
+        {id = 9408, name = "Ironshod Bludgeon", slot = "Two-Hand", kind = "Staff", chance = 20},
+      }},
+      {name = "Obsidian Sentinel", portrait = 607729},
+      {name = "Ancient Stone Keeper", portrait = 607538, loot = {
+        {id = 9410, name = "Cragfists", slot = "Hands", kind = "Plate", chance = 50},
+        {id = 9411, name = "Rockshard Pauldrons", slot = "Shoulder", kind = "Mail", chance = 50},
+      }},
+      {name = "Galgann Firehammer", portrait = 607606, loot = {
+        {id = 11311, name = "Emberscale Cape", slot = "Back", chance = 40},
+        {id = 11310, name = "Flameseer Mantle", slot = "Shoulder", kind = "Cloth", chance = 20},
+      }},
+      {name = "Grimlok", portrait = 607626, loot = {
+        {id = 9414, name = "Oilskin Leggings", slot = "Legs", kind = "Leather", chance = 40},
+        {id = 9415, name = "Grimlok's Tribal Vestments", slot = "Chest", kind = "Cloth", chance = 40},
+        {id = 9416, name = "Grimlok's Charge", slot = "Two-Hand", kind = "Polearm", chance = 20},
+      }},
+      {name = "Archaedas", portrait = 607546, loot = {
+        {id = 11118, name = "Archaedic Stone", slot = "Finger", chance = 60},
+        {id = 9413, name = "The Rockpounder", slot = "Two-Hand", kind = "Mace", chance = 20},
+      }},
+    },
     alliance = {
       {titles = {"Power Stones"}, steps = {
         {id = 2418, title = "Power Stones", level = 36, minLevel = 30, dungeon = true, giver = "Rigglefuzz", where = "Badlands 42.4, 52.9 (Valley of Fangs)", map = 1418, x = 42.4, y = 52.9, objectives = {"Collect 8 Dentrium Power Stone", "Collect 8 An'Alleum Power Stone"}, turnIn = "Rigglefuzz"},
@@ -496,7 +875,48 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "kroldok-stronghold", instanceId = 3039, name = "Krol'dok Stronghold", levelMin = 40, levelMax = 40,
+    isNew = true,
+    bosses = {
+      {name = "Slavecrusher Grox"},
+      {name = "Twilight Commander Zarmok"},
+      {name = "Handler Ashka"},
+      {name = "Nar'gurk"},
+      {name = "Overseer Mugg"},
+    },
+  },
+  {
     key = "maraudon", instanceId = 349, name = "Maraudon", levelMin = 42, levelMax = 42, aliases = {"Mara"},
+    players = 10, art = {button = 608209, lore = 608248},
+    bosses = {
+      {name = "Noxxion", portrait = 607728, loot = {
+        {id = 17744, name = "Heart of Noxxion", slot = "Trinket", chance = 40},
+        {id = 17745, name = "Noxious Shooter", slot = "Ranged", kind = "Wand", chance = 20},
+      }},
+      {name = "Razorlash", portrait = 607756, loot = {
+        {id = 17748, name = "Vinerot Sandals", slot = "Feet", kind = "Cloth", chance = 25},
+        {id = 17749, name = "Phytoskin Spaulders", slot = "Shoulder", kind = "Leather", chance = 25},
+        {id = 17750, name = "Chloromesh Girdle", slot = "Waist", kind = "Cloth", chance = 25},
+        {id = 17751, name = "Brusslehide Leggings", slot = "Legs", kind = "Leather", chance = 25},
+      }},
+      {name = "Tinkerer Gizlock", portrait = 607796},
+      {name = "Lord Vyletongue", portrait = 607699, loot = {
+        {id = 17754, name = "Infernal Trickster Leggings", slot = "Legs", kind = "Mail", chance = 33.3},
+        {id = 17755, name = "Satyrmane Sash", slot = "Waist", kind = "Cloth", chance = 33.3},
+      }},
+      {name = "Celebras the Cursed", portrait = 607562, loot = {
+        {id = 17739, name = "Grovekeeper's Drape", slot = "Back", chance = 33.3},
+        {id = 17740, name = "Soothsayer's Headdress", slot = "Head", kind = "Leather", chance = 33.3},
+      }},
+      {name = "Landslide", portrait = 607684},
+      {name = "Rotgrip", portrait = 607761, loot = {
+        {id = 17732, name = "Rotgrip Mantle", slot = "Shoulder", kind = "Cloth", chance = 40},
+      }},
+      {name = "Princess Theradras", portrait = 607747, loot = {
+        {id = 17713, name = "Blackstone Ring", slot = "Finger", chance = 25},
+        {id = 17714, name = "Bracers of the Stone Princess", slot = "Wrist", kind = "Mail", chance = 25},
+      }},
+    },
     alliance = {
       {titles = {"Shadowshard Fragments"}, steps = {
         {id = 7070, title = "Shadowshard Fragments", level = 42, minLevel = 39, dungeon = true, giver = "Archmage Tervosh", where = "Dustwallow Marsh 66.4, 49.3 (Theramore Isle)", map = 1445, x = 66.4, y = 49.3, objectives = {"Collect 10 Shadowshard Fragment"}, turnIn = "Archmage Tervosh"},
@@ -548,6 +968,38 @@ MGADungeonQuestsData = {
   },
   {
     key = "zulfarrak", instanceId = 209, name = "Zul'Farrak", levelMin = 42, levelMax = 42, aliases = {"ZF"},
+    players = 10, art = {button = 608230, lore = 608267},
+    bosses = {
+      {name = "Hydromancer Velratha", portrait = 607652, loot = {
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 0.7},
+      }},
+      {name = "Gahz'rilla", portrait = 607604},
+      {name = "Antu'sul", portrait = 607541, loot = {
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 2},
+      }},
+      {name = "Theka the Martyr", portrait = 607793, loot = {
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 0.6},
+      }},
+      {name = "Witch Doctor Zum'rah", portrait = 607819, loot = {
+        {id = 18083, name = "Jumanza Grips", slot = "Hands", kind = "Cloth", chance = 40},
+        {id = 18082, name = "Zum'rah's Vexing Cane", slot = "Two-Hand", kind = "Staff", chance = 20},
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 2},
+      }},
+      {name = "Nekrum Gutchewer", portrait = 607723, loot = {
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 0.6},
+      }},
+      {name = "Shadowpriest Sezz'ziz", loot = {
+        {id = 9470, name = "Bad Mojo Mask", slot = "Head", kind = "Cloth", chance = 25},
+        {id = 9474, name = "Jinxed Hoodoo Kilt", slot = "Legs", kind = "Leather", chance = 25},
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 2},
+      }},
+      {name = "Chief Ukorz Sandscalp", portrait = 607564, loot = {
+        {id = 9476, name = "Big Bad Pauldrons", slot = "Shoulder", kind = "Plate", chance = 30},
+        {id = 9478, name = "Ripsaw", slot = "Main Hand", kind = "Axe", chance = 20},
+        {id = 9479, name = "Embrace of the Lycan", slot = "Head", kind = "Leather", chance = 20},
+        {id = 9243, name = "Shriveled Heart", slot = "Neck", chance = 2},
+      }},
+    },
     alliance = {
       {titles = {"Scarab Shells"}, steps = {
         {id = 2864, title = "Tran'rek", level = 45, minLevel = 40, giver = "Krazek", where = "Stranglethorn Vale 26.9, 77.2 (Booty Bay)", map = 1434, x = 26.9, y = 77.2, turnIn = "Tran'rek"},
@@ -609,6 +1061,22 @@ MGADungeonQuestsData = {
   },
   {
     key = "sunken-temple", instanceId = 109, name = "Sunken Temple", levelMin = 45, levelMax = 45, aliases = {"Temple of Atal'Hakkar", "ST"},
+    players = 20, art = {button = 608217, lore = 608256},
+    bosses = {
+      {name = "Atal'alarion", loot = {
+        {id = 10798, name = "Atal'alarion's Tusk Ring", slot = "Waist", kind = "Plate", chance = 39.9},
+      }},
+      {name = "Avatar of Hakkar", portrait = 607548, loot = {
+        {id = 10843, name = "Featherskin Cape", slot = "Back", chance = 40},
+        {id = 10845, name = "Warrior's Embrace", slot = "Chest", kind = "Plate", chance = 39.8},
+      }},
+      {name = "Shade of Eranikus", portrait = 607768},
+      {name = "Hazzas"},
+      {name = "Morphaz"},
+      {name = "Weaver"},
+      {name = "Dreamscythe", portrait = 608311},
+      {name = "Jammal'an the Prophet", portrait = 607665},
+    },
     alliance = {
       {titles = {"Into The Temple of Atal'Hakkar"}, steps = {
         {id = 1448, title = "In Search of The Temple", level = 43, minLevel = 38, giver = "Brohann Caskbelly", where = "Stormwind City 69.5, 40.4", map = 1453, x = 69.5, y = 40.4, turnIn = "Brohann Caskbelly"},
@@ -726,7 +1194,71 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "alcaz-prison", instanceId = 2994, name = "Alcaz Prison", levelMin = 48, levelMax = 48,
+    isNew = true,
+    bosses = {
+      {name = "Overseer Wrex"},
+      {name = "Tidemistress Ca'zass"},
+      {name = "Katerina the Cleaner"},
+      {name = "The Questioner"},
+      {name = "Blazeroar"},
+    },
+  },
+  {
     key = "blackrock-depths", instanceId = 230, name = "Blackrock Depths", levelMin = 48, levelMax = 48, aliases = {"BRD"},
+    players = 5, art = {button = 608196, lore = 608235},
+    bosses = {
+      {name = "High Interrogator Gerstahn", portrait = 607644, loot = {
+        {id = 11625, name = "Enthralled Sphere", slot = "Held In Off-hand", chance = 25},
+      }},
+      {name = "Lord Roccor", portrait = 607697, loot = {
+        {id = 22234, name = "Mantle of Lost Hope", slot = "Shoulder", kind = "Cloth", chance = 25},
+      }},
+      {name = "Houndmaster Grebmar", portrait = 607647, loot = {
+        {id = 11628, name = "Houndmaster's Bow", slot = "Ranged", kind = "Bow", chance = 15},
+      }},
+      {name = "Ring of Law"},
+      {name = "Pyromancer Loregrain", portrait = 607749, loot = {
+        {id = 11749, name = "Searingscale Leggings", slot = "Legs", kind = "Mail", chance = 26.7},
+      }},
+      {name = "Lord Incendius", portrait = 607694, loot = {
+        {id = 11767, name = "Emberplate Armguards", slot = "Wrist", kind = "Plate", chance = 25},
+      }},
+      {name = "Warder Stilgiss", portrait = 607814, loot = {
+        {id = 11784, name = "Arbiter's Blade", slot = "Main Hand", kind = "Sword", chance = 25},
+      }},
+      {name = "Fineous Darkvire", portrait = 607602, loot = {
+        {id = 22223, name = "Foreman's Head Protector", slot = "Head", kind = "Plate", chance = 25},
+      }},
+      {name = "Bael'Gar", portrait = 607549, loot = {
+        {id = 11807, name = "Sash of the Burning Heart", slot = "Waist", kind = "Cloth", chance = 18},
+      }},
+      {name = "General Angerforge", portrait = 607610, loot = {
+        {id = 11821, name = "Warstrife Leggings", slot = "Legs", kind = "Leather", chance = 20},
+      }},
+      {name = "Golem Lord Argelmach", portrait = 607618, loot = {
+        {id = 11819, name = "Second Wind", slot = "Trinket", chance = 8},
+      }},
+      {name = "Hurley Blackbreath", portrait = 607650, loot = {
+        {id = 22275, name = "Firemoss Boots", slot = "Feet", kind = "Leather", chance = 30.3},
+      }},
+      {name = "Phalanx", portrait = 607740, loot = {
+        {id = 11745, name = "Fists of Phalanx", slot = "Hands", kind = "Plate", chance = 33.3},
+      }},
+      {name = "Ribbly Screwspigot", portrait = 607758},
+      {name = "Plugger Spazzring", portrait = 607741},
+      {name = "The Vault"},
+      {name = "Ambassador Flamelash", portrait = 607535},
+      {name = "The Seven"},
+      {name = "Magmus", portrait = 607705, loot = {
+        {id = 22208, name = "Lavastone Hammer", slot = "Two-Hand", kind = "Mace", chance = 20},
+      }},
+      {name = "Princess Moira Bronzebeard", portrait = 607746},
+      {name = "Emperor Dagran Thaurissan", loot = {
+        {id = 11924, name = "Robes of the Royal Crown", slot = "Chest", kind = "Cloth", chance = 20},
+        {id = 11815, name = "Hand of Justice", slot = "Trinket", chance = 19.8},
+      }},
+    },
     alliance = {
       {titles = {"Dark Iron Legacy"}, steps = {
         {id = 3801, title = "Dark Iron Legacy", level = 52, minLevel = 48, giver = "Franclorn Forgewright", where = "Burning Steppes 29.0, 28.9 (Blackrock Mountain)", map = 1428, x = 29.0, y = 28.9, turnIn = "Franclorn Forgewright"},
@@ -900,6 +1432,63 @@ MGADungeonQuestsData = {
   },
   {
     key = "blackrock-spire", instanceId = 229, name = "Blackrock Spire", levelMin = 53, levelMax = 53, aliases = {"LBRS", "UBRS"},
+    players = 10, art = {button = 608197, lore = 608236},
+    bosses = {
+      {name = "Highlord Omokk", portrait = 607645, loot = {
+        {id = 13170, name = "Skyshroud Leggings", slot = "Legs", kind = "Cloth", chance = 16.7},
+        {id = 16670, name = "Boots of Elements", slot = "Feet", kind = "Mail", chance = 16.7},
+      }},
+      {name = "Shadow Hunter Vosh'gajin", portrait = 607769, loot = {
+        {id = 16712, name = "Shadowcraft Gloves", slot = "Hands", kind = "Leather", chance = 21},
+        {id = 12653, name = "Riphook", slot = "Ranged", kind = "Bow", chance = 8},
+      }},
+      {name = "War Master Voone", portrait = 607810, loot = {
+        {id = 13179, name = "Brazecore Armguards", slot = "Wrist", kind = "Mail", chance = 20},
+        {id = 16676, name = "Beaststalker's Gloves", slot = "Hands", kind = "Mail", chance = 20},
+      }},
+      {name = "Mother Smolderweb", portrait = 607719, loot = {
+        {id = 13213, name = "Smolderweb's Eye", slot = "Trinket", chance = 35},
+        {id = 16715, name = "Wildheart Boots", slot = "Feet", kind = "Leather", chance = 15},
+      }},
+      {name = "Urok Doomhowl", portrait = 607801},
+      {name = "Quartermaster Zigris", portrait = 607751},
+      {name = "Halycon", portrait = 607634, loot = {
+        {id = 13212, name = "Halycon's Spiked Collar", slot = "Neck", chance = 28.7},
+        {id = 22313, name = "Ironweave Bracers", slot = "Wrist", kind = "Cloth", chance = 28.7},
+      }},
+      {name = "Gizrul the Slavener", portrait = 607615, loot = {
+        {id = 13205, name = "Rhombeard Protector", slot = "Off Hand", kind = "Shield", chance = 28.3},
+        {id = 13206, name = "Wolfshear Leggings", slot = "Legs", kind = "Cloth", chance = 28.3},
+        {id = 16718, name = "Wildheart Spaulders", slot = "Shoulder", kind = "Leather", chance = 15},
+      }},
+      {name = "Overlord Wyrmthalak", portrait = 607737, loot = {
+        {id = 16679, name = "Beaststalker's Mantle", slot = "Shoulder", kind = "Mail", chance = 20},
+      }},
+      {name = "Pyroguard Emberseer", portrait = 607748, loot = {
+        {id = 16672, name = "Gauntlets of Elements", slot = "Hands", kind = "Mail", chance = 20},
+      }},
+      {name = "Warchief Rend Blackhand", portrait = 607813, loot = {
+        {id = 16733, name = "Spaulders of Valor", slot = "Shoulder", kind = "Plate", chance = 19.8},
+      }},
+      {name = "The Beast", portrait = 607786, loot = {
+        {id = 16729, name = "Lightforge Spaulders", slot = "Shoulder", kind = "Plate", chance = 20},
+        {id = 22311, name = "Ironweave Boots", slot = "Feet", kind = "Cloth", chance = 20},
+      }},
+      {name = "General Drakkisath", portrait = 607612, loot = {
+        {id = 16666, name = "Vest of Elements", slot = "Chest", kind = "Mail", chance = 11.1},
+        {id = 16674, name = "Beaststalker's Tunic", slot = "Chest", kind = "Mail", chance = 11.1},
+        {id = 16688, name = "Magister's Robes", slot = "Chest", kind = "Cloth", chance = 11.1},
+        {id = 16690, name = "Devout Robe", slot = "Chest", kind = "Cloth", chance = 11.1},
+        {id = 16700, name = "Dreadmist Robe", slot = "Chest", kind = "Cloth", chance = 11.1},
+        {id = 16706, name = "Wildheart Vest", slot = "Chest", kind = "Leather", chance = 11.1},
+        {id = 16721, name = "Shadowcraft Tunic", slot = "Chest", kind = "Leather", chance = 11.1},
+        {id = 16726, name = "Lightforge Breastplate", slot = "Chest", kind = "Plate", chance = 11.1},
+        {id = 16730, name = "Breastplate of Valor", slot = "Chest", kind = "Plate", chance = 11.1},
+      }},
+      {name = "Lord Valthalak", loot = {
+        {id = 22302, name = "Ironweave Cowl", slot = "Head", kind = "Cloth", chance = 44.7},
+      }},
+    },
     alliance = {
       {titles = {"The Final Tablets"}, steps = {
         {id = 3520, title = "Screecher Spirits", level = 44, minLevel = 40, giver = "Yeh'kinya", where = "Tanaris 67.0, 22.4 (Steamwheedle Port)", map = 1446, x = 67.0, y = 22.4, objectives = {"Kill 3 Screecher Spirit", "Collect Yeh'kinya's Bramble"}, turnIn = "Yeh'kinya"},
@@ -1739,6 +2328,28 @@ MGADungeonQuestsData = {
   },
   {
     key = "dire-maul", instanceId = 429, name = "Dire Maul", levelMin = 54, levelMax = 54, aliases = {"DM"},
+    players = 5, art = {button = 608200, lore = 608239},
+    bosses = {
+      {name = "Zevrim Thornhoof", portrait = 607824},
+      {name = "Hydrospawn", portrait = 607653},
+      {name = "Lethtendris", portrait = 607686},
+      {name = "Pusillin"},
+      {name = "Alzzin the Wildshaper", portrait = 607533},
+      {name = "Tendris Warpwood", portrait = 607785},
+      {name = "Illyanna Ravenoak", portrait = 607656},
+      {name = "Magister Kalendris", portrait = 607703},
+      {name = "Immol'thar", portrait = 607657},
+      {name = "Prince Tortheldrin", portrait = 607745},
+      {name = "Guard Mol'dar", portrait = 607630},
+      {name = "Stomper Kreeg", portrait = 607777},
+      {name = "Guard Fengus", portrait = 607629},
+      {name = "Guard Slip'kik", portrait = 607631},
+      {name = "Captain Kromcrush", portrait = 607560},
+      {name = "Cho'Rush the Observer", portrait = 607565},
+      {name = "King Gordok", portrait = 607673},
+      {name = "Lord Hel'nurath"},
+      {name = "Tsu'zee"},
+    },
     alliance = {
       {titles = {"Lethtendris's Web"}, steps = {
         {id = 7494, title = "Feathermoon Stronghold", level = 57, minLevel = 54, giver = "Crier Goodman", where = "Stormwind City 56.4, 74.1", map = 1453, x = 56.4, y = 74.1, turnIn = "Latronicus Moonspear"},
@@ -1922,7 +2533,80 @@ MGADungeonQuestsData = {
     },
   },
   {
+    key = "blackmaw-hold", instanceId = 2974, name = "Blackmaw Hold", levelMin = 55, levelMax = 55,
+    isNew = true,
+    bosses = {
+      {name = "Withermaw"},
+      {name = "Impaan the Imprisoner"},
+      {name = "Elder Shaman Bloodmane"},
+      {name = "Bonesnout the Unbroken"},
+      {name = "Varrox Bleakhoof"},
+      {name = "Blackmaw Behemoth"},
+      {name = "Unbound Spirit"},
+    },
+  },
+  {
     key = "stratholme", instanceId = 329, name = "Stratholme", levelMin = 55, levelMax = 55, aliases = {"Strat"},
+    players = 5, art = {button = 608216, lore = 608255},
+    bosses = {
+      {name = "Hearthsinger Forresten", portrait = 607637, loot = {
+        {id = 16682, name = "Magister's Boots", slot = "Feet", kind = "Cloth", chance = 20},
+      }},
+      {name = "Timmy the Cruel", portrait = 607795, loot = {
+        {id = 16724, name = "Lightforge Gauntlets", slot = "Hands", kind = "Plate", chance = 20},
+      }},
+      {name = "Malor the Zealous"},
+      {name = "Cannon Master Willey", loot = {
+        {id = 16708, name = "Shadowcraft Spaulders", slot = "Shoulder", kind = "Leather", chance = 20},
+      }},
+      {name = "Archivist Galford", loot = {
+        {id = 16692, name = "Devout Gloves", slot = "Hands", kind = "Cloth", chance = 22},
+        {id = 13385, name = "Tome of Knowledge", slot = "Held In Off-hand", chance = 12},
+      }},
+      {name = "Balnazzar", portrait = 607551, loot = {
+        {id = 13359, name = "Crown of Tyranny", slot = "Head", kind = "Mail", chance = 20},
+        {id = 13358, name = "Wyrmtongue Shoulders", slot = "Shoulder", kind = "Leather", chance = 19.8},
+        {id = 16725, name = "Lightforge Boots", slot = "Feet", kind = "Plate", chance = 19.8},
+      }},
+      {name = "The Unforgiven", portrait = 607792, loot = {
+        {id = 13405, name = "Wailing Nightbane Pauldrons", slot = "Shoulder", kind = "Plate", chance = 20},
+        {id = 16717, name = "Wildheart Gloves", slot = "Hands", kind = "Leather", chance = 20},
+      }},
+      {name = "Baroness Anastari", portrait = 607553, loot = {
+        {id = 16704, name = "Dreadmist Sandals", slot = "Feet", kind = "Cloth", chance = 20},
+      }},
+      {name = "Nerub'enkan", portrait = 607724, loot = {
+        {id = 16675, name = "Beaststalker's Boots", slot = "Feet", kind = "Mail", chance = 20},
+      }},
+      {name = "Maleki the Pallid", portrait = 607707, loot = {
+        {id = 16691, name = "Devout Sandals", slot = "Feet", kind = "Cloth", chance = 20},
+      }},
+      {name = "Magistrate Barthilas", portrait = 607704, loot = {
+        {id = 18727, name = "Crimson Felt Hat", slot = "Head", kind = "Cloth", chance = 16.7},
+      }},
+      {name = "Ramstein the Gorger", portrait = 607752, loot = {
+        {id = 16737, name = "Gauntlets of Valor", slot = "Hands", kind = "Plate", chance = 12},
+      }},
+      {name = "Baron Rivendare", loot = {
+        {id = 16668, name = "Kilt of Elements", slot = "Legs", kind = "Mail", chance = 11.1},
+        {id = 16678, name = "Beaststalker's Pants", slot = "Legs", kind = "Mail", chance = 11.1},
+        {id = 16687, name = "Magister's Leggings", slot = "Legs", kind = "Cloth", chance = 11.1},
+        {id = 16694, name = "Devout Skirt", slot = "Legs", kind = "Cloth", chance = 11.1},
+        {id = 16699, name = "Dreadmist Leggings", slot = "Legs", kind = "Cloth", chance = 11.1},
+        {id = 16709, name = "Shadowcraft Pants", slot = "Legs", kind = "Leather", chance = 11.1},
+        {id = 16719, name = "Wildheart Kilt", slot = "Legs", kind = "Leather", chance = 11.1},
+        {id = 16728, name = "Lightforge Legplates", slot = "Legs", kind = "Plate", chance = 11.1},
+        {id = 16732, name = "Legplates of Valor", slot = "Legs", kind = "Plate", chance = 11.1},
+      }},
+      {name = "Black Guard Swordsmith"},
+      {name = "Crimson Hammersmith"},
+      {name = "Ezra Grimm"},
+      {name = "Postmaster Malown", portrait = 5875510},
+      {name = "Skul", loot = {
+        {id = 13395, name = "Skul's Fingerbone Claws", slot = "Hands", kind = "Leather", chance = 33.3},
+      }},
+      {name = "Stonespine"},
+    },
     alliance = {
       {titles = {"A Light in Dark Places"}, steps = {
         {id = 9319, title = "A Light in Dark Places", level = 60, minLevel = 50, dungeon = true, objectives = {"Use Flame of Dire Maul", "Use Flame of Blackrock Spire", "Use Flame of Stratholme", "Use Flame of the Scholomance"}, turnIn = "Festival Flamekeeper"},
@@ -2372,6 +3056,86 @@ MGADungeonQuestsData = {
   },
   {
     key = "scholomance", instanceId = 289, name = "Scholomance", levelMin = 57, levelMax = 57, aliases = {"Scholo"},
+    players = 5, art = {button = 608215, lore = 608254},
+    bosses = {
+      {name = "Kirtonos", loot = {
+        {id = 13957, name = "Gargoyle Slashers", slot = "Hands", kind = "Leather", chance = 11.1},
+        {id = 16734, name = "Boots of Valor", slot = "Feet", kind = "Plate", chance = 11.1},
+      }},
+      {name = "Jandice Barov", portrait = 607666, loot = {
+        {id = 16701, name = "Dreadmist Mantle", slot = "Shoulder", kind = "Cloth", chance = 17},
+      }},
+      {name = "Rattlegore", portrait = 607755, loot = {
+        {id = 16711, name = "Shadowcraft Boots", slot = "Feet", kind = "Leather", chance = 16},
+        {id = 14528, name = "Rattlecage Buckler", slot = "Off Hand", kind = "Shield", chance = 14},
+      }},
+      {name = "Marduk Blackpool", portrait = 607709},
+      {name = "Vectus", portrait = 607804},
+      {name = "Kormok", portrait = 1134504, loot = {
+        {id = 22303, name = "Ironweave Pants", slot = "Legs", kind = "Cloth", chance = 20},
+      }},
+      {name = "Ras Frostwhisperer", loot = {
+        {id = 16689, name = "Magister's Mantle", slot = "Shoulder", kind = "Cloth", chance = 16.7},
+      }},
+      {name = "Instructor Malicia", portrait = 607661, loot = {
+        {id = 16710, name = "Shadowcraft Bracers", slot = "Wrist", kind = "Leather", chance = 5},
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 1.1},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 1.1},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 1.1},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 1.1},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 1.1},
+      }},
+      {name = "Doctor Theolen Krastinov", portrait = 607586, loot = {
+        {id = 16684, name = "Magister's Gloves", slot = "Hands", kind = "Cloth", chance = 14},
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 1.1},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 1.1},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 1.1},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 1.1},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 1.1},
+      }},
+      {name = "Lorekeeper Polkelt", portrait = 607700, loot = {
+        {id = 16705, name = "Dreadmist Wraps", slot = "Hands", kind = "Cloth", chance = 17},
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 1.1},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 1.1},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 1.1},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 1.1},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 1.1},
+      }},
+      {name = "The Ravenian", portrait = 607791, loot = {
+        {id = 16716, name = "Wildheart Belt", slot = "Waist", kind = "Leather", chance = 4},
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 1.1},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 1.1},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 1.1},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 1.1},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 1.1},
+      }},
+      {name = "Lord Alexei Barov", portrait = 607691, loot = {
+        {id = 16722, name = "Lightforge Bracers", slot = "Wrist", kind = "Plate", chance = 5},
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 3.7},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 3.7},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 3.7},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 3.7},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 3.7},
+      }},
+      {name = "Lady Illucia Barov", portrait = 607681, loot = {
+        {id = 14626, name = "Necropile Robe", slot = "Chest", kind = "Cloth", chance = 1.1},
+        {id = 14629, name = "Necropile Cuffs", slot = "Wrist", kind = "Cloth", chance = 1.1},
+        {id = 14631, name = "Necropile Boots", slot = "Feet", kind = "Cloth", chance = 1.1},
+        {id = 14632, name = "Necropile Leggings", slot = "Legs", kind = "Cloth", chance = 1.1},
+        {id = 14633, name = "Necropile Mantle", slot = "Shoulder", kind = "Cloth", chance = 1.1},
+      }},
+      {name = "Darkmaster Gandling", portrait = 607582, loot = {
+        {id = 16667, name = "Coif of Elements", slot = "Head", kind = "Mail", chance = 11.1},
+        {id = 16677, name = "Beaststalker's Cap", slot = "Head", kind = "Mail", chance = 11.1},
+        {id = 16686, name = "Magister's Crown", slot = "Head", kind = "Cloth", chance = 11.1},
+        {id = 16693, name = "Devout Crown", slot = "Head", kind = "Cloth", chance = 11.1},
+        {id = 16698, name = "Dreadmist Mask", slot = "Head", kind = "Cloth", chance = 11.1},
+        {id = 16707, name = "Shadowcraft Cap", slot = "Head", kind = "Leather", chance = 11.1},
+        {id = 16720, name = "Wildheart Cowl", slot = "Head", kind = "Leather", chance = 11.1},
+        {id = 16727, name = "Lightforge Helm", slot = "Head", kind = "Plate", chance = 11.1},
+        {id = 16731, name = "Helm of Valor", slot = "Head", kind = "Plate", chance = 11.1},
+      }},
+    },
     alliance = {
       {titles = {"Plagued Hatchlings"}, steps = {
         {id = 5529, title = "Plagued Hatchlings", level = 58, minLevel = 55, dungeon = true, giver = "Betina Bigglezink", where = "Eastern Plaguelands 71.7, 49.9 (Light's Hope Chapel)", map = 1423, x = 71.7, y = 49.9, objectives = {"Kill 20 Plagued Hatchling"}, turnIn = "Betina Bigglezink"},
@@ -2578,6 +3342,23 @@ MGADungeonQuestsData = {
         {id = 8988, title = "More Components of Importance", level = 60, minLevel = 58, giver = "Bodley", where = "Burning Steppes 32.3, 25.8 (Blackrock Mountain)", map = 1428, x = 32.3, y = 25.8, objectives = {"Collect Soul Ashes of the Banished"}, turnIn = "Bodley"},
         {id = 8992, title = "The Right Piece of Lord Valthalak's Amulet", level = 60, minLevel = 58, dungeon = true, giver = "Bodley", where = "Burning Steppes 32.3, 25.8 (Blackrock Mountain)", map = 1428, x = 32.3, y = 25.8, objectives = {"Kill Kormok", "Collect Lord Valthalak's Amulet", "Collect Brazier of Beckoning"}, turnIn = "Bodley"},
       }},
+    },
+  },
+  {
+    key = "the-shapers-terrace", instanceId = 3001, name = "The Shaper's Terrace", levelMin = 60, levelMax = 60,
+    isNew = true,
+    bosses = {
+      {name = "Titanosaur"},
+      {name = "Ravasaur Hunters"},
+      {name = "Thunderhoof"},
+      {name = "Venomridge"},
+      {name = "Direhorn Matriarch"},
+      {name = "Cinder"},
+      {name = "King Op"},
+      {name = "Snowtalon"},
+      {name = "Bolt"},
+      {name = "Vitrix"},
+      {name = "Nanaya"},
     },
   },
 }

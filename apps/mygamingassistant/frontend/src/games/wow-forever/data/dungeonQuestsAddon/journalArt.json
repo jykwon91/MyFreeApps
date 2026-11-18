@@ -1,0 +1,228 @@
+{
+  "dungeons": {
+    "ragefire-chasm": {
+      "button": 608211,
+      "lore": 608250
+    },
+    "deadmines": {
+      "button": 522352,
+      "lore": 526404
+    },
+    "wailing-caverns": {
+      "button": 608229,
+      "lore": 608313
+    },
+    "shadowfang-keep": {
+      "button": 522358,
+      "lore": 526410
+    },
+    "blackfathom-deeps": {
+      "button": 608195,
+      "lore": 608234
+    },
+    "stormwind-stockade": {
+      "button": 608223,
+      "lore": 608262
+    },
+    "razorfen-kraul": {
+      "button": 608213,
+      "lore": 608252
+    },
+    "gnomeregan": {
+      "button": 608202,
+      "lore": 608241
+    },
+    "scarlet-monastery": {
+      "button": 608214,
+      "lore": 608253
+    },
+    "razorfen-downs": {
+      "button": 608212,
+      "lore": 608251
+    },
+    "uldaman": {
+      "button": 608225,
+      "lore": 608264
+    },
+    "maraudon": {
+      "button": 608209,
+      "lore": 608248
+    },
+    "zulfarrak": {
+      "button": 608230,
+      "lore": 608267
+    },
+    "sunken-temple": {
+      "button": 608217,
+      "lore": 608256
+    },
+    "blackrock-depths": {
+      "button": 608196,
+      "lore": 608235
+    },
+    "blackrock-spire": {
+      "button": 608197,
+      "lore": 608236
+    },
+    "dire-maul": {
+      "button": 608200,
+      "lore": 608239
+    },
+    "stratholme": {
+      "button": 608216,
+      "lore": 608255
+    },
+    "scholomance": {
+      "button": 608215,
+      "lore": 608254
+    }
+  },
+  "bosses": {
+    "Agathelos the Raging": 607530,
+    "Aggem Thorncurse": 607531,
+    "Aku'mai": 607532,
+    "Alzzin the Wildshaper": 607533,
+    "Ambassador Flamelash": 607535,
+    "Amnennar the Coldbringer": 607537,
+    "Ancient Stone Keeper": 607538,
+    "Antu'sul": 607541,
+    "Arcanist Doan": 607545,
+    "Archaedas": 607546,
+    "Avatar of Hakkar": 607548,
+    "Bael'Gar": 607549,
+    "Balnazzar": 607551,
+    "Baron Silverlaine": 522206,
+    "Baroness Anastari": 607553,
+    "Bazzalan": 607554,
+    "Bloodmage Thalnos": 607557,
+    "Captain Greenskin": 5875505,
+    "Captain Kromcrush": 607560,
+    "Celebras the Cursed": 607562,
+    "Charlga Razorflank": 607563,
+    "Chief Ukorz Sandscalp": 607564,
+    "Cho'Rush the Observer": 607565,
+    "Commander Springvale": 522213,
+    "Cookie": 5875506,
+    "Crowd Pummeler 9-60": 607572,
+    "Darkmaster Gandling": 607582,
+    "Death Speaker Jargba": 607584,
+    "Doctor Theolen Krastinov": 607586,
+    "Dreamscythe": 608311,
+    "Edwin VanCleef": 5875507,
+    "Electrocutioner 6000": 607594,
+    "Fineous Darkvire": 607602,
+    "Gahz'rilla": 607604,
+    "Galgann Firehammer": 607606,
+    "General Angerforge": 607610,
+    "General Drakkisath": 607612,
+    "Ghamoo-ra": 1064179,
+    "Gilnid": 5875508,
+    "Gizrul the Slavener": 607615,
+    "Glutton": 607617,
+    "Golem Lord Argelmach": 607618,
+    "Grimlok": 607626,
+    "Grubbis": 607628,
+    "Guard Fengus": 607629,
+    "Guard Mol'dar": 607630,
+    "Guard Slip'kik": 607631,
+    "Halycon": 607634,
+    "Hearthsinger Forresten": 607637,
+    "Herod": 607640,
+    "High Inquisitor Fairbanks": 607642,
+    "High Inquisitor Whitemane": 607643,
+    "High Interrogator Gerstahn": 607644,
+    "Highlord Omokk": 607645,
+    "Houndmaster Grebmar": 607647,
+    "Houndmaster Loksey": 607648,
+    "Hurley Blackbreath": 607650,
+    "Hydromancer Velratha": 607652,
+    "Hydrospawn": 607653,
+    "Illyanna Ravenoak": 607656,
+    "Immol'thar": 607657,
+    "Instructor Malicia": 607661,
+    "Interrogator Vishas": 607662,
+    "Ironaya": 607664,
+    "Jammal'an the Prophet": 607665,
+    "Jandice Barov": 607666,
+    "Jergosh the Invoker": 607668,
+    "King Gordok": 607673,
+    "Kormok": 1134504,
+    "Kresh": 607676,
+    "Lady Anacondra": 607680,
+    "Lady Illucia Barov": 607681,
+    "Lady Sarevess": 607682,
+    "Landslide": 607684,
+    "Lethtendris": 607686,
+    "Lord Alexei Barov": 607691,
+    "Lord Cobrahn": 607693,
+    "Lord Incendius": 607694,
+    "Lord Pythas": 607696,
+    "Lord Roccor": 607697,
+    "Lord Serpentis": 607698,
+    "Lord Vyletongue": 607699,
+    "Lorekeeper Polkelt": 607700,
+    "Lorgus Jett": 607701,
+    "Magister Kalendris": 607703,
+    "Magistrate Barthilas": 607704,
+    "Magmus": 607705,
+    "Maleki the Pallid": 607707,
+    "Mana Devourer": 1536492,
+    "Marduk Blackpool": 607709,
+    "Mekgineer Thermaplugg": 607714,
+    "Mordresh Fire Eye": 607718,
+    "Mother Smolderweb": 607719,
+    "Mr. Smite": 5875509,
+    "Mutanus the Devourer": 607721,
+    "Nekrum Gutchewer": 607723,
+    "Nerub'enkan": 607724,
+    "Noxxion": 607728,
+    "Obsidian Sentinel": 607729,
+    "Oggleflint": 607730,
+    "Old Serra'kis": 607733,
+    "Overlord Ramtusk": 607736,
+    "Overlord Wyrmthalak": 607737,
+    "Phalanx": 607740,
+    "Plugger Spazzring": 607741,
+    "Postmaster Malown": 5875510,
+    "Prince Tortheldrin": 607745,
+    "Princess Moira Bronzebeard": 607746,
+    "Princess Theradras": 607747,
+    "Pyroguard Emberseer": 607748,
+    "Pyromancer Loregrain": 607749,
+    "Quartermaster Zigris": 607751,
+    "Ramstein the Gorger": 607752,
+    "Rattlegore": 607755,
+    "Razorlash": 607756,
+    "Revelosh": 607757,
+    "Rhahk'Zor": 5875511,
+    "Ribbly Screwspigot": 607758,
+    "Roogug": 607760,
+    "Rotgrip": 607761,
+    "Shade of Eranikus": 607768,
+    "Shadow Hunter Vosh'gajin": 607769,
+    "Skum": 607775,
+    "Sneed": 5875512,
+    "Stomper Kreeg": 607777,
+    "Taragaman the Hungerer": 607781,
+    "Tendris Warpwood": 607785,
+    "The Beast": 607786,
+    "The Butcher": 1044375,
+    "The Lost Dwarves": 4741530,
+    "The Ravenian": 607791,
+    "The Unforgiven": 607792,
+    "Theka the Martyr": 607793,
+    "Timmy the Cruel": 607795,
+    "Tinkerer Gizlock": 607796,
+    "Tuten'kash": 607799,
+    "Twilight Lord Kelris": 607800,
+    "Urok Doomhowl": 607801,
+    "Vectus": 607804,
+    "Verdan the Everliving": 607805,
+    "Viscous Fallout": 607808,
+    "War Master Voone": 607810,
+    "Warchief Rend Blackhand": 607813,
+    "Warder Stilgiss": 607814,
+    "Witch Doctor Zum'rah": 607819,
+    "Zevrim Thornhoof": 607824
+  }
+}

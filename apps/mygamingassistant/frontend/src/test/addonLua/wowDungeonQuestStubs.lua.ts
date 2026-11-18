@@ -3,9 +3,10 @@
  * `player` (faction, class, level, skills = { {name, rank} }), `completed[questId] = true` (turned in), `questLog = { {id, complete} }`,
  * `instance = { type, id }` (nil = out in the world), then call `slash(msg)` or `fire(event)`.
  * Lines go into `out`: "chat: ..." for chat, "window: ..." for each line of text the window shows
- * (colour codes and icons stripped, icons as [done] / [log] / [todo]), "row: ..." for each dungeon
- * in the list, and "hidden" / "shown" for the window. `clear()` empties `out`; `clickRow(n)` and
- * `clickBack()` click the list and the back button. `C_QuestLog = nil` leaves the older globals.
+ * (colour codes and icons stripped, icons as [done] / [log] / [todo]), and "hidden" / "shown" for the
+ * window. `shownRows()`, `shownBosses()` and `shownLoot()` print "row: ...", "boss: ..." and "loot: ..."
+ * for what's on screen, `shownCrumbs()` the path at the top. `clear()` empties `out`; `clickRow(n)`,
+ * `clickBoss(n)`, `clickTab(n)`, `clickBack()` and `clickCrumb()` click them. `C_QuestLog = nil` leaves the older globals.
  * Map pins: `C_Map.SetUserWaypoint` prints "waypoint: <map> <x> <y>" (0-1), map 9999 can't take one,
  * `C_Map = nil` is a client without them; `shownPins()` prints "pins: 1,3" (the lines with a Pin
  * button), `clickPin(n)` clicks line n's.
@@ -76,7 +77,6 @@ SlashCmdList = {}
 
 local frames = {}
 local named = {}
-local rows = {}
 local function newObject(kind, name, parent)
   local o = { kind = kind, scripts = {}, events = {}, shownFlag = kind ~= "Frame" or name ~= "MGADungeonQuestsFrame", parent = parent }
   local methods = {}
@@ -95,27 +95,27 @@ local function newObject(kind, name, parent)
     self.text = t
     if self.isWindowText then
       for line in (t .. "\\n"):gmatch("(.-)\\n") do out[#out + 1] = "window: " .. plain(line) end
-    elseif self.isRowLabel then
-      out[#out + 1] = "row: " .. plain(t)
     end
   end
   function methods:GetStringHeight() return 100 end
   function methods:CreateFontString()
     local fs = newObject("FontString", nil, self)
-    if self.parent and self.parent.kind == "ScrollFrame" then fs.isWindowText = true else fs.isRowLabel = true end
+    fs.isWindowText = self.parent ~= nil and self.parent.kind == "ScrollFrame"
     return fs
   end
+  function methods:CreateTexture() return newObject("Texture", nil, self) end
+  function methods:SetTexture(file) self.file = file end
+  function methods:GetFrameLevel() return 1 end
   o.name = name
-  o.isWindowText, o.isRowLabel = false, false
+  o.isWindowText = false
   -- Unknown methods are no-ops; fields a template would add (TitleText) are absent.
   setmetatable(o, { __index = function(_, k) if k == "TitleText" then return nil end return methods[k] or function() end end })
   frames[#frames + 1] = o
   if name then named[name] = o end
-  if kind == "Button" and not name and parent and parent.parent and parent.parent.kind == "ScrollFrame" then rows[#rows + 1] = o end
   return o
 end
 function CreateFrame(kind, name, parent) return newObject(kind, name, parent) end
--- The scroll child's parent is the ScrollFrame; its rows are Buttons parented to the child.
+-- The scroll child's parent is the ScrollFrame; the window text is the font strings made on it.
 
 function fire(event, ...)
   for _, f in ipairs(frames) do
@@ -123,11 +123,40 @@ function fire(event, ...)
   end
 end
 function slash(msg) SlashCmdList.MGADUNGEONQUESTS(msg) end
-function clickRow(n)
-  local shownRows = {}
-  for _, r in ipairs(rows) do if r.shownFlag then shownRows[#shownRows + 1] = r end end
-  shownRows[n].scripts.OnClick(shownRows[n])
+-- Prints one line per pooled button on screen.
+local function printShown(prefix, describe)
+  for i = 1, 60 do
+    local b = named[prefix .. i]
+    if b and b.shownFlag then out[#out + 1] = describe(b) end
+  end
 end
+function shownRows()
+  printShown("MGADungeonQuestsDungeon", function(b)
+    return "row: " .. b.title.text .. " | " .. b.range.text .. " | " .. b.status.text .. " | art " .. tostring(b.art.file)
+  end)
+end
+function shownBosses()
+  printShown("MGADungeonQuestsBoss", function(b) return "boss: " .. b.label.text .. " | portrait " .. tostring(b.portrait.file) end)
+end
+function shownLoot()
+  printShown("MGADungeonQuestsLoot", function(b) return "loot: " .. plain(b.label.text) .. " | " .. b.sub.text .. " | " .. b.chance.text end)
+end
+-- The loot names as drawn, colour codes kept.
+function shownLootColours()
+  printShown("MGADungeonQuestsLoot", function(b) return "colour: " .. b.label.text end)
+end
+function shownCrumbs()
+  local path = {}
+  for _, name in ipairs({ "Home", "CrumbDungeon", "CrumbBoss" }) do
+    local b = named["MGADungeonQuests" .. name]
+    if b.shownFlag then path[#path + 1] = b.text end
+  end
+  out[#out + 1] = "crumbs: " .. table.concat(path, " > ")
+end
+function clickRow(n) named["MGADungeonQuestsDungeon" .. n].scripts.OnClick() end
+function clickBoss(n) named["MGADungeonQuestsBoss" .. n].scripts.OnClick() end
+function clickTab(n) named["MGADungeonQuestsTab" .. n].scripts.OnClick() end
+function clickCrumb() named.MGADungeonQuestsCrumbDungeon.scripts.OnClick() end
 -- The Pin buttons on screen, top to bottom, as "line n" numbers; clickPin(n) clicks line n's.
 function shownPins()
   local list = {}
@@ -138,9 +167,5 @@ function shownPins()
   out[#out + 1] = "pins: " .. table.concat(list, ",")
 end
 function clickPin(n) named["MGADungeonQuestsPin" .. n].scripts.OnClick() end
-function clickBack()
-  for _, f in ipairs(frames) do
-    if f.kind == "Button" and f.parent == named.MGADungeonQuestsFrame then f.scripts.OnClick(f) end
-  end
-end
+function clickBack() named.MGADungeonQuestsHome.scripts.OnClick() end
 `;

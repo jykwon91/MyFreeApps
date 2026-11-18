@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: MGA Dungeon Quests
-## Notes: Every quest to pick up for a dungeon's quests, in order, with who gives each and where — ticked with the quests you've done. Same list as MyGamingAssistant's "Before you go". /mgadq opens it.
+## Notes: A dungeon journal for WoW Forever: every dungeon, its bosses and loot, and every quest to pick up for it, ticked with the quests you've done. /mgadq opens it.
 ## Author: MyGamingAssistant
-## Version: 1.1.0
+## Version: 2.0.0
 ## SavedVariables: MGADungeonQuestsSettings
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 
