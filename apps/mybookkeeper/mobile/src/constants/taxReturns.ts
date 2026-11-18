@@ -47,7 +47,6 @@ export const TAX_RETURNS_MESSAGES = {
   filedBody: "Recalculating can change its numbers, and I can't undo it.",
   recalculateAnyway: "Recalculate anyway",
   cancel: "Cancel",
-  webLink: "Open this return on the website",
   title: (year: number) => `${year} tax return`,
   filedOn: (date: string) => `Filed on ${date}`,
   updated: (when: string) => `Updated ${when}`,

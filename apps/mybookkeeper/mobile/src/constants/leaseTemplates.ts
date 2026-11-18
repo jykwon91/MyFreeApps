@@ -23,8 +23,6 @@ export const LEASE_TEMPLATE_MESSAGES = {
   noneViewOnlyBody: "Someone with edit access can upload them.",
   add: "New template",
   moreThanShown: "Showing your first 100 templates.",
-  openWebsite: "Open on the website",
-  openOneOnWebsite: "Open this template on the website",
   files: "Files",
   noFiles: "This template has no files.",
   open: "Open",

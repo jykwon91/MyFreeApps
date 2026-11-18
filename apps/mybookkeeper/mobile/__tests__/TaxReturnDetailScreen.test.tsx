@@ -10,9 +10,8 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { TAX_ADVISOR_MESSAGES } from "../src/constants/taxAdvisor";
 import { TAX_DOCUMENTS_MESSAGES } from "../src/constants/taxDocuments";
 import { SEVERITY_LABELS, TAX_RETURNS_MESSAGES as MESSAGES } from "../src/constants/taxReturns";
@@ -222,12 +221,11 @@ describe("TaxReturnDetailScreen", () => {
     expect(await screen.findByText(MESSAGES.expectedActual("$1,000.00", "$800.00"))).toBeTruthy();
   });
 
-  it("keeps a link to the return on the website", async () => {
+  it("doesn't send people to the website for the return, the phone has all of it", async () => {
     serve();
     await show();
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-    await fireEvent.press(await screen.findByText(MESSAGES.webLink));
-    expect(open).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/tax-returns/r1`);
+    await screen.findByTestId("tax-return-detail");
+    expect(screen.queryByText(/website/)).toBeNull();
   });
 
   it.each<[string, TaxAdvisorCachedResponse | null, string]>([

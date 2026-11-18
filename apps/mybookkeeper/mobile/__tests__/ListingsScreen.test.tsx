@@ -8,7 +8,7 @@ import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
-import { Linking, Share } from "react-native";
+import { Share } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { stayLimits } from "../src/features/listings/listingDisplay";
@@ -325,12 +325,11 @@ describe("ListingDetailScreen", () => {
     expect(screen.getByText("Garden room")).toBeTruthy();
   });
 
-  it("still offers the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("doesn't send people to the website, the phone has all of it", async () => {
     startServer();
     await show(<ListingDetailScreen id="l1" />);
-    await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/listings/l1`);
+    await screen.findByText("Garden room");
+    expect(screen.queryByRole("button", { name: "Open on the website" })).toBeNull();
   });
 
   it("says when the listing has gone, and goes back", async () => {

@@ -9,9 +9,7 @@ import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import type { ReactElement } from "react";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { NEW_LEASE_MESSAGES } from "../src/constants/newLease";
 import { LEASE_TEMPLATE_MESSAGES } from "../src/constants/leaseTemplates";
 import { openAttachmentFile } from "../src/features/documents/openDocumentFile";
@@ -370,18 +368,17 @@ describe("LeaseTemplateDetailScreen", () => {
     const server = startServer(aPage([]));
     server.role = "viewer";
     await show(<LeaseTemplateDetailScreen id="t1" />);
-    await screen.findByRole("button", { name: LEASE_TEMPLATE_MESSAGES.openOneOnWebsite });
+    await screen.findByTestId("lease-template-detail");
     await waitFor(() => expect(server.workspaceReads).toBe(1));
     await act(async () => undefined);
     expect(screen.queryByRole("button", { name: NEW_LEASE_MESSAGES.useTemplate })).toBeNull();
   });
 
-  it("links to this template on the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("doesn't send people to the website, the phone has all of it", async () => {
     startServer(aPage([]));
     await show(<LeaseTemplateDetailScreen id="t1" />);
-    await fireEvent.press(await screen.findByRole("button", { name: LEASE_TEMPLATE_MESSAGES.openOneOnWebsite }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/lease-templates/t1`);
+    await screen.findByTestId("lease-template-detail");
+    expect(screen.queryByText(/website/)).toBeNull();
   });
 
   it("says when the template is gone, and offers a way back", async () => {
