@@ -29,7 +29,7 @@ export default function DocumentLibrarySheet({ messages: MESSAGES, isOpen, onClo
         <Text accessibilityRole="alert" style={{ fontSize: fontSize.md, color: colors.destructiveText }}>
           {MESSAGES.libraryFailed}
         </Text>
-        <LoadingButton onPress={() => void refetch()} variant="secondary">
+        <LoadingButton onPress={() => refetch()} variant="secondary">
           {MESSAGES.libraryRetry}
         </LoadingButton>
       </View>

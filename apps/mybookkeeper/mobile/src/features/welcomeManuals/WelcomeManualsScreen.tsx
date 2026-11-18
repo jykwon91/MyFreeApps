@@ -44,7 +44,7 @@ export default function WelcomeManualsScreen() {
   );
 
   const footer = loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => void refetch()} />
+    <LoadMoreFailed onRetry={() => refetch()} />
   ) : data?.has_more ? (
     <View style={{ padding: spacing.lg }}>
       <LoadingButton isLoading={isLoadingMore} loadingText={WELCOME_MANUAL_MESSAGES.loadingMore} onPress={() => setPageCount((count) => count + 1)} variant="secondary">

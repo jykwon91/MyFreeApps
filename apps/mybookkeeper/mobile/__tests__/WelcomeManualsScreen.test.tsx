@@ -1,6 +1,7 @@
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
+import type { AxiosAdapter } from "axios";
 import { WELCOME_MANUAL_MESSAGES } from "../src/constants/welcomeManuals";
 import WelcomeManualsScreen from "../src/features/welcomeManuals/WelcomeManualsScreen";
 import { aManual } from "../test-support/aWelcomeManual";
@@ -101,5 +102,38 @@ describe("the manuals list", () => {
     });
     await screen.findByText(SHOWING_LAST_LOADED_MESSAGE);
     expect(screen.getByText("Beach House guide")).toBeTruthy();
+  });
+
+  it("shows a retry after a failed load-more is working, and ignores a second tap until it answers", async () => {
+    const server = startWelcomeManualsServer({ manuals: manyManuals(30) });
+    await renderScreen(<WelcomeManualsScreen />);
+    await screen.findByText("Guide 0");
+    server.failReadsWith = 500;
+    await fireEvent.press(await screen.findByRole("button", { name: WELCOME_MANUAL_MESSAGES.showMore }));
+    await screen.findByText("I couldn't load more.");
+
+    server.failReadsWith = null;
+    const answer = api.defaults.adapter as AxiosAdapter;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let retries = 0;
+    api.defaults.adapter = (config) => {
+      if (config.url !== "/welcome-manuals") return answer(config);
+      retries += 1;
+      return gate.then(() => answer(config));
+    };
+    await fireEvent.press(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain }));
+    await waitFor(() => expect(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain })).toBeBusy());
+    expect(screen.getByTestId("loading-button-spinner")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain }));
+    expect(retries).toBe(1);
+
+    release();
+    await waitFor(() => expect(screen.queryByText("I couldn't load more.")).toBeNull());
+    expect(screen.queryByTestId("loading-button-spinner")).toBeNull();
+    const limits = server.requests.filter((request) => request.url === "/welcome-manuals").map((request) => request.params.limit);
+    expect(limits.at(-1)).toBe(50);
   });
 });

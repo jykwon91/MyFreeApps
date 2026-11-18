@@ -1,10 +1,12 @@
 import type { StyleProp, ViewStyle } from "react-native";
+import type { PressHandler } from "./PressHandler";
 
 export interface BannerAction {
   label: string;
   /** What a screen reader says, when the label alone isn't enough. */
   accessibilityHint?: string;
-  onPress: () => void;
+  /** Return the promise for work that takes a while: the action shows a spinner and ignores taps until it settles. */
+  onPress: PressHandler;
 }
 
 export interface BannerProps {

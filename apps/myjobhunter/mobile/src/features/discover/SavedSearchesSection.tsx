@@ -19,7 +19,7 @@ export default function SavedSearchesSection({ sources, isLoading, isError, onRe
     );
   }
   if (isError) {
-    return <Banner actions={[{ label: MESSAGES.tryAgain, onPress: () => void onRetry() }]} message={MESSAGES.couldntLoad} />;
+    return <Banner actions={[{ label: MESSAGES.tryAgain, onPress: onRetry }]} message={MESSAGES.couldntLoad} />;
   }
   if (!sources || sources.length === 0) return null;
   return (

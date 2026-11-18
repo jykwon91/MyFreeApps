@@ -37,7 +37,7 @@ export default function TenantRent({ applicantId }: { applicantId: string }) {
     return (
       <InquirySection title={RENT_MESSAGES.section}>
         <Text style={mutedText}>{RENT_MESSAGES.couldntLoad}</Text>
-        <LoadingButton onPress={() => void refetch()} variant="ghost">
+        <LoadingButton onPress={() => refetch()} variant="ghost">
           {RENT_MESSAGES.tryAgain}
         </LoadingButton>
       </InquirySection>

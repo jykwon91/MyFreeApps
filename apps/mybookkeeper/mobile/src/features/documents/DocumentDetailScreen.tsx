@@ -44,7 +44,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
     const isGone = "status" in error && error.status === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => goBackOr("/") } : { label: "Try again", onPress: async () => { await refetch(); } }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/") } : { label: "Try again", onPress: () => refetch() }}
         body={isGone ? "It may have been deleted." : "Want me to try again?"}
         heading={isGone ? "I can't find that document." : "I couldn't load that document."}
       />

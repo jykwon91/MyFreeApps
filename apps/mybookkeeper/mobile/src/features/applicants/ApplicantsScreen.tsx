@@ -65,7 +65,7 @@ export default function ApplicantsScreen({
     <LoadingRegion label={APPLICANT_LOADING_MESSAGES.more}>
       <ApplicantSkeletonRow />
     </LoadingRegion>
-  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined;
+  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined;
 
   return (
     <View style={{ flex: 1 }}>

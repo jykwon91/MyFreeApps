@@ -99,7 +99,7 @@ export default function InquiriesScreen({
         </LoadingRegion>
       );
     }
-    if (loadMoreFailed) return <LoadMoreFailed onRetry={() => void loadMore()} />;
+    if (loadMoreFailed) return <LoadMoreFailed onRetry={() => loadMore()} />;
     return undefined;
   }
 

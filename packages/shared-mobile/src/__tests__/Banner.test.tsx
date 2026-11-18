@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SessionContext } from "../auth/SessionContext";
 import Banner from "../components/Banner";
@@ -21,6 +21,43 @@ describe("Banner", () => {
     expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await fireEvent.press(action);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a spinner and ignores more taps while an action's promise is pending", async () => {
+    let finish: () => void = () => undefined;
+    const onPress = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await render(<Banner actions={[{ label: "Try again", onPress }]} message="Couldn't load" />);
+    const action = screen.getByRole("button", { name: "Try again" });
+    expect(action).not.toBeBusy();
+    expect(screen.queryByTestId("banner-action-spinner")).toBeNull();
+
+    await fireEvent.press(action);
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Try again" })).toBeBusy();
+    expect(screen.getByTestId("banner-action-spinner")).toBeTruthy();
+
+    await act(async () => {
+      finish();
+    });
+    expect(screen.getByRole("button", { name: "Try again" })).not.toBeBusy();
+    expect(screen.queryByTestId("banner-action-spinner")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it("stays tappable after a sync action", async () => {
+    const onPress = jest.fn();
+    await render(<Banner actions={[{ label: "Go", onPress }]} message="Heads up" />);
+    await fireEvent.press(screen.getByRole("button", { name: "Go" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Go" }));
+    expect(onPress).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId("banner-action-spinner")).toBeNull();
   });
 
   it("reads the info tone politely, not as an alert, in the same weights as the others", async () => {

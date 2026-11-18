@@ -31,7 +31,7 @@ export default function TenantLeases({ applicantId, name, isTenant }: TenantLeas
       {!isLoading && !currentData && error ? (
         <>
           <Text style={mutedText}>{LEASE_MESSAGES.couldntLoadTheirs}</Text>
-          <LoadingButton onPress={() => void refetch()} variant="ghost">
+          <LoadingButton onPress={() => refetch()} variant="ghost">
             {LEASE_MESSAGES.tryAgain}
           </LoadingButton>
         </>

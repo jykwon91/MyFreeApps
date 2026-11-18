@@ -71,7 +71,7 @@ export default function ListingsScreen() {
     <LoadingRegion label={LISTING_MESSAGES.loadingMore}>
       <ListingSkeletonRow />
     </LoadingRegion>
-  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined;
+  ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined;
 
   return (
     <View style={{ flex: 1 }}>

@@ -40,7 +40,7 @@ export default function VersionDiffScreen() {
         <EmptyState
           action={
             isDiffRetryable(error)
-              ? { label: MESSAGES.tryAgain, onPress: () => void refetch(), isLoading: isFetching }
+              ? { label: MESSAGES.tryAgain, onPress: () => refetch(), isLoading: isFetching }
               : { label: MESSAGES.goBack, onPress: () => goBackOrOpenRecipe(params.id) }
           }
           body={diffErrorMessage(error)}

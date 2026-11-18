@@ -69,7 +69,7 @@ export default function LeasesScreen() {
         <LoadingRegion label={LEASE_MESSAGES.loadingMore}>
           <ApplicantSkeletonRow />
         </LoadingRegion>
-      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
+      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />

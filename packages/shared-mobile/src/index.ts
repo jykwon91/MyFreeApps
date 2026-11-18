@@ -143,6 +143,8 @@ export type { KeyboardAwareScrollRef } from "./types/KeyboardAwareScrollRef";
 export type { LabelValueRowProps } from "./types/LabelValueRowProps";
 export type { ListRowTitleProps } from "./types/ListRowTitleProps";
 export type { LoadingButtonProps } from "./types/LoadingButtonProps";
+export type { PendingPress } from "./types/PendingPress";
+export type { PressHandler } from "./types/PressHandler";
 export type { LoadingRegionProps } from "./types/LoadingRegionProps";
 export type { LoadMoreFooterProps } from "./types/LoadMoreFooterProps";
 export type { MoreMenuGroup } from "./types/MoreMenuGroup";

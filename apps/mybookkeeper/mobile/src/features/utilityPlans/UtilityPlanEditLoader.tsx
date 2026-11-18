@@ -14,7 +14,7 @@ export default function UtilityPlanEditLoader({ id }: { id: string }) {
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/utility-plans") } : { label: MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/utility-plans") } : { label: MESSAGES.tryAgain, onPress: () => refetch() }}
       body={isGone ? MESSAGES.maybeDeleted : MESSAGES.tryAgainOffer}
       heading={isGone ? MESSAGES.cantFind : MESSAGES.couldntLoadOne}
     />

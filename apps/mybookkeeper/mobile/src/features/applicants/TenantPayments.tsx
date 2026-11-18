@@ -33,7 +33,7 @@ export default function TenantPayments({ applicantId, name }: { applicantId: str
     return (
       <InquirySection title={TENANT_PAYMENT_MESSAGES.section}>
         <Text style={mutedText}>{TENANT_PAYMENT_MESSAGES.couldntLoad}</Text>
-        <LoadingButton onPress={() => void refetch()} variant="ghost">
+        <LoadingButton onPress={() => refetch()} variant="ghost">
           {TENANT_PAYMENT_MESSAGES.tryAgain}
         </LoadingButton>
       </InquirySection>

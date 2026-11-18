@@ -12,5 +12,5 @@ export interface TweakFreshBase {
   /** The load failed since opening (a failure cached from before doesn't count). */
   hasFailed: boolean;
   error: ApiError | SerializedError | undefined;
-  refetch: () => unknown;
+  refetch: () => PromiseLike<unknown>;
 }

@@ -28,7 +28,7 @@ export default function RentReminderHistory({ applicantId }: { applicantId: stri
       {!sends && !isFetching ? (
         <>
           <Text style={mutedText}>{REMINDER_MESSAGES.couldntLoadHistory}</Text>
-          <LoadingButton onPress={() => void refetch()} variant="ghost">
+          <LoadingButton onPress={() => refetch()} variant="ghost">
             {REMINDER_MESSAGES.tryAgain}
           </LoadingButton>
         </>

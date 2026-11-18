@@ -1,11 +1,10 @@
-import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { DISABLED_OPACITY, PRESSED_OPACITY } from "../constants/loadingButton";
+import { usePendingPress } from "../hooks/usePendingPress";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { LoadingButtonProps } from "../types/LoadingButtonProps";
 import { buttonBackground, buttonForeground } from "../utils/buttonColors";
-import { isPromise } from "../utils/isPromise";
 import { loadingAccessibilityLabel } from "../utils/loadingAccessibilityLabel";
 
 export default function LoadingButton({
@@ -21,32 +20,11 @@ export default function LoadingButton({
   ...props
 }: LoadingButtonProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  const [isPending, setIsPending] = useState(false);
-  // State only blocks a second press after a re-render. The ref blocks it immediately.
-  const inFlight = useRef(false);
+  const { isPending, press } = usePendingPress(onPress, disabled || isLoading);
 
   const isBusy = isLoading || isPending;
   const isDisabled = disabled || isBusy;
   const foreground = buttonForeground(variant, colors);
-
-  const handlePress = (): void => {
-    if (inFlight.current || isDisabled) return;
-    inFlight.current = true;
-    let result: void | Promise<void>;
-    try {
-      result = onPress();
-    } catch (error) {
-      inFlight.current = false;
-      throw error;
-    }
-    const isAsync = isPromise(result);
-    if (isAsync) setIsPending(true);
-    // Sync work settles on the next microtask, which still stops a second press in this tick.
-    void Promise.resolve(result).finally(() => {
-      inFlight.current = false;
-      if (isAsync) setIsPending(false);
-    });
-  };
 
   return (
     <Pressable
@@ -55,7 +33,7 @@ export default function LoadingButton({
       accessibilityLabel={loadingAccessibilityLabel(accessibilityLabel, loadingText, isBusy)}
       accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: isBusy }}
       disabled={isDisabled}
-      onPress={handlePress}
+      onPress={press}
       style={({ pressed }) => [
         {
           minHeight: MIN_TOUCH_TARGET,

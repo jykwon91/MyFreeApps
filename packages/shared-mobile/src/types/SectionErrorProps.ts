@@ -1,5 +1,7 @@
+import type { PressHandler } from "./PressHandler";
+
 export interface SectionErrorProps {
   message: string;
   retryLabel: string;
-  onRetry: () => void | Promise<void>;
+  onRetry: PressHandler;
 }

@@ -12,7 +12,7 @@ export default function EditPolicyLoader({ id }: { id: string }) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: INSURANCE_MESSAGES.back, onPress: () => goBackOr("/insurance") } : { label: INSURANCE_MESSAGES.tryAgain, onPress: () => void refetch() }}
+        action={isGone ? { label: INSURANCE_MESSAGES.back, onPress: () => goBackOr("/insurance") } : { label: INSURANCE_MESSAGES.tryAgain, onPress: () => refetch() }}
         body={isGone ? INSURANCE_MESSAGES.maybeDeleted : INSURANCE_MESSAGES.tryAgainOffer}
         heading={isGone ? INSURANCE_MESSAGES.cantFind : INSURANCE_MESSAGES.couldntLoadOne}
       />

@@ -14,7 +14,7 @@ export default function MortgageEditLoader({ id }: { id: string }) {
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => goBackOr("/mortgages") } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => goBackOr("/mortgages") } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: () => refetch() }}
       body={isGone ? MORTGAGE_MESSAGES.maybeDeleted : MORTGAGE_MESSAGES.tryAgainOffer}
       heading={isGone ? MORTGAGE_MESSAGES.cantFind : MORTGAGE_MESSAGES.couldntLoadOne}
     />

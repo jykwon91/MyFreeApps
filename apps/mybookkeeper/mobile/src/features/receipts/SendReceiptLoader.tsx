@@ -33,7 +33,7 @@ export default function SendReceiptLoader({ transactionId }: { transactionId: st
   const goBack = { label: MESSAGES.goBack, onPress: () => goBackOr("/receipts") };
   if (!currentData) {
     if (isFetching) return <SendReceiptSkeleton />;
-    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;
+    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;
   }
   const receipt = finished ?? currentData.items.find((item) => item.transaction_id === transactionId);
   if (!receipt) return <EmptyState action={goBack} body={MESSAGES.notWaitingBody} heading={MESSAGES.notWaitingHeading} />;

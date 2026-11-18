@@ -54,7 +54,7 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
     if (!companies) {
       return (
         <Banner
-          actions={[{ label: MESSAGES.tryAgain, onPress: () => void refetch() }]}
+          actions={[{ label: MESSAGES.tryAgain, onPress: () => refetch() }]}
           message={MESSAGES.couldntLoadCompanies}
           style={{ margin: spacing.lg }}
         />

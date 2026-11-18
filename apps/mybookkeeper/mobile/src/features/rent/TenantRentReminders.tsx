@@ -44,7 +44,7 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
     return (
       <InquirySection title={REMINDER_MESSAGES.section}>
         <Text style={mutedText}>{REMINDER_MESSAGES.couldntLoad}</Text>
-        <LoadingButton onPress={() => void refetch()} variant="ghost">
+        <LoadingButton onPress={() => refetch()} variant="ghost">
           {REMINDER_MESSAGES.tryAgain}
         </LoadingButton>
       </InquirySection>

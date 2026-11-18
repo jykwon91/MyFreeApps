@@ -23,7 +23,7 @@ export default function ReconciliationDetailScreen({ id, year }: { id: string; y
         </LoadingRegion>
       );
     }
-    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: async () => void (await refetch()) }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;
+    return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;
   }
 
   const source = currentData.find((candidate) => candidate.id === id);

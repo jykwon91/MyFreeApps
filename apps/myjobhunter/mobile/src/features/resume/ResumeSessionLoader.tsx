@@ -39,7 +39,7 @@ export default function ResumeSessionLoader({ sessionId, onStartNew }: ResumeSes
         ) : (
           <>
             <EmptyState
-              action={{ label: MESSAGES.tryAgain, onPress: () => void query.refetch(), isLoading: query.isFetching }}
+              action={{ label: MESSAGES.tryAgain, onPress: () => query.refetch(), isLoading: query.isFetching }}
               body={MESSAGES.couldntLoadSessionBody}
               heading={MESSAGES.couldntLoadSession}
             />

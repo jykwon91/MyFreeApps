@@ -14,7 +14,7 @@ export default function LeaseTemplateLoader({ id, children }: Omit<LeaseTemplate
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/lease-templates") } : { label: MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/lease-templates") } : { label: MESSAGES.tryAgain, onPress: () => refetch() }}
       body={isGone ? MESSAGES.maybeDeleted : MESSAGES.tryAgainOffer}
       heading={isGone ? MESSAGES.cantFind : MESSAGES.couldntLoadOne}
     />
