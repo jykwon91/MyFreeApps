@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_LOADING_MESSAGES, INQUIRY_VIEWS } from "../../constants/inquiries";
+import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_LOADING_MESSAGES, INQUIRY_VIEWS, InquiryViewMode } from "../../constants/inquiries";
 import { INQUIRY_CREATE_MESSAGES } from "../../constants/inquiryCreate";
 import { INTEGRATIONS_LINK } from "../../constants/home";
 import { uniqueById } from "../../lib/uniqueById";
@@ -69,7 +69,7 @@ export default function InquiriesScreen({
     if (stage) {
       return <EmptyState action={{ label: "Clear filter", onPress: () => onStageChange(null) }} body="No inquiries are at that stage here." heading="Nothing matches that" />;
     }
-    const inboxIsEmpty = view === "inbox" || view === "all";
+    const inboxIsEmpty = view === InquiryViewMode.INBOX || view === InquiryViewMode.ALL;
     if (inboxIsEmpty && integrations && connection !== "connected") {
       if (!canWrite) return <EmptyState body={INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY} heading={INQUIRY_EMPTY_WORDS[view].heading} />;
       const words = INQUIRY_EMPTY_GMAIL_WORDS[connection];
@@ -137,7 +137,7 @@ export default function InquiriesScreen({
             inquiry={item}
             listingTitle={item.listing_title}
             onPress={() => router.push(`/inquiries/${item.id}`)}
-            showSpam={view === "all"}
+            showSpam={view === InquiryViewMode.ALL}
             showStage={stage === null}
           />
         )}
