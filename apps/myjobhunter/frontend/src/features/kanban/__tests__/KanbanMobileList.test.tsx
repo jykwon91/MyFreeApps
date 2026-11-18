@@ -11,6 +11,7 @@ import { useBoardMove } from "@myjobhunter/api-client/hooks/useBoardMove";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
+import { DASHBOARD_MESSAGES } from "@/constants/dashboard-messages";
 import KanbanMobileList from "../KanbanMobileList";
 import { useBoardMoveFeedback } from "../use-board-move-feedback";
 
@@ -107,8 +108,11 @@ function section(stage: string): HTMLElement {
 
 const MOVE_BUTTON = /Move Staff Engineer, Acme/;
 
-/** The thunk the real moveKanbanItem is: the card moves at once, and goes back if the server refuses. */
-function stubMove(outcome: "agrees" | "refuses"): void {
+/**
+ * The thunk the real moveKanbanItem is: the card moves at once, goes back if the server refuses, and stays
+ * where the server has it (here, moved) when the answer is lost.
+ */
+function stubMove(outcome: "agrees" | "refuses" | "loses the answer"): void {
   mocks.moveKanbanItem.mockImplementation(
     ({ applicationId, target }: { applicationId: string; target: KanbanColumn }) =>
       (
@@ -118,9 +122,10 @@ function stubMove(outcome: "agrees" | "refuses"): void {
         const before = getState().board.items.find((i) => i.id === applicationId);
         dispatch(boardSlice.actions.place({ id: applicationId, column: target }));
         if (outcome === "agrees") return Promise.resolve({});
+        if (outcome === "loses the answer") return Promise.reject({ status: undefined, data: "Network Error" });
         const back = Object.entries(EVENT_FOR_COLUMN).find(([, event]) => event === before?.latest_event_type)?.[0];
         dispatch(boardSlice.actions.place({ id: applicationId, column: back as KanbanColumn }));
-        return Promise.reject(new Error("nope"));
+        return Promise.reject({ status: 400, data: { detail: "nope" } });
       },
   );
 }
@@ -178,6 +183,18 @@ describe("KanbanMobileList", () => {
     expect(back).toBeEnabled();
     await waitFor(() => expect(back).toHaveFocus());
     expect(screen.getByRole("status")).toHaveTextContent("Couldn't move Staff Engineer to Offer; it was moved back.");
+  });
+
+  it("says it's unsure, and leaves the card where the server has it, when the answer to a move is lost", async () => {
+    stubMove("loses the answer");
+    renderList([item()]);
+    await userEvent.click(screen.getByRole("button", { name: MOVE_BUTTON }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Offer" }));
+
+    expect(mocks.showError).toHaveBeenCalledWith(DASHBOARD_MESSAGES.unsureMoved);
+    expect(mocks.showSuccess).not.toHaveBeenCalled();
+    expect(within(section("Offer")).getByRole("button", { name: MOVE_BUTTON })).toBeEnabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Not sure Staff Engineer moved to Offer; the board was refreshed.");
   });
 
   it("marks the card's current stage in the menu and does nothing when it is picked", async () => {

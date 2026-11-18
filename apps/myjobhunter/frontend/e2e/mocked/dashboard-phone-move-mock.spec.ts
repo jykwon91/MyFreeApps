@@ -81,3 +81,20 @@ test("a refused move puts the card back and shows an error toast", async ({ page
   await expect(stage(page, "Applied").getByText("Staff Engineer")).toBeVisible();
   await expect(stage(page, "Offer").getByText("Staff Engineer")).toHaveCount(0);
 });
+
+test("a move whose answer is lost says it's unsure and shows where the server has the card", async ({ page }) => {
+  const board: Board = { latestEventType: "applied" };
+  await mockBoard(page, board, () => ({ status: 500, body: { detail: "unused" } }));
+  // The server moves the card, but the answer is lost. The route added last wins over mockBoard's.
+  await page.route(TRANSITION_ENDPOINT, (route) => {
+    board.latestEventType = "offer_received";
+    return route.abort("connectionreset");
+  });
+
+  await page.goto("/dashboard");
+  await moveTo(page, "Offer");
+
+  await expect(page.getByText(/Not sure the move went through/).first()).toBeVisible();
+  await expect(stage(page, "Offer").getByText("Staff Engineer")).toBeVisible();
+  await expect(stage(page, "Applied").getByText("Staff Engineer")).toHaveCount(0);
+});

@@ -9,4 +9,5 @@ export const DASHBOARD_MESSAGES = {
   moveTitle: "Move to stage",
   movedTo: "Moved to",
   couldntMove: "Couldn't move card",
+  unsureMoved: "Not sure the move went through, so the board was refreshed to show where the card is now.",
 } as const;

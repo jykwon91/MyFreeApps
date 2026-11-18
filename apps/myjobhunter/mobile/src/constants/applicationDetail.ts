@@ -17,6 +17,7 @@ export const APPLICATION_DETAIL_MESSAGES = {
   moving: "Moving…",
   movedTo: "Moved to",
   couldntMove: "I couldn't move it. Want to try again?",
+  unsureMoved: "I'm not sure that moved. I've checked again, so what you see is where it is now.",
   archive: "Archive",
   restore: "Restore",
   archiving: "Archiving…",

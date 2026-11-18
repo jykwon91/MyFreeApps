@@ -4,7 +4,7 @@ import type { KanbanColumn } from "./kanban-column";
 export interface MoveKanbanItemArgs {
   applicationId: string;
   target: KanbanColumn;
-  /** Fresh per move, so a retried request can't move it twice. */
+  /** One per move, reused when the same move is retried, so the server counts it once. */
   idempotencyKey: string;
   /** When the move happened, for the card's stage age until the server answers. */
   occurredAt: string;

@@ -12,6 +12,15 @@ export function writeFailure(error: unknown, failed: string, gone: string = APPL
 }
 
 /**
+ * What to say when moving an application to another stage fails. After a lost answer the server may have moved it, so this
+ * doesn't offer a plain retry: what's on screen is read again from the server and is the truth.
+ */
+export function moveFailure(error: unknown): string {
+  if (writeOutcome(error) === "unknown") return APPLICATION_DETAIL_MESSAGES.unsureMoved;
+  return writeFailure(error, APPLICATION_DETAIL_MESSAGES.couldntMove);
+}
+
+/**
  * What to say when an add fails. Unlike a change, an add isn't safe to send twice: after a lost answer or a server failure
  * with no reason it may already be saved, so this says to check first rather than offering a plain retry.
  */

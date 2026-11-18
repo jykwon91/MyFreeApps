@@ -12,6 +12,7 @@ Covers:
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import uuid
 
@@ -173,6 +174,27 @@ class TestIdempotency:
         assert first.status_code == 201
         assert second.status_code == 201
         # Same event id -> the second POST resolved to the existing row.
+        assert first.json()["id"] == second.json()["id"]
+
+    @pytest.mark.asyncio
+    async def test_same_key_sent_twice_at_once_writes_one_event(
+        self, db: AsyncSession, user_factory, as_user,
+    ) -> None:
+        """A retry of a move whose answer was lost can arrive while the first is still running."""
+        user = await user_factory()
+        company = await _create_company(db, uuid.UUID(user["id"]), "Acme")
+
+        async with await as_user(user) as authed:
+            app_id = await _create_application(authed, company.id)
+            body = {"target_column": "interviewing", "idempotency_key": uuid.uuid4().hex}
+
+            first, second = await asyncio.gather(
+                authed.post(f"/applications/{app_id}/transitions", json=body),
+                authed.post(f"/applications/{app_id}/transitions", json=body),
+            )
+
+        assert first.status_code == 201
+        assert second.status_code == 201
         assert first.json()["id"] == second.json()["id"]
 
     @pytest.mark.asyncio

@@ -4,14 +4,18 @@ import {
   useTransitionApplicationMutation,
   useUpdateApplicationMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
+import { refetchAfterLostMove } from "@myjobhunter/api-client/store/refetchAfterLostMove";
+import { useMoveKeys } from "@myjobhunter/api-client/hooks/useMoveKeys";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { LoadingButton, OptionSheet, PickerField, useTheme, useToast } from "@platform/mobile";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { randomUUID } from "expo-crypto";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { Alert, View } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
 import { STAGE_OPTIONS } from "../../constants/stageOptions";
-import { writeFailure } from "../../lib/writeFailure";
+import { moveFailure, writeFailure } from "../../lib/writeFailure";
 import type { ApplicationAction } from "../../types/ApplicationAction";
 import type { ApplicationActionsProps } from "../../types/ApplicationActionsProps";
 
@@ -19,6 +23,8 @@ import type { ApplicationActionsProps } from "../../types/ApplicationActionsProp
 export default function ApplicationActions({ application, column, isLeaving, onDeleted }: ApplicationActionsProps) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
+  const dispatch = useDispatch();
+  const moveKeys = useMoveKeys(randomUUID);
   const [transition] = useTransitionApplicationMutation();
   const [updateApplication] = useUpdateApplicationMutation();
   const [deleteApplication] = useDeleteApplicationMutation();
@@ -27,14 +33,20 @@ export default function ApplicationActions({ application, column, isLeaving, onD
   const { id, archived } = application;
   const isDisabled = busy !== null || isLeaving;
 
-  async function run(action: ApplicationAction, work: () => Promise<unknown>, done: string, failed: string): Promise<boolean> {
+  async function run(
+    action: ApplicationAction,
+    work: () => Promise<unknown>,
+    done: string,
+    failed: string,
+    describeFailure: (error: unknown) => string = (error) => writeFailure(error, failed),
+  ): Promise<boolean> {
     setBusy(action);
     try {
       await work();
       showToast(done);
       return true;
     } catch (error) {
-      showToast(writeFailure(error, failed), "error");
+      showToast(describeFailure(error), "error");
       return false;
     } finally {
       setBusy(null);
@@ -43,8 +55,22 @@ export default function ApplicationActions({ application, column, isLeaving, onD
 
   async function moveTo(target: KanbanColumn): Promise<void> {
     if (target === column) return;
-    // A fresh key per move, as the website's board sends, so a retried request can't move it twice.
-    await run("stage", () => transition({ applicationId: id, target_column: target, idempotency_key: randomUUID() }).unwrap(), `${MESSAGES.movedTo} ${KANBAN_COLUMN_LABELS[target]}.`, MESSAGES.couldntMove);
+    const moved = await run(
+      "stage",
+      // The same move retried after a lost answer reuses its key, so the server counts it once.
+      () => transition({ applicationId: id, target_column: target, idempotency_key: moveKeys.keyFor(id, target) }).unwrap().catch(settleMove),
+      `${MESSAGES.movedTo} ${KANBAN_COLUMN_LABELS[target]}.`,
+      MESSAGES.couldntMove,
+      moveFailure,
+    );
+    if (moved) moveKeys.settle(id);
+  }
+
+  /** A lost answer leaves the stage unknown: read it again from the server and keep the key for a retry. Any other failure settles the move. */
+  function settleMove(error: unknown): never {
+    if (writeOutcome(error) === "unknown") dispatch(refetchAfterLostMove(id));
+    else moveKeys.settle(id);
+    throw error;
   }
 
   async function toggleArchive(): Promise<void> {

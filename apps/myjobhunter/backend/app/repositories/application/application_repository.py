@@ -96,12 +96,15 @@ async def get_by_id(
     user_id: uuid.UUID,
     *,
     include_deleted: bool = False,
+    for_update: bool = False,
 ) -> Application | None:
     """Return the application iff it belongs to ``user_id``.
 
     Defaults to skipping soft-deleted rows. ``include_deleted=True`` is used
     by the soft-delete flow so a second DELETE on an already-deleted row
-    still returns 204 (idempotent).
+    still returns 204 (idempotent). ``for_update`` locks the row until commit,
+    so concurrent writes to one application (a stage move and its retry)
+    run one after the other.
     """
     stmt = select(Application).where(
         Application.id == application_id,
@@ -109,6 +112,8 @@ async def get_by_id(
     )
     if not include_deleted:
         stmt = stmt.where(Application.deleted_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 

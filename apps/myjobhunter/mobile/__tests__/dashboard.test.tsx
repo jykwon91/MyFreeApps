@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { randomUUID } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { AppState, FlatList, Linking } from "react-native";
 import type { AppStateStatus } from "react-native";
@@ -431,7 +432,7 @@ it("moves a card to another stage at once, with a spinner on its Move button unt
   expect(await screen.findByText("Moved to Offer.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Offer, 1 application" })).toBeTruthy();
   expect(sent.filter(({ route }) => route === MOVE_STRIPE).map(({ body }) => body)).toEqual([
-    // A fresh key per move, as the website's board sends.
+    // One key per move, as the website's board sends.
     { target_column: "offer", idempotency_key: "move-key-1" },
   ]);
 });
@@ -451,6 +452,59 @@ it("puts a card back and says so when the server refuses the move", async () => 
   expect(await screen.findByText(DETAIL.couldntMove)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Applied, 2 applications" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Interviewing, 1 application" })).toBeTruthy();
+});
+
+it("shows the server's stage and says it's unsure when the answer to a move is lost", async () => {
+  // The move reached the server and moved Stripe to Offer; only the answer was lost.
+  let board = boardOf(...ITEMS);
+  serve({
+    "POST /auth/mobile/refresh": refreshed,
+    [BOARD]: () => board(),
+    [MOVE_STRIPE]: () => {
+      board = boardOf({ ...STRIPE, latest_event_type: "offer_received" }, AIRBNB, LYFT, ZILLOW);
+      throw new Error("Network Error");
+    },
+  });
+  await renderApp();
+  await showBoard();
+
+  await fireEvent.press(screen.getByRole("button", { name: "Move Staff Engineer, Stripe" }));
+  await fireEvent.press(await screen.findByRole("radio", { name: "Offer" }));
+
+  expect(await screen.findByText(DETAIL.unsureMoved)).toBeTruthy();
+  expect(screen.queryByText(DETAIL.couldntMove)).toBeNull();
+  expect(await screen.findByRole("button", { name: "Offer, 1 application" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Applied, 1 application" })).toBeTruthy();
+});
+
+it("sends a retry of a move whose answer was lost with the same key", async () => {
+  jest.mocked(randomUUID).mockReturnValueOnce("unique-key-1").mockReturnValueOnce("unique-key-2");
+  let lost = true;
+  const sent = serve({
+    "POST /auth/mobile/refresh": refreshed,
+    [BOARD]: boardOf(...ITEMS),
+    [MOVE_STRIPE]: () => {
+      if (lost) throw new Error("Network Error");
+      return { status: 201, data: eventRecord({ id: "e-2", application_id: "00000000-0000-4000-8000-000000000001", event_type: "offer_received" }) };
+    },
+  });
+  await renderApp();
+  await showBoard();
+
+  await fireEvent.press(screen.getByRole("button", { name: "Move Staff Engineer, Stripe" }));
+  await fireEvent.press(await screen.findByRole("radio", { name: "Offer" }));
+  expect(await screen.findByText(DETAIL.unsureMoved)).toBeTruthy();
+  // The server never got it, so Stripe is back in Applied to try again.
+  expect(await screen.findByRole("button", { name: "Applied, 2 applications" })).toBeTruthy();
+
+  lost = false;
+  await fireEvent.press(await screen.findByRole("button", { name: "Move Staff Engineer, Stripe" }));
+  await fireEvent.press(await screen.findByRole("radio", { name: "Offer" }));
+  expect(await screen.findByText("Moved to Offer.")).toBeTruthy();
+  expect(sent.filter(({ route }) => route === MOVE_STRIPE).map(({ body }) => body)).toEqual([
+    { target_column: "offer", idempotency_key: "unique-key-1" },
+    { target_column: "offer", idempotency_key: "unique-key-1" },
+  ]);
 });
 
 it("doesn't ask the server to move a card to the stage it's already in", async () => {

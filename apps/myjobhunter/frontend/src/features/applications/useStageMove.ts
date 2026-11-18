@@ -1,17 +1,16 @@
 import { useRef, useState } from "react";
 import { showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { writeOutcome } from "@platform/core/utils/writeOutcome";
+import { useMoveKeys } from "@myjobhunter/api-client/hooks/useMoveKeys";
 import {
   useGetApplicationQuery,
   useTransitionApplicationMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import { DASHBOARD_MESSAGES } from "@/constants/dashboard-messages";
+import { newIdempotencyKey } from "@/lib/newIdempotencyKey";
 
-function newIdempotencyKey(): string {
-  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 /**
  * Moves an application to another stage from a stage select.
@@ -24,11 +23,15 @@ function newIdempotencyKey(): string {
  * cache tag (the response is a single event, not the updated application),
  * and RTK Query starts that refetch synchronously when the move resolves, so
  * this hook's own query subscription already reports ``isFetching`` by the
- * render that follows. A failed move reverts straight away (no refetch).
+ * render that follows. A move the server refused reverts straight away (no
+ * refetch). If the answer was lost the server may have moved it, so the
+ * application is read again and the select shows what comes back; picking
+ * the same stage again sends the same idempotency key, so it counts once.
  */
 export function useStageMove(applicationId: string, currentColumn: KanbanColumn) {
   const [transitionApplication] = useTransitionApplicationMutation();
-  const { isFetching } = useGetApplicationQuery(applicationId);
+  const { isFetching, refetch } = useGetApplicationQuery(applicationId);
+  const moveKeys = useMoveKeys(newIdempotencyKey);
   const [pendingColumn, setPendingColumn] = useState<KanbanColumn | null>(null);
   const [saved, setSaved] = useState(false);
   const inFlight = useRef(false);
@@ -52,12 +55,19 @@ export function useStageMove(applicationId: string, currentColumn: KanbanColumn)
       await transitionApplication({
         applicationId,
         target_column: target,
-        idempotency_key: newIdempotencyKey(),
+        idempotency_key: moveKeys.keyFor(applicationId, target),
       }).unwrap();
+      moveKeys.settle(applicationId);
       showSuccess(`Moved to ${KANBAN_COLUMN_LABELS[target]}`);
       setSaved(true);
     } catch (err) {
-      showError(`Couldn't move: ${extractErrorMessage(err)}`);
+      if (writeOutcome(err) === "unknown") {
+        void refetch();
+        showError(DASHBOARD_MESSAGES.unsureMoved);
+      } else {
+        moveKeys.settle(applicationId);
+        showError(`Couldn't move: ${extractErrorMessage(err)}`);
+      }
       setPendingColumn(null);
     } finally {
       inFlight.current = false;

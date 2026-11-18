@@ -167,7 +167,11 @@ async def transition_application(
             f"target_column must be one of {KanbanColumn.ALL}, got {target_column!r}",
         )
 
-    application = await application_repository.get_by_id(db, application_id, user_id)
+    # Lock the application until commit, so a retry sent while the first
+    # request is still running waits for it, then finds its event below
+    # instead of writing a second one. Two different moves queue the same way
+    # and each is checked against the column the other left.
+    application = await application_repository.get_by_id(db, application_id, user_id, for_update=True)
     if application is None:
         return None
 
