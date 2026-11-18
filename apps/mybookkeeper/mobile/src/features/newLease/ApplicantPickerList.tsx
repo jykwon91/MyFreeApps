@@ -1,16 +1,16 @@
-import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
+import { flattenPagesById } from "@platform/core/utils/flattenPagesById";
 import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
-import { uniqueById } from "../../lib/uniqueById";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import ApplicantRow from "../applicants/ApplicantRow";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "../applicants/ApplicantsSkeleton";
 import PagedListFooter from "../shell/PagedListFooter";
-import { useLoadMoreFailure } from "../shell/useLoadMoreFailure";
 import { nextPath } from "./newLeaseFlow";
 
 const [APPROVED, LEASE_SENT] = STAGES_READY_FOR_LEASE;
@@ -18,29 +18,24 @@ const [APPROVED, LEASE_SENT] = STAGES_READY_FOR_LEASE;
 export default function ApplicantPickerList({ flow }: { flow: NewLeaseFlow }) {
   const { colors, spacing, fontSize } = useTheme();
   // The server filters on one stage at a time.
-  const approved = useListApplicantPagesInfiniteQuery({ stage: APPROVED });
-  const leaseSent = useListApplicantPagesInfiniteQuery({ stage: LEASE_SENT });
+  const approved = useApplicantsPages({ stage: APPROVED });
+  const leaseSent = useApplicantsPages({ stage: LEASE_SENT });
   const lists = [approved, leaseSent];
   const error = approved.error ?? leaseSent.error;
-  const { loadMoreFailed, loadMore, clearLoadMoreFailure } = useLoadMoreFailure(async () => {
-    const results = await Promise.all(lists.filter((list) => list.hasNextPage).map((list) => list.fetchNextPage()));
-    return results.some((result) => result.isError);
-  });
-  const { refresh, refreshControl } = useRefresh(async () => {
-    clearLoadMoreFailure();
-    await Promise.all(lists.map((list) => list.refetch()));
-  }, error);
-  const isLoaded = Boolean(approved.currentData && leaseSent.currentData);
+  const { refresh, refreshControl } = useRefresh(() => Promise.all(lists.map((list) => list.refetch())), error);
+  const isLoaded = lists.every(hasCurrentPages);
+  // An applicant can briefly sit in both stages while one is mid-move, so rows are unique across them.
   const rows = useMemo(
-    () =>
-      uniqueById([
-        ...(approved.currentData?.pages.flatMap((page) => page.items) ?? []),
-        ...(leaseSent.currentData?.pages.flatMap((page) => page.items) ?? []),
-      ]),
-    [approved.currentData, leaseSent.currentData],
+    () => flattenPagesById([{ items: [...approved.applicants, ...leaseSent.applicants], total: 0 }]),
+    [approved.applicants, leaseSent.applicants],
   );
   const isLoadingMore = lists.some((list) => list.isFetchingNextPage);
   const hasMore = lists.some((list) => list.hasNextPage);
+  const loadMoreFailed = lists.some((list) => list.isLoadMoreError);
+
+  function loadMore(): void {
+    lists.filter((list) => list.hasNextPage).forEach((list) => list.loadMore());
+  }
 
   // With only one of the two lists, someone would look like they aren't ready.
   const emptyList = isLoaded ? (
@@ -59,7 +54,7 @@ export default function ApplicantPickerList({ flow }: { flow: NewLeaseFlow }) {
           isLoadingMore={isLoadingMore}
           loadMoreFailed={loadMoreFailed}
           loadingLabel={MESSAGES.loadingMoreApplicants}
-          onRetry={() => void loadMore()}
+          onRetry={loadMore}
           skeletonRow={<ApplicantSkeletonRow />}
         />
       }
@@ -75,7 +70,7 @@ export default function ApplicantPickerList({ flow }: { flow: NewLeaseFlow }) {
       data={isLoaded ? rows : []}
       keyExtractor={(applicant) => applicant.id}
       onEndReached={() => {
-        if (hasMore && !isLoadingMore && !loadMoreFailed) void loadMore();
+        if (hasMore && !isLoadingMore && !loadMoreFailed) loadMore();
       }}
       onEndReachedThreshold={0.5}
       refreshControl={refreshControl}

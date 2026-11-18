@@ -1,3 +1,4 @@
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
@@ -8,8 +9,9 @@ import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { continueWithDocuments, LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/leaseDocuments";
 import { LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import LeaseTemplatesSkeleton, { LeaseTemplateSkeletonRow } from "../leaseTemplates/LeaseTemplatesSkeleton";
-import { useLeaseTemplatePages } from "../leaseTemplates/useLeaseTemplatePages";
 import PagedListFooter from "../shell/PagedListFooter";
 import TemplatePickerRow from "../newLease/TemplatePickerRow";
 import { addDocumentDetailsPath } from "./addDocumentFlow";
@@ -20,10 +22,9 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
   const insets = useSafeAreaInsets();
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const lease = useGetSignedLeaseByIdQuery(leaseId);
-  const templates = useLeaseTemplatePages();
+  const templates = useLeaseTemplatesPages();
   const error = lease.error ?? templates.error;
-  const { refresh, refreshControl } = useRefresh(() => Promise.all([lease.refetch(), templates.reload()]), error);
-  const { rows } = templates;
+  const { refresh, refreshControl } = useRefresh(() => Promise.all([lease.refetch(), templates.refetch()]), error);
   const onLease = new Set(lease.currentData?.templates.map((template) => template.id));
   const isLocked = lease.currentData?.documents_locked ?? false;
   // A pick that the lease has since locked out is dropped, so it is never sent.
@@ -37,7 +38,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
     setPickedIds(picked.includes(id) ? picked.filter((other) => other !== id) : [...picked, id]);
   }
 
-  const isLoaded = templates.isLoaded && Boolean(lease.currentData);
+  const isLoaded = hasCurrentPages(templates) && Boolean(lease.currentData);
   const emptyList = !isLoaded && !error ? (
     <LeaseTemplatesSkeleton />
   ) : !isLoaded ? (
@@ -57,15 +58,15 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
         ListFooterComponent={
           <PagedListFooter
             isLoadingMore={templates.isFetchingNextPage}
-            loadMoreFailed={templates.loadMoreFailed}
+            loadMoreFailed={templates.isLoadMoreError}
             loadingLabel={LEASE_TEMPLATE_MESSAGES.loadingMore}
-            onRetry={() => void templates.loadMore()}
+            onRetry={templates.loadMore}
             skeletonRow={<LeaseTemplateSkeletonRow />}
           />
         }
         ListHeaderComponent={
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && isLoaded && !templates.loadMoreFailed)} />
+            <StaleDataBanner isShown={Boolean(error && isLoaded && !templates.isLoadMoreError)} />
             <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.pickTitle}
             </Text>
@@ -73,9 +74,11 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
           </View>
         }
         contentInsetAdjustmentBehavior="automatic"
-        data={isLoaded ? rows : []}
+        data={isLoaded ? templates.templates : []}
         keyExtractor={(template) => template.id}
-        onEndReached={templates.loadMoreIfAny}
+        onEndReached={() => {
+          if (canLoadMore(templates)) templates.loadMore();
+        }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         renderItem={({ item }) => {

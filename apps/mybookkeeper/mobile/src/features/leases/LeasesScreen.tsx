@@ -1,16 +1,17 @@
-import { useListSignedLeasePagesInfiniteQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { EmptyState, LoadingButton, LoadingRegion, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { useSignedLeasesPages } from "@mybookkeeper/api-client/hooks/useSignedLeasesPages";
+import { EmptyState, LoadingButton, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { LEASE_IMPORT_MESSAGES } from "../../constants/leaseImport";
 import { LEASE_FILTERS, LEASE_MESSAGES } from "../../constants/leases";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
-import { uniqueById } from "../../lib/uniqueById";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { LeaseFilter } from "../../types/LeaseFilter";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "../applicants/ApplicantsSkeleton";
 import { templatesPath } from "../newLease/newLeaseFlow";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LeaseRow from "./LeaseRow";
 
@@ -18,24 +19,13 @@ export default function LeasesScreen() {
   const { spacing } = useTheme();
   const canWrite = useCanWrite();
   const [filter, setFilter] = useState<LeaseFilter>("current");
-  const [filterThatFailedToLoadMore, setFilterThatFailedToLoadMore] = useState<LeaseFilter | null>(null);
-  const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } =
-    useListSignedLeasePagesInfiniteQuery(filter === "all" ? {} : { group: filter });
-  const loadMoreFailed = filterThatFailedToLoadMore === filter;
-  const { refresh, refreshControl } = useRefresh(async () => {
-    setFilterThatFailedToLoadMore(null);
-    await refetch();
-  }, error);
-  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
-
-  async function loadMore(): Promise<void> {
-    const result = await fetchNextPage();
-    setFilterThatFailedToLoadMore(result.isError ? filter : null);
-  }
+  const list = useSignedLeasesPages(filter === "all" ? {} : { group: filter });
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const rows = hasCurrentPages(list) ? list.leases : [];
 
   function emptyList() {
-    if (isFetching) return <ApplicantsSkeleton label={LEASE_MESSAGES.loading} />;
-    if (error) {
+    if (list.isFetching) return <ApplicantsSkeleton label={LEASE_MESSAGES.loading} />;
+    if (list.error) {
       return (
         <EmptyState
           action={{ label: LEASE_MESSAGES.tryAgain, onPress: refresh }}
@@ -65,14 +55,18 @@ export default function LeasesScreen() {
   return (
     <FlatList
       ListEmptyComponent={emptyList()}
-      ListFooterComponent={isFetchingNextPage ? (
-        <LoadingRegion label={LEASE_MESSAGES.loadingMore}>
-          <ApplicantSkeletonRow />
-        </LoadingRegion>
-      ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => loadMore()} /> : undefined}
+      ListFooterComponent={
+        <PagedListFooter
+          isLoadingMore={list.isFetchingNextPage}
+          loadMoreFailed={list.isLoadMoreError}
+          loadingLabel={LEASE_MESSAGES.loadingMore}
+          onRetry={list.loadMore}
+          skeletonRow={<ApplicantSkeletonRow />}
+        />
+      }
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+          <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
           {canWrite ? <LoadingButton onPress={() => router.push(templatesPath())} variant="secondary">{NEW_LEASE_MESSAGES.newLease}</LoadingButton> : null}
           {canWrite ? <LoadingButton onPress={() => router.push("/leases/import")} variant="secondary">{LEASE_IMPORT_MESSAGES.importLease}</LoadingButton> : null}
           <SegmentedControl accessibilityLabel={LEASE_MESSAGES.filterLabel} onChange={setFilter} segments={LEASE_FILTERS} value={filter} />
@@ -82,7 +76,7 @@ export default function LeasesScreen() {
       data={rows}
       keyExtractor={(lease) => lease.id}
       onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage && !loadMoreFailed) void loadMore();
+        if (canLoadMore(list)) list.loadMore();
       }}
       onEndReachedThreshold={0.5}
       refreshControl={refreshControl}

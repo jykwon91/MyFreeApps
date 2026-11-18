@@ -1,8 +1,8 @@
 import DuplicatesLink from "../duplicates/DuplicatesLink";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { ClampedText, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, View } from "react-native";
@@ -184,19 +184,19 @@ export default function TransactionsScreen({
     <EmptyState body="Nothing is waiting for your review." heading="You're all caught up" />
   );
 
-  const footer = isFetchingNextPage ? (
-    <LoadingRegion label={TRANSACTION_LIST_MESSAGES.loadingMore}>
-      <TransactionSkeletonRow />
-    </LoadingRegion>
-  ) : loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => loadMore()} />
-  ) : undefined;
-
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         ListEmptyComponent={emptyList}
-        ListFooterComponent={footer}
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={isFetchingNextPage}
+            loadMoreFailed={loadMoreFailed}
+            loadingLabel={TRANSACTION_LIST_MESSAGES.loadingMore}
+            onRetry={loadMore}
+            skeletonRow={<TransactionSkeletonRow />}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />

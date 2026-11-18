@@ -1,3 +1,4 @@
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -5,9 +6,10 @@ import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
 import { continueWithTemplates, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import LeaseTemplatesSkeleton, { LeaseTemplateSkeletonRow } from "../leaseTemplates/LeaseTemplatesSkeleton";
-import { useLeaseTemplatePages } from "../leaseTemplates/useLeaseTemplatePages";
 import PagedListFooter from "../shell/PagedListFooter";
 import { nextPath } from "./newLeaseFlow";
 import TemplatePickerRow from "./TemplatePickerRow";
@@ -16,15 +18,17 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
   const [picked, setPicked] = useState<string[]>(flow.templateIds);
-  const { isLoaded, rows, error, isFetching, isFetchingNextPage, loadMoreFailed, loadMore, reload, loadMoreIfAny } = useLeaseTemplatePages();
-  const { refresh, refreshControl } = useRefresh(reload, error);
+  const templates = useLeaseTemplatesPages();
+  const { refresh, refreshControl } = useRefresh(templates.refetch, templates.error);
+  const isLoaded = hasCurrentPages(templates);
+  const rows = isLoaded ? templates.templates : [];
 
   function toggle(id: string): void {
     setPicked((current) => (current.includes(id) ? current.filter((other) => other !== id) : [...current, id]));
   }
 
   const emptyList =
-    !isLoaded && isFetching ? (
+    !isLoaded && templates.isFetching ? (
       <LeaseTemplatesSkeleton />
     ) : !isLoaded ? (
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadTemplates} />
@@ -42,16 +46,16 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
         ListEmptyComponent={emptyList}
         ListFooterComponent={
           <PagedListFooter
-            isLoadingMore={isFetchingNextPage}
-            loadMoreFailed={loadMoreFailed}
+            isLoadingMore={templates.isFetchingNextPage}
+            loadMoreFailed={templates.isLoadMoreError}
             loadingLabel={LEASE_TEMPLATE_MESSAGES.loadingMore}
-            onRetry={() => void loadMore()}
+            onRetry={templates.loadMore}
             skeletonRow={<LeaseTemplateSkeletonRow />}
           />
         }
         ListHeaderComponent={
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+            <StaleDataBanner isShown={Boolean(templates.error && rows.length > 0 && !templates.isLoadMoreError)} />
             {flow.parentLeaseId ? <Banner message={MESSAGES.followsEarlier} tone="success" /> : null}
             <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.whichTemplates}
@@ -62,7 +66,9 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
         contentInsetAdjustmentBehavior="automatic"
         data={rows}
         keyExtractor={(template) => template.id}
-        onEndReached={loadMoreIfAny}
+        onEndReached={() => {
+          if (canLoadMore(templates)) templates.loadMore();
+        }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         renderItem={({ item }) => {
