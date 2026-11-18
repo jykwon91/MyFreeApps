@@ -483,8 +483,9 @@ describe("MultiTemplatePicker", () => {
     expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
   });
 
-  it("keeps templates from an earlier load usable after a failed refresh", () => {
+  it("keeps templates from an earlier load usable under the error of a failed refresh", () => {
     renderPicker({ ...queryStatus({ failed: true, fetching: false }) });
+    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
     expect(screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();
   });
 });

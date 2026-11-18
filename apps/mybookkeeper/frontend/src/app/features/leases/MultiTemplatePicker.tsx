@@ -1,5 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
+import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
@@ -23,23 +24,21 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { templates, hasData, loadError: error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+  const { templates, hasData, loadError, error: lastError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
     useLeaseTemplatesPages();
   const mode = resolveListLoadMode({
     hasData,
-    hasError: error !== undefined,
+    hasError: loadError !== undefined,
     itemCount: templates.length,
   });
 
-  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
-  // refetches, which would flash "No templates yet" mid-retry.
-  const loadError = error ? (
+  const loadAlert = showsPagedLoadAlert({ loadError, error: lastError, hasData, isLoadMoreError }) ? (
     <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
   ) : null;
 
   switch (mode) {
     case "error":
-      return loadError;
+      return loadAlert;
     case "loading":
       return (
         <div className="space-y-2" data-testid="multi-template-picker-skeleton">
@@ -65,7 +64,7 @@ export default function MultiTemplatePicker({
       return (
         <div className="space-y-3">
           {/* Items from an earlier load stay usable; this says the latest one failed. */}
-          {loadError}
+          {loadAlert}
           <ul className="space-y-2" data-testid="multi-template-picker-list">
             {templates.map((t) => {
               const checked = selectedIds.includes(t.id);

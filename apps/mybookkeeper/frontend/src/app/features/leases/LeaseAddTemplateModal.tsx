@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@platform/ui";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
+import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import {
   useAddSignedLeaseTemplatesMutation,
@@ -66,7 +67,7 @@ export default function LeaseAddTemplateModal({
     useAddSignedLeaseTemplatesMutation();
   const [prefill, { isLoading: isPrefilling }] =
     usePrefillAddendumPlaceholdersMutation();
-  const { templates: available, hasData, loadError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+  const { templates: available, hasData, loadError, error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
     useLeaseTemplatesPages();
 
   const linkedSet = useMemo(
@@ -196,7 +197,7 @@ export default function LeaseAddTemplateModal({
               onToggle={handleToggle}
               isDocumentsLocked={isDocumentsLocked}
               mode={templatesMode}
-              hasError={loadError !== undefined}
+              hasError={showsPagedLoadAlert({ loadError, error, hasData, isLoadMoreError })}
               isRetrying={isLoading}
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}

@@ -6,6 +6,7 @@ import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
+import { showsPagedLoadAlert } from "@/shared/utils/shows-paged-load-alert";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import LoadMoreFooter from "@/shared/components/ui/LoadMoreFooter";
 import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
@@ -13,7 +14,7 @@ import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseT
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { templates, hasData, loadError, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
+  const { templates, hasData, loadError, error, isLoading, hasNextPage, isFetchingNextPage, isLoadMoreError, loadMore, refetch } =
     useLeaseTemplatesPages();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -43,7 +44,7 @@ export default function LeaseTemplates() {
         }
       />
 
-      {loadError ? (
+      {showsPagedLoadAlert({ loadError, error, hasData, isLoadMoreError }) ? (
         <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isLoading} onRetry={() => void refetch()} />
       ) : null}
 
