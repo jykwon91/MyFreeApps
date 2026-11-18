@@ -33,6 +33,7 @@ function aProperty(overrides: Partial<RentalRoiResponse["properties"][0]> = {}):
     noi_annual_cents: 1800000,
     cap_rate_pct: "11.52",
     cash_on_cash_pct: "21.60",
+    is_personal_home: false,
     cost_breakdown: {
       debt_service_monthly_cents: 100000,
       operating_monthly_cents: 50000,

@@ -181,6 +181,45 @@ def roi_sessions(monkeypatch: pytest.MonkeyPatch, _db_engine: AsyncEngine) -> No
     monkeypatch.setattr(rental_roi_service, "AsyncSessionLocal", _factory)
 
 
+class TestRentedHome:
+    @pytest.mark.asyncio
+    async def test_a_home_that_collects_rent_is_included_and_marked(
+        self, db: AsyncSession, roi_sessions: None,
+    ) -> None:
+        org_id, user_id = await _org_and_user(db)
+        home = _property(org_id, user_id, "Home", classification=PropertyClassification.PRIMARY_RESIDENCE)
+        rental = _property(org_id, user_id, "Rental")
+        db.add_all([home, rental])
+        db.add_all([
+            _txn(org_id, user_id, home.id, "rental_revenue", "12000.00"),
+            _txn(org_id, user_id, home.id, "utilities", "1200.00"),
+        ])
+        await db.commit()
+
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"), today=TODAY)
+
+        by_name = {p.property_name: p for p in result.properties}
+        assert by_name["Home"].is_personal_home is True
+        assert by_name["Home"].actual_revenue_monthly_cents == 100_000
+        assert by_name["Home"].break_even_monthly_cents == 10_000
+        assert by_name["Rental"].is_personal_home is False
+        assert result.summary.property_count == 2
+
+    @pytest.mark.asyncio
+    async def test_a_home_with_no_rent_stays_out(self, db: AsyncSession, roi_sessions: None) -> None:
+        org_id, user_id = await _org_and_user(db)
+        home = _property(org_id, user_id, "Home", classification=PropertyClassification.PRIMARY_RESIDENCE)
+        db.add(home)
+        db.add(_txn(org_id, user_id, home.id, "utilities", "1200.00"))
+        await db.commit()
+
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"), today=TODAY)
+
+        assert result.properties == []
+
+
 class TestGetRentalRoi:
     @pytest.mark.asyncio
     async def test_portfolio_end_to_end(self, db: AsyncSession, roi_sessions: None) -> None:

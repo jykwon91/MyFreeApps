@@ -57,7 +57,11 @@ def loan_from_mortgage(mortgage: Mortgage) -> RentalRoiLoan:
 
 
 def to_property_response(
-    property_id: uuid.UUID, property_name: str, figures: RentalRoiFigures,
+    property_id: uuid.UUID,
+    property_name: str,
+    figures: RentalRoiFigures,
+    *,
+    is_personal_home: bool = False,
 ) -> RentalRoiProperty:
     break_even_cents = to_cents(figures.break_even_monthly)
     debt_service_cents = to_cents(figures.debt_service_monthly)
@@ -66,6 +70,7 @@ def to_property_response(
     return RentalRoiProperty(
         property_id=property_id,
         property_name=property_name,
+        is_personal_home=is_personal_home,
         months_averaged=figures.months_averaged,
         has_purchase_price=figures.has_purchase_price,
         mortgage_source=figures.mortgage_source,

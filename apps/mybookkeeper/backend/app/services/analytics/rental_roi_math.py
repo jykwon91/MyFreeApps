@@ -66,6 +66,11 @@ def _sum_tags(totals: Mapping[str, Decimal], tags: Iterable[str]) -> Decimal:
     return sum((totals.get(tag, _ZERO) for tag in tags), _ZERO)
 
 
+def collects_rent(category_totals: Mapping[str, Decimal]) -> bool:
+    """Whether a property earned rental revenue, whatever its tax classification."""
+    return _sum_tags(category_totals, RENTAL_ROI_REVENUE_TAGS) > 0
+
+
 def _category_lines(
     totals: Mapping[str, Decimal], tags: Iterable[str], divisor: Decimal,
 ) -> tuple[RentalRoiCostLine, ...]:

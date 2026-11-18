@@ -22,6 +22,12 @@ from app.services.analytics import rental_roi_math
 from app.services.analytics.rental_roi_loan import RentalRoiLoan
 
 
+_PERSONAL_HOME_CLASSIFICATIONS = frozenset({
+    PropertyClassification.PRIMARY_RESIDENCE,
+    PropertyClassification.SECOND_HOME,
+})
+
+
 async def get_rental_roi(
     ctx: RequestContext,
     *,
@@ -59,7 +65,11 @@ async def get_rental_roi(
         loans_by_property[mortgage.property_id].append(rental_roi_mapper.loan_from_mortgage(mortgage))
 
     rentals = sorted(
-        (p for p in active_properties if p.classification == PropertyClassification.INVESTMENT),
+        (
+            p for p in active_properties
+            if p.classification == PropertyClassification.INVESTMENT
+            or rental_roi_math.collects_rent(totals_by_property.get(p.id, {}))
+        ),
         key=lambda p: p.name.lower(),
     )
     properties = [
@@ -73,6 +83,7 @@ async def get_rental_roi(
                 purchase_price=prop.purchase_price,
                 target_return_pct=target_return_pct,
             ),
+            is_personal_home=prop.classification in _PERSONAL_HOME_CLASSIFICATIONS,
         )
         for prop in rentals
     ]

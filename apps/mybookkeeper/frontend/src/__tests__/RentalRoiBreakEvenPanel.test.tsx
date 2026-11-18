@@ -16,6 +16,7 @@ import { useGetRentalRoiQuery } from "@mybookkeeper/api-client/store/analyticsAp
 const PEERLESS: RentalRoiProperty = {
   property_id: "prop-a",
   property_name: "6732 Peerless",
+  is_personal_home: false,
   months_averaged: 12,
   has_purchase_price: false,
   mortgage_source: "records",
@@ -146,6 +147,16 @@ describe("Break-even breakdown", () => {
     });
     const { panel } = await openPanel();
     expect(within(panel).getByText("No operating expenses recorded in this period.")).toBeInTheDocument();
+  });
+
+  it("says when a property is also the owner's home", async () => {
+    respondWith({ ...PEERLESS, is_personal_home: true });
+    render(
+      <MemoryRouter>
+        <RentalRoi />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText(/Your home: counts all of its costs/).length).toBeGreaterThan(0);
   });
 
   it("closes from its close button", async () => {

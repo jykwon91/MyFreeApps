@@ -19,6 +19,7 @@ export const RENTAL_ROI_BREAKDOWN_MESSAGES = {
   escrowHeading: "Not counted: already paid by escrow",
   escrowNote: "Your mortgage escrow pays these, so counting the bills too would charge you twice.",
   capitalNote: "Expenses marked as a capital improvement are never counted.",
+  personalHomeNote: "Your home: counts all of its costs, including the parts you live in.",
 } as const;
 
 export const RENTAL_ROI_MORTGAGE_SOURCE_NOTES: Readonly<Record<RentalRoiMortgageSource, string>> = {
