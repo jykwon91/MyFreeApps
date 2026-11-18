@@ -218,8 +218,306 @@ function M.Pin(step)
   say("map pin on " .. step.giver .. ", " .. step.where .. ". Open your map (M) to see it.")
 end
 
--- One quest line's block: its heading and "Next:" line (top), the steps (body), and the step to pin.
-local function lineBlock(n, line, inLog, level)
+-- Routes --------------------------------------------------------------------------------------
+-- The quickest way from where you stand to a spot: on foot, by flight path, boat, zeppelin or tram.
+-- The same travel-time search as the World Map's directions, in straight lines: the addon has no walk graph.
+
+local RUN_SPEED, FLY_SPEED, WALK_DETOUR, FLIGHT_WAIT, TRACK_SECONDS = 7, 20, 1.5, 30, 1
+local RIDE_WAIT = { boat = 240, zeppelin = 240, tram = 150 }
+local ARRIVED = { walk = 25, fly = 80, boat = 150, zeppelin = 150, tram = 150 }
+
+local route = nil -- the route being followed: { target, legs, at }
+local routeFrame
+
+local function worldSpot(map, x, y)
+  local zone = MGADungeonQuestsTravel and MGADungeonQuestsTravel.zones[map]
+  if not zone then return nil end
+  return { c = zone[1], wx = zone[3] - (y / 100) * (zone[3] - zone[2]), wy = zone[5] - (x / 100) * (zone[5] - zone[4]) }
+end
+
+-- Where you stand in the world; nil inside an instance, where the client doesn't say.
+local function playerSpot()
+  if not UnitPosition then return nil end
+  local wx, wy, _, continent = UnitPosition("player")
+  if not wx then return nil end
+  return { c = continent, wx = wx, wy = wy }
+end
+
+local function yardsApart(a, b)
+  if a.c ~= b.c then return math.huge end
+  return math.sqrt((a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2)
+end
+
+local function character()
+  MGADungeonQuestsCharacter = MGADungeonQuestsCharacter or {}
+  local saved = MGADungeonQuestsCharacter
+  saved.flights, saved.flightsSeen = saved.flights or {}, saved.flightsSeen or {}
+  return saved
+end
+
+-- Opening any flight master tells us every flight path you know on that continent.
+local function rememberFlights()
+  local spot = playerSpot()
+  if not (spot and C_TaxiMap and C_TaxiMap.GetAllTaxiNodes and GetTaxiMapID) then return end
+  local nodes = C_TaxiMap.GetAllTaxiNodes(GetTaxiMapID())
+  if not nodes or #nodes == 0 then return end
+  local saved = character()
+  local unreachable = Enum and Enum.FlightPathState and Enum.FlightPathState.Unreachable or 2
+  saved.flightsSeen[spot.c] = true
+  for _, node in ipairs(nodes) do
+    if node.state ~= unreachable then saved.flights[node.nodeID] = true end
+  end
+end
+
+local function usable(thing, side)
+  return thing.side == side or thing.side == "N"
+end
+
+-- A flight path counts once you know it; on a continent we haven't seen a flight master on, we can't tell yet.
+local function canFly(flight, side)
+  local saved = character()
+  return usable(flight, side) and (not saved.flightsSeen[flight.c] or saved.flights[flight.id] == true)
+end
+
+local function travelNodes(from, to, side)
+  local nodes = { { spot = from }, { spot = to } }
+  for _, flight in ipairs(MGADungeonQuestsTravel.flights) do
+    if canFly(flight, side) then
+      nodes[#nodes + 1] = { spot = flight, flight = flight, label = "the flight master at " .. flight.name }
+      nodes[#nodes + 1] = { spot = flight, flight = flight, air = true }
+    end
+  end
+  for _, ride in ipairs(MGADungeonQuestsTravel.rides) do
+    if usable(ride, side) then
+      for _, stop in ipairs(ride.stops) do nodes[#nodes + 1] = { spot = stop, ride = ride, label = stop.label } end
+    end
+  end
+  return nodes
+end
+
+local function flightLinks()
+  local links = {}
+  for _, link in ipairs(MGADungeonQuestsTravel.links) do
+    links[link[1]] = links[link[1]] or {}
+    links[link[1]][link[2]] = true
+  end
+  return links
+end
+
+-- Seconds from a to b, and whether that's aboard a ride; nil when there's no direct way.
+local function travelSeconds(a, b, links)
+  if a.air then
+    if not b.air then return a.flight == b.flight and 0 or nil end
+    if links[a.flight.id] and links[a.flight.id][b.flight.id] then return yardsApart(a.spot, b.spot) / FLY_SPEED end
+    return nil
+  end
+  if b.air then return a.flight == b.flight and FLIGHT_WAIT or nil end
+  local yards = yardsApart(a.spot, b.spot)
+  local walk = yards < math.huge and yards * WALK_DETOUR / RUN_SPEED or nil
+  if a.ride and a.ride == b.ride and (not walk or RIDE_WAIT[a.ride.vehicle] < walk) then return RIDE_WAIT[a.ride.vehicle], true end
+  return walk
+end
+
+-- The nodes of the quickest way from node 1 to node 2, and its seconds; nil when none joins them.
+local function quickestPath(nodes)
+  local links, seconds, previous, settled = flightLinks(), { [1] = 0 }, {}, {}
+  while true do
+    local current
+    for i in pairs(seconds) do
+      if not settled[i] and (not current or seconds[i] < seconds[current]) then current = i end
+    end
+    if not current or current == 2 then break end
+    settled[current] = true
+    for i, node in ipairs(nodes) do
+      local cost = not settled[i] and travelSeconds(nodes[current], node, links)
+      if cost and (not seconds[i] or seconds[current] + cost < seconds[i]) then
+        seconds[i], previous[i] = seconds[current] + cost, current
+      end
+    end
+  end
+  if not seconds[2] then return nil end
+  local path, at = {}, 2
+  while at do
+    table.insert(path, 1, nodes[at])
+    at = previous[at]
+  end
+  return path, seconds[2]
+end
+
+local function aboutYards(yards)
+  return math.max(10, math.floor(yards / 10 + 0.5) * 10) .. " yd"
+end
+
+local function legsAlong(path, target)
+  local links, legs = flightLinks(), {}
+  local function add(kind, text, spot) legs[#legs + 1] = { kind = kind, text = text, spot = spot } end
+  for i = 2, #path do
+    local a, b = path[i - 1], path[i]
+    local _, aboard = travelSeconds(a, b, links)
+    if a.air and not b.air then
+      add("fly", "Take the flight to " .. b.flight.name, b.spot)
+    elseif aboard then
+      add(a.ride.vehicle, "Take the " .. a.ride.vehicle .. " to " .. b.label, b.spot)
+    elseif not a.air and not b.air and yardsApart(a.spot, b.spot) > ARRIVED.walk then
+      local place = b.label or (target.giver .. ", " .. target.where)
+      add("walk", "Walk to " .. place .. " (about " .. aboutYards(yardsApart(a.spot, b.spot)) .. ")", b.spot)
+    end
+  end
+  return legs
+end
+
+-- The legs from one spot to a target, and the minutes they take; nil when no road joins them.
+function M.PlanRoute(from, target)
+  local to = worldSpot(target.map, target.x, target.y)
+  if not (from and to) then return nil end
+  to.map, to.x, to.y = target.map, target.x, target.y
+  local side = (UnitFactionGroup("player") or ""):sub(1, 1)
+  local path, seconds = quickestPath(travelNodes(from, to, side))
+  if not path then return nil end
+  return legsAlong(path, target), math.max(1, math.floor(seconds / 60 + 0.5))
+end
+
+local function pinLeg(leg)
+  local spot = leg.spot
+  if not M.CanPin(spot) then return end
+  if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(spot.map) then return end
+  C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(spot.map, spot.x / 100, spot.y / 100))
+  if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then C_SuperTrack.SetSuperTrackedUserWaypoint(true) end
+  route.pinned = true
+end
+
+-- Takes the route's own pin away; a pin you placed yourself stays.
+function M.StopRoute()
+  local pinned = route and route.pinned
+  route = nil
+  if routeFrame then routeFrame:Hide() end
+  if pinned and C_Map and C_Map.ClearUserWaypoint then C_Map.ClearUserWaypoint() end
+end
+
+-- Moves on to the furthest leg you've reached the end of; the last one ends the route.
+function M.TrackRoute()
+  local spot = route and playerSpot()
+  if not spot then return end
+  for i = #route.legs, route.at, -1 do
+    local leg = route.legs[i]
+    if yardsApart(spot, leg.spot) <= ARRIVED[leg.kind] then
+      if i == #route.legs then
+        say("you've reached " .. route.target.giver .. ".")
+        M.StopRoute()
+      else
+        route.at = i + 1
+        M.ShowRouteLeg()
+      end
+      return
+    end
+  end
+end
+
+local function newRouteFrame()
+  local f = CreateFrame("Frame", "MGADungeonQuestsRouteFrame", UIParent)
+  f:SetSize(340, 62)
+  f:SetPoint("TOP", 0, -120)
+  f:SetFrameStrata("MEDIUM")
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", f.StartMoving)
+  f:SetScript("OnDragStop", f.StopMovingOrSizing)
+  local back = f:CreateTexture(nil, "BACKGROUND")
+  back:SetAllPoints()
+  back:SetColorTexture(0, 0, 0, 0.75)
+  f.heading = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.heading:SetPoint("TOPLEFT", 10, -8)
+  f.heading:SetWidth(270)
+  f.heading:SetJustifyH("LEFT")
+  f.heading:SetWordWrap(false)
+  f.leg = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  f.leg:SetPoint("TOPLEFT", 10, -28)
+  f.leg:SetWidth(320)
+  f.leg:SetJustifyH("LEFT")
+  local stop = CreateFrame("Button", "MGADungeonQuestsRouteStop", f, "UIPanelButtonTemplate")
+  stop:SetSize(50, 20)
+  stop:SetPoint("TOPRIGHT", -6, -5)
+  stop:SetText("Stop")
+  stop:SetScript("OnClick", M.StopRoute)
+  local waited = 0
+  f:SetScript("OnUpdate", function(_, elapsed)
+    waited = waited + elapsed
+    if waited < TRACK_SECONDS then return end
+    waited = 0
+    M.TrackRoute()
+  end)
+  return f
+end
+
+function M.ShowRouteLeg()
+  routeFrame = routeFrame or newRouteFrame()
+  local leg = route.legs[route.at]
+  routeFrame.heading:SetText("Route to " .. route.target.giver .. " (about " .. route.minutes .. " min)")
+  routeFrame.leg:SetText(route.at .. " of " .. #route.legs .. ": " .. leg.text)
+  routeFrame:Show()
+  pinLeg(leg)
+end
+
+local function follow(target, legs, minutes)
+  route = { target = target, legs = legs, at = 1, minutes = minutes }
+  M.ShowRouteLeg()
+end
+
+-- Whether a route flies on a continent where we haven't seen which flight paths you know.
+function M.FliesUnchecked(legs)
+  for _, leg in ipairs(legs) do
+    if leg.kind == "fly" and not character().flightsSeen[leg.spot.c] then return true end
+  end
+  return false
+end
+
+-- Routes you to a target, or pins it when the way there can't be worked out (inside an instance, say).
+function M.StartRoute(target)
+  M.StopRoute()
+  local legs, minutes = M.PlanRoute(playerSpot(), target)
+  if not legs then return M.Pin(target) end
+  if #legs == 0 then return say("you're already at " .. target.giver .. ".") end
+  say("route to " .. target.giver .. ", about " .. minutes .. " min:")
+  for i, leg in ipairs(legs) do say(i .. ". " .. leg.text) end
+  if M.FliesUnchecked(legs) then
+    say("It counts every flight path until you open a flight master here, which shows the ones you know.")
+  end
+  follow(target, legs, minutes)
+end
+
+-- After a loading screen or a new flight path, the quickest way may have changed. Going into an instance ends it.
+function M.ReplanRoute()
+  if not route then return end
+  local _, instanceType = GetInstanceInfo()
+  if instanceType ~= "none" then return M.StopRoute() end
+  local legs, minutes = M.PlanRoute(playerSpot(), route.target)
+  if not legs then return end
+  if #legs == 0 then return M.StopRoute() end
+  follow(route.target, legs, minutes)
+end
+
+M.RememberFlights = rememberFlights
+
+-- Where a quest needs you next: its giver, whoever takes it back, or the dungeon's door.
+function M.RouteTarget(step, state, dungeon)
+  if not state then
+    return step.map and { giver = step.giver, where = step.where, map = step.map, x = step.x, y = step.y } or nil
+  end
+  if state == "complete" then
+    if not step.turnInMap then return nil end
+    return { giver = step.turnIn, where = step.turnInWhere, map = step.turnInMap, x = step.turnInX, y = step.turnInY }
+  end
+  return step.dungeon and M.DoorTarget(dungeon) or nil
+end
+
+function M.DoorTarget(dungeon)
+  local door = dungeon.door
+  return door and { giver = dungeon.name .. " entrance", where = door.where, map = door.map, x = door.x, y = door.y } or nil
+end
+
+-- One quest line's block: its heading and "Next:" line (top), the steps (body), and where to route to.
+local function lineBlock(n, line, inLog, level, dungeon)
   local done = M.DoneSteps(line, inLog)
   local doneCount, nextIndex = 0, nil
   for i in ipairs(line.steps) do
@@ -234,7 +532,8 @@ local function lineBlock(n, line, inLog, level)
     local step = line.steps[nextIndex]
     local state = inLog[step.id]
     top = top .. "\n" .. GOLD .. "Next:|r " .. M.NextText(step, state, level)
-    if not state and M.CanPin(step) then pin = step end
+    local target = M.RouteTarget(step, state, dungeon)
+    if target and M.CanPin(target) then pin = target end
   end
   local body = {}
   for i, step in ipairs(line.steps) do
@@ -253,7 +552,7 @@ function M.Checklist(dungeon)
     out.footer = "No quests to pick up for this dungeon for your faction and class."
     return out
   end
-  for n, line in ipairs(lines) do out.blocks[n] = lineBlock(n, line, inLog, level) end
+  for n, line in ipairs(lines) do out.blocks[n] = lineBlock(n, line, inLog, level, dungeon) end
   out.footer = GREY .. "Quest lines are Classic's; Forever may differ. Quests you turn in tick when the game records them.|r"
   return out
 end
@@ -364,7 +663,8 @@ local PIN_WIDTH, GAP, LORE_HEIGHT, LOOT_HEIGHT = 64, 6, 250, 47
 local frame, scroll, child, grid, gridChild, book, bossChild, lorePicture, loreBar, loreTitle
 local crumbs, tabs = {}, {}
 local dungeonButtons, bossButtons, lootButtons = {}, {}, {}
-local texts, pins = {}, {} -- pooled font strings and Pin buttons for the right-hand page
+local texts, pins = {}, {} -- pooled font strings and Route buttons for the right-hand page
+local doorButton
 local shown, shownBoss, shownTab = nil, nil, "quests" -- the dungeon on screen (nil = the grid), its boss, its tab
 local render
 
@@ -551,7 +851,7 @@ local function pinButton(i)
   if pins[i] then return pins[i] end
   local b = CreateFrame("Button", "MGADungeonQuestsPin" .. i, child, "UIPanelButtonTemplate")
   b:SetSize(PIN_WIDTH, 22)
-  b:SetText("Pin")
+  b:SetText("Route")
   pins[i] = b
   return b
 end
@@ -652,8 +952,9 @@ end
 
 local function hideAll()
   for _, pool in ipairs({ dungeonButtons, bossButtons, lootButtons, texts, pins }) do
-    for _, item in pairs(pool) do item:Hide() end -- pairs: a line with no Pin button leaves a gap
+    for _, item in pairs(pool) do item:Hide() end -- pairs: a line with no Route button leaves a gap
   end
+  if doorButton then doorButton:Hide() end
   lorePicture:Hide()
   loreBar:Hide()
   loreTitle:Hide()
@@ -671,7 +972,7 @@ local function pageWriter(y)
   return page
 end
 
--- Stacks the checklist's title, each line's heading + "Next:" (a Pin button beside it) and its steps.
+-- Stacks the checklist's title, each line's heading + "Next:" (a Route button beside it) and its steps.
 local function renderChecklist(list)
   local page = pageWriter(-4)
   page.put(list.title)
@@ -683,7 +984,7 @@ local function renderChecklist(list)
       local b, step = pinButton(n), block.pin
       b:ClearAllPoints()
       b:SetPoint("TOPRIGHT", child, "TOPRIGHT", -4, topY)
-      b:SetScript("OnClick", function() M.Pin(step) end)
+      b:SetScript("OnClick", function() M.StartRoute(step) end)
       b:Show()
     end
     page.put(block.body)
@@ -701,6 +1002,17 @@ local function renderOverview(dungeon)
   loreTitle:Show()
   local page = pageWriter(-LORE_HEIGHT - 12)
   for _, fact in ipairs(M.Overview(dungeon)) do page.put(WHITE .. fact .. "|r") end
+  local door = M.DoorTarget(dungeon)
+  if door and M.CanPin(door) then
+    doorButton = doorButton or CreateFrame("Button", "MGADungeonQuestsDoorRoute", child, "UIPanelButtonTemplate")
+    doorButton:SetSize(170, 24)
+    doorButton:SetText("Route to the entrance")
+    doorButton:ClearAllPoints()
+    doorButton:SetPoint("TOPLEFT", 4, page.y)
+    doorButton:SetScript("OnClick", function() M.StartRoute(door) end)
+    doorButton:Show()
+    page.y = page.y - 30
+  end
   child:SetHeight(-page.y + 8)
 end
 
@@ -874,11 +1186,15 @@ local function itemArrived()
 end
 
 local events = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "GET_ITEM_INFO_RECEIVED" }) do
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "GET_ITEM_INFO_RECEIVED", "TAXIMAP_OPENED" }) do
   events:RegisterEvent(e)
 end
 events:SetScript("OnEvent", function(_, event, _, isReloadingUi)
-  if event == "PLAYER_ENTERING_WORLD" then
+  if event == "TAXIMAP_OPENED" then
+    M.RememberFlights()
+    M.ReplanRoute()
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    M.ReplanRoute()
     if isReloadingUi then return end
     -- The quest log and completed quests may not be filled in yet as the loading screen ends.
     if C_Timer and C_Timer.After then C_Timer.After(3, remind) else remind() end

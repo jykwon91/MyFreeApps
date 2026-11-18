@@ -1994,8 +1994,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Each line's "Next:" (`M.NextText`) says get it (giver, where, level), finish it (objectives)
   or turn it in (to whom); every step's objectives + `turnIn` come from the quest pages' data
   (`loadDungeonQuestsAddonDetails` -> `lib/quests/loadQuestDetail.ts`, shared with the quest page).
-  A Pin button sets a World Map waypoint on the next giver (`C_Map.SetUserWaypoint` +
-  `C_SuperTrack`, feature-checked; `map` = the giver's uiMapId, never inside a dungeon).
+  A Route button plans the way to the line's next stop (the giver, who takes a finished quest back
+  when `turnInMap` is known, or a dungeon quest's door; the Overview tab routes to the door): the
+  World Map directions' travel-time search in Lua over `MGADungeonQuestsTravel` (`travelDataLua.ts`,
+  from `worldMap/travel.json`), same speeds, straight lines because the addon has no walk graph.
+  Each leg sets a World Map waypoint (`C_Map.SetUserWaypoint` + `C_SuperTrack`, feature-checked) and a
+  movable tracker advances on arrival. Known flight paths come from `C_TaxiMap.GetAllTaxiNodes` on
+  `TAXIMAP_OPENED`, saved per character in `MGADungeonQuestsCharacter`; a continent with no flight master
+  opened yet counts them all and says so. Inside an instance (`UnitPosition` is nil) it falls back to a pin.
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.
