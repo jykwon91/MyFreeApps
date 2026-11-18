@@ -16,6 +16,15 @@ const FIXTURE = `
 MGADungeonQuestsData = {
   {
     key = "the-deadmines", instanceId = 36, name = "The Deadmines", levelMin = 17, levelMax = 21, aliases = {"VC", "DM"},
+    players = 10, art = {button = 522352, lore = 526404},
+    bosses = {
+      {name = "Rhahk'Zor", portrait = 522000, loot = {
+        {id = 872, name = "Rockslicer", slot = "Two-Hand", kind = "Axe", chance = 16.2},
+        {id = 5187, name = "Rhahk'Zor's Hammer", slot = "Two-Hand", kind = "Mace", chance = 0.4},
+      }},
+      {name = "Miner Johnson"},
+      {name = "Edwin VanCleef", portrait = 522001, loot = {{id = 5191, name = "Cruel Barb", slot = "One-Hand", kind = "Sword", chance = 20}}},
+    },
     alliance = {
       {titles = {"The Defias Brotherhood"}, steps = {
         {id = 1, title = "Step One", level = 14, minLevel = 9, giver = "Gryan Stoutmantle", where = "Westfall 56.3, 47.5 (Sentinel Hill)", map = 1436, x = 56.3, y = 47.5, objectives = {"Collect 4 Gold Pickup Schedule"}, turnIn = "Gryan Stoutmantle"},
@@ -37,7 +46,7 @@ MGADungeonQuestsData = {
     },
   },
   {
-    key = "shadowfang-keep", instanceId = 33, name = "Shadowfang Keep", levelMin = 22, levelMax = 30,
+    key = "shadowfang-keep", instanceId = 33, name = "Shadowfang Keep", levelMin = 22, levelMax = 30, isNew = true,
     horde = {{titles = {"Deathstalkers"}, steps = {{id = 40, title = "Deathstalkers", level = 25, minLevel = 18, dungeon = true}}}},
   },
   {
@@ -228,22 +237,111 @@ describe("MGA Dungeon Quests checklist", () => {
   });
 });
 
-describe("MGA Dungeon Quests list and slash command", () => {
-  it("the list shows dungeons with quests for you, how many to pick up; a row opens one, back returns", () => {
-    const lines = run('slash("list")', 'questLog = { { id = 10 } }');
-    expect(lines.filter((l) => l.startsWith("row: "))).toEqual([
-      "row: The Deadmines  (levels 17-21) 3 quests to pick up",
-      "row: Wailing Caverns  (levels 17-24) 1 quest to pick up",
+describe("MGA Dungeon Quests journal pages", () => {
+  const only = (lines: string[], prefix: string) => lines.filter((l) => l.startsWith(prefix));
+
+  it("a dungeon opens on its quests with its bosses down the left, portraits falling back to the default", () => {
+    const lines = run('slash("deadmines"); shownBosses(); shownCrumbs()');
+    expect(window(lines)[0]).toBe("The Deadmines  levels 17-21");
+    expect(only(lines, "boss: ")).toEqual([
+      "boss: Rhahk'Zor | portrait 522000",
+      "boss: Miner Johnson | portrait 521744",
+      "boss: Edwin VanCleef | portrait 522001",
     ]);
-    const opened = run('slash("list"); clear(); clickRow(2)');
+    expect(lines).toContain("crumbs: Home > The Deadmines");
+  });
+
+  it("a boss opens its loot, with the chance per kill; the dungeon's name goes back to all of it", () => {
+    const boss = run('slash("deadmines"); clear(); clickBoss(1); shownLoot(); shownCrumbs()');
+    expect(window(boss)).toEqual(["Rhahk'Zor", "Drop chances are Classic's; Forever may differ."]);
+    expect(only(boss, "loot: ")).toEqual([
+      "loot: Rockslicer | Two-Hand, Axe | 16%",
+      "loot: Rhahk'Zor's Hammer | Two-Hand, Mace | 0.4%",
+    ]);
+    expect(boss).toContain("crumbs: Home > The Deadmines > Rhahk'Zor");
+    const all = run('slash("deadmines"); clickBoss(1); clear(); clickCrumb(); shownLoot(); shownCrumbs()');
+    expect(window(all)[0]).toBe("The Deadmines loot");
+    expect(only(all, "loot: ")).toEqual([
+      "loot: Rockslicer | Two-Hand, Axe - Rhahk'Zor | 16%",
+      "loot: Rhahk'Zor's Hammer | Two-Hand, Mace - Rhahk'Zor | 0.4%",
+      "loot: Cruel Barb | One-Hand, Sword - Edwin VanCleef | 20%",
+    ]);
+    expect(all).toContain("crumbs: Home > The Deadmines");
+  });
+
+  it("a boss with no loot says so, and leaving the Loot tab clears the boss", () => {
+    expect(window(run('slash("deadmines"); clear(); clickBoss(2)'))).toEqual(["Miner Johnson", "No loot listed here."]);
+    const quests = run('slash("deadmines"); clickBoss(1); clear(); clickTab(1); shownLoot(); shownCrumbs()');
+    expect(window(quests)[0]).toBe("The Deadmines  levels 17-21");
+    expect(only(quests, "loot: ")).toEqual([]);
+    expect(quests).toContain("crumbs: Home > The Deadmines");
+  });
+
+  it("the Overview tab gives the dungeon's facts", () => {
+    expect(window(run('slash("deadmines"); clear(); clickTab(2)'))).toEqual(["The Deadmines", "Levels 17-21", "Up to 10 players", "3 bosses", "4 quests to pick up"]);
+    expect(window(run('slash("shadowfang"); clear(); clickTab(2)'))).toEqual(["Shadowfang Keep", "Levels 22-30", "New in WoW Forever"]);
+  });
+
+  it("a Pin button doesn't follow you to another tab, even with a line before it that has none", () => {
+    const pins = run('slash("deadmines"); shownPins(); clickTab(3); shownPins()', "questLog = { { id = 1 } }");
+    expect(pins.filter((l) => l.startsWith("pins: "))).toEqual(["pins: 2", "pins: "]);
+  });
+
+  it("colours an item by its quality under either name the client has for item info", () => {
+    const colours = "ITEM_QUALITY_COLORS = { [3] = { hex = '|cff0070dd' } }";
+    const script = 'slash("deadmines"); clickBoss(1); shownLootColours()';
+    const seen = (setup: string) => run(script, `${colours}; ${setup}`).filter((l) => l.startsWith("colour: "));
+    expect(seen("function GetItemInfo() return 'Rockslicer', 'link', 3 end")[0]).toBe("colour: |cff0070ddRockslicer|r");
+    expect(seen("C_Item = { GetItemInfo = function() return 'Rockslicer', 'link', 3 end }")[0]).toBe("colour: |cff0070ddRockslicer|r");
+    expect(seen("")[0]).toBe("colour: Rockslicer");
+  });
+
+  it("redraws the Loot tab once when a batch of items arrives, and leaves other tabs alone", () => {
+    const timers = "pending = {}; C_Timer = { After = function(_, fn) pending[#pending + 1] = fn end }";
+    const arrive = 'clear(); fire("GET_ITEM_INFO_RECEIVED"); fire("GET_ITEM_INFO_RECEIVED")';
+    const onLoot = run(`slash("deadmines"); clickBoss(1); ${arrive}; out[#out + 1] = "queued: " .. #pending; pending[1]()`, timers);
+    expect(onLoot).toContain("queued: 1");
+    expect(window(onLoot)[0]).toBe("Rhahk'Zor");
+    expect(window(run(`slash("deadmines"); ${arrive}`))).toEqual([]);
+  });
+
+  it("a dungeon with no quests for you still opens, and says so", () => {
+    expect(window(run('slash("shadowfang")'))).toContain("No quests to pick up for this dungeon for your faction and class.");
+  });
+
+  it("every dungeon in the real Data.lua is on the grid, with bosses", () => {
+    const lines = runAddonLua(
+      [
+        ["Data.lua", addonData],
+        ["MGADungeonQuests.lua", addonLua],
+        ["clear", "clear()"],
+        ["test", 'slash("list"); shownRows(); slash("deadmines"); shownBosses(); clickBoss(1); shownLoot()'],
+      ],
+      WOW_DUNGEON_QUEST_STUBS,
+    );
+    expect(only(lines, "row: ").length).toBeGreaterThanOrEqual(28);
+    expect(only(lines, "boss: ").length).toBeGreaterThan(3);
+    expect(lines.some((l) => l.startsWith("boss: ") && !l.endsWith("portrait 521744"))).toBe(true);
+  });
+});
+
+describe("MGA Dungeon Quests list and slash command", () => {
+  it("the grid shows every dungeon, how many quests to pick up and its art; a button opens one, Home returns", () => {
+    const lines = run('slash("list"); shownRows()', "questLog = { { id = 10 } }");
+    expect(lines.filter((l) => l.startsWith("row: "))).toEqual([
+      "row: The Deadmines | levels 17-21 | 3 quests to pick up | art 522352",
+      "row: Shadowfang Keep | levels 22-30 |  | art 521746",
+      "row: Wailing Caverns | levels 17-24 | 1 quest to pick up | art 521746",
+    ]);
+    const opened = run('slash("list"); clear(); clickRow(3)');
     expect(window(opened)[0]).toBe("Wailing Caverns  levels 17-24");
-    const back = run('slash("wailing"); clear(); clickBack()');
-    expect(back.filter((l) => l.startsWith("row: "))).toHaveLength(2);
+    const back = run('slash("wailing"); clear(); clickBack(); shownRows()');
+    expect(back.filter((l) => l.startsWith("row: "))).toHaveLength(3);
   });
 
   it("/mgadq opens the dungeon you're in, else the list; an unknown name says so", () => {
     expect(window(run('instance = { type = "party", id = 36 }; slash("")'))[0]).toBe("The Deadmines  levels 17-21");
-    expect(run('slash("")').filter((l) => l.startsWith("row: "))).toHaveLength(2);
+    expect(run('slash(""); shownRows()').filter((l) => l.startsWith("row: "))).toHaveLength(3);
     expect(window(run('slash("vc")'))[0]).toBe("The Deadmines  levels 17-21");
     expect(run('slash("zzz")')).toContain('chat: MGA Dungeon Quests: no dungeon matches "zzz". /mgadq list shows them all.');
   });
