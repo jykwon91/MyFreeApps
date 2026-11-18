@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-17",
+    "title": "Guild: gear upgrades say what they're worth",
+    "summary": "Gear upgrades on the guild's Help each other tab now say what they're worth in the wearer's top stat, like \"Worth +4 Intellect\", instead of a percentage that ran wild when the old item had stats the spec doesn't use. The biggest upgrades are listed first.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-17",
     "title": "Item pages: craft or buy at auction prices",
     "summary": "An item you can craft now shows auction prices under its recipe: what each material costs, the total for one craft, what the item sells for, which is cheaper, and what the pattern costs. Bind-on-pickup items skip the buy price, since they never sell.",
     "to": "/wow-forever/items"

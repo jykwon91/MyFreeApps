@@ -1159,6 +1159,32 @@ test("help tab: PvP scores a Stamina enchant for a Balance druid that PvE skips,
   await expect(page.getByTestId("help-empty")).toBeVisible();
 });
 
+test("help tab: a gear upgrade says what it's worth in the wearer's top stat, not a percent", async ({ page }) => {
+  await stubAll(page);
+  await page.route(HELP_PATTERN, (route) => json(route, {
+    members: [
+      {
+        slug: "tailor", name: "Tailor", surname: "", class_name: "Warrior", level: 60, equipped: [],
+        recipe_ability_ids: [55423], // → spell 1257368, Novice Arcanist's Sash (+3 Int, +4 spell power, +3 Sta)
+        professions: [{ profession_id: 197, name: "Tailoring", skill: 100, max_skill: 300 }],
+      },
+      {
+        slug: "arcane", name: "Arcane", surname: "", class_name: "Mage", level: 20, talents: [{ tree_id: 237, points: 15 }],
+        equipped: [{ slot: "WAIST", item_id: 3217, name: "Foreman Belt", item_level: 15, inventory_type: "WAIST", enchantments: [] }],
+        recipe_ability_ids: [], professions: [],
+      },
+    ],
+  }));
+  await page.goto("/wow-forever/topdeadcenter?tab=help&help_type=gear");
+
+  const card = page.getByTestId("guild-match-card");
+  await expect(card).toHaveCount(1, { timeout: 10_000 });
+  await expect(card).toContainText("Novice Arcanist's Sash");
+  await expect(card).toContainText(/Worth \+\d+ Spell damage & healing/);
+  await expect(card).not.toContainText("%");
+  await expect(page.getByTestId("help-weights-note")).toContainText("what it's worth in the wearer's top stat");
+});
+
 test("help tab: skeleton while loading, then shows matches", async ({ page }) => {
   await stubAll(page);
   let release: () => void = () => {};

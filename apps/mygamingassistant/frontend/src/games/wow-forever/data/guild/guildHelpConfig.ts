@@ -18,12 +18,12 @@ export const HELP_TYPE_LABELS: Readonly<Record<GuildMatchType | "all", string>> 
   gear: "Gear upgrades",
 };
 
+export const GUILD_HELP_PROBLEM = "Couldn't load the guild's gear and recipes.";
+
 /**
  * Score must be this many percent better than worn to count as an upgrade.
  * Matches the item-compare page's SAME_SCORE_PCT (2).
  */
-export const GUILD_HELP_PROBLEM = "Couldn't load the guild's gear and recipes.";
-
 export const UPGRADE_THRESHOLD_PCT = 2;
 
 /**
@@ -44,8 +44,8 @@ export const GUILD_HELP_TEXT = {
   modeLabel: "Score gear for",
   /** Under the PvE / PvP chips. WoW Forever hasn't published stat weights, so both modes say where theirs come from. */
   weightsNote: {
-    pve: "Upgrades are scored with Classic stat weights. WoW Forever hasn't published its own, so treat these as a guide.",
-    pvp: "PvP scores are estimates built on Classic stat weights: they count Stamina as much as your best main stat, since Classic PvP guides rank Stamina first. WoW Forever hasn't published its own.",
+    pve: "Upgrades are scored with Classic stat weights. WoW Forever hasn't published its own, so treat these as a guide. A gear upgrade says what it's worth in the wearer's top stat.",
+    pvp: "PvP scores are estimates built on Classic stat weights: they count Stamina as much as your best main stat, since Classic PvP guides rank Stamina first. WoW Forever hasn't published its own. A gear upgrade says what it's worth in the wearer's top stat.",
   },
   madeByAnyone: "Anyone",
   forLabel: "Help for",

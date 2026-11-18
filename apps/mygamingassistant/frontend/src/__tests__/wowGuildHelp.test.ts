@@ -19,7 +19,8 @@ import { describe, expect, it } from "vitest";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import enchantingFile from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import { enchantEffect } from "@/games/wow-forever/lib/guild/enchantEffect";
-import { mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
+import { bestMainStat, mainStatPoint } from "@/games/wow-forever/lib/guild/mainStatPoint";
+import { upgradeGainLabel } from "@/games/wow-forever/lib/guild/upgradeGainLabel";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
 import { buildHelpParams, helpFiltersFromParams } from "@/games/wow-forever/lib/guild/guildHelpParams";
@@ -307,7 +308,7 @@ describe("computeGearMatches", () => {
     expect(m.crafter.slug).toBe("crafter");
     expect(m.beneficiary.slug).toBe("beneficiary");
     expect(m.slot.blizzard_slot).toBe("WAIST");
-    expect(m.upgrade_pct).toBeGreaterThan(0);
+    expect(m.upgrade?.points).toBeGreaterThanOrEqual(1);
     expect(m.proposed.item_id).toBe(253885);
   });
 
@@ -411,7 +412,7 @@ describe("computeGearMatches", () => {
     });
     const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
     const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
-    // Both crafters produce the same item so the upgrade_pct is identical;
+    // Both crafters produce the same item so the gain is identical;
     // deduplication keeps exactly one.
     const matches = computeGearMatches([crafterA, crafterB, beneficiary], craftingFiles, itemList);
     expect(matches).toHaveLength(1);
@@ -421,6 +422,37 @@ describe("computeGearMatches", () => {
     const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
     const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
     expect(computeGearMatches([], craftingFiles, itemList)).toHaveLength(0);
+  });
+
+  it("tells the gain in points of the wearer's best main stat, not a percentage", () => {
+    // The worn sash is the crafted one minus its 4 spell power: an Arcane Mage's best main stat.
+    const sameButNoSpellPower: ClientItem = { ...MOCK_SASH_MAGE, id: 5003, name: "Plain Sash", stats: { intellect: 3, stamina: 3 } };
+    const crafter = makeMember("crafter", {
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const mage = makeMember("mage", {
+      class_name: "Mage",
+      talents: [{ tree_id: 237, points: 31 }],
+      equipped: [{ slot: "WAIST", item_id: 5003, name: "Plain Sash", item_level: 15, inventory_type: "WAIST", enchantments: [] }],
+    });
+    const matches = computeGearMatches([crafter, mage], new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]), makeItemList([MOCK_SASH_MAGE, sameButNoSpellPower]));
+    expect(matches).toHaveLength(1);
+    expect(matches[0].upgrade).toEqual({ points: 4, stat: "spell_power" });
+  });
+
+  it("lists the biggest gain first", () => {
+    const crafter = makeMember("crafter", {
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const plain: ClientItem = { ...MOCK_SASH_MAGE, id: 5003, name: "Plain Sash", stats: { intellect: 3, stamina: 3 } };
+    const wear = (id: number, name: string) => [{ slot: "WAIST", item_id: id, name, item_level: 1, inventory_type: "WAIST", enchantments: [] }];
+    const almost = makeMember("almost", { class_name: "Mage", talents: [{ tree_id: 237, points: 31 }], equipped: wear(5003, "Plain Sash") });
+    const bare = makeMember("bare", { class_name: "Mage", talents: [{ tree_id: 237, points: 31 }], equipped: wear(5002, "Flimsy Chain Belt") });
+    const matches = computeGearMatches([crafter, almost, bare], new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]), makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST, plain]));
+    expect(matches.map((m) => m.beneficiary.slug)).toEqual(["bare", "almost"]);
+    expect(matches[0].upgrade!.points).toBeGreaterThan(matches[1].upgrade!.points);
   });
 
   it("beneficiary not wearing anything in the slot → no match", () => {
@@ -586,6 +618,17 @@ describe("computeEnchantMatches values the enchant for the wearer's class", () =
     expect(mainStatPoint(w({ agility: 0.05, spell_power: 1, spell_hit_pct: 9.6 }))).toBe(1);
     expect(mainStatPoint(w({ intellect: 0.38, healing: 0.3 }))).toBe(0.38);
     expect(mainStatPoint(w({}))).toBe(0);
+  });
+
+  it("names the main stat the weights value most, or none", () => {
+    const w = (stats: Record<string, number>) => ({ stats, meleeWeaponDps: 0, rangedWeaponDps: 0, armor: 0.02 });
+    expect(bestMainStat(w({ agility: 0.05, intellect: 0.4, spell_power: 1, spell_hit_pct: 9.6 }))).toBe("spell_power");
+    expect(bestMainStat(w({ strength: 1, agility: 0.8 }))).toBe("strength");
+    expect(bestMainStat(w({ spell_hit_pct: 9.6 }))).toBeNull();
+    // PvP ties Stamina with the best main stat: the caster's own stat still names the gain.
+    expect(bestMainStat(pvpWeights(PAWN_CLASSIC_WEIGHTS["druid/balance"]))).not.toBe("stamina");
+    expect(bestMainStat(w({ stamina: 1, intellect: 0.5 }))).toBe("stamina");
+    expect(upgradeGainLabel({ points: 4, stat: "intellect" })).toBe("Worth +4 Intellect");
   });
 
   it("picks the bracer enchant each class uses: Intellect for a Warlock, Strength for a Warrior", () => {
