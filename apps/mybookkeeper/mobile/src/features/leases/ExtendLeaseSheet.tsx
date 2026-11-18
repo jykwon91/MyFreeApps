@@ -1,9 +1,9 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, confirmDiscard, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Modal, Switch, Text, View } from "react-native";
+import { Alert, Modal, Text, View } from "react-native";
 import {
   alreadyEnds,
   emailAddendumLabel,
@@ -158,10 +158,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
           />
 
           {applicant?.has_contact_email ? (
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, minHeight: MIN_TOUCH_TARGET }}>
-              <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.foreground }}>{emailAddendumLabel(tenantName)}</Text>
-              <Switch accessibilityLabel={emailAddendumLabel(tenantName)} disabled={isBusy} onValueChange={setEmailTenant} value={emailTenant} />
-            </View>
+            <SwitchRow disabled={isBusy} label={emailAddendumLabel(tenantName)} onValueChange={setEmailTenant} value={emailTenant} />
           ) : null}
           {applicant?.has_contact_email === false ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_MESSAGES.noEmailOnFile}</Text> : null}
 
