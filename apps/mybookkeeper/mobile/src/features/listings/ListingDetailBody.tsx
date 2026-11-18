@@ -1,11 +1,10 @@
 import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, Chip, LoadingButton, OptionSheet, StaleDataBanner, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, OptionSheet, StaleDataBanner, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useMemo, useRef, useState } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { deleteListingTitle, LISTING_MESSAGES } from "../../constants/listings";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
@@ -31,7 +30,6 @@ interface ListingDetailBodyProps {
 
 export default function ListingDetailBody({ listing, propertyName, canWrite, hasStaleData, refreshControl, onDeleted }: ListingDetailBodyProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const openWebsite = useOpenWebsite();
   const asking = useRef(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const actions = useListingActions(listing, onDeleted);
@@ -85,9 +83,6 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
           </LoadingButton>
         </View>
       ) : null}
-      <LoadingButton onPress={() => openWebsite(WEB_BASE_URL, `/listings/${listing.id}`)} variant="ghost">
-        {LISTING_MESSAGES.openWebsite}
-      </LoadingButton>
       <OptionSheet<ListingStatus>
         isOpen={isStatusOpen}
         onClose={() => setIsStatusOpen(false)}

@@ -74,7 +74,7 @@ export const LEASE_MESSAGES = {
   extendNotSeen: "I don't see that change on the lease yet. Trying the same date again is safe.",
   extendUnsure: "I can't reach the server, so I can't tell if that went through. Trying the same date again is safe.",
   extendWrongStatus: "This lease is no longer signed or active, so it can't be extended.",
-  extendNoEndDate: "This lease has no end date yet. Add the original term on the website, then extend.",
+  extendNoEndDate: "This lease has no end date, so I can't extend it.",
   extendCheckFields: "Check the date and note, then try again.",
   extendNoEmail: "This tenant has no email on file. Nothing was changed.",
   noEmailOnFile: "This tenant has no email on file, so I can't email them the addendum.",

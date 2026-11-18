@@ -1,8 +1,7 @@
-import { Banner, LoadingButton, StaleDataBanner, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, StaleDataBanner, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { deleteTemplateTitle, LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { askOnce } from "../../lib/askOnce";
@@ -17,7 +16,6 @@ import type { LeaseTemplateDetailBodyProps } from "../../types/LeaseTemplateDeta
 
 export default function LeaseTemplateDetailBody({ template, canWrite, hasStaleData, refreshControl, onDeleted }: LeaseTemplateDetailBodyProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const openWebsite = useOpenWebsite();
   const asking = useRef(false);
   const { openingId, open } = useOpenTemplateFile(template.id);
   const { remove, isDeleting, message } = useDeleteLeaseTemplate(template.id, onDeleted);
@@ -79,9 +77,6 @@ export default function LeaseTemplateDetailBody({ template, canWrite, hasStaleDa
           {MESSAGES.delete}
         </LoadingButton>
       ) : null}
-      <LoadingButton accessibilityLabel={MESSAGES.openOneOnWebsite} onPress={() => openWebsite(WEB_BASE_URL, `/lease-templates/${template.id}`)} variant="ghost">
-        {MESSAGES.openWebsite}
-      </LoadingButton>
     </ScrollView>
   );
 }

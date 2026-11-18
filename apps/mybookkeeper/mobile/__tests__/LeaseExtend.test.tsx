@@ -377,7 +377,7 @@ describe("extending a lease", () => {
       [{ status: 403 }, "You have view-only access."],
       [{ status: 404 }, "That lease is gone."],
       [{ status: 409, detail: { code: "INVALID_STATUS_FOR_EXTENSION", message: "dev words" } }, "This lease is no longer signed or active, so it can't be extended."],
-      [{ status: 409, detail: { code: "MISSING_CURRENT_END_DATE", message: "dev words" } }, "This lease has no end date yet. Add the original term on the website, then extend."],
+      [{ status: 409, detail: { code: "MISSING_CURRENT_END_DATE", message: "dev words" } }, "This lease has no end date, so I can't extend it."],
       [{ status: 422 }, "Check the date and note, then try again."],
     ])("keeps what you entered and says why on %j", async (failure, message) => {
       const server = startServer();

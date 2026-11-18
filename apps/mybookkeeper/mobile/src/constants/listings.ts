@@ -16,7 +16,6 @@ export const LISTING_MESSAGES = {
   noneBody: "Add a room or unit, and I'll keep its rates, photos and links here.",
   noneViewOnlyBody: "Someone with edit access can add them.",
   add: "New listing",
-  openWebsite: "Open on the website",
   clearFilter: "Clear filter",
   tryAnotherStatus: "Try another status, or see them all.",
   chooseStatus: "Show which status?",

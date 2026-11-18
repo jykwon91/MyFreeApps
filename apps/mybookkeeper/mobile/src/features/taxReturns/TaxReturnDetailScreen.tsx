@@ -7,10 +7,9 @@ import {
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, EmptyState, LoadingButton, StaleDataBanner, WebLink, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import { isServerAnswer } from "../../utils/isServerAnswer";
@@ -20,7 +19,7 @@ import TaxMissingRowView from "../tax/TaxMissingRowView";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { bySeverity, taxReturnTitle, taxReturnWebPath } from "./taxReturnDisplay";
+import { bySeverity, taxReturnTitle } from "./taxReturnDisplay";
 import TaxAdvisorRow from "./TaxAdvisorRow";
 import TaxFormRow from "./TaxFormRow";
 import TaxReturnSection from "./TaxReturnSection";
@@ -131,10 +130,6 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
       </TaxReturnSection>
 
       <TaxAdvisorRow onPress={() => router.push(`/tax-returns/${id}/advisor`)} returnId={id} />
-
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <WebLink label={MESSAGES.webLink} webBaseUrl={WEB_BASE_URL} webPath={taxReturnWebPath(id)} />
-      </View>
     </ScrollView>
   );
 }
