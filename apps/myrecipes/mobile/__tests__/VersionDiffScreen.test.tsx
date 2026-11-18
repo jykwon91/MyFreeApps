@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
 import VersionDiffScreen from "../src/features/versions/VersionDiffScreen";
@@ -201,15 +201,42 @@ describe("VersionDiffScreen", () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it("says why when the comparison can't load, and opens the recipe when there's nothing to go back to", async () => {
+  it("opens the recipe when there's nothing to go back to", async () => {
     mockCanGoBack = false;
-    diffReply = "offline";
+    diffReply = { status: 404, data: { detail: "no" } };
     await show();
 
-    expect(await screen.findByText("We can't reach the server to load this comparison. Check your connection and try again.")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Go back" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Go back" }));
     expect(mockReplace).toHaveBeenCalledWith({ pathname: "/recipes/[id]", params: { id: "r1" } });
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
+
+  it.each([["offline" as Reply], [{ status: 500, data: { detail: "boom" } } as Reply]])(
+    "offers Try again when the comparison can't load, shows it working, and shows the diff once it loads",
+    async (failure) => {
+      diffReply = failure;
+      await show();
+
+      expect(
+        failure === "offline"
+          ? await screen.findByText("We can't reach the server to load this comparison. Check your connection and try again.")
+          : await screen.findByRole("header", { name: "Couldn't load this comparison" }),
+      ).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Go back" })).toBeNull();
+      const requestsBefore = diffRequests.length;
+
+      diffReply = { status: 200, data: DIFF };
+      const open = holdResponses();
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Try again" }).props.accessibilityState).toMatchObject({ busy: true }),
+      );
+      await act(async () => open());
+
+      expect(await screen.findByRole("header", { name: "v1 to v3" })).toBeTruthy();
+      expect(diffRequests.length).toBe(requestsBefore + 1);
+    },
+  );
 
   it("tries again on a pull, and keeps the diff with a notice when that fails", async () => {
     diffReply = "offline";

@@ -35,7 +35,11 @@ export const VERSION_DIFF_MESSAGES = {
   loading: "Loading comparison",
   updateFailed: "Couldn't update this comparison. Check your connection and try again.",
   goBack: "Go back",
+  tryAgain: "Try again",
 } as const;
+
+/** Statuses where asking for a comparison again can't help: a bad id in the link, or a recipe or version that's gone. */
+export const DIFF_PERMANENT_ERROR_STATUSES: readonly number[] = [400, 404, 422];
 
 /** Copy for one version shown in full, as the website shows the version picked in its timeline. */
 export const VERSION_VIEW_MESSAGES = {
