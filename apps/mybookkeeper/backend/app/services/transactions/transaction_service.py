@@ -238,6 +238,21 @@ async def bulk_approve(
         return {"approved": approved, "skipped": len(set(ids)) - approved}
 
 
+async def bulk_set_capital_improvement(
+    ctx: RequestContext, ids: list[uuid.UUID], is_capital_improvement: bool,
+) -> dict[str, int]:
+    """Mark or unmark the expenses among the ids; anything else is skipped."""
+    async with unit_of_work() as db:
+        locked = await transaction_repo.lock_live_transactions(db, ids, ctx.organization_id)
+        expenses = [txn for txn in locked if txn.transaction_type == "expense"]
+        for txn in expenses:
+            txn.is_capital_improvement = is_capital_improvement
+            txn.placed_in_service_date = placed_in_service_date_for(
+                is_capital_improvement, txn.placed_in_service_date, txn.transaction_date,
+            )
+        return {"updated": len(expenses), "skipped": len(set(ids)) - len(expenses)}
+
+
 async def bulk_delete(
     ctx: RequestContext, ids: list[uuid.UUID]
 ) -> dict[str, int]:

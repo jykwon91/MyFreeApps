@@ -13,6 +13,7 @@ import {
   useListTransactionCategoriesQuery,
   useBulkApproveTransactionsMutation,
   useBulkDeleteTransactionsMutation,
+  useBulkSetCapitalImprovementMutation,
   useUpdateTransactionMutation,
   useDeleteTransactionMutation,
   useGetDuplicatesQuery,
@@ -30,8 +31,9 @@ import { toFilterBarParams, toTransactionListParams } from "@/shared/utils/trans
 import { clampPage } from "@/shared/utils/clamp-page";
 import { useTransactionSelection } from "@/app/features/transactions/hooks/useTransactionSelection";
 import { useRefetchCount } from "@/app/features/transactions/hooks/useRefetchCount";
+import type { TransactionBulkAction } from "@/shared/types/transaction/transaction-bulk-action";
 import type { TransactionSelection } from "@/shared/types/transaction/transaction-selection";
-import { bulkApproveMessage, bulkDeleteMessage } from "@mybookkeeper/api-client/utils/bulkTransactionMessages";
+import { bulkApproveMessage, bulkCapitalImprovementMessage, bulkDeleteMessage } from "@mybookkeeper/api-client/utils/bulkTransactionMessages";
 import { downloadFile } from "@/shared/utils/download";
 import { formatTag } from "@/shared/utils/tag";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -76,7 +78,8 @@ export interface TransactionPageState {
   selection: TransactionSelection;
 
   // Bulk selection UI state
-  bulkAction: "approve" | "delete" | null;
+  bulkAction: TransactionBulkAction | null;
+  handleBulkCapitalImprovement: (ids: string[], isMarking: boolean) => Promise<void>;
   confirmBulkDelete: boolean;
   setConfirmBulkDelete: (open: boolean) => void;
 
@@ -144,7 +147,7 @@ export function useTransactionPageState(): TransactionPageState {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const [bulkAction, setBulkAction] = useState<"approve" | "delete" | null>(null);
+  const [bulkAction, setBulkAction] = useState<TransactionBulkAction | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showBankImport, setShowBankImport] = useState(false);
   const [showClassificationRules, setShowClassificationRules] = useState(false);
@@ -234,6 +237,7 @@ export function useTransactionPageState(): TransactionPageState {
   const [updateTransaction] = useUpdateTransactionMutation();
   const [bulkApprove] = useBulkApproveTransactionsMutation();
   const [bulkDelete] = useBulkDeleteTransactionsMutation();
+  const [bulkSetCapitalImprovement] = useBulkSetCapitalImprovementMutation();
 
   const propertyMap = useMemo(
     () => new Map(properties.map((p) => [p.id, p.name])),
@@ -291,6 +295,25 @@ export function useTransactionPageState(): TransactionPageState {
       }
     },
     [bulkApprove, removeFromSelection, showSuccess, showError],
+  );
+
+  const handleBulkCapitalImprovement = useCallback(
+    async (ids: string[], isMarking: boolean) => {
+      if (!ids.length) return;
+      setBulkAction(isMarking ? "mark-capital" : "unmark-capital");
+      try {
+        const run = await runBulkCounts(ids, ["updated", "skipped"], (batch) =>
+          bulkSetCapitalImprovement({ ids: batch, is_capital_improvement: isMarking }).unwrap(),
+        );
+        const failed = new Set(run.failedIds);
+        removeFromSelection(ids.filter((id) => !failed.has(id)));
+        const { text, isError } = bulkCapitalImprovementMessage(run, isMarking);
+        (isError ? showError : showSuccess)(text);
+      } finally {
+        setBulkAction(null);
+      }
+    },
+    [bulkSetCapitalImprovement, removeFromSelection, showSuccess, showError],
   );
 
   const executeBulkDelete = useCallback(
@@ -409,6 +432,7 @@ export function useTransactionPageState(): TransactionPageState {
     queryParams,
     selection,
     bulkAction,
+    handleBulkCapitalImprovement,
     confirmBulkDelete,
     setConfirmBulkDelete,
     busyId,

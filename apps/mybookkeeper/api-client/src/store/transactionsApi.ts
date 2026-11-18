@@ -4,6 +4,8 @@ import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
 import type { BankCsvImportRequest } from "../types/transaction/BankCsvImportRequest";
 import type { BulkApproveTransactionsResponse } from "../types/transaction/BulkApproveTransactionsResponse";
+import type { BulkCapitalImprovementRequest } from "../types/transaction/BulkCapitalImprovementRequest";
+import type { BulkCapitalImprovementResponse } from "../types/transaction/BulkCapitalImprovementResponse";
 import type { BulkDeleteTransactionsResponse } from "../types/transaction/BulkDeleteTransactionsResponse";
 import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairsResponse";
 import type { ImportResult } from "../types/transaction/ImportResult";
@@ -110,6 +112,10 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       query: (ids) => ({ url: "/transactions/bulk-approve", method: "POST", data: { ids } }),
       invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
     }),
+    bulkSetCapitalImprovement: builder.mutation<BulkCapitalImprovementResponse, BulkCapitalImprovementRequest>({
+      query: (data) => ({ url: "/transactions/bulk-capital-improvement", method: "POST", data }),
+      invalidatesTags: ["Transaction", "Summary"],
+    }),
     bulkDeleteTransactions: builder.mutation<BulkDeleteTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-delete", method: "POST", data: { ids } }),
       // Deleting a payment drops its pending rent receipt.
@@ -153,6 +159,7 @@ export const {
   useDeleteTransactionMutation,
   useBulkApproveTransactionsMutation,
   useBulkDeleteTransactionsMutation,
+  useBulkSetCapitalImprovementMutation,
   useGetScheduleEReportQuery,
   useGetDuplicatesQuery,
   useKeepDuplicateMutation,

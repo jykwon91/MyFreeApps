@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.transactions.bulk_capital_improvement_request import BulkCapitalImprovementRequest
 from app.schemas.transactions.bulk_transaction_ids_request import BulkTransactionIdsRequest
 from app.schemas.transactions.duplicate import DuplicateDismissRequest, DuplicateKeepRequest, DuplicateMergeRequest, DuplicatePair, DuplicatePairsResponse, DuplicateTransactionRead
 from app.schemas.transactions.operation_responses import (
     BulkApproveResponse,
+    BulkCapitalImprovementResponse,
     BulkDeleteResponse,
     DismissDuplicatesResponse,
     KeepDuplicateResponse,
@@ -182,6 +184,17 @@ async def bulk_approve(
 ) -> BulkApproveResponse:
     result = await transaction_service.bulk_approve(ctx, body.ids)
     return BulkApproveResponse(**result)
+
+
+@router.post("/bulk-capital-improvement")
+async def bulk_capital_improvement(
+    body: BulkCapitalImprovementRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> BulkCapitalImprovementResponse:
+    result = await transaction_service.bulk_set_capital_improvement(
+        ctx, body.ids, body.is_capital_improvement,
+    )
+    return BulkCapitalImprovementResponse(**result)
 
 
 @router.post("/bulk-delete")

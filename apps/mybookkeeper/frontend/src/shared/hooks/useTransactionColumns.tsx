@@ -15,6 +15,7 @@ import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
+import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
 import TransactionRowCheckbox from "@/app/features/transactions/TransactionRowCheckbox";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
 
@@ -113,16 +114,19 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
     }),
     columnHelper.accessor("category", {
       header: "Category",
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const cat = getValue();
         const color = TAG_COLORS[cat] ?? "#94a3b8";
         return (
-          <span
-            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
-            style={{ backgroundColor: color }}
-          >
-            {formatTag(cat)}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+              style={{ backgroundColor: color }}
+            >
+              {formatTag(cat)}
+            </span>
+            {row.original.is_capital_improvement ? <CapitalImprovementBadge /> : null}
+          </div>
         );
       },
     }),

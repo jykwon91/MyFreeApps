@@ -53,6 +53,7 @@ export default function Transactions() {
     retryLoad,
     selection,
     bulkAction,
+    handleBulkCapitalImprovement,
     confirmBulkDelete,
     setConfirmBulkDelete,
     busyId,
@@ -218,8 +219,12 @@ export default function Transactions() {
               hasApprovable={hasApprovable}
               isApproving={bulkAction === "approve"}
               isDeleting={bulkAction === "delete"}
+              isMarkingCapital={bulkAction === "mark-capital"}
+              isUnmarkingCapital={bulkAction === "unmark-capital"}
               isCheckingSelection={selection.isChecking}
               onApprove={() => handleBulkApprove(selectedRefs.filter(isRefApprovable).map((ref) => ref.id))}
+              onMarkCapital={() => handleBulkCapitalImprovement(selectedRefs.map((ref) => ref.id), true)}
+              onUnmarkCapital={() => handleBulkCapitalImprovement(selectedRefs.map((ref) => ref.id), false)}
               onDelete={() => setConfirmBulkDelete(true)}
               onClearSelection={selection.clear}
             />
