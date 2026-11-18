@@ -13,6 +13,7 @@ import { parse, format } from "date-fns";
 import { UTILITY_SUB_CATEGORY_COLORS, UTILITY_SUB_CATEGORIES, UTILITY_UNTYPED_BUCKET } from "@/shared/lib/constants";
 import UtilityTrendsChartTooltip from "@/app/features/analytics/UtilityTrendsChartTooltip";
 import type { UtilityTrendPoint } from "@mybookkeeper/api-client/types/analytics/utility-trend-point";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 type Granularity = "monthly" | "quarterly";
 
@@ -94,7 +95,7 @@ export default function UtilityTrendsChart({ trends, granularity, height = 350 }
             axisLine={false}
           />
           <YAxis
-            tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v.toFixed(0)}`}
+            tickFormatter={axisMoney}
             tick={{ fontSize: 11 }}
             tickLine={false}
             axisLine={false}

@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
 import CategoryChartTooltip from "@/app/features/dashboard/CategoryChartTooltip";
+import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 export interface CategoryChartProps {
   byCategory: Record<string, number>;
@@ -29,7 +30,7 @@ export default function CategoryChart({ byCategory, onBarClick }: CategoryChartP
   return (
     <ResponsiveContainer width="100%" height={chartHeight}>
       <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
-        <XAxis type="number" tickFormatter={(amount) => `$${(amount / 1000).toFixed(0)}k`} />
+        <XAxis type="number" tickFormatter={axisMoney} />
         <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
         <Tooltip content={<CategoryChartTooltip />} />
         <Bar

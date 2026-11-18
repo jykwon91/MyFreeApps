@@ -1,5 +1,5 @@
 import { chartMonths, topExpenseCategories } from "../src/features/home/homeCharts";
-import { alertsFailedMessage, axisMoney, monthlyChartSummary, periodHasMonths, renewalAlertLabel } from "../src/features/home/homeDisplay";
+import { alertsFailedMessage, monthlyChartSummary, periodHasMonths, renewalAlertLabel } from "../src/features/home/homeDisplay";
 import { renewalsDue } from "../test-support/homeAlerts";
 
 const aMonth = (month: string, revenue = 1, expenses = 0) => ({ month, revenue, expenses, profit: revenue - expenses });
@@ -53,15 +53,6 @@ describe("topExpenseCategories", () => {
 });
 
 describe("home wording", () => {
-  it("shortens the chart's side axis", () => {
-    expect([axisMoney(0), axisMoney(950), axisMoney(1000), axisMoney(12_000)]).toEqual(["$0", "$950", "$1k", "$12k"]);
-  });
-
-  it("labels each gridline exactly, never rounding it to another value", () => {
-    expect([axisMoney(750), axisMoney(2500), axisMoney(1000), axisMoney(1250)]).toEqual(["$750", "$2.5k", "$1k", "$1.25k"]);
-    expect([axisMoney(1_000_000), axisMoney(1_250_000), axisMoney(-2500)]).toEqual(["$1M", "$1.25M", "-$2.5k"]);
-  });
-
   it("names the chart's span", () => {
     expect(monthlyChartSummary([aMonth("2025-12"), aMonth("2026-01")])).toBe(
       "Revenue and expenses by month, December 2025 to January 2026. Approved transactions only.",
