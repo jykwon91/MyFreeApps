@@ -15,7 +15,7 @@ class InquirySummary(BaseModel):
     """Inbox-card shape per RENTALS_PLAN.md §9.1.
 
     Fields included:
-        - id, source, listing_id, stage (for filtering / navigation)
+        - id, source, listing_id, listing_title, stage (for filtering / navigation)
         - inquirer_name (display)
         - desired_start_date / desired_end_date (date range)
         - inquirer_employer (host's primary signal for triage)
@@ -31,6 +31,7 @@ class InquirySummary(BaseModel):
     id: uuid.UUID
     source: str
     listing_id: uuid.UUID | None = None
+    listing_title: str | None = None
     stage: str
 
     inquirer_name: str | None = None

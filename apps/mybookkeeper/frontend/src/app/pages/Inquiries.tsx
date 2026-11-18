@@ -77,14 +77,6 @@ export default function Inquiries() {
     [listingsData],
   );
 
-  const listingTitleById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const l of listings) {
-      map.set(l.id, l.title);
-    }
-    return map;
-  }, [listings]);
-
   function handleFilterChange(next: InquiryStage | null) {
     setSearchParams(
       (prev) => {
@@ -161,7 +153,6 @@ export default function Inquiries() {
         inquiries={rows}
         isFiltered={isFiltered}
         showStageBadge={showStageBadge}
-        listingTitleById={listingTitleById}
         hasMore={pages.hasNextPage}
         isLoadingMore={pages.isFetchingNextPage}
         onLoadMore={pages.loadMore}

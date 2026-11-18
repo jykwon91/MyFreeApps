@@ -21,6 +21,7 @@ class InquiryWithLastMessage(BaseModel):
     id: uuid.UUID
     source: str
     listing_id: uuid.UUID | None = None
+    listing_title: str | None = None
     stage: str
 
     inquirer_name: str | None = None

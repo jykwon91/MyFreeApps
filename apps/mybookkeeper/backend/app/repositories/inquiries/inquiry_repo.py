@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.inquiry_enums import INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
+from app.models.listings.listing import Listing
 from app.schemas.inquiries.inquiry_with_last_message import InquiryWithLastMessage
 
 # Allowlist of columns updatable via PATCH /inquiries/{id}. ``source``,
@@ -282,6 +283,7 @@ async def list_with_last_message(
             Inquiry.id,
             Inquiry.source,
             Inquiry.listing_id,
+            Listing.title.label("listing_title"),
             Inquiry.stage,
             Inquiry.inquirer_name,
             Inquiry.inquirer_employer,
@@ -298,6 +300,7 @@ async def list_with_last_message(
             last_msg.created_at.label("last_message_at"),
         )
         .outerjoin(last_msg, last_msg.id == latest_msg_id_sq)
+        .outerjoin(Listing, Listing.id == Inquiry.listing_id)
         .where(
             Inquiry.organization_id == organization_id,
             Inquiry.deleted_at.is_(None),
@@ -323,6 +326,7 @@ async def list_with_last_message(
             id=row.id,
             source=row.source,
             listing_id=row.listing_id,
+            listing_title=row.listing_title,
             stage=row.stage,
             inquirer_name=row.inquirer_name,
             inquirer_employer=row.inquirer_employer,

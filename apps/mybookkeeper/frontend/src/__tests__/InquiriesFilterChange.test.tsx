@@ -18,6 +18,7 @@ const NEW_INQUIRY: InquirySummary = {
   id: "inq-1",
   source: "FF",
   listing_id: null,
+  listing_title: null,
   stage: "new",
   inquirer_name: "Alice Nguyen",
   inquirer_employer: null,

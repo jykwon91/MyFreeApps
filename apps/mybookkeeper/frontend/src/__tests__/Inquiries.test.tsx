@@ -14,6 +14,7 @@ const mockInquiries: InquirySummary[] = [
     id: "inq-1",
     source: "FF",
     listing_id: "listing-1",
+    listing_title: "Garage Suite A",
     stage: "new",
     inquirer_name: "Alice Nguyen",
     inquirer_employer: "Texas Children's Hospital",
@@ -31,6 +32,7 @@ const mockInquiries: InquirySummary[] = [
     id: "inq-2",
     source: "TNH",
     listing_id: null,
+    listing_title: null,
     stage: "triaged",
     inquirer_name: "Bob Martin",
     inquirer_employer: null,
@@ -129,6 +131,19 @@ describe("Inquiries page", () => {
     );
     createInquiryMock.mockClear();
     vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  it("names an inquiry's listing even when the listings list doesn't include it", () => {
+    vi.mocked(useListInquiryPagesInfiniteQuery).mockReturnValue(
+      infiniteQueryData({
+        items: [{ ...mockInquiries[0], listing_id: "listing-75", listing_title: "Room 75" }],
+        total: 1,
+        has_more: false,
+      }) as unknown as InquiriesQueryReturn,
+    );
+    renderInquiries();
+    expect(screen.getAllByText(/Room 75/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Garage Suite A/)).toBeNull();
   });
 
   it("asks for the inbox by default, so email inquiries with no spam score show", () => {

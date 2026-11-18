@@ -63,6 +63,14 @@ describe("InquiriesScreen", () => {
     expect(screen.getAllByText("—")).toHaveLength(1);
   });
 
+  it("names the listing from the inquiry itself, not from a capped listings request", async () => {
+    const server = startInquiryServer([anInquiry({ id: "a", inquirer_name: "Linked Lin", listing_id: "l1" })]);
+    server.listings = [{ id: "l1", title: "Room 75" }];
+    await renderScreen();
+    expect(await screen.findByText("Room 75")).toBeTruthy();
+    expect(server.requests.some((request) => request.url === "/listings")).toBe(false);
+  });
+
   it("the inbox shows email inquiries that never got a spam score, and leaves out spam", async () => {
     const server = startInquiryServer([
       anInquiry({ id: "a", inquirer_name: "Unscored Una", spam_status: "unscored" }),

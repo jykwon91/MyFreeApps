@@ -1,11 +1,18 @@
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import type { InquiryView } from "../types/InquiryView";
 
+export const InquiryViewMode = {
+  INBOX: "inbox",
+  FLAGGED: "flagged",
+  SPAM: "spam",
+  ALL: "all",
+} as const satisfies Record<string, InquiryView>;
+
 export const INQUIRY_VIEWS: readonly { value: InquiryView; label: string }[] = [
-  { value: "inbox", label: "Inbox" },
-  { value: "flagged", label: "Flagged" },
-  { value: "spam", label: "Spam" },
-  { value: "all", label: "All" },
+  { value: InquiryViewMode.INBOX, label: "Inbox" },
+  { value: InquiryViewMode.FLAGGED, label: "Flagged" },
+  { value: InquiryViewMode.SPAM, label: "Spam" },
+  { value: InquiryViewMode.ALL, label: "All" },
 ];
 
 /** The stages you can move an inquiry to here. Declined and Archived have their own confirmations; Converted comes from promoting. */

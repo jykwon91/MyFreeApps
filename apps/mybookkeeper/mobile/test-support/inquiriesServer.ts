@@ -53,8 +53,15 @@ export function anInquiry(overrides: Partial<InquiryResponse> = {}): InquiryResp
   } as InquiryResponse;
 }
 
-function toSummary(inquiry: InquiryResponse): InquirySummary {
-  return { ...inquiry, submitted_via: "gmail_oauth", last_message_preview: inquiry.messages[0]?.parsed_body ?? null, last_message_at: null };
+function toSummary(inquiry: InquiryResponse, listings: Partial<ListingSummary>[] | null): InquirySummary {
+  const listingTitle = listings?.find((listing) => listing.id === inquiry.listing_id)?.title ?? null;
+  return {
+    ...inquiry,
+    listing_title: listingTitle,
+    submitted_via: "gmail_oauth",
+    last_message_preview: inquiry.messages[0]?.parsed_body ?? null,
+    last_message_at: null,
+  };
 }
 
 export interface FakeInquiryServer {
@@ -152,7 +159,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
           (!params.spam_status || row.spam_status === params.spam_status) &&
           (!params.inbox_only || !["flagged", "spam"].includes(row.spam_status)),
       );
-      const items = matches.slice(offset, offset + limit).map(toSummary);
+      const items = matches.slice(offset, offset + limit).map((inquiry) => toSummary(inquiry, server.listings));
       return respond({ items, total: matches.length, has_more: offset + limit < matches.length });
     }
     if (config.url?.startsWith("/listings/")) {
