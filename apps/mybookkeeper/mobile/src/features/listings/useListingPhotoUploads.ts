@@ -95,7 +95,12 @@ export function useListingPhotoUploads(listingId: string, onUploaded: (count: nu
     update((current) => current.filter((candidate) => candidate.key !== key));
   }
 
+  /** Read when it is asked, not at render, so a caller deciding whether everything has settled sees what is still going now. */
+  function hasPending(): boolean {
+    return pending.current > 0;
+  }
+
   const isSending = items.some((item) => item.status !== "failed");
   const hasFailed = items.some((item) => item.status === "failed");
-  return { items, batch, add, retry, discard, isSending, hasFailed };
+  return { items, batch, add, retry, discard, hasPending, isSending, hasFailed };
 }
