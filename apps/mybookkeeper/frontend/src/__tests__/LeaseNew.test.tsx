@@ -36,7 +36,18 @@ const mockUseCanWrite = vi.fn();
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetGenerateDefaultsQuery(args, opts),
-  useGetLeaseTemplatesQuery: () => mockUseGetLeaseTemplatesQuery(),
+  // The paged hook over the same fixture: one page holding everything the test sets up.
+  useListLeaseTemplatePagesInfiniteQuery: () => {
+    const result = mockUseGetLeaseTemplatesQuery();
+    return {
+      ...result,
+      data: result.data && { pages: [result.data] },
+      currentData: result.currentData && { pages: [result.currentData] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+    };
+  },
   useGetLeaseTemplateByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetLeaseTemplateByIdQuery(id, opts),
   useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
@@ -473,7 +484,7 @@ describe("MultiTemplatePicker", () => {
     expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
   });
 
-  it("keeps templates from an earlier load usable under the error", () => {
+  it("keeps templates from an earlier load usable under the error of a failed refresh", () => {
     renderPicker({ ...queryStatus({ failed: true, fetching: false }) });
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
     expect(screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();

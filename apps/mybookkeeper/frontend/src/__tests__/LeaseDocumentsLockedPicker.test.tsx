@@ -95,10 +95,13 @@ let templatesFailed = false;
 let templatesFetching = false;
 
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
-  useGetLeaseTemplatesQuery: () => ({
-    ...queryData(templatesFailed ? undefined : { items: TEMPLATES, total: 2 }),
+  useListLeaseTemplatePagesInfiniteQuery: () => ({
+    ...queryData(templatesFailed ? undefined : { pages: [{ items: TEMPLATES, total: 2, has_more: false }] }),
     isLoading: false,
     ...queryStatus({ failed: templatesFailed, fetching: templatesFetching }),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     refetch: vi.fn(),
   }),
 }));

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@platform/ui";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import {
   useAddSignedLeaseTemplatesMutation,
   usePrefillAddendumPlaceholdersMutation,
@@ -66,7 +66,8 @@ export default function LeaseAddTemplateModal({
     useAddSignedLeaseTemplatesMutation();
   const [prefill, { isLoading: isPrefilling }] =
     usePrefillAddendumPlaceholdersMutation();
-  const { data, error, isFetching, refetch } = useGetLeaseTemplatesQuery();
+  const pages = useLeaseTemplatesPages();
+  const { mode: templatesMode, rows: available } = pagedListView(pages, pages.templates);
 
   const linkedSet = useMemo(
     () => new Set(existingTemplateIds),
@@ -76,12 +77,6 @@ export default function LeaseAddTemplateModal({
   const selectedIds = pickedIds.filter(
     (id) => !(isDocumentsLocked && linkedSet.has(id)),
   );
-  const available = data?.items ?? [];
-  const templatesMode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: available.length,
-  });
 
   function handleToggle(t: LeaseTemplateSummary) {
     setPickedIds((prev) =>
@@ -196,10 +191,8 @@ export default function LeaseAddTemplateModal({
               onToggle={handleToggle}
               isDocumentsLocked={isDocumentsLocked}
               mode={templatesMode}
-              hasError={error !== undefined}
-              isRetrying={isFetching}
+              pages={pages}
               isPrefilling={isPrefilling}
-              onRetry={() => void refetch()}
               onContinue={() => void handleContinue()}
               onClose={onClose}
             />

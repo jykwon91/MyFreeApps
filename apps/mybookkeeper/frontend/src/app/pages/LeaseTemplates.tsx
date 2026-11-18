@@ -2,26 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { data, isFetching, error, refetch } =
-    useGetLeaseTemplatesQuery();
+  const pages = useLeaseTemplatesPages();
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const templates = data?.items ?? [];
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: templates.length,
-  });
+  const { mode, rows } = pagedListView(pages, pages.templates);
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -43,11 +38,13 @@ export default function LeaseTemplates() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="templates" />
 
-      <LeaseTemplatesListBody mode={mode} templates={templates} />
+      <LeaseTemplatesListBody mode={mode} templates={rows} />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       <LeaseTemplateUploadDialog
         open={uploadOpen}

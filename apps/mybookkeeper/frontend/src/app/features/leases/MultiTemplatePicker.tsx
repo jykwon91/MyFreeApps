@@ -1,8 +1,9 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
+import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 
 export interface MultiTemplatePickerProps {
   selectedIds: string[];
@@ -22,23 +23,13 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { data, error, isFetching, refetch } = useGetLeaseTemplatesQuery();
-  const templates = data?.items ?? [];
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: templates.length,
-  });
-
-  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
-  // refetches, which would flash "No templates yet" mid-retry.
-  const loadError = error ? (
-    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-  ) : null;
+  const pages = useLeaseTemplatesPages();
+  const { mode, rows: templates } = pagedListView(pages, pages.templates);
+  const loadAlert = <ListPagesErrorAlert pages={pages} noun="templates" />;
 
   switch (mode) {
     case "error":
-      return loadError;
+      return loadAlert;
     case "loading":
       return (
         <div className="space-y-2" data-testid="multi-template-picker-skeleton">
@@ -64,7 +55,7 @@ export default function MultiTemplatePicker({
       return (
         <div className="space-y-3">
           {/* Items from an earlier load stay usable; this says the latest one failed. */}
-          {loadError}
+          {loadAlert}
           <ul className="space-y-2" data-testid="multi-template-picker-list">
             {templates.map((t) => {
               const checked = selectedIds.includes(t.id);
@@ -116,6 +107,7 @@ export default function MultiTemplatePicker({
               );
             })}
           </ul>
+          <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
         </div>
       );
   }

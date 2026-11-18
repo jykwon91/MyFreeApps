@@ -1,21 +1,20 @@
 import { Button, LoadingButton } from "@platform/ui";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import type { LeaseTemplatesPagesState } from "@mybookkeeper/api-client/types/lease/lease-templates-pages-state";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 import LeaseAddTemplatePickBody from "./LeaseAddTemplatePickBody";
 
 export interface LeaseAddTemplatePickStepProps {
-  available: LeaseTemplateSummary[];
+  available: readonly LeaseTemplateSummary[];
   linkedSet: Set<string>;
   selectedIds: string[];
   onToggle: (template: LeaseTemplateSummary) => void;
   isDocumentsLocked: boolean;
   mode: ListLoadMode;
-  /** The latest load failed; items from an earlier load may still show. */
-  hasError: boolean;
-  isRetrying: boolean;
+  pages: LeaseTemplatesPagesState;
   isPrefilling: boolean;
-  onRetry: () => void;
   onContinue: () => void;
   onClose: () => void;
 }
@@ -34,18 +33,14 @@ export default function LeaseAddTemplatePickStep({
   onToggle,
   isDocumentsLocked,
   mode,
-  hasError,
-  isRetrying,
+  pages,
   isPrefilling,
-  onRetry,
   onContinue,
   onClose,
 }: LeaseAddTemplatePickStepProps) {
   return (
     <>
-      {hasError ? (
-        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isRetrying} onRetry={onRetry} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="templates" />
       <LeaseAddTemplatePickBody
         mode={mode}
         available={available}
@@ -54,6 +49,9 @@ export default function LeaseAddTemplatePickStep({
         onToggle={onToggle}
         isDocumentsLocked={isDocumentsLocked}
       />
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" size="sm" onClick={onClose}>
