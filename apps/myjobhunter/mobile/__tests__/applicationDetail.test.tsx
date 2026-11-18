@@ -151,6 +151,25 @@ it("keeps what it loaded on screen under a banner when a refresh fails", async (
   expect(screen.getByRole("header", { name: "Staff Engineer" })).toBeTruthy();
 });
 
+it.each(["events", "documents"])("keeps what it loaded under a banner when refreshing the %s fails", async (section) => {
+  let fails = false;
+  const routes = applicationDetailRoutes(STRIPE);
+  const route = section === "events" ? `GET /applications/${ID}/events` : "GET /documents";
+  const answer = routes[route];
+  serve({ ...routes, [route]: (body, params) => (fails ? { status: 500 } : answer(body, params)) });
+  await renderApplicationDetail(ID);
+  await screen.findByRole("header", { name: "Staff Engineer" });
+  expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+
+  fails = true;
+  await act(async () => {
+    await screen.getByTestId("application-detail").props.refreshControl.props.onRefresh();
+  });
+
+  expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+  expect(screen.getByRole("header", { name: "Staff Engineer" })).toBeTruthy();
+});
+
 it("saves edited notes when Save is pressed, and says so", async () => {
   const sent = serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 200, data: STRIPE }) });
   await renderApplicationDetail(ID);

@@ -3,7 +3,7 @@ import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrat
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
@@ -110,7 +110,7 @@ export default function InquiriesScreen({
         ListFooterComponent={footer()}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
             {canWrite ? (
               <LoadingButton accessibilityHint={INQUIRY_CREATE_MESSAGES.addHint} onPress={() => setIsAdding(true)}>
                 {INQUIRY_CREATE_MESSAGES.addInquiry}

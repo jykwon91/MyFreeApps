@@ -1,5 +1,5 @@
 import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -38,7 +38,7 @@ export default function PaymentReviewScreen() {
       ListHeaderComponent={
         rows.length > 0 ? (
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error)} />
             {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
             <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
               {queueCountLine(currentData?.pending_count ?? rows.length)}

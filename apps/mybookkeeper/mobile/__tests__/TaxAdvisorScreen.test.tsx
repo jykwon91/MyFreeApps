@@ -4,8 +4,8 @@ import type { TaxAdvisorCachedResponse } from "@mybookkeeper/api-client/types/ta
 import type { TaxAdvisorSuggestionRead } from "@mybookkeeper/api-client/types/tax/TaxAdvisorSuggestionRead";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Provider } from "react-redux";
 import { TAX_ADVISOR_MESSAGES as MESSAGES } from "../src/constants/taxAdvisor";
 import TaxAdvisorScreen from "../src/features/taxReturns/TaxAdvisorScreen";
@@ -36,6 +36,8 @@ interface World {
   forms: { form_name: string; instance_count: number; field_count: number }[];
   generate: { status?: number; data?: TaxAdvisorCachedResponse };
   status: number;
+  /** A status the forms overview fails with while set. */
+  formsStatus?: number;
   gate?: Promise<void>;
 }
 
@@ -48,7 +50,7 @@ function serve(over: Partial<World> = {}) {
     ...over,
   };
   const server = startTaxServer(async (call: TaxCall) => {
-    if (call.url.endsWith("/forms-overview")) return { data: world.forms };
+    if (call.url.endsWith("/forms-overview")) return world.formsStatus ? { status: world.formsStatus } : { data: world.forms };
     if (call.url.endsWith("/validation")) return { data: [] };
     if (call.url.endsWith("/advisor/generate")) {
       await world.gate;
@@ -235,6 +237,29 @@ describe("TaxAdvisorScreen", () => {
     await show();
     expect(await screen.findByText(MESSAGES.noFormsHeading)).toBeTruthy();
     expect(screen.queryByRole("button", { name: MESSAGES.getAdvice })).toBeNull();
+  });
+
+  it("keeps the advice and says so when refreshing the forms behind it fails", async () => {
+    const { world } = serve({ cached: advice([]) });
+    await show();
+    expect(await screen.findByText(MESSAGES.allGoodHeading)).toBeTruthy();
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+    world.formsStatus = 500;
+    await act(async () => {
+      await screen.getByTestId("tax-advisor").props.refreshControl.props.onRefresh();
+    });
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+    expect(screen.getByText(MESSAGES.allGoodHeading)).toBeTruthy();
+  });
+
+  it("doesn't call having no advice yet a failed refresh", async () => {
+    serve();
+    await show();
+    expect(await screen.findByRole("button", { name: MESSAGES.getAdvice })).toBeTruthy();
+    await act(async () => {
+      await screen.getByTestId("tax-advisor").props.refreshControl.props.onRefresh();
+    });
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
   });
 
   it("offers a retry when the advice failed to load, instead of calling it none", async () => {

@@ -2,7 +2,7 @@ import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookk
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, StaleDataBanner, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { SectionList, View } from "react-native";
@@ -113,7 +113,7 @@ export default function CalendarScreen() {
                 {CALENDAR_MESSAGES.reviewQueue}
               </LoadingButton>
             )}
-            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && currentData)} />
             <LoadingButton
               accessibilityLabel={`${FILTER_MESSAGES.button}, currently ${hasFilters ? filterLabel : "none"}`}
               onPress={() => setIsFilterOpen(true)}

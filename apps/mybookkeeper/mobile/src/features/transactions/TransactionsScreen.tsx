@@ -2,7 +2,7 @@ import DuplicatesLink from "../duplicates/DuplicatesLink";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SearchField, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { ClampedText, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, View } from "react-native";
@@ -196,7 +196,7 @@ export default function TransactionsScreen({
         ListFooterComponent={footer}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
             <DuplicatesLink />
             <SearchField
               accessibilityLabel="Search transactions by vendor"

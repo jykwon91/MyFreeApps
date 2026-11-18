@@ -1,5 +1,5 @@
 import { useListSourcesQuery } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, EmptyState, goBackOr, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, goBackOr, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -38,7 +38,7 @@ export default function ReconciliationDetailScreen({ id, year }: { id: string; y
       refreshControl={refreshControl}
       testID="reconciliation-detail"
     >
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <ReconciliationDetailBody canWrite={canWrite} source={source} />
     </ScrollView>
   );

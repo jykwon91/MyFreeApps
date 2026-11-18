@@ -8,6 +8,7 @@ export const COOK_LOG_PHONE_MESSAGES = {
   cancel: "Cancel",
   loading: "Loading cook log",
   loadFailed: "Couldn't load your cook log.",
+  updateFailed: "Couldn't update your cook log. Check your connection and try again.",
   tryAgain: "Try again",
   deleteRowLabel: (date: string) => `Delete cook log from ${date}`,
   deleteHint: "Asks before deleting this cook log.",

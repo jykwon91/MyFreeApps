@@ -1,6 +1,6 @@
 import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@platform/core/utils/localToday";
-import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingRegion, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -60,7 +60,7 @@ export default function TenantsScreen({
       ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
           <SegmentedControl accessibilityLabel={TENANT_MESSAGES.filterLabel} onChange={onFilterChange} segments={TENANT_FILTERS} value={filter} />
         </View>
       }

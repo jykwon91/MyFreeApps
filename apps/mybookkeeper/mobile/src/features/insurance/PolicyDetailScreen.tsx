@@ -1,5 +1,5 @@
 import { useDeleteInsurancePolicyMutation, useGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Chip, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -63,7 +63,7 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
           {policy.policy_name}

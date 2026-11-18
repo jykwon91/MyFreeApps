@@ -1,5 +1,5 @@
 import { useListSignedLeasePagesInfiniteQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { Banner, EmptyState, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -72,7 +72,7 @@ export default function LeasesScreen() {
       ) : loadMoreFailed ? <LoadMoreFailed onRetry={() => void loadMore()} /> : undefined}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
           {canWrite ? <LoadingButton onPress={() => router.push(templatesPath())} variant="secondary">{NEW_LEASE_MESSAGES.newLease}</LoadingButton> : null}
           {canWrite ? <LoadingButton onPress={() => router.push("/leases/import")} variant="secondary">{LEASE_IMPORT_MESSAGES.importLease}</LoadingButton> : null}
           <SegmentedControl accessibilityLabel={LEASE_MESSAGES.filterLabel} onChange={setFilter} segments={LEASE_FILTERS} value={filter} />

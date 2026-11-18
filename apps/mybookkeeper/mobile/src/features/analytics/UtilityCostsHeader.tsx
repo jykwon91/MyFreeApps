@@ -1,5 +1,5 @@
 import { changeFigures } from "@mybookkeeper/api-client/utils/comparePeriods";
-import { Banner, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useTheme } from "@platform/mobile";
+import { SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -54,7 +54,7 @@ export default function UtilityCostsHeader({
   const sectionTitle = { fontSize: fontSize.md, fontWeight: "600", color: colors.foreground } as const;
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
-      {showLastLoaded ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={showLastLoaded} />
       {controls}
       <SegmentedControl accessibilityLabel={MESSAGES.granularityLabel} onChange={onChangeGranularity} segments={UTILITY_GRANULARITIES} value={granularity} />
       {propertiesFailed ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text> : null}

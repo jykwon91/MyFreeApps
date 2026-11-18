@@ -1,7 +1,7 @@
 import { APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { Banner, EmptyState, LoadingButton, LoadingRegion, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -74,7 +74,7 @@ export default function ApplicantsScreen({
         ListFooterComponent={footer}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
             <LoadingButton onPress={() => setIsStageSheetOpen(true)} variant="secondary">
               {`Stage: ${stage ? applicantStageLabel(stage) : "All"}`}
             </LoadingButton>

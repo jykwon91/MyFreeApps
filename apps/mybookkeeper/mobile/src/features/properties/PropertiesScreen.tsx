@@ -1,5 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, View } from "react-native";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
@@ -44,7 +44,7 @@ export default function PropertiesScreen() {
       ListHeaderComponent={
         hasHeader ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && properties.length > 0 ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && properties.length > 0)} />
             {waiting.length > 0 ? (
               <Banner
                 actions={canWrite ? [{ label: PROPERTY_MESSAGES.classify, onPress: () => router.push(`/properties/${waiting[0].id}/edit`) }] : undefined}

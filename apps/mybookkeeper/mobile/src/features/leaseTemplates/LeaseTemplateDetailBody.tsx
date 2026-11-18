@@ -1,4 +1,4 @@
-import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, StaleDataBanner, useOpenWebsite, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -27,7 +27,7 @@ export default function LeaseTemplateDetailBody({ template, canWrite, hasStaleDa
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.xl, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="lease-template-detail">
-      {hasStaleData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={hasStaleData} />
       {message ? <Banner message={message} /> : null}
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>

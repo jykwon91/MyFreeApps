@@ -2,7 +2,7 @@ import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseT
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -57,7 +57,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
         ListFooterComponent={templates.currentData?.has_more ? <MoreOnWebsite path="/lease-templates" /> : undefined}
         ListHeaderComponent={
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            {error && isLoaded ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && isLoaded)} />
             <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.pickTitle}
             </Text>

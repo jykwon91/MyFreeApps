@@ -1,5 +1,5 @@
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useLeaveWhenSaved, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { Chip, EmptyState, StaleDataBanner, useLeaveWhenSaved, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { UTILITY_PLAN_MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
@@ -39,7 +39,7 @@ export default function UtilityPlanDetailScreen({ id }: { id: string }) {
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
           {planTitle(plan)}

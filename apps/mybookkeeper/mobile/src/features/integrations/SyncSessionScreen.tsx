@@ -1,6 +1,6 @@
 import { integrationsApi, useGetEmailQueueQuery, useGetSyncLogsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, LoadingRegion, Skeleton, useRefresh, useScreenFocused, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useScreenFocused, useTheme, goBackOr } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import QueueItemRow from "./QueueItemRow";
@@ -63,7 +63,7 @@ export default function SyncSessionScreen({ id }: { id: number }) {
       }
       ListHeaderComponent={
         <View style={{ gap: spacing.lg, padding: spacing.lg }}>
-          {logs.error || queue.error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(logs.error || queue.error)} />
           <SyncSessionFacts cancel={cancel} log={log} />
           <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
             {MESSAGES.itemsHeading}

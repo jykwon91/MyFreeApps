@@ -1,6 +1,6 @@
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -52,7 +52,7 @@ export default function TaxReturnsScreen() {
               {TAX_RETURN_CREATE_MESSAGES.newReturn}
             </LoadingButton>
           ) : null}
-          {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && currentData)} />
         </View>
       }
       contentInsetAdjustmentBehavior="automatic"

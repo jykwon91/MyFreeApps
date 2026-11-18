@@ -1,5 +1,5 @@
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
-import { Banner, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
+import { StaleDataBanner, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { DASHBOARD_MESSAGES as MESSAGES } from "../../constants/dashboard";
 import { applicationCount } from "../../lib/boardCardDisplay";
@@ -11,7 +11,7 @@ export default function DashboardSummary({ counts, total, isStale, onShowStage }
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
-      {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <View style={{ gap: spacing.xs }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {MESSAGES.summaryTitle}

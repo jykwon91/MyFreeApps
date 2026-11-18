@@ -1,5 +1,5 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -44,7 +44,7 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
         ListFooterComponent={currentData?.has_more ? <MoreOnWebsite path="/lease-templates" /> : undefined}
         ListHeaderComponent={
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            {error && rows.length > 0 ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && rows.length > 0)} />
             {flow.parentLeaseId ? <Banner message={MESSAGES.followsEarlier} tone="success" /> : null}
             <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
               {MESSAGES.whichTemplates}

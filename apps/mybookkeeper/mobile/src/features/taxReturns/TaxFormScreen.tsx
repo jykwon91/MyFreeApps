@@ -1,7 +1,7 @@
 import { useGetFormFieldsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -50,7 +50,7 @@ export default function TaxFormScreen({ returnId, formName }: { returnId: string
       ListEmptyComponent={<EmptyState body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />}
       ListHeaderComponent={
         <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-          {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error)} />
           {!isAdmin && sections.length > 0 ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.readOnlyNote}</Text> : null}
         </View>
       }

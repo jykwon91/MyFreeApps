@@ -1,6 +1,6 @@
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
@@ -45,7 +45,7 @@ export default function PropertyPnlScreen() {
         ListEmptyComponent={emptyList}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && currentData)} />
             <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setIsChoosing(true)} value={`${periodName(preset)}, ${dates}`} />
             {currentData && properties.length > 0 ? <PropertyPnlTotals dates={dates} totals={currentData} /> : null}
             {currentData && properties.length > 0 ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.approvedOnly}</Text> : null}

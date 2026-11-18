@@ -1,5 +1,5 @@
 import { useGetListingChannelsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Banner, EmptyState, LoadingButton, LoadingRegion, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView } from "react-native";
 import { LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
@@ -39,7 +39,7 @@ function ChannelsBody({ id }: { id: string }) {
   }
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       {canWrite ? <LoadingButton onPress={add}>{MESSAGES.add}</LoadingButton> : null}
       {channelListings.map((channelListing) => (
         <ChannelListingRow canWrite={canWrite} channelListing={channelListing} key={channelListing.id} />

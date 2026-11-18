@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
-import { fireEvent, screen } from "@testing-library/react-native";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { BENCHMARK_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { MONEY_INPUT_MESSAGES } from "@mybookkeeper/api-client/constants/moneyInput";
@@ -192,6 +193,19 @@ describe("market premium", () => {
     await screen.findByText("Comparing against");
     expect(screen.queryByRole("button", { name: "Update the market premium" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove the market premium" })).toBeNull();
+  });
+
+  it("keeps the figure and says so when a refresh fails", async () => {
+    const server = startInsuranceServer({ benchmark: aBenchmark() });
+    await renderInsurance(<MarketPremiumScreen />);
+    await screen.findByText("Comparing against");
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+    server.failures["GET /insurance-benchmarks"] = "offline";
+    await act(async () => {
+      await screen.getByTestId("market-premium").props.refreshControl.props.onRefresh();
+    });
+    expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+    expect(screen.getByText("Comparing against")).toBeTruthy();
   });
 
   it("offers a retry when it won't load", async () => {

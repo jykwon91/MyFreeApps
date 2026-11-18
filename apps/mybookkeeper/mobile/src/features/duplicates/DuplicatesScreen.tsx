@@ -1,5 +1,5 @@
 import { useGetDuplicatesQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
@@ -31,7 +31,7 @@ export default function DuplicatesScreen() {
       ListHeaderComponent={
         pairs.length > 0 ? (
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error)} />
             {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
             <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
               {duplicateCountLine(pairs.length)}

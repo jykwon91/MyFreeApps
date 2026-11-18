@@ -1,5 +1,5 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
@@ -28,7 +28,7 @@ function LinksBody({ id }: { id: string }) {
   }
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       {canWrite ? <LoadingButton onPress={add}>{MESSAGES.add}</LoadingButton> : null}
       {links.map((link) => (
         <ListingLinkRow canWrite={canWrite} key={link.id} link={link} />

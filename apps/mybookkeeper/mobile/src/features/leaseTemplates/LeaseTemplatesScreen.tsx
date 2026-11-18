@@ -1,5 +1,5 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { LEASE_TEMPLATE_LIST_LIMIT, LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
@@ -40,13 +40,7 @@ export default function LeaseTemplatesScreen() {
           </View>
         ) : undefined
       }
-      ListHeaderComponent={
-        error && rows.length > 0 ? (
-          <View style={{ padding: spacing.lg }}>
-            <Banner message={SHOWING_LAST_LOADED_MESSAGE} />
-          </View>
-        ) : undefined
-      }
+      ListHeaderComponent={<StaleDataBanner isShown={Boolean(error) && rows.length > 0} style={{ margin: spacing.lg }} />}
       contentInsetAdjustmentBehavior="automatic"
       data={rows}
       keyExtractor={(template) => template.id}

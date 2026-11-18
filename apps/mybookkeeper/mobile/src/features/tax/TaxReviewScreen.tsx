@@ -1,6 +1,6 @@
 import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import type { FormCompleteness } from "@mybookkeeper/api-client/types/tax/FormCompleteness";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -68,7 +68,7 @@ export default function TaxReviewScreen() {
               value={String(year)}
             />
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.note}</Text>
-            {error && review ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={Boolean(error && review)} />
             {hasForms && review?.needs_recompute ? <Banner message={MESSAGES.outOfDate} /> : null}
             {review && hasForms ? (
               <>

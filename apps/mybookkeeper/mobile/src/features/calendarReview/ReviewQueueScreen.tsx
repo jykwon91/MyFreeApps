@@ -1,6 +1,6 @@
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetReviewQueueQuery } from "@mybookkeeper/api-client/store/calendarApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { useMemo } from "react";
 import { FlatList, Text } from "react-native";
 import { REVIEW_MESSAGES, REVIEW_QUEUE_LISTINGS_ARGS } from "../../constants/calendarReview";
@@ -38,7 +38,7 @@ export default function ReviewQueueScreen() {
       ListHeaderComponent={
         <>
           <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>{REVIEW_MESSAGES.intro}</Text>
-          {error && items ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} style={{ marginHorizontal: spacing.lg, marginBottom: spacing.md }} /> : null}
+          <StaleDataBanner isShown={Boolean(error && items)} style={{ marginHorizontal: spacing.lg, marginBottom: spacing.md }} />
           {canWrite ? null : (
             <Text style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md, fontSize: fontSize.sm, color: colors.mutedForeground }}>
               {REVIEW_MESSAGES.viewOnly}

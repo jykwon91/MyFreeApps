@@ -2,7 +2,7 @@ import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy"
 import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { useListLanguagesQuery } from "@mylanguagetutor/api-client/store/catalogApi";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
-import { Banner, ListSeparator, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { ListSeparator, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { CATALOG_MESSAGES, LANGUAGE_SKELETON_ROWS } from "../../constants/catalog";
@@ -30,7 +30,7 @@ export default function LanguageScreen() {
       ListEmptyComponent={renderEmpty()}
       ListHeaderComponent={
         <View>
-          {isError && languages?.length ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} style={{ marginBottom: spacing.md }} /> : null}
+          <StaleDataBanner isShown={Boolean(isError && languages?.length)} style={{ marginBottom: spacing.md }} />
           <OnboardingIntro heading={ONBOARDING_COPY.languageHeading} intro={ONBOARDING_COPY.languageIntro} step={ONBOARDING_COPY.languageStep} />
         </View>
       }

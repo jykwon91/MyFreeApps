@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useGetWelcomeManualsQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { WELCOME_MANUAL_PAGE_SIZE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
@@ -59,7 +59,7 @@ export default function WelcomeManualsScreen() {
       ListFooterComponent={footer}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
           {canWrite && rows.length > 0 ? <LoadingButton onPress={addManual}>{WELCOME_MANUAL_MESSAGES.new}</LoadingButton> : null}
         </View>
       }

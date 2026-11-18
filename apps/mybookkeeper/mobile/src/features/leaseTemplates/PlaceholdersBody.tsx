@@ -1,5 +1,5 @@
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
@@ -19,7 +19,7 @@ export default function PlaceholdersBody({ template, canWrite }: PlaceholdersBod
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="lease-template-placeholders">
       <View style={{ gap: spacing.md, padding: spacing.lg }}>
-        {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <StaleDataBanner isShown={Boolean(error)} />
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{canWrite ? MESSAGES.intro : MESSAGES.introViewOnly}</Text>
       </View>
       {rows.map((placeholder) => (

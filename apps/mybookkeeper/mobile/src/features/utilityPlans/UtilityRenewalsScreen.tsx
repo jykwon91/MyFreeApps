@@ -1,5 +1,5 @@
 import { useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh } from "@platform/mobile";
 import { ScrollView } from "react-native";
 import { UTILITY_RENEWAL_MESSAGES as MESSAGES } from "../../constants/utilityInsights";
 import { useTodayIso } from "../../lib/useTodayIso";
@@ -32,7 +32,7 @@ export default function UtilityRenewalsScreen() {
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error && currentData)} />
       {body()}
     </ScrollView>
   );

@@ -4,7 +4,7 @@ import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { duplicateConfidenceLabel, duplicateHeadline } from "@mybookkeeper/api-client/utils/duplicatePairLabels";
 import { computeDefaults, differingFields } from "@mybookkeeper/api-client/utils/mergeDefaults";
-import { Banner, SHOWING_LAST_LOADED_MESSAGE, useTheme, goBackOr } from "@platform/mobile";
+import { StaleDataBanner, useTheme, goBackOr } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
@@ -52,7 +52,7 @@ export default function DuplicateCompare({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} refreshControl={refreshControl}>
-        {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <StaleDataBanner isShown={isStale} />
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
         <View style={{ gap: spacing.sm }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

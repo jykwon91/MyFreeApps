@@ -3,7 +3,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import type { CompareMode } from "@mybookkeeper/api-client/types/analytics/compare-mode";
 import { monthlyAverage } from "@mybookkeeper/api-client/utils/summaryAverages";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView } from "react-native";
@@ -70,7 +70,7 @@ export default function MoneyAnalysisScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} refreshControl={refreshControl} testID="analysis-screen">
-      {summary.isError && summary.currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(summary.isError && summary.currentData)} />
       <AnalysisControls
         choices={choices}
         compare={compare}

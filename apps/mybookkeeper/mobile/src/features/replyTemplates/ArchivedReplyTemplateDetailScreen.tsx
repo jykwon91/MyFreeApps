@@ -1,5 +1,5 @@
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { ScrollView, Text } from "react-native";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
@@ -44,7 +44,7 @@ export default function ArchivedReplyTemplateDetailScreen({ id }: { id: string }
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={Boolean(error)} />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{REPLY_TEMPLATE_MESSAGES.archivedNote}</Text>
       <ReplyTemplateBody template={template} />
       {canWrite ? <RestoreReplyTemplateButton id={template.id} onRestored={() => setHasRestored(true)} /> : null}

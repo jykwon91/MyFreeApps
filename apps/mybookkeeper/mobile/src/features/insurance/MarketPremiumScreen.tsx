@@ -1,5 +1,5 @@
 import { useDeleteInsuranceBenchmarkMutation, useGetInsuranceBenchmarkQuery } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
-import { EmptyState, LoadingButton, LoadingRegion, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadingRegion, Skeleton, StaleDataBanner, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { MARKET_MESSAGES } from "../../constants/insuranceMarket";
@@ -54,7 +54,8 @@ export default function MarketPremiumScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+    <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="market-premium">
+      <StaleDataBanner isShown={Boolean(error)} />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MARKET_MESSAGES.blurb}</Text>
       {benchmark ? <MarketPremiumSummary benchmark={benchmark} /> : <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{MARKET_MESSAGES.none}</Text>}
       {canWrite ? (

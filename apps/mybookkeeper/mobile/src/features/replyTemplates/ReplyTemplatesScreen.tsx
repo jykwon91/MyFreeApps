@@ -1,5 +1,5 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, View } from "react-native";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
@@ -43,7 +43,7 @@ export default function ReplyTemplatesScreen() {
       ListHeaderComponent={
         showsBanner || canWrite ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {showsBanner ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <StaleDataBanner isShown={showsBanner} />
             {canWrite ? (
               <LoadingButton onPress={makeOne} variant="secondary">
                 {REPLY_TEMPLATE_MESSAGES.newTemplate}

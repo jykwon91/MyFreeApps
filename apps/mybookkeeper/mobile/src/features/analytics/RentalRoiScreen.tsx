@@ -2,7 +2,7 @@ import { RENTAL_ROI_DEFAULT_TARGET_PCT } from "@mybookkeeper/api-client/constant
 import { useGetRentalRoiQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { rentalRoiHeadline } from "@mybookkeeper/api-client/utils/rentalRoi";
 import { formatMoneyCents } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -63,6 +63,7 @@ export default function RentalRoiScreen() {
       testID="rental-roi-scroll"
     >
       <View style={{ gap: spacing.lg, padding: spacing.lg }}>
+        <StaleDataBanner isShown={Boolean(error)} />
 
         <View
           accessible

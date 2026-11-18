@@ -1,5 +1,5 @@
 import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -57,11 +57,7 @@ export default function PoliciesScreen() {
         ListHeaderComponent={
           <>
             <PoliciesHeader canWrite={canWrite} filter={filter} onOpenFilter={() => setIsFilterOpen(true)} />
-            {error && rows.length > 0 ? (
-              <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-                <Banner message={SHOWING_LAST_LOADED_MESSAGE} />
-              </View>
-            ) : null}
+            <StaleDataBanner isShown={Boolean(error) && rows.length > 0} style={{ marginHorizontal: spacing.lg, marginBottom: spacing.md }} />
           </>
         }
         contentInsetAdjustmentBehavior="automatic"

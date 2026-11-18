@@ -3,7 +3,7 @@ import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, KeyboardAwareScroll, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
+import { EmptyState, KeyboardAwareScroll, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
@@ -56,6 +56,11 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   const column = currentKanbanColumn(application.events);
   // A company that won't load shouldn't hold the screen up; the list says the same when it has no name.
   const companyName = company.currentData?.name ?? (company.isError ? APPLICATION_MESSAGES.unknownCompany : null);
+  // Any section still showing what it loaded before a failed refresh; a failed next page says so itself.
+  const isStale =
+    Boolean(error) ||
+    Boolean(events.error && events.currentData) ||
+    (documents.error !== undefined && hasCurrentDocuments && !documents.isLoadMoreError);
 
   return (
     <KeyboardAwareScroll
@@ -65,7 +70,7 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
       refreshControl={refreshControl}
       testID="application-detail"
     >
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+      <StaleDataBanner isShown={isStale} />
       <ApplicationHeader application={application} column={column} companyName={companyName} />
       <ApplicationActions application={application} column={column} isLeaving={isLeaving} onDeleted={() => setIsLeaving(true)} />
       <OverviewSection application={application} />
