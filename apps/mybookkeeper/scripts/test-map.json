@@ -795,7 +795,10 @@
         "frontend/src/shared/lib/paged-list-view.ts",
         "frontend/src/shared/types/paged-list-view.ts",
         "frontend/src/shared/types/paged-list-status.ts",
-        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx",
+        "frontend/src/shared/components/ui/LoadMoreButton.tsx",
+        "frontend/src/app/features/listings/ListingSelect.tsx",
+        "api-client/src/hooks/useListingsPages.ts"
       ],
       "backend_tests": [
         "test_encrypted_string_type.py",
@@ -831,6 +834,7 @@
         "Inquiries.test.tsx",
         "InquiryDetail.test.tsx",
         "InquiryForm.test.tsx",
+        "ListingSelectLoadMore.test.tsx",
         "InquiryQualityBadge.test.tsx",
         "InquiryReplyPanel.test.tsx",
         "InquirySpamBadge.test.tsx",

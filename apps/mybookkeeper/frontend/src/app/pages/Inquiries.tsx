@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { LoadingButton, useLiveSearchParams } from "@platform/ui";
 import { useInquiriesPages } from "@mybookkeeper/api-client/hooks/useInquiriesPages";
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
@@ -67,15 +66,6 @@ export default function Inquiries() {
 
   const pages = useInquiriesPages(queryArgs);
   const { mode, rows } = pagedListView(pages, pages.inquiries);
-  const { data: listingsData } = useGetListingsQuery();
-
-  // Memoize the listings array reference so the downstream useMemo deps
-  // remain stable across renders when listingsData hasn't changed (the
-  // ``?? []`` fallback otherwise produces a fresh array each render).
-  const listings = useMemo(
-    () => listingsData?.items ?? [],
-    [listingsData],
-  );
 
   function handleFilterChange(next: InquiryStage | null) {
     setSearchParams(
@@ -160,10 +150,7 @@ export default function Inquiries() {
       />
 
       {showForm && canWrite ? (
-        <InquiryForm
-          listings={listings}
-          onClose={() => setShowForm(false)}
-        />
+        <InquiryForm onClose={() => setShowForm(false)} />
       ) : null}
     </div>
   );

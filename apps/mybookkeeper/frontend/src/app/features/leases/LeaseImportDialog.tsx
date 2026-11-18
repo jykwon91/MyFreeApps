@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import ListingSelect from "@/app/features/listings/ListingSelect";
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
@@ -26,9 +26,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const navigate = useNavigate();
   const [importLease, { isLoading }] = useImportSignedLeaseMutation();
   const { data: applicantsData } = useGetApplicantsQuery({ limit: 100 });
-  const { data: listingsData } = useGetListingsQuery({ limit: 100 });
   const applicants = applicantsData?.items ?? [];
-  const listings = listingsData?.items ?? [];
 
   const [applicantId, setApplicantId] = useState("");
   const [listingId, setListingId] = useState("");
@@ -125,20 +123,14 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
                   (optional)
                 </span>
               </label>
-              <select
+              <ListingSelect
                 id="import-listing"
                 value={listingId}
                 onChange={(e) => setListingId(e.target.value)}
                 className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
                 data-testid="import-listing-select"
-              >
-                <option value="">— none —</option>
-                {listings.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title}
-                  </option>
-                ))}
-              </select>
+                emptyLabel="— none —"
+              />
             </div>
 
             {/* Term dates */}

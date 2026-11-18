@@ -1,6 +1,3 @@
-/** Enough for every listing a host has; the same cap the lease import uses. */
-export const INQUIRY_LISTING_CHOICE_LIMIT = 100;
-
 export const INQUIRY_CREATE_MESSAGES = {
   addInquiry: "Add inquiry",
   addHint: "For someone who called, texted or reached you another way",
@@ -10,6 +7,7 @@ export const INQUIRY_CREATE_MESSAGES = {
   receivedDate: "Date received",
   receivedTime: "Time received",
   loadingListings: "Loading your listings",
+  showMoreListings: "Show more listings",
   listingsFailed: "I couldn't load your listings. You can still add the inquiry and link one later.",
   added: (name: string) => `Got it. I added ${name}'s inquiry.`,
   fixFields: "A couple of things need a look before I can add this.",

@@ -4,24 +4,23 @@ import {
   useResolveQueueItemMutation,
 } from "@mybookkeeper/api-client/store/calendarApi";
 import type { ReviewQueueItem } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
-import { LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
+import { LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { REVIEW_MESSAGES } from "../../constants/calendarReview";
-import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
+import ReviewQueueListingSheet from "./ReviewQueueListingSheet";
 import { addFailure, dismissFailure, ignoreFailure } from "./reviewQueueFailures";
 import { reviewItemChannel, reviewItemDetails, reviewItemListingKey, reviewItemSubject, reviewQueueSpokenLabel } from "./reviewQueueDisplay";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 interface ReviewQueueCardProps {
   item: ReviewQueueItem;
-  listings: readonly { value: string; label: string }[];
   canWrite: boolean;
 }
 
-export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueueCardProps) {
+export default function ReviewQueueCard({ item, canWrite }: ReviewQueueCardProps) {
   const { colors, spacing, fontSize, radius } = useTheme();
   const { showToast } = useToast();
   const [isChoosing, setIsChoosing] = useState(false);
@@ -102,22 +101,13 @@ export default function ReviewQueueCard({ item, listings, canWrite }: ReviewQueu
           <LoadingButton disabled={isBusy} isLoading={isDismissing} loadingText={REVIEW_MESSAGES.dismissing} onPress={() => void dismissItem()} variant="ghost">
             {REVIEW_MESSAGES.dismiss}
           </LoadingButton>
-          <OptionSheet
+          <ReviewQueueListingSheet
             description={`Which listing does this ${reviewItemChannel(item)} booking belong to?`}
-            emptyContent={
-              <SheetEmptyAction
-                actionLabel={REVIEW_MESSAGES.addListing}
-                message={REVIEW_MESSAGES.noListings}
-                onPress={() => listingSheet.closeThen(() => router.push("/listings/new"))}
-              />
-            }
             isOpen={isChoosing}
+            onAddListing={() => listingSheet.closeThen(() => router.push("/listings/new"))}
             onClose={() => setIsChoosing(false)}
             onClosed={listingSheet.handleClosed}
             onSelect={(listingId) => void add(listingId)}
-            options={[...listings]}
-            title={REVIEW_MESSAGES.chooseListing}
-            value=""
           />
         </>
       ) : null}

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
+import ListingSelect from "@/app/features/listings/ListingSelect";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { INQUIRY_FIELD_MAX_LENGTH as MAX_LENGTH, INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
@@ -16,10 +17,8 @@ import {
 } from "@mybookkeeper/api-client/utils/inquiryForm";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
-import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 
 export interface InquiryFormProps {
-  listings: readonly ListingSummary[];
   onClose: () => void;
   onCreated?: (inquiry: InquiryResponse) => void;
 }
@@ -29,7 +28,7 @@ export interface InquiryFormProps {
  * The fields, validation and request body are shared with the phone app via
  * ``@mybookkeeper/api-client/utils/inquiryForm``.
  */
-export default function InquiryForm({ listings, onClose, onCreated }: InquiryFormProps) {
+export default function InquiryForm({ onClose, onCreated }: InquiryFormProps) {
   const [createInquiry, { isLoading }] = useCreateInquiryMutation();
   const defaults = useMemo<InquiryFormValues>(() => blankInquiryForm(new Date()), []);
 
@@ -214,19 +213,13 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
 
           <FormField label={LABELS.listing}>
             {(field) => (
-              <select
+              <ListingSelect
                 {...register("listing_id")}
                 data-testid="inquiry-form-listing"
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                emptyLabel={LABELS.noListing}
                 {...field}
-              >
-                <option value="">{LABELS.noListing}</option>
-                {listings.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title}
-                  </option>
-                ))}
-              </select>
+              />
             )}
           </FormField>
 

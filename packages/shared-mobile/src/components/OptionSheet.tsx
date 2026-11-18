@@ -18,6 +18,8 @@ export default function OptionSheet<Value extends string>({
   emptyText,
   emptyContent,
   loadError,
+  onEndReached,
+  footer,
   onClosed,
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
@@ -62,6 +64,7 @@ export default function OptionSheet<Value extends string>({
           </View>
         ) : (
           <FlatList
+            ListFooterComponent={footer ? <>{footer}</> : undefined}
             ListEmptyComponent={
               emptyContent ? (
                 <>{emptyContent}</>
@@ -72,6 +75,8 @@ export default function OptionSheet<Value extends string>({
             accessibilityRole="radiogroup"
             data={options}
             keyExtractor={(option) => option.value}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.5}
             onLayout={showSelected}
             onScrollToIndexFailed={({ index, averageItemLength }) => list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false })}
             ref={list}

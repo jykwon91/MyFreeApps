@@ -82,8 +82,10 @@ const defaultInquiriesState = {
 };
 
 const defaultListingsState = {
-  data: mockListings,
+  ...infiniteQueryData(mockListings),
   isLoading: false,
+  isFetchingNextPage: false,
+  fetchNextPage: vi.fn(),
   isFetching: false,
   isError: false,
   refetch: vi.fn(),
@@ -102,7 +104,7 @@ vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
-  useGetListingsQuery: vi.fn(() => defaultListingsState),
+  useListListingPagesInfiniteQuery: vi.fn(() => defaultListingsState),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
