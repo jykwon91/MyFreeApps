@@ -94,6 +94,7 @@ async def txn_sum_by_category(
     end_date: datetime | None = None,
     property_ids: list[uuid.UUID] | None = None,
     tax_relevant_only: bool = False,
+    exclude_capital_improvements: bool = False,
 ) -> Sequence[Row]:
     filters = _build_txn_filters(
         organization_id,
@@ -101,6 +102,7 @@ async def txn_sum_by_category(
         end_date=end_date,
         property_ids=property_ids,
         tax_relevant_only=tax_relevant_only,
+        exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
         select(
@@ -123,10 +125,12 @@ async def txn_sum_by_property_and_category(
     end_date: datetime | None = None,
     property_ids: list[uuid.UUID] | None = None,
     tax_relevant_only: bool = False,
+    exclude_capital_improvements: bool = False,
 ) -> Sequence[Row]:
     filters = _build_txn_filters(
         organization_id, start_date=start_date, end_date=end_date, property_ids=property_ids,
         tax_relevant_only=tax_relevant_only,
+        exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
         select(

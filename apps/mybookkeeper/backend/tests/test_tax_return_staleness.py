@@ -232,6 +232,7 @@ class TestEdit:
         {"tax_year": 2024},
         {"status": "needs_review"},
         {"tax_relevant": False},
+        {"is_capital_improvement": True},
     ])
     async def test_editing_a_summed_field_flags(
         self, db: AsyncSession, test_user: User, test_org: Organization, updates: dict[str, object],
@@ -380,3 +381,35 @@ class TestAttribution:
             )
 
         await _assert_flagged(db, draft, filed, flagged=True)
+
+
+class TestBulkCapitalImprovement:
+    @pytest.mark.asyncio
+    async def test_marking_a_counted_row_flags(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        txn = await _seed_txn(db, _txn(test_org, test_user))
+        draft, filed = await _seed_returns(db, test_org)
+
+        with patch(f"{_SERVICE}.unit_of_work", _session_factory(db)):
+            result = await transaction_service.bulk_set_capital_improvement(
+                _ctx(test_org, test_user), [txn.id], True,
+            )
+
+        assert result["updated"] == 1
+        await _assert_flagged(db, draft, filed, flagged=True)
+
+    @pytest.mark.asyncio
+    async def test_marking_a_pending_row_does_not_flag(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        txn = await _seed_txn(db, _txn(test_org, test_user, status="pending"))
+        draft, filed = await _seed_returns(db, test_org)
+
+        with patch(f"{_SERVICE}.unit_of_work", _session_factory(db)):
+            result = await transaction_service.bulk_set_capital_improvement(
+                _ctx(test_org, test_user), [txn.id], True,
+            )
+
+        assert result["updated"] == 1
+        await _assert_flagged(db, draft, filed, flagged=False)
