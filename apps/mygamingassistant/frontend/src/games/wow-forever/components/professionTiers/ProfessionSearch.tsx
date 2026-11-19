@@ -1,24 +1,21 @@
 import { useId } from "react";
-import {
-  PROFESSION_SEARCH_DEBOUNCE_MS,
-  PROFESSION_SEARCH_MAX_LENGTH,
-  PROFESSION_SEARCH_PARAM,
-} from "@/games/wow-forever/data/professions/professionTiers/viewParams";
-import { useDebouncedSearchParam } from "@/games/wow-forever/hooks/useDebouncedSearchParam";
+import { PROFESSION_SEARCH_MAX_LENGTH } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
 
 interface ProfessionSearchProps {
   label: string;
   placeholder: string;
   testId: string;
+  /** What's in the box; the page's view hook owns it so Clear filters can empty it. */
+  text: string;
+  onText: (text: string) => void;
 }
 
 /**
- * A search box kept in `?q=`. The text is local, so typing never waits on the router; the link follows once typing
- * pauses. Escape or the x empties it at once.
+ * The writs and crates search box. The text lives in the page's view hook (local, so typing never waits on the
+ * router; `?q=` follows once typing pauses). Escape or the x empties it at once.
  */
-export default function ProfessionSearch({ label, placeholder, testId }: ProfessionSearchProps) {
+export default function ProfessionSearch({ label, placeholder, testId, text, onText }: ProfessionSearchProps) {
   const inputId = useId();
-  const { text, setText } = useDebouncedSearchParam(PROFESSION_SEARCH_PARAM, PROFESSION_SEARCH_DEBOUNCE_MS);
   return (
     <div className="space-y-1 sm:max-w-md" role="search">
       <label htmlFor={inputId} className="block text-sm font-medium">
@@ -29,9 +26,9 @@ export default function ProfessionSearch({ label, placeholder, testId }: Profess
           id={inputId}
           type="search"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => onText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Escape") setText("");
+            if (e.key === "Escape") onText("");
           }}
           placeholder={placeholder}
           maxLength={PROFESSION_SEARCH_MAX_LENGTH}
@@ -44,7 +41,7 @@ export default function ProfessionSearch({ label, placeholder, testId }: Profess
             type="button"
             aria-label="Clear search"
             data-testid={`${testId}-clear`}
-            onClick={() => setText("")}
+            onClick={() => onText("")}
             className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ×

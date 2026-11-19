@@ -1,12 +1,18 @@
 import { useCallback, useMemo } from "react";
 import { useLiveSearchParams } from "@platform/ui";
-import { PROFESSION_SEARCH_PARAM, PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import {
+  PROFESSION_SEARCH_DEBOUNCE_MS,
+  PROFESSION_SEARCH_PARAM,
+  PROFESSION_TIER_PARAM,
+} from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import { useDebouncedSearchParam } from "@/games/wow-forever/hooks/useDebouncedSearchParam";
 import { WRIT_DEALS_PARAM, WRIT_LOCATION_PARAM } from "@/games/wow-forever/data/professions/writs/writParams";
 import { nextSort } from "@/games/wow-forever/lib/professionTiers/nextSort";
 import { writViewFromParams, writViewToParams } from "@/games/wow-forever/lib/writs/writViewParams";
 import type { WritFilters } from "@/games/wow-forever/types/writs/writFilters";
 import type { WritSort } from "@/games/wow-forever/types/writs/writSort";
 import type { WritSortKey } from "@/games/wow-forever/types/writs/writSortKey";
+import type { DebouncedSearchParam } from "@/games/wow-forever/types/debouncedSearchParam";
 import type { WritView } from "@/games/wow-forever/types/writs/writView";
 
 export interface WritViewState {
@@ -16,6 +22,8 @@ export interface WritViewState {
   /** A header click: the same column flips its direction, another starts low to high. */
   toggleSort: (key: WritSortKey) => void;
   clearFilters: () => void;
+  /** The search box: typed text, debounced into `?q=`. */
+  search: DebouncedSearchParam;
 }
 
 /**
@@ -24,6 +32,8 @@ export interface WritViewState {
  */
 export function useWritView(knownLocations: readonly string[]): WritViewState {
   const [params, setParams] = useLiveSearchParams();
+  const search = useDebouncedSearchParam(PROFESSION_SEARCH_PARAM, PROFESSION_SEARCH_DEBOUNCE_MS);
+  const { setText } = search;
   const view = useMemo(() => writViewFromParams(params, knownLocations), [params, knownLocations]);
 
   const update = useCallback(
@@ -37,6 +47,8 @@ export function useWritView(knownLocations: readonly string[]): WritViewState {
   const setSort = useCallback((sort: WritSort) => update((v) => ({ ...v, sort })), [update]);
   const toggleSort = useCallback((key: WritSortKey) => update((v) => ({ ...v, sort: nextSort(v.sort, key) })), [update]);
   const clearFilters = useCallback(() => {
+    // Empty the box too: typed text not yet in the link would otherwise be written back by the debounce.
+    setText("");
     setParams(
       (prev) => {
         for (const name of [PROFESSION_TIER_PARAM, WRIT_LOCATION_PARAM, WRIT_DEALS_PARAM, PROFESSION_SEARCH_PARAM]) prev.delete(name);
@@ -44,7 +56,7 @@ export function useWritView(knownLocations: readonly string[]): WritViewState {
       },
       { replace: true },
     );
-  }, [setParams]);
+  }, [setParams, setText]);
 
-  return { view, setFilters, setSort, toggleSort, clearFilters };
+  return { view, setFilters, setSort, toggleSort, clearFilters, search };
 }

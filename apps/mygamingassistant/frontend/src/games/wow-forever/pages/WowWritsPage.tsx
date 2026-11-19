@@ -36,7 +36,7 @@ export default function WowWritsPage() {
     [prices, house],
   );
   const locations = useMemo(() => knownLocations(WRITS_FILE.turnIns), []);
-  const { view, setFilters, setSort, toggleSort, clearFilters } = useWritView(locations);
+  const { view, setFilters, setSort, toggleSort, clearFilters, search } = useWritView(locations);
   const visible = useMemo(() => sortWritRows(filterWritRows(rows, view.filters), view.sort), [rows, view]);
 
   return (
@@ -61,6 +61,7 @@ export default function WowWritsPage() {
         onFilters={setFilters}
         onSort={setSort}
         onClear={clearFilters}
+        search={search}
       />
       {visible.length > 0 ? <WritsGrid rows={visible} sort={view.sort} onSort={toggleSort} loading={loading} /> : null}
       {visible.length === 0 && loading ? <ProfessionRowsSkeleton label="Loading writs" testId="writs-skeleton" /> : null}

@@ -1,11 +1,17 @@
 import { useCallback, useMemo } from "react";
 import { useLiveSearchParams } from "@platform/ui";
-import { PROFESSION_SEARCH_PARAM, PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import {
+  PROFESSION_SEARCH_DEBOUNCE_MS,
+  PROFESSION_SEARCH_PARAM,
+  PROFESSION_TIER_PARAM,
+} from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import { useDebouncedSearchParam } from "@/games/wow-forever/hooks/useDebouncedSearchParam";
 import { crateViewFromParams, crateViewToParams } from "@/games/wow-forever/lib/crates/crateViewParams";
 import { nextSort } from "@/games/wow-forever/lib/professionTiers/nextSort";
 import type { CrateFilters } from "@/games/wow-forever/types/crates/crateFilters";
 import type { CrateSort } from "@/games/wow-forever/types/crates/crateSort";
 import type { CrateSortKey } from "@/games/wow-forever/types/crates/crateSortKey";
+import type { DebouncedSearchParam } from "@/games/wow-forever/types/debouncedSearchParam";
 import type { CrateView } from "@/games/wow-forever/types/crates/crateView";
 
 export interface CrateViewState {
@@ -15,6 +21,8 @@ export interface CrateViewState {
   /** A header click: the same column flips its direction, another starts low to high. */
   toggleSort: (key: CrateSortKey) => void;
   clearFilters: () => void;
+  /** The search box: typed text, debounced into `?q=`. */
+  search: DebouncedSearchParam;
 }
 
 /**
@@ -23,6 +31,8 @@ export interface CrateViewState {
  */
 export function useCrateView(): CrateViewState {
   const [params, setParams] = useLiveSearchParams();
+  const search = useDebouncedSearchParam(PROFESSION_SEARCH_PARAM, PROFESSION_SEARCH_DEBOUNCE_MS);
+  const { setText } = search;
   const view = useMemo(() => crateViewFromParams(params), [params]);
 
   const update = useCallback(
@@ -36,6 +46,8 @@ export function useCrateView(): CrateViewState {
   const setSort = useCallback((sort: CrateSort) => update((v) => ({ ...v, sort })), [update]);
   const toggleSort = useCallback((key: CrateSortKey) => update((v) => ({ ...v, sort: nextSort(v.sort, key) })), [update]);
   const clearFilters = useCallback(() => {
+    // Empty the box too: typed text not yet in the link would otherwise be written back by the debounce.
+    setText("");
     setParams(
       (prev) => {
         prev.delete(PROFESSION_TIER_PARAM);
@@ -44,7 +56,7 @@ export function useCrateView(): CrateViewState {
       },
       { replace: true },
     );
-  }, [setParams]);
+  }, [setParams, setText]);
 
-  return { view, setFilters, setSort, toggleSort, clearFilters };
+  return { view, setFilters, setSort, toggleSort, clearFilters, search };
 }

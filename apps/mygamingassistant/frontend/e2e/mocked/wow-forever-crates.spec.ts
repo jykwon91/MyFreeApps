@@ -310,6 +310,19 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("crate-row")).toHaveCount(CRATES.length);
   });
 
+  test("Clear filters straight after typing empties the box and the search stays off", async ({ page }) => {
+    await stubPrices(page);
+    await page.goto(`/wow-forever/crates?tier=${CHEAP.tier}`);
+    const box = page.getByRole("searchbox", { name: "Search crates" });
+    // Typed text not yet in the link: Clear filters lands inside the debounce window.
+    await box.fill("linen");
+    await page.getByRole("button", { name: "Clear filters" }).click();
+    await expect(box).toHaveValue("");
+    await page.waitForTimeout(600);
+    await expect(page).not.toHaveURL(/q=|tier=/);
+    await expect(page.getByTestId("crate-row")).toHaveCount(CRATES.length);
+  });
+
   test("switching the auction house re-prices the rows", async ({ page }) => {
     await stubPrices(page);
     await page.goto("/wow-forever/crates");
