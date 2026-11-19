@@ -3,6 +3,7 @@ import { SLOT_LABELS } from "@/games/wow-forever/data/itemSlots";
 import { guideProfession } from "@/games/wow-forever/lib/character/characterProfessions";
 import { professionName } from "@/games/wow-forever/lib/guild/guildRecipes";
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
+import { placeText } from "@/games/wow-forever/lib/dungeonQuestsAddon/placeText";
 import { objectiveText } from "@/games/wow-forever/lib/dungeonQuestsAddon/objectiveText";
 import { travelDataLua } from "@/games/wow-forever/lib/dungeonQuestsAddon/travelDataLua";
 import { placedGiversByName, turnInGiver } from "@/games/wow-forever/lib/dungeonQuestsAddon/turnInGiver";
@@ -30,8 +31,7 @@ function giverWhere(giver: QuestGiver): string | null {
   if (giver.insideDungeon) return "inside the dungeon";
   if (!giver.place) return null;
   const { zoneName, subzone, x, y } = giver.place;
-  const spot = `${zoneName} ${x.toFixed(1)}, ${y.toFixed(1)}`;
-  return subzone && subzone !== zoneName ? `${spot} (${subzone})` : spot;
+  return placeText(zoneName, subzone, x, y);
 }
 
 /** The giver's map pin: the World Map zone (uiMapId) and map percent; none inside a dungeon or when we don't know where. */

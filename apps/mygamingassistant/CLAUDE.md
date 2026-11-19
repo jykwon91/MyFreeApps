@@ -1857,6 +1857,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   auctions), what the made item sells for, and the difference (`craftProfit`,
   only when everything is priced; enchants make no item). An unknown `?recipe`
   says "wasn't found"; an invalid `?prof` is ignored.
+- **Required after any change to an addon in `frontend/addon/<Addon>/`: install it into the
+  operator's game yourself** by copying that folder's files into
+  `D:\World of Warcraft\_forever_\Interface\AddOns\<Addon>\` (look at the installed
+  `## Version` first). Never hand the operator "download and unzip" steps. MGA Prices is the
+  exception: its repo `Data.lua` is an empty stand-in, so copy only `MGAPrices.lua`/`.toc` and keep
+  the installed `Data.lua`. Then tell the operator: a new or removed file in the `.toc` needs a
+  full game restart (`/reload` doesn't load new files); otherwise `/reload`. The local
+  `check-addon-installed` Stop hook (operator machine) blocks ending a session while an installed addon differs
+  from the repo.
 - MGA Buffs addon (`frontend/addon/MGABuffs/`, Interface 16001, static: no Settings live in an options panel (Options > AddOns > MGA Buffs, `buildOptions()`; `Settings.RegisterCanvasLayoutCategory` with an `InterfaceOptions_AddCategory` fallback); `/mgabuffs` opens it and the subcommands are shortcuts that go through the same setters, so the panel and chat stay in step. Forever hides ("secret") aura data from addons in some places and `GetAuraDataByIndex` then throws: `buffs()` pcalls each read and returns nil for that unit, and every check that needs its buffs stays silent (never "missing" on a hidden list), with one chat line each time hiding starts.
   generated data): out of combat and alive, a movable icon list (plus a
   mid-screen flash + sound the first time a reminder appears, never on the
@@ -2002,6 +2011,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   movable tracker advances on arrival. Known flight paths come from `C_TaxiMap.GetAllTaxiNodes` on
   `TAXIMAP_OPENED`, saved per character in `MGADungeonQuestsCharacter`; a continent with no flight master
   opened yet counts them all and says so. Inside an instance (`UnitPosition` is nil) it falls back to a pin.
+  Turn-ins: every finished quest in the log (any quest) gets a World Map pin at whoever takes it back, one
+  pin per NPC (frames on `WorldMapFrame:GetCanvas()`, redrawn on `OnShow`/`OnMapChanged` and quest events;
+  zone map = that zone, continent maps via `C_Map.GetMapPosFromWorldPos`). `/mgadq turnin` or the map's
+  "Route turn-ins" button orders the stops (travel-time matrix from the same search, nearest stop then 2-opt)
+  and routes stop by stop, moving on when the stop's quests leave the log. Spots come from `TurnIns.lua`
+  (`turnInsDataLua.ts` <- `loadTurnInSpots.ts`: a quest's single ender placed where that NPC id gives a
+  quest in any quest shard; ~3,000 of ~3,500 quests). `/mgadq pins off` hides the pins.
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.

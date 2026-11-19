@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-19",
+    "title": "Your finished quests on the World Map, and the quickest way to hand them in",
+    "summary": "Update MGA Dungeon Quests. Every quest you've finished, dungeon or not, gets a pin on your World Map at whoever takes it back; hover it to see which quests. Press Route turn-ins on the map, or type /mgadq turnin, and it works out the quickest order to hand them all in, by foot, flight path, boat, zeppelin or tram, then takes you to each stop in turn.",
+    "to": "/wow-forever/dungeons?addon=open"
+  },
+  {
     "date": "2026-11-18",
     "title": "MGA Dungeon Quests routes you to your next quest",
     "summary": "Update the addon and press Route beside a quest in /mgadq. It works out the quickest way from where you stand, on foot, by flight path, boat, zeppelin or tram, then moves your map pin along each leg as you go. It sends you to the quest giver, back to whoever takes the quest, or to the dungeon's entrance, and it only uses the flight paths you know.",

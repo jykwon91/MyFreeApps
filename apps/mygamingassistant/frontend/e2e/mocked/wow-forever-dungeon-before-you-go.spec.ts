@@ -233,8 +233,10 @@ test("the addon link opens the Dungeons page with the MGA Dungeon Quests card op
     "MGADungeonQuests/Data.lua",
     "MGADungeonQuests/MGADungeonQuests.lua",
     "MGADungeonQuests/MGADungeonQuests.toc",
+    "MGADungeonQuests/TurnIns.lua",
   ]);
   expect(strFromU8(files["MGADungeonQuests/Data.lua"])).toContain('{id = 166, title = "The Defias Brotherhood"');
+  expect(strFromU8(files["MGADungeonQuests/TurnIns.lua"])).toContain('{"Gryan Stoutmantle", 1436,');
   await expect(page.getByText("MGA Dungeon Quests is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });
 
