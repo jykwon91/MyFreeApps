@@ -3,30 +3,21 @@ import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { LoadingButton } from "@platform/ui";
-import { useGetWelcomeManualsQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import { useWelcomeManualsPages } from "@mybookkeeper/api-client/hooks/useWelcomeManualsPages";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { WELCOME_MANUAL_PAGE_SIZE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import WelcomeManualsListBody from "@/app/features/welcome-manuals/WelcomeManualsListBody";
 import WelcomeManualCreateDialog from "@/app/features/welcome-manuals/WelcomeManualCreateDialog";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { pagedListView } from "@/shared/lib/paged-list-view";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 
 export default function WelcomeManuals() {
   const navigate = useNavigate();
-  const [pageCount, setPageCount] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
-
-  const queryArgs = useMemo(
-    () => ({ limit: WELCOME_MANUAL_PAGE_SIZE * pageCount, offset: 0 }),
-    [pageCount],
-  );
-
-  const { data, isFetching, error, refetch } = useGetWelcomeManualsQuery(queryArgs);
+  const pages = useWelcomeManualsPages();
   const { data: properties = [] } = useGetPropertiesQuery();
-
-  const manuals = data?.items ?? [];
-  const hasMore = data?.has_more ?? false;
+  const { mode, rows } = pagedListView(pages, pages.manuals);
 
   const propertyById = useMemo(() => {
     const map = new Map<string, string>();
@@ -38,16 +29,6 @@ export default function WelcomeManuals() {
 
   const propertyName = (m: WelcomeManualSummary): string | null =>
     m.property_id ? propertyById.get(m.property_id) ?? "Unknown property" : null;
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
-  }
-
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: manuals.length,
-  });
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -66,19 +47,18 @@ export default function WelcomeManuals() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="I couldn't load your welcome manuals. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="welcome manuals" />
 
       <WelcomeManualsListBody
         mode={mode}
-        manuals={manuals}
+        manuals={rows}
         propertyName={propertyName}
-        hasMore={hasMore}
-        isFetching={isFetching}
-        onLoadMore={handleLoadMore}
         onCreateFirst={() => setShowCreate(true)}
       />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       {showCreate ? (
         <WelcomeManualCreateDialog

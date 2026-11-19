@@ -2,12 +2,13 @@ import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import type { AxiosAdapter } from "axios";
+import { WELCOME_MANUAL_PAGE_SIZE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { WELCOME_MANUAL_MESSAGES } from "../src/constants/welcomeManuals";
 import WelcomeManualsScreen from "../src/features/welcomeManuals/WelcomeManualsScreen";
 import { aManual } from "../test-support/aWelcomeManual";
 import { holdReads } from "../test-support/holdReads";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
-import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
+import { startWelcomeManualsServer, type WelcomeManualsServer } from "../test-support/welcomeManualsServer";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -29,6 +30,14 @@ afterEach(() => {
 });
 
 const manyManuals = (count: number) => Array.from({ length: count }, (_, index) => aManual({ id: `m${index}`, title: `Guide ${index}` }));
+
+const listParams = (server: WelcomeManualsServer) =>
+  server.requests.filter((request) => request.url === "/welcome-manuals").map((request) => request.params as { limit: number; offset: number });
+const reachEnd = async () => {
+  await act(async () => {
+    await screen.getByTestId("welcome-manuals-list").props.onEndReached();
+  });
+};
 
 describe("the manuals list", () => {
   it("shows a skeleton while the first answer is on its way", async () => {
@@ -72,13 +81,30 @@ describe("the manuals list", () => {
     expect(screen.queryByRole("button", { name: WELCOME_MANUAL_MESSAGES.new })).toBeNull();
   });
 
-  it("loads more on request, rather than stopping at the first page", async () => {
+  it("loads the next page when the list is scrolled to the end", async () => {
     const server = startWelcomeManualsServer({ manuals: manyManuals(30) });
     await renderScreen(<WelcomeManualsScreen />);
-    await fireEvent.press(await screen.findByRole("button", { name: WELCOME_MANUAL_MESSAGES.showMore }));
-    await waitFor(() => expect(screen.queryByRole("button", { name: WELCOME_MANUAL_MESSAGES.showMore })).toBeNull());
-    const limits = server.requests.filter((request) => request.url === "/welcome-manuals").map((request) => request.params.limit);
-    expect(limits).toEqual([25, 50]);
+    await screen.findByText("Guide 0");
+    await reachEnd();
+    await waitFor(() => expect(screen.getByTestId("welcome-manuals-list").props.data).toHaveLength(30));
+    expect(listParams(server)).toEqual([
+      { limit: WELCOME_MANUAL_PAGE_SIZE, offset: 0 },
+      { limit: WELCOME_MANUAL_PAGE_SIZE, offset: WELCOME_MANUAL_PAGE_SIZE },
+    ]);
+  });
+
+  it("keeps loading a page at a time past 100 manuals, never asking for more than the server answers", async () => {
+    const server = startWelcomeManualsServer({ manuals: manyManuals(130) });
+    await renderScreen(<WelcomeManualsScreen />);
+    await screen.findByText("Guide 0");
+    for (let loaded = WELCOME_MANUAL_PAGE_SIZE; loaded < 130; loaded += WELCOME_MANUAL_PAGE_SIZE) {
+      await reachEnd();
+      await waitFor(() => expect(screen.getByTestId("welcome-manuals-list").props.data).toHaveLength(Math.min(loaded + WELCOME_MANUAL_PAGE_SIZE, 130)));
+    }
+    expect(listParams(server).map((params) => params.offset)).toEqual([0, 25, 50, 75, 100, 125]);
+    expect(listParams(server).every((params) => params.limit === WELCOME_MANUAL_PAGE_SIZE)).toBe(true);
+    expect(screen.queryByText(WELCOME_MANUAL_MESSAGES.couldntLoadList)).toBeNull();
+    expect(screen.queryByText("I couldn't load more.")).toBeNull();
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {
@@ -104,12 +130,12 @@ describe("the manuals list", () => {
     expect(screen.getByText("Beach House guide")).toBeTruthy();
   });
 
-  it("shows a retry after a failed load-more is working, and ignores a second tap until it answers", async () => {
+  it("shows a retry after a failed load-more, and asks for that same page once when it is tapped", async () => {
     const server = startWelcomeManualsServer({ manuals: manyManuals(30) });
     await renderScreen(<WelcomeManualsScreen />);
     await screen.findByText("Guide 0");
     server.failReadsWith = 500;
-    await fireEvent.press(await screen.findByRole("button", { name: WELCOME_MANUAL_MESSAGES.showMore }));
+    await reachEnd();
     await screen.findByText("I couldn't load more.");
 
     server.failReadsWith = null;
@@ -125,15 +151,15 @@ describe("the manuals list", () => {
       return gate.then(() => answer(config));
     };
     await fireEvent.press(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain }));
-    await waitFor(() => expect(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain })).toBeBusy());
-    expect(screen.getByTestId("loading-button-spinner")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain }));
+    // While the page is on its way the retry gives way to a skeleton row, so it can't be tapped twice.
+    await waitFor(() => expect(screen.queryByRole("button", { name: WELCOME_MANUAL_MESSAGES.tryAgain })).toBeNull());
+    expect(screen.getByLabelText(WELCOME_MANUAL_MESSAGES.loadingMore)).toBeTruthy();
     expect(retries).toBe(1);
 
     release();
-    await waitFor(() => expect(screen.queryByText("I couldn't load more.")).toBeNull());
-    expect(screen.queryByTestId("loading-button-spinner")).toBeNull();
-    const limits = server.requests.filter((request) => request.url === "/welcome-manuals").map((request) => request.params.limit);
-    expect(limits.at(-1)).toBe(50);
+    await waitFor(() => expect(screen.getByTestId("welcome-manuals-list").props.data).toHaveLength(30));
+    expect(screen.queryByText("I couldn't load more.")).toBeNull();
+    expect(screen.queryByLabelText(WELCOME_MANUAL_MESSAGES.loadingMore)).toBeNull();
+    expect(listParams(server).at(-1)).toEqual({ limit: WELCOME_MANUAL_PAGE_SIZE, offset: WELCOME_MANUAL_PAGE_SIZE });
   });
 });

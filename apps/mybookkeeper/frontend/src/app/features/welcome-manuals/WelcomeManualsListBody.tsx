@@ -1,4 +1,3 @@
-import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
@@ -8,11 +7,8 @@ import WelcomeManualTableRow from "./WelcomeManualTableRow";
 
 export interface WelcomeManualsListBodyProps {
   mode: ListLoadMode;
-  manuals: WelcomeManualSummary[];
+  manuals: readonly WelcomeManualSummary[];
   propertyName: (m: WelcomeManualSummary) => string | null;
-  hasMore: boolean;
-  isFetching: boolean;
-  onLoadMore: () => void;
   onCreateFirst: () => void;
 }
 
@@ -20,9 +16,6 @@ export default function WelcomeManualsListBody({
   mode,
   manuals,
   propertyName,
-  hasMore,
-  isFetching,
-  onLoadMore,
   onCreateFirst,
 }: WelcomeManualsListBodyProps) {
   switch (mode) {
@@ -75,19 +68,6 @@ export default function WelcomeManualsListBody({
               </tbody>
             </table>
           </div>
-
-          {hasMore ? (
-            <div className="flex justify-center">
-              <LoadingButton
-                variant="secondary"
-                onClick={onLoadMore}
-                isLoading={isFetching}
-                loadingText="Loading..."
-              >
-                Load more
-              </LoadingButton>
-            </div>
-          ) : null}
         </>
       );
   }

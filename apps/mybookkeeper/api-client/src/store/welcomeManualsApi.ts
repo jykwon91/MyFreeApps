@@ -1,11 +1,11 @@
 import { EXPORT_REQUEST_TIMEOUT_MS, UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
+import { WELCOME_MANUAL_PAGE_SIZE } from "../constants/welcomeManualLimits";
 import type { WelcomeManualCreateRequest } from "../types/welcome-manual/welcome-manual-create-request";
 import type { WelcomeManualEmailRequest } from "../types/welcome-manual/welcome-manual-email-request";
 import type { WelcomeManualFieldCreateRequest } from "../types/welcome-manual/welcome-manual-field-create-request";
 import type { WelcomeManualFieldUpdateRequest } from "../types/welcome-manual/welcome-manual-field-update-request";
 import type { WelcomeManualImageUpdateRequest } from "../types/welcome-manual/welcome-manual-image-update-request";
-import type { WelcomeManualListArgs } from "../types/welcome-manual/welcome-manual-list-args";
 import type { WelcomeManualListResponse } from "../types/welcome-manual/welcome-manual-list-response";
 import type { WelcomeManualPlaceCreateRequest } from "../types/welcome-manual/welcome-manual-place-create-request";
 import type { WelcomeManualPlaceResponse } from "../types/welcome-manual/welcome-manual-place-response";
@@ -28,21 +28,20 @@ export const welcomeManualsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["WelcomeManual", "WelcomeManualSend"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getWelcomeManuals: builder.query<WelcomeManualListResponse, WelcomeManualListArgs | void>({
-      query: (args) => ({
+    listWelcomeManualPages: builder.infiniteQuery<WelcomeManualListResponse, void, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + WELCOME_MANUAL_PAGE_SIZE : undefined,
+      },
+      query: ({ pageParam }) => ({
         url: "/welcome-manuals",
-        params: {
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
+        params: { limit: WELCOME_MANUAL_PAGE_SIZE, offset: pageParam },
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((manual) => ({ type: "WelcomeManual" as const, id: manual.id })),
-              { type: "WelcomeManual" as const, id: "LIST" },
-            ]
-          : [{ type: "WelcomeManual" as const, id: "LIST" }],
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((manual) => ({ type: "WelcomeManual" as const, id: manual.id })) ?? []),
+        { type: "WelcomeManual" as const, id: "LIST" },
+      ],
     }),
     getWelcomeManualById: builder.query<WelcomeManualResponse, string>({
       query: (id) => ({ url: `/welcome-manuals/${id}` }),
@@ -336,7 +335,7 @@ export const welcomeManualsApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetWelcomeManualsQuery,
+  useListWelcomeManualPagesInfiniteQuery,
   useGetWelcomeManualByIdQuery,
   useCreateWelcomeManualMutation,
   useUpdateWelcomeManualMutation,
