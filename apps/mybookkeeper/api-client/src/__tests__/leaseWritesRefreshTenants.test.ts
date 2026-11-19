@@ -51,7 +51,7 @@ beforeEach(() => {
 async function tenantFetchesAfter(mutate: (store: Store) => Promise<unknown>): Promise<number> {
   const store = makeStore();
   // The default tenant list is active-only, so it never holds an ended tenant's id.
-  const subscription = store.dispatch(endpoints.getTenants.initiate({ today: "2026-01-01" })) as unknown as Subscription;
+  const subscription = store.dispatch(endpoints.listTenantPages.initiate({ include_ended: false, today: "2026-01-01" })) as unknown as Subscription;
   await subscription;
   await mutate(store);
   await new Promise((resolve) => setTimeout(resolve, 0));

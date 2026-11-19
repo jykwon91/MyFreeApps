@@ -945,7 +945,6 @@
         "backend/alembic/versions/tenend260503_add_tenant_ended_columns.py",
         "frontend/src/app/pages/Tenants.tsx",
         "frontend/src/app/features/tenants/",
-        "api-client/src/types/applicant/tenant-list-args.ts",
         "api-client/src/types/applicant/tenant-list-response.ts",
         "api-client/src/types/applicant/tenancy-end-request.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
