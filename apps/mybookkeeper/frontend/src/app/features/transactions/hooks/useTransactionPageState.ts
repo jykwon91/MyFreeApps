@@ -44,6 +44,7 @@ import { runBulkCounts } from "@mybookkeeper/api-client/utils/runBulkCounts";
 import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactionExportPath";
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
+import { duplicateConflictMessage } from "@mybookkeeper/api-client/utils/duplicateConflictMessage";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 
@@ -368,8 +369,8 @@ export function useTransactionPageState(): TransactionPageState {
       try {
         const result = await keepDuplicate({ keep_id: keepId, delete_ids: deleteIds }).unwrap();
         showSuccess(`Kept 1 transaction, removed ${result.deleted}`);
-      } catch {
-        showError("Failed to resolve duplicate");
+      } catch (error) {
+        showError(duplicateConflictMessage(error) ?? "Failed to resolve duplicate");
       }
     },
     [keepDuplicate, showSuccess, showError],
@@ -402,8 +403,8 @@ export function useTransactionPageState(): TransactionPageState {
           field_overrides: fieldOverrides,
         }).unwrap();
         showSuccess("Transactions merged successfully");
-      } catch {
-        showError("Failed to merge transactions");
+      } catch (error) {
+        showError(duplicateConflictMessage(error) ?? "Failed to merge transactions");
       }
     },
     [mergeDuplicates, showSuccess, showError],

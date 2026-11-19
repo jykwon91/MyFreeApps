@@ -19,6 +19,7 @@ from app.schemas.transactions.duplicate import DuplicateMergeFieldSource, Duplic
 from app.services.transactions import transaction_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.core.context import RequestContext
+from app.core.tags import CATEGORY_TO_SCHEDULE_E
 
 
 def _ctx(org: Organization, user: User) -> RequestContext:
@@ -55,6 +56,7 @@ def _make_txn(
         amount=amount,
         transaction_type="expense",
         category=category,
+        schedule_e_line=CATEGORY_TO_SCHEDULE_E.get(category),
         tags=tags or [],
         extraction_id=extraction_id,
         property_id=property_id,

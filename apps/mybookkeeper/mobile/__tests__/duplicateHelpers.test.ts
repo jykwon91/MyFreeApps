@@ -73,6 +73,8 @@ describe("duplicate failures", () => {
     expect(duplicateFailureMessage("merge", { status: 500, data: { detail: "nope" } })).toBe("I couldn't merge those. Want to try again?");
     expect(duplicateFailureMessage("dismiss", { status: 500, data: { detail: "nope" } })).toBe("I couldn't mark those as not duplicates. Want to try again?");
     expect(duplicateFailureMessage({ keep: "a" }, { status: 500, data: { detail: "nope" } })).toBe("I couldn't resolve that duplicate. Want to try again?");
+    expect(duplicateFailureMessage({ keep: "a" }, { status: 409, data: { detail: "Linked to different vendors." } })).toBe("Linked to different vendors.");
+    expect(duplicateFailureMessage("merge", { status: 409, data: {} })).toBe("I couldn't merge those. Want to try again?");
     // No answer, or a proxy error, can come after the change landed, so it never says nothing changed.
     expect(duplicateFailureMessage("merge", {})).toBe(DUPLICATES_MESSAGES.unsure);
     expect(duplicateFailureMessage("dismiss", { status: 502, data: "<html>Bad Gateway</html>" })).toBe(DUPLICATES_MESSAGES.unsure);

@@ -209,6 +209,17 @@ describe("comparing a suspected duplicate", () => {
     expect(mockBack).not.toHaveBeenCalled();
   });
 
+  it("gives the server's reason when the two are linked to different tenants", async () => {
+    const reason = "These transactions are linked to different tenants. Set the same one on both, or clear it on one of them, then try again.";
+    const server = serve();
+    server.duplicateConflict = reason;
+    answerAlert("Merge");
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Merge these two into one transaction" }));
+    expect(await screen.findByText(reason)).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
   it("gives a viewer the comparison with no way to change anything", async () => {
     const server = serve();
     server.role = "viewer";

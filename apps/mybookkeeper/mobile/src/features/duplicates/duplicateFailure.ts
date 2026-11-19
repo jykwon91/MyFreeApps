@@ -1,3 +1,4 @@
+import { duplicateConflictMessage } from "@mybookkeeper/api-client/utils/duplicateConflictMessage";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
@@ -20,6 +21,8 @@ export function duplicateFailureMessage(action: DuplicateAction, error: unknown)
       return "You have read-only access, so I can't change these.";
     case 404:
       return GONE;
+    case 409:
+      return duplicateConflictMessage(error) ?? duplicateRetryMessage(action);
     case 422:
       return "These can't be merged as picked. Try again, or check the values.";
     default:

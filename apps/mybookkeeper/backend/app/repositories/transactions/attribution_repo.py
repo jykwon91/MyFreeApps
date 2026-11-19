@@ -6,9 +6,9 @@ import uuid
 from datetime import datetime, timezone
 from collections.abc import Sequence
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.models.applicants.applicant import Applicant
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue
@@ -106,7 +106,6 @@ async def count_pending(
     db: AsyncSession,
     organization_id: uuid.UUID,
 ) -> int:
-    from sqlalchemy import func
     result = await db.execute(
         select(func.count())
         .select_from(RentAttributionReviewQueue)
@@ -148,3 +147,30 @@ async def hard_delete_by_id(
         .returning(RentAttributionReviewQueue.transaction_id)
     )
     return result.scalar_one_or_none()
+
+
+async def move_pending_review(
+    db: AsyncSession,
+    *,
+    from_transaction_id: uuid.UUID,
+    to_transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Repoint a removed duplicate's open "who paid this?" review at the row that replaces it.
+
+    Nothing moves when the target already has a review row (one per transaction).
+    """
+    target = aliased(RentAttributionReviewQueue)
+    result = await db.execute(
+        update(RentAttributionReviewQueue)
+        .where(
+            RentAttributionReviewQueue.transaction_id == from_transaction_id,
+            RentAttributionReviewQueue.organization_id == organization_id,
+            RentAttributionReviewQueue.status == "pending",
+            RentAttributionReviewQueue.deleted_at.is_(None),
+            ~exists().where(target.transaction_id == to_transaction_id),
+        )
+        .values(transaction_id=to_transaction_id)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
