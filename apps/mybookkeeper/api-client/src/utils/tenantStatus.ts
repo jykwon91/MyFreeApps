@@ -18,7 +18,7 @@ export function isTenantEnded(tenant: TenantEndFields, today?: string): boolean 
  * late payment can arrive after move-out — but sort after active tenants and
  * carry an "(ended)" suffix so the host picks deliberately.
  */
-export function buildTenantOptions(tenants: ApplicantSummary[], today?: string): TenantOption[] {
+export function buildTenantOptions(tenants: readonly ApplicantSummary[], today?: string): TenantOption[] {
   const withStatus = tenants.map((tenant) => ({ tenant, ended: isTenantEnded(tenant, today) }));
   const active = withStatus.filter((t) => !t.ended);
   const ended = withStatus.filter((t) => t.ended);

@@ -1,9 +1,6 @@
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportProblems } from "@mybookkeeper/api-client/types/lease/lease-import-problems";
 
-/** The website lists the first hundred applicants too. */
-export const LEASE_IMPORT_CHOICE_LIMIT = 100;
-
 export const LEASE_IMPORT_MESSAGES = {
   importLease: "Import a signed lease",
   title: "Import a signed lease",
@@ -14,7 +11,6 @@ export const LEASE_IMPORT_MESSAGES = {
   loadingTenants: "Loading your applicants",
   couldntLoadTenants: "I couldn't load your applicants. Want me to try again?",
   noTenants: "You don't have any applicants yet. Add one first, then import their lease.",
-  moreTenants: "Only your first 100 applicants are listed here.",
   listing: "Listing",
   listingNone: "No listing",
   listingSheetTitle: "Which listing?",

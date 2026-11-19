@@ -6,4 +6,6 @@ export const PICKER_LOAD_MESSAGES = {
   loadingListings: "Loading your listings",
   listingsFailed: "I couldn't load your listings.",
   loadingMoreListings: "Loading more listings",
+  loadingMoreTenants: "Loading more tenants",
+  loadingMoreApplicants: "Loading more applicants",
 } as const;

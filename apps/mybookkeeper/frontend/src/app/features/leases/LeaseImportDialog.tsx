@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
 import ListingSelect from "@/app/features/listings/ListingSelect";
+import PagedSelect from "@/shared/components/ui/PagedSelect";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
@@ -25,8 +27,9 @@ export interface LeaseImportDialogProps {
 export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const navigate = useNavigate();
   const [importLease, { isLoading }] = useImportSignedLeaseMutation();
-  const { data: applicantsData } = useGetApplicantsQuery({ limit: 100 });
-  const applicants = applicantsData?.items ?? [];
+  const applicantPages = useApplicantsPages({});
+  const { mode: applicantsMode, rows: applicants } = pagedListView(applicantPages, applicantPages.applicants);
+  const applicantOptions = applicants.map((a) => ({ value: a.id, label: a.legal_name ?? `Applicant ${a.id.slice(0, 8)}` }));
 
   const [applicantId, setApplicantId] = useState("");
   const [listingId, setListingId] = useState("");
@@ -95,21 +98,19 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
               >
                 Applicant <span className="text-destructive">*</span>
               </label>
-              <select
+              <PagedSelect
                 id="import-applicant"
                 value={applicantId}
                 onChange={(e) => setApplicantId(e.target.value)}
                 required
                 className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
                 data-testid="import-applicant-select"
-              >
-                <option value="">— select applicant —</option>
-                {applicants.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.legal_name ?? `Applicant ${a.id.slice(0, 8)}`}
-                  </option>
-                ))}
-              </select>
+                aria-busy={applicantsMode === "loading"}
+                emptyLabel="— select applicant —"
+                noun="applicants"
+                options={applicantOptions}
+                pages={applicantPages}
+              />
             </div>
 
             {/* Listing (optional) */}

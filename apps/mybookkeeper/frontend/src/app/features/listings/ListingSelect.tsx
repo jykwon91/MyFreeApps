@@ -1,7 +1,6 @@
 import type { ComponentPropsWithRef } from "react";
 import { useListingsPages } from "@mybookkeeper/api-client/hooks/useListingsPages";
-import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
-import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
+import PagedSelect from "@/shared/components/ui/PagedSelect";
 import { pagedListView } from "@/shared/lib/paged-list-view";
 
 export interface ListingSelectProps extends Omit<ComponentPropsWithRef<"select">, "children"> {
@@ -18,19 +17,7 @@ export interface ListingSelectProps extends Omit<ComponentPropsWithRef<"select">
 export default function ListingSelect({ emptyLabel, ...selectProps }: ListingSelectProps) {
   const pages = useListingsPages({});
   const { mode, rows: listings } = pagedListView(pages, pages.listings);
+  const options = listings.map((listing) => ({ value: listing.id, label: listing.title }));
 
-  return (
-    <div className="space-y-2 flex-1">
-      <select {...selectProps} aria-busy={mode === "loading"}>
-        <option value="">{emptyLabel}</option>
-        {listings.map((listing) => (
-          <option key={listing.id} value={listing.id}>
-            {listing.title}
-          </option>
-        ))}
-      </select>
-      <ListPagesErrorAlert pages={pages} noun="listings" />
-      <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
-    </div>
-  );
+  return <PagedSelect {...selectProps} aria-busy={mode === "loading"} emptyLabel={emptyLabel} noun="listings" options={options} pages={pages} />;
 }

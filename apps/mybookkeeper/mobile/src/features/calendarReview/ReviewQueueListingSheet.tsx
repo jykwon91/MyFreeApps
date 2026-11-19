@@ -3,7 +3,7 @@ import { REVIEW_MESSAGES } from "../../constants/calendarReview";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { ReviewQueueListingSheetProps } from "../../types/ReviewQueueListingSheetProps";
-import ListingChoicesFooter from "../listings/ListingChoicesFooter";
+import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import { useListingChoices } from "../listings/useListingChoices";
 import SheetEmptyAction from "../shell/SheetEmptyAction";
 
@@ -26,7 +26,7 @@ export default function ReviewQueueListingSheet({ isOpen, description, onSelect,
           <SheetEmptyAction actionLabel={REVIEW_MESSAGES.addListing} message={REVIEW_MESSAGES.noListings} onPress={onAddListing} />
         )
       }
-      footer={<ListingChoicesFooter choices={choices} />}
+      footer={<PagedChoicesFooter choices={choices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreListings} />}
       isOpen={isOpen}
       loadError={loadError}
       onClose={onClose}

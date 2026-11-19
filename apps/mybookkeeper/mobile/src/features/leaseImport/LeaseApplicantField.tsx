@@ -1,10 +1,11 @@
-import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { FieldError, LoadingRegion, OptionSheet, SectionError, Skeleton, useTheme } from "@platform/mobile";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Text } from "react-native";
-import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
+import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { pickerLoadError } from "../../lib/pickerLoadError";
-import { applicantName } from "../applicants/applicantDisplay";
+import { useApplicantChoices } from "../applicants/useApplicantChoices";
+import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import PickerField from "../transactions/PickerField";
 
 interface LeaseApplicantFieldProps {
@@ -14,19 +15,16 @@ interface LeaseApplicantFieldProps {
   disabled: boolean;
 }
 
-/** Who signed the lease. Like the website, it lists the first hundred applicants. */
+/** Who signed the lease: any applicant, more loading as the sheet nears its end. */
 export default function LeaseApplicantField({ value, onChange, error, disabled }: LeaseApplicantFieldProps) {
   const { colors, fontSize } = useTheme();
-  const { currentData, error: loadError, isLoading, refetch } = useGetApplicantsQuery({ limit: LEASE_IMPORT_CHOICE_LIMIT });
+  const choices = useApplicantChoices();
+  const { options, hasData, error: loadError, refetch } = choices;
   const [isPicking, setIsPicking] = useState(false);
-  const options = useMemo(
-    () => (currentData?.items ?? []).map((applicant) => ({ value: applicant.id, label: applicantName(applicant.legal_name) })),
-    [currentData],
-  );
 
-  const failure = pickerLoadError({ hasLoaded: currentData !== undefined, error: loadError, refetch }, MESSAGES.couldntLoadTenants);
+  const failure = pickerLoadError({ hasLoaded: hasData, error: loadError, refetch }, MESSAGES.couldntLoadTenants);
   if (failure) return <SectionError {...failure} />;
-  if (isLoading || !currentData) {
+  if (!hasData) {
     return (
       <LoadingRegion label={MESSAGES.loadingTenants}>
         <Skeleton height={56} />
@@ -39,7 +37,6 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
     <>
       <PickerField
         error={error}
-        hint={currentData.has_more ? MESSAGES.moreTenants : undefined}
         label={`${MESSAGES.tenant} *`}
         onPress={() => {
           if (!disabled) setIsPicking(true);
@@ -48,8 +45,10 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
       />
       <FieldError message={error} name={MESSAGES.tenant} />
       <OptionSheet
+        footer={<PagedChoicesFooter choices={choices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreApplicants} />}
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}
+        onEndReached={choices.loadMoreIfAny}
         onSelect={(applicantId) => {
           setIsPicking(false);
           onChange(applicantId);

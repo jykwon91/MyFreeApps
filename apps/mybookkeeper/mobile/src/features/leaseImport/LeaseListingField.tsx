@@ -1,8 +1,9 @@
 import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { useMemo, useState } from "react";
 import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
 import { pickerLoadError } from "../../lib/pickerLoadError";
-import ListingChoicesFooter from "../listings/ListingChoicesFooter";
+import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import { useListingChoices } from "../listings/useListingChoices";
 import PickerField from "../transactions/PickerField";
 
@@ -42,7 +43,7 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
         value={options.find((option) => option.value === value)?.label ?? MESSAGES.listingNone}
       />
       <OptionSheet
-        footer={<ListingChoicesFooter choices={choices} />}
+        footer={<PagedChoicesFooter choices={choices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreListings} />}
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}
         onEndReached={loadMoreIfAny}
