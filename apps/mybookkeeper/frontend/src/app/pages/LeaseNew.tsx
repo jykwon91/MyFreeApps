@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useLeaseTemplatesPages } from "@mybookkeeper/api-client/hooks/useLeaseTemplatesPages";
+import { useLeaseTemplateNames } from "@mybookkeeper/api-client/hooks/useLeaseTemplateNames";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
@@ -59,21 +59,12 @@ export default function LeaseNew() {
 
   const resolvedApplicantId = pickedApplicantId ?? urlApplicantId;
 
-  // The templates the picker has loaded so far (same cache entry), so every picked one has its name.
-  const { templates: loadedTemplates } = useLeaseTemplatesPages();
-  const templateById = useMemo(() => {
-    return loadedTemplates.reduce<Record<string, LeaseTemplateSummary>>((acc, t) => {
-      acc[t.id] = t;
-      return acc;
-    }, {});
-  }, [loadedTemplates]);
-
-  const templateLabels = useMemo<Record<string, string>>(() => {
-    return selectedTemplateIds.reduce<Record<string, string>>((acc, id) => {
-      acc[id] = templateById[id]?.name ?? id.slice(0, 8);
-      return acc;
-    }, {});
-  }, [selectedTemplateIds, templateById]);
+  // Fetched by id, so a template past the picker's loaded pages (e.g. one preselected by the URL) still has its name.
+  const templateNames = useLeaseTemplateNames(selectedTemplateIds);
+  const templateLabels = useMemo<Record<string, string>>(
+    () => Object.fromEntries(selectedTemplateIds.map((id) => [id, templateNames[id] ?? id.slice(0, 8)])),
+    [selectedTemplateIds, templateNames],
+  );
 
   const {
     currentData: applicant,
@@ -226,7 +217,7 @@ export default function LeaseNew() {
             >
               Template:{" "}
               <span className="text-foreground font-medium">
-                {templateById[id]?.name ?? id.slice(0, 8)}
+                {templateLabels[id]}
               </span>
             </span>
           ))}

@@ -1,4 +1,3 @@
-export const LEASE_TEMPLATE_LIST_LIMIT = 100;
 export const LEASE_TEMPLATE_SKELETON_ROWS = ["a", "b", "c", "d"];
 
 /** Only these can be uploaded; `lease_template_service.ALLOWED_TEMPLATE_MIME_TYPES`. */
@@ -23,7 +22,6 @@ export const LEASE_TEMPLATE_MESSAGES = {
   noneBody: "Upload a Word, Markdown or text file with placeholders like [TENANT FULL NAME], and I'll fill them in for each applicant.",
   noneViewOnlyBody: "Someone with edit access can upload them.",
   add: "New template",
-  moreThanShown: "Showing your first 100 templates.",
   files: "Files",
   noFiles: "This template has no files.",
   open: "Open",

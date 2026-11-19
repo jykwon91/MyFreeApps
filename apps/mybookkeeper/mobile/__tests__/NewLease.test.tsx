@@ -70,6 +70,8 @@ type Failure = { status: number; detail?: unknown } | "offline";
 
 interface FakeServer {
   templates: ReturnType<typeof aTemplate>[];
+  /** Only reachable by id, as templates past the first page of the list are. */
+  laterTemplates: ReturnType<typeof aTemplate>[];
   applicants: ReturnType<typeof anApplicantRow>[];
   fields: MergedPlaceholder[];
   templatesFailure: Failure | null;
@@ -84,6 +86,7 @@ interface FakeServer {
 function startServer(overrides: Partial<FakeServer> = {}): FakeServer {
   const server: FakeServer = {
     templates: [aTemplate("t1", "Standard lease"), aTemplate("t2", "Pet addendum")],
+    laterTemplates: [],
     applicants: [anApplicantRow("a1", "Dana Reed", "approved"), anApplicantRow("a2", "Sam Lee", "lease_sent"), anApplicantRow("a3", "Pat Kim", "screening_passed")],
     fields: [aField("Tenant name", { required: true, value: "Dana Reed", provenance: "applicant" }), aField("Rent", { type: "number" })],
     templatesFailure: null,
@@ -107,6 +110,10 @@ function startServer(overrides: Partial<FakeServer> = {}): FakeServer {
     if (config.url === "/lease-templates") {
       if (server.templatesFailure) return fail(server.templatesFailure);
       return respond({ items: server.templates, total: server.templates.length, has_more: false });
+    }
+    if (config.url?.startsWith("/lease-templates/") && config.url !== "/lease-templates/generate-defaults") {
+      const template = [...server.templates, ...server.laterTemplates].find((row) => config.url === `/lease-templates/${row.id}`);
+      return template ? respond(template) : respond({ detail: "no" }, 404);
     }
     if (config.url === "/lease-templates/generate-defaults") {
       server.defaultsReads.push(JSON.parse(String(config.data)));
@@ -328,6 +335,12 @@ describe("what goes in the lease", () => {
     startServer({ fields: [aField("Rent", { templates: ["t1", "t2"] })] });
     await openDetails({ templateIds: ["t1", "t2"], applicantId: "a1" });
     expect(await screen.findByText("Used in Standard lease, Pet addendum")).toBeTruthy();
+  });
+
+  it("names a template that is past the first page of the list", async () => {
+    startServer({ laterTemplates: [aTemplate("t99", "Parking addendum")], fields: [aField("Rent", { templates: ["t1", "t99"] })] });
+    await openDetails({ templateIds: ["t1", "t99"], applicantId: "a1" });
+    expect(await screen.findByText("Used in Standard lease, Parking addendum")).toBeTruthy();
   });
 
   it("uses the keyboard that fits the field", async () => {

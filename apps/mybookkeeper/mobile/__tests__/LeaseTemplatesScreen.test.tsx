@@ -1,3 +1,4 @@
+import { LEASE_TEMPLATE_PAGE_SIZE } from "@mybookkeeper/api-client/constants/leaseTemplatePaging";
 import { leaseTemplatesApi } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 import type { LeaseTemplateFile } from "@mybookkeeper/api-client/types/lease/lease-template-file";
@@ -182,21 +183,29 @@ describe("LeaseTemplatesScreen", () => {
     expect(await screen.findByTestId("lease-templates-skeleton")).toBeTruthy();
   });
 
-  it("asks for as many as the server allows, lists them, and opens one", async () => {
+  it("lists them a page at a time, and opens one", async () => {
     const server = startServer(aPage([aSummary()]));
     await show(<LeaseTemplatesScreen />);
     await screen.findByText("Standard lease");
-    expect(server.listParams).toEqual({ limit: 100 });
+    expect(server.listParams).toEqual({ limit: LEASE_TEMPLATE_PAGE_SIZE, offset: 0 });
     expect(screen.getByText("For the Oak Street rooms")).toBeTruthy();
     expect(screen.getByText("2 files, 14 placeholders")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Standard lease. For the Oak Street rooms, 2 files, 14 placeholders" }));
     expect(mockPush).toHaveBeenCalledWith("/lease-templates/t1");
   });
 
-  it("says when there are more than it shows", async () => {
-    startServer(aPage([aSummary()], true));
+  it("loads the next page when the list is scrolled to the end, so a template past the first page shows", async () => {
+    const server = startServer(aPage([aSummary()], true));
     await show(<LeaseTemplatesScreen />);
-    await screen.findByText(LEASE_TEMPLATE_MESSAGES.moreThanShown);
+    await screen.findByText("Standard lease");
+    expect(screen.queryByText("Garage addendum")).toBeNull();
+    server.list = aPage([aSummary({ id: "t2", name: "Garage addendum" })]);
+    await act(async () => {
+      await screen.getByTestId("lease-templates-list").props.onEndReached();
+    });
+    await screen.findByText("Garage addendum");
+    expect(server.listParams).toEqual({ limit: LEASE_TEMPLATE_PAGE_SIZE, offset: LEASE_TEMPLATE_PAGE_SIZE });
+    expect(screen.getByText("Standard lease")).toBeTruthy();
   });
 
   it("offers to upload a template from the list and when there are none", async () => {
