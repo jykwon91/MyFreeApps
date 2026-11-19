@@ -1,16 +1,6 @@
-import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { LoadingRegion } from "@platform/mobile";
 import { INSURANCE_MESSAGES, POLICY_SKELETON_ROWS } from "../../constants/insurance";
-
-export function PolicySkeletonRow() {
-  const { spacing } = useTheme();
-  return (
-    <View style={{ gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
-      <Skeleton height={20} width="65%" />
-      <Skeleton height={14} width="50%" />
-    </View>
-  );
-}
+import PolicySkeletonRow from "./PolicySkeletonRow";
 
 export default function PoliciesSkeleton() {
   return (

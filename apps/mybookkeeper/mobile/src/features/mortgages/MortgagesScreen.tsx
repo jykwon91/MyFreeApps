@@ -10,7 +10,8 @@ import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { sortedMortgages } from "./mortgageDisplay";
 import MortgageRow from "./MortgageRow";
-import MortgagesSkeleton, { MortgageSkeletonRow } from "./MortgagesSkeleton";
+import MortgageSkeletonRow from "./MortgageSkeletonRow";
+import MortgagesSkeleton from "./MortgagesSkeleton";
 
 export default function MortgagesScreen() {
   const { spacing } = useTheme();

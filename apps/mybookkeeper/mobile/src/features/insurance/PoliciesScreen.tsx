@@ -13,7 +13,8 @@ import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import PoliciesFilterSheet from "./PoliciesFilterSheet";
 import PoliciesHeader from "./PoliciesHeader";
-import PoliciesSkeleton, { PolicySkeletonRow } from "./PoliciesSkeleton";
+import PolicySkeletonRow from "./PolicySkeletonRow";
+import PoliciesSkeleton from "./PoliciesSkeleton";
 import { sortedPolicies } from "./policyDisplay";
 import PolicyRow from "./PolicyRow";
 

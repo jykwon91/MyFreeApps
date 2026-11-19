@@ -16,7 +16,8 @@ import { NO_UTILITY_PLAN_FILTER, filterLabel, isNarrowed, pageArgsFor } from "./
 import UtilityPlanFilterSheet from "./UtilityPlanFilterSheet";
 import UtilityPlanRow from "./UtilityPlanRow";
 import UtilityPlansGlance from "./UtilityPlansGlance";
-import UtilityPlansSkeleton, { UtilityPlanSkeletonRow } from "./UtilityPlansSkeleton";
+import UtilityPlanSkeletonRow from "./UtilityPlanSkeletonRow";
+import UtilityPlansSkeleton from "./UtilityPlansSkeleton";
 
 export default function UtilityPlansScreen() {
   const { spacing } = useTheme();
