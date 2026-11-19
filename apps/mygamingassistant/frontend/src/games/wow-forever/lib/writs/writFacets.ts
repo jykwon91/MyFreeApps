@@ -1,6 +1,9 @@
 import { WRIT_LOCATION_UNKNOWN } from "@/games/wow-forever/data/professions/writs/writParams";
 import { WRIT_NO_TURN_IN } from "@/games/wow-forever/data/professions/writs/writsCopy";
+import { WRIT_TIERS } from "@/games/wow-forever/data/professions/writs/writTiers";
+import { countByTier } from "@/games/wow-forever/lib/professionTiers/countByTier";
 import { filterWritRows, writLocationOf } from "@/games/wow-forever/lib/writs/filterWritRows";
+import type { TierCounts } from "@/games/wow-forever/types/professionTiers/tierCounts";
 import type { WritFilters } from "@/games/wow-forever/types/writs/writFilters";
 import type { WritLocationOption } from "@/games/wow-forever/types/writs/writLocationOption";
 import type { WritRow } from "@/games/wow-forever/types/writs/writRow";
@@ -8,11 +11,8 @@ import type { WritTier } from "@/games/wow-forever/types/writs/writTier";
 import type { WritsFile } from "@/games/wow-forever/types/writs/writsFile";
 
 /** How many writs each tier would show with the other filters applied (the tier filter itself ignored). */
-export function tierCounts(rows: readonly WritRow[], filters: WritFilters): Record<WritTier, number> & { all: number } {
-  const others = filterWritRows(rows, { ...filters, tier: null });
-  const counts = { all: others.length, journeyman: 0, expert: 0, artisan: 0 };
-  for (const row of others) counts[row.writ.tier] += 1;
-  return counts;
+export function tierCounts(rows: readonly WritRow[], filters: WritFilters): TierCounts<WritTier> {
+  return countByTier(filterWritRows(rows, { ...filters, tier: null }), WRIT_TIERS, (row) => row.writ.tier);
 }
 
 /** Every recorded zone (A-Z), then "Not known yet", each with how many writs it would show for this house; the location filter itself is ignored. */

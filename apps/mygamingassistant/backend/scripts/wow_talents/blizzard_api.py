@@ -119,6 +119,16 @@ class BlizzardStatic:
             raise SystemExit(f"Blizzard API {target}: answer is not a JSON object")
         return body
 
+    def item_known(self, item_id: int) -> bool:
+        """Whether Forever's item API has this id (a client-only or removed item answers 404)."""
+        target = f"{BLIZZARD_API_BASE}/data/wow/item/{item_id}"
+        response = self._send(target)
+        if response.status_code == httpx.codes.NOT_FOUND:
+            return False
+        if response.status_code != httpx.codes.OK:
+            raise _failure(target, response)
+        return True
+
     def _send(self, target: str) -> httpx.Response:
         dropped: httpx.ConnectError | None = None
         for attempt in range(_CONNECT_ATTEMPTS):

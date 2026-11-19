@@ -212,6 +212,13 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every Craftsman's Writ with what the writ and the item it asks for cost on the auction house, cheapest first.",
       },
       {
+        path: "/wow-forever/crates",
+        category: "crafting",
+        title: "Waylaid crates",
+        iconName: "Package",
+        description: "Every Waylaid Crate with what it costs on the auction house, and the cheapest bundle to fill it with.",
+      },
+      {
         path: "/wow-forever/professions",
         category: "crafting",
         title: "Professions",

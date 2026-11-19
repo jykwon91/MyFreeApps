@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useLiveSearchParams } from "@platform/ui";
-import {
-  WRIT_DEALS_PARAM,
-  WRIT_LOCATION_PARAM,
-  WRIT_TIER_PARAM,
-} from "@/games/wow-forever/data/professions/writs/writParams";
+import { PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import { WRIT_DEALS_PARAM, WRIT_LOCATION_PARAM } from "@/games/wow-forever/data/professions/writs/writParams";
+import { nextSort } from "@/games/wow-forever/lib/professionTiers/nextSort";
 import { writViewFromParams, writViewToParams } from "@/games/wow-forever/lib/writs/writViewParams";
 import type { WritFilters } from "@/games/wow-forever/types/writs/writFilters";
 import type { WritSort } from "@/games/wow-forever/types/writs/writSort";
@@ -37,18 +35,11 @@ export function useWritView(knownLocations: readonly string[]): WritViewState {
 
   const setFilters = useCallback((patch: Partial<WritFilters>) => update((v) => ({ ...v, filters: { ...v.filters, ...patch } })), [update]);
   const setSort = useCallback((sort: WritSort) => update((v) => ({ ...v, sort })), [update]);
-  const toggleSort = useCallback(
-    (key: WritSortKey) =>
-      update((v) => ({
-        ...v,
-        sort: { key, direction: v.sort.key === key && v.sort.direction === "asc" ? "desc" : "asc" },
-      })),
-    [update],
-  );
+  const toggleSort = useCallback((key: WritSortKey) => update((v) => ({ ...v, sort: nextSort(v.sort, key) })), [update]);
   const clearFilters = useCallback(() => {
     setParams(
       (prev) => {
-        for (const name of [WRIT_TIER_PARAM, WRIT_LOCATION_PARAM, WRIT_DEALS_PARAM]) prev.delete(name);
+        for (const name of [PROFESSION_TIER_PARAM, WRIT_LOCATION_PARAM, WRIT_DEALS_PARAM]) prev.delete(name);
         return prev;
       },
       { replace: true },
