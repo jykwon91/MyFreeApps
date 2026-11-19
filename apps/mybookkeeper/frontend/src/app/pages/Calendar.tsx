@@ -1,3 +1,4 @@
+import { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
 import { useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
@@ -58,8 +59,8 @@ export default function Calendar() {
     parseIsoOrNull(searchParams.get("to")) ?? addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS);
 
   const monthWindow = monthGridWindow(anchorIso);
-  const fromIso = view === "month" ? monthWindow.fromIso : anchorIso;
-  const toIso = view === "month" ? monthWindow.toIso : timelineToIso;
+  const fromIso = view === CALENDAR_VIEW_MODE.MONTH ? monthWindow.fromIso : anchorIso;
+  const toIso = view === CALENDAR_VIEW_MODE.MONTH ? monthWindow.toIso : timelineToIso;
 
   // Memoize the filter arrays so the query cache key stays referentially
   // stable across renders that don't change the URL — without this, the
@@ -121,7 +122,7 @@ export default function Calendar() {
 
   function handleToday() {
     const today = localToday();
-    if (view === "month") {
+    if (view === CALENDAR_VIEW_MODE.MONTH) {
       updateAnchorMonth(today);
       return;
     }
@@ -133,7 +134,7 @@ export default function Calendar() {
       (prev) => {
         const params = new URLSearchParams(prev);
         params.set("view", nextView);
-        if (nextView === "month") {
+        if (nextView === CALENDAR_VIEW_MODE.MONTH) {
           // Land on the month the operator was already looking at.
           params.set("from", startOfMonth(anchorIso));
           params.delete("to");
@@ -225,7 +226,7 @@ export default function Calendar() {
       <ReviewQueueDrawer isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
 
       <div className="flex flex-wrap items-center gap-3">
-        {view === "month" ? (
+        {view === CALENDAR_VIEW_MODE.MONTH ? (
           <CalendarMonthNav
             anchorIso={anchorIso}
             onChange={updateAnchorMonth}

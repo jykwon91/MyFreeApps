@@ -1,3 +1,4 @@
+import { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 /**
@@ -68,11 +69,11 @@ export const CALENDAR_MONTH_MIN_ROW_PX = 104;
  * for the per-listing question the month grid can't answer.
  */
 export const CALENDAR_VIEW_OPTIONS: ReadonlyArray<{ value: CalendarView; label: string }> = [
-  { value: "month", label: "Month" },
-  { value: "timeline", label: "Timeline" },
+  { value: CALENDAR_VIEW_MODE.MONTH, label: "Month" },
+  { value: CALENDAR_VIEW_MODE.TIMELINE, label: "Timeline" },
 ];
 
-export const CALENDAR_DEFAULT_VIEW: CalendarView = "month";
+export const CALENDAR_DEFAULT_VIEW: CalendarView = CALENDAR_VIEW_MODE.MONTH;
 
 export function parseCalendarView(raw: string | null): CalendarView {
   return CALENDAR_VIEW_OPTIONS.some((o) => o.value === raw)

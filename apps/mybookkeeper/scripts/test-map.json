@@ -708,6 +708,7 @@
         "frontend/src/shared/types/calendar/",
         "api-client/src/store/calendarApi.ts",
         "api-client/src/constants/calendarListingsCheck.ts",
+        "api-client/src/constants/calendarViewMode.ts",
         "api-client/src/types/calendar/",
         "frontend/src/shared/lib/calendar-constants.ts",
         "frontend/src/shared/lib/list-load-mode.ts",

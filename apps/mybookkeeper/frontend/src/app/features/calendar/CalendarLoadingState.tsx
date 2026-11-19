@@ -1,3 +1,4 @@
+import { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
 import CalendarAgendaSkeleton from "@/app/features/calendar/CalendarAgendaSkeleton";
 import CalendarMonthSkeleton from "@/app/features/calendar/CalendarMonthSkeleton";
 import CalendarSkeleton from "@/app/features/calendar/CalendarSkeleton";
@@ -16,7 +17,7 @@ export interface CalendarLoadingStateProps {
  * both views.
  */
 export default function CalendarLoadingState({ view }: CalendarLoadingStateProps) {
-  if (view === "timeline") return <CalendarSkeleton />;
+  if (view === CALENDAR_VIEW_MODE.TIMELINE) return <CalendarSkeleton />;
 
   return (
     <div data-testid="calendar-skeleton">
