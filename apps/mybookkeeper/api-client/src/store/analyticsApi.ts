@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { localToday } from "@platform/core/utils/localToday";
 import type { RentalRoiParams } from "../types/analytics/rental-roi-params";
 import type { RentalRoiResponse } from "../types/analytics/rental-roi-response";
 import type { UtilityTrendsParams } from "../types/analytics/utility-trends-params";
@@ -27,7 +28,8 @@ const analyticsApi = baseApi.enhanceEndpoints({
     getRentalRoi: builder.query<RentalRoiResponse, RentalRoiParams>({
       query: ({ targetReturnPct }) => ({
         url: "/analytics/rental-roi",
-        params: { target_return_pct: targetReturnPct },
+        // The window ends at the host's last full month; the server (UTC) can already be in the next one.
+        params: { target_return_pct: targetReturnPct, today: localToday() },
       }),
       providesTags: ["Transaction", { type: "Mortgage", id: "LIST" }],
     }),
