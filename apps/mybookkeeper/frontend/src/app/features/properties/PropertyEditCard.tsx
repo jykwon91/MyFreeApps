@@ -11,6 +11,7 @@ import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import { fromProperty, toAddress, addressComplete } from "@mybookkeeper/api-client/utils/propertyForm";
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
+import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
 import AddressInputs from "./AddressInputs";
 
 export interface PropertyEditCardProps {
@@ -22,6 +23,8 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   const [form, setForm] = useState<PropertyForm>(() => fromProperty(property));
   const [purchasePrice, setPurchasePrice] = useState(property.purchase_price ?? "");
   const priceErrorId = useId();
+  const [rentedSince, setRentedSince] = useState(property.rented_since ?? "");
+  const rentedSinceHelpId = useId();
   const [updateProperty, { isLoading }] = useUpdatePropertyMutation();
   const { showSuccess, showError } = useToast();
 
@@ -41,7 +44,8 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   const priceBlank = purchasePrice.trim() === "";
   const priceRemoved = priceBlank && property.purchase_price != null;
   const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
-  const canSave = !!(form.name && addressComplete(form)) && !priceInvalid;
+  const rentedSinceRemoved = rentedSince === "" && property.rented_since != null;
+  const canSave = !!(form.name && addressComplete(form)) && !priceInvalid && !rentedSinceRemoved;
 
   function handleSave() {
     updateProperty({
@@ -52,6 +56,7 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
         classification: form.classification,
         ...(form.type ? { type: form.type } : {}),
         ...(cleanedPrice ? { purchase_price: cleanedPrice } : {}),
+        ...(rentedSince ? { rented_since: rentedSince } : {}),
       },
     })
       .unwrap()
@@ -117,6 +122,27 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
                   : "Enter the price as a dollar amount, like 250000."}
               </p>
             )}
+          </>
+        )}
+      </FormField>
+      <FormField label={RENTED_SINCE_MESSAGES.label}>
+        {(field) => (
+          <>
+            <input
+              type="date"
+              value={rentedSince}
+              onChange={(e) => setRentedSince(e.target.value)}
+              aria-invalid={rentedSinceRemoved}
+              aria-describedby={rentedSinceHelpId}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              {...field}
+            />
+            <p
+              id={rentedSinceHelpId}
+              className={rentedSinceRemoved ? "mt-1 text-xs text-red-600 dark:text-red-400" : "mt-1 text-xs text-muted-foreground"}
+            >
+              {rentedSinceRemoved ? RENTED_SINCE_MESSAGES.removed : RENTED_SINCE_MESSAGES.hint}
+            </p>
           </>
         )}
       </FormField>

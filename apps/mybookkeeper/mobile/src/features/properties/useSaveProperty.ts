@@ -10,6 +10,7 @@ import { saveFailureCopy } from "../../lib/writeFailureCopy";
 /** Extra fields that can be patched onto a property update beyond the core form. */
 interface PropertyExtraFields {
   purchase_price?: string;
+  rented_since?: string;
 }
 
 /** Adds a property, or saves what changed on `original`, and goes back when it's done. */

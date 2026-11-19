@@ -6,10 +6,12 @@ import type { PropertyForm } from "@mybookkeeper/api-client/types/property/Prope
 import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
+import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { type ComponentRef, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
+import OptionalDateField from "../shell/OptionalDateField";
 import { useSaveProperty } from "./useSaveProperty";
 
 const CLASSIFICATION_OPTIONS = CLASSIFICATION_CHOICES.map(({ value, label }) => ({ value, label }));
@@ -21,6 +23,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const [hasTried, setHasTried] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [purchasePrice, setPurchasePrice] = useState(original?.purchase_price ?? "");
+  const [rentedSince, setRentedSince] = useState<string | null>(original?.rented_since ?? null);
   const { submit, isBusy, isLeaving, failure } = useSaveProperty(original);
   const streetInput = useRef<ComponentRef<typeof TextInput>>(null);
   const cityInput = useRef<ComponentRef<typeof TextInput>>(null);
@@ -32,8 +35,11 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const priceBlank = purchasePrice.trim() === "";
   const priceRemoved = priceBlank && original?.purchase_price != null;
   const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
+  const rentedSinceRemoved = rentedSince === null && original?.rented_since != null;
   const isDirty = original
-    ? Object.keys(propertyChanges(form, original)).length > 0 || purchasePrice !== (original.purchase_price ?? "")
+    ? Object.keys(propertyChanges(form, original)).length > 0
+      || purchasePrice !== (original.purchase_price ?? "")
+      || rentedSince !== (original.rented_since ?? null)
     : !isBlank(form);
   const choice = CLASSIFICATION_CHOICES.find((candidate) => candidate.value === form.classification);
   const locked = isBusy || isLeaving;
@@ -47,8 +53,11 @@ export default function PropertyFormScreen({ original }: { original: Property | 
 
   function save(): void {
     setHasTried(true);
-    if (Object.keys(problems).length > 0 || priceInvalid) return;
-    const extra = cleanedPrice ? { purchase_price: cleanedPrice } : {};
+    if (Object.keys(problems).length > 0 || priceInvalid || rentedSinceRemoved) return;
+    const extra = {
+      ...(cleanedPrice ? { purchase_price: cleanedPrice } : {}),
+      ...(rentedSince && rentedSince !== original?.rented_since ? { rented_since: rentedSince } : {}),
+    };
     void submit(form, extra);
   }
 
@@ -158,6 +167,22 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             {MESSAGES.purchasePriceHint}
           </Text>
         )}
+        {original ? (
+          <>
+            <OptionalDateField
+              disabled={locked}
+              error={hasTried && rentedSinceRemoved ? RENTED_SINCE_MESSAGES.removed : undefined}
+              label={RENTED_SINCE_MESSAGES.label}
+              maximumDate={new Date()}
+              onChange={setRentedSince}
+              startsAt={new Date()}
+              value={rentedSince}
+            />
+            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground, marginTop: -spacing.sm }}>
+              {RENTED_SINCE_MESSAGES.hint}
+            </Text>
+          </>
+        ) : null}
         <LoadingButton
           disabled={locked}
           isLoading={isBusy}

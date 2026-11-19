@@ -30,6 +30,7 @@ class PropertyRead(BaseModel):
     purchase_price: Decimal | None = None
     land_value: Decimal | None = None
     date_placed_in_service: date | None = None
+    rented_since: date | None = None
     property_class: str | None = None
     personal_use_days: int = 0
     activity_periods: list[ActivityPeriodRead] = []

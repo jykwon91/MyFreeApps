@@ -48,6 +48,8 @@ def _property(
     *,
     classification: PropertyClassification = PropertyClassification.INVESTMENT,
     purchase_price: Decimal | None = None,
+    rented_since: date | None = None,
+    placed_in_service: date | None = None,
 ) -> Property:
     return Property(
         id=uuid.uuid4(),
@@ -57,6 +59,8 @@ def _property(
         classification=classification,
         type=PropertyType.LONG_TERM if classification == PropertyClassification.INVESTMENT else None,
         purchase_price=purchase_price,
+        rented_since=rented_since,
+        date_placed_in_service=placed_in_service,
     )
 
 
@@ -212,6 +216,79 @@ class TestRentedHome:
         home = _property(org_id, user_id, "Home", classification=PropertyClassification.PRIMARY_RESIDENCE)
         db.add(home)
         db.add(_txn(org_id, user_id, home.id, "utilities", "1200.00"))
+        await db.commit()
+
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"), today=TODAY)
+
+        assert result.properties == []
+
+
+class TestRentedSince:
+    @pytest.mark.asyncio
+    async def test_only_months_from_rented_since_count(
+        self, db: AsyncSession, roi_sessions: None,
+    ) -> None:
+        org_id, user_id = await _org_and_user(db)
+        home = _property(
+            org_id, user_id, "Home",
+            classification=PropertyClassification.PRIMARY_RESIDENCE,
+            rented_since=date(2026, 4, 20),
+        )
+        db.add(home)
+        db.add_all([
+            # Lived in, not rented: left out.
+            _txn(org_id, user_id, home.id, "utilities", "3000.00", txn_date=date(2026, 1, 15)),
+            _txn(org_id, user_id, home.id, "utilities", "500.00", txn_date=date(2026, 3, 31)),
+            # Rented April-October: seven months.
+            _txn(org_id, user_id, home.id, "utilities", "700.00", txn_date=date(2026, 4, 2)),
+            _txn(org_id, user_id, home.id, "rental_revenue", "14000.00", txn_date=date(2026, 6, 1)),
+        ])
+        await db.commit()
+
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"), today=TODAY)
+
+        (prop,) = result.properties
+        assert prop.months_averaged == 7
+        assert prop.break_even_monthly_cents == 10_000
+        assert prop.actual_revenue_monthly_cents == 200_000
+
+    @pytest.mark.asyncio
+    async def test_rented_since_wins_over_placed_in_service(
+        self, db: AsyncSession, roi_sessions: None,
+    ) -> None:
+        org_id, user_id = await _org_and_user(db)
+        rental = _property(
+            org_id, user_id, "Rental",
+            rented_since=date(2026, 9, 1), placed_in_service=date(2020, 1, 1),
+        )
+        db.add(rental)
+        db.add_all([
+            _txn(org_id, user_id, rental.id, "utilities", "900.00", txn_date=date(2026, 8, 31)),
+            _txn(org_id, user_id, rental.id, "utilities", "200.00", txn_date=date(2026, 9, 1)),
+        ])
+        await db.commit()
+
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"), today=TODAY)
+
+        (prop,) = result.properties
+        assert prop.months_averaged == 2
+        assert prop.break_even_monthly_cents == 10_000
+
+    @pytest.mark.asyncio
+    async def test_a_home_whose_rent_is_all_before_rented_since_stays_out(
+        self, db: AsyncSession, roi_sessions: None,
+    ) -> None:
+        org_id, user_id = await _org_and_user(db)
+        home = _property(
+            org_id, user_id, "Home",
+            classification=PropertyClassification.PRIMARY_RESIDENCE,
+            rented_since=date(2026, 10, 1),
+        )
+        db.add(home)
+        db.add(_txn(org_id, user_id, home.id, "rental_revenue", "1000.00", txn_date=date(2026, 2, 1)))
         await db.commit()
 
         ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)

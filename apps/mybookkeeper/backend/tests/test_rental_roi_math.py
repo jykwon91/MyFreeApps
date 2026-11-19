@@ -13,7 +13,9 @@ from app.services.analytics.rental_roi_loan import RentalRoiLoan
 from app.services.analytics.rental_roi_math import (
     cash_invested,
     compute_property_figures,
+    counting_from,
     months_in_service,
+    rental_start,
     trailing_window,
 )
 
@@ -85,6 +87,29 @@ class TestMonthsInService:
 
     def test_in_service_after_the_window_is_at_least_one(self) -> None:
         assert months_in_service(WINDOW_START, WINDOW_END, date(2026, 11, 3)) == 1
+
+
+
+class TestRentalStart:
+    def test_rented_since_wins_over_in_service(self) -> None:
+        assert rental_start(date(2026, 4, 1), date(2020, 1, 1)) == date(2026, 4, 1)
+
+    def test_falls_back_to_in_service(self) -> None:
+        assert rental_start(None, date(2020, 1, 1)) == date(2020, 1, 1)
+
+    def test_neither_is_unknown(self) -> None:
+        assert rental_start(None, None) is None
+
+
+class TestCountingFrom:
+    def test_unknown_start_is_the_window_start(self) -> None:
+        assert counting_from(WINDOW_START, None) == WINDOW_START
+
+    def test_start_before_the_window_is_the_window_start(self) -> None:
+        assert counting_from(WINDOW_START, date(2019, 3, 5)) == WINDOW_START
+
+    def test_mid_window_start_is_the_first_of_its_month(self) -> None:
+        assert counting_from(WINDOW_START, date(2026, 4, 15)) == date(2026, 4, 1)
 
 
 class TestCashInvested:
