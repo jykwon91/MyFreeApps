@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-19",
+    "title": "Crafting writs, cheapest first",
+    "summary": "A new page lists every Craftsman's Writ in a grid with what the writ and the item it asks for cost on the auction house, cheapest total first. A row lights up as a deal when the total is under 50 silver (Journeyman), 1 gold (Expert) or 2 gold (Artisan). Filter by tier or turn-in location, or show only the deals. Update MGA Dungeon Quests to 2.3.0 and it records where each writ is delivered as you pick them up, so the Turn-in column fills in.",
+    "to": "/wow-forever/writs"
+  },
+  {
+    "date": "2026-11-19",
     "title": "Your finished quests on the World Map, and the quickest way to hand them in",
     "summary": "Update MGA Dungeon Quests. Every quest you've finished, dungeon or not, gets a pin on your World Map at whoever takes it back; hover it to see which quests. Press Route turn-ins on the map, or type /mgadq turnin, and it works out the quickest order to hand them all in, by foot, flight path, boat, zeppelin or tram, then takes you to each stop in turn.",
     "to": "/wow-forever/dungeons?addon=open"
