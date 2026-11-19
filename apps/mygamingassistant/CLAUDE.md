@@ -2041,6 +2041,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   a name on several ids narrowed with `BlizzardStatic.item_known` (Forever's API 404s removed ids, e.g.
   Dark Iron Ore 11099 vs 11370); anything unreadable stops the build. The page prices every bundle
   (count × market value) and the crate itself from the AH; cheapest priced bundle + crate = total.
+  Each crate carries Blizzard's item quality (`common` | `uncommon`; Fabrics/Ingots/Parts are uncommon) and
+  the name is coloured by it. Rewards come from `data/professions/crates/crateRewards.ts` (tier × quality:
+  Apprentice 5/10, Journeyman 10/20, Expert 15/30, Artisan 20/40); cost per reward = total ÷ rewards, to the
+  nearest copper. The default sort is `perReward` ascending, unknowns last (`?sort=total` still works).
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
   worked out in `crafting/derivedPrices.ts` — an essence from the other half of

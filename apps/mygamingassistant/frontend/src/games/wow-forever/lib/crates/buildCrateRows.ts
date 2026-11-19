@@ -1,4 +1,5 @@
 import { cheapestBundleIndex } from "@/games/wow-forever/lib/crates/cheapestBundleIndex";
+import { costPerReward, crateReward } from "@/games/wow-forever/lib/crates/crateReward";
 import type { CrateBundleRow } from "@/games/wow-forever/types/crates/crateBundleRow";
 import type { CrateRow } from "@/games/wow-forever/types/crates/crateRow";
 import type { CratesFile } from "@/games/wow-forever/types/crates/cratesFile";
@@ -6,7 +7,7 @@ import type { CratesFile } from "@/games/wow-forever/types/crates/cratesFile";
 /**
  * One row per crate. `priceOf` answers an item id's auction price in copper (undefined = no price).
  * A bundle costs count x the material's price; the cheapest priced bundle is picked (the first in game order on a tie).
- * The total is crate + cheapest bundle only when both are known, never a partial sum.
+ * The total is crate + cheapest bundle only when both are known, never a partial sum. The cost per reward is that total over the crate's rewards.
  */
 export function buildCrateRows(file: CratesFile, priceOf: (itemId: number) => number | undefined): CrateRow[] {
   return file.crates.map((crate) => {
@@ -23,13 +24,17 @@ export function buildCrateRows(file: CratesFile, priceOf: (itemId: number) => nu
     }));
     const cratePrice = priceOf(crate.id) ?? null;
     const bundleCost = best === -1 ? null : costs[best];
+    const total = cratePrice !== null && bundleCost !== null ? cratePrice + bundleCost : null;
+    const reward = crateReward(crate);
     return {
       crate,
       cratePrice,
       bundles,
       cheapest: best === -1 ? null : bundles[best],
       bundleCost,
-      total: cratePrice !== null && bundleCost !== null ? cratePrice + bundleCost : null,
+      total,
+      reward,
+      costPerReward: costPerReward(total, reward),
     };
   });
 }

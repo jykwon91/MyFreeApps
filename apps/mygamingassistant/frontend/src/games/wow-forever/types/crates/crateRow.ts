@@ -12,4 +12,8 @@ export interface CrateRow {
   bundleCost: number | null;
   /** Crate + cheapest bundle, only when both are known, never a partial sum. */
   total: number | null;
+  /** Rewards the crate pays (tier x quality). */
+  reward: number;
+  /** The total divided by the rewards, to the nearest copper; null when the total is unknown. */
+  costPerReward: number | null;
 }

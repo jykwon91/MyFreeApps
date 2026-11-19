@@ -20,7 +20,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts.wow_crates.crates import crate_bundles, crate_items, crate_tier, material_id, material_index
+from scripts.wow_crates.crates import crate_bundles, crate_items, crate_quality, crate_tier, material_id, material_index
 from scripts.wow_food.build import WOW_DATA_DIR
 from scripts.wow_item_names.build import OUT_PATH as ITEM_NAMES_FILE
 from scripts.wow_talents.blizzard_api import BlizzardStatic, blizzard_credentials, namespace_build
@@ -56,7 +56,7 @@ def main() -> None:
                 {"count": count, "item": {"id": material_id(material, index, api.item_known), "name": material}}
                 for count, material in crate_bundles(crate_id, item)
             ]
-            crates.append({"id": crate_id, "name": name, "tier": crate_tier(name), "bundles": bundles})
+            crates.append({"id": crate_id, "name": name, "tier": crate_tier(name), "quality": crate_quality(crate_id, item), "bundles": bundles})
     CRATES_FILE.parent.mkdir(parents=True, exist_ok=True)
     CRATES_FILE.write_text(crates_json(build, crates), encoding="utf-8")
     print(f"wrote {len(crates)} crates (build {build}) to {CRATES_FILE}")

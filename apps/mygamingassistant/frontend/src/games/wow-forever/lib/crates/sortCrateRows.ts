@@ -9,6 +9,8 @@ function valueOf(row: CrateRow, key: CrateSortKey): number | string | null {
   if (key === "tier") return CRATE_TIERS.indexOf(row.crate.tier);
   if (key === "cratePrice") return row.cratePrice;
   if (key === "bundleCost") return row.bundleCost;
+  if (key === "reward") return row.reward;
+  if (key === "perReward") return row.costPerReward;
   return row.total;
 }
 

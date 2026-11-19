@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-19",
+    "title": "Waylaid crates: cost per reward, cheapest first",
+    "summary": "Every Waylaid Crate now shows how many rewards it pays (by tier, and Uncommon crates pay double) and what one reward costs, and the page puts the cheapest reward first. Sort by Total or Rewards instead if you like.",
+    "to": "/wow-forever/crates"
+  },
+  {
+    "date": "2026-11-19",
     "title": "Search the Crafting writs and Waylaid crates pages",
     "summary": "Both pages now have a search box. On Crafting writs, type a writ or the item it asks for; on Waylaid crates, type a crate or a material (try Silk Cloth to find every crate it fills). Search works with the tier and location filters, and the link keeps it.",
     "to": "/wow-forever/writs"

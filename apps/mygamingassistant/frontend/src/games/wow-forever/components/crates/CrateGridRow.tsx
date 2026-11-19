@@ -3,6 +3,7 @@ import CrateBundlesDisclosure from "@/games/wow-forever/components/crates/CrateB
 import CrateCheapestCell from "@/games/wow-forever/components/crates/CrateCheapestCell";
 import CrateNameCell from "@/games/wow-forever/components/crates/CrateNameCell";
 import CratePriceBreakdown from "@/games/wow-forever/components/crates/CratePriceBreakdown";
+import CratePerRewardCell from "@/games/wow-forever/components/crates/CratePerRewardCell";
 import CrateTotalCell from "@/games/wow-forever/components/crates/CrateTotalCell";
 import { CRATE_ROW_GRID } from "@/games/wow-forever/components/crates/crateRowStyles";
 import ProfessionPriceCell from "@/games/wow-forever/components/professionTiers/ProfessionPriceCell";
@@ -17,7 +18,7 @@ interface CrateGridRowProps {
   loading: boolean;
 }
 
-/** One crate: a card on a phone (name and tier, cheapest bundle, big total, the sum, all bundles), a table row from lg up. */
+/** One crate: a card on a phone (name and tier, cheapest bundle, total, big per-reward price, the sum, all bundles), a table row from lg up. */
 export default function CrateGridRow({ row, loading }: CrateGridRowProps) {
   const { crate } = row;
   const dimmed = !loading && row.total === null;
@@ -46,6 +47,12 @@ export default function CrateGridRow({ row, loading }: CrateGridRowProps) {
       </div>
       <div role="cell">
         <CrateTotalCell row={row} loading={loading} />
+      </div>
+      <div role="cell" className="hidden tabular-nums lg:block" data-testid="crate-reward">
+        {row.reward}
+      </div>
+      <div role="cell">
+        <CratePerRewardCell row={row} loading={loading} />
       </div>
       <div role="cell" className="lg:hidden">
         {loading ? null : <CratePriceBreakdown row={row} />}

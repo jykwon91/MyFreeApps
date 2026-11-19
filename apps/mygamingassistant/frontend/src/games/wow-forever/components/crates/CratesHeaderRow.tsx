@@ -20,6 +20,8 @@ export default function CratesHeaderRow({ sort, onSort }: CratesHeaderRowProps) 
       <div role="columnheader">Cheapest bundle</div>
       {header("bundleCost")}
       {header("total")}
+      {header("reward")}
+      {header("perReward")}
     </div>
   );
 }
