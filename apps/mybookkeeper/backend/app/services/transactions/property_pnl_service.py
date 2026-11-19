@@ -12,6 +12,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
+from app.core.tags import EXPENSE_TAGS, REVENUE_TAGS
 from app.db.session import AsyncSessionLocal
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
@@ -60,11 +61,10 @@ async def _compute_pnl(
     )
     properties = list(props_result.scalars().all())
 
-    # Single aggregate query: (property_id, transaction_type, category, SUM(amount))
+    # Single aggregate query: (property_id, category, SUM(amount))
     rows_result = await db.execute(
         select(
             Transaction.property_id,
-            Transaction.transaction_type,
             Transaction.category,
             func.sum(Transaction.amount).label("total"),
         )
@@ -76,7 +76,7 @@ async def _compute_pnl(
             Transaction.transaction_date >= since,
             Transaction.transaction_date <= until,
         )
-        .group_by(Transaction.property_id, Transaction.transaction_type, Transaction.category)
+        .group_by(Transaction.property_id, Transaction.category)
     )
 
     # Index by property_id
@@ -92,9 +92,11 @@ async def _compute_pnl(
         if prop_id is None:
             continue
         total: Decimal = row.total or Decimal("0")
-        if row.transaction_type == "income":
+        # Same tag sets as the Dashboard summary: security deposits and
+        # uncategorized rows are neutral and count as neither.
+        if row.category in REVENUE_TAGS:
             revenue_by_prop[prop_id] += total
-        else:
+        elif row.category in EXPENSE_TAGS:
             expense_by_prop[prop_id] += total
             expense_cat_by_prop[prop_id][row.category] += total
 

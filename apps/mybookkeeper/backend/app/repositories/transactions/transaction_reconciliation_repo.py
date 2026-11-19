@@ -8,7 +8,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.sql.expression import FunctionElement
 
-from app.core.tags import NON_DEDUCTIBLE_TAGS
+from app.core.tags import NON_DEDUCTIBLE_TAGS, REVENUE_TAGS
 from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
@@ -297,6 +297,7 @@ async def summary_by_property(
         select(
             Transaction.property_id,
             Transaction.transaction_type,
+            Transaction.category,
             func.sum(Transaction.amount).label("total_amount"),
         )
         .where(
@@ -304,7 +305,7 @@ async def summary_by_property(
             Transaction.deleted_at.is_(None),
             Transaction.status == "approved",
         )
-        .group_by(Transaction.property_id, Transaction.transaction_type)
+        .group_by(Transaction.property_id, Transaction.transaction_type, Transaction.category)
     )
 
     if start_date is not None:
@@ -451,7 +452,7 @@ async def sum_by_normalized_vendor_year(
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
-            Transaction.transaction_type == "income",
+            Transaction.category.in_(REVENUE_TAGS),
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),

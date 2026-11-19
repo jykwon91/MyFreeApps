@@ -547,6 +547,49 @@ class TestSummaryByProperty:
         assert len(rows) == 0
 
 
+class TestIncomeIgnoresSecurityDeposits:
+    @pytest.mark.asyncio
+    async def test_vendor_income_total_excludes_deposit(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        for category, amount in (("rental_revenue", "500.00"), ("security_deposit", "2000.00")):
+            txn = _make_transaction(
+                test_org.id, test_user.id,
+                transaction_type="income",
+                category=category,
+                amount=Decimal(amount),
+                status="approved",
+                tax_relevant=True,
+                vendor="Tenant Co",
+            )
+            txn.normalized_vendor = "tenant co"
+            await transaction_repo.create(db, txn)
+        await db.commit()
+
+        totals = dict(await transaction_repo.sum_by_normalized_vendor_year(
+            db, test_org.id, 2025,
+        ))
+        assert sum(totals.values()) == Decimal("500.00")
+
+    @pytest.mark.asyncio
+    async def test_property_summary_exposes_category(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        prop = await _create_property(db, test_org.id, test_user.id)
+        await transaction_repo.create(db, _make_transaction(
+            test_org.id, test_user.id,
+            property_id=prop.id,
+            transaction_type="income",
+            category="security_deposit",
+            amount=Decimal("2000.00"),
+            status="approved",
+        ))
+        await db.commit()
+
+        rows = await transaction_repo.summary_by_property(db, test_org.id)
+        assert [r.category for r in rows] == ["security_deposit"]
+
+
 class TestScheduleEReport:
     @pytest.mark.asyncio
     async def test_groups_by_property_and_line(
