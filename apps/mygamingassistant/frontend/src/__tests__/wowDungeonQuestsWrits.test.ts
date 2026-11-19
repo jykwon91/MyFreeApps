@@ -94,4 +94,12 @@ describe("MGA Dungeon Quests writ spots", () => {
       C_QuestLog.GetQuestsOnMap = function(map) if map == 1413 then return { { questID = 94004, x = 0.25, y = 0.75 } } end end`;
     expect(chat(run("fire('QUEST_LOG_UPDATE')", setup))).toEqual(["noted where Craftsman's Writ: Elixir of Ogre's Strength goes: The Barrens 25.0, 75.0."]);
   });
+  it("a writ seen before its map or faction is known is tried again, not dropped", () => {
+    const lines = run(
+      "fire('QUEST_LOG_UPDATE'); player.faction = 'Horde'; slash('writs'); spots(94219)",
+      "player.faction = nil",
+    );
+    expect(chat(lines)[0]).toBe("noted where Craftsman's Writ: Draught of Water Breathing goes: Durotar 52.1, 43.1.");
+    expect(lines.filter((l) => l.startsWith("spot: "))).toEqual(["spot: Durotar 1411 52.1 43.1 2026-11-19 horde"]);
+  });
 });

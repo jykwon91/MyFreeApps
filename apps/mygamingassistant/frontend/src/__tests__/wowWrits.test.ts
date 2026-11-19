@@ -173,18 +173,23 @@ describe("filterWritRows and facets", () => {
 
   it("lists recorded zones A-Z then Not known yet, with counts", () => {
     // Stormwind is the alliance turn-in of quest 1003 (writ 3); the player is alliance.
-    expect(locationOptions(rows, NONE)).toEqual([
+    expect(locationOptions(rows, NONE, knownLocations(FILE.turnIns))).toEqual([
       { value: "Ironforge", label: "Ironforge", count: 1 },
+      { value: "Orgrimmar", label: "Orgrimmar", count: 0 },
       { value: "Stormwind", label: "Stormwind", count: 1 },
       { value: "unknown", label: "Not known yet", count: 5 },
     ]);
-    expect(locationOptions(rows, { ...NONE, dealsOnly: true }).map((o) => o.count)).toEqual([1, 1, 1]);
-    expect(knownLocations(rows)).toEqual(["Ironforge", "Stormwind", "unknown"]);
+    expect(locationOptions(rows, { ...NONE, dealsOnly: true }, knownLocations(FILE.turnIns)).map((o) => o.count)).toEqual([1, 0, 1, 1]);
+    expect(knownLocations(FILE.turnIns)).toEqual(["Ironforge", "Orgrimmar", "Stormwind", "unknown"]);
   });
 });
 
 describe("writViewFromParams / writViewToParams", () => {
-  const known = knownLocations(rows);
+  const known = knownLocations(FILE.turnIns);
+
+  it("keeps a zone only the other faction handed in at, so switching house doesn't drop ?loc=", () => {
+    expect(writViewFromParams(new URLSearchParams("loc=Orgrimmar"), known).filters.location).toBe("Orgrimmar");
+  });
 
   it("reads defaults from an empty link", () => {
     expect(writViewFromParams(new URLSearchParams(), known)).toEqual({

@@ -34,7 +34,7 @@ export default function WowWritsPage() {
     () => buildWritRows(WRITS_FILE, (id) => prices?.byId.get(id)?.marketValue, house === "neutral" ? null : house),
     [prices, house],
   );
-  const locations = useMemo(() => knownLocations(rows), [rows]);
+  const locations = useMemo(() => knownLocations(WRITS_FILE.turnIns), []);
   const { view, setFilters, setSort, toggleSort, clearFilters } = useWritView(locations);
   const visible = useMemo(() => sortWritRows(filterWritRows(rows, view.filters), view.sort), [rows, view]);
 
@@ -53,6 +53,7 @@ export default function WowWritsPage() {
       ) : null}
       <WritsFilters
         rows={rows}
+        locations={locations}
         shown={visible.length}
         filters={view.filters}
         sort={view.sort}

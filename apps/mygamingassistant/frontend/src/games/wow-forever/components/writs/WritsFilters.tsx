@@ -10,6 +10,8 @@ import type { WritSort } from "@/games/wow-forever/types/writs/writSort";
 interface WritsFiltersProps {
   /** Every writ, unfiltered: the counts are worked out from these. */
   rows: readonly WritRow[];
+  /** Every recorded turn-in zone plus "unknown" (any faction). */
+  locations: readonly string[];
   shown: number;
   filters: WritFilters;
   sort: WritSort;
@@ -19,7 +21,7 @@ interface WritsFiltersProps {
 }
 
 /** Tier, turn-in location, "Only deals", the phone's sort, and "Showing N of M" with a way to clear the filters. */
-export default function WritsFilters({ rows, shown, filters, sort, onFilters, onSort, onClear }: WritsFiltersProps) {
+export default function WritsFilters({ rows, locations, shown, filters, sort, onFilters, onSort, onClear }: WritsFiltersProps) {
   const active = filters.tier !== null || filters.location !== null || filters.dealsOnly;
   return (
     <section aria-label="Filters" className="space-y-3">
@@ -27,7 +29,7 @@ export default function WritsFilters({ rows, shown, filters, sort, onFilters, on
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,20rem)]">
         <WritsLocationSelect
           value={filters.location}
-          options={locationOptions(rows, filters)}
+          options={locationOptions(rows, filters, locations)}
           onChange={(location) => onFilters({ location })}
         />
         <WritsSortSelect value={sort} onChange={onSort} />

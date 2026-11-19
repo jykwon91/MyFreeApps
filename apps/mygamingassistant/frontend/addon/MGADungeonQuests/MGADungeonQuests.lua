@@ -1466,10 +1466,11 @@ end
 local function round1(v) return math.floor(v * 1000 + 0.5) / 10 end
 
 -- One writ's spot into writSpots; true when it's a place not noted before.
+-- nil: not saved (map or faction not known yet); false: a place already noted (its date refreshed); true, spot: a new place.
 local function noteWritSpot(id, map, x, y)
   local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(map)
   local faction = UnitFactionGroup and UnitFactionGroup("player")
-  if not (info and info.name and faction) then return false end
+  if not (info and info.name and faction) then return nil end
   MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
   MGADungeonQuestsSettings.writSpots = MGADungeonQuestsSettings.writSpots or {}
   local spots = MGADungeonQuestsSettings.writSpots[id] or {}
@@ -1495,9 +1496,13 @@ function M.RecordWrits(force)
         writTried[q.id] = now
         local map, x, y = writMarker(q.id)
         if map then
-          writNoted[q.id] = true
           local new, spot = noteWritSpot(q.id, map, x, y)
-          if new then say(string.format("noted where %s goes: %s %.1f, %.1f.", q.title, spot.zone, spot.x, spot.y)) end
+          if new == nil then
+            unplaced[#unplaced + 1] = q.title
+          else
+            writNoted[q.id] = true
+            if new then say(string.format("noted where %s goes: %s %.1f, %.1f.", q.title, spot.zone, spot.x, spot.y)) end
+          end
         else
           unplaced[#unplaced + 1] = q.title
         end
