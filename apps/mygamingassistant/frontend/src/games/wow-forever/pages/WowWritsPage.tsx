@@ -3,10 +3,10 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionFactionSwitch from "@/games/wow-forever/components/auctionHouse/AuctionFactionSwitch";
 import AuctionPriceFreshness from "@/games/wow-forever/components/auctionHouse/AuctionPriceFreshness";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
-import WritsEmpty from "@/games/wow-forever/components/writs/WritsEmpty";
+import ProfessionEmpty from "@/games/wow-forever/components/professionTiers/ProfessionEmpty";
+import ProfessionRowsSkeleton from "@/games/wow-forever/components/professionTiers/ProfessionRowsSkeleton";
 import WritsFilters from "@/games/wow-forever/components/writs/WritsFilters";
 import WritsGrid from "@/games/wow-forever/components/writs/WritsGrid";
-import WritsRowsSkeleton from "@/games/wow-forever/components/writs/WritsRowsSkeleton";
 import { WRITS_FILE } from "@/games/wow-forever/data/professions/writs/writsData";
 import { WRITS_SUBTITLE } from "@/games/wow-forever/data/professions/writs/writsCopy";
 import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
@@ -62,8 +62,8 @@ export default function WowWritsPage() {
         onClear={clearFilters}
       />
       {visible.length > 0 ? <WritsGrid rows={visible} sort={view.sort} onSort={toggleSort} loading={loading} /> : null}
-      {visible.length === 0 && loading ? <WritsRowsSkeleton /> : null}
-      {visible.length === 0 && !loading ? <WritsEmpty onClear={clearFilters} /> : null}
+      {visible.length === 0 && loading ? <ProfessionRowsSkeleton label="Loading writs" testId="writs-skeleton" /> : null}
+      {visible.length === 0 && !loading ? <ProfessionEmpty message="No writs match these filters" testId="writs-empty" onClear={clearFilters} /> : null}
     </div>
   );
 }

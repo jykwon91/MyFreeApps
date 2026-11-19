@@ -2033,6 +2033,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.
+- Waylaid crates page (`/wow-forever/crates`) reads `data/professions/crates/crates.json` from
+  `python -m scripts.wow_crates.build`: crates = `item_names.json` "Waylaid Crate: X" items (the unlabelled
+  "Waylaid Crate" is opened, not filled); tier = the tier word in the name ("Earthly Expert Herbs" is Expert);
+  bundles parsed from the item's "Use: Fill the crate with any bundle from the following list:" text in
+  Blizzard's item API (one material per line, "- 10 Stranglekelp"); materials matched by exact item name,
+  a name on several ids narrowed with `BlizzardStatic.item_known` (Forever's API 404s removed ids, e.g.
+  Dark Iron Ore 11099 vs 11370); anything unreadable stops the build. The page prices every bundle
+  (count × market value) and the crate itself from the AH; cheapest priced bundle + crate = total.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
   worked out in `crafting/derivedPrices.ts` — an essence from the other half of

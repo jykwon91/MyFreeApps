@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-19",
+    "title": "Waylaid crates, cheapest first",
+    "summary": "A new page lists every Waylaid Crate (Apprentice, Journeyman, Expert and Artisan) with what the crate costs on the auction house. A crate fills with any one of its bundles, so the page prices every bundle and picks the cheapest for you, with the total to complete the crate. Open a row to see all its bundles, and filter by tier.",
+    "to": "/wow-forever/crates"
+  },
+  {
+    "date": "2026-11-19",
     "title": "Crafting writs, cheapest first",
     "summary": "A new page lists every Craftsman's Writ in a grid with what the writ and the item it asks for cost on the auction house, cheapest total first. A row lights up as a deal when the total is under 50 silver (Journeyman), 1 gold (Expert) or 2 gold (Artisan). Filter by tier or turn-in location, or show only the deals. Update MGA Dungeon Quests to 2.3.0 and it records where each writ is delivered as you pick them up, so the Turn-in column fills in.",
     "to": "/wow-forever/writs"

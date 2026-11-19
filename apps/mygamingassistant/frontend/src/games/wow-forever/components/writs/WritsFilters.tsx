@@ -1,7 +1,9 @@
 import { Button } from "@platform/ui";
+import ProfessionSortSelect from "@/games/wow-forever/components/professionTiers/ProfessionSortSelect";
+import ProfessionTierFilter from "@/games/wow-forever/components/professionTiers/ProfessionTierFilter";
 import WritsLocationSelect from "@/games/wow-forever/components/writs/WritsLocationSelect";
-import WritsSortSelect from "@/games/wow-forever/components/writs/WritsSortSelect";
-import WritsTierFilter from "@/games/wow-forever/components/writs/WritsTierFilter";
+import { WRIT_SORT_CHOICES } from "@/games/wow-forever/data/professions/writs/writSortOptions";
+import { WRIT_TIERS, WRIT_TIER_LABEL } from "@/games/wow-forever/data/professions/writs/writTiers";
 import { locationOptions, tierCounts } from "@/games/wow-forever/lib/writs/writFacets";
 import type { WritFilters } from "@/games/wow-forever/types/writs/writFilters";
 import type { WritRow } from "@/games/wow-forever/types/writs/writRow";
@@ -25,14 +27,20 @@ export default function WritsFilters({ rows, locations, shown, filters, sort, on
   const active = filters.tier !== null || filters.location !== null || filters.dealsOnly;
   return (
     <section aria-label="Filters" className="space-y-3">
-      <WritsTierFilter value={filters.tier} counts={tierCounts(rows, filters)} onChange={(tier) => onFilters({ tier })} />
+      <ProfessionTierFilter
+        tiers={WRIT_TIERS}
+        labels={WRIT_TIER_LABEL}
+        value={filters.tier}
+        counts={tierCounts(rows, filters)}
+        onChange={(tier) => onFilters({ tier })}
+      />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,20rem)]">
         <WritsLocationSelect
           value={filters.location}
           options={locationOptions(rows, filters, locations)}
           onChange={(location) => onFilters({ location })}
         />
-        <WritsSortSelect value={sort} onChange={onSort} />
+        <ProfessionSortSelect id="writ-sort" choices={WRIT_SORT_CHOICES} value={sort} onChange={onSort} />
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <label className="flex min-h-[44px] items-center gap-2 text-sm">
