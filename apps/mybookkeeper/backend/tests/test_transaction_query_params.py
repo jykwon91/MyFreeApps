@@ -4,6 +4,7 @@ FastAPI reads a query-parameter model's fields as separate params only when the 
 route's sole query parameter, so these run the real routes with the service stubbed out.
 """
 from collections.abc import Iterator
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -16,7 +17,7 @@ from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_sort_key import TransactionSortKey
 
-_EMPTY_PAGE = TransactionListPage(items=[], total=0, has_more=False)
+_EMPTY_PAGE = TransactionListPage(items=[], total=0, has_more=False, amount_total=Decimal("0"))
 
 
 @pytest.fixture

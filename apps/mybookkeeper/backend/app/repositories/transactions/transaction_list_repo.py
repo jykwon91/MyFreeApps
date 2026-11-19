@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Any, Unpack
 
 from sqlalchemy import ColumnElement, Row, Select, func, or_, select
@@ -20,6 +21,7 @@ from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.repositories.transactions.summary_repo import txn_active_property_filter
 from app.repositories.transactions.transaction_filter_args import TransactionFilterArgs
+from app.repositories.transactions.transaction_totals import TransactionTotals
 from app.schemas.transactions.transaction_sort_key import TransactionSortKey
 
 # Case-insensitive, and a blank vendor counts as a missing one. Not normalized_vendor:
@@ -152,15 +154,19 @@ async def list_filtered(
     return result.scalars().all()
 
 
-async def count_filtered(
+async def totals_filtered(
     db: AsyncSession,
     organization_id: uuid.UUID,
     **filters: Unpack[TransactionFilterArgs],
-) -> int:
-    """How many rows ``list_filtered`` would return across every page for the same filters."""
-    stmt = _filtered(select(func.count()).select_from(Transaction), organization_id, **filters)
-    result = await db.execute(stmt)
-    return result.scalar_one()
+) -> TransactionTotals:
+    """How many rows ``list_filtered`` would return across every page for the same filters, and their amounts' sum."""
+    stmt = _filtered(
+        select(func.count(), func.coalesce(func.sum(Transaction.amount), 0)).select_from(Transaction),
+        organization_id,
+        **filters,
+    )
+    count, amount_total = (await db.execute(stmt)).one()
+    return TransactionTotals(count=count, amount_total=Decimal(amount_total))
 
 
 async def list_selection_refs(

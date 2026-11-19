@@ -17,9 +17,14 @@ import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { EMPTY_SUMMARY } from "./fixtures/mockDashboard";
 import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
+import type { TransactionListPage } from "@mybookkeeper/api-client/types/transaction/TransactionListPage";
 
 const LOAD_ERROR = "Couldn't load these transactions.";
 const ZERO_HEADLINE = /0 transactions — \$0/;
+
+/** GET /transactions/page with nothing matching: no rows, a zero count and total. */
+const EMPTY_PAGE: TransactionListPage = { items: [], total: 0, has_more: false, amount_total: "0.00" };
+const TRANSACTION_PAGES = /\/api\/transactions\/page(\?|$)/;
 
 const SUMMARY: SummaryResponse = { ...EMPTY_SUMMARY, expenses: 500, profit: -500, by_category: { maintenance: 500 } };
 
@@ -38,7 +43,7 @@ async function stubDashboard(page: Page): Promise<void> {
 test("drill-down says it couldn't load instead of showing 0 transactions and $0", async ({ page }) => {
   await plantAuth(page);
   await stubDashboard(page);
-  await failUntilRecovered(page, /\/api\/transactions(\?|$)/, []);
+  await failUntilRecovered(page, TRANSACTION_PAGES, EMPTY_PAGE);
 
   await openMaintenanceDrillDown(page);
 
@@ -52,7 +57,7 @@ test("drill-down says it couldn't load instead of showing 0 transactions and $0"
 test("drill-down Retry holds the error while it runs, then shows the empty result once it recovers", async ({ page }) => {
   await plantAuth(page);
   await stubDashboard(page);
-  const transactions = await failUntilRecovered(page, /\/api\/transactions(\?|$)/, []);
+  const transactions = await failUntilRecovered(page, TRANSACTION_PAGES, EMPTY_PAGE);
 
   await openMaintenanceDrillDown(page);
   const panel = page.getByRole("dialog");

@@ -85,7 +85,7 @@ async def list_transaction_page(
     limit: int,
     offset: int,
 ) -> TransactionListPage:
-    """One page of the list, and how many rows the same filters match across every page."""
+    """One page of the list, and how many rows the same filters match across every page and what they add up to."""
     filter_args = filters.filter_args()
     async with AsyncSessionLocal() as db:
         rows = await transaction_repo.list_filtered(
@@ -96,9 +96,14 @@ async def list_transaction_page(
             limit=limit,
             offset=offset,
         )
-        total = await transaction_repo.count_filtered(db, ctx.organization_id, **filter_args)
+        totals = await transaction_repo.totals_filtered(db, ctx.organization_id, **filter_args)
     items = [TransactionRead.model_validate(row) for row in rows]
-    return TransactionListPage(items=items, total=total, has_more=offset + len(items) < total)
+    return TransactionListPage(
+        items=items,
+        total=totals.count,
+        has_more=offset + len(items) < totals.count,
+        amount_total=totals.amount_total,
+    )
 
 
 async def list_selection_refs(ctx: RequestContext, filters: TransactionFilters) -> list[TransactionSelectionRef]:

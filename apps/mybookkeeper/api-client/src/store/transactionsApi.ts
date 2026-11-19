@@ -1,7 +1,7 @@
 import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
-import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
+import { DRILL_DOWN_PAGE_SIZE, TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
 import type { BankCsvImportRequest } from "../types/transaction/BankCsvImportRequest";
 import type { BulkApproveTransactionsResponse } from "../types/transaction/BulkApproveTransactionsResponse";
 import type { BulkCapitalImprovementRequest } from "../types/transaction/BulkCapitalImprovementRequest";
@@ -58,6 +58,25 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       }),
       providesTags: (result) => [
         ...(result?.items.map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
+        { type: "Transaction", id: "LIST" },
+      ],
+    }),
+    // The rows behind a dashboard or analysis figure, a page at a time, each page carrying the count and
+    // amount total of every matching row, so the drill-down's headline never stops at what is loaded.
+    listDrillDownPages: builder.infiniteQuery<TransactionListPage, TransactionListParams, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + DRILL_DOWN_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: pathWithQuery(
+          "/transactions/page",
+          `${transactionListQuery({ ...queryArg, limit: DRILL_DOWN_PAGE_SIZE })}&offset=${pageParam}`,
+        ),
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
         { type: "Transaction", id: "LIST" },
       ],
     }),
@@ -150,6 +169,7 @@ export const {
   useListTransactionsQuery,
   useListTransactionPagesInfiniteQuery,
   useGetTransactionPageQuery,
+  useListDrillDownPagesInfiniteQuery,
   useLazyListTransactionSelectionQuery,
   useListTransactionCategoriesQuery,
   useGetTransactionReviewCountQuery,

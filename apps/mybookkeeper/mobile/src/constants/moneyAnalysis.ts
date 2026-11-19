@@ -95,5 +95,6 @@ export const DRILL_DOWN_MESSAGES = {
   tryAgain: "Try again",
   noneHeading: "No approved transactions here.",
   noneBody: "The number you tapped may include something that has changed since. Pull down to refresh.",
+  loadingMore: "Loading more transactions",
   count: (count: number) => `${count} ${count === 1 ? "transaction" : "transactions"}`,
 } as const;

@@ -11,9 +11,11 @@ const originalAdapter = api.defaults.adapter;
  */
 export function stubApi(handler: ApiStubHandler): void {
   const adapter: AxiosAdapter = async (config) => {
-    const path = new URL(config.url ?? "", "http://test").pathname;
+    const url = new URL(config.url ?? "", "http://test");
+    // Endpoints that build their own query string (repeated keys) send it in the URL rather than as params.
+    const params = { ...Object.fromEntries(url.searchParams), ...((config.params ?? {}) as Record<string, unknown>) };
     try {
-      const data: unknown = await handler(path, (config.params ?? {}) as Record<string, unknown>);
+      const data: unknown = await handler(url.pathname, params, url.searchParams);
       return { status: 200, data, statusText: "OK", headers: {}, config };
     } catch {
       throw serverError(config);

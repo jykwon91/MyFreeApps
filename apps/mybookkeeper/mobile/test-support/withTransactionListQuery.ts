@@ -18,10 +18,10 @@ function paramsFrom(query: URLSearchParams): Record<string, QueryValue> {
   return params;
 }
 
-const LIST_PATHS = new Set(["/transactions", "/transactions/selection"]);
+const LIST_PATHS = new Set(["/transactions", "/transactions/page", "/transactions/selection"]);
 
 /**
- * A transaction list request as the backend reads it: `/transactions` (or `/transactions/selection`) in `url` and its query
+ * A transaction list request as the backend reads it: `/transactions` (or `/transactions/page`, `/transactions/selection`) in `url` and its query
  * string, list filters repeated, read back into typed `params`. Any other request is unchanged.
  */
 export function withTransactionListQuery(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {

@@ -1,393 +1,176 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { store } from "@/shared/store";
+/**
+ * The drill-down panel against the real RTK Query hook and a stubbed server: what it asks GET /transactions/page
+ * for, the server's count and total in its headline, and its loading, empty and error states.
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { DRILL_DOWN_PAGE_SIZE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
-
-vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
-  useListTransactionsQuery: vi.fn(),
-}));
-
-vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
-  useGetPropertiesQuery: vi.fn(() => ({ data: [], error: undefined, isFetching: false, refetch: vi.fn() })),
-}));
-
-import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { TransactionListPage } from "@mybookkeeper/api-client/types/transaction/TransactionListPage";
 import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
+import { restoreApi, stubApi } from "@/test/api-stub";
+import { deferred } from "@/test/deferred";
+import { aDrillDownTransaction, answerDrillDownPage } from "@/test/drill-down-server";
+import { renderWithStore } from "@/test/render-with-store";
 
-function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
-  return {
-    id: crypto.randomUUID(),
-    organization_id: "org-1",
-    user_id: "user-1",
-    property_id: "prop-1",
-    extraction_id: null,
-    transaction_date: "2024-06-15",
-    tax_year: 2024,
-    sub_category: null,
-    usage_quantity: null,
-    usage_unit: null,
-    service_period_start: null,
-    service_period_end: null,
-    vendor: "Test Plumber",
-    vendor_id: null,
-    description: null,
-    amount: "500.00",
-    transaction_type: "expense",
-    category: "contract_work",
-    tags: ["contract_work"],
-    tax_relevant: true,
-    schedule_e_line: null,
-    is_capital_improvement: false,
-    placed_in_service_date: null,
-    channel: null,
-    address: null,
-    payment_method: null,
-    status: "approved",
-    review_fields: null,
-    reconciled: false,
-    reconciled_at: null,
-    is_manual: false,
-    deleted_at: null,
-    created_at: "2024-06-15T00:00:00Z",
-    updated_at: "2024-06-15T00:00:00Z",
-    source_document_id: null,
-    source_file_name: null,
-    linked_document_ids: [],
-    external_id: null,
-    external_source: null,
-    is_pending: false,
-    activity_id: null,
-    review_reason: null,
-    applicant_id: null,
-    attribution_source: null,
-    payer_name: null,
-    ...overrides,
-  };
-}
-
-const defaultFilter: DrillDownFilter = {
+const filter: DrillDownFilter = {
   category: "contract_work",
   startDate: "2024-06-01",
   endDate: "2024-06-30",
   label: "Contract Work — June 2024",
 };
+const EMPTY_STATE = "No transactions found for this period.";
+const LOAD_ERROR = "Couldn't load these transactions.";
+const PROPERTIES_ERROR = "Couldn't load your properties, so property names may be missing.";
 
-function setupMocks(
-  transactions: Transaction[],
-  opts: { isLoading?: boolean } = {},
-) {
-  vi.mocked(useListTransactionsQuery).mockReturnValue({
-    currentData: opts.isLoading ? undefined : transactions,
-    error: undefined,
-    isFetching: opts.isLoading ?? false,
-    refetch: vi.fn(),
-  } as unknown as ReturnType<typeof useListTransactionsQuery>);
+interface ServerOptions {
+  rows?: readonly Transaction[];
+  amountTotal?: string;
+  /** Answers GET /transactions/page in place of the rows: a rejection answers with a 500. */
+  page?: () => Promise<TransactionListPage>;
+  propertiesFail?: boolean;
 }
 
-function setupFailedLoad(refetch = vi.fn(), opts: { isFetching?: boolean } = {}) {
-  vi.mocked(useListTransactionsQuery).mockReturnValue({
-    currentData: undefined,
-    error: { status: 500 },
-    isFetching: opts.isFetching ?? false,
-    refetch,
-  } as unknown as ReturnType<typeof useListTransactionsQuery>);
+/** Every query GET /transactions/page was sent, in order. */
+let pageQueries: URLSearchParams[] = [];
+let propertiesCalls = 0;
+let cleanup: () => void = () => undefined;
+
+function renderPanel(drillFilter: DrillDownFilter, { rows = [], amountTotal = "0.00", page, propertiesFail = false }: ServerOptions = {}) {
+  pageQueries = [];
+  propertiesCalls = 0;
+  stubApi((path, params, query) => {
+    if (path === "/properties") {
+      propertiesCalls += 1;
+      if (propertiesFail) throw new Error("properties down");
+      return [];
+    }
+    if (path !== "/transactions/page") throw new Error(`unexpected ${path}`);
+    pageQueries.push(query);
+    return page ? page() : answerDrillDownPage(rows, params, amountTotal);
+  });
+  cleanup = renderWithStore(<DrillDownPanel filter={drillFilter} onClose={vi.fn()} />, "/");
 }
+
+afterEach(() => {
+  cleanup();
+  restoreApi();
+});
 
 describe("DrillDownPanel", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  it("shows the label, the rows, and the server's count and total", async () => {
+    renderPanel(filter, {
+      rows: [aDrillDownTransaction(1, { vendor: "Test Plumber" }), aDrillDownTransaction(2, { vendor: "Electrician Co" })],
+      amountTotal: "1000.00",
+    });
 
-  it("renders transaction list with filter label and count", () => {
-    const txns = [makeTxn(), makeTxn({ vendor: "Electrician Co" })];
-    setupMocks(txns);
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Contract Work — June 2024")).toBeInTheDocument();
-    expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
-    expect(screen.getByText("Test Plumber")).toBeInTheDocument();
+    expect(await screen.findByText("Test Plumber")).toBeInTheDocument();
     expect(screen.getByText("Electrician Co")).toBeInTheDocument();
-  });
-
-  it("does not show transaction list or empty state while loading", () => {
-    setupMocks([], { isLoading: true });
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.queryByText("No transactions found for this period.")).not.toBeInTheDocument();
     expect(screen.getByText("Contract Work — June 2024")).toBeInTheDocument();
+    expect(screen.getByText("2 transactions — $1,000.00")).toBeInTheDocument();
   });
 
-  it("shows empty state when no transactions", () => {
-    setupMocks([]);
+  it("shows neither the empty state nor a count or total while loading", async () => {
+    const never = deferred<TransactionListPage>();
+    renderPanel(filter, { page: () => never.promise });
 
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("No transactions found for this period.")).toBeInTheDocument();
+    await waitFor(() => expect(pageQueries).toHaveLength(1));
+    expect(screen.getByText("Contract Work — June 2024")).toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_STATE)).not.toBeInTheDocument();
+    expect(screen.queryByText(/transactions? —/)).not.toBeInTheDocument();
   });
 
-  it("filters transactions by propertyIds when provided", () => {
-    const txns = [
-      makeTxn({ vendor: "Plumber A", property_id: "prop-1" }),
-      makeTxn({ vendor: "Plumber B", property_id: "prop-2" }),
-      makeTxn({ vendor: "Plumber C", property_id: "prop-3" }),
-    ];
-    setupMocks(txns);
+  it("shows the empty state, with a zero headline, when nothing matches", async () => {
+    renderPanel(filter);
 
-    const filterWithPropertyIds: DrillDownFilter = {
-      ...defaultFilter,
-      propertyIds: ["prop-1", "prop-3"],
-    };
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={filterWithPropertyIds} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Plumber A")).toBeInTheDocument();
-    expect(screen.queryByText("Plumber B")).not.toBeInTheDocument();
-    expect(screen.getByText("Plumber C")).toBeInTheDocument();
-    expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
+    expect(await screen.findByText(EMPTY_STATE)).toBeInTheDocument();
+    expect(screen.getByText("0 transactions — $0.00")).toBeInTheDocument();
   });
 
-  it("shows all transactions when propertyIds is not provided", () => {
-    const txns = [
-      makeTxn({ vendor: "Plumber A", property_id: "prop-1" }),
-      makeTxn({ vendor: "Plumber B", property_id: "prop-2" }),
-    ];
-    setupMocks(txns);
+  it("asks the server, a page at a time, for the summary's own rows", async () => {
+    renderPanel({ label: "Revenue", type: "revenue", startDate: "2024-06-01", endDate: "2024-06-30" });
 
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Plumber A")).toBeInTheDocument();
-    expect(screen.getByText("Plumber B")).toBeInTheDocument();
-    expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
+    await screen.findByText(EMPTY_STATE);
+    const query = pageQueries[0];
+    expect(query.get("summary_kind")).toBe("revenue");
+    expect(query.get("status")).toBe("approved");
+    expect(query.get("active_properties_only")).toBe("true");
+    expect(query.get("start_date")).toBe("2024-06-01");
+    expect(query.get("end_date")).toBe("2024-06-30");
+    expect(query.get("limit")).toBe(String(DRILL_DOWN_PAGE_SIZE));
+    expect(query.get("offset")).toBe("0");
   });
 
-  it("routes the Unassigned bucket to the unassigned filter, not a bogus property_id", () => {
-    setupMocks([]);
+  it("sends the chosen properties and categories to the server rather than filtering loaded rows", async () => {
+    renderPanel({ label: "Expenses", type: "expenses", propertyIds: ["prop-1", "prop-3"], categories: ["utilities"] }, {
+      rows: [aDrillDownTransaction(1, { vendor: "Plumber A" })],
+      amountTotal: "10.00",
+    });
 
-    const unassignedFilter: DrillDownFilter = {
-      propertyId: UNASSIGNED_PROPERTY_ID,
-      type: "revenue",
-      startDate: "2026-05-01",
-      endDate: "2026-05-31",
-      label: "Unassigned — Revenue",
-    };
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={unassignedFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    const params = vi.mocked(useListTransactionsQuery).mock.calls[0][0];
-    expect(params).toMatchObject({ unassigned: true, property_id: undefined });
+    expect(await screen.findByText("Plumber A")).toBeInTheDocument();
+    expect(pageQueries[0].getAll("property_ids")).toEqual(["prop-1", "prop-3"]);
+    expect(pageQueries[0].getAll("categories")).toEqual(["utilities"]);
+    expect(screen.getByText("1 transaction — $10.00")).toBeInTheDocument();
   });
 
-  it("passes a real property_id through and leaves unassigned unset", () => {
-    setupMocks([]);
-
-    const propertyFilter: DrillDownFilter = {
-      propertyId: "prop-42",
-      type: "revenue",
-      label: "6734 Peerless — Revenue",
-    };
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={propertyFilter} onClose={vi.fn()} />
-      </Provider>,
+  it("routes the Unassigned bucket to the unassigned filter, with no property id or allowlist", async () => {
+    renderPanel(
+      { propertyId: UNASSIGNED_PROPERTY_ID, propertyIds: ["prop-1", "prop-2"], type: "revenue", label: "Unassigned — Revenue" },
+      { rows: [aDrillDownTransaction(1, { vendor: "Unattributed Airbnb", property_id: null })], amountTotal: "10.00" },
     );
 
-    const params = vi.mocked(useListTransactionsQuery).mock.calls[0][0];
-    expect(params).toMatchObject({ property_id: "prop-42", unassigned: undefined });
+    expect(await screen.findByText("Unattributed Airbnb")).toBeInTheDocument();
+    expect(pageQueries[0].get("unassigned")).toBe("true");
+    expect(pageQueries[0].has("property_id")).toBe(false);
+    expect(pageQueries[0].has("property_ids")).toBe(false);
   });
 
-  it("does not apply the propertyIds client filter to the Unassigned bucket", () => {
-    const txns = [
-      makeTxn({ vendor: "Unattributed Airbnb A", property_id: null }),
-      makeTxn({ vendor: "Unattributed Airbnb B", property_id: null }),
-    ];
-    setupMocks(txns);
+  it("passes a real property id through and leaves unassigned unset", async () => {
+    renderPanel({ propertyId: "prop-42", type: "revenue", label: "6734 Peerless — Revenue" });
 
-    // activePropertyIds is spread onto every drill filter by the dashboard;
-    // for the Unassigned bucket it must NOT zero out the (null-property) rows.
-    const unassignedFilter: DrillDownFilter = {
-      propertyId: UNASSIGNED_PROPERTY_ID,
-      propertyIds: ["prop-1", "prop-2"],
-      label: "Unassigned — Revenue",
-    };
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={unassignedFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Unattributed Airbnb A")).toBeInTheDocument();
-    expect(screen.getByText("Unattributed Airbnb B")).toBeInTheDocument();
-    expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
+    await screen.findByText(EMPTY_STATE);
+    expect(pageQueries[0].get("property_id")).toBe("prop-42");
+    expect(pageQueries[0].has("unassigned")).toBe(false);
   });
 
-  it("combines type and propertyIds filtering", () => {
-    const txns = [
-      makeTxn({ vendor: "Revenue Co", property_id: "prop-1", transaction_type: "income", category: "rental_revenue" }),
-      makeTxn({ vendor: "Expense Co", property_id: "prop-1", transaction_type: "expense", category: "maintenance" }),
-      makeTxn({ vendor: "Other Revenue", property_id: "prop-2", transaction_type: "income", category: "rental_revenue" }),
-    ];
-    setupMocks(txns);
+  it("shows an error with Retry, not a $0 empty result, when the load fails", async () => {
+    renderPanel(filter, { page: () => Promise.reject(new Error("down")) });
 
-    const filter: DrillDownFilter = {
-      label: "Revenue — filtered",
-      type: "revenue",
-      propertyIds: ["prop-1"],
-    };
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={filter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Revenue Co")).toBeInTheDocument();
-    expect(screen.queryByText("Expense Co")).not.toBeInTheDocument();
-    expect(screen.queryByText("Other Revenue")).not.toBeInTheDocument();
-    expect(screen.getByText(/1 transaction\b/)).toBeInTheDocument();
-  });
-
-  it("asks the server for the most rows and the summary's own rules", () => {
-    setupMocks([makeTxn()]);
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={{ label: "Revenue", type: "revenue" }} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(useListTransactionsQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 5000, summary_kind: "revenue", active_properties_only: true, status: "approved" }),
-    );
-  });
-
-  it("warns that there may be more when the list reached the server's limit", () => {
-    setupMocks(Array.from({ length: 5000 }, () => makeTxn()));
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByRole("status")).toHaveTextContent(/most I can load at once/);
-  });
-
-  it("does not warn for a short list", () => {
-    setupMocks([makeTxn()]);
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-  it("shows an error with Retry, not a $0 empty result, when the load fails", () => {
-    setupFailedLoad();
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Couldn't load these transactions.")).toBeInTheDocument();
+    expect(await screen.findByText(LOAD_ERROR)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.queryByText(/transactions? —/)).not.toBeInTheDocument();
-    expect(screen.queryByText("No transactions found for this period.")).not.toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_STATE)).not.toBeInTheDocument();
   });
 
-  it("Retry refetches the transactions", () => {
-    const refetch = vi.fn();
-    setupFailedLoad(refetch);
+  it("Retry asks again, keeps the error up with Retrying... while it's in flight, then shows the rows", async () => {
+    const retry = deferred<TransactionListPage>();
+    let calls = 0;
+    renderPanel(filter, {
+      page: () => {
+        calls += 1;
+        return calls === 1 ? Promise.reject(new Error("down")) : retry.promise;
+      },
+    });
 
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    expect(await screen.findByRole("button", { name: /Retrying/ })).toBeDisabled();
+    expect(screen.getByText(LOAD_ERROR)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    retry.resolve(answerDrillDownPage([aDrillDownTransaction(1, { vendor: "Test Plumber" })], { limit: DRILL_DOWN_PAGE_SIZE, offset: 0 }, "10.00"));
+    expect(await screen.findByText("Test Plumber")).toBeInTheDocument();
+    expect(screen.queryByText(LOAD_ERROR)).not.toBeInTheDocument();
+    expect(calls).toBe(2);
   });
 
-  it("keeps the error up with Retrying... while a retry is in flight", () => {
-    setupFailedLoad(vi.fn(), { isFetching: true });
+  it("warns that property names may be missing when the properties load fails, and Retry asks again", async () => {
+    renderPanel(filter, { rows: [aDrillDownTransaction(1, { vendor: "Test Plumber" })], amountTotal: "10.00", propertiesFail: true });
 
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Couldn't load these transactions.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
-  });
-
-  it("shows no count or total while loading", () => {
-    setupMocks([], { isLoading: true });
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.queryByText(/transactions? —/)).not.toBeInTheDocument();
-  });
-
-  it("warns that property names may be missing when the properties load fails", () => {
-    setupMocks([makeTxn()]);
-    const refetchProperties = vi.fn();
-    vi.mocked(useGetPropertiesQuery).mockReturnValueOnce({
-      data: undefined,
-      error: { status: 500 },
-      isFetching: false,
-      refetch: refetchProperties,
-    } as unknown as ReturnType<typeof useGetPropertiesQuery>);
-
-    render(
-      <Provider store={store}>
-        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
-      </Provider>,
-    );
-
-    expect(screen.getByText("Couldn't load your properties, so property names may be missing.")).toBeInTheDocument();
+    expect(await screen.findByText(PROPERTIES_ERROR)).toBeInTheDocument();
     expect(screen.getByText("Test Plumber")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetchProperties).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(propertiesCalls).toBe(2));
   });
 });
