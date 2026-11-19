@@ -1,24 +1,19 @@
 import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { usePendingReceiptsPages } from "@mybookkeeper/api-client/hooks/usePendingReceiptsPages";
 import { receiptsWaitingLine } from "@mybookkeeper/api-client/utils/receiptsWaitingLine";
 import { RECEIPT_GMAIL_STATE_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
 import PendingReceiptsListBody from "@/app/features/receipts/PendingReceiptsListBody";
 import PendingReceiptsSkeleton from "@/app/features/receipts/PendingReceiptsSkeleton";
 
 export default function PendingReceipts() {
-  const { data, error, isFetching, refetch } = useGetPendingReceiptsQuery();
-  const receipts = data?.items ?? [];
-  const pendingCount = data?.pending_count ?? 0;
-  const gmailState = data?.gmail_state ?? "ready";
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: receipts.length,
-  });
+  const pages = usePendingReceiptsPages();
+  const { mode, rows } = pagedListView(pages, pages.receipts);
+  const { gmailState } = pages;
 
   if (mode === "loading") {
     return <PendingReceiptsSkeleton />;
@@ -29,15 +24,13 @@ export default function PendingReceipts() {
       <SectionHeader
         title="Pending Receipts"
         subtitle={
-          pendingCount > 0
-            ? receiptsWaitingLine(pendingCount)
+          pages.total > 0
+            ? receiptsWaitingLine(pages.total)
             : "Rent receipts that have been auto-queued from attributed payments."
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="Couldn't load pending receipts." isRetrying={isFetching} onRetry={() => void refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="pending receipts" />
 
       {gmailState !== "ready" && (
         <AlertBox variant="warning">
@@ -50,7 +43,11 @@ export default function PendingReceipts() {
         </AlertBox>
       )}
 
-      <PendingReceiptsListBody mode={mode} receipts={receipts} canSend={gmailState === "ready"} />
+      <PendingReceiptsListBody mode={mode} receipts={rows} canSend={gmailState === "ready"} />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
     </div>
   );
 }

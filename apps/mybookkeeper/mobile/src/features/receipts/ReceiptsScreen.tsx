@@ -1,31 +1,31 @@
-import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { usePendingReceiptsPages } from "@mybookkeeper/api-client/hooks/usePendingReceiptsPages";
 import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
-import { RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReceiptGmailBanner from "./ReceiptGmailBanner";
 import { receiptsWaitingLine } from "@mybookkeeper/api-client/utils/receiptsWaitingLine";
-import { moreWaitingLine } from "./receiptDisplay";
 import ReceiptRow from "./ReceiptRow";
-import ReceiptsSkeleton from "./ReceiptsSkeleton";
+import ReceiptsSkeleton, { ReceiptSkeletonRow } from "./ReceiptsSkeleton";
 
 export default function ReceiptsScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
-  const { currentData, error, isFetching, refetch } = useGetPendingReceiptsQuery({ limit: RECEIPTS_LIMIT });
-  const { refresh, refreshControl } = useRefresh(async () => {
-    await refetch();
-  }, error);
-  const rows = currentData?.items ?? [];
-  const waiting = (currentData?.pending_count ?? 0) - rows.length;
-  const gmailState = currentData?.gmail_state ?? "ready";
+  const list = usePendingReceiptsPages();
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.receipts : [];
+  const { gmailState } = list;
 
   // A failed load, or rows cleared while more wait on the server, isn't caught up. A failed refresh keeps
   // the last answer but says so in the header.
-  const isCaughtUp = currentData !== undefined && currentData.pending_count === 0;
+  const isCaughtUp = isCurrent && list.total === 0;
   const emptyList = isCaughtUp ? (
     <EmptyState body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
-  ) : isFetching ? (
+  ) : list.isFetching ? (
     <ReceiptsSkeleton />
   ) : (
     <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />
@@ -35,19 +35,23 @@ export default function ReceiptsScreen() {
     <FlatList
       ListEmptyComponent={emptyList}
       ListFooterComponent={
-        rows.length > 0 && waiting > 0 ? (
-          <Text style={{ padding: spacing.lg, fontSize: fontSize.sm, color: colors.mutedForeground }}>{moreWaitingLine(waiting)}</Text>
-        ) : undefined
+        <PagedListFooter
+          isLoadingMore={list.isFetchingNextPage}
+          loadMoreFailed={list.isLoadMoreError}
+          loadingLabel={MESSAGES.loadingMore}
+          onRetry={list.loadMore}
+          skeletonRow={<ReceiptSkeletonRow />}
+        />
       }
       ListHeaderComponent={
-        rows.length > 0 || (error && currentData) ? (
+        rows.length > 0 || (list.error && isCurrent) ? (
           <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <StaleDataBanner isShown={Boolean(error)} />
+            <StaleDataBanner isShown={Boolean(list.error) && !list.isLoadMoreError} />
             {rows.length > 0 ? (
               <>
                 {canWrite ? <ReceiptGmailBanner state={gmailState} /> : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
                 <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-                  {receiptsWaitingLine(currentData?.pending_count ?? rows.length)}
+                  {receiptsWaitingLine(list.total)}
                 </Text>
               </>
             ) : null}
@@ -57,6 +61,10 @@ export default function ReceiptsScreen() {
       contentInsetAdjustmentBehavior="automatic"
       data={rows}
       keyExtractor={(item) => item.id}
+      onEndReached={() => {
+        if (canLoadMore(list)) list.loadMore();
+      }}
+      onEndReachedThreshold={0.5}
       refreshControl={refreshControl}
       renderItem={({ item }) => <ReceiptRow canSend={gmailState === "ready"} canWrite={canWrite} receipt={item} />}
       testID="receipts-list"

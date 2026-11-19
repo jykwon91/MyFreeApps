@@ -15,6 +15,7 @@ from app.schemas.leases.receipt_period_rules import (
     RECEIPT_PERIOD_ORDER_MESSAGE,
     receipt_period_in_order,
 )
+from app.schemas.leases.pending_receipt_lookup_response import PendingReceiptLookupResponse
 from app.schemas.leases.receipt_request import SendReceiptRequest
 from app.schemas.leases.receipt_response import (
     PendingReceiptListResponse,
@@ -64,6 +65,22 @@ async def list_pending_receipts(
         user_id=ctx.user_id,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get(
+    "/rent-receipts/pending/{transaction_id}",
+    response_model=PendingReceiptLookupResponse,
+)
+async def get_pending_receipt(
+    transaction_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> PendingReceiptLookupResponse:
+    """One payment's open receipt, however far down the list it is. ``item`` is null once it isn't open."""
+    return await receipt_service.get_pending_receipt(
+        transaction_id=transaction_id,
+        organization_id=ctx.organization_id,
+        user_id=ctx.user_id,
     )
 
 

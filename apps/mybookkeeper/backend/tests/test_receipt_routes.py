@@ -5,6 +5,7 @@ and patches service calls — no real DB or Gmail connection required.
 
 Covers:
 - GET /rent-receipts/pending — enriched items, total, Gmail state, empty list.
+- GET /rent-receipts/pending/{transaction_id} — one open receipt, or null once it isn't open.
 - POST /rent-receipts/{transaction_id}/send — happy path, 404, 422 (not attributed),
   422 (teammate's tenant), 422 (no email), 422 (no integration), 503 (gmail_reauth_required), 502 (send error).
 - POST /rent-receipts/{transaction_id}/dismiss — happy path, 404, 422 (already sent), 409 (mid-send).
@@ -24,6 +25,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
+from app.schemas.leases.pending_receipt_lookup_response import PendingReceiptLookupResponse
 from app.schemas.leases.receipt_response import (
     PendingReceiptListResponse,
     PendingReceiptResponse,
@@ -97,6 +99,7 @@ class TestListPendingReceipts:
         listing = PendingReceiptListResponse(
             items=[_pending_receipt()],
             total=3,
+            has_more=False,
             pending_count=3,
             gmail_state="needs_send_permission",
         )
@@ -110,6 +113,7 @@ class TestListPendingReceipts:
         assert resp.status_code == 200
         body = resp.json()
         assert body["total"] == 3
+        assert body["has_more"] is False
         assert body["pending_count"] == 3
         assert body["gmail_state"] == "needs_send_permission"
         item = body["items"][0]
@@ -127,7 +131,7 @@ class TestListPendingReceipts:
             "app.services.leases.receipt_service.get_pending_receipt_list",
             new_callable=AsyncMock,
             return_value=PendingReceiptListResponse(
-                items=[], total=0, pending_count=0, gmail_state="ready",
+                items=[], total=0, has_more=False, pending_count=0, gmail_state="ready",
             ),
         ):
             resp = client.get("/rent-receipts/pending")
@@ -140,6 +144,46 @@ class TestListPendingReceipts:
 
     def test_requires_auth(self, client) -> None:
         resp = client.get("/rent-receipts/pending")
+        assert resp.status_code in (401, 422)
+
+
+class TestGetPendingReceipt:
+    def test_returns_the_receipt_and_gmail_state(
+        self, client, override_ctx, org_id, user_id,
+    ) -> None:
+        transaction_id = uuid.uuid4()
+        lookup = PendingReceiptLookupResponse(
+            item=_pending_receipt(transaction_id), gmail_state="needs_reconnect",
+        )
+        with patch(
+            "app.services.leases.receipt_service.get_pending_receipt",
+            new_callable=AsyncMock,
+            return_value=lookup,
+        ) as get_mock:
+            resp = client.get(f"/rent-receipts/pending/{transaction_id}")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["item"]["transaction_id"] == str(transaction_id)
+        assert body["item"]["tenant_name"] == "Maria Lopez"
+        assert body["gmail_state"] == "needs_reconnect"
+        get_mock.assert_awaited_once_with(
+            transaction_id=transaction_id, organization_id=org_id, user_id=user_id,
+        )
+
+    def test_returns_null_item_once_it_isnt_open(self, client, override_ctx) -> None:
+        with patch(
+            "app.services.leases.receipt_service.get_pending_receipt",
+            new_callable=AsyncMock,
+            return_value=PendingReceiptLookupResponse(item=None, gmail_state="ready"),
+        ):
+            resp = client.get(f"/rent-receipts/pending/{uuid.uuid4()}")
+
+        assert resp.status_code == 200
+        assert resp.json() == {"item": None, "gmail_state": "ready"}
+
+    def test_requires_auth(self, client) -> None:
+        resp = client.get(f"/rent-receipts/pending/{uuid.uuid4()}")
         assert resp.status_code in (401, 422)
 
 

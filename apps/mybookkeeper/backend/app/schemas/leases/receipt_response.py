@@ -42,5 +42,6 @@ class PendingReceiptResponse(BaseModel):
 class PendingReceiptListResponse(BaseModel):
     items: list[PendingReceiptResponse]
     total: int
+    has_more: bool
     pending_count: int
     gmail_state: ReceiptGmailState

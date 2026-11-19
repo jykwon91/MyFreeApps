@@ -11,12 +11,12 @@ import { Alert } from "react-native";
 import { openAuthSessionAsync } from "expo-web-browser";
 import { Provider } from "react-redux";
 import { GMAIL_CONNECT_MESSAGES, GMAIL_CONNECT_RETURN_URL } from "../src/constants/gmailConnect";
-import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { PENDING_RECEIPT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/receiptPaging";
+import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import {
   blockerMessage,
   dismissActionLabel,
   gmailMessage,
-  moreWaitingLine,
   periodLabel,
   reviewActionLabel,
   rowLabel,
@@ -26,7 +26,7 @@ import { usePendingReceiptActions } from "../src/features/receipts/usePendingRec
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
-import { aReceipt, startReceiptServer } from "../test-support/receiptsServer";
+import { aReceipt, cachedReceiptPages, startReceiptServer } from "../test-support/receiptsServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
@@ -46,9 +46,26 @@ function Screen({ children }: { children: ReactNode }) {
 async function showScreen() {
   await render(<ReceiptsScreen />, { wrapper: Screen });
   await act(async () => {
-    await store.dispatch(rentReceiptsApi.endpoints.getPendingReceipts.initiate({ limit: RECEIPTS_LIMIT }, { forceRefetch: true }));
+    // Joins the screen's own first load, so the test waits for its answer.
+    await store.dispatch(rentReceiptsApi.endpoints.listPendingReceiptPages.initiate());
   });
   await waitFor(() => expect(screen.queryByTestId("receipts-skeleton")).toBeNull());
+}
+
+function manyReceipts(count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    aReceipt({ id: `pr${index + 1}`, transaction_id: `tx${index + 1}`, tenant_name: `Tenant ${index + 1}`, payer_name: null }),
+  );
+}
+
+function listedRows(): unknown[] {
+  return screen.getByTestId("receipts-list").props.data as unknown[];
+}
+
+async function reachEnd() {
+  await act(async () => {
+    await screen.getByTestId("receipts-list").props.onEndReached();
+  });
 }
 
 async function settle() {
@@ -140,11 +157,11 @@ describe("what the list shows", () => {
     expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
   });
 
-  it("asks for every open receipt in one load, so a deep link can find its row", async () => {
+  it("asks for the first page by offset, never for more than the server answers", async () => {
     const server = startReceiptServer([aReceipt()]);
     await showScreen();
 
-    expect(server.listReads[0].params).toEqual({ limit: RECEIPTS_LIMIT });
+    expect(server.listReads.map((read) => read.params)).toEqual([{ limit: PENDING_RECEIPT_PAGE_SIZE, offset: 0 }]);
   });
 
   it("shows the tenant, amount, period, date and count", async () => {
@@ -167,13 +184,69 @@ describe("what the list shows", () => {
     expect(screen.getByText(MESSAGES.unnamed)).toBeTruthy();
   });
 
-  it("says how many more are waiting past the ones it loaded", async () => {
-    const server = startReceiptServer([aReceipt()]);
-    server.pendingCount = 4;
+  it("counts every open receipt, and loads the rest a page at a time as the list reaches its end", async () => {
+    const count = PENDING_RECEIPT_PAGE_SIZE * 2 + 5;
+    const server = startReceiptServer(manyReceipts(count));
     await showScreen();
 
-    expect(screen.getByText("4 receipts waiting to send")).toBeTruthy();
-    expect(screen.getByText(moreWaitingLine(3))).toBeTruthy();
+    expect(screen.getByText(`${count} receipts waiting to send`)).toBeTruthy();
+    expect(listedRows()).toHaveLength(PENDING_RECEIPT_PAGE_SIZE);
+    for (let loaded = PENDING_RECEIPT_PAGE_SIZE; loaded < count; loaded += PENDING_RECEIPT_PAGE_SIZE) {
+      await reachEnd();
+      await waitFor(() => expect(listedRows()).toHaveLength(Math.min(loaded + PENDING_RECEIPT_PAGE_SIZE, count)));
+    }
+
+    expect(server.listReads.map((read) => (read.params as { offset: number }).offset)).toEqual([0, 25, 50]);
+    expect(screen.queryByText("I couldn't load more.")).toBeNull();
+  });
+
+  it("lists a receipt from the second page once it loads", async () => {
+    startReceiptServer(manyReceipts(PENDING_RECEIPT_PAGE_SIZE + 3));
+    await showScreen();
+    const onSecondPage = `tx${PENDING_RECEIPT_PAGE_SIZE + 2}`;
+    expect(listedRows().map((row) => (row as { transaction_id: string }).transaction_id)).not.toContain(onSecondPage);
+
+    await reachEnd();
+
+    await waitFor(() => expect(listedRows().map((row) => (row as { transaction_id: string }).transaction_id)).toContain(onSecondPage));
+  });
+
+  it("keeps its receipts when the next page fails, and Try again loads it", async () => {
+    const server = startReceiptServer(manyReceipts(PENDING_RECEIPT_PAGE_SIZE + 3));
+    await showScreen();
+    server.listStatus = 500;
+    await reachEnd();
+
+    expect(await screen.findByText("I couldn't load more.")).toBeTruthy();
+    expect(listedRows()).toHaveLength(PENDING_RECEIPT_PAGE_SIZE);
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+
+    server.listStatus = null;
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
+    await waitFor(() => expect(listedRows()).toHaveLength(PENDING_RECEIPT_PAGE_SIZE + 3));
+    expect(screen.queryByText("I couldn't load more.")).toBeNull();
+  });
+
+  it("takes a dismissed receipt on the second page off the loaded pages and their count, even when the reload fails", async () => {
+    const server = startReceiptServer(manyReceipts(PENDING_RECEIPT_PAGE_SIZE + 3));
+    await showScreen();
+    await reachEnd();
+    await waitFor(() => expect(listedRows()).toHaveLength(PENDING_RECEIPT_PAGE_SIZE + 3));
+    server.listStatus = 500;
+
+    const target = aReceipt({ transaction_id: `tx${PENDING_RECEIPT_PAGE_SIZE + 2}`, tenant_name: `Tenant ${PENDING_RECEIPT_PAGE_SIZE + 2}`, payer_name: null });
+    // The list only draws the rows near the top, so the dismiss runs through the row's own hook.
+    const { result } = await renderHook(() => usePendingReceiptActions(target), { wrapper: Screen });
+    await act(async () => {
+      await result.current.dismiss();
+    });
+
+    // The reload after it failed, so this is the dropped row alone.
+    const pages = cachedReceiptPages(store.getState());
+    const kept = pages.flatMap((page) => page.items.map((item) => item.transaction_id));
+    expect(kept).toHaveLength(PENDING_RECEIPT_PAGE_SIZE + 2);
+    expect(kept).not.toContain(target.transaction_id);
+    expect(pages.map((page) => page.total)).toEqual([PENDING_RECEIPT_PAGE_SIZE + 2, PENDING_RECEIPT_PAGE_SIZE + 2]);
   });
 
   it("opens the send screen for that payment", async () => {

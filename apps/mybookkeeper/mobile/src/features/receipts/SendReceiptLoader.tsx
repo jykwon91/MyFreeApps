@@ -1,22 +1,22 @@
-import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { useGetPendingReceiptQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { EmptyState, goBackOr } from "@platform/mobile";
 import { usePreventRemove } from "expo-router";
 import { useEffect } from "react";
-import { RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import SendReceiptForm from "./SendReceiptForm";
 import SendReceiptSkeleton from "./SendReceiptSkeleton";
 import { useReceiptPreview } from "./useReceiptPreview";
 import { useSendReceipt } from "./useSendReceipt";
 
 export default function SendReceiptLoader({ transactionId }: { transactionId: string }) {
-  // The same list the Receipts screen loads, so its rows open with nothing to wait for.
-  const { currentData, isFetching, refetch } = useGetPendingReceiptsQuery({ limit: RECEIPTS_LIMIT });
+  // Looked up by its payment, so a receipt opens wherever it sits in the list.
+  const { currentData, isFetching, refetch } = useGetPendingReceiptQuery(transactionId);
   const { isSending, failure, finished, askToSend } = useSendReceipt(async () => {
     try {
       const latest = await refetch();
       return latest.isError ? null : (latest.data ?? null);
     } catch {
-      // Refetching throws once the screen has gone, and then there's no list either.
+      // Refetching throws once the screen has gone, and then there's no answer either.
       return null;
     }
   });
@@ -35,7 +35,7 @@ export default function SendReceiptLoader({ transactionId }: { transactionId: st
     if (isFetching) return <SendReceiptSkeleton />;
     return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;
   }
-  const receipt = finished ?? currentData.items.find((item) => item.transaction_id === transactionId);
+  const receipt = finished ?? currentData.item;
   if (!receipt) return <EmptyState action={goBack} body={MESSAGES.notWaitingBody} heading={MESSAGES.notWaitingHeading} />;
 
   return (

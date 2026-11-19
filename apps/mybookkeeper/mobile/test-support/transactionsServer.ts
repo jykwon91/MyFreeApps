@@ -192,7 +192,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       return respond({ items: [], pending_count: server.pendingPayments });
     }
     if (config.url === "/rent-receipts/pending") {
-      return respond({ items: [], total: server.pendingReceipts, pending_count: server.pendingReceipts, gmail_state: "ready" });
+      return respond({ items: [], total: server.pendingReceipts, has_more: false, pending_count: server.pendingReceipts, gmail_state: "ready" });
     }
     if (config.url?.startsWith("/summary")) {
       return server.failSummary ? respond({ detail: "nope" }, 500) : respond({ ...EMPTY_SUMMARY, ...server.summary });

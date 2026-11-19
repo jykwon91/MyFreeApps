@@ -1,8 +1,6 @@
 import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
 import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/receipt-send-blocker";
 
-/** One load covers every open receipt the server will return, so a deep link finds its row. */
-export const RECEIPTS_LIMIT = 500;
 export const RECEIPTS_SKELETON_ROWS = ["a", "b", "c"];
 /** The first option in the payment method sheet. The send endpoint takes it as no method. */
 export const NO_PAYMENT_METHOD = "";
@@ -17,6 +15,7 @@ export const BLOCKER_FIX_ON_PHONE: Readonly<Partial<Record<ReceiptSendBlocker, s
 
 export const RECEIPTS_MESSAGES = {
   loading: "Loading your rent receipts",
+  loadingMore: "Loading more receipts",
   loadingReceipt: "Loading this receipt",
   couldntLoad: "I couldn't load your rent receipts.",
   checkConnection: "Check your connection and try again.",
