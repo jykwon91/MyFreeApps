@@ -43,3 +43,17 @@ describe("TransactionRow text size", () => {
     expect(screen.getByRole("button").props.accessibilityLabel).toBe(label);
   });
 });
+
+describe("TransactionRow capital improvement badge", () => {
+  it("shows the label, and says it to a screen reader, only for a row marked as a capital improvement", async () => {
+    await render(<TransactionRow onPress={() => {}} propertyName={null} transaction={aTransaction({ is_capital_improvement: true })} />);
+    expect(screen.getByText("Capital improvement")).toBeTruthy();
+    expect(screen.getByRole("button").props.accessibilityLabel).toContain("capital improvement");
+  });
+
+  it("shows nothing extra for an ordinary row", async () => {
+    await render(<TransactionRow onPress={() => {}} propertyName={null} transaction={aTransaction()} />);
+    expect(screen.queryByText("Capital improvement")).toBeNull();
+    expect(screen.queryByTestId("chip")).toBeNull();
+  });
+});

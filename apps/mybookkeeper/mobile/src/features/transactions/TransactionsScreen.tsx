@@ -26,6 +26,7 @@ import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, clearedFilters, isSorted, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
+import { useBulkCapitalImprovement } from "./useBulkCapitalImprovement";
 import { useBulkDeleteTransactions } from "./useBulkDeleteTransactions";
 import { useShareTransactionExport } from "./useShareTransactionExport";
 import { useTransactionSelection } from "./useTransactionSelection";
@@ -50,6 +51,7 @@ export default function TransactionsScreen({
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const bulk = useBulkApprove();
+  const bulkCapital = useBulkCapitalImprovement();
   const bulkDelete = useBulkDeleteTransactions(settleSelection);
 
   const params = useMemo(() => toListParams(filters, today), [filters, today]);
@@ -120,6 +122,11 @@ export default function TransactionsScreen({
 
   async function approveSelected(): Promise<void> {
     settleSelection(approvableIds, await bulk.approve(approvableIds));
+  }
+
+  async function markSelected(isMarking: boolean): Promise<void> {
+    const run = isMarking ? bulkCapital.mark : bulkCapital.unmark;
+    settleSelection(selectedIds, await run(selectedIds));
   }
 
   async function loadMore(): Promise<void> {
@@ -293,7 +300,11 @@ export default function TransactionsScreen({
           isApproving={bulk.isApproving}
           isChecking={selection.isChecking}
           isDeleting={bulkDelete.isDeleting}
+          isMarking={bulkCapital.isMarking}
+          isUnmarking={bulkCapital.isUnmarking}
           onApprove={approveSelected}
+          onMarkCapital={() => markSelected(true)}
+          onUnmarkCapital={() => markSelected(false)}
           onDelete={() => bulkDelete.askToDelete(selectedIds)}
           onCancel={selection.cancel}
           selectedCount={selectedIds.length}

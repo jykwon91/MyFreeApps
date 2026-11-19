@@ -1,13 +1,12 @@
 import { CheckCircle, Hammer, Loader2, Trash2 } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
 import {
-  CHECKING_SELECTION_LABEL,
   MARK_CAPITAL_IMPROVEMENT,
   MARKING_CAPITAL_IMPROVEMENT,
-  RANGE_SELECT_HINT,
   UNMARK_CAPITAL_IMPROVEMENT,
   UNMARKING_CAPITAL_IMPROVEMENT,
-} from "@/shared/lib/transaction-list-messages";
+} from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
+import { CHECKING_SELECTION_LABEL, RANGE_SELECT_HINT } from "@/shared/lib/transaction-list-messages";
 
 export interface TransactionBulkBarProps {
   selectedCount: number;

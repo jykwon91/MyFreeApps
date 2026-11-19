@@ -7,7 +7,7 @@ import {
   CAPITAL_IMPROVEMENT_LABEL,
   MARK_CAPITAL_IMPROVEMENT,
   UNMARK_CAPITAL_IMPROVEMENT,
-} from "@/shared/lib/transaction-list-messages";
+} from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
 
 vi.mock("@/shared/utils/download", () => ({ downloadFile: vi.fn() }));
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
