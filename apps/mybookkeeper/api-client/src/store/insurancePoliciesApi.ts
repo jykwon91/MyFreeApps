@@ -1,12 +1,13 @@
 import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
+import { INSURANCE_POLICY_PAGE_SIZE } from "../constants/insurancePolicyPaging";
 import { INSURANCE_UPLOAD_TIMEOUT_MS } from "../constants/insuranceUploads";
 import type { InsurancePolicyAttachment } from "../types/insurance/insurance-policy-attachment";
 import type { InsurancePolicyCreateRequest } from "../types/insurance/insurance-policy-create-request";
 import type { InsurancePolicyDetail } from "../types/insurance/insurance-policy-detail";
 import type { InsurancePolicyDraft } from "../types/insurance/insurance-policy-draft";
-import type { InsurancePolicyListArgs } from "../types/insurance/insurance-policy-list-args";
 import type { InsurancePolicyListResponse } from "../types/insurance/insurance-policy-list-response";
+import type { InsurancePolicyPageArgs } from "../types/insurance/insurance-policy-page-args";
 import type { InsurancePolicyUpdateRequest } from "../types/insurance/insurance-policy-update-request";
 import type { InsurancePremiumComparison } from "../types/insurance/insurance-premium-comparison";
 import { localToday } from "@platform/core/utils/localToday";
@@ -15,23 +16,20 @@ export const insurancePoliciesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["InsurancePolicy", "Document"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getInsurancePolicies: builder.query<InsurancePolicyListResponse, InsurancePolicyListArgs | void>({
-      query: (args) => ({
+    listInsurancePolicyPages: builder.infiniteQuery<InsurancePolicyListResponse, InsurancePolicyPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + INSURANCE_POLICY_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
         url: "/insurance-policies",
-        params: {
-          ...(args?.property_id ? { property_id: args.property_id } : {}),
-          ...(args?.expiring_before ? { expiring_before: args.expiring_before } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
+        params: { ...queryArg, limit: INSURANCE_POLICY_PAGE_SIZE, offset: pageParam },
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((policy) => ({ type: "InsurancePolicy" as const, id: policy.id })),
-              { type: "InsurancePolicy" as const, id: "LIST" },
-            ]
-          : [{ type: "InsurancePolicy" as const, id: "LIST" }],
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((policy) => ({ type: "InsurancePolicy" as const, id: policy.id })) ?? []),
+        { type: "InsurancePolicy" as const, id: "LIST" },
+      ],
     }),
     getInsurancePolicyById: builder.query<InsurancePolicyDetail, string>({
       query: (id) => ({ url: `/insurance-policies/${id}` }),
@@ -119,7 +117,7 @@ export const insurancePoliciesApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetInsurancePoliciesQuery,
+  useListInsurancePolicyPagesInfiniteQuery,
   useGetInsurancePolicyByIdQuery,
   useGetInsurancePremiumComparisonQuery,
   useLazyGetInsurancePolicyByIdQuery,

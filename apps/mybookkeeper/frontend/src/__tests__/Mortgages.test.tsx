@@ -15,6 +15,7 @@ import { store } from "@/shared/store";
 import Mortgages from "@/app/pages/Mortgages";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import { queryStatus } from "@/test/rtk-query-status";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
 const mockRefetch = vi.fn();
 let mockIsLoading = false;
@@ -23,11 +24,13 @@ let mockIsFetching = false;
 let mockMortgages: Mortgage[] = [];
 
 vi.mock("@mybookkeeper/api-client/store/mortgagesApi", () => ({
-  useGetMortgagesQuery: vi.fn(() => ({
+  useListMortgagePagesInfiniteQuery: vi.fn(() => ({
     // RTK has no data while a first load runs or after it failed.
-    data: mockIsLoading || mockIsError ? undefined : { items: mockMortgages, total: mockMortgages.length, has_more: false },
+    ...infiniteQueryData(mockIsLoading || mockIsError ? undefined : { items: mockMortgages, total: mockMortgages.length, has_more: false }),
     isLoading: mockIsLoading,
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     refetch: mockRefetch,
   })),
   useCreateMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

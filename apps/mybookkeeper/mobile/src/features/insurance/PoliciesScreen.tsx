@@ -1,37 +1,38 @@
-import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
+import { useInsurancePoliciesPages } from "@mybookkeeper/api-client/hooks/useInsurancePoliciesPages";
 import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
-import { EXPIRING_FILTER_DAYS, INSURANCE_MESSAGES, POLICY_LIST_LIMIT } from "../../constants/insurance";
+import { FlatList } from "react-native";
+import { EXPIRING_FILTER_DAYS, INSURANCE_MESSAGES } from "../../constants/insurance";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import { addDays } from "../../lib/localDate";
 import { useTodayIso } from "../../lib/useTodayIso";
 import type { PolicyFilter } from "../../types/PolicyFilter";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import PoliciesFilterSheet from "./PoliciesFilterSheet";
 import PoliciesHeader from "./PoliciesHeader";
+import PolicySkeletonRow from "./PolicySkeletonRow";
 import PoliciesSkeleton from "./PoliciesSkeleton";
 import { sortedPolicies } from "./policyDisplay";
 import PolicyRow from "./PolicyRow";
 
 export default function PoliciesScreen() {
-  const { colors, spacing, fontSize } = useTheme();
+  const { spacing } = useTheme();
   const canWrite = useCanWrite();
   const todayIso = useTodayIso();
   const [filter, setFilter] = useState<PolicyFilter>("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const { currentData, error, isFetching, refetch } = useGetInsurancePoliciesQuery({
-    limit: POLICY_LIST_LIMIT,
-    ...(filter === "expiring" ? { expiring_before: addDays(todayIso, EXPIRING_FILTER_DAYS) } : {}),
-  });
-  const { refresh, refreshControl } = useRefresh(async () => {
-    await refetch();
-  }, error);
-  const rows = useMemo(() => sortedPolicies(currentData?.items ?? [], todayIso), [currentData, todayIso]);
+  const args = useMemo(() => (filter === "expiring" ? { expiring_before: addDays(todayIso, EXPIRING_FILTER_DAYS) } : {}), [filter, todayIso]);
+  const list = useInsurancePoliciesPages(args);
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = useMemo(() => sortedPolicies(isCurrent ? list.policies : [], todayIso), [isCurrent, list.policies, todayIso]);
 
-  const emptyList = !currentData && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <PoliciesSkeleton />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState action={{ label: INSURANCE_MESSAGES.tryAgain, onPress: refresh }} body={INSURANCE_MESSAGES.tryAgainOffer} heading={INSURANCE_MESSAGES.couldntLoadList} />
   ) : filter === "expiring" ? (
     <EmptyState action={{ label: INSURANCE_MESSAGES.showAll, onPress: () => setFilter("all") }} body={INSURANCE_MESSAGES.noneExpiring} heading={INSURANCE_MESSAGES.noneExpiringHeading} />
@@ -48,21 +49,30 @@ export default function PoliciesScreen() {
       <FlatList
         ListEmptyComponent={emptyList}
         ListFooterComponent={
-          currentData?.has_more ? (
-            <View style={{ padding: spacing.lg }}>
-              <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{INSURANCE_MESSAGES.moreThanShown}</Text>
-            </View>
-          ) : undefined
+          <PagedListFooter
+            isLoadingMore={list.isFetchingNextPage}
+            loadMoreFailed={list.isLoadMoreError}
+            loadingLabel={INSURANCE_MESSAGES.loadingMore}
+            onRetry={list.loadMore}
+            skeletonRow={<PolicySkeletonRow />}
+          />
         }
         ListHeaderComponent={
           <>
             <PoliciesHeader canWrite={canWrite} filter={filter} onOpenFilter={() => setIsFilterOpen(true)} />
-            <StaleDataBanner isShown={Boolean(error) && rows.length > 0} style={{ marginHorizontal: spacing.lg, marginBottom: spacing.md }} />
+            <StaleDataBanner
+              isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)}
+              style={{ marginHorizontal: spacing.lg, marginBottom: spacing.md }}
+            />
           </>
         }
         contentInsetAdjustmentBehavior="automatic"
         data={rows}
         keyExtractor={(policy) => policy.id}
+        onEndReached={() => {
+          if (canLoadMore(list)) list.loadMore();
+        }}
+        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         renderItem={({ item }) => <PolicyRow onPress={() => router.push(`/insurance/${item.id}`)} policy={item} todayIso={todayIso} />}
         testID="policies-list"

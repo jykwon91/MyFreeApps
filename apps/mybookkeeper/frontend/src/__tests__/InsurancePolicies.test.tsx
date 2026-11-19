@@ -18,7 +18,7 @@ import { store } from "@/shared/store";
 import InsurancePolicies from "@/app/pages/InsurancePolicies";
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import { queryStatus } from "@/test/rtk-query-status";
-import { queryData } from "@/test/rtk-query-data";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -29,11 +29,13 @@ let mockIsFetching = false;
 let mockPolicies: InsurancePolicySummary[] = [];
 
 vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
-  useGetInsurancePoliciesQuery: vi.fn(() => ({
+  useListInsurancePolicyPagesInfiniteQuery: vi.fn(() => ({
     // RTK has no data while a first load runs or after it failed.
-    ...queryData(mockIsLoading || mockIsError ? undefined : { items: mockPolicies, total: mockPolicies.length, has_more: false }),
+    ...infiniteQueryData(mockIsLoading || mockIsError ? undefined : { items: mockPolicies, total: mockPolicies.length, has_more: false }),
     isLoading: mockIsLoading,
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     refetch: mockRefetch,
   })),
 }));

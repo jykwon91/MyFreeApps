@@ -14,6 +14,7 @@ import uuid
 from typing import Any
 
 from app.core.utility_plan_constants import (
+    ACTIONABLE_RENEWAL_STATUSES,
     EXPIRING_SOON_DAYS,
     RATE_TYPE_REGULATED,
     RENEWAL_STATUS_ACTIVE,
@@ -89,6 +90,12 @@ def current_plan_ids(plans: list[Any]) -> set[uuid.UUID]:
         if incumbent is None or _currency_sort_key(plan) > _currency_sort_key(incumbent):
             best[key] = plan
     return {plan.id for plan in best.values()}
+
+
+def needs_renewing(plan: Any, *, current_ids: set[uuid.UUID], today: _dt.date) -> bool:
+    """A current plan whose term has lapsed or ends within the window: the list's "needs renewing" filter."""
+    status = renewal_status(plan.rate_type, plan.term_end_date, today=today)
+    return plan.id in current_ids and status in ACTIONABLE_RENEWAL_STATUSES
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import UtilityPlanRow from "./UtilityPlanRow";
 
 export interface UtilityPlansListBodyProps {
   mode: ListLoadMode;
-  plans: UtilityPlanSummary[];
+  plans: readonly UtilityPlanSummary[];
   showExpiringOnly: boolean;
   deletingPlanId: string | null;
   onEdit: (plan: UtilityPlanSummary) => void;

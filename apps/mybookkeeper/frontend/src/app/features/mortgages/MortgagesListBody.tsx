@@ -8,7 +8,7 @@ import type { ListLoadMode } from "@/shared/types/list-load-mode";
 
 export interface MortgagesListBodyProps {
   mode: ListLoadMode;
-  mortgages: Mortgage[];
+  mortgages: readonly Mortgage[];
   onEdit: (mortgage: Mortgage) => void;
 }
 

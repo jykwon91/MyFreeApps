@@ -1,11 +1,11 @@
 import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
-export const POLICY_LIST_LIMIT = 100;
 /** How far ahead the "running out" filter looks — the same 30 days the website uses. */
 export const EXPIRING_FILTER_DAYS = 30;
 export const POLICY_SKELETON_ROWS = ["a", "b", "c", "d", "e"];
 
 export const INSURANCE_MESSAGES = {
   loadingList: "Loading your insurance policies",
+  loadingMore: "Loading more policies",
   loadingOne: "Loading this policy",
   couldntLoadList: "I couldn't load your insurance policies.",
   couldntLoadOne: "I couldn't load that policy.",
@@ -35,7 +35,6 @@ export const INSURANCE_MESSAGES = {
   filterTitle: "Which policies",
   filterAll: "All policies",
   filterExpiring: "Running out in 30 days",
-  moreThanShown: `I'm showing the first ${POLICY_LIST_LIMIT} policies. Use the filter to narrow the list.`,
   policyNumber: "Policy number",
   coverage: "Coverage",
   deductible: "Deductible",

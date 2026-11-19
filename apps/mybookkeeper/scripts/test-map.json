@@ -1126,6 +1126,7 @@
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
         "InsurancePolicies.test.tsx",
+        "FinanceListsLoadMore.test.tsx",
         "InsurancePolicyDetail.test.tsx",
         "insurance-policy-format.test.ts",
         "AddInsurancePolicyDialog.test.tsx",
@@ -1200,6 +1201,7 @@
       ],
       "frontend_tests": [
         "Mortgages.test.tsx",
+        "FinanceListsLoadMore.test.tsx",
         "EditMortgageDialog.test.tsx",
         "MortgageRateWatchSection.test.tsx",
         "PropertyOccupancyFixer.test.tsx",
@@ -1211,7 +1213,8 @@
       "e2e_specs": [
         "mortgages.spec.ts",
         "mocked/mortgage-rate-watch.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/finance-lists-load-more-mock.spec.ts"
       ]
     },
     "utility_plans": {
@@ -1321,6 +1324,7 @@
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
+        "FinanceListsLoadMore.test.tsx",
         "AddUtilityPlanDialog.test.tsx",
         "DocumentDraftNotices.test.tsx",
         "UtilityPlanDocumentReader.test.tsx",
@@ -1344,7 +1348,8 @@
         "utility-plan-comparison-layout.spec.ts",
         "mocked/utility-better-plans.spec.ts",
         "mocked/dashboard-cards-retry-mock.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/finance-lists-load-more-mock.spec.ts"
       ]
     },
     "welcome_manuals": {

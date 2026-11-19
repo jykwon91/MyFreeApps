@@ -6,7 +6,7 @@
  * - Error state with retry
  * - Empty states (all plans / needs-renewing filter active)
  * - Rows render provider, rate, term countdown and status badge
- * - The "needs renewing" filter keys off derived status, not the raw date
+ * - The "needs renewing" filter asks the server (which owns the derived status) for its plans
  * - Superseded plans stay listed but are marked as history
  * - Delete surfaces success and failure
  */
@@ -19,7 +19,10 @@ import { store } from "@/shared/store";
 import UtilityPlans from "@/app/pages/UtilityPlans";
 import { showError, showSuccess } from "@platform/ui";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import type { UtilityPlanPageArgs } from "@mybookkeeper/api-client/types/utility/utility-plan-page-args";
+import { useListUtilityPlanPagesInfiniteQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { queryStatus } from "@/test/rtk-query-status";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -29,15 +32,23 @@ let mockIsLoading = false;
 let mockIsError = false;
 let mockIsFetching = false;
 let mockPlans: UtilityPlanSummary[] = [];
+/** What the server answers for the "needs renewing" filter. */
+let mockRenewingPlans: UtilityPlanSummary[] = [];
 
 vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
-  useGetUtilityPlansQuery: vi.fn(() => ({
-    // RTK has no data while a first load runs or after it failed.
-    data: mockIsLoading || mockIsError ? undefined : { items: mockPlans, total: mockPlans.length, has_more: false },
-    isLoading: mockIsLoading,
-    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
-    refetch: mockRefetch,
-  })),
+  useListUtilityPlanPagesInfiniteQuery: vi.fn((args: UtilityPlanPageArgs) => {
+    const plans = args.needs_renewal ? mockRenewingPlans : mockPlans;
+    return {
+      // RTK has no data while a first load runs or after it failed.
+      ...infiniteQueryData(mockIsLoading || mockIsError ? undefined : { items: plans, total: plans.length, has_more: false }),
+      originalArgs: args,
+      isLoading: mockIsLoading,
+      ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: mockRefetch,
+    };
+  }),
   useGetUtilityPlanByIdQuery: vi.fn(() => ({
     data: undefined,
     isLoading: true,
@@ -119,6 +130,7 @@ beforeEach(() => {
   mockIsError = false;
   mockIsFetching = false;
   mockPlans = [];
+  mockRenewingPlans = [];
   mockDeleteUnwrap.mockResolvedValue(undefined);
 });
 
@@ -196,27 +208,21 @@ describe("UtilityPlans — rows", () => {
 });
 
 describe("UtilityPlans — needs-renewing filter", () => {
-  it("keeps only current plans whose derived status is actionable", async () => {
+  it("shows the plans the server says need renewing", async () => {
     const user = userEvent.setup();
     mockPlans = [
       makePlan({ id: "plan-expired" }),
-      makePlan({ id: "plan-soon", renewal_status: "expiring_soon", days_until_term_end: 12 }),
       makePlan({ id: "plan-active", renewal_status: "active", days_until_term_end: 300 }),
-      // Regulated gas has a provider monopoly — nothing to renew, so it must
-      // not be swept in even though it is current.
-      GAS_PLAN,
-      // Already superseded: its lapse is history, not an action.
-      makePlan({ id: "plan-old", is_current: false }),
     ];
+    mockRenewingPlans = [makePlan({ id: "plan-expired" })];
 
     renderPage();
+    expect(vi.mocked(useListUtilityPlanPagesInfiniteQuery)).toHaveBeenLastCalledWith({});
     await user.click(screen.getByTestId("utility-plans-expiring-toggle"));
 
+    expect(vi.mocked(useListUtilityPlanPagesInfiniteQuery)).toHaveBeenLastCalledWith({ needs_renewal: true });
     expect(screen.getByTestId("utility-plan-item-plan-expired")).toBeInTheDocument();
-    expect(screen.getByTestId("utility-plan-item-plan-soon")).toBeInTheDocument();
     expect(screen.queryByTestId("utility-plan-item-plan-active")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("utility-plan-item-plan-gas")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("utility-plan-item-plan-old")).not.toBeInTheDocument();
   });
 
   it("says nothing needs renewing when the filter empties the list", async () => {

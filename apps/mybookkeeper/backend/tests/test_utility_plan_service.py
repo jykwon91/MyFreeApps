@@ -601,6 +601,87 @@ class TestSweepPlansNeedingRenewal:
 
 
 @pytest.mark.asyncio
+class TestListNeedsRenewal:
+    """The list's "needs renewing" filter: current plans whose term lapsed or ends within the window, paged by the server."""
+
+    async def _seed(self, db: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        oak = await _make_property(db, org_id, user_id, "Oak St")
+        elm = await _make_property(db, org_id, user_id, "Elm St")
+        plans = [
+            # Superseded: expired, but no longer the plan in force.
+            (oak, SERVICE_TYPE_ELECTRICITY, "Old REP", RATE_TYPE_FIXED, _dt.date(2024, 1, 1), _dt.date(2025, 1, 1)),
+            # Current, ending within the window.
+            (oak, SERVICE_TYPE_ELECTRICITY, "Soon REP", RATE_TYPE_FIXED, _dt.date(2025, 9, 1), TODAY + _dt.timedelta(days=10)),
+            # Regulated: past on paper, nothing to renew.
+            (oak, SERVICE_TYPE_NATURAL_GAS, "CenterPoint", RATE_TYPE_REGULATED, None, _dt.date(2020, 1, 1)),
+            # Current, well outside the window.
+            (elm, SERVICE_TYPE_INTERNET, "Comcast", RATE_TYPE_FIXED, _dt.date(2026, 1, 1), TODAY + _dt.timedelta(days=EXPIRING_SOON_DAYS + 30)),
+            # Current and lapsed.
+            (elm, SERVICE_TYPE_ELECTRICITY, "Lapsed REP", RATE_TYPE_FIXED, _dt.date(2025, 1, 1), _dt.date(2026, 1, 1)),
+        ]
+        for prop, service, provider, rate_type, start, end in plans:
+            await utility_plan_repo.create(
+                db,
+                user_id=user_id,
+                organization_id=org_id,
+                property_id=prop.id,
+                service_type=service,
+                provider_name=provider,
+                rate_type=rate_type,
+                service_start_date=start,
+                term_end_date=end,
+            )
+        return org_id, user_id
+
+    async def test_keeps_only_current_plans_that_need_renewing(self, db: AsyncSession) -> None:
+        org_id, user_id = await self._seed(db)
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            narrowed = await utility_plan_service.list_plans(
+                user_id=user_id, organization_id=org_id, needs_renewal=True, today=TODAY,
+            )
+            everything = await utility_plan_service.list_plans(
+                user_id=user_id, organization_id=org_id, today=TODAY,
+            )
+
+        assert {p.provider_name for p in narrowed.items} == {"Soon REP", "Lapsed REP"}
+        assert narrowed.total == 2
+        assert narrowed.has_more is False
+        assert everything.total == 5
+
+    async def test_pages_the_narrowed_list(self, db: AsyncSession) -> None:
+        org_id, user_id = await self._seed(db)
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            first = await utility_plan_service.list_plans(
+                user_id=user_id, organization_id=org_id, needs_renewal=True, limit=1, today=TODAY,
+            )
+            second = await utility_plan_service.list_plans(
+                user_id=user_id, organization_id=org_id, needs_renewal=True, limit=1, offset=1, today=TODAY,
+            )
+
+        assert (first.total, first.has_more) == (2, True)
+        assert (second.total, second.has_more) == (2, False)
+        assert {first.items[0].provider_name, second.items[0].provider_name} == {"Soon REP", "Lapsed REP"}
+
+    async def test_combines_with_the_service_filter(self, db: AsyncSession) -> None:
+        org_id, user_id = await self._seed(db)
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            result = await utility_plan_service.list_plans(
+                user_id=user_id,
+                organization_id=org_id,
+                service_type=SERVICE_TYPE_INTERNET,
+                needs_renewal=True,
+                today=TODAY,
+            )
+
+        assert result.items == []
+        assert result.total == 0
+
+
+@pytest.mark.asyncio
 class TestUpdatePlan:
     async def test_patch_rejects_term_end_before_stored_start(
         self, db: AsyncSession,

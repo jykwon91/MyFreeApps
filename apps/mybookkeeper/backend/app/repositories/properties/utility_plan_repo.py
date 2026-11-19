@@ -41,7 +41,10 @@ def _apply_filters(
     property_id: uuid.UUID | None,
     service_type: str | None,
     expiring_before: _dt.date | None,
+    plan_ids: set[uuid.UUID] | None,
 ) -> Select:
+    if plan_ids is not None:
+        stmt = stmt.where(UtilityPlan.id.in_(plan_ids))
     if property_id is not None:
         stmt = stmt.where(UtilityPlan.property_id == property_id)
     if service_type is not None:
@@ -147,6 +150,7 @@ async def list_for_org(
     property_id: uuid.UUID | None = None,
     service_type: str | None = None,
     expiring_before: _dt.date | None = None,
+    plan_ids: set[uuid.UUID] | None = None,
     include_deleted: bool = False,
     limit: int = 50,
     offset: int = 0,
@@ -161,6 +165,7 @@ async def list_for_org(
         property_id=property_id,
         service_type=service_type,
         expiring_before=expiring_before,
+        plan_ids=plan_ids,
     )
     # Newest term first so the current plan for each property leads its group;
     # created_at breaks ties for rows entered without a start date.
@@ -184,6 +189,7 @@ async def count_for_org(
     property_id: uuid.UUID | None = None,
     service_type: str | None = None,
     expiring_before: _dt.date | None = None,
+    plan_ids: set[uuid.UUID] | None = None,
     include_deleted: bool = False,
 ) -> int:
     stmt = _apply_filters(
@@ -196,6 +202,7 @@ async def count_for_org(
         property_id=property_id,
         service_type=service_type,
         expiring_before=expiring_before,
+        plan_ids=plan_ids,
     )
     result = await db.execute(stmt)
     return int(result.scalar_one())

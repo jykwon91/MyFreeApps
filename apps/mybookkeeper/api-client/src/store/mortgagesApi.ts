@@ -1,10 +1,10 @@
 import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
+import { MORTGAGE_PAGE_SIZE } from "../constants/mortgagePaging";
 import { MORTGAGE_UPLOAD_TIMEOUT_MS } from "../constants/mortgageUpload";
 import type { Mortgage } from "../types/mortgage/mortgage";
 import type { MortgageCreateRequest } from "../types/mortgage/mortgage-create-request";
 import type { MortgageDraft } from "../types/mortgage/mortgage-draft";
-import type { MortgageListArgs } from "../types/mortgage/mortgage-list-args";
 import type { MortgageListResponse } from "../types/mortgage/mortgage-list-response";
 import type { MortgageUpdateRequest } from "../types/mortgage/mortgage-update-request";
 
@@ -21,22 +21,20 @@ export const mortgagesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Mortgage", "Document"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getMortgages: builder.query<MortgageListResponse, MortgageListArgs | void>({
-      query: (args) => ({
+    listMortgagePages: builder.infiniteQuery<MortgageListResponse, void, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + MORTGAGE_PAGE_SIZE : undefined,
+      },
+      query: ({ pageParam }) => ({
         url: "/mortgages",
-        params: {
-          ...(args?.property_id ? { property_id: args.property_id } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
+        params: { limit: MORTGAGE_PAGE_SIZE, offset: pageParam },
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((mortgage) => ({ type: "Mortgage" as const, id: mortgage.id })),
-              { type: "Mortgage" as const, id: "LIST" },
-            ]
-          : [{ type: "Mortgage" as const, id: "LIST" }],
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((mortgage) => ({ type: "Mortgage" as const, id: mortgage.id })) ?? []),
+        { type: "Mortgage" as const, id: "LIST" },
+      ],
     }),
     getMortgageById: builder.query<Mortgage, string>({
       query: (id) => ({ url: `/mortgages/${id}` }),
@@ -107,7 +105,7 @@ export const mortgagesApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetMortgagesQuery,
+  useListMortgagePagesInfiniteQuery,
   useGetMortgageByIdQuery,
   useCreateMortgageMutation,
   useUpdateMortgageMutation,
