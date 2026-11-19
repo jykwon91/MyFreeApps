@@ -1,4 +1,6 @@
 import { Button } from "@platform/ui";
+import type { DebouncedSearchParam } from "@/games/wow-forever/types/debouncedSearchParam";
+import ProfessionSearch from "@/games/wow-forever/components/professionTiers/ProfessionSearch";
 import ProfessionSortSelect from "@/games/wow-forever/components/professionTiers/ProfessionSortSelect";
 import ProfessionTierFilter from "@/games/wow-forever/components/professionTiers/ProfessionTierFilter";
 import WritsLocationSelect from "@/games/wow-forever/components/writs/WritsLocationSelect";
@@ -20,13 +22,15 @@ interface WritsFiltersProps {
   onFilters: (patch: Partial<WritFilters>) => void;
   onSort: (sort: WritSort) => void;
   onClear: () => void;
+  search: DebouncedSearchParam;
 }
 
 /** Tier, turn-in location, "Only deals", the phone's sort, and "Showing N of M" with a way to clear the filters. */
-export default function WritsFilters({ rows, locations, shown, filters, sort, onFilters, onSort, onClear }: WritsFiltersProps) {
-  const active = filters.tier !== null || filters.location !== null || filters.dealsOnly;
+export default function WritsFilters({ rows, locations, shown, filters, sort, onFilters, onSort, onClear, search }: WritsFiltersProps) {
+  const active = filters.tier !== null || filters.location !== null || filters.dealsOnly || filters.query !== "";
   return (
     <section aria-label="Filters" className="space-y-3">
+      <ProfessionSearch label="Search writs" placeholder="Writ or item name" testId="writs-search" text={search.text} onText={search.setText} />
       <ProfessionTierFilter
         tiers={WRIT_TIERS}
         labels={WRIT_TIER_LABEL}

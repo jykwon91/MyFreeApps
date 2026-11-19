@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-19",
+    "title": "Search the Crafting writs and Waylaid crates pages",
+    "summary": "Both pages now have a search box. On Crafting writs, type a writ or the item it asks for; on Waylaid crates, type a crate or a material (try Silk Cloth to find every crate it fills). Search works with the tier and location filters, and the link keeps it.",
+    "to": "/wow-forever/writs"
+  },
+  {
+    "date": "2026-11-19",
     "title": "Waylaid crates, cheapest first",
     "summary": "A new page lists every Waylaid Crate (Apprentice, Journeyman, Expert and Artisan) with what the crate costs on the auction house. A crate fills with any one of its bundles, so the page prices every bundle and picks the cheapest for you, with the total to complete the crate. Open a row to see all its bundles, and filter by tier.",
     "to": "/wow-forever/crates"

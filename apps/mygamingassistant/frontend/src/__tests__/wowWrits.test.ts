@@ -60,7 +60,7 @@ const PRICES = new Map<number, number>([
 
 const rows = buildWritRows(FILE, (id) => PRICES.get(id), "alliance");
 const byName = (name: string) => rows.find((r) => r.writ.name.endsWith(name));
-const NONE: WritFilters = { tier: null, location: null, dealsOnly: false };
+const NONE: WritFilters = { tier: null, location: null, dealsOnly: false, query: "" };
 const names = (list: typeof rows) => list.map((r) => r.writ.name.replace("Craftsman's Writ: ", ""));
 
 describe("buildWritRows", () => {
@@ -163,7 +163,7 @@ describe("filterWritRows and facets", () => {
     expect(names(filterWritRows(rows, { ...NONE, location: "Ironforge" }))).toEqual(["Bravo"]);
     expect(names(filterWritRows(rows, { ...NONE, location: "unknown" }))).toHaveLength(5);
     expect(names(filterWritRows(rows, { ...NONE, dealsOnly: true }))).toEqual(["Bravo", "Charlie", "Echo"]);
-    expect(names(filterWritRows(rows, { tier: "journeyman", location: null, dealsOnly: true }))).toEqual(["Bravo"]);
+    expect(names(filterWritRows(rows, { ...NONE, tier: "journeyman", dealsOnly: true }))).toEqual(["Bravo"]);
   });
 
   it("counts tiers with the other filters applied", () => {
@@ -184,6 +184,51 @@ describe("filterWritRows and facets", () => {
   });
 });
 
+describe("writ search", () => {
+  const search = (query: string, extra: Partial<WritFilters> = {}) => names(filterWritRows(rows, { ...NONE, ...extra, query }));
+
+  it("finds a writ by its name, with or without the prefix, in any case", () => {
+    expect(search("bravo")).toEqual(["Bravo"]);
+    expect(search("  CHARLIE ")).toEqual(["Charlie"]);
+    expect(search("craftsman's writ: echo")).toEqual(["Echo"]);
+    expect(search("nothing like this")).toEqual([]);
+  });
+
+  it("finds a writ by the item it asks for, matched or not", () => {
+    const itemRows = buildWritRows(
+      {
+        ...FILE,
+        writs: [
+          { ...writ(1, "Alpha", "journeyman", 101), productName: "Frost Oil", product: { id: 101, name: "Frost Oil" } },
+          { ...writ(2, "Bravo", "journeyman", null), productName: "Mystery Brew" },
+        ],
+      },
+      () => undefined,
+      "alliance",
+    );
+    const found = (q: string) => filterWritRows(itemRows, { ...NONE, query: q }).map((r) => r.writ.id);
+    expect(found("frost")).toEqual([1]);
+    expect(found("mystery brew")).toEqual([2]);
+    expect(found("writ")).toEqual([1, 2]);
+  });
+
+  it("combines with the other filters and the counts reflect it", () => {
+    expect(search("a", { tier: "expert" })).toEqual(["Charlie", "Delta"]);
+    expect(search("charlie", { tier: "artisan" })).toEqual([]);
+    expect(tierCounts(rows, { ...NONE, query: "o" })).toEqual({ all: 4, journeyman: 2, expert: 0, artisan: 2 });
+    expect(locationOptions(rows, { ...NONE, query: "bravo" }, knownLocations(FILE.turnIns)).map((o) => o.count)).toEqual([1, 0, 0, 0]);
+  });
+
+  it("round-trips through ?q=", () => {
+    const known = knownLocations(FILE.turnIns);
+    expect(writViewFromParams(new URLSearchParams("q=%20frost%20oil%20"), known).filters.query).toBe("frost oil");
+    expect(writViewFromParams(new URLSearchParams(), known).filters.query).toBe("");
+    const view = writViewFromParams(new URLSearchParams("q=frost&house=horde"), known);
+    expect(writViewToParams(new URLSearchParams("house=horde"), view).toString()).toBe("house=horde&q=frost");
+    expect(writViewToParams(new URLSearchParams("q=frost"), { ...view, filters: { ...view.filters, query: "" } }).toString()).toBe("");
+  });
+});
+
 describe("writViewFromParams / writViewToParams", () => {
   const known = knownLocations(FILE.turnIns);
 
@@ -201,7 +246,7 @@ describe("writViewFromParams / writViewToParams", () => {
   it("reads every param", () => {
     const view = writViewFromParams(new URLSearchParams("tier=expert&loc=Ironforge&deals=1&sort=name&dir=desc"), known);
     expect(view).toEqual({
-      filters: { tier: "expert", location: "Ironforge", dealsOnly: true },
+      filters: { tier: "expert", location: "Ironforge", dealsOnly: true, query: "" },
       sort: { key: "name", direction: "desc" },
     });
   });
@@ -213,7 +258,7 @@ describe("writViewFromParams / writViewToParams", () => {
 
   it("writes only what differs from the defaults and leaves other params alone", () => {
     const params = writViewToParams(new URLSearchParams("house=neutral"), {
-      filters: { tier: "artisan", location: null, dealsOnly: true },
+      filters: { tier: "artisan", location: null, dealsOnly: true, query: "" },
       sort: { key: "total", direction: "desc" },
     });
     expect(params.toString()).toBe("house=neutral&tier=artisan&deals=1&dir=desc");

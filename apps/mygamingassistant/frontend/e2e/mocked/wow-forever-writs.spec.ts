@@ -8,6 +8,7 @@
  *   - sorting by a column header flips its direction and keeps unknown totals last
  *   - switching the auction house re-prices the rows
  *   - prices that fail to load leave the rows, with a retry
+ *   - the search box matches the writ or the item it asks for, lives in `?q=`, restores on reload, and clears
  *   - a phone gets a card per writ with a sort select, and nothing scrolls sideways
  *
  * The writs come from the real data file (any row count): the spec picks rows by tier and prices only those.
@@ -213,6 +214,64 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("writ-row").last()).toHaveAttribute("data-tier", "artisan");
   });
 
+  test("search matches the writ or its item, keeps its place in the link and clears", async ({ page }) => {
+    await stubPrices(page);
+    const word = ARTISAN_DEAL.name.replace("Craftsman's Writ: ", "").toLowerCase();
+    const matching = WRITS.filter((w) => `${w.name} ${w.product?.name ?? ""}`.toLowerCase().includes(word));
+    await page.goto("/wow-forever/writs");
+    const box = page.getByRole("searchbox", { name: "Search writs" });
+    await expect(box).toBeVisible();
+    await expect(box).toHaveAttribute("placeholder", "Writ or item name");
+    await box.fill(`  ${word.toUpperCase()}  `);
+    await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe(word.toUpperCase());
+    await expect(page.getByTestId("writ-row")).toHaveCount(matching.length);
+    await expect(rowOf(page, ARTISAN_DEAL)).toBeVisible();
+    await expect(page.getByTestId("writs-count")).toHaveText(`Showing ${matching.length} of ${WRITS.length}`);
+
+    // The item's name finds the writ too.
+    await box.fill(CHEAP.product.name);
+    await expect(rowOf(page, CHEAP)).toBeVisible();
+    await expect(page).toHaveURL(/q=/);
+
+    // Reload restores the box and the rows.
+    await page.reload();
+    await expect(page.getByRole("searchbox", { name: "Search writs" })).toHaveValue(CHEAP.product.name);
+    await expect(rowOf(page, CHEAP)).toBeVisible();
+
+    // Search + tier filter, counts follow.
+    await box.fill(word);
+    await page.getByRole("radio", { name: /^Journeyman/ }).click();
+    await expect(page).toHaveURL(/tier=journeyman/);
+    await expect(page).toHaveURL(/q=/);
+    await expect(page.getByTestId("writs-count")).toHaveText(
+      `Showing ${matching.filter((w) => w.tier === "journeyman").length} of ${WRITS.length}`,
+    );
+
+    // Clear filters clears the search too.
+    await page.getByRole("region", { name: "Filters" }).getByRole("button", { name: "Clear filters" }).click();
+    await expect(page).not.toHaveURL(/q=|tier=/);
+    await expect(box).toHaveValue("");
+    await expect(page.getByTestId("writ-row")).toHaveCount(WRITS.length);
+
+    // The x button and Escape empty the box.
+    await box.fill("zzzz");
+    await expect(page.getByText("No writs match \u201Czzzz\u201D.")).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(box).toHaveValue("");
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(page.getByTestId("writ-row")).toHaveCount(WRITS.length);
+    await box.fill("alpha");
+    await box.press("Escape");
+    await expect(box).toHaveValue("");
+    await expect(page).not.toHaveURL(/q=/);
+
+    // The empty state's own button clears the search.
+    await page.goto("/wow-forever/writs?q=zzzz");
+    await expect(page.getByTestId("writs-empty")).toContainText("\u201Czzzz\u201D");
+    await page.getByTestId("writs-empty").getByRole("button", { name: "Clear filters" }).click();
+    await expect(page.getByTestId("writ-row")).toHaveCount(WRITS.length);
+  });
+
   test("switching the auction house re-prices the rows", async ({ page }) => {
     await stubPrices(page);
     await page.goto("/wow-forever/writs");
@@ -270,5 +329,14 @@ test.describe("phone", () => {
 
     const box = await page.getByRole("radio", { name: /^All \(/ }).boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    const search = page.getByRole("searchbox", { name: "Search writs" });
+    expect((await search.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await search.fill(EXPENSIVE.name.replace("Craftsman's Writ: ", ""));
+    await expect(rowOf(page, EXPENSIVE)).toBeVisible();
+    const clear = await page.getByRole("button", { name: "Clear search" }).boundingBox();
+    expect(clear?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(clear?.width ?? 0).toBeGreaterThanOrEqual(44);
+    await expectNoSidewaysScroll(page);
   });
 });

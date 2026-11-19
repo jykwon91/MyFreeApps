@@ -53,7 +53,7 @@ const PRICES = new Map<number, number>([
 const rows = buildCrateRows(FILE, (id) => PRICES.get(id));
 const byName = (name: string) => rows.find((r) => r.crate.name.endsWith(name));
 const names = (list: typeof rows) => list.map((r) => crateDisplayName(r.crate.name));
-const NONE: CrateFilters = { tier: null };
+const NONE: CrateFilters = { tier: null, query: "" };
 
 describe("cheapestBundleIndex", () => {
   it("picks the lowest known cost and skips unknown ones", () => {
@@ -179,14 +179,14 @@ describe("sortCrateRows", () => {
 
 describe("filterCrateRows and tier counts", () => {
   it("filters by tier", () => {
-    expect(names(filterCrateRows(rows, { tier: "expert" }))).toEqual(["Charlie", "Delta"]);
+    expect(names(filterCrateRows(rows, { ...NONE, tier: "expert" }))).toEqual(["Charlie", "Delta"]);
     expect(names(filterCrateRows(rows, NONE))).toHaveLength(6);
   });
 
   it("counts every tier, ignoring the tier filter itself", () => {
     const expected = { all: 6, apprentice: 1, journeyman: 1, expert: 2, artisan: 2 };
     expect(crateTierCounts(rows, NONE)).toEqual(expected);
-    expect(crateTierCounts(rows, { tier: "artisan" })).toEqual(expected);
+    expect(crateTierCounts(rows, { ...NONE, tier: "artisan" })).toEqual(expected);
   });
 
   it("counts the real data's tiers", () => {
@@ -197,6 +197,39 @@ describe("filterCrateRows and tier counts", () => {
   });
 });
 
+describe("crate search", () => {
+  const search = (query: string, extra: Partial<CrateFilters> = {}) => names(filterCrateRows(rows, { ...NONE, ...extra, query }));
+
+  it("finds a crate by its name, in any case", () => {
+    expect(search("bravo")).toEqual(["Bravo"]);
+    expect(search("  WAYLAID crate: echo ")).toEqual(["Echo"]);
+    expect(search("zzz")).toEqual([]);
+  });
+
+  it("finds a crate by any of its bundles' materials, every word required", () => {
+    expect(search("item 108")).toEqual(["Delta"]);
+    expect(search("item 107")).toEqual(["Charlie"]);
+    expect(search("item 1")).toHaveLength(6);
+    expect(search("item 108 delta")).toEqual(["Delta"]);
+    expect(search("item 108 charlie")).toEqual([]);
+  });
+
+  it("combines with the tier filter and the counts reflect it", () => {
+    expect(search("item 10", { tier: "expert" })).toEqual(["Charlie", "Delta"]);
+    expect(search("item 110", { tier: "expert" })).toEqual([]);
+    expect(crateTierCounts(rows, { ...NONE, query: "item 10" })).toEqual({ all: 5, apprentice: 1, journeyman: 1, expert: 2, artisan: 1 });
+    expect(crateTierCounts(rows, { tier: "artisan", query: "item 10" }).all).toBe(5);
+  });
+
+  it("round-trips through ?q=", () => {
+    expect(crateViewFromParams(new URLSearchParams("q=%20silk%20cloth%20")).filters.query).toBe("silk cloth");
+    expect(crateViewFromParams(new URLSearchParams()).filters.query).toBe("");
+    const view = crateViewFromParams(new URLSearchParams("q=silk&house=horde"));
+    expect(crateViewToParams(new URLSearchParams("house=horde"), view).toString()).toBe("house=horde&q=silk");
+    expect(crateViewToParams(new URLSearchParams("q=silk"), { ...view, filters: { ...view.filters, query: "" } }).toString()).toBe("");
+  });
+});
+
 describe("crateViewFromParams / crateViewToParams", () => {
   it("reads defaults from an empty link", () => {
     expect(crateViewFromParams(new URLSearchParams())).toEqual({ filters: NONE, sort: { key: "total", direction: "asc" } });
@@ -204,7 +237,7 @@ describe("crateViewFromParams / crateViewToParams", () => {
 
   it("reads every param", () => {
     expect(crateViewFromParams(new URLSearchParams("tier=apprentice&sort=bundleCost&dir=desc"))).toEqual({
-      filters: { tier: "apprentice" },
+      filters: { tier: "apprentice", query: "" },
       sort: { key: "bundleCost", direction: "desc" },
     });
   });
@@ -218,14 +251,14 @@ describe("crateViewFromParams / crateViewToParams", () => {
 
   it("writes only what differs from the defaults and leaves other params alone", () => {
     const params = crateViewToParams(new URLSearchParams("house=neutral"), {
-      filters: { tier: "artisan" },
+      filters: { tier: "artisan", query: "" },
       sort: { key: "total", direction: "desc" },
     });
     expect(params.toString()).toBe("house=neutral&tier=artisan&dir=desc");
   });
 
   it("round-trips a view through a link", () => {
-    const view = { filters: { tier: "expert" as const }, sort: { key: "name" as const, direction: "desc" as const } };
+    const view = { filters: { tier: "expert" as const, query: "silk cloth" }, sort: { key: "name" as const, direction: "desc" as const } };
     expect(crateViewFromParams(crateViewToParams(new URLSearchParams(), view))).toEqual(view);
   });
 

@@ -16,6 +16,7 @@ import { useCrateView } from "@/games/wow-forever/hooks/useCrateView";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { buildCrateRows } from "@/games/wow-forever/lib/crates/buildCrateRows";
 import { filterCrateRows } from "@/games/wow-forever/lib/crates/filterCrateRows";
+import { professionEmptyMessage } from "@/games/wow-forever/lib/professionTiers/professionEmptyMessage";
 import { sortCrateRows } from "@/games/wow-forever/lib/crates/sortCrateRows";
 
 /**
@@ -30,7 +31,7 @@ export default function WowCratesPage() {
   const loading = status === LOAD_STATUS.loading;
 
   const rows = useMemo(() => buildCrateRows(CRATES_FILE, (id) => prices?.byId.get(id)?.marketValue), [prices]);
-  const { view, setFilters, setSort, toggleSort, clearFilters } = useCrateView();
+  const { view, setFilters, setSort, toggleSort, clearFilters, search } = useCrateView();
   const visible = useMemo(() => sortCrateRows(filterCrateRows(rows, view.filters), view.sort), [rows, view]);
 
   return (
@@ -49,11 +50,12 @@ export default function WowCratesPage() {
         onFilters={setFilters}
         onSort={setSort}
         onClear={clearFilters}
+        search={search}
       />
       {visible.length > 0 ? <CratesGrid rows={visible} sort={view.sort} onSort={toggleSort} loading={loading} /> : null}
       {visible.length === 0 && loading ? <ProfessionRowsSkeleton label="Loading crates" testId="crates-skeleton" /> : null}
       {visible.length === 0 && !loading ? (
-        <ProfessionEmpty message="No crates match these filters" testId="crates-empty" onClear={clearFilters} />
+        <ProfessionEmpty message={professionEmptyMessage("crates", view.filters.query)} testId="crates-empty" onClear={clearFilters} />
       ) : null}
     </div>
   );
