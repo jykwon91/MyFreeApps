@@ -1,6 +1,7 @@
+import { DOCUMENT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/documentPaging";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Provider } from "react-redux";
 import { UTILITY_PLAN_READER_MESSAGES as MESSAGES } from "../src/constants/utilityPlanForm";
@@ -8,6 +9,7 @@ import DocumentLibrarySheet from "../src/features/documentReader/DocumentLibrary
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { answerDocumentList } from "../test-support/documentPages";
 
 const originalAdapter = api.defaults.adapter;
 
@@ -21,9 +23,21 @@ afterEach(() => {
   api.defaults.adapter = originalAdapter;
 });
 
-function answerDocumentsWith(respond: () => Promise<unknown>) {
-  const adapter: AxiosAdapter = (config) => respond().then((data) => ({ data, status: 200, statusText: "OK", headers: {}, config }));
+/** Answers the library's pages from the documents `respond` gives, as the backend does; every request is kept. */
+function answerDocumentsWith(respond: () => Promise<{ id: string; file_name: string }[]>) {
+  const requests: string[] = [];
+  const adapter: AxiosAdapter = (config) => {
+    requests.push(String(config.url));
+    return respond().then((documents) => ({
+      data: answerDocumentList(config.url, documents.map((document) => ({ ...document, status: "completed" }))),
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config,
+    }));
+  };
   api.defaults.adapter = adapter;
+  return requests;
 }
 
 async function showSheet(onPick = jest.fn()) {
@@ -67,5 +81,29 @@ describe("the document library sheet", () => {
     const onPick = await showSheet();
     await fireEvent.press(await screen.findByRole("radio", { name: "bill.pdf" }));
     expect(onPick).toHaveBeenCalledWith("d1", "bill.pdf");
+  });
+
+  it("reaches a document past the first page when scrolled to the end", async () => {
+    const many = Array.from({ length: DOCUMENT_PAGE_SIZE + 1 }, (_, i) => ({
+      id: `d${i}`,
+      file_name: `bill-${i}.pdf`,
+      created_at: new Date(Date.UTC(2026, 10, 1) - i * 1000).toISOString(),
+    }));
+    const requests = answerDocumentsWith(() => Promise.resolve(many));
+    await showSheet();
+    await screen.findByRole("radio", { name: "bill-0.pdf" });
+    // The sheet's list is the nearest node above a choice that holds the choices.
+    const sheetList = () => {
+      let node: ReturnType<typeof screen.getByRole> | null = screen.getByRole("radio", { name: "bill-0.pdf" });
+      while (node && !node.props.data) node = node.parent;
+      return node!;
+    };
+    const offered = () => (sheetList().props.data as { value: string }[]).map((option) => option.value);
+    expect(offered()).toHaveLength(DOCUMENT_PAGE_SIZE);
+    await act(async () => {
+      sheetList().props.onEndReached();
+    });
+    await waitFor(() => expect(offered()).toContain(`d${DOCUMENT_PAGE_SIZE}`));
+    expect(requests.at(-1)).toContain(`offset=${DOCUMENT_PAGE_SIZE}`);
   });
 });

@@ -1,6 +1,7 @@
 import api from "@platform/core/lib/api";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { answerDocumentList } from "./documentPages";
 
 export function aDocument(overrides: Partial<Document> = {}): Document {
   return {
@@ -46,7 +47,8 @@ export function startFakeServer(documents: Document[], role = "owner"): FakeServ
     if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
-    if (config.url === "/documents") return respond(server.documents);
+    const listed = answerDocumentList(config.url, server.documents);
+    if (listed !== undefined) return respond(listed);
     if (config.method !== "get" && server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
     if (config.url === "/documents/bulk-delete") {
       const attempt = server.requests.filter((request) => request.url === "/documents/bulk-delete").length;

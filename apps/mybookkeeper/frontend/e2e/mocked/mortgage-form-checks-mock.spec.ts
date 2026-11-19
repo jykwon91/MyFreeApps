@@ -16,6 +16,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { stubDocumentPages } from "./fixtures/mockDocuments";
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
 
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000e1";
@@ -74,6 +75,7 @@ async function stubMortgageApi(page: Page): Promise<string[]> {
     writes.push(route.request().method());
     return route.fulfill(json(MORTGAGE));
   });
+  await stubDocumentPages(page, []);
   return writes;
 }
 

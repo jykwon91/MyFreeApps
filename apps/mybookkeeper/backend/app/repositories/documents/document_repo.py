@@ -13,6 +13,7 @@ from sqlalchemy.orm import undefer
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
+from app.core.document_list_constants import DOCUMENT_NOT_IN_LIBRARY_STATUSES
 from app.models.documents.document import Document
 
 
@@ -32,7 +33,7 @@ async def list_filtered(
     )
 
     if exclude_processing:
-        stmt = stmt.where(Document.status.notin_(["processing", "extracting", "duplicate", "deleted"]))
+        stmt = stmt.where(Document.status.notin_(DOCUMENT_NOT_IN_LIBRARY_STATUSES))
     if property_id is not None:
         stmt = stmt.where(Document.property_id == property_id)
     if status is not None:

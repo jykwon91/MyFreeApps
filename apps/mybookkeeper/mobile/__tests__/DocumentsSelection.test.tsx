@@ -113,7 +113,7 @@ describe("picking several documents", () => {
     await renderScreen();
     await startPicking();
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    expect(screen.getByText("2 selected")).toBeTruthy();
+    expect(await screen.findByText("2 selected")).toBeTruthy();
     expect(screen.getByText("1 document is still being read, so can't be selected yet.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Select all the documents shown" }).props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.press(screen.getByLabelText(/papers/));
@@ -126,9 +126,9 @@ describe("picking several documents", () => {
     await screen.findByText("alpha.pdf");
     await fireEvent.changeText(screen.getByLabelText("Search documents"), "r");
     await waitFor(() => expect(screen.queryByText("alpha.pdf")).toBeNull());
-    await fireEvent.press(screen.getByRole("button", { name: "Select several documents" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Select several documents" }));
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    expect(screen.getByText("2 selected")).toBeTruthy();
+    expect(await screen.findByText("2 selected")).toBeTruthy();
   });
 
   it("counts and deletes only what is on screen, and says how many a search hides", async () => {
@@ -136,7 +136,7 @@ describe("picking several documents", () => {
     await renderScreen();
     await startPicking();
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    expect(screen.getByText("3 selected")).toBeTruthy();
+    expect(await screen.findByText("3 selected")).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText("Search documents"), "bravo");
     await waitFor(() => expect(screen.getByText("1 selected")).toBeTruthy());
     expect(screen.getByText(hiddenSelectedNote(2))).toBeTruthy();
@@ -269,7 +269,7 @@ describe("deleting the selected documents", () => {
     await renderScreen();
     await startPicking(/doc0\.pdf/);
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    await fireEvent.press(screen.getByRole("button", { name: `Delete ${many.length} selected` }));
+    await fireEvent.press(await screen.findByRole("button", { name: `Delete ${many.length} selected` }));
     await confirmDeletion();
     await waitFor(() => expect(server.documents).toHaveLength(0));
     expect(bulkRequests(server.requests).map((request) => (JSON.parse(String(request.data)) as { ids: string[] }).ids.length)).toEqual([500, 1]);
@@ -285,7 +285,7 @@ describe("deleting the selected documents", () => {
     await renderScreen();
     await startPicking(/doc0\.pdf/);
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    await fireEvent.press(screen.getByRole("button", { name: `Delete ${many.length} selected` }));
+    await fireEvent.press(await screen.findByRole("button", { name: `Delete ${many.length} selected` }));
     await confirmDeletion();
     expect(await screen.findByText(deletedSomeFailedMessage(MAX_BULK_DELETE_DOCUMENT_IDS, 1))).toBeTruthy();
     await waitFor(() => expect(server.documents).toHaveLength(1));

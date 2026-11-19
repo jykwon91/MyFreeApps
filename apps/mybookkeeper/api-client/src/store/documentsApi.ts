@@ -1,28 +1,56 @@
 import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { baseApi } from "@platform/core/store/baseApi";
+import { DOCUMENT_PAGE_SIZE } from "../constants/documentPaging";
 import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
+import type { DocumentListPage } from "../types/document/DocumentListPage";
+import type { DocumentPageArgs } from "../types/document/DocumentPageArgs";
+import type { DocumentSelectionRef } from "../types/document/DocumentSelectionRef";
 import type { DocumentSummary } from "../types/document/DocumentSummary";
 import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
 import type { UploadDocumentArgs } from "../types/document/UploadDocumentArgs";
 import type { UploadResponse } from "../types/document/UploadResponse";
+import { documentFilterQuery, documentListQuery } from "../utils/documentListQuery";
+import { pathWithQuery } from "../utils/pathWithQuery";
 
 export const documentsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Document", "Summary", "Transaction", "SignedLease", "TaxReturn"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getDocuments: builder.query<Document[], { status?: string; propertyId?: string; excludeProcessing?: boolean }>({
-      query: ({ status, propertyId, excludeProcessing } = {}) => ({
-        url: "/documents",
-        params: { status, property_id: propertyId, exclude_processing: excludeProcessing || undefined },
-      }),
+    // Unpaged and bounded by the server: only for a narrow subset, like the documents still processing.
+    // A list that must reach every document pages through listDocumentPages.
+    getDocuments: builder.query<Document[], { status: string }>({
+      query: ({ status }) => ({ url: "/documents", params: { status } }),
       providesTags: (result) =>
         result
           ? [...result.map((d) => ({ type: "Document" as const, id: d.id })), { type: "Document", id: "LIST" }]
           : [{ type: "Document", id: "LIST" }],
+    }),
+    listDocumentPages: builder.infiniteQuery<DocumentListPage, DocumentPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + DOCUMENT_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: pathWithQuery(
+          "/documents/page",
+          `${documentListQuery(queryArg)}&limit=${DOCUMENT_PAGE_SIZE}&offset=${pageParam}`,
+        ),
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((d) => ({ type: "Document" as const, id: d.id })) ?? []),
+        { type: "Document" as const, id: "LIST" },
+      ],
+    }),
+    // Every document the filters match, so "select all" can tick ones not loaded yet. Fetched only when
+    // triggered (select all, or checking ticks), so it provides no tag: a delete would otherwise refetch
+    // every matching id for as long as the lazy query stays subscribed.
+    listDocumentSelection: builder.query<DocumentSelectionRef[], DocumentPageArgs>({
+      query: (args) => ({ url: pathWithQuery("/documents/selection", documentFilterQuery(args)) }),
     }),
     // Counts for Home. Tagged as a Document so whatever refreshes the list refreshes this too.
     getDocumentSummary: builder.query<DocumentSummary, void>({
@@ -84,6 +112,8 @@ export const documentsApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetDocumentsQuery,
+  useListDocumentPagesInfiniteQuery,
+  useLazyListDocumentSelectionQuery,
   useGetDocumentSummaryQuery,
   useUploadDocumentMutation,
   useGetBatchStatusQuery,

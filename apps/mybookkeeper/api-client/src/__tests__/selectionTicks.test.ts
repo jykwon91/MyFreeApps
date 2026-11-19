@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
-import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "../utils/transactionTicks";
+import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "../utils/selectionTicks";
 
 function ref(id: string, status: TransactionSelectionRef["status"] = "pending"): TransactionSelectionRef {
   return { id, property_id: "p1", status };
 }
 
-describe("transaction ticks", () => {
+describe("selection ticks", () => {
   it("knows the filters a first tick matches, and loses that once a row of unknown match joins", () => {
     const first = addTicks(NO_TICKS, [ref("a")], "vendor=x");
     expect(first.checkKey).toBe("vendor=x");

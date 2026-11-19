@@ -1,15 +1,17 @@
-import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
-import { ALL_DOCUMENTS } from "../../constants/documents";
-import { isBeingRead } from "./documentDisplay";
-import { useProcessingPoll } from "./useProcessingPoll";
-import { useRefreshWhenReadingFinishes } from "./useRefreshWhenReadingFinishes";
+import { useDocumentsPages } from "@mybookkeeper/api-client/hooks/useDocumentsPages";
+import { useFailedDocuments } from "@mybookkeeper/api-client/hooks/useFailedDocuments";
+import type { DocumentPageArgs } from "@mybookkeeper/api-client/types/document/DocumentPageArgs";
+import { useDocumentSummaryWithPolling } from "./useDocumentSummaryWithPolling";
 
-/** The list, refreshing itself while anything in it is still being read. */
-export function useDocumentsWithPolling() {
-  const { data: known } = useGetDocumentsQuery(ALL_DOCUMENTS);
-  const beingRead = known?.filter(isBeingRead).length ?? 0;
-  const poll = useProcessingPoll(beingRead > 0);
-  const query = useGetDocumentsQuery(ALL_DOCUMENTS, { pollingInterval: poll.pollingInterval, skipPollingIfUnfocused: true });
-  useRefreshWhenReadingFinishes(beingRead);
-  return { ...query, gaveUp: poll.gaveUp };
+/**
+ * The list a page at a time, with the workspace's counts and its failed documents, all refreshing
+ * themselves while anything in the workspace is still being read (counted by the server, so a document
+ * being read on a page not loaded yet counts too).
+ */
+export function useDocumentsWithPolling(args: DocumentPageArgs) {
+  const summary = useDocumentSummaryWithPolling();
+  const polling = { pollingInterval: summary.pollingInterval };
+  const list = useDocumentsPages(args, polling);
+  const failed = useFailedDocuments(polling);
+  return { list, summary, failed, gaveUp: summary.gaveUp };
 }

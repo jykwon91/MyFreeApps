@@ -1,4 +1,4 @@
-/** The header checkbox of the transactions table: ticks every row the filters match, on every page. */
+/** The header checkbox of a list that pages: ticks every row the filters match, on every page. */
 export interface SelectAllControl {
   checked: boolean;
   indeterminate: boolean;

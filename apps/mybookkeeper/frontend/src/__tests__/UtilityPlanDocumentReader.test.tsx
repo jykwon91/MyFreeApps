@@ -19,6 +19,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import UtilityPlanDocumentReader from "@/app/features/utility/UtilityPlanDocumentReader";
 import { showError } from "@platform/ui";
+import { documentsPagesState } from "@/test/documents-pages-state";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -35,8 +36,8 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useExtractUtilityPlanFromUploadMutation: vi.fn(() => [mockExtractUpload, uploadState]),
 }));
 
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: (...args: unknown[]) => mockUseGetDocuments(...args),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: (...args: unknown[]) => mockUseGetDocuments(...args),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => ({
@@ -57,7 +58,7 @@ function renderReader(onRead = vi.fn()) {
 }
 
 function withLibrary(documents: { id: string; file_name: string }[]) {
-  mockUseGetDocuments.mockReturnValue({ data: documents });
+  mockUseGetDocuments.mockReturnValue(documentsPagesState(documents));
 }
 
 async function pickFile(user: ReturnType<typeof userEvent.setup>, file = EFL) {
@@ -163,6 +164,20 @@ describe("UtilityPlanDocumentReader — the document library", () => {
 
     expect(screen.queryByTestId("utility-plan-library-picker")).not.toBeInTheDocument();
     expect(screen.getByTestId("utility-plan-file-dropzone")).toBeInTheDocument();
+  });
+
+  it("counts the whole library and loads older documents on request", async () => {
+    const loadMore = vi.fn();
+    mockUseGetDocuments.mockReturnValue(
+      documentsPagesState([{ id: "doc-1", file_name: "constellation-efl.pdf" }], { total: 1200, hasNextPage: true, loadMore }),
+    );
+    const user = userEvent.setup();
+    renderReader();
+
+    expect(screen.getByText("Or pick one you've already uploaded (1200)")).toBeInTheDocument();
+    await user.click(screen.getByText("Or pick one you've already uploaded (1200)"));
+    await user.click(screen.getByTestId("load-more-button"));
+    expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
   it("still reads a document already in the library", async () => {

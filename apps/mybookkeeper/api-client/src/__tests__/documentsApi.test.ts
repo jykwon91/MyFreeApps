@@ -4,6 +4,8 @@ import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { DOCUMENT_PAGE_SIZE } from "../constants/documentPaging";
+import { DEFAULT_DOCUMENT_VIEW } from "../constants/documentListView";
 import { EMAIL_DERIVED_TAGS } from "../constants/emailDerivedTags";
 import "../store/documentsApi";
 import { integrationsApi } from "../store/integrationsApi";
@@ -29,7 +31,8 @@ beforeAll(() => {
   });
   const adapter: AxiosAdapter = (config) => {
     sent.push(config);
-    return Promise.resolve({ data: [], status: 200, statusText: "", headers: {}, config });
+    const data = config.url?.startsWith("/documents/page") ? { items: [], total: 0, has_more: false } : [];
+    return Promise.resolve({ data, status: 200, statusText: "", headers: {}, config });
   };
   api.defaults.adapter = adapter;
 });
@@ -39,16 +42,30 @@ beforeEach(() => {
 });
 
 describe("documentsApi", () => {
-  it("asks for documents with the server's parameter names", async () => {
-    await makeStore().dispatch(endpoints.getDocuments.initiate({ excludeProcessing: true, propertyId: "p1" }));
+  it("asks for the documents in one status with the server's parameter name", async () => {
+    await makeStore().dispatch(endpoints.getDocuments.initiate({ status: "processing" }));
     expect(sent[0].url).toBe("/documents");
-    expect(sent[0].params).toEqual({ property_id: "p1", exclude_processing: true });
+    expect(sent[0].params).toEqual({ status: "processing" });
     expect(sent[0].headers["X-Organization-Id"]).toBe("w1");
+  });
+
+  it("asks for the first page of the list with its filters as repeated keys and the order", async () => {
+    await makeStore().dispatch(
+      endpoints.listDocumentPages.initiate({ ...DEFAULT_DOCUMENT_VIEW, search: " bill ", statuses: ["failed", "duplicate"], needsReview: true }),
+    );
+    expect(sent[0].url).toBe(
+      `/documents/page?search=bill&statuses=failed&statuses=duplicate&needs_review=true&sort_by=created_at&sort_dir=desc&limit=${DOCUMENT_PAGE_SIZE}&offset=0`,
+    );
+  });
+
+  it("asks for every match for select all by the filters alone", async () => {
+    await makeStore().dispatch(endpoints.listDocumentSelection.initiate({ ...DEFAULT_DOCUMENT_VIEW, sources: ["email"], excludeProcessing: true }));
+    expect(sent[0].url).toBe("/documents/selection?sources=email&exclude_processing=true");
   });
 
   it("refetches the list after a delete", async () => {
     const store = makeStore();
-    store.dispatch(endpoints.getDocuments.initiate({}));
+    store.dispatch(endpoints.getDocuments.initiate({ status: "processing" }));
     await new Promise((resolve) => setTimeout(resolve, 0));
     await store.dispatch(endpoints.deleteDocument.initiate("d1"));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -61,7 +78,7 @@ describe("documentsApi", () => {
 
   it("deletes several in one request with the ids in the body, then refetches the list", async () => {
     const store = makeStore();
-    store.dispatch(endpoints.getDocuments.initiate({}));
+    store.dispatch(endpoints.getDocuments.initiate({ status: "processing" }));
     await new Promise((resolve) => setTimeout(resolve, 0));
     await store.dispatch(endpoints.bulkDeleteDocuments.initiate(["d1", "d2"]));
     await new Promise((resolve) => setTimeout(resolve, 0));

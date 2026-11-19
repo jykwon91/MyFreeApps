@@ -12,6 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
 import { showError } from "@platform/ui";
+import { documentsPagesState } from "@/test/documents-pages-state";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -35,10 +36,8 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   })),
 }));
 
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: vi.fn(() => ({
-    data: [{ id: "doc-1", file_name: "constellation-efl.pdf" }],
-  })),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: () => documentsPagesState([{ id: "doc-1", file_name: "constellation-efl.pdf" }]),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => ({

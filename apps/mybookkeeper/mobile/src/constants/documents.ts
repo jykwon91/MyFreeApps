@@ -1,14 +1,12 @@
 import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
-import { DOCUMENT_LIST_LIMIT } from "@mybookkeeper/api-client/constants/documentListLimit";
 
 export const POLL_INTERVAL_MS = 5000;
 export const POLL_GIVE_UP_MS = 2 * 60 * 1000;
 export const STILL_READING_MESSAGE = "Still working on this one. Pull down to check again.";
 
-export const ALL_DOCUMENTS = {};
-
 export const DOCUMENT_LIST_MESSAGES = {
   loading: "Loading your documents",
+  loadingMore: "Loading more documents",
   loadingOne: "Loading this document",
   filters: "Filters",
   clearFilters: "Clear filters",
@@ -41,15 +39,6 @@ export function filtersAccessibilityLabel(count: number): string {
 export function documentCountLabel(shown: number, total: number): string {
   if (shown === total) return total === 1 ? "1 document" : `${total} documents`;
   return `${shown} of ${total} documents`;
-}
-
-/** The list is cut off at the server's limit, so the total isn't known and older ones aren't here. */
-export function cappedListLabel(): string {
-  return `Showing your newest ${DOCUMENT_LIST_LIMIT.toLocaleString("en-US")}`;
-}
-
-export function cappedSelectNote(): string {
-  return `Select all covers the ${DOCUMENT_LIST_LIMIT.toLocaleString("en-US")} shown, not older ones.`;
 }
 
 /** One warning for deleting from the list and from a document's own screen. */

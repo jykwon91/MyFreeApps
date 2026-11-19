@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import { FORM_DIALOG_WIDTH_CLASS } from "@/shared/components/ui/form-dialog-width-class";
 import { showError } from "@platform/ui";
+import { documentsPagesState } from "@/test/documents-pages-state";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -39,10 +40,8 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   })),
 }));
 
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: vi.fn(() => ({
-    data: [{ id: "doc-1", file_name: "texas-mutual-dec.pdf" }],
-  })),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: () => documentsPagesState([{ id: "doc-1", file_name: "texas-mutual-dec.pdf" }]),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => ({

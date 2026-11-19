@@ -9,7 +9,7 @@ import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
 import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { SELECTING_ALL_LABEL } from "@/shared/lib/transaction-list-messages";
-import type { SelectAllControl } from "@/shared/types/transaction/select-all-control";
+import type { SelectAllControl } from "@/shared/types/select-all-control";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";

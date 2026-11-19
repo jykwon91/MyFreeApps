@@ -13,6 +13,7 @@ import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { inListOrder } from "./transactionListOrder";
 import { withTransactionListQuery } from "./withTransactionListQuery";
+import { answerDocumentList } from "./documentPages";
 
 export function aTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -185,11 +186,8 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const vendor = server.vendors.find((row) => row.id === config.url?.split("/")[2]);
       return vendor ? respond(vendor) : respond({ detail: "Vendor not found" }, 404);
     }
-    if (config.url === "/documents") return respond(server.documents);
-    if (config.url === "/documents/summary") {
-      const counting = (statuses: string[]) => server.documents.filter((row) => statuses.includes(row.status)).length;
-      return respond({ total: server.documents.length, in_progress: counting(["processing", "extracting"]), needs_review: counting(["failed", "duplicate"]) });
-    }
+    const listedDocuments = answerDocumentList(config.url, server.documents);
+    if (listedDocuments !== undefined) return respond(listedDocuments);
     if (config.url === "/summary/years") return respond(server.summaryYears);
     if (config.url === "/transactions/attribution-review-queue") {
       return respond({ items: [], pending_count: server.pendingPayments });

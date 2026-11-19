@@ -19,6 +19,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import InsurancePolicyDocumentReader from "@/app/features/insurance/InsurancePolicyDocumentReader";
 import { showError } from "@platform/ui";
+import { documentsPagesState } from "@/test/documents-pages-state";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -38,8 +39,8 @@ vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   ]),
 }));
 
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: (...args: unknown[]) => mockUseGetDocuments(...args),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: (...args: unknown[]) => mockUseGetDocuments(...args),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => ({
@@ -65,7 +66,7 @@ function renderReader(onRead = vi.fn()) {
 }
 
 function withLibrary(documents: { id: string; file_name: string }[]) {
-  mockUseGetDocuments.mockReturnValue({ data: documents });
+  mockUseGetDocuments.mockReturnValue(documentsPagesState(documents));
 }
 
 async function pickFile(user: ReturnType<typeof userEvent.setup>, file = DEC_PAGE) {

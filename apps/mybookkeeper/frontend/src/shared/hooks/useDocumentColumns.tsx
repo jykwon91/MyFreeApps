@@ -3,15 +3,16 @@ import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type AppTableFeatures } from "@/shared/lib/table-features";
-import { FileCheck } from "lucide-react";
+import { FileCheck, Loader2 } from "lucide-react";
 import { timeSince } from "@platform/core/utils/timeSince";
 import { formatDate } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
-import { matchesChoice } from "@mybookkeeper/api-client/utils/documentListView";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
+import { SELECTING_ALL_DOCUMENTS_LABEL } from "@/shared/lib/document-list-messages";
+import type { SelectAllControl } from "@/shared/types/select-all-control";
 
 interface ColumnActions {
   onDelete: (id: string) => void;
@@ -19,28 +20,33 @@ interface ColumnActions {
   onReExtract?: (id: string) => void;
   reExtractingId?: string | null;
   canWrite?: boolean;
+  /** Ticks every document the filters match, loaded or not. */
+  selectAll: SelectAllControl;
 }
 
 const columnHelper = createColumnHelper<AppTableFeatures, Document>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFeatures, Document, any>[] {
-  const { onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true } = actions;
+  const { onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true, selectAll } = actions;
 
   return useMemo(
     () => [
       columnHelper.display({
         id: "select",
         enableSorting: false,
-        header: ({ table }) => (
-          <IndeterminateCheckbox
-            checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select all documents"
-          />
-        ),
+        header: () =>
+          selectAll.isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" role="status" aria-label={SELECTING_ALL_DOCUMENTS_LABEL} />
+          ) : (
+            <IndeterminateCheckbox
+              checked={selectAll.checked}
+              indeterminate={selectAll.indeterminate}
+              onChange={selectAll.onToggle}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Select all documents"
+            />
+          ),
         cell: ({ row }) => (
           <IndeterminateCheckbox
             checked={row.getIsSelected()}
@@ -69,20 +75,11 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
             )}
           </div>
         ),
-        filterFn: (row, _columnId, filterValue: string[]) => {
-          return matchesChoice(row.getValue<string>("status"), filterValue);
-        },
       }),
       columnHelper.accessor("file_name", {
         header: "File",
         enableSorting: true,
         enableColumnFilter: true,
-        sortFn: (rowA, rowB) => {
-          const a = rowA.original.file_name ?? "";
-          const b = rowB.original.file_name ?? "";
-          return a.localeCompare(b);
-        },
-        filterFn: "includesString",
         cell: ({ getValue }) => (
           <span className="block" title={getValue() ?? undefined}>
             {getValue() ?? "\u2014"}
@@ -100,9 +97,6 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
             </span>
           );
         },
-        filterFn: (row, _columnId, filterValue: string[]) => {
-          return matchesChoice(row.getValue<string | null>("document_type"), filterValue);
-        },
       }),
       columnHelper.accessor("source", {
         header: () => <span title="Where this document came from — uploaded by you or imported from Gmail">Source</span>,
@@ -112,18 +106,10 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
             {documentSourceLabel(getValue())}
           </span>
         ),
-        filterFn: (row, _columnId, filterValue: string[]) => {
-          return matchesChoice(row.getValue<string>("source"), filterValue);
-        },
       }),
       columnHelper.accessor("created_at", {
         header: "Uploaded",
         enableSorting: true,
-        sortFn: (rowA, rowB) => {
-          const a = rowA.original.created_at ?? "";
-          const b = rowB.original.created_at ?? "";
-          return a.localeCompare(b);
-        },
         cell: ({ getValue }) => (
           <span className="text-muted-foreground" title={formatDate(getValue())}>
             {timeSince(getValue())}
@@ -146,6 +132,6 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
         ),
       }),
     ],
-    [onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite],
+    [onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite, selectAll],
   );
 }

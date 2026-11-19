@@ -4,7 +4,6 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { useState } from "react";
 import { Provider } from "react-redux";
-import { SEARCH_DEBOUNCE_MS } from "../src/constants/transactionFilters";
 import type { DocumentFilter } from "../src/types/DocumentFilter";
 import DocumentsScreen from "../src/features/documents/DocumentsScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -71,8 +70,8 @@ describe("DocumentsScreen", () => {
     await renderScreen();
     await screen.findByText("new.pdf");
     await fireEvent.press(screen.getByRole("tab", { name: "Needs a look" }));
+    expect(await screen.findByText("bad.pdf")).toBeTruthy();
     expect(screen.queryByText("new.pdf")).toBeNull();
-    expect(screen.getByText("bad.pdf")).toBeTruthy();
   });
 
   it("opens already narrowed when a link asks for it", async () => {
@@ -87,38 +86,38 @@ describe("DocumentsScreen", () => {
     await renderScreen();
     await screen.findByText("new.pdf");
     await fireEvent.changeText(screen.getByLabelText("Search documents"), "OLD");
-    await waitFor(() => expect(screen.queryByText("new.pdf")).toBeNull());
-    expect(screen.getByText("old.pdf")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText("new.pdf")).toBeNull();
+      expect(screen.getByText("old.pdf")).toBeTruthy();
+    });
     await fireEvent.changeText(screen.getByLabelText("Search documents"), "nothing");
     expect(await screen.findByText("Nothing matches that.")).toBeTruthy();
   });
 
-  it("filters only once typing pauses, but shows what was typed at once and clears at once", async () => {
-    startFakeServer([NEW, OLD]);
+  it("searches only once typing pauses, but shows what was typed at once and clears at once", async () => {
+    const server = startFakeServer([NEW, OLD]);
     await renderScreen();
     await screen.findByText("new.pdf");
-    jest.useFakeTimers();
-    try {
-      const field = () => screen.getByLabelText("Search documents");
-      await fireEvent.changeText(field(), "o");
-      await fireEvent.changeText(field(), "ol");
-      await fireEvent.changeText(field(), "old");
-      expect(field().props.value).toBe("old");
-      expect(screen.getByText("new.pdf")).toBeTruthy();
-      await act(async () => {
-        jest.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1);
-      });
-      expect(screen.getByText("new.pdf")).toBeTruthy();
-      await act(async () => {
-        jest.advanceTimersByTime(1);
-      });
+    const searchesSent = () =>
+      server.requests
+        .map((request) => new URL(String(request.url), "http://test"))
+        .filter((url) => url.pathname === "/documents/page" && url.searchParams.has("search"))
+        .map((url) => url.searchParams.get("search"));
+    const field = () => screen.getByLabelText("Search documents");
+    await fireEvent.changeText(field(), "o");
+    await fireEvent.changeText(field(), "ol");
+    await fireEvent.changeText(field(), "old");
+    expect(field().props.value).toBe("old");
+    expect(screen.getByText("new.pdf")).toBeTruthy();
+    expect(searchesSent()).toEqual([]);
+    // Only the term typing paused on goes to the server.
+    await waitFor(() => expect(searchesSent()).toEqual(["old"]));
+    await waitFor(() => {
       expect(screen.queryByText("new.pdf")).toBeNull();
       expect(screen.getByText("old.pdf")).toBeTruthy();
-      await fireEvent.changeText(field(), "");
-      expect(screen.getByText("new.pdf")).toBeTruthy();
-    } finally {
-      jest.useRealTimers();
-    }
+    });
+    await fireEvent.changeText(field(), "");
+    expect(screen.getByText("new.pdf")).toBeTruthy();
   });
 
   it("offers someone who can add documents the camera when there are none", async () => {

@@ -1,6 +1,6 @@
-import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
-import { View } from "react-native";
+import { LoadingRegion, useTheme } from "@platform/mobile";
 import { DOCUMENT_LIST_MESSAGES } from "../../constants/documents";
+import DocumentSkeletonRow from "./DocumentSkeletonRow";
 
 const ROWS = ["a", "b", "c", "d", "e", "f"];
 
@@ -9,10 +9,7 @@ export default function DocumentsSkeleton() {
   return (
     <LoadingRegion label={DOCUMENT_LIST_MESSAGES.loading} style={{ gap: spacing.lg, padding: spacing.lg }} testID="documents-skeleton">
       {ROWS.map((row) => (
-        <View key={row} style={{ gap: spacing.xs }}>
-          <Skeleton height={20} />
-          <Skeleton height={14} />
-        </View>
+        <DocumentSkeletonRow key={row} />
       ))}
     </LoadingRegion>
   );

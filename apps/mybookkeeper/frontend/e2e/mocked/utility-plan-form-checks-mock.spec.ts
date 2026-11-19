@@ -16,6 +16,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { stubDocumentPages } from "./fixtures/mockDocuments";
 
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c3";
 
@@ -35,7 +36,7 @@ async function stubUtilityApi(page: Page): Promise<string[]> {
     writes.push(route.request().method());
     return route.fulfill(json({ id: "00000000-0000-0000-0000-0000000000f3" }));
   });
-  await page.route("**/api/documents*", (route) => route.fulfill(json([])));
+  await stubDocumentPages(page, []);
   return writes;
 }
 

@@ -9,13 +9,13 @@ import { useToast } from "@/shared/hooks/useToast";
 import { idsBetween } from "@/shared/utils/rowRange";
 import { SELECT_ALL_FAILED, SELECTION_CHECK_FAILED } from "@/shared/lib/transaction-list-messages";
 import { refsById, toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
-import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/transactionTicks";
-import type { SelectAllRun } from "@mybookkeeper/api-client/types/transaction/SelectAllRun";
+import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/selectionTicks";
+import type { SelectAllRun } from "@mybookkeeper/api-client/types/selection/SelectAllRun";
 import type { TransactionSelection } from "@/shared/types/transaction/transaction-selection";
 import type { PageRowsStatus } from "@/shared/types/transaction/page-rows-status";
-import type { TransactionTicks } from "@mybookkeeper/api-client/types/transaction/TransactionTicks";
+import type { SelectionTicks } from "@mybookkeeper/api-client/types/selection/SelectionTicks";
 
-function toRowSelection(ticks: TransactionTicks): RowSelectionState {
+function toRowSelection(ticks: SelectionTicks<TransactionSelectionRef>): RowSelectionState {
   const state: RowSelectionState = {};
   for (const id of Object.keys(ticks.refs)) state[id] = true;
   return state;
@@ -39,7 +39,7 @@ export function useTransactionSelection(
   rows: PageRowsStatus,
 ): TransactionSelection {
   const { showError } = useToast();
-  const [ticks, setTicks] = useState<TransactionTicks>(NO_TICKS);
+  const [ticks, setTicks] = useState<SelectionTicks<TransactionSelectionRef>>(NO_TICKS);
   const [lastRun, setLastRun] = useState<SelectAllRun | null>(null);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
   const [fetchSelection, { data: fetchedRefs }] = useLazyListTransactionSelectionQuery();

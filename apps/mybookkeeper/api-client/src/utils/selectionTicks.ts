@@ -1,9 +1,9 @@
-import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
-import type { TransactionTicks } from "../types/transaction/TransactionTicks";
+import type { SelectableRef } from "../types/selection/SelectableRef";
+import type { SelectionTicks } from "../types/selection/SelectionTicks";
 
-export const NO_TICKS: TransactionTicks = { refs: {}, checkKey: null };
+export const NO_TICKS: SelectionTicks<never> = { refs: {}, checkKey: null };
 
-export function tickCount(ticks: TransactionTicks): number {
+export function tickCount<R extends SelectableRef>(ticks: SelectionTicks<R>): number {
   return Object.keys(ticks.refs).length;
 }
 
@@ -11,11 +11,11 @@ export function tickCount(ticks: TransactionTicks): number {
  * Ticks rows known to match ``checkKey`` (null when that isn't known). The result is known to
  * match it only if every row already ticked was too.
  */
-export function addTicks(
-  current: TransactionTicks,
-  refs: readonly TransactionSelectionRef[],
+export function addTicks<R extends SelectableRef>(
+  current: SelectionTicks<R>,
+  refs: readonly R[],
   checkKey: string | null,
-): TransactionTicks {
+): SelectionTicks<R> {
   const known = tickCount(current) === 0 || current.checkKey === checkKey;
   return {
     refs: { ...current.refs, ...Object.fromEntries(refs.map((ref) => [ref.id, ref])) },
@@ -24,18 +24,18 @@ export function addTicks(
 }
 
 /** Keeps only the ticked rows among ``matching``: every row that matches as of ``checkKey``. */
-export function intersectTicks(
-  current: TransactionTicks,
-  matching: readonly TransactionSelectionRef[],
+export function intersectTicks<R extends SelectableRef>(
+  current: SelectionTicks<R>,
+  matching: readonly R[],
   checkKey: string,
-): TransactionTicks {
-  const refs: Record<string, TransactionSelectionRef> = {};
+): SelectionTicks<R> {
+  const refs: Record<string, R> = {};
   for (const ref of matching) if (ref.id in current.refs) refs[ref.id] = ref;
   return { refs, checkKey };
 }
 
 /** Unticks ``ids``; the rest still match whatever they matched. */
-export function removeTicks(current: TransactionTicks, ids: readonly string[]): TransactionTicks {
+export function removeTicks<R extends SelectableRef>(current: SelectionTicks<R>, ids: readonly string[]): SelectionTicks<R> {
   const dropped = new Set(ids);
   return {
     refs: Object.fromEntries(Object.entries(current.refs).filter(([id]) => !dropped.has(id))),

@@ -9,7 +9,12 @@ from app.db.session import AsyncSessionLocal
 from app.mappers.document_summary_mapper import to_document_summary
 from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
-from app.repositories import document_repo, integration_repo
+from app.repositories import document_list_repo, document_repo, integration_repo
+from app.schemas.documents.document import DocumentRead
+from app.schemas.documents.document_filters import DocumentFilters
+from app.schemas.documents.document_list_page import DocumentListPage
+from app.schemas.documents.document_page_query import DocumentPageQuery
+from app.schemas.documents.document_selection_ref import DocumentSelectionRef
 from app.schemas.documents.document_summary import DocumentSummary
 from app.services.documents.document_mime_constants import EMAIL_FILE_TYPE
 from app.services.documents.document_mime_type import (
@@ -65,6 +70,25 @@ async def list_documents(
             offset=offset,
         )
         return list(result)
+
+
+async def list_document_page(ctx: RequestContext, query: DocumentPageQuery) -> DocumentListPage:
+    """One page of the list, and how many documents the same filters match across every page."""
+    async with AsyncSessionLocal() as db:
+        rows = await document_list_repo.list_page(
+            db, ctx.organization_id, query,
+            sort_by=query.sort_by, sort_dir=query.sort_dir, limit=query.limit, offset=query.offset,
+        )
+        total = await document_list_repo.count_filtered(db, ctx.organization_id, query)
+    items = [DocumentRead.model_validate(row) for row in rows]
+    return DocumentListPage(items=items, total=total, has_more=query.offset + len(items) < total)
+
+
+async def list_selection_refs(ctx: RequestContext, filters: DocumentFilters) -> list[DocumentSelectionRef]:
+    """Every document the filters match, as little as "select all" needs to tick it."""
+    async with AsyncSessionLocal() as db:
+        rows = await document_list_repo.list_selection_refs(db, ctx.organization_id, filters)
+    return [DocumentSelectionRef(id=row.id, status=row.status) for row in rows]
 
 
 async def get_summary(ctx: RequestContext) -> DocumentSummary:

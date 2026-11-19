@@ -1,4 +1,5 @@
 import type { DocumentListView } from "../types/document/DocumentListView";
+import type { DocumentPageArgs } from "../types/document/DocumentPageArgs";
 import type { DocumentSortField } from "../types/document/DocumentSortField";
 import type { SortFieldOption } from "../types/sort/SortFieldOption";
 
@@ -19,3 +20,9 @@ export const DOCUMENT_SORT_FIELDS: readonly SortFieldOption<DocumentSortField>[]
   { value: "status", label: "Status" },
   { value: "source", label: "Source" },
 ];
+
+/** Only the documents that failed to read: what "Show failed" opens, and what the failed notice counts. */
+export const FAILED_DOCUMENTS_VIEW: DocumentListView = { ...DEFAULT_DOCUMENT_VIEW, statuses: ["failed"] };
+
+/** What the library holds, newest first: the website's Documents list and the "pick one you've uploaded" pickers. */
+export const DOCUMENT_LIBRARY_VIEW: DocumentPageArgs = { ...DEFAULT_DOCUMENT_VIEW, excludeProcessing: true };
