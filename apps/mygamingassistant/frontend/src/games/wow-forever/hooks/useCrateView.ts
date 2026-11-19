@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useLiveSearchParams } from "@platform/ui";
-import { PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import { PROFESSION_SEARCH_PARAM, PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
 import { crateViewFromParams, crateViewToParams } from "@/games/wow-forever/lib/crates/crateViewParams";
 import { nextSort } from "@/games/wow-forever/lib/professionTiers/nextSort";
 import type { CrateFilters } from "@/games/wow-forever/types/crates/crateFilters";
@@ -18,7 +18,7 @@ export interface CrateViewState {
 }
 
 /**
- * The crates page's filter and order, kept in the link (`?tier=`, `?sort=`, `?dir=`) so a view can be shared and
+ * The crates page's filter and order, kept in the link (`?tier=`, `?q=`, `?sort=`, `?dir=`) so a view can be shared and
  * Back returns to it. Changes replace the history entry, so Back leaves the page.
  */
 export function useCrateView(): CrateViewState {
@@ -39,6 +39,7 @@ export function useCrateView(): CrateViewState {
     setParams(
       (prev) => {
         prev.delete(PROFESSION_TIER_PARAM);
+        prev.delete(PROFESSION_SEARCH_PARAM);
         return prev;
       },
       { replace: true },

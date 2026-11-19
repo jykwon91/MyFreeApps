@@ -16,6 +16,7 @@ import { useCrateView } from "@/games/wow-forever/hooks/useCrateView";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { buildCrateRows } from "@/games/wow-forever/lib/crates/buildCrateRows";
 import { filterCrateRows } from "@/games/wow-forever/lib/crates/filterCrateRows";
+import { professionEmptyMessage } from "@/games/wow-forever/lib/professionTiers/professionEmptyMessage";
 import { sortCrateRows } from "@/games/wow-forever/lib/crates/sortCrateRows";
 
 /**
@@ -53,7 +54,7 @@ export default function WowCratesPage() {
       {visible.length > 0 ? <CratesGrid rows={visible} sort={view.sort} onSort={toggleSort} loading={loading} /> : null}
       {visible.length === 0 && loading ? <ProfessionRowsSkeleton label="Loading crates" testId="crates-skeleton" /> : null}
       {visible.length === 0 && !loading ? (
-        <ProfessionEmpty message="No crates match these filters" testId="crates-empty" onClear={clearFilters} />
+        <ProfessionEmpty message={professionEmptyMessage("crates", view.filters.query)} testId="crates-empty" onClear={clearFilters} />
       ) : null}
     </div>
   );

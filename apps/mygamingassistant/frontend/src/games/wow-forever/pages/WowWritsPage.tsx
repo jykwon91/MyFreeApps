@@ -16,6 +16,7 @@ import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { useWritView } from "@/games/wow-forever/hooks/useWritView";
 import { buildWritRows } from "@/games/wow-forever/lib/writs/buildWritRows";
 import { filterWritRows } from "@/games/wow-forever/lib/writs/filterWritRows";
+import { professionEmptyMessage } from "@/games/wow-forever/lib/professionTiers/professionEmptyMessage";
 import { sortWritRows } from "@/games/wow-forever/lib/writs/sortWritRows";
 import { knownLocations } from "@/games/wow-forever/lib/writs/writFacets";
 
@@ -63,7 +64,7 @@ export default function WowWritsPage() {
       />
       {visible.length > 0 ? <WritsGrid rows={visible} sort={view.sort} onSort={toggleSort} loading={loading} /> : null}
       {visible.length === 0 && loading ? <ProfessionRowsSkeleton label="Loading writs" testId="writs-skeleton" /> : null}
-      {visible.length === 0 && !loading ? <ProfessionEmpty message="No writs match these filters" testId="writs-empty" onClear={clearFilters} /> : null}
+      {visible.length === 0 && !loading ? <ProfessionEmpty message={professionEmptyMessage("writs", view.filters.query)} testId="writs-empty" onClear={clearFilters} /> : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useLiveSearchParams } from "@platform/ui";
-import { PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
+import { PROFESSION_SEARCH_PARAM, PROFESSION_TIER_PARAM } from "@/games/wow-forever/data/professions/professionTiers/viewParams";
 import { WRIT_DEALS_PARAM, WRIT_LOCATION_PARAM } from "@/games/wow-forever/data/professions/writs/writParams";
 import { nextSort } from "@/games/wow-forever/lib/professionTiers/nextSort";
 import { writViewFromParams, writViewToParams } from "@/games/wow-forever/lib/writs/writViewParams";
@@ -19,7 +19,7 @@ export interface WritViewState {
 }
 
 /**
- * The writs page's filters and order, kept in the link (`?tier=`, `?loc=`, `?deals=`, `?sort=`, `?dir=`) so a view
+ * The writs page's filters and order, kept in the link (`?tier=`, `?loc=`, `?deals=`, `?q=`, `?sort=`, `?dir=`) so a view
  * can be shared and Back returns to it. Changes replace the history entry, so Back leaves the page.
  */
 export function useWritView(knownLocations: readonly string[]): WritViewState {
@@ -39,7 +39,7 @@ export function useWritView(knownLocations: readonly string[]): WritViewState {
   const clearFilters = useCallback(() => {
     setParams(
       (prev) => {
-        for (const name of [PROFESSION_TIER_PARAM, WRIT_LOCATION_PARAM, WRIT_DEALS_PARAM]) prev.delete(name);
+        for (const name of [PROFESSION_TIER_PARAM, WRIT_LOCATION_PARAM, WRIT_DEALS_PARAM, PROFESSION_SEARCH_PARAM]) prev.delete(name);
         return prev;
       },
       { replace: true },

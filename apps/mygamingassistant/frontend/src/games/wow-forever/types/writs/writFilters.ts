@@ -6,4 +6,6 @@ export interface WritFilters {
   /** A recorded zone, or `WRIT_LOCATION_UNKNOWN` for writs with no recorded turn-in. */
   location: string | null;
   dealsOnly: boolean;
+  /** The search box text, trimmed; "" = not searching. */
+  query: string;
 }

@@ -1,4 +1,5 @@
 import { Button } from "@platform/ui";
+import ProfessionSearch from "@/games/wow-forever/components/professionTiers/ProfessionSearch";
 import ProfessionSortSelect from "@/games/wow-forever/components/professionTiers/ProfessionSortSelect";
 import ProfessionTierFilter from "@/games/wow-forever/components/professionTiers/ProfessionTierFilter";
 import { CRATE_SORT_CHOICES } from "@/games/wow-forever/data/professions/crates/crateSortOptions";
@@ -23,6 +24,7 @@ interface CratesFiltersProps {
 export default function CratesFilters({ rows, shown, filters, sort, onFilters, onSort, onClear }: CratesFiltersProps) {
   return (
     <section aria-label="Filters" className="space-y-3">
+      <ProfessionSearch label="Search crates" placeholder="Crate or material name" testId="crates-search" />
       <ProfessionTierFilter
         tiers={CRATE_TIERS}
         labels={CRATE_TIER_LABEL}
@@ -37,7 +39,7 @@ export default function CratesFilters({ rows, shown, filters, sort, onFilters, o
         <p className="text-sm text-muted-foreground" data-testid="crates-count">
           Showing {shown} of {rows.length}
         </p>
-        {filters.tier !== null ? (
+        {filters.tier !== null || filters.query !== "" ? (
           <Button type="button" variant="secondary" size="sm" className="min-h-[44px]" onClick={onClear}>
             Clear filters
           </Button>

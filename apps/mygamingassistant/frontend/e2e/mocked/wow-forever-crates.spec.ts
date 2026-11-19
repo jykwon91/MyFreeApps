@@ -8,6 +8,7 @@
  *   - sorting by a column header flips its direction and keeps unknown totals last
  *   - switching the auction house re-prices the rows
  *   - prices that fail to load leave the rows, with a retry
+ *   - the search box matches the crate or any bundle's material, lives in `?q=`, restores on reload, and clears
  *   - a phone gets a card per crate with a sort select, and nothing scrolls sideways
  *   - while prices load the rows are already there, with skeletons where the prices go
  *
@@ -251,6 +252,64 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("crate-row").first()).toHaveAttribute("data-tier", "artisan");
   });
 
+  test("search matches the crate or any bundle's material, keeps its place in the link and clears", async ({ page }) => {
+    await stubPrices(page);
+    const material = CHEAP.bundles[1].item.name;
+    const withMaterial = CRATES.filter((c) => c.bundles.some((b) => b.item.name.toLowerCase().includes(material.toLowerCase())));
+    await page.goto("/wow-forever/crates");
+    const box = page.getByRole("searchbox", { name: "Search crates" });
+    await expect(box).toBeVisible();
+    await expect(box).toHaveAttribute("placeholder", "Crate or material name");
+
+    await box.fill(`  ${material.toUpperCase()} `);
+    await expect(page).toHaveURL(/q=/);
+    await expect(page.getByTestId("crate-row")).toHaveCount(withMaterial.length);
+    await expect(rowOf(page, CHEAP)).toBeVisible();
+    await expect(page.getByTestId("crates-count")).toHaveText(`Showing ${withMaterial.length} of ${CRATES.length}`);
+    // Nothing else changes in the row: the bundles stay folded.
+    await expect(rowOf(page, CHEAP).getByTestId("crate-bundle")).toHaveCount(0);
+
+    // A crate name finds the crate.
+    await box.fill(short(DEAR));
+    await expect(rowOf(page, DEAR)).toBeVisible();
+
+    // Reload restores the box and the rows.
+    await page.reload();
+    await expect(page.getByRole("searchbox", { name: "Search crates" })).toHaveValue(short(DEAR));
+    await expect(rowOf(page, DEAR)).toBeVisible();
+
+    // Search + tier filter.
+    await box.fill(material);
+    await page.getByRole("radio", { name: new RegExp(`^${CRATE_TIER_LABEL[CHEAP.tier]}`) }).click();
+    await expect(page).toHaveURL(/q=/);
+    await expect(page).toHaveURL(new RegExp(`tier=${CHEAP.tier}`));
+    await expect(page.getByTestId("crates-count")).toHaveText(
+      `Showing ${withMaterial.filter((c) => c.tier === CHEAP.tier).length} of ${CRATES.length}`,
+    );
+
+    // Clear filters clears the search too.
+    await page.getByRole("button", { name: "Clear filters" }).click();
+    await expect(page).not.toHaveURL(/q=|tier=/);
+    await expect(box).toHaveValue("");
+    await expect(page.getByTestId("crate-row")).toHaveCount(CRATES.length);
+
+    // The x button and Escape empty the box; the empty state names the query.
+    await box.fill("zzzz");
+    await expect(page.getByText("No crates match \u201Czzzz\u201D.")).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(box).toHaveValue("");
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(page.getByTestId("crate-row")).toHaveCount(CRATES.length);
+    await box.fill("herbs");
+    await box.press("Escape");
+    await expect(box).toHaveValue("");
+    await expect(page).not.toHaveURL(/q=/);
+
+    await page.goto("/wow-forever/crates?q=zzzz");
+    await page.getByTestId("crates-empty").getByRole("button", { name: "Clear filters" }).click();
+    await expect(page.getByTestId("crate-row")).toHaveCount(CRATES.length);
+  });
+
   test("switching the auction house re-prices the rows", async ({ page }) => {
     await stubPrices(page);
     await page.goto("/wow-forever/crates");
@@ -320,6 +379,16 @@ test.describe("phone", () => {
     await expect(cheap.getByText(/^Crate ~.* \+ Bundle ~/)).toBeVisible();
     await expect(cheap.getByTestId("crate-total")).toBeVisible();
     await expectNoSidewaysScroll(page);
+
+    const search = page.getByRole("searchbox", { name: "Search crates" });
+    expect((await search.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await search.fill(CHEAP.bundles[1].item.name);
+    await expect(cheap).toBeVisible();
+    const clear = await page.getByRole("button", { name: "Clear search" }).boundingBox();
+    expect(clear?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(clear?.width ?? 0).toBeGreaterThanOrEqual(44);
+    await expectNoSidewaysScroll(page);
+    await search.fill("");
 
     await cheap.getByRole("button", { name: `All ${CHEAP.bundles.length} bundles` }).click();
     await expect(cheap.getByTestId("crate-bundle")).toHaveCount(CHEAP.bundles.length);
