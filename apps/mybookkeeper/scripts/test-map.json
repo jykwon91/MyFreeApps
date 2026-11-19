@@ -707,6 +707,8 @@
         "frontend/src/app/features/calendar/",
         "frontend/src/shared/types/calendar/",
         "api-client/src/store/calendarApi.ts",
+        "api-client/src/constants/calendarListingsCheck.ts",
+        "api-client/src/constants/calendarViewMode.ts",
         "api-client/src/types/calendar/",
         "frontend/src/shared/lib/calendar-constants.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
@@ -1655,7 +1657,12 @@
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode-args.ts",
-        "api-client/src/utils/receiptsWaitingLine.ts"
+        "api-client/src/utils/receiptsWaitingLine.ts",
+        "api-client/src/hooks/usePendingReceiptsPages.ts",
+        "api-client/src/constants/receiptPaging.ts",
+        "api-client/src/types/lease/pending-receipt-lookup-response.ts",
+        "api-client/src/types/lease/pending-receipts-pages-state.ts",
+        "backend/app/schemas/leases/pending_receipt_lookup_response.py"
       ],
       "backend_tests": [
         "test_receipt_send_details_match_api_client.py",
@@ -1673,11 +1680,13 @@
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",
         "PendingReceipts.test.tsx",
+        "PendingReceiptsPaging.test.tsx",
         "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "pending-receipts.spec.ts",
-        "mocked/sections-retry-mock.spec.ts"
+        "mocked/sections-retry-mock.spec.ts",
+        "mocked/pending-receipts-load-more-mock.spec.ts"
       ]
     },
     "screening": {

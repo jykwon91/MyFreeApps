@@ -3,7 +3,6 @@ import { RECEIPT_GMAIL_STATE_MESSAGES, RECEIPT_SEND_BLOCKER_MESSAGES } from "@my
 import { RECEIPT_SEND_ERROR_MESSAGES } from "@mybookkeeper/api-client/constants/receiptSendErrorMessages";
 import { rentReceiptsApi } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { localToday } from "@platform/core/utils/localToday";
-import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
@@ -15,7 +14,7 @@ import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import { GMAIL_CONNECT_MESSAGES } from "../src/constants/gmailConnect";
-import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
+import { BLOCKER_FIX_ON_PHONE, RECONNECT_IN_INTEGRATIONS, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import SendReceiptScreen from "../src/features/receipts/SendReceiptScreen";
 import { useSendReceipt } from "../src/features/receipts/useSendReceipt";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
@@ -23,7 +22,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { fakeDownloads, fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
-import { aReceipt, type FakeReceiptServer, startReceiptServer } from "../test-support/receiptsServer";
+import { aReceipt, cachedReceiptPages, type FakeReceiptServer, startReceiptServer } from "../test-support/receiptsServer";
 
 const mockPreventRemove = { active: false };
 jest.mock("expo-router", () => ({
@@ -70,7 +69,8 @@ async function settle() {
 async function showScreen(transactionId = "tx1") {
   await render(<SendReceiptScreen transactionId={transactionId} />, { wrapper: Screen });
   await act(async () => {
-    await store.dispatch(rentReceiptsApi.endpoints.getPendingReceipts.initiate({ limit: RECEIPTS_LIMIT }, { forceRefetch: true }));
+    // Joins the screen's own lookup, so the test waits for its answer.
+    await store.dispatch(rentReceiptsApi.endpoints.getPendingReceipt.initiate(transactionId));
   });
   await settle();
 }
@@ -91,8 +91,15 @@ async function sendAndConfirm() {
   await pressAlert(MESSAGES.sendReceipt);
 }
 
-function cachedList(): PendingReceiptListResponse | undefined {
-  return store.getState().api.queries[`getPendingReceipts({"limit":${RECEIPTS_LIMIT}})`]?.data as PendingReceiptListResponse | undefined;
+/** The Receipts list's loaded pages, as the screen behind this one holds them. */
+function cachedPages() {
+  return cachedReceiptPages(store.getState());
+}
+
+async function loadReceiptsList() {
+  await act(async () => {
+    await store.dispatch(rentReceiptsApi.endpoints.listPendingReceiptPages.initiate());
+  });
 }
 
 beforeEach(() => {
@@ -136,7 +143,7 @@ describe("opening it", () => {
     expect(await screen.findByText("Jane Smith")).toBeTruthy();
   });
 
-  it("says a receipt that isn't in the list isn't waiting anymore", async () => {
+  it("says a receipt that isn't waiting on the server isn't waiting anymore", async () => {
     startReceiptServer([aReceipt()]);
     await showScreen("tx-other");
 
@@ -144,6 +151,18 @@ describe("opening it", () => {
     expect(screen.getByText(MESSAGES.notWaitingBody)).toBeTruthy();
     await fireEvent.press(screen.getByText(MESSAGES.goBack));
     expect(router.back).toHaveBeenCalled();
+  });
+
+  it("opens a receipt past the most one list request returns, asking for that receipt alone", async () => {
+    const receipts = Array.from({ length: 520 }, (_, index) =>
+      aReceipt({ id: `pr${index + 1}`, transaction_id: `tx${index + 1}`, tenant_name: `Tenant ${index + 1}`, payer_name: null }),
+    );
+    const server = startReceiptServer(receipts);
+    await showScreen("tx510");
+
+    expect(screen.getByText("Tenant 510")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.notWaitingHeading)).toBeNull();
+    expect(server.listReads.map((read) => read.url)).toEqual(["/rent-receipts/pending/tx510"]);
   });
 
   it("gives a viewer who follows a link a way back and no form", async () => {
@@ -354,6 +373,7 @@ describe("sending", () => {
 
   it("sends, takes it off the list even if the reload fails, says so, and goes back", async () => {
     const server = startReceiptServer([aReceipt(), aReceipt({ id: "pr2", transaction_id: "tx2" })]);
+    await loadReceiptsList();
     await showScreen();
     server.listStatus = 500;
 
@@ -363,8 +383,8 @@ describe("sending", () => {
 
     expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/send", body: { period_start: "2026-06-01", period_end: "2026-06-30", payment_method: "zelle", today: localToday() } }]);
     expect(screen.getByText(SENT)).toBeTruthy();
-    expect(cachedList()?.items.map((item) => item.transaction_id)).toEqual(["tx2"]);
-    expect(cachedList()?.pending_count).toBe(1);
+    expect(cachedPages().flatMap((page) => page.items.map((item) => item.transaction_id))).toEqual(["tx2"]);
+    expect(cachedPages().map((page) => page.pending_count)).toEqual([1]);
     // Still the form, not "isn't waiting anymore", while the screen goes.
     expect(screen.queryByText(MESSAGES.notWaitingHeading)).toBeNull();
   });

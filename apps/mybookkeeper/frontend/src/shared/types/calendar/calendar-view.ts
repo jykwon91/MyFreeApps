@@ -1,3 +1,5 @@
+import type { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
+
 /**
  * Which shape the calendar is drawn in.
  *
@@ -6,4 +8,4 @@
  * free" — a question the month shape can't, since a cell stacks every listing
  * together.
  */
-export type CalendarView = "month" | "timeline";
+export type CalendarView = (typeof CALENDAR_VIEW_MODE)[keyof typeof CALENDAR_VIEW_MODE];

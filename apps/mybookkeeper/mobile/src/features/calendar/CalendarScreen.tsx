@@ -6,7 +6,8 @@ import { Banner, LoadingButton, StaleDataBanner, useAnnouncement, useRefresh, us
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { SectionList, View } from "react-native";
-import { CALENDAR_LISTINGS_CHECK, CALENDAR_MESSAGES } from "../../constants/calendar";
+import { CALENDAR_LISTINGS_CHECK } from "@mybookkeeper/api-client/constants/calendarListingsCheck";
+import { CALENDAR_MESSAGES } from "../../constants/calendar";
 import { FILTER_MESSAGES } from "../../constants/calendarFilters";
 import { isoFromDate, monthOf, shiftMonth } from "../../lib/localDate";
 import { useToday } from "../../lib/useToday";

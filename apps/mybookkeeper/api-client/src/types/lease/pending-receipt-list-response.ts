@@ -5,6 +5,8 @@ export interface PendingReceiptListResponse {
   items: PendingReceipt[];
   /** Every open receipt, not just this page. Same as `pending_count`. */
   total: number;
+  /** More open receipts after this page. */
+  has_more: boolean;
   pending_count: number;
   gmail_state: ReceiptGmailState;
 }

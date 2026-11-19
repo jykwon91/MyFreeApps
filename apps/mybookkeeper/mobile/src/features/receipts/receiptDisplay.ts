@@ -47,10 +47,6 @@ export function receivedLine(receipt: PendingReceipt): string {
   return `Received ${shortDate(receipt.transaction_date)}`;
 }
 
-export function moreWaitingLine(count: number): string {
-  return `${count} more ${count === 1 ? "is" : "are"} waiting. They'll show up as you finish these.`;
-}
-
 export function blockerMessage(blocker: ReceiptSendBlocker): string {
   const reason = RECEIPT_SEND_BLOCKER_MESSAGES[blocker];
   const fix = BLOCKER_FIX_ON_PHONE[blocker];

@@ -7,7 +7,7 @@ import PendingReceipts from "@/app/pages/PendingReceipts";
 import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
 
 vi.mock("@mybookkeeper/api-client/store/rentReceiptsApi", () => ({
-  useGetPendingReceiptsQuery: vi.fn(),
+  useListPendingReceiptPagesInfiniteQuery: vi.fn(),
   useDismissReceiptMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
@@ -25,7 +25,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showError: vi.fn(),
 }));
 
-import { useDismissReceiptMutation, useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { useDismissReceiptMutation, useListPendingReceiptPagesInfiniteQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { queryStatus } from "@/test/rtk-query-status";
 
 const pendingResponse: PendingReceiptListResponse = {
@@ -52,17 +53,31 @@ const pendingResponse: PendingReceiptListResponse = {
     },
   ],
   total: 1,
+  has_more: false,
   pending_count: 1,
   gmail_state: "ready",
 };
 
-function mockList(data: PendingReceiptListResponse) {
-  vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-    data,
-    isLoading: false,
-    isError: false,
+interface QueryState {
+  data?: PendingReceiptListResponse;
+  isLoading?: boolean;
+  failed?: boolean;
+  fetching?: boolean;
+}
+
+function mockQuery({ data, isLoading = false, failed = false, fetching = false }: QueryState) {
+  vi.mocked(useListPendingReceiptPagesInfiniteQuery).mockReturnValue({
+    ...infiniteQueryData(data),
+    isLoading,
+    ...queryStatus({ failed, fetching }),
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     refetch: vi.fn(),
-  } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+  } as unknown as ReturnType<typeof useListPendingReceiptPagesInfiniteQuery>);
+}
+
+function mockList(data: PendingReceiptListResponse) {
+  mockQuery({ data });
 }
 
 function renderPage() {
@@ -81,36 +96,21 @@ describe("PendingReceipts page", () => {
   });
 
   it("shows skeleton while loading", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockQuery({ isLoading: true, fetching: true });
 
     renderPage();
     expect(screen.getAllByTestId("pending-receipt-row-skeleton").length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no pending receipts", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: { items: [], total: 0, pending_count: 0, gmail_state: "ready" },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList({ items: [], total: 0, has_more: false, pending_count: 0, gmail_state: "ready" });
 
     renderPage();
     expect(screen.getByText(/queue a receipt/i)).toBeInTheDocument();
   });
 
   it("shows pending receipt rows", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: pendingResponse,
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList(pendingResponse);
 
     renderPage();
     const row = screen.getByTestId("pending-receipt-row");
@@ -170,15 +170,7 @@ describe("PendingReceipts page", () => {
   });
 
   it("marks a send Gmail hasn't confirmed and hides Dismiss on it", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: {
-        ...pendingResponse,
-        items: [{ ...pendingResponse.items[0], status: "sending" }],
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList({ ...pendingResponse, items: [{ ...pendingResponse.items[0], status: "sending" }] });
 
     renderPage();
     expect(screen.getByTestId("pending-receipt-confirming")).toHaveTextContent("Confirming with Gmail");
@@ -211,24 +203,14 @@ describe("PendingReceipts page", () => {
   });
 
   it("shows no confirming pill on a pending row", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: pendingResponse,
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList(pendingResponse);
 
     renderPage();
     expect(screen.queryByTestId("pending-receipt-confirming")).not.toBeInTheDocument();
   });
 
   it("shows send dialog when Review & send is clicked", async () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: pendingResponse,
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList(pendingResponse);
 
     renderPage();
     fireEvent.click(screen.getByTestId("pending-receipt-send-btn"));
@@ -239,38 +221,23 @@ describe("PendingReceipts page", () => {
   });
 
   it("shows error alert on fetch failure", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      ...queryStatus({ failed: true, fetching: false }),
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockQuery({ failed: true });
 
     renderPage();
-    expect(screen.getByText(/couldn't load pending receipts/i)).toBeInTheDocument();
+    expect(screen.getByText(/couldn't load your pending receipts/i)).toBeInTheDocument();
   });
 
   it("keeps the error, not the empty state, while Retry refetches", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      ...queryStatus({ failed: true, fetching: true }),
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockQuery({ failed: true, fetching: true });
 
     renderPage();
-    expect(screen.getByText(/couldn't load pending receipts/i)).toBeInTheDocument();
+    expect(screen.getByText(/couldn't load your pending receipts/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
     expect(screen.queryByText(/I'll queue a receipt here/)).not.toBeInTheDocument();
   });
 
   it("counts every open receipt in the subtitle as waiting, not ready", () => {
-    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: pendingResponse,
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+    mockList(pendingResponse);
 
     renderPage();
     expect(screen.getByText("1 receipt waiting to send")).toBeInTheDocument();

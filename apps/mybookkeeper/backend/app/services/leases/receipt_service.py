@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.mappers.pending_receipt_mapper import to_pending_receipt_response
+from app.models.integrations.integration import Integration
 from app.models.leases.pending_rent_receipt import PendingRentReceipt
 from app.repositories import integration_repo
 from app.repositories.applicants import applicant_repo
@@ -21,7 +22,9 @@ from app.repositories.leases import (
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
-from app.schemas.leases.receipt_response import PendingReceiptListResponse
+from app.schemas.leases.pending_receipt_list_row import PendingReceiptListRow
+from app.schemas.leases.pending_receipt_lookup_response import PendingReceiptLookupResponse
+from app.schemas.leases.receipt_response import PendingReceiptListResponse, PendingReceiptResponse
 from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptTransactionNotAttributedError,
@@ -119,6 +122,34 @@ async def create_pending_receipt_from_attribution(
         )
 
 
+def _to_response(
+    row: PendingReceiptListRow,
+    *,
+    user_id: uuid.UUID,
+    integration: Integration | None,
+    now: _dt.datetime,
+) -> PendingReceiptResponse:
+    """An open receipt with what a send would refuse, for the user asking."""
+    return to_pending_receipt_response(
+        row,
+        send_blocker=receipt_send_blocker(
+            attributed=row.attributed,
+            tenant_owner_id=row.tenant_owner_id,
+            requester_id=user_id,
+            tenant_email=resolve_tenant_email(row.contact_email, row.inquirer_email),
+            has_lease=row.has_lease,
+        ),
+        sent_from_other_gmail=sent_from_other_gmail(
+            status=row.status,
+            sender_gmail_address=row.sender_gmail_address,
+            send_message_id=row.send_message_id,
+            send_claimed_at=row.send_claimed_at,
+            integration=integration,
+            now=now,
+        ),
+    )
+
+
 async def get_pending_receipt_list(
     *,
     organization_id: uuid.UUID,
@@ -136,31 +167,32 @@ async def get_pending_receipt_list(
             db, organization_id, "gmail",
         )
     now = _dt.datetime.now(_dt.timezone.utc)
-    items = [
-        to_pending_receipt_response(
-            row,
-            send_blocker=receipt_send_blocker(
-                attributed=row.attributed,
-                tenant_owner_id=row.tenant_owner_id,
-                requester_id=user_id,
-                tenant_email=resolve_tenant_email(row.contact_email, row.inquirer_email),
-                has_lease=row.has_lease,
-            ),
-            sent_from_other_gmail=sent_from_other_gmail(
-                status=row.status,
-                sender_gmail_address=row.sender_gmail_address,
-                send_message_id=row.send_message_id,
-                send_claimed_at=row.send_claimed_at,
-                integration=integration,
-                now=now,
-            ),
-        )
-        for row in rows
-    ]
     return PendingReceiptListResponse(
-        items=items,
+        items=[_to_response(row, user_id=user_id, integration=integration, now=now) for row in rows],
         total=pending_count,
+        has_more=offset + len(rows) < pending_count,
         pending_count=pending_count,
+        gmail_state=receipt_gmail_state(integration),
+    )
+
+
+async def get_pending_receipt(
+    *,
+    transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> PendingReceiptLookupResponse:
+    """One payment's open receipt, as the list shows it, plus the Gmail state."""
+    async with AsyncSessionLocal() as db:
+        row = await pending_rent_receipt_repo.get_open_by_transaction_id(
+            db, organization_id, user_id, transaction_id,
+        )
+        integration = await integration_repo.get_by_org_and_provider(
+            db, organization_id, "gmail",
+        )
+    now = _dt.datetime.now(_dt.timezone.utc)
+    return PendingReceiptLookupResponse(
+        item=_to_response(row, user_id=user_id, integration=integration, now=now) if row else None,
         gmail_state=receipt_gmail_state(integration),
     )
 

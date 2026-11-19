@@ -5,7 +5,7 @@ import PendingReceiptRow from "./PendingReceiptRow";
 
 export interface PendingReceiptsListBodyProps {
   mode: ListLoadMode;
-  receipts: PendingReceipt[];
+  receipts: readonly PendingReceipt[];
   canSend: boolean;
 }
 
@@ -15,7 +15,7 @@ export default function PendingReceiptsListBody({ mode, receipts, canSend }: Pen
       // The page shows its full-page skeleton instead.
       return null;
     case "error":
-      // The page's LoadErrorAlert says the receipts couldn't load.
+      // The page's ListPagesErrorAlert says the receipts couldn't load.
       return null;
     case "empty":
       return (

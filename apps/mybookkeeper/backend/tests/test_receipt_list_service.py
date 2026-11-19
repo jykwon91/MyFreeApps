@@ -258,6 +258,81 @@ async def test_total_counts_every_open_receipt_not_just_the_page(
 
     assert len(listing.items) == 1
     assert listing.total == 2
+    assert listing.has_more is True
+
+
+@pytest.mark.asyncio
+async def test_pages_reach_every_open_receipt_and_the_last_says_no_more(
+    db: AsyncSession, test_org: Organization, test_user: User,
+) -> None:
+    seeded = {
+        await seed_receipt(db, org=test_org, user=test_user, with_integration=index == 0)
+        for index in range(5)
+    }
+
+    pages = [
+        await receipt_service.get_pending_receipt_list(
+            organization_id=test_org.id, user_id=test_user.id, limit=2, offset=offset,
+        )
+        for offset in (0, 2, 4)
+    ]
+
+    assert [page.has_more for page in pages] == [True, True, False]
+    assert {row.transaction_id for page in pages for row in page.items} == seeded
+
+
+@pytest.mark.asyncio
+async def test_looks_up_one_open_receipt_past_the_first_page(
+    db: AsyncSession, test_org: Organization, test_user: User,
+) -> None:
+    oldest = await seed_receipt(db, org=test_org, user=test_user, payer_name="OLDEST")
+    for _ in range(3):
+        await seed_receipt(db, org=test_org, user=test_user, with_integration=False)
+    # The list is newest first, so the oldest sits past a first page of two.
+    await db.execute(
+        update(PendingRentReceipt)
+        .where(PendingRentReceipt.transaction_id == oldest)
+        .values(created_at=_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=30))
+    )
+    await db.commit()
+    first_page = await receipt_service.get_pending_receipt_list(
+        organization_id=test_org.id, user_id=test_user.id, limit=2, offset=0,
+    )
+    assert oldest not in {row.transaction_id for row in first_page.items}
+
+    lookup = await receipt_service.get_pending_receipt(
+        transaction_id=oldest, organization_id=test_org.id, user_id=test_user.id,
+    )
+
+    assert lookup.item is not None
+    assert lookup.item.transaction_id == oldest
+    assert lookup.item.payer_name == "OLDEST"
+    assert lookup.item.send_blocker is None
+    assert lookup.gmail_state == "ready"
+
+
+@pytest.mark.asyncio
+async def test_lookup_says_none_for_a_finished_or_other_orgs_receipt(
+    db: AsyncSession, test_org: Organization, test_user: User,
+) -> None:
+    sent = await seed_receipt(db, org=test_org, user=test_user)
+    sending = await seed_receipt(db, org=test_org, user=test_user, with_integration=False)
+    await _set_status(db, sent, "sent")
+    await _set_status(db, sending, "sending")
+    other_org = Organization(id=uuid.uuid4(), name="Other", created_by=test_user.id)
+    db.add(other_org)
+    await db.commit()
+    elsewhere = await seed_receipt(db, org=other_org, user=test_user, with_integration=False)
+
+    async def lookup(txn_id: uuid.UUID):  # type: ignore[no-untyped-def]
+        return await receipt_service.get_pending_receipt(
+            transaction_id=txn_id, organization_id=test_org.id, user_id=test_user.id,
+        )
+
+    assert (await lookup(sent)).item is None
+    assert (await lookup(elsewhere)).item is None
+    still_sending = (await lookup(sending)).item
+    assert still_sending is not None and still_sending.status == "sending"
 
 
 async def _drop_gmail(db: AsyncSession) -> None:
