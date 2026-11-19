@@ -1440,6 +1440,83 @@ local function remind()
   end
 end
 
+-- Craftsman's Writs: where each is delivered is in no game data, only marked on your map while you
+-- hold it. Note each writ quest's marker in writSpots (account-wide) for the site's Crafting writs page.
+local WRIT_PREFIX = "Craftsman's Writ: "
+local AZEROTH_MAP = 947
+local ZONE_MAP_TYPE = 3
+local SAME_WRIT_SPOT = 1
+local WRIT_RETRY_SECONDS = 5
+local writNoted, writTried = {}, {}
+
+local function writMarker(id)
+  if C_QuestLog and C_QuestLog.GetNextWaypoint then
+    local map, x, y = C_QuestLog.GetNextWaypoint(id)
+    if map and x and y then return map, x, y end
+  end
+  if not (C_QuestLog and C_QuestLog.GetQuestsOnMap and C_Map and C_Map.GetMapChildrenInfo) then return nil end
+  local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or ZONE_MAP_TYPE
+  for _, zone in ipairs(C_Map.GetMapChildrenInfo(AZEROTH_MAP, zoneType, true) or {}) do
+    for _, q in ipairs(C_QuestLog.GetQuestsOnMap(zone.mapID) or {}) do
+      if q.questID == id and q.x and q.y then return zone.mapID, q.x, q.y end
+    end
+  end
+end
+
+local function round1(v) return math.floor(v * 1000 + 0.5) / 10 end
+
+-- One writ's spot into writSpots; true when it's a place not noted before.
+local function noteWritSpot(id, map, x, y)
+  local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(map)
+  local faction = UnitFactionGroup and UnitFactionGroup("player")
+  if not (info and info.name and faction) then return false end
+  MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
+  MGADungeonQuestsSettings.writSpots = MGADungeonQuestsSettings.writSpots or {}
+  local spots = MGADungeonQuestsSettings.writSpots[id] or {}
+  MGADungeonQuestsSettings.writSpots[id] = spots
+  local spot = { zone = info.name, map = map, x = round1(x), y = round1(y), seen = date and date("%Y-%m-%d") or "", faction = faction:lower() }
+  for _, s in ipairs(spots) do
+    if s.map == map and s.faction == spot.faction and math.abs(s.x - spot.x) <= SAME_WRIT_SPOT and math.abs(s.y - spot.y) <= SAME_WRIT_SPOT then
+      s.seen = spot.seen
+      return false
+    end
+  end
+  spots[#spots + 1] = spot
+  return true, spot
+end
+
+-- Every writ in your log: note where it goes. Returns the writs whose marker the client didn't give.
+function M.RecordWrits(force)
+  local now = GetTime and GetTime() or 0
+  local unplaced = {}
+  for _, q in ipairs(scanLog()) do
+    if q.title:sub(1, #WRIT_PREFIX) == WRIT_PREFIX and not writNoted[q.id] then
+      if force or not writTried[q.id] or now - writTried[q.id] >= WRIT_RETRY_SECONDS then
+        writTried[q.id] = now
+        local map, x, y = writMarker(q.id)
+        if map then
+          writNoted[q.id] = true
+          local new, spot = noteWritSpot(q.id, map, x, y)
+          if new then say(string.format("noted where %s goes: %s %.1f, %.1f.", q.title, spot.zone, spot.x, spot.y)) end
+        else
+          unplaced[#unplaced + 1] = q.title
+        end
+      else
+        unplaced[#unplaced + 1] = q.title
+      end
+    end
+  end
+  return unplaced
+end
+
+local function writsCommand()
+  local unplaced = M.RecordWrits(true)
+  local count = 0
+  for _ in pairs((MGADungeonQuestsSettings and MGADungeonQuestsSettings.writSpots) or {}) do count = count + 1 end
+  say(string.format("%d writ%s noted so far. Pick up a writ and it's noted on its own; the site's Crafting writs page shows them after the next data refresh.", count, count == 1 and "" or "s"))
+  if #unplaced > 0 then say("the game hasn't marked where these go yet: " .. table.concat(unplaced, ", ") .. ".") end
+end
+
 SLASH_MGADUNGEONQUESTS1 = "/mgadq"
 SLASH_MGADUNGEONQUESTS2 = "/mgadungeonquests"
 SlashCmdList.MGADUNGEONQUESTS = function(msg)
@@ -1448,9 +1525,11 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
   word = word and word:lower()
   if word == "help" then
     say("/mgadq opens the dungeon you're in, else the journal. /mgadq <dungeon> (deadmines, sfk, vc...) opens one. /mgadq list. " ..
-      "/mgadq turnin routes you through your finished quests. /mgadq pins on|off shows them on the World Map. /mgadq remind on|off.")
+      "/mgadq turnin routes you through your finished quests. /mgadq pins on|off shows them on the World Map. /mgadq writs: the writs noted so far. /mgadq remind on|off.")
   elseif word == "list" then
     M.Show(nil)
+  elseif word == "writs" or word == "writ" then
+    writsCommand()
   elseif word == "turnin" or word == "turnins" or word == "turn-in" or word == "turn-ins" then
     M.StartTurnIns()
   elseif word == "pins" then
@@ -1491,6 +1570,7 @@ end
 local QUEST_EVENTS = { QUEST_ACCEPTED = true, QUEST_TURNED_IN = true, QUEST_REMOVED = true, QUEST_LOG_UPDATE = true }
 events:SetScript("OnEvent", function(_, event, arg1, isReloadingUi)
   if QUEST_EVENTS[event] then
+    M.RecordWrits()
     M.CheckTurnIns()
     if WorldMapFrame and WorldMapFrame:IsShown() then M.DrawTurnInPins() end
   end

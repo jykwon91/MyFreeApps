@@ -205,6 +205,13 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Look up what any item sells for: market value, average sale price and how many sell a day, on the US auction house.",
       },
       {
+        path: "/wow-forever/writs",
+        category: "crafting",
+        title: "Crafting writs",
+        iconName: "ScrollText",
+        description: "Every Craftsman's Writ with what the writ and the item it asks for cost on the auction house, cheapest first.",
+      },
+      {
         path: "/wow-forever/professions",
         category: "crafting",
         title: "Professions",

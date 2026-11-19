@@ -34,7 +34,7 @@ export default function DungeonQuestsAddonCard() {
           in to. Route shows the quickest way there from where you stand, by foot, flight path, boat or zeppelin, and moves the map pin along as you go. Any quest you&apos;ve finished, dungeon or not, gets a pin on your World Map at
           whoever takes it back, and <code>/mgadq turnin</code> (or the map&apos;s Route turn-ins button) takes you to them all in
           the quickest order. It also reminds you in chat when you enter a dungeon with quests you
-          haven&apos;t picked up.
+          haven&apos;t picked up, and notes where each Craftsman&apos;s Writ you pick up is delivered, for the Crafting writs page.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>

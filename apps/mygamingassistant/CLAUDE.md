@@ -2018,6 +2018,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   and routes stop by stop, moving on when the stop's quests leave the log. Spots come from `TurnIns.lua`
   (`turnInsDataLua.ts` <- `loadTurnInSpots.ts`: a quest's single ender placed where that NPC id gives a
   quest in any quest shard; ~3,000 of ~3,500 quests). `/mgadq pins off` hides the pins.
+  Writ spots (2.3.0): where a Craftsman's Writ is delivered is in no game data (not Blizzard's API, the
+  client DB2s or the quest cache), only on the map while you hold it. On quest events the addon reads each
+  writ quest's marker (`C_QuestLog.GetNextWaypoint`, else `C_QuestLog.GetQuestsOnMap` over Azeroth's zones)
+  into account-wide `MGADungeonQuestsSettings.writSpots[questId]` = `{zone, map, x, y, seen, faction}`;
+  `/mgadq writs` shows the count and the writs not yet marked. The Crafting writs page
+  (`/wow-forever/writs`) reads `data/professions/writs/writs.json` from
+  `python -m scripts.wow_writs.build`: writs = `item_names.json` "Craftsman's Writ: X" items; tier
+  (`name_description`) and quest from Blizzard's item API; the item asked for matched by craft name in
+  `professions/crafting/*.json` (recipe, made item, or teaching item minus "Recipe: " etc.; no single
+  match = null, shown "Unknown item", never guessed); turn-in spots merged from every
+  `WTF/Account/*/SavedVariables/MGADungeonQuests.lua` (`MGA_WOW_WTF_DIR` overrides) over the ones already in
+  the file, so a run never loses one. Rerun the build after the operator has picked up writs.
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.
