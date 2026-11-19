@@ -1374,6 +1374,7 @@
         "frontend/src/shared/types/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode-args.ts",
         "api-client/src/store/welcomeManualsApi.ts",
+        "api-client/src/hooks/useWelcomeManualsPages.ts",
         "api-client/src/types/welcome-manual/",
         "api-client/src/constants/welcomeManualLimits.ts",
         "api-client/src/utils/welcomeManualProblems.ts",
@@ -1422,6 +1423,7 @@
         "WelcomeManualShareCard.test.tsx",
         "PublicWelcomeManual.test.tsx",
         "WelcomeManuals.test.tsx",
+        "WelcomeManualsPaging.test.tsx",
         "WelcomeManualRoomManager.test.tsx",
         "WelcomeManualSectionCard.test.tsx",
         "WelcomeManualSectionFieldManager.test.tsx",
@@ -1435,6 +1437,7 @@
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
+        "mocked/welcome-manuals-load-more-mock.spec.ts",
         "welcome-manual-rooms.spec.ts",
         "welcome-manuals-layout.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts",

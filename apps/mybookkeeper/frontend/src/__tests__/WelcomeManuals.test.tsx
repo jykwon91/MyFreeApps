@@ -15,6 +15,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import WelcomeManuals from "@/app/pages/WelcomeManuals";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { queryStatus } from "@/test/rtk-query-status";
 
 const mockRefetch = vi.fn();
@@ -29,11 +30,13 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
-  useGetWelcomeManualsQuery: vi.fn(() => ({
+  useListWelcomeManualPagesInfiniteQuery: vi.fn(() => ({
     // RTK has no data while a first load runs or after it failed.
-    data: mockIsLoading || mockIsError ? undefined : { items: mockManuals, total: mockManuals.length, has_more: false },
+    ...infiniteQueryData(mockIsLoading || mockIsError ? undefined : { items: mockManuals, total: mockManuals.length, has_more: false }),
     isLoading: mockIsLoading,
     ...queryStatus({ failed: mockIsError, fetching: false }),
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     refetch: mockRefetch,
   })),
   useCreateWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
