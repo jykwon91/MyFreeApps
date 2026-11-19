@@ -101,7 +101,7 @@ class TestTransactionPage:
         await _seed_transaction(db, org, owner)
 
         body = (await client.get("/transactions/page")).json()
-        assert body == {"items": body["items"], "total": 1, "has_more": False}
+        assert body == {"items": body["items"], "total": 1, "has_more": False, "amount_total": "100.00"}
         assert len(body["items"]) == 1
         assert DEFAULT_TRANSACTION_PAGE_SIZE <= MAX_TRANSACTION_PAGE_SIZE
 
@@ -314,9 +314,9 @@ class TestSelectionAndCategories:
         assert (await client.get("/transactions/categories", params={"vendor": "power"})).json() == ["utilities"]
 
 
-class TestCountFiltered:
+class TestTotalsFiltered:
     @pytest.mark.asyncio
-    async def test_counts_the_same_rows_the_list_returns(
+    async def test_counts_and_sums_the_same_rows_the_list_returns(
         self, db: AsyncSession, org: Organization, owner: User, prop: Property,
     ) -> None:
         await _seed_transaction(db, org, owner, status="pending", tax_relevant=True, vendor="Alpha Plumbing")
@@ -337,5 +337,6 @@ class TestCountFiltered:
             {"property_ids": [prop.id, "unassigned"], "statuses": ["approved"]},
         ):
             listed = await transaction_repo.list_filtered(db, org.id, **filters)  # type: ignore[arg-type]
-            counted = await transaction_repo.count_filtered(db, org.id, **filters)  # type: ignore[arg-type]
-            assert counted == len(listed), filters
+            totals = await transaction_repo.totals_filtered(db, org.id, **filters)  # type: ignore[arg-type]
+            assert totals.count == len(listed), filters
+            assert totals.amount_total == sum((row.amount for row in listed), Decimal("0")), filters

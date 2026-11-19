@@ -5,7 +5,7 @@ import { formatTag } from "@/shared/utils/tag";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
 export interface DrillDownListProps {
-  transactions: Transaction[];
+  transactions: readonly Transaction[];
   onSelectTxn: (txn: Transaction) => void;
 }
 

@@ -1,8 +1,9 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Provider } from "react-redux";
-import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
+import { DRILL_DOWN_PAGE_SIZE } from "@mybookkeeper/api-client/constants/transactionPaging";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { DRILL_DOWN_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import DrillDownScreen from "../src/features/drillDown/DrillDownScreen";
@@ -38,19 +39,19 @@ async function show(): Promise<void> {
 }
 
 describe("DrillDownScreen", () => {
-  it("asks for approved transactions over the dates, as many as the server allows", async () => {
+  it("asks for approved transactions over the dates, one page at a time", async () => {
     const server = startTransactionServer([aTransaction({ id: "a", transaction_type: "income", category: "rental_revenue", vendor: "Guest" })]);
     await show();
     await screen.findByText("Guest");
-    const asked = server.requests.find((request) => request.url === "/transactions")?.params as Record<string, unknown>;
-    expect(asked).toMatchObject({ status: "approved", start_date: "2026-01-01", end_date: "2026-12-31", limit: 5000 });
+    const asked = server.requests.find((request) => request.url === "/transactions/page")?.params as Record<string, unknown>;
+    expect(asked).toMatchObject({ status: "approved", start_date: "2026-01-01", end_date: "2026-12-31", limit: DRILL_DOWN_PAGE_SIZE, offset: 0 });
   });
 
   it("asks the server for the summary's own rules: the kind's categories, in active properties only", async () => {
     const server = startTransactionServer([aTransaction({ id: "a", transaction_type: "income", category: "rental_revenue", vendor: "Guest" })]);
     await show();
     await screen.findByText("Guest");
-    const asked = server.requests.find((request) => request.url === "/transactions")?.params as Record<string, unknown>;
+    const asked = server.requests.find((request) => request.url === "/transactions/page")?.params as Record<string, unknown>;
     expect(asked).toMatchObject({ summary_kind: "revenue", active_properties_only: true });
   });
 
@@ -79,10 +80,34 @@ describe("DrillDownScreen", () => {
     expect(screen.getByText("1 transaction · $40.00")).toBeTruthy();
   });
 
-  it("warns that there may be more when the list reached the server's limit", async () => {
-    startTransactionServer(Array.from({ length: 5000 }, (_, index) => aTransaction({ id: `r${index}`, transaction_type: "income", category: "rental_revenue" })));
+  it("loads the next page on scroll, with the server's count and total for every row from the first page on", async () => {
+    const count = DRILL_DOWN_PAGE_SIZE * 2 + 5;
+    const server = startTransactionServer(
+      Array.from({ length: count }, (_, index) => aTransaction({ id: `r${index}`, transaction_type: "income", category: "rental_revenue", vendor: `Guest ${index}`, amount: "10.00" })),
+    );
+    const listed = () => (screen.getByTestId("drill-down-list").props.data as Transaction[]).map((row) => row.id);
     await show();
-    expect(await screen.findByText(DRILL_DOWN_TRUNCATED_MESSAGE)).toBeTruthy();
+    await screen.findByText("Guest 0");
+    expect(listed()).toHaveLength(DRILL_DOWN_PAGE_SIZE);
+    expect(screen.getByText(`${count} transactions · $2,050.00`)).toBeTruthy();
+
+    await fireEvent(screen.getByTestId("drill-down-list"), "onEndReached");
+    await waitFor(() => expect(listed()).toContain(`r${DRILL_DOWN_PAGE_SIZE + 1}`));
+    expect(screen.getByText(`${count} transactions · $2,050.00`)).toBeTruthy();
+    const offsets = server.requests.filter((request) => request.url === "/transactions/page").map((request) => (request.params as { offset: number }).offset);
+    expect(offsets).toEqual([0, DRILL_DOWN_PAGE_SIZE]);
+  });
+
+  it("keeps its rows when the next page fails, and says so", async () => {
+    const server = startTransactionServer(
+      Array.from({ length: DRILL_DOWN_PAGE_SIZE + 5 }, (_, index) => aTransaction({ id: `r${index}`, transaction_type: "income", category: "rental_revenue", vendor: `Guest ${index}` })),
+    );
+    await show();
+    await screen.findByText("Guest 0");
+    server.failListFromOffset = DRILL_DOWN_PAGE_SIZE;
+    await fireEvent(screen.getByTestId("drill-down-list"), "onEndReached");
+    await waitFor(() => expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy());
+    expect(screen.getByText("Guest 0")).toBeTruthy();
   });
 
   it("lists only the kind that was tapped, with how many and what they add up to", async () => {

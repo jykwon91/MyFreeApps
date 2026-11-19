@@ -20,7 +20,6 @@ from app.repositories.tax import tax_return_repo
 
 # -- re-exports for back-compat ------------------------------------------
 from app.repositories.transactions.transaction_list_repo import (
-    count_filtered,
     count_to_review,
     find_by_vendor_for_retroactive,
     list_by_activity_ids,
@@ -33,6 +32,7 @@ from app.repositories.transactions.transaction_list_repo import (
     list_selection_refs,
     list_unassigned_tax_relevant,
     sum_schedule_e_by_property_line,
+    totals_filtered,
 )
 from app.repositories.transactions.transaction_bulk_repo import (
     bulk_approve,
@@ -74,7 +74,6 @@ __all__ = [
     "mark_deleted",
     "flush",
     # list
-    "count_filtered",
     "count_to_review",
     "find_by_vendor_for_retroactive",
     "list_by_activity_ids",
@@ -87,6 +86,7 @@ __all__ = [
     "list_selection_refs",
     "list_unassigned_tax_relevant",
     "sum_schedule_e_by_property_line",
+    "totals_filtered",
     # bulk
     "bulk_approve",
     "bulk_delete",

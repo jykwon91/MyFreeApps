@@ -1,61 +1,60 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
-import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
-import { Banner, EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
-import { formatCurrency } from "@platform/core/utils/currency";
+import { useDrillDownPages } from "@mybookkeeper/api-client/hooks/useDrillDownPages";
+import { StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { DRILL_DOWN_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { DrillDownParams } from "../../types/DrillDownParams";
+import PagedListFooter from "../shell/PagedListFooter";
 import TransactionRow from "../transactions/TransactionRow";
-import TransactionsSkeleton from "../transactions/TransactionsSkeleton";
-import { propertyLabel, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { TransactionSkeletonRow } from "../transactions/TransactionsSkeleton";
+import { propertyLabel } from "../transactions/transactionDisplay";
+import DrillDownEmptyList from "./DrillDownEmptyList";
+import DrillDownHeadline from "./DrillDownHeadline";
 import { drillDownFilterFromParams } from "./drillDownLink";
 
-/** The approved transactions a number on the analytics screen was added up from. */
+/** The approved transactions a number on the analytics screen was added up from, a page at a time, with the server's count and total. */
 export default function DrillDownScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const params = useLocalSearchParams<Partial<DrillDownParams>>();
   const filter = useMemo(() => drillDownFilterFromParams(params), [params]);
-  const query = useMemo(() => drillDownListParams(filter), [filter]);
-  const { currentData, error, isFetching, refetch } = useListTransactionsQuery(query);
+  const list = useDrillDownPages(filter);
   const { data: properties = [] } = useGetPropertiesQuery();
-  const { refresh, refreshControl } = useRefresh(async () => {
-    await refetch();
-  }, error);
-  const transactions = useMemo(() => (currentData ? filterDrillDownTransactions(currentData, filter) : []), [currentData, filter]);
-  const total = drillDownTotal(transactions);
-
-  const emptyList = currentData ? (
-    <EmptyState body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
-  ) : isFetching ? (
-    <TransactionsSkeleton />
-  ) : (
-    <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />
-  );
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.transactions : [];
 
   return (
     <FlatList
-      ListEmptyComponent={emptyList}
+      ListEmptyComponent={<DrillDownEmptyList isEmpty={isCurrent && list.total === 0} isFetching={list.isFetching} onRetry={refresh} />}
+      ListFooterComponent={
+        <PagedListFooter
+          isLoadingMore={list.isFetchingNextPage}
+          loadMoreFailed={list.isLoadMoreError}
+          loadingLabel={MESSAGES.loadingMore}
+          onRetry={list.loadMore}
+          skeletonRow={<TransactionSkeletonRow />}
+        />
+      }
       ListHeaderComponent={
         <View style={{ gap: spacing.xs, padding: spacing.lg }}>
-          <StaleDataBanner isShown={Boolean(error && currentData)} />
+          <StaleDataBanner isShown={Boolean(list.error) && isCurrent && !list.isLoadMoreError} />
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {filter.label}
           </Text>
-          {currentData ? (
-            <Text accessibilityLabel={`${MESSAGES.count(transactions.length)}, ${spokenSignedMoney(total)}`} style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
-              {MESSAGES.count(transactions.length)} · {formatCurrency(total)}
-            </Text>
-          ) : null}
-          {currentData && isDrillDownTruncated(currentData) ? <Banner message={DRILL_DOWN_TRUNCATED_MESSAGE} /> : null}
+          <DrillDownHeadline amountTotal={list.amountTotal} count={list.total} isShown={isCurrent} />
         </View>
       }
       contentInsetAdjustmentBehavior="automatic"
-      data={transactions}
+      data={rows}
       keyExtractor={(transaction) => transaction.id}
+      onEndReached={() => {
+        if (canLoadMore(list)) list.loadMore();
+      }}
+      onEndReachedThreshold={0.5}
       refreshControl={refreshControl}
       renderItem={({ item }) => (
         <TransactionRow

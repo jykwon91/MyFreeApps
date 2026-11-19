@@ -17,9 +17,12 @@ const deleteTransaction = vi.fn(() => ({ unwrap: deleteUnwrap }));
 let isSaving = false;
 
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
-  useListTransactionsQuery: vi.fn(),
   useUpdateTransactionMutation: () => [updateTransaction, { isLoading: isSaving }],
   useDeleteTransactionMutation: () => [deleteTransaction, { isLoading: false }],
+}));
+
+vi.mock("@mybookkeeper/api-client/hooks/useDrillDownPages", () => ({
+  useDrillDownPages: vi.fn(),
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
@@ -42,7 +45,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showError: (msg: string) => showError(msg),
 }));
 
-import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
+import { useDrillDownPages } from "@mybookkeeper/api-client/hooks/useDrillDownPages";
+import type { DrillDownPagesState } from "@mybookkeeper/api-client/types/transaction/DrillDownPagesState";
 
 const TXN = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -249,14 +253,23 @@ describe("TransactionPanel unsaved changes", () => {
 
 describe("DrillDownPanel with an edited transaction", () => {
   function renderDrillDown(onClose = vi.fn()) {
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [TXN],
-      currentData: [TXN],
+    const pages: DrillDownPagesState = {
+      transactions: [TXN],
+      total: 1,
+      amountTotal: 500,
       isLoading: false,
-      isFetching: false,
+      hasData: true,
+      isFiltering: false,
+      loadError: undefined,
       error: undefined,
+      hasNextPage: false,
+      isFetching: false,
+      isFetchingNextPage: false,
+      isLoadMoreError: false,
+      loadMore: vi.fn(),
       refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    };
+    vi.mocked(useDrillDownPages).mockReturnValue(pages);
     render(
       <Provider store={store}>
         <DrillDownPanel

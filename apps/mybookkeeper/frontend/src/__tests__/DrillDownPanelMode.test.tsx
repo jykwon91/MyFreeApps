@@ -1,45 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { useDrillDownBodyMode } from "@/app/features/dashboard/useDrillDownBodyMode";
 import { useDashboardHeaderMode } from "@/app/features/dashboard/useDashboardHeaderMode";
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { HealthSummary } from "@/shared/types/health/health-summary";
 import type { DateRange } from "@/shared/types/dashboard/date-range";
-
-// ---- useDrillDownBodyMode ----
-
-const txn = { id: "t1" } as Transaction;
-
-describe("useDrillDownBodyMode", () => {
-  it('returns "detail" when selectedTxn is set (even if loading)', () => {
-    expect(
-      useDrillDownBodyMode({ selectedTxn: txn, isLoading: true, hasError: false, transactionCount: 0 }),
-    ).toBe("detail");
-  });
-
-  it('returns "loading" when no selected txn and isLoading is true', () => {
-    expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: true, hasError: false, transactionCount: 0 }),
-    ).toBe("loading");
-  });
-
-  it('returns "error" when the load failed, even though there are no rows', () => {
-    expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: true, transactionCount: 0 }),
-    ).toBe("error");
-  });
-
-  it('returns "empty" when not loading and transaction count is 0', () => {
-    expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: false, transactionCount: 0 }),
-    ).toBe("empty");
-  });
-
-  it('returns "list" when not loading and there are transactions', () => {
-    expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: false, transactionCount: 3 }),
-    ).toBe("list");
-  });
-});
 
 // ---- useDashboardHeaderMode ----
 

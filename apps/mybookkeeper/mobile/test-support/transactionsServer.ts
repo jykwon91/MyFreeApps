@@ -1,4 +1,6 @@
 import { MAX_BULK_TRANSACTION_IDS } from "@mybookkeeper/api-client/constants/transactionBulk";
+import { EXPENSE_CATEGORY_SET, REVENUE_CATEGORY_SET } from "@mybookkeeper/api-client/constants/summaryCategorySets";
+import { amountToCents } from "@mybookkeeper/api-client/utils/amountToCents";
 import api from "@platform/core/lib/api";
 import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -262,11 +264,22 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const deleted = before - server.transactions.length;
       return respond({ deleted, skipped: new Set(ids).size - deleted });
     }
-    const listParams = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
+    const listParams = (config.params ?? {}) as Record<string, string | number | boolean | string[] | undefined>;
+    const anyOf = (key: string, value: string | null) => {
+      const allowed = listParams[key];
+      return !Array.isArray(allowed) || allowed.length === 0 || (value !== null && allowed.includes(value));
+    };
+    const summaryKind = { revenue: REVENUE_CATEGORY_SET, expenses: EXPENSE_CATEGORY_SET }[String(listParams.summary_kind)];
     const matching = () =>
       server.transactions.filter(
         (row) =>
           (!listParams.to_review || REVIEWABLE.includes(row.status)) &&
+          (!summaryKind || summaryKind.has(row.category)) &&
+          (!listParams.category || row.category === listParams.category) &&
+          (!listParams.property_id || row.property_id === listParams.property_id) &&
+          (!listParams.unassigned || row.property_id === null) &&
+          anyOf("categories", row.category) &&
+          anyOf("property_ids", row.property_id) &&
           (!listParams.status || row.status === listParams.status) &&
           (!listParams.start_date || row.transaction_date >= String(listParams.start_date)) &&
           (!listParams.end_date || row.transaction_date <= String(listParams.end_date)) &&
@@ -276,6 +289,14 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/selection") {
       if (server.failSelectionWith !== null) return respond({ detail: "nope" }, server.failSelectionWith);
       return respond(matching().map(({ id, property_id, status }) => ({ id, property_id, status })));
+    }
+    if (config.url === "/transactions/page") {
+      const offset = Number(listParams.offset ?? 0);
+      if (server.failListFromOffset !== null && offset >= server.failListFromOffset) return respond({ detail: "nope" }, 500);
+      const matches = inListOrder(matching(), config.params as TransactionListParams | undefined);
+      const items = matches.slice(offset, offset + Number(listParams.limit ?? 50));
+      const cents = matches.reduce((sum, row) => sum + amountToCents(row.amount), 0);
+      return respond({ items, total: matches.length, has_more: offset + items.length < matches.length, amount_total: (cents / 100).toFixed(2) });
     }
     if (config.url === "/transactions") {
       const offset = Number(listParams.offset ?? 0);

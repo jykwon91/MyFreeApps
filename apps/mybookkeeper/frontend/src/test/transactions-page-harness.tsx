@@ -115,7 +115,8 @@ function pageFor(query: URLSearchParams): TransactionListPage {
   const rows = matchingRows(query);
   const offset = Number(query.get("offset"));
   const items = rows.slice(offset, offset + Number(query.get("limit")));
-  return { items, total: rows.length, has_more: offset + items.length < rows.length };
+  const cents = rows.reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0);
+  return { items, total: rows.length, has_more: offset + items.length < rows.length, amount_total: (cents / 100).toFixed(2) };
 }
 
 export function selectionFor(query: URLSearchParams): TransactionSelectionRef[] {

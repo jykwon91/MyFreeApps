@@ -1,23 +1,24 @@
 import { describe, expect, it } from "vitest";
-import type { Transaction } from "../types/transaction/transaction";
-import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "../utils/drillDown";
+import type { TransactionListPage } from "../types/transaction/TransactionListPage";
+import { drillDownAmountTotal, drillDownListParams } from "../utils/drillDown";
 
-function aTransaction(overrides: Partial<Transaction>): Transaction {
-  return { id: "t", property_id: "p1", transaction_type: "expense", amount: "10.00", ...overrides } as Transaction;
+function aPage(amountTotal: string): TransactionListPage {
+  return { items: [], total: 0, has_more: false, amount_total: amountTotal };
 }
 
 describe("drillDownListParams", () => {
-  it("asks for the approved rows in the range and category", () => {
+  it("asks for the approved rows in the range and category, with no cap on how many", () => {
     expect(drillDownListParams({ label: "x", category: "utilities", startDate: "2026-01-01", endDate: "2026-01-31", propertyId: "p1" })).toEqual({
       category: "utilities",
       property_id: "p1",
       unassigned: undefined,
+      property_ids: undefined,
+      categories: undefined,
       start_date: "2026-01-01",
       end_date: "2026-01-31",
       status: "approved",
       summary_kind: undefined,
       active_properties_only: true,
-      limit: 5000,
     });
   });
 
@@ -26,69 +27,27 @@ describe("drillDownListParams", () => {
     expect(drillDownListParams({ label: "x", type: "expenses" }).summary_kind).toBe("expenses");
   });
 
-  it("asks for rows with no property, not for a property called unassigned", () => {
-    const params = drillDownListParams({ label: "x", propertyId: "unassigned" });
+  it("sends the chosen properties and categories to the server, so its count and total cover them", () => {
+    const params = drillDownListParams({ label: "x", type: "expenses", propertyIds: ["p1", "p2"], categories: ["utilities"] });
+    expect(params.property_ids).toEqual(["p1", "p2"]);
+    expect(params.categories).toEqual(["utilities"]);
+  });
+
+  it("asks for rows with no property, not for a property called unassigned, and drops the property allowlist", () => {
+    const params = drillDownListParams({ label: "x", propertyId: "unassigned", propertyIds: ["p2"] });
     expect(params.unassigned).toBe(true);
     expect(params.property_id).toBeUndefined();
+    expect(params.property_ids).toBeUndefined();
   });
 });
 
-describe("filterDrillDownTransactions", () => {
-  const rows = [
-    aTransaction({ id: "a", transaction_type: "income", category: "rental_revenue", property_id: "p1" }),
-    aTransaction({ id: "b", transaction_type: "expense", category: "maintenance", property_id: "p2" }),
-    aTransaction({ id: "c", transaction_type: "expense", category: "utilities", property_id: null }),
-    aTransaction({ id: "d", transaction_type: "income", category: "security_deposit", property_id: "p1" }),
-    aTransaction({ id: "e", transaction_type: "income", category: "uncategorized", property_id: "p1" }),
-  ];
-
-  it("keeps revenue and expenses by category, as the summary counts them, not by transaction type", () => {
-    expect(filterDrillDownTransactions(rows, { label: "x", type: "revenue" }).map((t) => t.id)).toEqual(["a"]);
-    expect(filterDrillDownTransactions(rows, { label: "x", type: "expenses" }).map((t) => t.id)).toEqual(["b", "c"]);
+describe("drillDownAmountTotal", () => {
+  it("reads the latest page's total, which the server sends as text", () => {
+    expect(drillDownAmountTotal([aPage("10.00"), aPage("1234.56")])).toBe(1234.56);
   });
 
-  it("keeps only the categories the category filter left on", () => {
-    expect(filterDrillDownTransactions(rows, { label: "x", type: "expenses", categories: ["utilities"] }).map((t) => t.id)).toEqual(["c"]);
-  });
-
-  it("adds up to the figure the summary showed for that kind", () => {
-    const priced = [
-      aTransaction({ id: "r", category: "rental_revenue", transaction_type: "income", amount: "1000.00" }),
-      aTransaction({ id: "m", category: "maintenance", amount: "200.00" }),
-      aTransaction({ id: "u", category: "utilities", amount: "100.00" }),
-      aTransaction({ id: "dep", category: "security_deposit", transaction_type: "income", amount: "500.00" }),
-    ];
-    expect(drillDownTotal(filterDrillDownTransactions(priced, { label: "x", type: "revenue" }))).toBe(1000);
-    expect(drillDownTotal(filterDrillDownTransactions(priced, { label: "x", type: "expenses" }))).toBe(300);
-  });
-
-  it("keeps only the chosen properties", () => {
-    expect(filterDrillDownTransactions(rows, { label: "x", propertyIds: ["p2"] }).map((t) => t.id)).toEqual(["b"]);
-  });
-
-  it("does not apply the chosen properties to the unassigned bucket", () => {
-    expect(filterDrillDownTransactions(rows, { label: "x", propertyId: "unassigned", propertyIds: ["p2"] })).toHaveLength(5);
-  });
-});
-
-describe("drillDownTotal", () => {
-  it("adds amounts that arrive as text, and counts an unreadable one as nothing", () => {
-    expect(drillDownTotal([aTransaction({ amount: "10.50" }), aTransaction({ amount: "2.25" }), aTransaction({ amount: "n/a" })])).toBeCloseTo(12.75);
-  });
-
-  it("adds in whole cents, so 0.1 + 0.2 is exactly 0.3", () => {
-    expect(drillDownTotal([aTransaction({ amount: "0.10" }), aTransaction({ amount: "0.20" })])).toBe(0.3);
-  });
-
-  it("is exactly zero, never negative zero, when amounts cancel out", () => {
-    const total = drillDownTotal([aTransaction({ amount: "0.10" }), aTransaction({ amount: "0.20" }), aTransaction({ amount: "-0.30" })]);
-    expect(Object.is(total, 0)).toBe(true);
-  });
-});
-
-describe("isDrillDownTruncated", () => {
-  it("is true only when the list reached the server's limit", () => {
-    expect(isDrillDownTruncated(Array.from({ length: 4999 }, () => aTransaction({})))).toBe(false);
-    expect(isDrillDownTruncated(Array.from({ length: 5000 }, () => aTransaction({})))).toBe(true);
+  it("is zero before any page loads, and never negative zero", () => {
+    expect(drillDownAmountTotal([])).toBe(0);
+    expect(Object.is(drillDownAmountTotal([aPage("-0.00")]), 0)).toBe(true);
   });
 });
