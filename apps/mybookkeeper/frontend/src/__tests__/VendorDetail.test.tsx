@@ -37,7 +37,6 @@ const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) })
 const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
-  useGetVendorsQuery: vi.fn(() => ({ ...queryData(undefined), isLoading: false })),
   useGetVendorByIdQuery: vi.fn(() => defaultDetailState),
   useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
   useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],

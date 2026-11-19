@@ -1769,7 +1769,8 @@
         "frontend/src/shared/lib/paged-list-view.ts",
         "frontend/src/shared/types/paged-list-view.ts",
         "frontend/src/shared/types/paged-list-status.ts",
-        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx"
+        "frontend/src/shared/components/ui/ListPagesErrorAlert.tsx",
+        "frontend/src/shared/types/vendor-select-options.ts"
       ],
       "backend_tests": [
         "test_vendor_repo.py",
@@ -1782,6 +1783,7 @@
         "Vendors.test.tsx",
         "VendorDetail.test.tsx",
         "VendorForm.test.tsx",
+        "TransactionVendorPicker.test.tsx",
         "list-load-mode.test.ts",
         "detail-load-mode.test.ts",
         "ListPagesPaging.test.tsx"
@@ -1790,6 +1792,7 @@
         "vendors-api.spec.ts",
         "vendors.spec.ts",
         "vendors-layout.spec.ts",
+        "mocked/transactions-vendor-picker-mock.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts"
       ]
     },

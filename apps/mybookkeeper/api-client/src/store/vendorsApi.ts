@@ -1,7 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { VENDOR_PAGE_SIZE } from "../constants/vendorLabels";
 import type { VendorCreateRequest } from "../types/vendor/vendor-create-request";
-import type { VendorListArgs } from "../types/vendor/vendor-list-args";
 import type { VendorListResponse } from "../types/vendor/vendor-list-response";
 import type { VendorPageArgs } from "../types/vendor/vendor-page-args";
 import type { VendorResponse } from "../types/vendor/vendor-response";
@@ -20,30 +19,6 @@ export const vendorsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Vendor", "Transaction"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getVendors: builder.query<VendorListResponse, VendorListArgs | void>({
-      query: (args) => ({
-        url: "/vendors",
-        params: {
-          ...(args?.category ? { category: args.category } : {}),
-          ...(args?.preferred !== undefined ? { preferred: args.preferred } : {}),
-          ...(args?.include_deleted !== undefined
-            ? { include_deleted: args.include_deleted }
-            : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((vendor) => ({
-                type: "Vendor" as const,
-                id: vendor.id,
-              })),
-              { type: "Vendor" as const, id: "LIST" },
-            ]
-          : [{ type: "Vendor" as const, id: "LIST" }],
-    }),
     listVendorPages: builder.infiniteQuery<VendorListResponse, VendorPageArgs, number>({
       infiniteQueryOptions: {
         initialPageParam: 0,
@@ -97,7 +72,6 @@ export const vendorsApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetVendorsQuery,
   useGetVendorByIdQuery,
   useCreateVendorMutation,
   useUpdateVendorMutation,

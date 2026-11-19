@@ -1,7 +1,5 @@
-import { ASSIGN_VENDOR_LIST_ARGS } from "@mybookkeeper/api-client/constants/assignVendorList";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
-import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
@@ -17,7 +15,9 @@ import type { TransactionEditSheet } from "../../types/TransactionEditSheet";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
 import type { TransactionSaveAction } from "../../types/TransactionSaveAction";
 import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
+import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import PeriodDateRow from "../shell/PeriodDateRow";
+import { useVendorChoices } from "../vendors/useVendorChoices";
 import PickerField from "./PickerField";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
 import { savedVendorChoices, savedVendorLabel } from "./savedVendor";
@@ -33,9 +33,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const { showToast } = useToast();
   const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
   const properties = loadedProperties ?? [];
-  const { data: vendorList, error: vendorsError, isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
-  const vendors = vendorList?.items ?? [];
-  const vendorsFailed = vendorList === undefined && Boolean(vendorsError);
+  const vendorChoices = useVendorChoices(original.vendor_id);
+  const { vendors, hasData: vendorsLoaded, error: vendorsError, isLoading: vendorsLoading, refetch: refetchVendors } = vendorChoices;
+  const vendorsFailed = !vendorsLoaded && Boolean(vendorsError);
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
@@ -134,7 +134,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
     },
     savedVendor: {
       options: savedVendorChoices(vendors, !(vendorsFailed && values.vendorId !== null)),
-      loadError: pickerLoadError({ hasLoaded: vendorList !== undefined, error: vendorsError, refetch: refetchVendors }, SAVED_VENDOR_MESSAGES.loadFailed),
+      loadError: pickerLoadError({ hasLoaded: vendorsLoaded, error: vendorsError, refetch: refetchVendors }, SAVED_VENDOR_MESSAGES.loadFailed),
+      footer: <PagedChoicesFooter choices={vendorChoices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreVendors} />,
+      onEndReached: vendorChoices.loadMoreIfAny,
       value: values.vendorId ?? NONE_OPTION_VALUE,
       apply: (vendorId) => update({ vendorId: fromChoice(vendorId) || null }),
       description: SAVED_VENDOR_MESSAGES.sheetDescription,
@@ -249,7 +251,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
         emptyText={sheet?.emptyText}
         isOpen={sheet !== null}
         loadError={sheet?.loadError}
+        footer={sheet?.footer}
         onClose={() => setOpenSheet(null)}
+        onEndReached={sheet?.onEndReached}
         onSelect={(value) => {
           sheet?.apply(value);
           setOpenSheet(null);

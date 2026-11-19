@@ -177,7 +177,10 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/properties") return server.failPropertiesWith === null ? respond(server.properties) : respond({ detail: "nope" }, server.failPropertiesWith);
     if (server.failVendorsWith !== null && config.url?.startsWith("/vendors")) return respond({ detail: "nope" }, server.failVendorsWith);
-    if (config.url === "/vendors") return respond({ items: server.vendors, total: server.vendors.length, has_more: false });
+    if (config.url === "/vendors") {
+      const { limit = 25, offset = 0 } = (config.params ?? {}) as { limit?: number; offset?: number };
+      return respond({ items: server.vendors.slice(offset, offset + limit), total: server.vendors.length, has_more: offset + limit < server.vendors.length });
+    }
     if (config.url?.startsWith("/vendors/")) {
       const vendor = server.vendors.find((row) => row.id === config.url?.split("/")[2]);
       return vendor ? respond(vendor) : respond({ detail: "Vendor not found" }, 404);

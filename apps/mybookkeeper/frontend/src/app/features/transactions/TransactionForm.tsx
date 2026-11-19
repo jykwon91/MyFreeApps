@@ -11,10 +11,10 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { SourcePreview } from "@/shared/types/transaction/source-preview";
+import PagedSelect from "@/shared/components/ui/PagedSelect";
 import Select from "@/shared/components/ui/Select";
+import { useVendorSelectOptions } from "@/app/features/vendors/useVendorSelectOptions";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
-import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
-import { ASSIGN_VENDOR_LIST_ARGS } from "@mybookkeeper/api-client/constants/assignVendorList";
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
@@ -60,9 +60,8 @@ export default function TransactionForm({
   const transactionType = watch("transaction_type");
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
 
-  // PR 4.2: vendor rolodex for the "Assign vendor" dropdown.
-  const { data: vendorsData, isLoading: vendorsLoading } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
-  const vendors = vendorsData?.items ?? [];
+  // PR 4.2: vendor rolodex for the "Assign vendor" dropdown, every vendor a page at a time.
+  const { pages: vendorPages, mode: vendorsMode, options: vendorOptions } = useVendorSelectOptions(transaction.vendor_id ?? null);
 
   const revokePreview = useCallback(() => {
     setSourcePreview((prev) => {
@@ -204,25 +203,24 @@ export default function TransactionForm({
           The "(none)" option submits ``vendor_id: null`` to detach. */}
       <FormField label="Assign vendor" dirty={!!dirtyFields.vendor_id}>
         {(field) =>
-          vendorsLoading ? (
+          vendorsMode === "loading" ? (
             <div
               className="h-10 w-full bg-muted/40 rounded-md animate-pulse"
               data-testid="vendor-id-select-skeleton"
             />
           ) : (
-            <Select
+            <PagedSelect
               {...register("vendor_id")}
-              className={selectClass("vendor_id")}
+              // Controlled, so a vendor read in after the first render still shows as picked.
+              value={watch("vendor_id")}
+              className={`border rounded-md px-3 py-2 text-sm ${selectClass("vendor_id")}`}
               data-testid="vendor-id-select"
+              emptyLabel="(none)"
+              noun="vendors"
+              options={vendorOptions}
+              pages={vendorPages}
               {...field}
-            >
-              <option value="">(none)</option>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </Select>
+            />
           )
         }
       </FormField>
