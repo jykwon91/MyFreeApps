@@ -90,6 +90,8 @@ export interface FakeTransactionServer {
   duplicates: DuplicatePair[];
   /** Drops the answer to the next duplicate write while set: after the change was saved, or before it was. */
   duplicateAnswerLost: "afterSaving" | "beforeSaving" | null;
+  /** Refuses every duplicate write with a 409 carrying this reason while set, as the server does for rows linked to different tenants. */
+  duplicateConflict: string | null;
   /** What a bank statement import answers with. Its preview rows land in the list, approved, as the backend saves them. */
   bankImportResult: ImportResult;
   /** Fails bank statement imports while set: with a status, or with no answer at all. */
@@ -160,6 +162,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     premiumComparison: noPremiumComparison(),
     duplicates: [],
     duplicateAnswerLost: null,
+    duplicateConflict: null,
     bankImportResult: {
       imported: 2,
       skipped_duplicates: 1,
@@ -230,6 +233,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/duplicates") return respond({ pairs: server.duplicates, total: server.duplicates.length });
     if (config.url?.startsWith("/transactions/duplicates/")) {
       if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      if (server.duplicateConflict !== null) return respond({ detail: server.duplicateConflict }, 409);
       const lost = () => Promise.reject(Object.assign(new Error("Network Error"), { config }));
       if (server.duplicateAnswerLost === "beforeSaving") return lost();
       const body = JSON.parse(String(config.data)) as { transaction_ids?: string[]; delete_ids?: string[]; transaction_a_id?: string; transaction_b_id?: string };

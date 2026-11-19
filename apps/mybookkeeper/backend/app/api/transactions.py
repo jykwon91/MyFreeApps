@@ -24,6 +24,7 @@ from app.schemas.transactions.transaction_list_query import TransactionListQuery
 from app.schemas.transactions.transaction_page_query import TransactionPageQuery
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.transactions import transaction_service
+from app.services.transactions.merge_conflict_error import MergeConflictError
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -126,6 +127,8 @@ async def keep_duplicate(
 ) -> KeepDuplicateResponse:
     try:
         result = await transaction_service.keep_transaction(ctx, body.keep_id, body.delete_ids)
+    except MergeConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return KeepDuplicateResponse(**result)
@@ -153,6 +156,8 @@ async def merge_duplicates(
             body.surviving_id,
             body.field_overrides,
         )
+    except MergeConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         detail = str(e)
         if "not found" in detail:

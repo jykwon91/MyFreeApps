@@ -11,6 +11,7 @@ from app.core.tags import (
     schedule_e_line_after_category_change,
     transaction_type_for_category,
 )
+from app.core.tax_year_after_date_change import tax_year_after_date_change
 from app.core.tax_total_inputs import tax_total_inputs
 from app.core.transaction_statuses import COUNTED_STATUS
 from app.db.session import AsyncSessionLocal, unit_of_work
@@ -24,6 +25,7 @@ from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.classification import rule_learning_service
 from app.services.transactions.capital_improvement import placed_in_service_date_for
+from app.services.transactions.duplicate_absorb import absorb_duplicates
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.services.transactions.reference_ownership import assert_references_owned
 
@@ -299,7 +301,7 @@ async def keep_transaction(
     keep_id: uuid.UUID,
     delete_ids: list[uuid.UUID],
 ) -> dict[str, int]:
-    """Keep one transaction, soft-delete the others. Transfer document links."""
+    """Keep one transaction and fold the others into it (see ``absorb_duplicates``)."""
     async with unit_of_work() as db:
         # One org-scoped, id-ordered lock over the kept row and the rows to delete.
         # Anything missing, in another org or already deleted is simply not in the set.
@@ -310,13 +312,12 @@ async def keep_transaction(
         if keep_txn is None:
             raise ValueError("Transaction to keep not found")
         to_delete = [t for t in locked if t.id != keep_id]
+        old_tax_inputs = tax_total_inputs(keep_txn)
 
-        await transaction_repo.soft_delete_transactions(db, to_delete)
-        # Transfer document links from the deleted transactions to the kept one
-        for txn in to_delete:
-            await transaction_repo.transfer_document_links(db, txn.id, keep_id)
+        await absorb_duplicates(db, keep_txn, to_delete)
 
         keep_txn.duplicate_reviewed_at = datetime.now(timezone.utc)
+        await tax_return_repo.flag_unfiled_if_totals_moved(db, keep_txn, old_tax_inputs)
 
         return {"kept": 1, "deleted": len(to_delete)}
 
@@ -344,10 +345,10 @@ async def merge_transactions(
 
     Field values are chosen per MERGEABLE_FIELDS: use the override when provided,
     otherwise fall back to auto_pick_defaults heuristics. Tags are always unioned
-    from both transactions regardless of overrides. Derived fields (tax_year,
-    transaction_type, schedule_e_line) are recomputed after field assignment.
-    The non-surviving transaction is soft-deleted and its document links are
-    transferred to the surviving one.
+    from both transactions regardless of overrides. transaction_type follows the
+    merged category; tax_year and schedule_e_line follow the date and category
+    only when those changed and weren't chosen by hand. The non-surviving
+    transaction is folded into the survivor by ``absorb_duplicates``.
     """
     if transaction_a_id == transaction_b_id:
         raise ValueError("A transaction can't be merged with itself")
@@ -374,9 +375,14 @@ async def merge_transactions(
         survivor = txn_a if surviving_id == transaction_a_id else txn_b
         loser = txn_b if surviving_id == transaction_a_id else txn_a
         old_survivor_tax_inputs = tax_total_inputs(survivor)
+        old_date = survivor.transaction_date
+        old_category = survivor.category
 
         overrides_dict = field_overrides.model_dump(exclude_none=True)
         auto_picks = auto_pick_defaults(txn_a, txn_b)
+
+        # First, so a conflicting tenant, vendor or activity refuses before anything changes.
+        await absorb_duplicates(db, survivor, [loser])
 
         for field in MERGEABLE_FIELDS:
             if field == "tags":
@@ -391,16 +397,13 @@ async def merge_transactions(
             value = getattr(txn_a, field) if source == "a" else getattr(txn_b, field)
             setattr(survivor, field, value)
 
-        # Recompute derived fields
-        survivor.tax_year = survivor.transaction_date.year
+        survivor.tax_year = tax_year_after_date_change(
+            survivor.tax_year, old_date, survivor.transaction_date,
+        )
         survivor.transaction_type = transaction_type_for_category(survivor.category)
-        survivor.schedule_e_line = CATEGORY_TO_SCHEDULE_E.get(survivor.category)
-
-        # Transfer document links from the loser to the survivor
-        await transaction_repo.transfer_document_links(db, loser.id, survivor.id)
-
-        # Soft-delete the non-surviving transaction
-        await transaction_repo.mark_deleted(db, loser)
+        survivor.schedule_e_line = schedule_e_line_after_category_change(
+            survivor.schedule_e_line, old_category, survivor.category,
+        )
 
         # Mark the survivor as approved and reviewed
         survivor.status = COUNTED_STATUS

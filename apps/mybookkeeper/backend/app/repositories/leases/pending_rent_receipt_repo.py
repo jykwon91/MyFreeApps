@@ -9,8 +9,9 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, and_, func, select, update
+from sqlalchemy import ColumnElement, Select, and_, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.applicants.applicant import Applicant
 from app.models.inquiries.inquiry import Inquiry
@@ -399,6 +400,35 @@ async def mark_dismissed_if_claimed(
         update(PendingRentReceipt)
         .where(*_held_by(receipt_id, organization_id, send_message_id))
         .values(status="dismissed", updated_at=dismissed_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+async def move_to_transaction(
+    db: AsyncSession,
+    *,
+    from_transaction_id: uuid.UUID,
+    to_transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Repoint a removed duplicate's receipt, in any status, at the row that replaces it.
+
+    A sent receipt must stay on record against the surviving payment so it isn't
+    sent twice, and an open one stays sendable. Nothing moves when the target
+    already has a receipt row (one per transaction); the removed row's open
+    receipt is then dismissed with it.
+    """
+    target = aliased(PendingRentReceipt)
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(
+            PendingRentReceipt.transaction_id == from_transaction_id,
+            PendingRentReceipt.organization_id == organization_id,
+            PendingRentReceipt.deleted_at.is_(None),
+            ~exists().where(target.transaction_id == to_transaction_id),
+        )
+        .values(transaction_id=to_transaction_id)
         .execution_options(synchronize_session=False)
     )
     return result.rowcount == 1
