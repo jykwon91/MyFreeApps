@@ -1,7 +1,8 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
 import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { memo } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
 
 function TransactionRow({
@@ -69,7 +70,12 @@ function TransactionRow({
       <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {details}
       </ClampedText>
-      {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
+      {transaction.status === "approved" && !transaction.is_capital_improvement ? null : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
+          {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
+          {transaction.is_capital_improvement ? <Chip label={CAPITAL_IMPROVEMENT_LABEL} /> : null}
+        </View>
+      )}
     </Pressable>
   );
 }

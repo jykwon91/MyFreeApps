@@ -33,6 +33,7 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
     channel: null,
     payment_method: null,
     tax_relevant: false,
+    is_capital_improvement: false,
     schedule_e_line: null,
     address: null,
     review_reason: null,
@@ -63,6 +64,8 @@ export interface FakeTransactionServer {
   bulkDeletesBeforeFailing: number | null;
   /** Lets this many bulk-approve requests through, then fails the rest with a 500, while set. */
   bulkApprovesBeforeFailing: number | null;
+  /** Lets this many bulk capital-improvement requests through, then fails the rest with a 500, while set. */
+  bulkCapitalBeforeFailing: number | null;
   /** Fails list requests at or past this offset, while set. */
   failListFromOffset: number | null;
   /** The status every "select all" request (GET /transactions/selection) fails with, while set. */
@@ -140,6 +143,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     failWritesWith: null,
     bulkDeletesBeforeFailing: null,
     bulkApprovesBeforeFailing: null,
+    bulkCapitalBeforeFailing: null,
     failListFromOffset: null,
     failSelectionWith: null,
     retroactiveCount: 0,
@@ -248,6 +252,21 @@ export function startTransactionServer(transactions: Transaction[], properties: 
         row.status = "approved";
       });
       return respond({ approved: approvable.length, skipped: ids.length - approvable.length });
+    }
+    if (config.url === "/transactions/bulk-capital-improvement") {
+      if (server.role === "viewer") return respond({ detail: "Viewers have read-only access" }, 403);
+      if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const body = JSON.parse(String(config.data)) as { ids: string[]; is_capital_improvement: boolean };
+      if (body.ids.length < 1 || body.ids.length > MAX_BULK_TRANSACTION_IDS) return respond({ detail: [{ msg: "ids: invalid length" }] }, 422);
+      if (server.bulkCapitalBeforeFailing !== null) {
+        if (server.bulkCapitalBeforeFailing <= 0) return respond({ detail: "nope" }, 500);
+        server.bulkCapitalBeforeFailing -= 1;
+      }
+      // Only expenses can be marked; income and unknown ids are skipped. Rows are replaced, not edited: the store freezes what it was served.
+      const isMarked = (row: Transaction) => body.ids.includes(row.id) && row.transaction_type === "expense";
+      const updated = server.transactions.filter(isMarked).length;
+      server.transactions = server.transactions.map((row) => (isMarked(row) ? { ...row, is_capital_improvement: body.is_capital_improvement } : row));
+      return respond({ updated, skipped: new Set(body.ids).size - updated });
     }
     if (config.url === "/transactions/bulk-delete") {
       if (server.role === "viewer") return respond({ detail: "Viewers have read-only access" }, 403);

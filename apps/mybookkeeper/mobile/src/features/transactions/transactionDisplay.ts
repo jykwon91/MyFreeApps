@@ -1,3 +1,4 @@
+import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { SortDirection } from "@mybookkeeper/api-client/types/sort/SortDirection";
@@ -123,6 +124,7 @@ export function rowAccessibilityLabel(transaction: Transaction, propertyName: st
     spokenDate(transaction.transaction_date),
     propertyName,
     transaction.status === "approved" ? null : statusLabel(transaction.status).toLowerCase(),
+    transaction.is_capital_improvement ? CAPITAL_IMPROVEMENT_LABEL.toLowerCase() : null,
   ]
     .filter(Boolean)
     .join(", ");

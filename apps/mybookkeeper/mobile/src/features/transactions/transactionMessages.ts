@@ -62,6 +62,17 @@ export const BULK_TRANSACTION_MESSAGES = {
   approving: "Approving\u2026",
 } as const;
 
+export function bulkCapitalImprovementFailureMessage(isMarking: boolean): (error: unknown) => string {
+  const done = isMarking ? "those were marked" : "those were unmarked";
+  const verb = isMarking ? "mark" : "unmark";
+  return (error) => {
+    if (writeOutcome(error) === "unknown") return unsureRepeatableMessage(done);
+    return httpStatus(error) === 403
+      ? "You have read-only access, so I can't change these."
+      : `I couldn't ${verb} those. Want to try again?`;
+  };
+}
+
 export function bulkDeleteFailureMessage(error: unknown): string {
   if (writeOutcome(error) === "unknown") return unsureRepeatableMessage("those were deleted");
   switch (httpStatus(error)) {

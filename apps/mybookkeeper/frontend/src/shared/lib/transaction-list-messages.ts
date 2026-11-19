@@ -10,14 +10,6 @@ export const SELECTING_ALL_LABEL = "Selecting all matching transactions";
 /** When the ticked rows couldn't be checked against new filters; the ticks are cleared rather than kept unchecked. */
 export const SELECTION_CHECK_FAILED = "I couldn't check which selected transactions still match the filters, so I cleared the selection.";
 
-/** Beside the category of a row marked as a one-time project. */
-export const CAPITAL_IMPROVEMENT_LABEL = "Capital improvement";
-
-export const MARK_CAPITAL_IMPROVEMENT = "Mark capital improvement";
-export const MARKING_CAPITAL_IMPROVEMENT = "Marking...";
-export const UNMARK_CAPITAL_IMPROVEMENT = "Unmark";
-export const UNMARKING_CAPITAL_IMPROVEMENT = "Unmarking...";
-
 /** Shown in the bulk bar once a row is ticked, when the next tick can extend the selection. */
 export const RANGE_SELECT_HINT = "Shift-click another row to select everything between";
 

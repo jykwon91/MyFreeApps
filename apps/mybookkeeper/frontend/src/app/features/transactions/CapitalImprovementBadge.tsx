@@ -1,4 +1,4 @@
-import { CAPITAL_IMPROVEMENT_LABEL } from "@/shared/lib/transaction-list-messages";
+import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
 
 export default function CapitalImprovementBadge() {
   return (
