@@ -1,6 +1,6 @@
 /**
- * Against the real RTK Query hook and a server stub that refuses a limit above its cap: the drill-down loads
- * past its first page one page at a time, its headline always shows the server's count and total for every
+ * Against the real RTK Query hook and a server stub, with a test-sized page: the drill-down loads past its
+ * first page one page at a time, its headline always shows the server's count and total for every
  * matching row, a failed "Load more" keeps the rows (its Retry asks for that page again), and the rows stay
  * put through a visit to a transaction's detail.
  */
@@ -16,6 +16,15 @@ import { restoreApi, stubApi } from "@/test/api-stub";
 import { aDrillDownTransaction, answerDrillDownPage } from "@/test/drill-down-server";
 import { renderWithStore } from "@/test/render-with-store";
 
+/**
+ * A test-sized page, so each page draws a handful of rows rather than a hundred. The real page size is what
+ * DrillDownPanel.test.tsx and the api-client's drillDownPages test check is sent.
+ */
+vi.mock("@mybookkeeper/api-client/constants/transactionPaging", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@mybookkeeper/api-client/constants/transactionPaging")>()),
+  DRILL_DOWN_PAGE_SIZE: 10,
+}));
+
 vi.mock("@/app/features/transactions/TransactionPanel", () => ({
   default: forwardRef<{ requestClose: (after: () => void) => void }, { transaction: Transaction }>(
     function TransactionPanelStub({ transaction }, ref) {
@@ -25,8 +34,8 @@ vi.mock("@/app/features/transactions/TransactionPanel", () => ({
   ),
 }));
 
-/** More rows than two pages hold, so the last needs a third request. */
-const ROW_COUNT = DRILL_DOWN_PAGE_SIZE * 2 + 30;
+/** More rows than one page holds, so the last needs a second request. */
+const ROW_COUNT = DRILL_DOWN_PAGE_SIZE + 5;
 /** What the server says every matching row adds up to: more than any page holds. */
 const SERVER_TOTAL = "2312.34";
 const HEADLINE = `${ROW_COUNT} transactions — $2,312.34`;
@@ -51,7 +60,7 @@ function renderPanel(): void {
   cleanup = renderWithStore(<DrillDownPanel filter={filter} onClose={vi.fn()} />, "/");
 }
 
-// Text lookups, not role+name queries: computing accessible names over hundreds of rows is slow in jsdom.
+// Text lookups, not role+name queries: computing accessible names over many rows is slow in jsdom.
 const drawnRows = () => screen.getAllByText(/^Vendor \d+$/);
 const loadMore = () => userEvent.click(screen.getByRole("button", { name: "Load more" }));
 
@@ -68,14 +77,11 @@ describe("DrillDownPanel paging", () => {
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
 
     await loadMore();
-    expect(await screen.findByText(`Vendor ${DRILL_DOWN_PAGE_SIZE + 1}`)).toBeInTheDocument();
-    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
-
-    await loadMore();
     expect(await screen.findByText(`Vendor ${ROW_COUNT - 1}`)).toBeInTheDocument();
     expect(drawnRows()).toHaveLength(ROW_COUNT);
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
-    expect(offsets).toEqual([0, DRILL_DOWN_PAGE_SIZE, DRILL_DOWN_PAGE_SIZE * 2]);
+    expect(offsets).toEqual([0, DRILL_DOWN_PAGE_SIZE]);
   });
 
   it("keeps its rows when Load more fails, and Retry asks for that page again", async () => {
@@ -98,11 +104,11 @@ describe("DrillDownPanel paging", () => {
     renderPanel();
     await screen.findByText("Vendor 0");
     await loadMore();
-    await userEvent.click(await screen.findByText("Vendor 150"));
-    expect(screen.getByTestId("detail")).toHaveTextContent("Vendor 150");
+    await userEvent.click(await screen.findByText(`Vendor ${DRILL_DOWN_PAGE_SIZE + 2}`));
+    expect(screen.getByTestId("detail")).toHaveTextContent(`Vendor ${DRILL_DOWN_PAGE_SIZE + 2}`);
 
     await userEvent.click(screen.getByTitle("Back to list"));
-    await waitFor(() => expect(drawnRows()).toHaveLength(DRILL_DOWN_PAGE_SIZE * 2));
+    await waitFor(() => expect(drawnRows()).toHaveLength(ROW_COUNT));
     expect(offsets).toEqual([0, DRILL_DOWN_PAGE_SIZE]);
   });
 
