@@ -1,13 +1,12 @@
 import { DOCUMENT_LIBRARY_VIEW } from "@mybookkeeper/api-client/constants/documentListView";
 import { useDocumentsPages } from "@mybookkeeper/api-client/hooks/useDocumentsPages";
-import { LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
+import { OptionSheet } from "@platform/mobile";
 import { useMemo } from "react";
-import { Text, View } from "react-native";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { pagedChoices } from "../../lib/pagedChoices";
 import type { DocumentReaderMessages } from "../../types/DocumentReaderMessages";
 import PagedChoicesFooter from "../shell/PagedChoicesFooter";
-import DocumentLibrarySkeleton from "./DocumentLibrarySkeleton";
+import DocumentLibraryPlaceholder from "./DocumentLibraryPlaceholder";
 
 interface DocumentLibrarySheetProps {
   messages: DocumentReaderMessages;
@@ -18,7 +17,6 @@ interface DocumentLibrarySheetProps {
 
 /** A document already in the library, as the other way to read: every one of them, a page at a time. */
 export default function DocumentLibrarySheet({ messages: MESSAGES, isOpen, onClose, onPick }: DocumentLibrarySheetProps) {
-  const { colors, spacing, fontSize } = useTheme();
   const pages = useDocumentsPages(DOCUMENT_LIBRARY_VIEW, { skip: !isOpen });
   const { documents, hasData, error, isFetching, refetch } = pages;
   const options = useMemo(
@@ -27,21 +25,9 @@ export default function DocumentLibrarySheet({ messages: MESSAGES, isOpen, onClo
   );
   const choices = pagedChoices(pages, options);
   // An empty list is only "no documents" once the answer is in: loading and failing read differently.
-  const placeholder =
-    hasData ? undefined : isFetching ? (
-      <DocumentLibrarySkeleton label={MESSAGES.libraryLoading} />
-    ) : error ? (
-      <View style={{ gap: spacing.md, padding: spacing.lg }}>
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.md, color: colors.destructiveText }}>
-          {MESSAGES.libraryFailed}
-        </Text>
-        <LoadingButton onPress={() => refetch()} variant="secondary">
-          {MESSAGES.libraryRetry}
-        </LoadingButton>
-      </View>
-    ) : (
-      <DocumentLibrarySkeleton label={MESSAGES.libraryLoading} />
-    );
+  const placeholder = hasData ? undefined : (
+    <DocumentLibraryPlaceholder failed={Boolean(error)} isFetching={isFetching} messages={MESSAGES} onRetry={() => refetch()} />
+  );
   return (
     <OptionSheet
       emptyContent={placeholder}

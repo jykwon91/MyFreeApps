@@ -30,7 +30,7 @@ import { REFERENCE_ONLY_COPY } from "@mybookkeeper/api-client/constants/document
 import { failedDocumentsMessage } from "@mybookkeeper/api-client/utils/failedDocumentsMessage";
 import { referenceOnlyMarkedMessage } from "@mybookkeeper/api-client/utils/escrowToggleMessage";
 import DocumentUploadZone from "@/app/features/documents/DocumentUploadZone";
-import DocumentsSkeleton from "@/app/features/documents/DocumentsSkeleton";
+import DocumentsListBody from "@/app/features/documents/DocumentsListBody";
 import DocumentTable from "@/app/features/documents/DocumentTable";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
@@ -281,9 +281,7 @@ export default function Documents() {
 
       <ListPagesErrorAlert pages={pages} noun="documents" />
 
-      {mode === "loading" ? (
-        <DocumentsSkeleton canWrite={canWrite} />
-      ) : mode === "error" ? null : (
+      <DocumentsListBody mode={mode} canWrite={canWrite}>
         <DocumentTable
           table={table}
           colCount={colCount}
@@ -299,7 +297,7 @@ export default function Documents() {
           isFetchingNextPage={pages.isFetchingNextPage}
           onLoadMore={pages.loadMore}
         />
-      )}
+      </DocumentsListBody>
 
       <ConfirmDialog
         open={!!confirmDeleteId}

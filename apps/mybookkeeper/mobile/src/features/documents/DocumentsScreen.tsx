@@ -25,6 +25,7 @@ import DocumentFilterSheet from "./DocumentFilterSheet";
 import DocumentRow from "./DocumentRow";
 import DocumentSelectionHeader from "./DocumentSelectionHeader";
 import DocumentSkeletonRow from "./DocumentSkeletonRow";
+import DocumentsListEmpty from "./DocumentsListEmpty";
 import DocumentsSkeleton from "./DocumentsSkeleton";
 import FailedDocumentsNotice from "./FailedDocumentsNotice";
 import { useBulkDeleteDocuments } from "./useBulkDeleteDocuments";
@@ -162,19 +163,7 @@ export default function DocumentsScreen({
       ) : null}
       <FlatList
         ListEmptyComponent={
-          !isCurrent && list.isFetching ? (
-            <DocumentsSkeleton />
-          ) : list.loadError !== undefined ? (
-            <EmptyState
-              action={{ label: DOCUMENT_LIST_MESSAGES.tryAgain, onPress: refresh }}
-              body={DOCUMENT_LIST_MESSAGES.loadFailedBody}
-              heading={DOCUMENT_LIST_MESSAGES.loadFailedHeading}
-            />
-          ) : (
-            <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>
-              {DOCUMENT_LIST_MESSAGES.nothingMatches}
-            </Text>
-          )
+          <DocumentsListEmpty isFiltering={!isCurrent && list.isFetching} loadFailed={list.loadError !== undefined} onRetry={refresh} />
         }
         ListFooterComponent={
           <PagedListFooter
