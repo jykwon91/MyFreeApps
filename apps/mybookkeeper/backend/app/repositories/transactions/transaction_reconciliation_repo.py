@@ -8,7 +8,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.sql.expression import FunctionElement
 
-from app.core.tags import NON_DEDUCTIBLE_TAGS, REVENUE_TAGS
+from app.core.tags import NEUTRAL_TAGS, NON_DEDUCTIBLE_TAGS
 from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
@@ -452,7 +452,8 @@ async def sum_by_normalized_vendor_year(
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
-            Transaction.category.in_(REVENUE_TAGS),
+            Transaction.transaction_type == "income",
+            Transaction.category.notin_(NEUTRAL_TAGS),
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),

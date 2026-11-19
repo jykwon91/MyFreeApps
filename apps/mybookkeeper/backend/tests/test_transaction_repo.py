@@ -572,6 +572,28 @@ class TestIncomeIgnoresSecurityDeposits:
         assert sum(totals.values()) == Decimal("500.00")
 
     @pytest.mark.asyncio
+    async def test_vendor_income_total_keeps_uncategorized_income(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        txn = _make_transaction(
+            test_org.id, test_user.id,
+            transaction_type="income",
+            category="uncategorized",
+            amount=Decimal("750.00"),
+            status="approved",
+            tax_relevant=True,
+            vendor="Tenant Co",
+        )
+        txn.normalized_vendor = "tenant co"
+        await transaction_repo.create(db, txn)
+        await db.commit()
+
+        totals = dict(await transaction_repo.sum_by_normalized_vendor_year(
+            db, test_org.id, 2025,
+        ))
+        assert sum(totals.values()) == Decimal("750.00")
+
+    @pytest.mark.asyncio
     async def test_property_summary_exposes_category(
         self, db: AsyncSession, test_user: User, test_org: Organization
     ) -> None:
