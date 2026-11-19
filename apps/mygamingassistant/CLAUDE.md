@@ -2002,6 +2002,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   movable tracker advances on arrival. Known flight paths come from `C_TaxiMap.GetAllTaxiNodes` on
   `TAXIMAP_OPENED`, saved per character in `MGADungeonQuestsCharacter`; a continent with no flight master
   opened yet counts them all and says so. Inside an instance (`UnitPosition` is nil) it falls back to a pin.
+  Turn-ins: every finished quest in the log (any quest) gets a World Map pin at whoever takes it back, one
+  pin per NPC (frames on `WorldMapFrame:GetCanvas()`, redrawn on `OnShow`/`OnMapChanged` and quest events;
+  zone map = that zone, continent maps via `C_Map.GetMapPosFromWorldPos`). `/mgadq turnin` or the map's
+  "Route turn-ins" button orders the stops (travel-time matrix from the same search, nearest stop then 2-opt)
+  and routes stop by stop, moving on when the stop's quests leave the log. Spots come from `TurnIns.lua`
+  (`turnInsDataLua.ts` <- `loadTurnInSpots.ts`: a quest's single ender placed where that NPC id gives a
+  quest in any quest shard; ~3,000 of ~3,500 quests). `/mgadq pins off` hides the pins.
   Download card = `components/dungeons/DungeonQuestsAddonCard.tsx` on `/wow-forever/dungeons`
   (`?addon=open` opens it; "Before you go" links there via `DUNGEON_QUESTS_ADDON_PATH`).
   Lua tests run under fengari with `src/test/addonLua/wowDungeonQuestStubs.lua.ts`.

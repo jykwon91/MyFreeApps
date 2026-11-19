@@ -42,25 +42,32 @@ local function askInLog(id)
   return complete and "complete" or true
 end
 
--- The quests in your quest log: id -> "complete" (ready to turn in), true, or false (not in it).
-function M.QuestsInLog()
-  local scanned = {}
+-- The quests listed in your quest log (a collapsed header hides its own): { {id, title, complete} }.
+local function scanLog()
+  local out = {}
   local numEntries = (C_QuestLog and C_QuestLog.GetNumQuestLogEntries) or GetNumQuestLogEntries
   local count = numEntries and numEntries() or 0
   for i = 1, count do
-    local id, complete
+    local id, title, complete
     if C_QuestLog and C_QuestLog.GetInfo then
       local info = C_QuestLog.GetInfo(i)
       if info and not info.isHeader then
-        id = info.questID
+        id, title = info.questID, info.title
         complete = C_QuestLog.IsComplete and C_QuestLog.IsComplete(id)
       end
     elseif GetQuestLogTitle then
-      local _, _, _, isHeader, _, isComplete, _, questId = GetQuestLogTitle(i)
-      if not isHeader then id, complete = questId, isComplete == 1 end
+      local name, _, _, isHeader, _, isComplete, _, questId = GetQuestLogTitle(i)
+      if not isHeader then id, title, complete = questId, name, isComplete == 1 end
     end
-    if id and id > 0 then scanned[id] = complete and "complete" or true end
+    if id and id > 0 then out[#out + 1] = { id = id, title = title or ("Quest " .. id), complete = complete and true or false } end
   end
+  return out
+end
+
+-- The quests in your quest log: id -> "complete" (ready to turn in), true, or false (not in it).
+function M.QuestsInLog()
+  local scanned = {}
+  for _, q in ipairs(scanLog()) do scanned[q.id] = q.complete and "complete" or true end
   return setmetatable({}, { __index = function(t, id)
     local state = askInLog(id)
     if state == nil then state = scanned[id] or false end
@@ -227,6 +234,7 @@ local RIDE_WAIT = { boat = 240, zeppelin = 240, tram = 150 }
 local ARRIVED = { walk = 25, fly = 80, boat = 150, zeppelin = 150, tram = 150 }
 
 local route = nil -- the route being followed: { target, legs, at }
+local tour = nil -- while handing in your finished quests: { stop = the stop being routed to }
 local routeFrame
 
 local function worldSpot(map, x, y)
@@ -269,6 +277,10 @@ local function rememberFlights()
   end
 end
 
+local function playerSide()
+  return (UnitFactionGroup("player") or ""):sub(1, 1)
+end
+
 local function usable(thing, side)
   return thing.side == side or thing.side == "N"
 end
@@ -279,8 +291,8 @@ local function canFly(flight, side)
   return usable(flight, side) and (not saved.flightsSeen[flight.c] or saved.flights[flight.id] == true)
 end
 
-local function travelNodes(from, to, side)
-  local nodes = { { spot = from }, { spot = to } }
+-- Adds every flight master (on the ground and in the air) and ride stop your faction can use to `nodes`.
+local function withTransit(nodes, side)
   for _, flight in ipairs(MGADungeonQuestsTravel.flights) do
     if canFly(flight, side) then
       nodes[#nodes + 1] = { spot = flight, flight = flight, label = "the flight master at " .. flight.name }
@@ -293,6 +305,10 @@ local function travelNodes(from, to, side)
     end
   end
   return nodes
+end
+
+local function travelNodes(from, to, side)
+  return withTransit({ { spot = from }, { spot = to } }, side)
 end
 
 local function flightLinks()
@@ -318,15 +334,15 @@ local function travelSeconds(a, b, links)
   return walk
 end
 
--- The nodes of the quickest way from node 1 to node 2, and its seconds; nil when none joins them.
-local function quickestPath(nodes)
-  local links, seconds, previous, settled = flightLinks(), { [1] = 0 }, {}, {}
+-- Seconds from nodes[start] to each node it reaches (all of them, or until `goal`), and the node before each.
+local function quickestFrom(nodes, start, goal, links)
+  local seconds, previous, settled = { [start] = 0 }, {}, {}
   while true do
     local current
     for i in pairs(seconds) do
       if not settled[i] and (not current or seconds[i] < seconds[current]) then current = i end
     end
-    if not current or current == 2 then break end
+    if not current or current == goal then break end
     settled[current] = true
     for i, node in ipairs(nodes) do
       local cost = not settled[i] and travelSeconds(nodes[current], node, links)
@@ -335,6 +351,12 @@ local function quickestPath(nodes)
       end
     end
   end
+  return seconds, previous
+end
+
+-- The nodes of the quickest way from node 1 to node 2, and its seconds; nil when none joins them.
+local function quickestPath(nodes)
+  local seconds, previous = quickestFrom(nodes, 1, 2, flightLinks())
   if not seconds[2] then return nil end
   local path, at = {}, 2
   while at do
@@ -371,8 +393,7 @@ function M.PlanRoute(from, target)
   local to = worldSpot(target.map, target.x, target.y)
   if not (from and to) then return nil end
   to.map, to.x, to.y = target.map, target.x, target.y
-  local side = (UnitFactionGroup("player") or ""):sub(1, 1)
-  local path, seconds = quickestPath(travelNodes(from, to, side))
+  local path, seconds = quickestPath(travelNodes(from, to, playerSide()))
   if not path then return nil end
   return legsAlong(path, target), math.max(1, math.floor(seconds / 60 + 0.5))
 end
@@ -386,12 +407,22 @@ local function pinLeg(leg)
   route.pinned = true
 end
 
--- Takes the route's own pin away; a pin you placed yourself stays.
-function M.StopRoute()
+-- Ends the route and takes its own pin away; a pin you placed yourself stays.
+local function endRoute()
   local pinned = route and route.pinned
   route = nil
   if routeFrame then routeFrame:Hide() end
   if pinned and C_Map and C_Map.ClearUserWaypoint then C_Map.ClearUserWaypoint() end
+end
+
+-- Stops the route, and the turn-in run if one is going.
+function M.StopRoute()
+  tour = nil
+  endRoute()
+end
+
+local function handInText(stop)
+  return "hand in " .. table.concat(stop.quests, ", ") .. " to " .. stop.giver .. "."
 end
 
 -- Moves on to the furthest leg you've reached the end of; the last one ends the route.
@@ -402,8 +433,8 @@ function M.TrackRoute()
     local leg = route.legs[i]
     if yardsApart(spot, leg.spot) <= ARRIVED[leg.kind] then
       if i == #route.legs then
-        say("you've reached " .. route.target.giver .. ".")
-        M.StopRoute()
+        say("you've reached " .. route.target.giver .. "." .. (tour and (" Now " .. handInText(tour.stop)) or ""))
+        endRoute()
       else
         route.at = i + 1
         M.ShowRouteLeg()
@@ -453,7 +484,7 @@ end
 function M.ShowRouteLeg()
   routeFrame = routeFrame or newRouteFrame()
   local leg = route.legs[route.at]
-  routeFrame.heading:SetText("Route to " .. route.target.giver .. " (about " .. route.minutes .. " min)")
+  routeFrame.heading:SetText((route.target.heading or ("Route to " .. route.target.giver)) .. " (about " .. route.minutes .. " min)")
   routeFrame.leg:SetText(route.at .. " of " .. #route.legs .. ": " .. leg.text)
   routeFrame:Show()
   pinLeg(leg)
@@ -473,17 +504,26 @@ function M.FliesUnchecked(legs)
 end
 
 -- Routes you to a target, or pins it when the way there can't be worked out (inside an instance, say).
-function M.StartRoute(target)
-  M.StopRoute()
+-- Returns true when you're already there.
+local function routeTo(target)
+  endRoute()
   local legs, minutes = M.PlanRoute(playerSpot(), target)
   if not legs then return M.Pin(target) end
-  if #legs == 0 then return say("you're already at " .. target.giver .. ".") end
+  if #legs == 0 then
+    say("you're already at " .. target.giver .. ".")
+    return true
+  end
   say("route to " .. target.giver .. ", about " .. minutes .. " min:")
   for i, leg in ipairs(legs) do say(i .. ". " .. leg.text) end
   if M.FliesUnchecked(legs) then
     say("It counts every flight path until you open a flight master here, which shows the ones you know.")
   end
   follow(target, legs, minutes)
+end
+
+function M.StartRoute(target)
+  tour = nil
+  routeTo(target)
 end
 
 -- After a loading screen or a new flight path, the quickest way may have changed. Going into an instance ends it.
@@ -493,7 +533,7 @@ function M.ReplanRoute()
   if instanceType ~= "none" then return M.StopRoute() end
   local legs, minutes = M.PlanRoute(playerSpot(), route.target)
   if not legs then return end
-  if #legs == 0 then return M.StopRoute() end
+  if #legs == 0 then return endRoute() end
   follow(route.target, legs, minutes)
 end
 
@@ -514,6 +554,242 @@ end
 function M.DoorTarget(dungeon)
   local door = dungeon.door
   return door and { giver = dungeon.name .. " entrance", where = door.where, map = door.map, x = door.x, y = door.y } or nil
+end
+
+-- Turn-ins ------------------------------------------------------------------------------------
+-- Your finished quests (any quest, not only dungeon ones): a World Map pin on whoever takes each back,
+-- and the quickest order to hand them all in. Who and where come from TurnIns.lua.
+
+local TURN_IN_ICON = "Interface\\GossipFrame\\ActiveQuestIcon"
+local CONTINENT_MAP = 2 -- Enum.UIMapType.Continent: this and the world above it show every pin
+
+-- The places to hand in your finished quests, one per NPC: { {giver, where, map, x, y, quests = {titles}} },
+-- and the titles of finished quests we don't know where to hand in.
+function M.TurnInStops()
+  local stops, byKey, unknown = {}, {}, {}
+  for _, q in ipairs(scanLog()) do
+    if q.complete then
+      local t = MGADungeonQuestsTurnIns and MGADungeonQuestsTurnIns[q.id]
+      if t then
+        local key = t[1] .. "|" .. t[2] .. "|" .. t[3] .. "|" .. t[4]
+        local stop = byKey[key]
+        if not stop then
+          stop = { key = key, giver = t[1], map = t[2], x = t[3], y = t[4], where = t[5], quests = {} }
+          byKey[key], stops[#stops + 1] = stop, stop
+        end
+        stop.quests[#stop.quests + 1] = q.title
+      else
+        unknown[#unknown + 1] = q.title
+      end
+    end
+  end
+  return stops, unknown
+end
+
+-- Seconds of a run through `order` (indexes into secs) starting at 1; math.huge when a stop can't be reached.
+local function runSeconds(order, secs)
+  local total, at = 0, 1
+  for _, i in ipairs(order) do
+    local s = secs[at][i]
+    if not s then return math.huge end
+    total, at = total + s, i
+  end
+  return total
+end
+
+-- The stops in the quickest order from where you stand, and the minutes it takes (nil when one can't be
+-- reached): the nearest stop each time, then any swap of a stretch that shortens the run (2-opt).
+function M.TurnInOrder(from, stops)
+  local nodes = { { spot = from } }
+  for _, stop in ipairs(stops) do
+    local spot = worldSpot(stop.map, stop.x, stop.y)
+    nodes[#nodes + 1] = { spot = spot or { c = -1, wx = 0, wy = 0 } }
+  end
+  local n, links = #stops, flightLinks()
+  withTransit(nodes, playerSide())
+  local secs = {}
+  for i = 1, n + 1 do secs[i] = quickestFrom(nodes, i, nil, links) end
+  local order, left, at = {}, {}, 1
+  for i = 2, n + 1 do left[i] = true end
+  for _ = 1, n do
+    local best
+    for i in pairs(left) do
+      local s = secs[at][i] or math.huge
+      if not best or s < (secs[at][best] or math.huge) or (s == (secs[at][best] or math.huge) and i < best) then best = i end
+    end
+    order[#order + 1], left[best], at = best, nil, best
+  end
+  local improved = true
+  while improved do
+    improved = false
+    for i = 1, n - 1 do
+      for j = i + 1, n do
+        local tried = {}
+        for k = 1, n do tried[k] = order[k] end
+        for k = 0, j - i do tried[i + k] = order[j - k] end
+        if runSeconds(tried, secs) < runSeconds(order, secs) then order, improved = tried, true end
+      end
+    end
+  end
+  local out = {}
+  for k, i in ipairs(order) do out[k] = stops[i - 1] end
+  local seconds = runSeconds(order, secs)
+  return out, seconds < math.huge and math.max(1, math.floor(seconds / 60 + 0.5)) or nil
+end
+
+local function questCount(stops)
+  local count = 0
+  for _, stop in ipairs(stops) do count = count + #stop.quests end
+  return count
+end
+
+local function stopTarget(stop, i, total)
+  return { giver = stop.giver, where = stop.where, map = stop.map, x = stop.x, y = stop.y,
+    heading = total > 1 and ("Turn-in " .. i .. " of " .. total .. ": " .. stop.giver) or ("Turn in at " .. stop.giver) }
+end
+
+-- Plans the run from where you stand and routes you to its first stop; quiet = only say the next stop.
+local function runTurnIns(quiet)
+  local stops, unknown = M.TurnInStops()
+  if not quiet and #unknown > 0 then
+    say(#unknown .. " finished " .. (#unknown == 1 and "quest has" or "quests have") .. " no turn-in spot in our data: " .. table.concat(unknown, ", ") .. ".")
+  end
+  if #stops == 0 then
+    if tour then M.StopRoute() end
+    if quiet then say("that's every quest handed in.") elseif #unknown == 0 then say("no finished quests in your quest log.") end
+    return
+  end
+  local from = playerSpot()
+  if not from then
+    if tour then M.StopRoute() end
+    return say("inside an instance the game doesn't say where you are. Try again outside; your turn-ins are pinned on the World Map.")
+  end
+  local ordered, minutes = M.TurnInOrder(from, stops)
+  if not quiet then
+    local count = questCount(ordered)
+    say("hand in " .. count .. (count == 1 and " quest" or " quests") .. " at " .. #ordered .. (#ordered == 1 and " stop" or " stops") ..
+      (minutes and (", about " .. minutes .. " min of travel") or "") .. ", in this order:")
+    for i, stop in ipairs(ordered) do say(i .. ". " .. stop.giver .. ", " .. stop.where .. ": " .. table.concat(stop.quests, ", ")) end
+  else
+    say("next: " .. handInText(ordered[1]))
+  end
+  local here = routeTo(stopTarget(ordered[1], 1, #ordered))
+  tour = { stop = ordered[1] }
+  if here then say("Now " .. handInText(ordered[1])) end
+end
+
+function M.StartTurnIns()
+  runTurnIns(false)
+end
+
+-- After your quest log changes: once the stop you're on is handed in, on to the next one.
+function M.CheckTurnIns()
+  if not tour then return end
+  for _, stop in ipairs((M.TurnInStops())) do
+    if stop.key == tour.stop.key then
+      tour.stop = stop
+      return
+    end
+  end
+  runTurnIns(true)
+end
+
+-- The World Map pins.
+local function pinsOn()
+  return not (MGADungeonQuestsSettings and MGADungeonQuestsSettings.turnInPins == false)
+end
+
+local turnInPins, mapButton = {}, nil
+
+-- Where a stop falls on the map being shown (0-1), or nil when it isn't on it: its own zone map, or a
+-- continent (or the world) when the client can place it there.
+local function onMap(stop, mapId)
+  if mapId == stop.map then return stop.x / 100, stop.y / 100 end
+  local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapId)
+  if not (info and info.mapType and info.mapType <= CONTINENT_MAP) then return nil end
+  if not (C_Map.GetWorldPosFromMapPos and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return nil end
+  local continent, world = C_Map.GetWorldPosFromMapPos(stop.map, CreateVector2D(stop.x / 100, stop.y / 100))
+  if not (continent and world) then return nil end
+  local _, pos = C_Map.GetMapPosFromWorldPos(continent, world, mapId)
+  if not pos then return nil end
+  local x, y = pos:GetXY()
+  if x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+  return x, y
+end
+
+local function mapCanvas()
+  if not WorldMapFrame then return nil end
+  if WorldMapFrame.GetCanvas then return WorldMapFrame:GetCanvas() end
+  return WorldMapFrame.ScrollContainer and WorldMapFrame.ScrollContainer.Child
+end
+
+local function newTurnInPin(i, canvas)
+  local pin = CreateFrame("Button", "MGADungeonQuestsTurnInPin" .. i, canvas)
+  pin:SetSize(22, 22)
+  if WorldMapFrame.GetFrameStrata then pin:SetFrameStrata(WorldMapFrame:GetFrameStrata()) end
+  pin:SetFrameLevel(canvas:GetFrameLevel() + 100)
+  local icon = pin:CreateTexture(nil, "OVERLAY")
+  icon:SetAllPoints()
+  icon:SetTexture(TURN_IN_ICON)
+  pin:SetScript("OnEnter", function(self)
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(self.stop.giver)
+    GameTooltip:AddLine(self.stop.where, 0.7, 0.7, 0.7)
+    for _, title in ipairs(self.stop.quests) do GameTooltip:AddLine("Turn in: " .. title, 0.2, 1, 0.2) end
+    GameTooltip:AddLine("Click to route here.", 0.4, 0.73, 1)
+    GameTooltip:Show()
+  end)
+  pin:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  pin:SetScript("OnClick", function(self) M.StartRoute(stopTarget(self.stop, 1, 1)) end)
+  return pin
+end
+
+local function newMapButton()
+  local b = CreateFrame("Button", "MGADungeonQuestsTurnInButton", WorldMapFrame, "UIPanelButtonTemplate")
+  b:SetSize(150, 22)
+  b:SetPoint("TOPRIGHT", WorldMapFrame.ScrollContainer or WorldMapFrame, "TOPRIGHT", -8, -8)
+  b:SetFrameLevel((mapCanvas() or WorldMapFrame):GetFrameLevel() + 110)
+  b:SetScript("OnClick", M.StartTurnIns)
+  return b
+end
+
+-- Draws a pin on each turn-in spot on the map you're looking at, and the "Route turn-ins" button.
+function M.DrawTurnInPins()
+  local canvas = mapCanvas()
+  if not canvas then return end
+  local stops = (pinsOn() and WorldMapFrame:IsShown()) and M.TurnInStops() or {}
+  local mapId = WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()
+  local used = 0
+  for _, stop in ipairs(stops) do
+    local x, y
+    if mapId then x, y = onMap(stop, mapId) end
+    if x then
+      used = used + 1
+      local pin = turnInPins[used] or newTurnInPin(used, canvas)
+      turnInPins[used], pin.stop = pin, stop
+      pin:ClearAllPoints()
+      pin:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth(), -y * canvas:GetHeight())
+      pin:Show()
+    end
+  end
+  for i = used + 1, #turnInPins do turnInPins[i]:Hide() end
+  if #stops > 0 then
+    mapButton = mapButton or newMapButton()
+    local count = questCount(stops)
+    mapButton:SetText("Route " .. count .. (count == 1 and " turn-in" or " turn-ins"))
+    mapButton:Show()
+  elseif mapButton then
+    mapButton:Hide()
+  end
+end
+
+local mapHooked = false
+function M.HookWorldMap()
+  if mapHooked or not WorldMapFrame then return end
+  mapHooked = true
+  if WorldMapFrame.HookScript then WorldMapFrame:HookScript("OnShow", M.DrawTurnInPins) end
+  if hooksecurefunc and WorldMapFrame.OnMapChanged then hooksecurefunc(WorldMapFrame, "OnMapChanged", M.DrawTurnInPins) end
 end
 
 -- One quest line's block: its heading and "Next:" line (top), the steps (body), and where to route to.
@@ -1156,9 +1432,17 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
   local word, rest = msg:match("^(%S+)%s*(.*)$")
   word = word and word:lower()
   if word == "help" then
-    say("/mgadq opens the dungeon you're in, else the journal. /mgadq <dungeon> (deadmines, sfk, vc...) opens one. /mgadq list. /mgadq remind on|off.")
+    say("/mgadq opens the dungeon you're in, else the journal. /mgadq <dungeon> (deadmines, sfk, vc...) opens one. /mgadq list. " ..
+      "/mgadq turnin routes you through your finished quests. /mgadq pins on|off shows them on the World Map. /mgadq remind on|off.")
   elseif word == "list" then
     M.Show(nil)
+  elseif word == "turnin" or word == "turnins" or word == "turn-in" or word == "turn-ins" then
+    M.StartTurnIns()
+  elseif word == "pins" then
+    MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
+    MGADungeonQuestsSettings.turnInPins = rest:lower() ~= "off"
+    say("World Map pins on your finished quests " .. (MGADungeonQuestsSettings.turnInPins and "on." or "off."))
+    M.DrawTurnInPins()
   elseif word == "remind" then
     MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
     MGADungeonQuestsSettings.remind = rest:lower() ~= "off"
@@ -1186,14 +1470,22 @@ local function itemArrived()
 end
 
 local events = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "GET_ITEM_INFO_RECEIVED", "TAXIMAP_OPENED" }) do
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ADDON_LOADED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "GET_ITEM_INFO_RECEIVED", "TAXIMAP_OPENED" }) do
   events:RegisterEvent(e)
 end
-events:SetScript("OnEvent", function(_, event, _, isReloadingUi)
-  if event == "TAXIMAP_OPENED" then
+local QUEST_EVENTS = { QUEST_ACCEPTED = true, QUEST_TURNED_IN = true, QUEST_REMOVED = true, QUEST_LOG_UPDATE = true }
+events:SetScript("OnEvent", function(_, event, arg1, isReloadingUi)
+  if QUEST_EVENTS[event] then
+    M.CheckTurnIns()
+    if WorldMapFrame and WorldMapFrame:IsShown() then M.DrawTurnInPins() end
+  end
+  if event == "ADDON_LOADED" then
+    if arg1 == "Blizzard_WorldMap" then M.HookWorldMap() end
+  elseif event == "TAXIMAP_OPENED" then
     M.RememberFlights()
     M.ReplanRoute()
   elseif event == "PLAYER_ENTERING_WORLD" then
+    M.HookWorldMap()
     M.ReplanRoute()
     if isReloadingUi then return end
     -- The quest log and completed quests may not be filled in yet as the loading screen ends.

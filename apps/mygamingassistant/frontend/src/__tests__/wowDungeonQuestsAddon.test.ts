@@ -95,15 +95,17 @@ describe("MGA Dungeon Quests addon files", () => {
     expect(shown.some((l) => /from .+, Westfall \d/.test(l))).toBe(true);
   });
 
-  it("the toc loads Data.lua before the addon and saves its settings; the zip unzips into one folder", () => {
+  it("the toc loads Data.lua and TurnIns.lua before the addon and saves its settings; the zip unzips into one folder", () => {
     expect(addonToc).toMatch(/## Interface: 16001/);
     expect(addonToc).toMatch(/## SavedVariables: MGADungeonQuestsSettings/);
     expect(addonToc.indexOf("Data.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
+    expect(addonToc.indexOf("TurnIns.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
     const files = unzipSync(dungeonQuestsAddonZip());
     expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual([
       "MGADungeonQuests/Data.lua",
       "MGADungeonQuests/MGADungeonQuests.lua",
       "MGADungeonQuests/MGADungeonQuests.toc",
+      "MGADungeonQuests/TurnIns.lua",
     ]);
     expect(strFromU8(files["MGADungeonQuests/MGADungeonQuests.lua"])).toBe(addonLua);
   });

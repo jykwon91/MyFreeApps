@@ -12,6 +12,8 @@
  * button), `clickPin(n)` clicks line n's. Routes: `position = { x, y, c }` is where you stand (nil = inside an
  * instance), `shownRoute()` prints "route: <heading> | <leg>" or "route: none", `tickRoute()` runs the tracker,
  * `clickRouteStop()` and `clickDoorRoute()` click its Stop and the Overview tab's button.
+ * Turn-ins: `questLog` entries take a `title`; `openMap(id)` shows the World Map, `shownTurnInPins()` prints its pins and
+ * button, `hoverTurnInPin(n)` prints "tooltip: ..." lines, `clickTurnInPin(n)` and `clickTurnInButton()` click them.
  */
 export const WOW_DUNGEON_QUEST_STUBS = `
 out = {}
@@ -44,7 +46,7 @@ C_QuestLog = {
   IsQuestFlaggedCompleted = function(id) return completed[id] == true end,
   GetInfo = function(i)
     local q = questLog[i]
-    return q and { questID = q.id, isHeader = false } or nil
+    return q and { questID = q.id, title = q.title, isHeader = false } or nil
   end,
   IsComplete = function(id)
     for _, q in ipairs(questLog) do if q.id == id then return q.complete == true end end
@@ -55,7 +57,7 @@ function GetNumQuestLogEntries() return #questLog, #questLog end
 function GetQuestLogTitle(i)
   local q = questLog[i]
   if not q then return nil end
-  return "Quest", 1, nil, false, false, q.complete and 1 or nil, 0, q.id
+  return q.title or "Quest", 1, nil, false, false, q.complete and 1 or nil, 0, q.id
 end
 function IsQuestFlaggedCompleted(id) return completed[id] == true end
 position = nil
@@ -114,6 +116,10 @@ local function newObject(kind, name, parent)
   function methods:CreateTexture() return newObject("Texture", nil, self) end
   function methods:SetTexture(file) self.file = file end
   function methods:GetFrameLevel() return 1 end
+  function methods:GetWidth() return 1000 end
+  function methods:GetHeight() return 500 end
+  function methods:SetPoint(...) self.point = { ... } end
+  function methods:HookScript(k, fn) self.hooks = rawget(self, "hooks") or {}; self.hooks[k] = fn end
   o.name = name
   o.isWindowText = false
   -- Unknown methods are no-ops; fields a template would add (TitleText) are absent.
@@ -123,6 +129,50 @@ local function newObject(kind, name, parent)
   return o
 end
 function CreateFrame(kind, name, parent) return newObject(kind, name, parent) end
+function hooksecurefunc(t, name, fn)
+  local old = t[name]
+  t[name] = function(...) local r = old(...); fn(...); return r end
+end
+-- The World Map: openMap(uiMapId) shows it on a map; mapTypes[id] = 2 makes a map a continent, whose
+-- pins C_Map places by mapOnContinent[uiMapId] = {x, y} (0-1).
+mapTypes, mapOnContinent = {}, {}
+WorldMapFrame = newObject("Frame", "WorldMapFrame", UIParent)
+WorldMapFrame.shownFlag = false
+WorldMapFrame.ScrollContainer = newObject("Frame", nil, WorldMapFrame)
+WorldMapFrame.ScrollContainer.Child = newObject("Frame", nil, WorldMapFrame.ScrollContainer)
+WorldMapFrame.mapId = nil
+function WorldMapFrame.GetMapID(self) return self.mapId end
+function WorldMapFrame.GetCanvas(self) return self.ScrollContainer.Child end
+function WorldMapFrame.OnMapChanged() end
+function openMap(id)
+  WorldMapFrame.mapId = id
+  local wasShown = WorldMapFrame.shownFlag
+  WorldMapFrame.shownFlag = true
+  local hooks = rawget(WorldMapFrame, "hooks")
+  if not wasShown and hooks and hooks.OnShow then hooks.OnShow(WorldMapFrame) end
+  WorldMapFrame:OnMapChanged()
+end
+C_Map.GetMapInfo = function(id) return { mapType = mapTypes[id] or 3 } end
+CreateVector2D = function(x, y) return { x = x, y = y, GetXY = function(v) return v.x, v.y end } end
+C_Map.GetWorldPosFromMapPos = function(map, pos) return 0, { map = map } end
+C_Map.GetMapPosFromWorldPos = function(_, world)
+  local spot = mapOnContinent[world.map]
+  if spot then return 1415, CreateVector2D(spot[1], spot[2]) end
+end
+GameTooltip = newObject("Frame", "GameTooltip", UIParent)
+function GameTooltip.AddLine(_, text) out[#out + 1] = "tooltip: " .. text end
+-- The turn-in pins on the map: "turnin pin: <giver> at <x> <y>" (canvas offsets), and the map's button.
+function shownTurnInPins()
+  for i = 1, 30 do
+    local p = named["MGADungeonQuestsTurnInPin" .. i]
+    if p and p.shownFlag then out[#out + 1] = string.format("turnin pin: %s at %.0f %.0f", p.stop.giver, p.point[4], p.point[5]) end
+  end
+  local b = named.MGADungeonQuestsTurnInButton
+  out[#out + 1] = (b and b.shownFlag) and ("map button: " .. b.text) or "map button: none"
+end
+function hoverTurnInPin(n) local p = named["MGADungeonQuestsTurnInPin" .. n]; p.scripts.OnEnter(p) end
+function clickTurnInPin(n) local p = named["MGADungeonQuestsTurnInPin" .. n]; p.scripts.OnClick(p) end
+function clickTurnInButton() named.MGADungeonQuestsTurnInButton.scripts.OnClick() end
 -- The scroll child's parent is the ScrollFrame; the window text is the font strings made on it.
 
 function fire(event, ...)
