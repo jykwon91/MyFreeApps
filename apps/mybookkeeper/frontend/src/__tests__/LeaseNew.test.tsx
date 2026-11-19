@@ -26,6 +26,7 @@ import { queryData } from "@/test/rtk-query-data";
 
 const mockUseGetLeaseTemplatesQuery = vi.fn();
 const mockUseGetLeaseTemplateByIdQuery = vi.fn();
+const mockFetchLeaseTemplateById = vi.fn();
 const mockUseListApplicantPagesInfiniteQuery = vi.fn();
 const mockUseGetApplicantByIdQuery = vi.fn();
 const mockUseGetGenerateDefaultsQuery = vi.fn();
@@ -50,6 +51,10 @@ vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   },
   useGetLeaseTemplateByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetLeaseTemplateByIdQuery(id, opts),
+  // The by-id fetch behind the picked templates' names.
+  useLazyGetLeaseTemplateByIdQuery: () => [
+    (id: string) => ({ unwrap: () => mockFetchLeaseTemplateById(id) }),
+  ],
   useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetMultiGenerateDefaultsQuery(args, opts),
 }));
@@ -238,6 +243,8 @@ describe("LeaseNew page", () => {
       isFetching: false,
     });
     mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn(), { isLoading: false }]);
+    mockFetchLeaseTemplateById.mockReset();
+    mockFetchLeaseTemplateById.mockRejectedValue(new Error("not found"));
   });
 
   it("renders the page heading", () => {
@@ -264,6 +271,19 @@ describe("LeaseNew page", () => {
   it("shows applicant picker when template_ids has 1+ id in the URL", () => {
     renderLeaseNew("/leases/new?template_ids=tpl-1");
     expect(screen.getByTestId("applicant-picker-section")).toBeInTheDocument();
+  });
+
+  it("names a template preselected by the URL that isn't in the loaded pages, by fetching it", async () => {
+    mockFetchLeaseTemplateById.mockResolvedValue({ ...TEMPLATE_SUMMARY, id: "tpl-99", name: "Parking addendum", files: [], placeholders: [] });
+    renderLeaseNew("/leases/new?template_ids=tpl-99");
+    expect(await screen.findByText("Parking addendum")).toBeInTheDocument();
+    expect(mockFetchLeaseTemplateById).toHaveBeenCalledWith("tpl-99");
+  });
+
+  it("shows a short id until the preselected template's name arrives", () => {
+    mockFetchLeaseTemplateById.mockReturnValue(new Promise(() => undefined));
+    renderLeaseNew("/leases/new?template_ids=tpl-99-long-id");
+    expect(screen.getByTestId("lease-new-summary-template-tpl-99-long-id")).toHaveTextContent("tpl-99-l");
   });
 
   it("accepts the legacy single template_id URL param", () => {

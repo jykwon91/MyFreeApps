@@ -1,9 +1,8 @@
+import { useLeaseTemplateNames } from "@mybookkeeper/api-client/hooks/useLeaseTemplateNames";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { useGetLeaseTemplatesQuery, useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { askedFields, computedFields } from "@mybookkeeper/api-client/utils/leasePlaceholders";
 import { EmptyState, useRefresh, goBackOr } from "@platform/mobile";
-import { useMemo } from "react";
-import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import { applicantName } from "../applicants/applicantDisplay";
@@ -16,11 +15,10 @@ export default function NewLeaseDetailsLoader({ flow }: { flow: NewLeaseFlow }) 
   // Pulled fresh on arrival: the applicant may have just been edited.
   const defaults = useGetMultiGenerateDefaultsQuery({ template_ids: flow.templateIds, applicant_id: applicantId }, { refetchOnMountOrArgChange: true });
   const applicant = useGetApplicantByIdQuery(applicantId);
-  const { currentData: templates } = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
+  // Only for the "Used in" hint, so the form doesn't wait on it.
+  const templateNames = useLeaseTemplateNames(flow.templateIds);
   const error = defaults.error ?? applicant.error;
   const { refresh } = useRefresh(() => Promise.all([defaults.refetch(), applicant.refetch()]), error);
-  // Only for the "Used in" hint, so the form doesn't wait on it.
-  const templateNames = useMemo(() => Object.fromEntries((templates?.items ?? []).map((template) => [template.id, template.name])), [templates]);
 
   if (defaults.currentData && applicant.currentData) {
     return (
