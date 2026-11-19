@@ -53,6 +53,9 @@ test("a company whose answer is lost and whose list can't be read says it isn't 
 
   await addGlobex(page);
 
-  await expect(page.getByText(/not sure that saved\. Check your companies before trying again/)).toBeVisible();
+  // The toast region only: for its first second Radix also keeps a hidden screen-reader copy of the toast text.
+  await expect(
+    page.getByRole("region", { name: "Notifications" }).getByText(/not sure that saved\. Check your companies before trying again/),
+  ).toBeVisible();
   await expect(page.getByText('Company "Globex" added', { exact: true })).toHaveCount(0);
 });
