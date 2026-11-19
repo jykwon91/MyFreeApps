@@ -42,14 +42,9 @@ afterEach(() => {
 });
 
 describe("applicantsApi", () => {
-  it("lists by stage", async () => {
-    await makeStore().dispatch(endpoints.getApplicants.initiate({ stage: "approved", limit: 25, offset: 50 }));
-    expect(sent[0].url).toBe("/applicants");
-    expect(sent[0].params).toEqual({ stage: "approved", limit: 25, offset: 50 });
-  });
-
-  it("asks for one page at a time", async () => {
+  it("lists by stage, one page at a time", async () => {
     await makeStore().dispatch(endpoints.listApplicantPages.initiate({ stage: "approved" }));
+    expect(sent[0].url).toBe("/applicants");
     expect(sent[0].params).toEqual({ stage: "approved", limit: 25, offset: 0 });
   });
 
@@ -67,10 +62,10 @@ describe("applicantsApi", () => {
 
   it("sends the host's date when listing tenants", async () => {
     await makeStore().dispatch(
-      endpoints.getTenants.initiate({ include_ended: true, limit: 100, today: "2026-11-06" }),
+      endpoints.listTenantPages.initiate({ include_ended: true, today: "2026-11-06" }),
     );
     expect(sent[0].url).toBe("/applicants/tenants");
-    expect(sent[0].params).toEqual({ today: "2026-11-06", include_ended: true, limit: 100 });
+    expect(sent[0].params).toEqual({ today: "2026-11-06", include_ended: true, limit: 25, offset: 0 });
   });
 
   it("knows a declined applicant has nowhere further to go", () => {

@@ -1,3 +1,4 @@
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { Provider } from "react-redux";
@@ -12,7 +13,8 @@ vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetTenantsQuery: vi.fn(),
+  useListTenantPagesInfiniteQuery: vi.fn(),
+  useGetApplicantByIdQuery: vi.fn(() => ({ currentData: undefined })),
 }));
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(),
@@ -28,8 +30,21 @@ import {
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
 } from "@mybookkeeper/api-client/store/attributionApi";
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import type { TenantListResponse } from "@mybookkeeper/api-client/types/applicant/tenant-list-response";
+
+function tenantPages(items: unknown[]) {
+  return {
+    ...infiniteQueryData({ items, total: items.length, has_more: false } as TenantListResponse),
+    isLoading: false,
+    isFetching: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    isError: false,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useListTenantPagesInfiniteQuery>;
+}
 
 function makeItem(overrides: Partial<ReviewItemType> = {}): ReviewItemType {
   return {
@@ -131,10 +146,7 @@ beforeEach(() => {
     { isLoading: false },
   ] as unknown as ReturnType<typeof useRejectAttributionReviewMutation>);
   setAttributeLoading(false);
-  vi.mocked(useGetTenantsQuery).mockReturnValue({
-    data: { items: [{ id: "a1", legal_name: "Bob Tenant" }] },
-    isLoading: false,
-  } as unknown as ReturnType<typeof useGetTenantsQuery>);
+  vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue(tenantPages([{ id: "a1", legal_name: "Bob Tenant" }]));
   vi.mocked(useGetPropertiesQuery).mockReturnValue({
     data: [
       { id: "p1", name: "Beach House", is_active: true },
@@ -356,12 +368,7 @@ describe("AttributionReviewItem", () => {
   });
 
   it("rent-unmatched: empty tenants → message + disabled Link + no picker", () => {
-    vi.mocked(useGetTenantsQuery).mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-      isError: false,
-      isUninitialized: false,
-    } as unknown as ReturnType<typeof useGetTenantsQuery>);
+    vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue(tenantPages([]));
     renderItem(rentUnmatched());
     expect(
       screen.getByText(

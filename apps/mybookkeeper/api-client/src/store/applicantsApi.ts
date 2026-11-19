@@ -5,7 +5,6 @@ import { tagsForTenantDates } from "../utils/tagsForTenantDates";
 import type { ApplicantContactEmailRequest } from "../types/applicant/applicant-contact-email-request";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";
-import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
 import type { ApplicantListResponse } from "../types/applicant/applicant-list-response";
 import type { ApplicantPageArgs } from "../types/applicant/applicant-page-args";
 import type { ApplicantPromoteRequest } from "../types/applicant/applicant-promote-request";
@@ -13,7 +12,6 @@ import type { ApplicantUpdateRequest } from "../types/applicant/applicant-update
 import type { StageTransitionRequest } from "../types/applicant/stage-transition-request";
 import type { TenantPageArgs } from "../types/applicant/tenant-page-args";
 import type { TenancyEndRequest } from "../types/applicant/tenancy-end-request";
-import type { TenantListArgs } from "../types/applicant/tenant-list-args";
 import type { TenantListResponse } from "../types/applicant/tenant-list-response";
 
 /**
@@ -31,29 +29,6 @@ const applicantsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Applicant", "Inquiry", "RentReminder", "SignedLease"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getApplicants: builder.query<ApplicantListResponse, ApplicantListArgs | void>({
-      query: (args) => ({
-        url: "/applicants",
-        params: {
-          ...(args?.stage ? { stage: args.stage } : {}),
-          ...(args?.include_deleted !== undefined
-            ? { include_deleted: args.include_deleted }
-            : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((applicant) => ({
-                type: "Applicant" as const,
-                id: applicant.id,
-              })),
-              { type: "Applicant" as const, id: "LIST" },
-            ]
-          : [{ type: "Applicant" as const, id: "LIST" }],
-    }),
     listApplicantPages: builder.infiniteQuery<ApplicantListResponse, ApplicantPageArgs, number>({
       infiniteQueryOptions: {
         initialPageParam: 0,
@@ -102,30 +77,6 @@ const applicantsApi = baseApi.enhanceEndpoints({
         data,
       }),
       invalidatesTags: (_result, _err, arg) => tagsForTenantDates(arg.applicantId),
-    }),
-
-    getTenants: builder.query<TenantListResponse, TenantListArgs>({
-      query: (args) => ({
-        url: "/applicants/tenants",
-        params: {
-          today: args.today,
-          ...(args.include_ended !== undefined
-            ? { include_ended: args.include_ended }
-            : {}),
-          ...(args.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((t) => ({
-                type: "Applicant" as const,
-                id: t.id,
-              })),
-              { type: "Applicant" as const, id: "TENANT_LIST" },
-            ]
-          : [{ type: "Applicant" as const, id: "TENANT_LIST" }],
     }),
 
     listTenantPages: builder.infiniteQuery<TenantListResponse, TenantPageArgs, number>({
@@ -196,7 +147,6 @@ const applicantsApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetApplicantsQuery,
   useListApplicantPagesInfiniteQuery,
   useGetApplicantByIdQuery,
   useRevealApplicantSensitiveMutation,
@@ -204,7 +154,6 @@ export const {
   useTransitionApplicantStageMutation,
   useUpdateApplicantContractDatesMutation,
   useUpdateApplicantContactEmailMutation,
-  useGetTenantsQuery,
   useListTenantPagesInfiniteQuery,
   useEndTenancyMutation,
   useRestartTenancyMutation,

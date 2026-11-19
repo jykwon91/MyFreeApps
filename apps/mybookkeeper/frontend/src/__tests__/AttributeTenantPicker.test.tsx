@@ -1,3 +1,4 @@
+import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
@@ -5,7 +6,8 @@ import { store } from "@/shared/store";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetTenantsQuery: vi.fn(),
+  useListTenantPagesInfiniteQuery: vi.fn(),
+  useGetApplicantByIdQuery: vi.fn(() => ({ currentData: undefined })),
 }));
 vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
@@ -16,7 +18,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import type { TenantListResponse } from "@mybookkeeper/api-client/types/applicant/tenant-list-response";
 import { localToday } from "@platform/core/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { showSuccess } from "@platform/ui";
@@ -24,14 +27,16 @@ import { showSuccess } from "@platform/ui";
 const resolvedUnwrap = () => ({ unwrap: () => Promise.resolve({ ok: true }) });
 let attributeTrigger: ReturnType<typeof vi.fn>;
 
-function mockTenants(
-  state: Partial<ReturnType<typeof useGetTenantsQuery>>,
-): void {
-  vi.mocked(useGetTenantsQuery).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    ...state,
-  } as unknown as ReturnType<typeof useGetTenantsQuery>);
+function mockTenants({ data, isLoading = false }: { data?: unknown; isLoading?: boolean }): void {
+  vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue({
+    ...infiniteQueryData(data as TenantListResponse | undefined),
+    isLoading,
+    isFetching: isLoading,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    isError: false,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useListTenantPagesInfiniteQuery>);
 }
 
 beforeEach(() => {
@@ -56,15 +61,13 @@ function renderPicker(currentApplicantId: string | null = null) {
 }
 
 describe("AttributeTenantPicker", () => {
-  it("queries the dedicated tenants endpoint with a within-cap limit, including ended tenants", () => {
-    // Regression guard: the generic /applicants endpoint caps limit at 100;
-    // requesting it with limit > 100 returned 422 and rendered as the empty
-    // state. The picker must use the tenants endpoint with a valid limit.
+  it("pages through the dedicated tenants endpoint, including ended tenants", () => {
+    // Regression guard: the generic /applicants endpoint hides lease_signed
+    // applicants, and a fixed limit (the server caps it at 100) left later
+    // tenants out. The picker pages the tenants endpoint instead.
     mockTenants({ data: { items: [], total: 0, has_more: false } });
     renderPicker();
-    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith({ limit: 100, include_ended: true, today: localToday() });
-    const [[args]] = vi.mocked(useGetTenantsQuery).mock.calls;
-    expect((args as { limit: number }).limit).toBeLessThanOrEqual(100);
+    expect(vi.mocked(useListTenantPagesInfiniteQuery)).toHaveBeenCalledWith({ include_ended: true, today: localToday() });
   });
 
   it("shows a loading skeleton while fetching (no empty message, no select)", () => {

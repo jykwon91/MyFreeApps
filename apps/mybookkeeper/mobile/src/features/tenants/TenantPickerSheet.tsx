@@ -1,13 +1,14 @@
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { OptionSheet } from "@platform/mobile";
 import { router } from "expo-router";
-import { TENANT_PICKER_LIMIT, TENANT_PICKER_MESSAGES as MESSAGES } from "../../constants/tenantPicker";
+import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
+import { TENANT_PICKER_MESSAGES as MESSAGES } from "../../constants/tenantPicker";
 import { pickerLoadError } from "../../lib/pickerLoadError";
 import type { TenantChoice } from "../../types/TenantChoice";
 import { useTodayIso } from "../../lib/useTodayIso";
+import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
+import { useTenantChoices } from "./useTenantChoices";
 
 interface TenantPickerSheetProps {
   isOpen: boolean;
@@ -19,30 +20,31 @@ interface TenantPickerSheetProps {
   selectedId?: string | null;
 }
 
+/** Every tenant, more loading as the list nears its end. Whoever opens it shows the linked tenant's name itself. */
 export default function TenantPickerSheet({ isOpen, description, onClose, onClosed, onPick, selectedId = null }: TenantPickerSheetProps) {
   const today = useTodayIso();
-  // Ended tenants stay in the list: a final or late payment can arrive after move-out.
-  const { currentData, error, refetch } = useGetTenantsQuery({ limit: TENANT_PICKER_LIMIT, include_ended: true, today });
-  const tenants = currentData?.items ?? [];
-  const options = buildTenantOptions(tenants, today).map((option) => ({ value: option.id, label: option.label }));
+  const choices = useTenantChoices(today);
+  const { tenants, hasData, error, refetch } = choices;
   const { closeThen, handleClosed } = useAfterSheetCloses(onClose, onClosed);
 
   return (
     <OptionSheet
-      description={currentData?.has_more ? `${description} ${MESSAGES.more}` : description}
+      description={description}
       emptyContent={
-        currentData ? (
+        hasData ? (
           // Applicants is a tab, so this goes back to it rather than stacking a second copy of the tabs.
           <SheetEmptyAction actionLabel={MESSAGES.seeApplicants} message={MESSAGES.none} onPress={() => closeThen(() => router.navigate("/people?section=applicants"))} />
         ) : undefined
       }
       emptyText={MESSAGES.loading}
+      footer={<PagedChoicesFooter choices={choices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreTenants} />}
       isOpen={isOpen}
-      loadError={pickerLoadError({ hasLoaded: currentData !== undefined, error, refetch }, MESSAGES.failed)}
+      loadError={pickerLoadError({ hasLoaded: hasData, error, refetch }, MESSAGES.failed)}
       onClose={onClose}
       onClosed={handleClosed}
+      onEndReached={choices.loadMoreIfAny}
       onSelect={(id) => onPick({ id, name: tenants.find((tenant) => tenant.id === id)?.legal_name ?? MESSAGES.thisTenant })}
-      options={options}
+      options={choices.options}
       title={MESSAGES.title}
       value={selectedId}
     />

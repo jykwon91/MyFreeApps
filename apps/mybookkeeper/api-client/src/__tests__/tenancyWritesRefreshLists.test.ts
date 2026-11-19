@@ -46,8 +46,8 @@ beforeEach(() => {
 
 async function listFetchesAfter(mutate: (store: Store) => unknown): Promise<{ tenants: number; applicants: number }> {
   const store = makeStore();
-  const tenantList = store.dispatch(endpoints.getTenants.initiate({ today: "2026-01-01" })) as unknown as Subscription;
-  const applicantList = store.dispatch(endpoints.getApplicants.initiate()) as unknown as Subscription;
+  const tenantList = store.dispatch(endpoints.listTenantPages.initiate({ include_ended: false, today: "2026-01-01" })) as unknown as Subscription;
+  const applicantList = store.dispatch(endpoints.listApplicantPages.initiate({})) as unknown as Subscription;
   await Promise.all([tenantList, applicantList]);
   await mutate(store);
   await new Promise((resolve) => setTimeout(resolve, 0));

@@ -2,25 +2,19 @@
  * Inline "Attribute to tenant" widget shown in the TransactionPanel for
  * income transactions that are not yet linked to an applicant.
  *
- * Fetches lease_signed tenants from the dedicated /applicants/tenants
- * endpoint (the same source as the Tenants page), shows a native <select>,
- * and fires the POST /transactions/{id}/attribute endpoint on confirm.
- *
- * NOTE: must use ``useGetTenantsQuery``, not ``useGetApplicantsQuery``. The
- * generic /applicants endpoint caps ``limit`` at 100 and is designed to
- * *hide* lease_signed applicants (they live on /tenants). Requesting it with
- * ``limit: 200`` returned 422, which this component silently rendered as the
- * "no tenants" empty state for every user — see the limit cap in
- * ``api/applicants.py``.
+ * Lists every lease_signed tenant from the dedicated /applicants/tenants
+ * endpoint (the same source as the Tenants page), a page at a time with Load
+ * more, in a native <select>, and fires the POST /transactions/{id}/attribute
+ * endpoint on confirm.
  */
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@platform/core/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { attributionSourceLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
-import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import PagedSelect from "@/shared/components/ui/PagedSelect";
+import { useTenantSelectOptions } from "@/app/features/tenants/useTenantSelectOptions";
 
 export interface AttributeTenantPickerProps {
   transactionId: string;
@@ -36,13 +30,7 @@ export default function AttributeTenantPicker({
   const [selectedId, setSelectedId] = useState<string>(currentApplicantId ?? "");
   const [attribute, { isLoading }] = useAttributeTransactionManuallyMutation();
 
-  const { data: tenantsResponse, isLoading: loadingApplicants } = useGetTenantsQuery({
-    limit: 100,
-    include_ended: true,
-    today: localToday(),
-  });
-
-  const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);
+  const { pages, mode, options: tenantOptions } = useTenantSelectOptions(currentApplicantId);
 
   const isAlreadyAttributed = Boolean(currentApplicantId);
   const hasChanged = selectedId !== (currentApplicantId ?? "");
@@ -57,11 +45,13 @@ export default function AttributeTenantPicker({
     }
   };
 
-  if (loadingApplicants) {
+  if (mode === "loading") {
     return (
       <div className="h-8 w-48 animate-pulse rounded bg-muted" aria-busy="true" />
     );
   }
+
+  if (mode === "error") return <ListPagesErrorAlert pages={pages} noun="tenants" />;
 
   if (tenantOptions.length === 0) {
     return (
@@ -73,32 +63,29 @@ export default function AttributeTenantPicker({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px]"
-          aria-label="Select tenant"
-        >
-          <option value="">— select tenant —</option>
-          {tenantOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <LoadingButton
-          variant="primary"
-          size="sm"
-          isLoading={isLoading}
-          loadingText="Linking..."
-          onClick={handleAttribute}
-          disabled={!selectedId || !hasChanged}
-        >
-          <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-          {isAlreadyAttributed ? "Reassign" : "Link"}
-        </LoadingButton>
-      </div>
+      <PagedSelect
+        value={selectedId}
+        onChange={(e) => setSelectedId(e.target.value)}
+        className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px]"
+        aria-label="Select tenant"
+        emptyLabel="— select tenant —"
+        noun="tenants"
+        options={tenantOptions}
+        pages={pages}
+        aside={
+          <LoadingButton
+            variant="primary"
+            size="sm"
+            isLoading={isLoading}
+            loadingText="Linking..."
+            onClick={handleAttribute}
+            disabled={!selectedId || !hasChanged}
+          >
+            <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+            {isAlreadyAttributed ? "Reassign" : "Link"}
+          </LoadingButton>
+        }
+      />
       {isAlreadyAttributed && currentAttributionSource && (
         <p className="text-[11px] text-muted-foreground">
           Currently linked ({attributionSourceLabel(currentAttributionSource)})

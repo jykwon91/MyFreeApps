@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, XCircle, HelpCircle, UserCheck, Home } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Home } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatLocaleDate } from "@/shared/utils/date";
@@ -9,11 +9,9 @@ import {
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
 } from "@mybookkeeper/api-client/store/attributionApi";
-import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@platform/core/utils/localToday";
-import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import AttributionChannelBadge from "./AttributionChannelBadge";
+import AttributionTenantPicker from "./AttributionTenantPicker";
 
 export interface AttributionReviewItemProps {
   item: ReviewItemType;
@@ -54,23 +52,6 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const channel = txn?.channel ?? null;
   const isPropertyRow = channel !== null && channel !== "direct";
   const badgeChannel = isPropertyRow ? channel : null;
-
-  // Tenant list only for rent rows that are unmatched — never for property
-  // rows, otherwise this mounts on every Airbnb row and burns RTK cache.
-  // Uses the dedicated /applicants/tenants endpoint (NOT the generic
-  // /applicants, whose limit caps at 100 — requesting `limit: 200` there
-  // returned 422 and stranded this picker in its error state).
-  const {
-    data: tenantsResponse,
-    isLoading: loadingApplicants,
-    isError: applicantsError,
-    isUninitialized: applicantsUninitialized,
-  } = useGetTenantsQuery(
-    // include_ended: a final or late payment can arrive after move-out.
-    { limit: 100, include_ended: true, today: localToday() },
-    { skip: !isUnmatched || isPropertyRow },
-  );
-  const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);
 
   // Property list only for property rows that are unmatched (no proposal to
   // confirm — the host picks the listing the payout belongs to).
@@ -156,6 +137,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   // is unreachable from real data — it renders the unmatched cue + reject only.
   const isFuzzyProperty =
     isPropertyRow && item.confidence === "fuzzy" && proposedProperty != null;
+  // The tenant picker loads the tenant list, so it mounts only on unmatched rent rows.
   const showTenantPicker = !isPropertyRow && isUnmatched && txn != null;
   const showPropertyPicker = isPropertyRow && isUnmatched && txn != null;
 
@@ -169,19 +151,6 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     showPropertyPicker && !propsLoading && !propertiesError && activeProperties.length === 0;
   const propsReady =
     showPropertyPicker && !propsLoading && !propertiesError && activeProperties.length > 0;
-
-  // Tenant-picker sub-states, mirroring the property machine above.
-  // `tenantsLoading` also covers the pre-fetch tick (the query is skipped
-  // until this is a rent row, so it starts uninitialized). `tenantsEmpty`
-  // gives the host an explanation + next step when there are no lease_signed
-  // tenants yet, instead of silently leaving only "Not them".
-  const tenantsLoading =
-    showTenantPicker && (loadingApplicants || applicantsUninitialized);
-  const tenantsErrored = showTenantPicker && !tenantsLoading && applicantsError;
-  const tenantsEmpty =
-    showTenantPicker && !tenantsLoading && !applicantsError && tenantOptions.length === 0;
-  const tenantsReady =
-    showTenantPicker && !tenantsLoading && !applicantsError && tenantOptions.length > 0;
 
   return (
     <div data-testid="attribution-review-item" className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
@@ -225,76 +194,14 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           </div>
         )}
 
-        {tenantsLoading && (
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <div
-              className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px] flex items-center text-muted-foreground"
-              aria-hidden="true"
-            >
-              Loading tenants…
-            </div>
-            <LoadingButton
-              variant="primary"
-              size="sm"
-              isLoading={false}
-              onClick={() => {}}
-              disabled
-            >
-              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-              Link
-            </LoadingButton>
-          </div>
-        )}
-        {tenantsErrored && (
-          <p className="text-sm text-destructive pt-1">
-            Couldn't load tenants — try refreshing.
-          </p>
-        )}
-        {tenantsEmpty && (
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <p className="text-sm text-muted-foreground">
-              No tenants with a signed lease yet — add one in Applicants.
-            </p>
-            <LoadingButton
-              variant="primary"
-              size="sm"
-              isLoading={false}
-              onClick={() => {}}
-              disabled
-            >
-              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-              Link
-            </LoadingButton>
-          </div>
-        )}
-        {tenantsReady && (
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <select
-              value={pickedApplicantId}
-              onChange={(e) => setPickedApplicantId(e.target.value)}
-              className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px]"
-              aria-label="Pick a tenant for this payment"
-              disabled={anyLoading}
-            >
-              <option value="">— pick a tenant —</option>
-              {tenantOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <LoadingButton
-              variant="primary"
-              size="sm"
-              isLoading={isAttributing && isActing}
-              loadingText="Linking..."
-              onClick={handleLink}
-              disabled={!pickedApplicantId || anyLoading}
-            >
-              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-              Link
-            </LoadingButton>
-          </div>
+        {showTenantPicker && (
+          <AttributionTenantPicker
+            value={pickedApplicantId}
+            onChange={setPickedApplicantId}
+            disabled={anyLoading}
+            isLinking={isAttributing && isActing}
+            onLink={handleLink}
+          />
         )}
 
         {propsLoading && (

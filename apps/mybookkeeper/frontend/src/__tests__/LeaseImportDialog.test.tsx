@@ -29,8 +29,8 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetApplicantsQuery: vi.fn(() => ({
-    data: {
+  useListApplicantPagesInfiniteQuery: vi.fn(() => ({
+    ...infiniteQueryData({
       items: [
         {
           id: "app-1",
@@ -50,8 +50,13 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
       ],
       total: 1,
       has_more: false,
-    } satisfies ApplicantListResponse,
+    } satisfies ApplicantListResponse),
     isLoading: false,
+    isFetching: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    isError: false,
+    refetch: vi.fn(),
   })),
 }));
 
