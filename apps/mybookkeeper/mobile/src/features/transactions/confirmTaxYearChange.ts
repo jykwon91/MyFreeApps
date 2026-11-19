@@ -1,5 +1,6 @@
+import { TAX_YEAR_CHANGE_MESSAGES as MESSAGES, TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChange";
+import type { TaxYearChoice } from "@mybookkeeper/api-client/types/transaction/TaxYearChoice";
 import { Alert } from "react-native";
-import type { TaxYearChoice } from "../../types/TaxYearChoice";
 
 /**
  * A date in another year doesn't move the tax year by itself, so the person says which year the
@@ -8,14 +9,14 @@ import type { TaxYearChoice } from "../../types/TaxYearChoice";
 export function confirmTaxYearChange(currentYear: number, newYear: number): Promise<TaxYearChoice> {
   return new Promise((resolve) => {
     Alert.alert(
-      `Move it to tax year ${newYear}?`,
-      `The new date is in ${newYear}, but this is filed under tax year ${currentYear}. That decides which year's tax report it shows up in.`,
+      MESSAGES.title(newYear),
+      MESSAGES.body(currentYear, newYear),
       [
-        { text: "Keep editing", style: "cancel", onPress: () => resolve("cancel") },
-        { text: `Keep ${currentYear}`, onPress: () => resolve("keep") },
-        { text: `Move to ${newYear}`, onPress: () => resolve("move") },
+        { text: MESSAGES.keepEditing, style: "cancel", onPress: () => resolve(TAX_YEAR_CHOICE.cancel) },
+        { text: MESSAGES.keep(currentYear), onPress: () => resolve(TAX_YEAR_CHOICE.keep) },
+        { text: MESSAGES.move(newYear), onPress: () => resolve(TAX_YEAR_CHOICE.move) },
       ],
-      { cancelable: true, onDismiss: () => resolve("cancel") },
+      { cancelable: true, onDismiss: () => resolve(TAX_YEAR_CHOICE.cancel) },
     );
   });
 }

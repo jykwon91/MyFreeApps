@@ -17,6 +17,7 @@ def _build_txn_filters(
     start_date: date | None = None,
     end_date: date | None = None,
     property_ids: list[uuid.UUID] | None = None,
+    tax_year: int | None = None,
     tax_relevant_only: bool = False,
     exclude_capital_improvements: bool = False,
 ) -> list:
@@ -31,6 +32,8 @@ def _build_txn_filters(
         filters.append(Transaction.transaction_date <= end_date)
     if property_ids:
         filters.append(Transaction.property_id.in_(property_ids))
+    if tax_year is not None:
+        filters.append(Transaction.tax_year == tax_year)
     if tax_relevant_only:
         filters.append(Transaction.tax_relevant.is_(True))
     if exclude_capital_improvements:
@@ -93,6 +96,7 @@ async def txn_sum_by_category(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     property_ids: list[uuid.UUID] | None = None,
+    tax_year: int | None = None,
     tax_relevant_only: bool = False,
     exclude_capital_improvements: bool = False,
 ) -> Sequence[Row]:
@@ -101,6 +105,7 @@ async def txn_sum_by_category(
         start_date=start_date,
         end_date=end_date,
         property_ids=property_ids,
+        tax_year=tax_year,
         tax_relevant_only=tax_relevant_only,
         exclude_capital_improvements=exclude_capital_improvements,
     )
@@ -124,12 +129,13 @@ async def txn_sum_by_property_and_category(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     property_ids: list[uuid.UUID] | None = None,
+    tax_year: int | None = None,
     tax_relevant_only: bool = False,
     exclude_capital_improvements: bool = False,
 ) -> Sequence[Row]:
     filters = _build_txn_filters(
         organization_id, start_date=start_date, end_date=end_date, property_ids=property_ids,
-        tax_relevant_only=tax_relevant_only,
+        tax_year=tax_year, tax_relevant_only=tax_relevant_only,
         exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(

@@ -1,7 +1,9 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
+import { TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChange";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
+import { otherTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -21,7 +23,6 @@ import { useVendorChoices } from "../vendors/useVendorChoices";
 import PickerField from "./PickerField";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
 import { savedVendorChoices, savedVendorLabel } from "./savedVendor";
-import { otherTaxYear } from "./taxYear";
 import { choiceLabel, fromChoice } from "./transactionCreateValues";
 import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, taxYearError, toEditValues } from "./transactionEditValues";
@@ -93,9 +94,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
     }
     // A tax year typed in is already the answer, so only a new date alone asks which year it files under.
     const newTaxYear = changes.transaction_date && changes.tax_year === undefined ? otherTaxYear(changes.transaction_date, original) : null;
-    const choice = newTaxYear === null ? "keep" : await confirmTaxYearChange(original.tax_year, newTaxYear);
-    if (choice === "cancel") return;
-    const data: Partial<Transaction> = choice === "move" && newTaxYear !== null ? { ...approval, tax_year: newTaxYear } : approval;
+    const choice = newTaxYear === null ? TAX_YEAR_CHOICE.keep : await confirmTaxYearChange(original.tax_year, newTaxYear);
+    if (choice === TAX_YEAR_CHOICE.cancel) return;
+    const data: Partial<Transaction> = choice === TAX_YEAR_CHOICE.move && newTaxYear !== null ? { ...approval, tax_year: newTaxYear } : approval;
     setSavingAction(approve ? TRANSACTION_SAVE_ACTION.approve : TRANSACTION_SAVE_ACTION.save);
     try {
       const result = await updateTransaction({ id: original.id, data }).unwrap();
