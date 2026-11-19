@@ -17,6 +17,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { stubDocumentPages } from "./fixtures/mockDocuments";
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
 
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c2";
@@ -32,6 +33,7 @@ async function stubInsuranceApi(page: Page): Promise<string[]> {
     return route.fulfill(json({ id: "00000000-0000-0000-0000-0000000000f2" }));
   });
   await page.route("**/api/insurance-benchmarks?*", (route) => route.fulfill({ status: 404, contentType: "application/json", body: "{}" }));
+  await stubDocumentPages(page, []);
   return writes;
 }
 
