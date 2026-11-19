@@ -1,4 +1,6 @@
+import clsx from "clsx";
 import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink";
+import { QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { crateDisplayName } from "@/games/wow-forever/lib/crates/crateDisplayName";
 import type { CrateRecord } from "@/games/wow-forever/types/crates/crateRecord";
 
@@ -11,7 +13,7 @@ export default function CrateNameCell({ crate }: { crate: CrateRecord }) {
         itemId={crate.id}
         name={crateDisplayName(crate.name)}
         withIcon
-        className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium lg:min-h-0"
+        className={clsx("inline-flex min-h-[44px] items-center gap-2 text-sm font-medium lg:min-h-0", QUALITY_TEXT_CLASSES[crate.quality])}
       />
     </span>
   );

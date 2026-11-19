@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from scripts.wow_crates.build import crates_json
-from scripts.wow_crates.crates import crate_bundles, crate_items, crate_tier, material_id, material_index
+from scripts.wow_crates.crates import crate_bundles, crate_items, crate_quality, crate_tier, material_id, material_index
 from scripts.wow_talents.blizzard_api import BlizzardStatic
 
 FILL = "Use: Fill the crate with any bundle from the following list:"
@@ -34,6 +34,17 @@ def test_crate_tier_is_the_tier_word_in_the_name(name, tier):
 def test_a_crate_with_no_tier_word_stops_the_build():
     with pytest.raises(SystemExit, match="tier"):
         crate_tier("Waylaid Crate: Mystery Goods")
+
+
+@pytest.mark.parametrize(("blizzard", "quality"), [("COMMON", "common"), ("UNCOMMON", "uncommon")])
+def test_crate_quality_is_the_item_quality_lower_cased(blizzard, quality):
+    assert crate_quality(248682, {"quality": {"type": blizzard, "name": blizzard.title()}}) == quality
+
+
+@pytest.mark.parametrize("item", [{"quality": {"type": "RARE"}}, {"quality": {}}, {}])
+def test_a_crate_of_another_or_no_quality_stops_the_build(item):
+    with pytest.raises(SystemExit, match="quality"):
+        crate_quality(248682, item)
 
 
 def test_bundles_read_crlf_and_lf_lists_in_order():

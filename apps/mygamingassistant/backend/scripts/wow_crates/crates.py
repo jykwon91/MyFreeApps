@@ -7,6 +7,8 @@ from typing import Any
 
 CRATE_PREFIX = "Waylaid Crate: "
 TIERS = ("apprentice", "journeyman", "expert", "artisan")
+# A crate's item quality sets its reward with its tier (the page holds the reward table).
+QUALITIES = ("common", "uncommon")
 FILL_INTRO = "Fill the crate with any bundle from the following list:"
 _BUNDLE = re.compile(r"^- (?P<count>\d+) (?P<name>.+)$")
 
@@ -23,6 +25,14 @@ def crate_tier(name: str) -> str:
     if len(found) != 1:
         raise SystemExit(f"crate {name!r}: expected one tier word ({', '.join(TIERS)}), found {found}")
     return found[0]
+
+
+def crate_quality(crate_id: int, item: Mapping[str, Any]) -> str:
+    """The crate's item quality, lower-case ("common" or "uncommon"); anything else stops the build."""
+    quality = str(((item.get("quality") or {}).get("type")) or "").lower()
+    if quality not in QUALITIES:
+        raise SystemExit(f"crate {crate_id}: expected quality {' or '.join(QUALITIES)}, found {quality or 'none'!r}")
+    return quality
 
 
 def crate_bundles(crate_id: int, item: Mapping[str, Any]) -> list[tuple[int, str]]:

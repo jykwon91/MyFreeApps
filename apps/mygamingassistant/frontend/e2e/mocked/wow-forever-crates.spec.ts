@@ -1,11 +1,11 @@
 /**
  * WoW Forever Waylaid crates page — E2E, network-stubbed.
  *
- *   - rows are ordered by total (crate + its cheapest bundle), cheapest first, crates with no total last
+ *   - rows are ordered by cost per reward (crate + its cheapest bundle, over the rewards the crate pays), cheapest first, crates with no total last
  *   - the cheapest bundle and what it costs show in the row; a crate whose materials have no price says so
  *   - "All N bundles" folds out every bundle with its prices and a Cheapest mark
  *   - the tier filter lives in the link and narrows the grid ("Showing N of M"), with Clear filters
- *   - sorting by a column header flips its direction and keeps unknown totals last
+ *   - sorting by a column header (Per reward, Total, Rewards) flips its direction and keeps unknown totals last
  *   - switching the auction house re-prices the rows
  *   - prices that fail to load leave the rows, with a retry
  *   - the search box matches the crate or any bundle's material, lives in `?q=`, restores on reload, and clears
@@ -44,6 +44,7 @@ interface Crate {
   id: number;
   name: string;
   tier: "apprentice" | "journeyman" | "expert" | "artisan";
+  quality: "common" | "uncommon";
   bundles: Bundle[];
 }
 
@@ -56,10 +57,10 @@ const CRATES = (
 const short = (crate: Crate) => crate.name.replace(PREFIX, "");
 const materialIds = (crate: Crate) => crate.bundles.map((b) => b.item.id);
 
-/** The first crate of a tier with at least `minBundles` bundles, none of whose materials is in `avoid`. */
+/** The first common crate of a tier with at least `minBundles` bundles, none of whose materials is in `avoid`. */
 function pick(tier: Crate["tier"], minBundles: number, avoid: Set<number> = new Set()): Crate {
-  const found = CRATES.find((c) => c.tier === tier && c.bundles.length >= minBundles && !materialIds(c).some((id) => avoid.has(id)));
-  if (!found) throw new Error(`no ${tier} crate with ${minBundles}+ bundles`);
+  const found = CRATES.find((c) => c.tier === tier && c.quality === "common" && c.bundles.length >= minBundles && !materialIds(c).some((id) => avoid.has(id)));
+  if (!found) throw new Error(`no common ${tier} crate with ${minBundles}+ bundles`);
   return found;
 }
 
@@ -76,14 +77,14 @@ const DEAR_BUNDLE = DEAR.bundles[0];
 
 type Row = [number, number, string];
 
-/** Alliance: CHEAP totals 10s + a few copper, DEAR 20s + its bundle; Horde: CHEAP's crate costs 100g, so DEAR goes first. */
+/** Alliance: CHEAP totals 10s + a few copper (5 rewards), DEAR 40s + its bundle (10 rewards); Horde: CHEAP's crate costs 100g, so DEAR goes first. */
 function rowsFor(faction: string): Row[] {
   const cheapCrate = faction === "horde" ? 1_000_000 : 1_000;
   return [
     [CHEAP.id, cheapCrate, CHEAP.name],
     [CHEAP_BUNDLE.item.id, 1, CHEAP_BUNDLE.item.name],
     [CHEAP.bundles[0].item.id, 100_000, CHEAP.bundles[0].item.name],
-    [DEAR.id, 2_000, DEAR.name],
+    [DEAR.id, 4_000, DEAR.name],
     [DEAR_BUNDLE.item.id, 50, DEAR_BUNDLE.item.name],
     [UNPRICED_BUNDLES.id, 99, UNPRICED_BUNDLES.name],
     [NO_CRATE_PRICE.bundles[0].item.id, 7, NO_CRATE_PRICE.bundles[0].item.name],
@@ -134,7 +135,7 @@ test.beforeEach(async ({ page }) => {
 test.describe("desktop", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test("orders by total, cheapest first, with unknown totals last", async ({ page }) => {
+  test("orders by cost per reward, cheapest first, with unknown totals last", async ({ page }) => {
     await stubPrices(page);
     await page.goto("/wow-forever/crates");
     await expect(page).toHaveTitle(/Waylaid crates/);
@@ -143,11 +144,19 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("price-credit")).toBeVisible();
     await expect(rowOf(page, CHEAP).getByTestId("crate-total")).toBeVisible();
     expect(await firstRowNames(page, 2)).toEqual([short(CHEAP), short(DEAR)]);
+    await expect(page).not.toHaveURL(/sort=/);
+    await expect(page.getByRole("columnheader", { name: "Per reward" })).toHaveAttribute("aria-sort", "ascending");
+    // Common crates pay 5 (Apprentice) and 10 (Journeyman) rewards; the price of one reward shows with the "~" of every price.
+    await expect(rowOf(page, CHEAP).getByTestId("crate-reward")).toHaveText("5");
+    await expect(rowOf(page, DEAR).getByTestId("crate-reward")).toHaveText("10");
+    await expect(rowOf(page, CHEAP).getByTestId("crate-per-reward")).toContainText("~");
     // A crate with a price but no priced bundle, and one with priced bundles but no crate price, have no total.
     for (const crate of [UNPRICED_BUNDLES, NO_CRATE_PRICE]) {
       const row = rowOf(page, crate);
       await expect(row.getByText("No total")).toBeVisible();
       await expect(row.getByTestId("crate-total")).toHaveCount(0);
+      await expect(row.getByTestId("crate-per-reward")).toHaveCount(0);
+      await expect(row.getByText("No per-reward price")).toBeVisible();
     }
     await expect(page.getByTestId("crate-row").last().getByText("No total")).toBeVisible();
   });
@@ -160,7 +169,7 @@ test.describe("desktop", () => {
     await expect(row).toContainText(PREFIX.trim());
     await expect(row.getByTestId("crate-tier").last()).toHaveText(CRATE_TIER_LABEL[CHEAP.tier]);
     await expect(row).toHaveAttribute("data-tier", CHEAP.tier);
-    await expect(page.getByRole("columnheader")).toHaveText(["Crate", "Tier", "Crate price", "Cheapest bundle", "Bundle cost", "Total"]);
+    await expect(page.getByRole("columnheader")).toHaveText(["Crate", "Tier", "Crate price", "Cheapest bundle", "Bundle cost", "Total", "Rewards", "Per reward"]);
   });
 
   test("shows the cheapest bundle and what it costs, and says so when no bundle has a price", async ({ page }) => {
@@ -233,13 +242,33 @@ test.describe("desktop", () => {
   test("a column header sorts, flips on a second click, and keeps unknown totals last", async ({ page }) => {
     await stubPrices(page);
     await page.goto("/wow-forever/crates");
-    const total = page.getByRole("columnheader", { name: "Total" });
-    await expect(total).toHaveAttribute("aria-sort", "ascending");
-    await total.getByRole("button").click();
-    await expect(total).toHaveAttribute("aria-sort", "descending");
+    const perReward = page.getByRole("columnheader", { name: "Per reward" });
+    await expect(perReward).toHaveAttribute("aria-sort", "ascending");
+    await perReward.getByRole("button").click();
+    await expect(perReward).toHaveAttribute("aria-sort", "descending");
     await expect(page).toHaveURL(/dir=desc/);
     expect(await firstRowNames(page, 2)).toEqual([short(DEAR), short(CHEAP)]);
     await expect(page.getByTestId("crate-row").last().getByText("No total")).toBeVisible();
+
+    const total = page.getByRole("columnheader", { name: "Total" });
+    await total.getByRole("button").click();
+    await expect(total).toHaveAttribute("aria-sort", "ascending");
+    await expect(perReward).toHaveAttribute("aria-sort", "none");
+    await expect(page).toHaveURL(/sort=total/);
+    expect(await firstRowNames(page, 2)).toEqual([short(CHEAP), short(DEAR)]);
+    await total.getByRole("button").click();
+    await expect(total).toHaveAttribute("aria-sort", "descending");
+    expect(await firstRowNames(page, 2)).toEqual([short(DEAR), short(CHEAP)]);
+    await expect(page.getByTestId("crate-row").last().getByText("No total")).toBeVisible();
+
+    const rewards = page.getByRole("columnheader", { name: "Rewards" });
+    await rewards.getByRole("button").click();
+    await expect(rewards).toHaveAttribute("aria-sort", "ascending");
+    await expect(page).toHaveURL(/sort=reward/);
+    await expect(page.getByTestId("crate-row").first().getByTestId("crate-reward")).toHaveText("5");
+    await rewards.getByRole("button").click();
+    await expect(rewards).toHaveAttribute("aria-sort", "descending");
+    await expect(page.getByTestId("crate-row").first().getByTestId("crate-reward")).toHaveText("40");
 
     const tier = page.getByRole("columnheader", { name: "Tier" });
     await tier.getByRole("button").click();
@@ -361,7 +390,7 @@ test.describe("desktop", () => {
     const rows = page.getByTestId("crate-row");
     await expect(rows).toHaveCount(CRATES.length);
     const first = rows.first();
-    await expect(first.locator(".animate-pulse")).toHaveCount(4);
+    await expect(first.locator(".animate-pulse")).toHaveCount(5);
     await expect(first.getByTestId("crate-total")).toHaveCount(0);
     const cellsLoading = await first.getByRole("cell").count();
     const heightLoading = (await first.boundingBox())?.height ?? 0;
@@ -391,6 +420,9 @@ test.describe("phone", () => {
     await expect(cheap.getByTestId("crate-cheapest")).toContainText("Cheapest bundle");
     await expect(cheap.getByText(/^Crate ~.* \+ Bundle ~/)).toBeVisible();
     await expect(cheap.getByTestId("crate-total")).toBeVisible();
+    await expect(cheap.getByTestId("crate-per-reward")).toContainText("per reward");
+    await expect(cheap.getByTestId("crate-per-reward")).toContainText("~");
+    await expect(cheap.getByTestId("crate-reward-phone")).toHaveText("5 rewards");
     await expectNoSidewaysScroll(page);
 
     const search = page.getByRole("searchbox", { name: "Search crates" });
@@ -408,9 +440,13 @@ test.describe("phone", () => {
     await expectNoSidewaysScroll(page);
 
     const sort = page.getByLabel("Sort by");
-    await sort.selectOption("total:desc");
+    await expect(sort).toHaveValue("perReward:asc");
+    await sort.selectOption("perReward:desc");
     await expect(page).toHaveURL(/dir=desc/);
     await expect(page.getByTestId("crate-row").first()).toContainText(short(DEAR));
+    await sort.selectOption("total:asc");
+    await expect(page).toHaveURL(/sort=total/);
+    await expect(page.getByTestId("crate-row").first()).toContainText(short(CHEAP));
     await expectNoSidewaysScroll(page);
 
     const box = await page.getByRole("radio", { name: /^All \(/ }).boundingBox();

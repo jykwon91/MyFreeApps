@@ -7,12 +7,12 @@ interface CrateTotalCellProps {
   loading: boolean;
 }
 
-/** Crate + its cheapest bundle, the figure the grid is ordered by. */
+/** Crate + its cheapest bundle. */
 export default function CrateTotalCell({ row, loading }: CrateTotalCellProps) {
   if (loading) return <Skeleton className="h-6 w-20" />;
   if (row.total === null) return <span className="text-sm italic text-muted-foreground">No total</span>;
   return (
-    <span className="text-xl font-bold tabular-nums text-primary lg:text-base" data-testid="crate-total">
+    <span className="text-base font-semibold tabular-nums lg:font-bold" data-testid="crate-total">
       {formatCost(row.total)}
     </span>
   );
