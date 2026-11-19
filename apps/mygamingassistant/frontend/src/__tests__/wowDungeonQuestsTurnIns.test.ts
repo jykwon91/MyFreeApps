@@ -165,6 +165,31 @@ describe("MGA Dungeon Quests turn-ins", () => {
     expect(route(replaced)).toMatch(/^route: Route to Near/);
   });
 
+  it("a stop whose quests the game still has (under a collapsed header) isn't counted as handed in", () => {
+    // Gryan's two quests drop out of the listed log, but asked by id the game says they're still there.
+    const askable = "C_QuestLog.IsOnQuest = function(id) return id == 101 or id == 102 end";
+    const collapsed = run(`${askable}; slash('turnin'); clear(); table.remove(questLog, 1); table.remove(questLog, 1); fire('QUEST_LOG_UPDATE'); shownRoute()`);
+    expect(chat(collapsed)).toEqual([]);
+    expect(route(collapsed)).toMatch(/^route: Turn-in 1 of 3: Gryan Stoutmantle/);
+  });
+
+  it("once only quests with no known spot are left it says so instead of 'every quest handed in'", () => {
+    const lines = run("slash('turnin'); clear(); questLog = { questLog[6] }; fire('QUEST_LOG_UPDATE')");
+    expect(chat(lines)).toEqual(["that's every turn-in we know the spot of. Still finished: Somewhere Unknown."]);
+  });
+
+  it("a stop it can't find a way to goes last, and the rest still get their best order", () => {
+    const lines = run(`MGADungeonQuestsTurnIns[103] = {"Nowhere", 424242, 50, 50, "Nowhere 50.0, 50.0"}; slash('turnin')`);
+    const said = chat(lines);
+    expect(said[1]).toBe("hand in 4 quests at 3 stops, in this order:");
+    expect(said.slice(2, 5).map((l) => l.split(",")[0])).toEqual(["1. Gryan Stoutmantle", "2. Marshal Dughan", "3. Nowhere"]);
+  });
+
+  it("a pin's route on a client without map waypoints says where instead of failing", () => {
+    const lines = run("position = nil; C_Map = nil; openMap(1436); clickTurnInPin(1)");
+    expect(chat(lines)).toEqual(["the map can't take a pin there. Gryan Stoutmantle is at Westfall 56.3, 47.5 (Sentinel Hill)."]);
+  });
+
   it("says so when nothing is finished, and inside an instance it can't plan", () => {
     expect(chat(run("slash('turnin')", "questLog = {}"))).toEqual(["no finished quests in your quest log."]);
     expect(chat(run("position = nil; slash('turnin')", "questLog = { questLog[1] }"))).toEqual([

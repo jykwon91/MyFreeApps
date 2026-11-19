@@ -216,7 +216,7 @@ end
 
 -- Puts a World Map pin (and the on-screen arrow, where the client has one) on a step's giver.
 function M.Pin(step)
-  if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(step.map) then
+  if not M.CanPin(step) or (C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(step.map)) then
     say("the map can't take a pin there. " .. step.giver .. " is at " .. step.where .. ".")
     return
   end
@@ -491,7 +491,8 @@ function M.ShowRouteLeg()
 end
 
 local function follow(target, legs, minutes)
-  route = { target = target, legs = legs, at = 1, minutes = minutes }
+  -- A replan keeps knowing it pinned, so ending it still clears its old pin.
+  route = { target = target, legs = legs, at = 1, minutes = minutes, pinned = route and route.pinned }
   M.ShowRouteLeg()
 end
 
@@ -574,10 +575,11 @@ function M.TurnInStops()
         local key = t[1] .. "|" .. t[2] .. "|" .. t[3] .. "|" .. t[4]
         local stop = byKey[key]
         if not stop then
-          stop = { key = key, giver = t[1], map = t[2], x = t[3], y = t[4], where = t[5], quests = {} }
+          stop = { key = key, giver = t[1], map = t[2], x = t[3], y = t[4], where = t[5], quests = {}, ids = {} }
           byKey[key], stops[#stops + 1] = stop, stop
         end
         stop.quests[#stop.quests + 1] = q.title
+        stop.ids[#stop.ids + 1] = q.id
       else
         unknown[#unknown + 1] = q.title
       end
@@ -586,13 +588,13 @@ function M.TurnInStops()
   return stops, unknown
 end
 
--- Seconds of a run through `order` (indexes into secs) starting at 1; math.huge when a stop can't be reached.
+-- Seconds of a run through `order` (indexes into secs) starting at 1. A leg with no way there costs
+-- UNREACHABLE, so the reachable stops are still put in their best order (and the unreachable ones last).
+local UNREACHABLE = 1e7
 local function runSeconds(order, secs)
   local total, at = 0, 1
   for _, i in ipairs(order) do
-    local s = secs[at][i]
-    if not s then return math.huge end
-    total, at = total + s, i
+    total, at = total + (secs[at][i] or UNREACHABLE), i
   end
   return total
 end
@@ -634,7 +636,7 @@ function M.TurnInOrder(from, stops)
   local out = {}
   for k, i in ipairs(order) do out[k] = stops[i - 1] end
   local seconds = runSeconds(order, secs)
-  return out, seconds < math.huge and math.max(1, math.floor(seconds / 60 + 0.5)) or nil
+  return out, seconds < UNREACHABLE and math.max(1, math.floor(seconds / 60 + 0.5)) or nil
 end
 
 local function questCount(stops)
@@ -656,7 +658,12 @@ local function runTurnIns(quiet)
   end
   if #stops == 0 then
     if tour then M.StopRoute() end
-    if quiet then say("that's every quest handed in.") elseif #unknown == 0 then say("no finished quests in your quest log.") end
+    if quiet then
+      say(#unknown == 0 and "that's every quest handed in." or
+        ("that's every turn-in we know the spot of. Still finished: " .. table.concat(unknown, ", ") .. "."))
+    elseif #unknown == 0 then
+      say("no finished quests in your quest log.")
+    end
     return
   end
   local from = playerSpot()
@@ -683,6 +690,8 @@ function M.StartTurnIns()
 end
 
 -- After your quest log changes: once the stop you're on is handed in, on to the next one.
+-- The stop counts as handed in only when the game, asked by id, says none of its quests is still in your
+-- log: missing from the listed log alone (a collapsed header, a log still loading) proves nothing.
 function M.CheckTurnIns()
   if not tour then return end
   for _, stop in ipairs((M.TurnInStops())) do
@@ -690,6 +699,9 @@ function M.CheckTurnIns()
       tour.stop = stop
       return
     end
+  end
+  for _, id in ipairs(tour.stop.ids) do
+    if askInLog(id) then return end
   end
   runTurnIns(true)
 end
@@ -789,7 +801,10 @@ function M.HookWorldMap()
   if mapHooked or not WorldMapFrame then return end
   mapHooked = true
   if WorldMapFrame.HookScript then WorldMapFrame:HookScript("OnShow", M.DrawTurnInPins) end
-  if hooksecurefunc and WorldMapFrame.OnMapChanged then hooksecurefunc(WorldMapFrame, "OnMapChanged", M.DrawTurnInPins) end
+  if not hooksecurefunc then return end
+  -- OnMapChanged is the map canvas's own hook; SetMapID covers a client whose map lacks it.
+  if WorldMapFrame.OnMapChanged then hooksecurefunc(WorldMapFrame, "OnMapChanged", M.DrawTurnInPins)
+  elseif WorldMapFrame.SetMapID then hooksecurefunc(WorldMapFrame, "SetMapID", M.DrawTurnInPins) end
 end
 
 -- One quest line's block: its heading and "Next:" line (top), the steps (body), and where to route to.
