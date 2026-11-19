@@ -29,6 +29,8 @@ type Respond = (data: unknown, status?: number) => AxiosPromise;
 type Collection = { id: string; display_order: number }[];
 
 const PAGE = 25;
+/** The most manuals the server answers in one request (`limit: Query(50, ge=1, le=100)`). */
+const LIST_LIMIT_CAP = 100;
 
 /** Answers the whole welcome-manuals API like the server does, and remembers what it was asked. */
 export function startWelcomeManualsServer(initial: { manuals?: WelcomeManualResponse[]; role?: string } = {}): WelcomeManualsServer {
@@ -95,6 +97,7 @@ function route(server: WelcomeManualsServer, method: string, url: string, config
       const params = (config.params ?? {}) as { limit?: number; offset?: number };
       const offset = Number(params.offset ?? 0);
       const limit = Number(params.limit ?? PAGE);
+      if (!(limit >= 1 && limit <= LIST_LIMIT_CAP)) return respond({ detail: "limit out of range" }, 422);
       const items = server.manuals.map((manual) => ({ id: manual.id, title: manual.title, property_id: manual.property_id, section_count: manual.sections.length, created_at: manual.created_at, updated_at: manual.updated_at }));
       return respond({ items: items.slice(offset, offset + limit), total: items.length, has_more: offset + limit < items.length });
     }

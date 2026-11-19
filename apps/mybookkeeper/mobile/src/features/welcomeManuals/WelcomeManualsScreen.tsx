@@ -1,35 +1,30 @@
+import { useWelcomeManualsPages } from "@mybookkeeper/api-client/hooks/useWelcomeManualsPages";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { useGetWelcomeManualsQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
-import { WELCOME_MANUAL_PAGE_SIZE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
-import LoadMoreFailed from "../shell/LoadMoreFailed";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { manualPropertyName } from "./welcomeManualDisplay";
 import WelcomeManualRow from "./WelcomeManualRow";
-import WelcomeManualsSkeleton from "./WelcomeManualsSkeleton";
+import WelcomeManualsSkeleton, { WelcomeManualSkeletonRow } from "./WelcomeManualsSkeleton";
 
 export default function WelcomeManualsScreen() {
   const { spacing } = useTheme();
   const canWrite = useCanWrite();
-  const [pageCount, setPageCount] = useState(1);
-  const { data, currentData, error, isFetching, refetch } = useGetWelcomeManualsQuery({ limit: WELCOME_MANUAL_PAGE_SIZE * pageCount });
+  const list = useWelcomeManualsPages();
   const { currentData: properties } = useGetPropertiesQuery();
-  const { refresh, refreshControl } = useRefresh(async () => {
-    await refetch();
-  }, error);
-  // `data` keeps the rows already shown while a longer list loads; `currentData` would blank them.
-  const rows = data?.items ?? [];
-  const isLoadingMore = isFetching && pageCount > 1 && currentData === undefined;
-  const loadMoreFailed = Boolean(error) && pageCount > 1 && rows.length > 0;
+  const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.manuals : [];
   const addManual = () => router.push("/welcome-manuals/new");
 
-  const emptyList = !data && isFetching ? (
+  const emptyList = !isCurrent && list.isFetching ? (
     <WelcomeManualsSkeleton />
-  ) : error ? (
+  ) : list.error ? (
     <EmptyState
       action={{ label: WELCOME_MANUAL_MESSAGES.tryAgain, onPress: refresh }}
       body={WELCOME_MANUAL_MESSAGES.tryAgainOffer}
@@ -43,29 +38,31 @@ export default function WelcomeManualsScreen() {
     />
   );
 
-  const footer = loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => refetch()} />
-  ) : data?.has_more ? (
-    <View style={{ padding: spacing.lg }}>
-      <LoadingButton isLoading={isLoadingMore} loadingText={WELCOME_MANUAL_MESSAGES.loadingMore} onPress={() => setPageCount((count) => count + 1)} variant="secondary">
-        {WELCOME_MANUAL_MESSAGES.showMore}
-      </LoadingButton>
-    </View>
-  ) : undefined;
-
   return (
     <FlatList
       ListEmptyComponent={emptyList}
-      ListFooterComponent={footer}
+      ListFooterComponent={
+        <PagedListFooter
+          isLoadingMore={list.isFetchingNextPage}
+          loadMoreFailed={list.isLoadMoreError}
+          loadingLabel={WELCOME_MANUAL_MESSAGES.loadingMore}
+          onRetry={list.loadMore}
+          skeletonRow={<WelcomeManualSkeletonRow />}
+        />
+      }
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          <StaleDataBanner isShown={Boolean(error && rows.length > 0 && !loadMoreFailed)} />
+          <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
           {canWrite && rows.length > 0 ? <LoadingButton onPress={addManual}>{WELCOME_MANUAL_MESSAGES.new}</LoadingButton> : null}
         </View>
       }
       contentInsetAdjustmentBehavior="automatic"
       data={rows}
       keyExtractor={(manual) => manual.id}
+      onEndReached={() => {
+        if (canLoadMore(list)) list.loadMore();
+      }}
+      onEndReachedThreshold={0.5}
       refreshControl={refreshControl}
       renderItem={({ item }) => (
         <WelcomeManualRow

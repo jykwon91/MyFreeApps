@@ -4,7 +4,6 @@ export const WELCOME_MANUAL_MESSAGES = {
   loadingList: "Loading your welcome manuals",
   loadingOne: "Loading this manual",
   loadingMore: "Loading more manuals",
-  showMore: "Show more",
   couldntLoadList: "I couldn't load your manuals.",
   couldntLoadOne: "I couldn't load this manual.",
   cantFind: "I can't find that manual.",
