@@ -11,9 +11,13 @@ import { showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES } from "@/shared/lib/transaction-edit-messages";
 import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 
-vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
-  useGetVendorsQuery: () => ({ data: { items: [] }, isLoading: false }),
-}));
+vi.mock("@mybookkeeper/api-client/store/vendorsApi", async () => {
+  const { EMPTY_VENDOR_PAGES } = await import("@/test/empty-vendor-pages");
+  return {
+    useListVendorPagesInfiniteQuery: () => EMPTY_VENDOR_PAGES,
+    useGetVendorByIdQuery: () => ({ currentData: undefined }),
+  };
+});
 
 vi.mock("@/shared/lib/api", () => ({ default: { get: vi.fn() } }));
 vi.mock("@platform/ui", async (importOriginal) => ({

@@ -14,9 +14,13 @@ vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useDeleteTransactionMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
-vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
-  useGetVendorsQuery: () => ({ data: { items: [] }, isLoading: false }),
-}));
+vi.mock("@mybookkeeper/api-client/store/vendorsApi", async () => {
+  const { EMPTY_VENDOR_PAGES } = await import("@/test/empty-vendor-pages");
+  return {
+    useListVendorPagesInfiniteQuery: () => EMPTY_VENDOR_PAGES,
+    useGetVendorByIdQuery: () => ({ currentData: undefined }),
+  };
+});
 
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),
