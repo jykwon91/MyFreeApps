@@ -36,7 +36,7 @@ describe("when extraction finishes while the screen is open", () => {
     await renderScreen(<IntegrationsScreen />);
     await screen.findByText("1 extracting");
     await act(async () => {
-      store.dispatch(documentsApi.endpoints.getDocuments.initiate({}));
+      store.dispatch(documentsApi.endpoints.getDocuments.initiate({ status: "processing" }));
     });
     await waitFor(() => expect(server.documentReads).toBe(1));
 
@@ -51,7 +51,7 @@ describe("when extraction finishes while the screen is open", () => {
     await renderScreen(<IntegrationsScreen />);
     await screen.findByText("1 ready to extract");
     await act(async () => {
-      store.dispatch(documentsApi.endpoints.getDocuments.initiate({}));
+      store.dispatch(documentsApi.endpoints.getDocuments.initiate({ status: "processing" }));
     });
     await waitFor(() => expect(server.documentReads).toBe(1));
     await refreshScreen();

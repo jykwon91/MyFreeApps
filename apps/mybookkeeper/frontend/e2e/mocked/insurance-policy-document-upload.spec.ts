@@ -28,6 +28,7 @@ import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
+import { stubDocumentPages, type MockDocumentRow } from "./fixtures/mockDocuments";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -93,9 +94,8 @@ async function stubInsurancePage(page: Page): Promise<void> {
 }
 
 /** ``documents`` is what the library picker reads; empty is the phone case. */
-async function stubDocuments(page: Page, documents: unknown[]): Promise<void> {
-  await page.route("**/api/documents?*", (route) => route.fulfill(json(documents)));
-  await page.route("**/api/documents", (route) => route.fulfill(json(documents)));
+async function stubDocuments(page: Page, documents: readonly MockDocumentRow[]): Promise<void> {
+  await stubDocumentPages(page, documents);
 }
 
 async function openDialog(page: Page): Promise<void> {

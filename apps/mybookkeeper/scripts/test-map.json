@@ -232,7 +232,7 @@
         "mobile/src/constants/documents.ts",
         "mobile/test-support/documentsServer.ts",
         "api-client/src/constants/documentFilterOptions.ts",
-        "api-client/src/constants/documentListLimit.ts",
+        "api-client/src/constants/documentPaging.ts",
         "api-client/src/constants/documentSourceLabels.ts",
         "api-client/src/constants/documentStatusLabels.ts",
         "api-client/src/utils/documentSourceLabel.ts",
@@ -253,7 +253,23 @@
         "mobile/src/types/UploadFileStatus.ts",
         "mobile/src/types/UploadFileStatusChange.ts",
         "mobile/src/types/UploadFilePercent.ts",
-        "mobile/src/types/UploadsState.ts"
+        "mobile/src/types/UploadsState.ts",
+        "api-client/src/hooks/useDocumentsPages.ts",
+        "api-client/src/hooks/useFailedDocuments.ts",
+        "api-client/src/utils/documentListQuery.ts",
+        "api-client/src/utils/documentSelectionRef.ts",
+        "backend/app/core/document_list_constants.py",
+        "frontend/src/shared/utils/document-list-args.ts",
+        "frontend/src/shared/lib/document-list-messages.ts",
+        "frontend/src/shared/lib/document-polling.ts",
+        "frontend/src/test/documents-page-server.ts",
+        "frontend/src/test/documents-pages-state.ts",
+        "mobile/src/lib/useRowsRefreshCount.ts",
+        "mobile/src/types/DocumentMatches.ts",
+        "mobile/test-support/documentPages.ts",
+        "api-client/src/utils/selectionTicks.ts",
+        "api-client/src/types/selection/",
+        "frontend/src/shared/types/select-all-control.ts"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
@@ -268,7 +284,8 @@
         "test_source_documents.py",
         "test_dual_write.py",
         "test_document_delete.py",
-        "test_document_extraction_deleted_mid_read.py"
+        "test_document_extraction_deleted_mid_read.py",
+        "test_document_list_page.py"
       ],
       "frontend_tests": [
         "DocumentUploadZone.test.tsx",
@@ -279,11 +296,13 @@
         "documentUploadSlice.test.ts",
         "DocumentsSkeleton.test.tsx",
         "useDocumentColumns.test.tsx",
-        "Documents.test.tsx"
+        "Documents.test.tsx",
+        "DocumentsPaging.test.tsx"
       ],
       "e2e_specs": [
         "documents.spec.ts",
-        "feature-additions.spec.ts"
+        "feature-additions.spec.ts",
+        "mocked/documents-paging-mock.spec.ts"
       ]
     },
     "email": {
@@ -1943,7 +1962,7 @@
         "frontend/src/shared/utils/clamp-page.ts",
         "frontend/src/shared/utils/transaction-filter-options.ts",
         "api-client/src/utils/transactionSelectionRef.ts",
-        "api-client/src/utils/transactionTicks.ts",
+        "api-client/src/utils/selectionTicks.ts",
         "frontend/src/shared/utils/transaction-value-guards.ts",
         "frontend/src/app/pages/Dashboard.tsx",
         "frontend/src/app/features/transactions/",
@@ -2066,7 +2085,9 @@
         "mobile/app/(app)/transactions/import.tsx",
         "backend/app/core/tax_total_inputs.py",
         "backend/app/core/transaction_statuses.py",
-        "frontend/src/test/transactions-page-harness.tsx"
+        "frontend/src/test/transactions-page-harness.tsx",
+        "frontend/src/shared/types/select-all-control.ts",
+        "api-client/src/types/selection/"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",

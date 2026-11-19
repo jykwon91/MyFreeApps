@@ -2,7 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import DocumentCardSkeleton from "@/app/features/documents/DocumentCardSkeleton";
 
 // Mirrors DocumentTable: phone cards below md, the 7-column table from md up,
-// and the pagination footer under both.
+// and the footer (count and Load more) under both.
 // checkbox | status | file | type | source | uploaded | actions
 const COLUMNS = [
   { width: "w-4" },     // checkbox

@@ -1,11 +1,12 @@
 import { useLazyListTransactionSelectionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import type { SelectAllRun } from "@mybookkeeper/api-client/types/transaction/SelectAllRun";
+import type { SelectAllRun } from "@mybookkeeper/api-client/types/selection/SelectAllRun";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
-import type { TransactionTicks } from "@mybookkeeper/api-client/types/transaction/TransactionTicks";
+import type { SelectionTicks } from "@mybookkeeper/api-client/types/selection/SelectionTicks";
+import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import { refsById, toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
-import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/transactionTicks";
+import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/selectionTicks";
 import { useToast } from "@platform/mobile";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TRANSACTION_SELECTION_MESSAGES as MESSAGES } from "../../constants/transactionSelection";
@@ -23,7 +24,7 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 export function useTransactionSelection(rows: readonly Transaction[], params: TransactionListParams, rowsStatus: ListRowsStatus) {
   const { showToast } = useToast();
   // Null while not picking at all.
-  const [ticks, setTicks] = useState<TransactionTicks | null>(null);
+  const [ticks, setTicks] = useState<SelectionTicks<TransactionSelectionRef> | null>(null);
   const [lastRun, setLastRun] = useState<SelectAllRun | null>(null);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
   const [fetchSelection, { data: fetchedRefs }] = useLazyListTransactionSelectionQuery();

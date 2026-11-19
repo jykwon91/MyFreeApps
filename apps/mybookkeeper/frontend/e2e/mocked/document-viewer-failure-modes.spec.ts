@@ -6,6 +6,7 @@
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { stubDocumentPages } from "./fixtures/mockDocuments";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -17,31 +18,21 @@ test.beforeEach(async ({ page }) => {
 const DOC_ID = "00000000-0000-0000-0000-000000000aaa";
 
 async function stubDocumentList(page: import("@playwright/test").Page): Promise<void> {
-  // The Documents page calls /api/documents (RTK Query) — return one PDF row.
-  await page.route("**/api/documents*", (route, request) => {
-    if (request.method() === "GET") {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: DOC_ID,
-            file_name: "empty-test.pdf",
-            file_mime_type: "application/pdf",
-            status: "completed",
-            document_type: "Invoice",
-            source: "manual",
-            created_at: "2026-05-01T00:00:00Z",
-            user_id: "00000000-0000-0000-0000-000000000001",
-            organization_id: "00000000-0000-0000-0000-000000000010",
-            invoice_id: null,
-          },
-        ]),
-      });
-      return;
-    }
-    route.fallback();
-  });
+  // The Documents page reads GET /api/documents/page (RTK Query) — answer one PDF row.
+  await stubDocumentPages(page, [
+    {
+      id: DOC_ID,
+      file_name: "empty-test.pdf",
+      file_mime_type: "application/pdf",
+      status: "completed",
+      document_type: "Invoice",
+      source: "manual",
+      created_at: "2026-05-01T00:00:00Z",
+      user_id: "00000000-0000-0000-0000-000000000001",
+      organization_id: "00000000-0000-0000-0000-000000000010",
+      invoice_id: null,
+    },
+  ]);
 }
 
 test.describe("DocumentViewer — failure modes surface to user", () => {

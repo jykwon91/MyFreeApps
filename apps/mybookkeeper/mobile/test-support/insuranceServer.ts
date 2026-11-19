@@ -9,6 +9,7 @@ import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { aInsurancePolicySummary } from "./aInsurancePolicySummary";
+import { answerDocumentList } from "./documentPages";
 
 export function anAttachment(overrides: Partial<InsurancePolicyAttachment> = {}): InsurancePolicyAttachment {
   return {
@@ -160,7 +161,8 @@ export function startInsuranceServer(overrides: Partial<FakeInsuranceServer> = {
     const url = config.url ?? "";
     const policyId = /^\/insurance-policies\/([^/]+)/.exec(url)?.[1];
     if (url === "/properties") return respond(server.properties);
-    if (url === "/documents") return respond(server.documents);
+    const listedDocuments = answerDocumentList(url, server.documents);
+    if (listedDocuments !== undefined) return respond(listedDocuments);
     if (url === "/insurance-benchmarks") {
       if (method === "get") return respond(server.benchmark);
       if (method === "delete") {

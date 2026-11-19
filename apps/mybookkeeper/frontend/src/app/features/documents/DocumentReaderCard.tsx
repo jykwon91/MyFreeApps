@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { LoadingButton, showError } from "@platform/ui";
 import { readDocumentErrorMessage } from "@mybookkeeper/api-client/utils/documentReadErrors";
-import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { DOCUMENT_LIBRARY_VIEW } from "@mybookkeeper/api-client/constants/documentListView";
+import { useDocumentsPages } from "@mybookkeeper/api-client/hooks/useDocumentsPages";
 import type { DocumentSource } from "@/shared/types/document/document-source";
 import ChosenDocument from "./ChosenDocument";
 import DocumentFileDropzone from "./DocumentFileDropzone";
@@ -52,7 +53,7 @@ export default function DocumentReaderCard({
   testIdPrefix,
   inputClass,
 }: DocumentReaderCardProps) {
-  const { data: documents = [] } = useGetDocumentsQuery({ excludeProcessing: true });
+  const library = useDocumentsPages(DOCUMENT_LIBRARY_VIEW);
   const [source, setSource] = useState<DocumentSource | null>(null);
   const [hasFailed, setHasFailed] = useState(false);
 
@@ -96,9 +97,9 @@ export default function DocumentReaderCard({
             disabled={isReading}
             testIdPrefix={testIdPrefix}
           />
-          {documents.length > 0 && (
+          {library.total > 0 && (
             <DocumentLibraryPicker
-              documents={documents}
+              library={library}
               onPick={(documentId, name) => pick({ kind: "library", documentId, name })}
               disabled={isReading}
               testIdPrefix={testIdPrefix}

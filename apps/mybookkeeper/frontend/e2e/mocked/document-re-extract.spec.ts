@@ -18,6 +18,7 @@
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { stubDocumentPages, type MockDocumentRow } from "./fixtures/mockDocuments";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -30,7 +31,7 @@ const USER_ID = "00000000-0000-0000-0000-000000000001";
 const DOC_ID = "00000000-0000-0000-0000-000000000bbb";
 const FAILED_FILE = "unreadable-invoice.pdf";
 
-function documentRow(status: string, errorMessage: string | null): Record<string, unknown> {
+function documentRow(status: string, errorMessage: string | null): MockDocumentRow {
   return {
     id: DOC_ID,
     file_name: FAILED_FILE,
@@ -55,23 +56,17 @@ test.describe("Documents — re-extract a failed document", () => {
     let reExtractMethod: string | null = null;
     let getCallsAfterReExtract = 0;
 
-    // GET /documents list. Failed until the re-extract POST fires. After that the
-    // doc is `processing` — which the list query (exclude_processing=true) filters
-    // out, so the first refetch returns an empty list (row drops out). Subsequent
-    // polls return the reprocessed `completed` document.
-    await page.route("**/api/documents*", async (route, request) => {
-      if (request.method() !== "GET") {
-        await route.fallback();
-        return;
-      }
-      let body: Array<Record<string, unknown>>;
+    // GET /documents/page. Failed until the re-extract POST fires. After that the
+    // doc is `processing` — which the list (exclude_processing=true) leaves out, so
+    // the list's first refetch is empty (row drops out). Later polls return the
+    // reprocessed `completed` document. The failed notice's own query (statuses=failed)
+    // finds nothing once the document is reprocessing.
+    await stubDocumentPages(page, (url) => {
       if (reExtractMethod === null) {
-        body = [documentRow("failed", "I couldn't read this document — the file looks corrupted.")];
-      } else {
-        getCallsAfterReExtract += 1;
-        body = getCallsAfterReExtract <= 1 ? [] : [documentRow("completed", null)];
+        return [documentRow("failed", "I couldn't read this document — the file looks corrupted.")];
       }
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+      if (url.pathname.endsWith("/page") && !url.searchParams.has("statuses")) getCallsAfterReExtract += 1;
+      return getCallsAfterReExtract <= 1 ? [] : [documentRow("completed", null)];
     });
 
     // POST /documents/{id}/re-extract. Registered AFTER the list route so it wins
@@ -134,17 +129,7 @@ test.describe("Documents — re-extract a failed document", () => {
 
     let reExtractMethod: string | null = null;
 
-    await page.route("**/api/documents*", async (route, request) => {
-      if (request.method() !== "GET") {
-        await route.fallback();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([documentRow("failed", "I couldn't read this document — the file looks corrupted.")]),
-      });
-    });
+    await stubDocumentPages(page, [documentRow("failed", "I couldn't read this document — the file looks corrupted.")]);
     await page.route(`**/api/documents/${DOC_ID}/re-extract`, async (route, request) => {
       reExtractMethod = request.method();
       await route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ status: "processing" }) });

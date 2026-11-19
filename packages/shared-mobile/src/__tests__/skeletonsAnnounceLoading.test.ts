@@ -21,6 +21,7 @@ const ANNOUNCED_ELSEWHERE: Record<string, string> = {
   "apps/mybookkeeper/mobile/src/features/shell/PagedChoicesFooter.tsx": "Row; passed to PagedListFooter, which renders it only inside a load-more LoadingRegion.",
   "apps/mybookkeeper/mobile/src/features/mortgages/MortgageSkeletonRow.tsx": "Row; rendered only inside MortgagesSkeleton's LoadingRegion and MortgagesScreen's load-more LoadingRegion (PagedListFooter).",
   "apps/mybookkeeper/mobile/src/features/utilityPlans/UtilityPlanSkeletonRow.tsx": "Row; rendered only inside UtilityPlansSkeleton's LoadingRegion and UtilityPlansScreen's load-more LoadingRegion (PagedListFooter).",
+  "apps/mybookkeeper/mobile/src/features/documents/DocumentSkeletonRow.tsx": "Row; rendered only inside DocumentsSkeleton's LoadingRegion and DocumentsScreen's load-more LoadingRegion (PagedListFooter).",
   "apps/mybookkeeper/mobile/src/features/insurance/PolicySkeletonRow.tsx": "Row; rendered only inside PoliciesSkeleton's LoadingRegion and PoliciesScreen's load-more LoadingRegion (PagedListFooter).",
   "apps/mybookkeeper/mobile/src/features/transactions/TransactionsSkeleton.tsx": "TransactionSkeletonRow, exported from here, is rendered only inside TransactionsSkeleton's LoadingRegion and TransactionsScreen's load-more LoadingRegion.",
   "apps/myjobhunter/mobile/src/features/discover/ButtonRowSkeleton.tsx": "Part of a card; rendered only by DiscoveredJobSkeletonCard.",

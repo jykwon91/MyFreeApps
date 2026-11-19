@@ -60,8 +60,19 @@ const mockToggleEscrow = vi.fn(() => ({
 }));
 const mockReExtract = vi.fn(() => ({ unwrap: () => Promise.resolve({ status: "processing" }) }));
 
+const mockUseDocumentsPages = vi.fn();
+const mockUseFailedDocuments = vi.fn();
+
+vi.mock('@mybookkeeper/api-client/hooks/useDocumentsPages', () => ({
+  useDocumentsPages: (...args: unknown[]) => mockUseDocumentsPages(...args),
+}));
+
+vi.mock('@mybookkeeper/api-client/hooks/useFailedDocuments', () => ({
+  useFailedDocuments: () => mockUseFailedDocuments(),
+}));
+
 vi.mock('@mybookkeeper/api-client/store/documentsApi', () => ({
-  useGetDocumentsQuery: vi.fn(() => ({ data: mockDocuments, isLoading: false })),
+  useLazyListDocumentSelectionQuery: vi.fn(() => [vi.fn(), {}]),
   useDeleteDocumentMutation: vi.fn(() => [mockDeleteDocument, { isLoading: false }]),
   useBulkDeleteDocumentsMutation: vi.fn(() => [mockBulkDelete, { isLoading: false }]),
   useToggleEscrowPaidMutation: vi.fn(() => [mockToggleEscrow, { isLoading: false }]),
@@ -125,8 +136,14 @@ vi.mock('@/shared/hooks/useOrgRole', () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import { useGetDocumentsQuery } from '@mybookkeeper/api-client/store/documentsApi';
 import { useCanWrite } from '@/shared/hooks/useOrgRole';
+import { documentsPagesState } from '@/test/documents-pages-state';
+
+function withDocuments(documents: Document[]) {
+  mockUseDocumentsPages.mockReturnValue(documentsPagesState(documents));
+  const failed = documents.filter((d) => d.status === 'failed');
+  mockUseFailedDocuments.mockReturnValue({ count: failed.length, newest: failed[0] });
+}
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -140,10 +157,7 @@ describe('Documents', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem('docs-info-dismissed');
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: mockDocuments,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    withDocuments(mockDocuments);
     vi.mocked(useCanWrite).mockReturnValue(true);
   });
 
@@ -175,10 +189,7 @@ describe('Documents', () => {
   });
 
   it('shows skeleton when loading', () => {
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: [],
-      isLoading: true,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    mockUseDocumentsPages.mockReturnValue(documentsPagesState([], { isLoading: true, hasData: false }));
     const { container } = renderWithProviders(<Documents />);
     const skeletons = container.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
@@ -215,19 +226,13 @@ describe('Documents', () => {
       { ...mockDocuments[1], id: 'doc-3', file_name: 'doc_a.pdf' },
       { ...mockDocuments[1], id: 'doc-4', file_name: 'doc_b.pdf' },
     ];
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: twoFailed,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    withDocuments(twoFailed);
     renderWithProviders(<Documents />);
     expect(screen.getByText(/I had trouble with 2 documents/)).toBeInTheDocument();
   });
 
   it('does not show failed docs banner when no documents failed', () => {
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: [mockDocuments[0]],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    withDocuments([mockDocuments[0]]);
     renderWithProviders(<Documents />);
     expect(screen.queryByText(/I had trouble with/)).not.toBeInTheDocument();
   });
@@ -235,6 +240,14 @@ describe('Documents', () => {
   it('shows Show failed filter button inside the warning banner', () => {
     renderWithProviders(<Documents />);
     expect(screen.getByText('Show failed')).toBeInTheDocument();
+  });
+
+  it('asks the server for only the failed documents when Show failed is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Documents />);
+    await user.click(screen.getByText('Show failed'));
+    const lastArgs = mockUseDocumentsPages.mock.calls[mockUseDocumentsPages.mock.calls.length - 1][0];
+    expect(lastArgs).toMatchObject({ statuses: ['failed'], search: '', excludeProcessing: true });
   });
 
   it('opens confirm dialog with file name when Delete is clicked', async () => {
@@ -276,10 +289,7 @@ describe('Documents', () => {
   });
 
   it('still renders search bar when no documents are returned', () => {
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: [],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    withDocuments([]);
     renderWithProviders(<Documents />);
     expect(screen.getByPlaceholderText('Search by file name...')).toBeInTheDocument();
   });
@@ -289,10 +299,7 @@ describe('Documents — viewer role', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem('docs-info-dismissed');
-    vi.mocked(useGetDocumentsQuery).mockReturnValue({
-      data: mockDocuments,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    withDocuments(mockDocuments);
     vi.mocked(useCanWrite).mockReturnValue(false);
   });
 

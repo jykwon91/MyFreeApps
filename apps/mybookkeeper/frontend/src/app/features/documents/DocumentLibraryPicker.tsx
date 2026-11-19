@@ -1,7 +1,9 @@
-import type { Document } from "@mybookkeeper/api-client/types/document/document";
+import type { DocumentsPagesState } from "@mybookkeeper/api-client/types/document/DocumentsPagesState";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 
 export interface DocumentLibraryPickerProps {
-  documents: Document[];
+  /** The library a page at a time; older documents are a "Load more" away. */
+  library: DocumentsPagesState;
   onPick: (documentId: string, name: string) => void;
   /** Namespaces the test ids so each domain's specs address their own card. */
   testIdPrefix: string;
@@ -20,16 +22,17 @@ export interface DocumentLibraryPickerProps {
  * without extra ARIA.
  */
 export default function DocumentLibraryPicker({
-  documents,
+  library,
   onPick,
   testIdPrefix,
   inputClass,
   disabled = false,
 }: DocumentLibraryPickerProps) {
+  const documents = library.documents;
   return (
     <details data-testid={`${testIdPrefix}-library-picker`}>
       <summary className="min-h-[44px] flex items-center cursor-pointer text-xs font-medium text-primary">
-        Or pick one you've already uploaded ({documents.length})
+        Or pick one you've already uploaded ({library.total})
       </summary>
       <select
         value=""
@@ -49,6 +52,15 @@ export default function DocumentLibraryPicker({
           </option>
         ))}
       </select>
+      {library.hasNextPage && (
+        <div className="mt-2">
+          <LoadMoreButton
+            hasNextPage={library.hasNextPage}
+            isFetchingNextPage={library.isFetchingNextPage}
+            onLoadMore={library.loadMore}
+          />
+        </div>
+      )}
     </details>
   );
 }

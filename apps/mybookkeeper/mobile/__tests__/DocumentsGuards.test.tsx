@@ -4,7 +4,6 @@ import { ToastProvider } from "@platform/mobile";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { useState } from "react";
 import { Provider } from "react-redux";
-import { cappedListLabel, cappedSelectNote } from "../src/constants/documents";
 import DocumentsScreen from "../src/features/documents/DocumentsScreen";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -13,7 +12,6 @@ import { store } from "../src/lib/store";
 import type { DocumentFilter } from "../src/types/DocumentFilter";
 import { aDocument, startFakeServer } from "../test-support/documentsServer";
 
-jest.mock("@mybookkeeper/api-client/constants/documentListLimit", () => ({ DOCUMENT_LIST_LIMIT: 2 }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn() },
@@ -55,23 +53,13 @@ afterEach(() => {
   api.defaults.adapter = originalAdapter;
 });
 
-describe("a list cut off at the server's limit", () => {
-  it("says it shows the newest ones, and that Select all covers only those", async () => {
-    startFakeServer([A, B]);
-    await render(tree());
-    expect(await screen.findByText(cappedListLabel())).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Select several documents" }));
-    expect(screen.getByText(cappedSelectNote())).toBeTruthy();
-  });
-});
-
 describe("what can be ticked", () => {
   it("leaves out a document being read and one already deleted", async () => {
     startFakeServer([A, READING, GONE]);
     await render(tree());
     await fireEvent.press(await screen.findByRole("button", { name: "Select several documents" }));
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
-    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(await screen.findByText("1 selected")).toBeTruthy();
     expect(screen.getByText("1 document is still being read, so can't be selected yet.")).toBeTruthy();
   });
 

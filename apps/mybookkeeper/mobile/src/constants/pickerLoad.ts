@@ -9,4 +9,5 @@ export const PICKER_LOAD_MESSAGES = {
   loadingMoreTenants: "Loading more tenants",
   loadingMoreApplicants: "Loading more applicants",
   loadingMoreVendors: "Loading more vendors",
+  loadingMoreDocuments: "Loading more documents",
 } as const;

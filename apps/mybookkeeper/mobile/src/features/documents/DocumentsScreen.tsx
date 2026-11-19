@@ -1,29 +1,34 @@
-import { DOCUMENT_LIST_LIMIT } from "@mybookkeeper/api-client/constants/documentListLimit";
 import { DEFAULT_DOCUMENT_VIEW } from "@mybookkeeper/api-client/constants/documentListView";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import type { DocumentListView } from "@mybookkeeper/api-client/types/document/DocumentListView";
-import { activeDocumentFilterCount, isDefaultDocumentView, viewDocuments } from "@mybookkeeper/api-client/utils/documentListView";
+import type { DocumentPageArgs } from "@mybookkeeper/api-client/types/document/DocumentPageArgs";
+import { activeDocumentFilterCount, isDefaultDocumentView } from "@mybookkeeper/api-client/utils/documentListView";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import { EmptyState, LoadingButton, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, Text, View } from "react-native";
-import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { DOCUMENT_BULK_MESSAGES, hiddenSelectedNote } from "../../constants/documentBulk";
-import { SEARCH_DEBOUNCE_MS } from "../../constants/transactionFilters";
 import { DOCUMENT_FILTERS } from "../../constants/documentFilters";
+import { DOCUMENT_LIST_MESSAGES, documentCountLabel, filtersAccessibilityLabel, filtersButtonLabel, STILL_READING_MESSAGE } from "../../constants/documents";
+import { SEARCH_DEBOUNCE_MS } from "../../constants/transactionFilters";
+import { canLoadMore } from "../../lib/canLoadMore";
+import { hasCurrentPages } from "../../lib/hasCurrentPages";
+import { useRowsRefreshCount } from "../../lib/useRowsRefreshCount";
 import type { DocumentFilter } from "../../types/DocumentFilter";
-import { cappedListLabel, DOCUMENT_LIST_MESSAGES, documentCountLabel, filtersAccessibilityLabel, filtersButtonLabel, STILL_READING_MESSAGE } from "../../constants/documents";
-import { useRowSelection } from "../../lib/useRowSelection";
 import UploadStatus from "../capture/UploadStatus";
+import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { isActionable, isBeingRead, needsALook } from "./documentDisplay";
+import { isActionable } from "./documentDisplay";
 import DocumentBulkBar from "./DocumentBulkBar";
 import DocumentFilterSheet from "./DocumentFilterSheet";
 import DocumentRow from "./DocumentRow";
 import DocumentSelectionHeader from "./DocumentSelectionHeader";
+import DocumentSkeletonRow from "./DocumentSkeletonRow";
 import DocumentsSkeleton from "./DocumentsSkeleton";
 import FailedDocumentsNotice from "./FailedDocumentsNotice";
 import { useBulkDeleteDocuments } from "./useBulkDeleteDocuments";
+import { useDocumentSelection } from "./useDocumentSelection";
 import { useDocumentsWithPolling } from "./useDocumentsWithPolling";
 
 export default function DocumentsScreen({
@@ -45,7 +50,17 @@ export default function DocumentsScreen({
   const appliedView = useMemo<DocumentListView>(() => ({ ...options, search: appliedSearch }), [options, appliedSearch]);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [isFailedNoticeDismissed, setIsFailedNoticeDismissed] = useState(false);
-  const selection = useRowSelection();
+  // Search, filters, order and the "needs a look" segment are all applied by the server, a page at a time.
+  const args = useMemo<DocumentPageArgs>(() => ({ ...appliedView, needsReview: filter === "needsALook" }), [appliedView, filter]);
+
+  const { list, summary, failed, gaveUp } = useDocumentsWithPolling(args);
+  const { refresh, refreshControl } = useRefresh(() => Promise.all([list.refetch(), summary.refetch()]), list.error);
+  const isCurrent = hasCurrentPages(list);
+  const rows = isCurrent ? list.documents : [];
+  const rowsVersion = useRowsRefreshCount(JSON.stringify(args), list.documents);
+  const rowsStatus = useMemo(() => ({ isCurrent, version: rowsVersion }), [isCurrent, rowsVersion]);
+
+  const selection = useDocumentSelection(rows, args, rowsStatus);
   const { cancel, keepOnly } = selection;
   // Whatever was refused as being read, or not deleted because a request failed, stays ticked to retry; otherwise the pick is over.
   const bulkDelete = useBulkDeleteDocuments(({ beingReadIds, failedIds }) => {
@@ -54,26 +69,6 @@ export default function DocumentsScreen({
     else keepOnly(toRetry);
   });
 
-  const { data, error, gaveUp, isLoading, refetch } = useDocumentsWithPolling();
-  const { refresh, refreshControl } = useRefresh(refetch, error);
-
-  const rows = useMemo(
-    () => viewDocuments((data ?? []).filter((document) => filter === "all" || needsALook(document)), appliedView),
-    [data, filter, appliedView],
-  );
-  const failed = useMemo(() => (data ?? []).filter((document) => document.status === "failed"), [data]);
-  // Only finished, undeleted documents can be ticked: one being read or already deleted can't be acted on.
-  const selectableIds = useMemo(() => rows.filter(isActionable).map((document) => document.id), [rows]);
-  const actionableIds = useMemo(() => (data ?? []).filter(isActionable).map((document) => document.id), [data]);
-  // A tick outlives a search or filter that hides it (it is only noted), but never a document that is gone or busy.
-  useEffect(() => keepOnly(actionableIds), [actionableIds, keepOnly]);
-  const visibleSelectedIds = useMemo(
-    () => selectableIds.filter((id) => selection.selected?.has(id)),
-    [selectableIds, selection.selected],
-  );
-  const hiddenSelectedCount = (selection.selected?.size ?? 0) - visibleSelectedIds.length;
-  const isCapped = (data?.length ?? 0) >= DOCUMENT_LIST_LIMIT;
-
   // Selection is a writer's tool: if write access goes away mid-pick, stop.
   useEffect(() => {
     if (!canWrite) cancel();
@@ -81,7 +76,8 @@ export default function DocumentsScreen({
 
   const filterCount = activeDocumentFilterCount(view);
   const isNarrowed = !isDefaultDocumentView(view) || filter !== "all";
-  const selectedCount = visibleSelectedIds.length;
+  const selectedCount = selection.selectedIds.length;
+  const workspaceTotal = summary.data?.total ?? list.total;
 
   function applyView({ search, ...next }: DocumentListView): void {
     setSearchText(search);
@@ -122,8 +118,8 @@ export default function DocumentsScreen({
     </View>
   );
 
-  if (isLoading) return <DocumentsSkeleton />;
-  if (error && !data) {
+  if (list.isLoading) return <DocumentsSkeleton />;
+  if (list.loadError !== undefined && !list.hasData) {
     return (
       <View style={{ flex: 1 }}>
         {uploadStatus}
@@ -135,7 +131,8 @@ export default function DocumentsScreen({
       </View>
     );
   }
-  if (data?.length === 0) {
+  // No documents at all, not just none matching: the list says so unfiltered, the counts when it is filtered.
+  if (isCurrent && list.total === 0 && (!isNarrowed || summary.data?.total === 0)) {
     return (
       <View style={{ flex: 1 }}>
         {uploadStatus}
@@ -152,26 +149,50 @@ export default function DocumentsScreen({
     <View style={{ flex: 1 }}>
       {selection.isSelecting ? (
         <DocumentSelectionHeader
-          hiddenNote={hiddenSelectedCount > 0 ? hiddenSelectedNote(hiddenSelectedCount) : null}
+          hiddenNote={selection.hiddenCount > 0 ? hiddenSelectedNote(selection.hiddenCount) : null}
           isBusy={bulkDelete.isDeleting}
-          isCapped={isCapped}
+          isChecking={selection.isChecking}
+          isSelectingAll={selection.isSelectingAll}
           onCancel={selection.cancel}
-          onSelectAll={() => selection.selectAll(selectableIds)}
-          selectableCount={selectableIds.length}
+          onSelectAll={() => void selection.selectAll()}
+          selectableCount={selection.selectableCount}
           selectedCount={selectedCount}
-          unselectableCount={rows.filter(isBeingRead).length}
+          unselectableCount={selection.beingReadCount}
         />
       ) : null}
       <FlatList
         ListEmptyComponent={
-          <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>
-            {DOCUMENT_LIST_MESSAGES.nothingMatches}
-          </Text>
+          !isCurrent && list.isFetching ? (
+            <DocumentsSkeleton />
+          ) : list.loadError !== undefined ? (
+            <EmptyState
+              action={{ label: DOCUMENT_LIST_MESSAGES.tryAgain, onPress: refresh }}
+              body={DOCUMENT_LIST_MESSAGES.loadFailedBody}
+              heading={DOCUMENT_LIST_MESSAGES.loadFailedHeading}
+            />
+          ) : (
+            <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>
+              {DOCUMENT_LIST_MESSAGES.nothingMatches}
+            </Text>
+          )
+        }
+        ListFooterComponent={
+          <PagedListFooter
+            isLoadingMore={list.isFetchingNextPage}
+            loadMoreFailed={list.isLoadMoreError}
+            loadingLabel={DOCUMENT_LIST_MESSAGES.loadingMore}
+            onRetry={list.loadMore}
+            skeletonRow={
+              <View style={{ padding: spacing.lg }}>
+                <DocumentSkeletonRow />
+              </View>
+            }
+          />
         }
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             <UploadStatus />
-            <StaleDataBanner isShown={Boolean(error)} />
+            <StaleDataBanner isShown={Boolean(list.error && rows.length > 0 && !list.isLoadMoreError)} />
             {gaveUp ? (
               <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
                 {STILL_READING_MESSAGE}
@@ -202,7 +223,7 @@ export default function DocumentsScreen({
               >
                 {filtersButtonLabel(filterCount)}
               </LoadingButton>
-              {canWrite && !selection.isSelecting && selectableIds.length > 0 ? (
+              {canWrite && !selection.isSelecting && rows.some(isActionable) ? (
                 <LoadingButton accessibilityLabel={DOCUMENT_BULK_MESSAGES.selectLabel} onPress={() => selection.start()} style={{ flex: 1 }} variant="secondary">
                   {DOCUMENT_BULK_MESSAGES.select}
                 </LoadingButton>
@@ -210,7 +231,7 @@ export default function DocumentsScreen({
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
               <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
-                {isCapped ? cappedListLabel() : documentCountLabel(rows.length, data?.length ?? 0)}
+                {documentCountLabel(list.total, isNarrowed ? workspaceTotal : list.total)}
               </Text>
               {isNarrowed ? (
                 <LoadingButton onPress={clearNarrowing} variant="ghost">
@@ -224,14 +245,19 @@ export default function DocumentsScreen({
         extraData={selection.selected}
         keyExtractor={(document) => document.id}
         keyboardShouldPersistTaps="handled"
+        onEndReached={() => {
+          if (canLoadMore(list)) list.loadMore();
+        }}
+        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         renderItem={renderDocument}
         testID="documents-list"
       />
       {selection.isSelecting ? (
         <DocumentBulkBar
+          isChecking={selection.isChecking}
           isDeleting={bulkDelete.isDeleting}
-          onDelete={() => bulkDelete.askToDelete(visibleSelectedIds)}
+          onDelete={() => bulkDelete.askToDelete(selection.selectedIds)}
           selectedCount={selectedCount}
         />
       ) : null}

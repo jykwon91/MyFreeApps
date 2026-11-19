@@ -4,21 +4,17 @@ import type { Document } from "@mybookkeeper/api-client/types/document/document"
 import { documentSourceLabel as sourceLabel } from "@mybookkeeper/api-client/utils/documentSourceLabel";
 import { DOCUMENT_LIST_MESSAGES } from "../../constants/documents";
 
-export function isBeingRead(document: Document): boolean {
+export function isBeingRead(document: Pick<Document, "status">): boolean {
   return document.status === "processing" || document.status === "extracting";
 }
 
-export function isDeleted(document: Document): boolean {
+export function isDeleted(document: Pick<Document, "status">): boolean {
   return document.status === "deleted";
 }
 
-/** Whether it can be deleted or marked reference-only: not while it is being read, and not once it is gone. */
-export function isActionable(document: Document): boolean {
+/** Whether it can be deleted (only the status is read, so a selection ref can be asked too) or marked reference-only: not while it is being read, and not once it is gone. */
+export function isActionable(document: Pick<Document, "status">): boolean {
   return !isBeingRead(document) && !isDeleted(document);
-}
-
-export function needsALook(document: Document): boolean {
-  return document.status === "failed" || document.status === "duplicate";
 }
 
 export function documentName(document: Document): string {

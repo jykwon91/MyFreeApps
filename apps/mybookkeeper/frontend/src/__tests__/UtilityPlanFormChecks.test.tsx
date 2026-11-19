@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
+import { documentsPagesState } from "@/test/documents-pages-state";
 
 const mockCreate = vi.fn();
 
@@ -23,8 +24,8 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [{ id: "prop-1", name: "6734 Peerless St" }] })),
 }));
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: vi.fn(() => ({ data: [] })),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: () => documentsPagesState([]),
 }));
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),

@@ -3,7 +3,7 @@
 Financial CRUD (update, approve, bulk-approve) now lives in /transactions.
 """
 import uuid
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
@@ -22,6 +22,10 @@ from app.mappers.document_delete_mapper import to_bulk_delete_response
 from app.schemas.documents.bulk_delete_documents_request import BulkDeleteDocumentsRequest
 from app.schemas.documents.bulk_delete_documents_response import BulkDeleteDocumentsResponse
 from app.schemas.documents.document import DocumentRead
+from app.schemas.documents.document_filters import DocumentFilters
+from app.schemas.documents.document_list_page import DocumentListPage
+from app.schemas.documents.document_page_query import DocumentPageQuery
+from app.schemas.documents.document_selection_ref import DocumentSelectionRef
 from app.schemas.documents.document_summary import DocumentSummary
 from app.schemas.documents.operation_responses import (
     CancelBatchResponse,
@@ -50,6 +54,9 @@ async def list_documents(
     offset: int = 0,
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[DocumentRead]:
+    """A bounded, unpaged list: the website reads the documents still processing from it to restore an
+    upload's progress, and phone builds from before /documents/page read their list from it. A list that
+    must reach every document pages through /documents/page instead."""
     return await document_query_service.list_documents(
         ctx,
         property_id=property_id,
@@ -58,6 +65,24 @@ async def list_documents(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/page", response_model=DocumentListPage)
+async def list_document_page(
+    query: Annotated[DocumentPageQuery, Query()],
+    ctx: RequestContext = Depends(current_org_member),
+) -> DocumentListPage:
+    """One page of the list with the total the filters match, so a client can page through every document."""
+    return await document_query_service.list_document_page(ctx, query)
+
+
+@router.get("/selection", response_model=list[DocumentSelectionRef])
+async def list_document_selection(
+    filters: Annotated[DocumentFilters, Query()],
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[DocumentSelectionRef]:
+    """Every document the filters match, so "select all" can tick documents not loaded yet."""
+    return await document_query_service.list_selection_refs(ctx, filters)
 
 
 @router.get("/summary", response_model=DocumentSummary)

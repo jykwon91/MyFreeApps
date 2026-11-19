@@ -1,23 +1,24 @@
 import { formatCount } from "@/shared/utils/count";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  useTable,
-  type ColumnFiltersState,
-  type RowSelectionState,
-  type SortingState,
-} from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import { appTableFeatures } from "@/shared/lib/table-features";
-import { Search, X } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import {
-  useGetDocumentsQuery,
   useBulkDeleteDocumentsMutation,
   useDeleteDocumentMutation,
   useReExtractDocumentMutation,
   useToggleEscrowPaidMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
+import { useDocumentsPages } from "@mybookkeeper/api-client/hooks/useDocumentsPages";
+import { useFailedDocuments } from "@mybookkeeper/api-client/hooks/useFailedDocuments";
 import { runBulkDelete } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
 import { errorDetail } from "@mybookkeeper/api-client/utils/errorDetail";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
+import { useDocumentListControls } from "@/app/features/documents/hooks/useDocumentListControls";
+import { useDocumentSelection } from "@/app/features/documents/hooks/useDocumentSelection";
+import { pagedListView } from "@/shared/lib/paged-list-view";
+import { CHECKING_DOCUMENT_SELECTION_LABEL } from "@/shared/lib/document-list-messages";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 import { useToast } from "@/shared/hooks/useToast";
 import { useAppSelector } from "@/shared/store/hooks";
 import {
@@ -37,6 +38,7 @@ import { ConfirmDialog, AlertBox } from "@platform/ui";
 import { Button } from "@platform/ui";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { DOCUMENT_POLL_INTERVAL_MS, RE_EXTRACT_POLL_WINDOW_MS } from "@/shared/lib/document-polling";
 
 export default function Documents() {
   const { showError, showSuccess } = useToast();
@@ -46,10 +48,12 @@ export default function Documents() {
   const [reExtractPolling, setReExtractPolling] = useState(false);
   const [reExtractingId, setReExtractingId] = useState<string | null>(null);
 
-  const { data: documents = [], isLoading } = useGetDocumentsQuery(
-    { excludeProcessing: true },
-    { pollingInterval: isExtracting || reExtractPolling ? 5000 : 0, skipPollingIfUnfocused: true },
-  );
+  const controls = useDocumentListControls();
+  const polling = { pollingInterval: isExtracting || reExtractPolling ? DOCUMENT_POLL_INTERVAL_MS : 0 };
+  const pages = useDocumentsPages(controls.args, polling);
+  const { mode, rows: documents } = pagedListView(pages, pages.documents);
+  const failed = useFailedDocuments(polling);
+  const selection = useDocumentSelection(documents, controls.args, pages.total, !pages.isFiltering);
 
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
   const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteDocumentsMutation();
@@ -60,7 +64,7 @@ export default function Documents() {
   // "Extracting" to its final state without a manual refresh.
   useEffect(() => {
     if (!reExtractPolling) return;
-    const timer = window.setTimeout(() => setReExtractPolling(false), 30000);
+    const timer = window.setTimeout(() => setReExtractPolling(false), RE_EXTRACT_POLL_WINDOW_MS);
     return () => window.clearTimeout(timer);
   }, [reExtractPolling]);
 
@@ -69,10 +73,6 @@ export default function Documents() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmEscrowId, setConfirmEscrowId] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   const handleDelete = useCallback((id: string) => {
@@ -93,10 +93,9 @@ export default function Documents() {
 
   async function handleBulkDelete() {
     setConfirmBulkDelete(false);
-    const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    const run = await runBulkDelete(ids, (batch) => bulkDelete(batch).unwrap());
+    const run = await runBulkDelete(selection.selectedIds, (batch) => bulkDelete(batch).unwrap());
     // Whatever errored stays selected so it can be retried; the rest of the pick is over.
-    setRowSelection(Object.fromEntries(run.failedIds.map((id) => [id, true])));
+    selection.keepOnly(run.failedIds);
     if (run.failedIds.length > 0) {
       showError(
         run.deleted.length > 0
@@ -157,6 +156,7 @@ export default function Documents() {
     onReExtract: handleReExtract,
     reExtractingId,
     canWrite,
+    selectAll: selection.selectAll,
   });
 
   const filterOptions = useMemo(
@@ -168,25 +168,31 @@ export default function Documents() {
     [],
   );
 
+  // The server narrows, orders and pages the documents; the table shows the ones loaded so far.
   const table = useTable({
     features: appTableFeatures,
     data: documents,
     columns,
-    state: { rowSelection, sorting, columnFilters },
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    state: {
+      rowSelection: selection.rowSelection,
+      sorting: controls.sorting,
+      columnFilters: controls.columnFilters,
+    },
+    onRowSelectionChange: selection.onRowSelectionChange,
+    onSortingChange: controls.setSorting,
+    onColumnFiltersChange: controls.setColumnFilters,
+    manualFiltering: true,
+    manualSorting: true,
+    manualPagination: true,
     enableRowSelection: true,
     getRowId: (row) => row.id,
-    initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
   });
 
   const colCount = table.getAllLeafColumns().length;
-  const selectedCount = table.getSelectedRowModel().rows.length;
+  const selectedCount = selection.selectedIds.length;
   const deleteTarget = confirmDeleteId
     ? documents.find((d) => d.id === confirmDeleteId)
     : null;
-  const failedDocs = documents.filter((d) => d.status === "failed");
 
   return (
     <div className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
@@ -213,20 +219,17 @@ export default function Documents() {
 
       {canWrite ? <DocumentUploadZone /> : null}
 
-      {failedDocs.length > 0 && !failedDismissed && (
+      {failed.count > 0 && !failedDismissed && (
         <AlertBox variant="warning" className="flex items-center justify-between gap-3">
           <span>
-            {failedDocumentsMessage(failedDocs.length, failedDocs[0].file_name ?? "this document")}
+            {failedDocumentsMessage(failed.count, failed.newest?.file_name ?? "this document")}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="ghost"
               size="sm"
               className="text-orange-800 dark:text-orange-200 hover:bg-orange-100 dark:hover:bg-orange-900 h-7 px-2"
-              onClick={() => {
-                setSearchQuery("");
-                setColumnFilters([{ id: "status", value: ["failed"] }]);
-              }}
+              onClick={controls.showFailed}
             >
               Show failed
             </Button>
@@ -245,11 +248,8 @@ export default function Documents() {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            table.getColumn("file_name")?.setFilterValue(e.target.value || undefined);
-          }}
+          value={controls.searchQuery}
+          onChange={(e) => controls.setSearchQuery(e.target.value)}
           placeholder="Search by file name..."
           className="w-full border rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -257,19 +257,33 @@ export default function Documents() {
 
       {selectedCount > 0 && canWrite && (
         <div className="flex items-center gap-3 px-4 py-2 bg-muted rounded-lg">
-          <span className="text-sm font-medium">{selectedCount} selected</span>
-          <Button variant="destructive" size="sm" onClick={() => setConfirmBulkDelete(true)}>
+          {selection.isChecking ? (
+            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground" role="status">
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+              {CHECKING_DOCUMENT_SELECTION_LABEL}
+            </span>
+          ) : (
+            <span className="text-sm font-medium">{selectedCount} selected</span>
+          )}
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={selection.isChecking}
+            onClick={() => setConfirmBulkDelete(true)}
+          >
             Delete selected
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setRowSelection({})}>
+          <Button variant="ghost" size="sm" onClick={selection.clear}>
             Clear
           </Button>
         </div>
       )}
 
-      {isLoading ? (
+      <ListPagesErrorAlert pages={pages} noun="documents" />
+
+      {mode === "loading" ? (
         <DocumentsSkeleton canWrite={canWrite} />
-      ) : (
+      ) : mode === "error" ? null : (
         <DocumentTable
           table={table}
           colCount={colCount}
@@ -280,6 +294,10 @@ export default function Documents() {
           onReExtract={handleReExtract}
           reExtractingId={reExtractingId}
           canWrite={canWrite}
+          total={pages.total}
+          hasNextPage={pages.hasNextPage}
+          isFetchingNextPage={pages.isFetchingNextPage}
+          onLoadMore={pages.loadMore}
         />
       )}
 

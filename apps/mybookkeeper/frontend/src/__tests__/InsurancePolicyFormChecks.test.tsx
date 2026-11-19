@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import EditInsurancePolicyDialog from "@/app/features/insurance/EditInsurancePolicyDialog";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
+import { documentsPagesState } from "@/test/documents-pages-state";
 
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
@@ -20,8 +21,8 @@ vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [{ id: "property-1", name: "6734 Peerless St" }] })),
 }));
-vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
-  useGetDocumentsQuery: vi.fn(() => ({ data: [] })),
+vi.mock("@mybookkeeper/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: () => documentsPagesState([]),
 }));
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),

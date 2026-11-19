@@ -1,20 +1,16 @@
 import { Fragment } from "react";
 import { flexRender, type ReactTable } from "@tanstack/react-table";
 import type { AppTableFeatures } from "@/shared/lib/table-features";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
-import { PAGE_SIZE_OPTIONS, DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
+import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { SortIndicator, ColumnFilter } from "@/shared/components/table";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import { timeSince } from "@platform/core/utils/timeSince";
 import { cn } from "@/shared/utils/cn";
+import { formatCount } from "@/shared/utils/count";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 
 interface FilterOptions {
   [columnId: string]: { value: string; label: string }[];
@@ -30,6 +26,11 @@ export interface DocumentTableProps {
   onReExtract?: (id: string) => void;
   reExtractingId?: string | null;
   canWrite?: boolean;
+  /** How many documents match across every page; the table holds the ones loaded so far. */
+  total: number;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
 }
 
 export default function DocumentTable({
@@ -42,11 +43,12 @@ export default function DocumentTable({
   onReExtract,
   reExtractingId,
   canWrite = true,
+  total,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
 }: DocumentTableProps) {
-  const { pageIndex, pageSize } = table.state.pagination;
-  const totalRows = table.getFilteredRowModel().rows.length;
-  const start = pageIndex * pageSize + 1;
-  const end = Math.min((pageIndex + 1) * pageSize, totalRows);
+  const shown = table.getRowModel().rows.length;
 
   return (
     <div className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
@@ -162,53 +164,11 @@ export default function DocumentTable({
         </table>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 text-sm text-muted-foreground shrink-0">
-        <div className="flex items-center gap-2">
-          <span>Rows per page:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="border rounded px-1.5 py-0.5 text-xs bg-background"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span>{totalRows > 0 ? `${start}\u2013${end} of ${totalRows}` : "0 results"}</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t bg-muted/30 text-sm text-muted-foreground shrink-0">
+        <span data-testid="documents-shown-count">
+          {shown === total ? formatCount(total, "document") : `${shown} of ${formatCount(total, "document")}`}
+        </span>
+        <LoadMoreButton hasNextPage={hasNextPage} isFetchingNextPage={isFetchingNextPage} onLoadMore={onLoadMore} />
       </div>
     </div>
   );

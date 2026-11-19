@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, renderHook, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import {
   useTable,
   flexRender,
@@ -9,18 +9,9 @@ import { appTableFeatures, type AppTableFeatures } from "@/shared/lib/table-feat
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from "@/shared/lib/constants";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
+import type { SelectAllControl } from "@/shared/types/select-all-control";
 
-interface ColumnWithFilter {
-  filterFn: (row: { getValue: () => unknown }, columnId: string, filterValue: string[]) => boolean;
-}
-
-function findColumnByAccessorKey(columns: ColumnDef<AppTableFeatures, Document, unknown>[], key: string): ColumnWithFilter {
-  // RTK/tanstack types don't expose accessorKey as a direct property at the union level,
-  // so we cast to access it without polluting call sites with `any`.
-  const col = columns.find((c) => (c as { accessorKey?: string }).accessorKey === key);
-  if (!col) throw new Error(`Column "${key}" not found`);
-  return col as unknown as ColumnWithFilter;
-}
+const SELECT_ALL: SelectAllControl = { checked: false, indeterminate: false, isLoading: false, onToggle: vi.fn() };
 
 vi.mock("@platform/core/utils/timeSince", () => ({ timeSince: (s: string) => s }));
 
@@ -34,7 +25,9 @@ vi.mock("@/app/features/documents/StatusBadge", () => ({
 }))
 
 vi.mock("@/shared/components/ui/IndeterminateCheckbox", () => ({
-  default: () => <input type="checkbox" />,
+  default: ({ checked, onChange, "aria-label": label }: { checked: boolean; onChange: () => void; "aria-label": string }) => (
+    <input type="checkbox" checked={checked} onChange={onChange} aria-label={label} />
+  ),
 }))
 
 vi.mock("@platform/ui", async (importOriginal) => {
@@ -71,7 +64,7 @@ function makeDocument(overrides: Partial<Document> = {}): Document {
 }
 
 function DocumentTypeCell({ doc }: { doc: Document }) {
-  const columns = useDocumentColumns({ onDelete: vi.fn() });
+  const columns = useDocumentColumns({ onDelete: vi.fn(), selectAll: SELECT_ALL });
   const table = useTable({
     features: appTableFeatures,
     data: [doc],
@@ -144,30 +137,37 @@ describe("useDocumentColumns — document_type column", () => {
 });
 
 // ---------------------------------------------------------------------------
-// document_type filter function
+// select column header — "select all" reaches documents not loaded
 // ---------------------------------------------------------------------------
 
-describe("useDocumentColumns — document_type filterFn", () => {
-  it("includes row when document_type matches filter value", () => {
-    const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
-    const mockRow = { getValue: () => "invoice" };
-    expect(col.filterFn(mockRow, "document_type", ["invoice", "receipt"])).toBe(true);
+function SelectHeader({ selectAll }: { selectAll: SelectAllControl }) {
+  const columns = useDocumentColumns({ onDelete: vi.fn(), selectAll });
+  const table = useTable({
+    features: appTableFeatures,
+    data: [makeDocument()],
+    columns: columns as ColumnDef<AppTableFeatures, Document, unknown>[],
+    getRowId: (row) => row.id,
+  });
+  const header = table.getHeaderGroups()[0].headers[0];
+  return <div>{flexRender(header.column.columnDef.header, header.getContext())}</div>;
+}
+
+describe("useDocumentColumns — select all", () => {
+  it("hands the header checkbox to the select-all control, not to the loaded rows", () => {
+    const onToggle = vi.fn();
+    render(<SelectHeader selectAll={{ ...SELECT_ALL, checked: true, onToggle }} />);
+
+    const box = screen.getByRole("checkbox", { name: "Select all documents" });
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("excludes row when document_type is not in filter values", () => {
-    const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
-    const mockRow = { getValue: () => "lease" };
-    expect(col.filterFn(mockRow, "document_type", ["invoice", "receipt"])).toBe(false);
-  });
+  it("shows a spinner while the matching documents are fetched", () => {
+    render(<SelectHeader selectAll={{ ...SELECT_ALL, isLoading: true }} />);
 
-  it("treats null document_type as empty string for filter matching", () => {
-    const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
-    const mockRow = { getValue: () => null };
-    expect(col.filterFn(mockRow, "document_type", [""])).toBe(true);
-    expect(col.filterFn(mockRow, "document_type", ["invoice"])).toBe(false);
+    expect(screen.getByRole("status", { name: "Selecting all matching documents" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });
 
@@ -176,7 +176,7 @@ describe("useDocumentColumns — document_type filterFn", () => {
 // ---------------------------------------------------------------------------
 
 function DocumentRow({ doc, onReExtract }: { doc: Document; onReExtract?: (id: string) => void }) {
-  const columns = useDocumentColumns({ onDelete: vi.fn(), onReExtract, canWrite: true });
+  const columns = useDocumentColumns({ onDelete: vi.fn(), onReExtract, canWrite: true, selectAll: SELECT_ALL });
   const table = useTable({
     features: appTableFeatures,
     data: [doc],

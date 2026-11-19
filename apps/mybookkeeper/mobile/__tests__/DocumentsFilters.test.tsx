@@ -1,7 +1,7 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import { useState } from "react";
 import { Provider } from "react-redux";
 import type { DocumentFilter } from "../src/types/DocumentFilter";
@@ -80,13 +80,13 @@ describe("documents filters and order", () => {
     await openSheet();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Failed" }));
     await apply();
-    expect(order()).toEqual(["bad.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["bad.pdf"]));
     expect(screen.getByText("1 of 3 documents")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
     await openSheet();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Completed" }));
     await apply();
-    expect(order()).toHaveLength(3);
+    await waitFor(() => expect(order()).toHaveLength(3));
   });
 
   it("narrows by type and by source", async () => {
@@ -95,12 +95,12 @@ describe("documents filters and order", () => {
     await openSheet();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Invoice" }));
     await apply();
-    expect(order()).toEqual(["invoice.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["invoice.pdf"]));
     await openSheet();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Invoice" }));
     await fireEvent.press(screen.getByRole("checkbox", { name: "Upload" }));
     await apply();
-    expect(order()).toEqual(["bad.pdf", "receipt.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["bad.pdf", "receipt.pdf"]));
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
   });
 
@@ -111,16 +111,16 @@ describe("documents filters and order", () => {
     await fireEvent.press(screen.getByRole("radio", { name: "File name" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Ascending" }));
     await apply();
-    expect(order()).toEqual(["bad.pdf", "invoice.pdf", "receipt.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["bad.pdf", "invoice.pdf", "receipt.pdf"]));
     await openSheet();
     await fireEvent.press(screen.getByRole("radio", { name: "Descending" }));
     await apply();
-    expect(order()).toEqual(["receipt.pdf", "invoice.pdf", "bad.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["receipt.pdf", "invoice.pdf", "bad.pdf"]));
     await openSheet();
     await fireEvent.press(screen.getByRole("radio", { name: "Uploaded" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Ascending" }));
     await apply();
-    expect(order()).toEqual(["receipt.pdf", "invoice.pdf", "bad.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["receipt.pdf", "invoice.pdf", "bad.pdf"]));
   });
 
   it("discards sheet choices on Close", async () => {
@@ -138,9 +138,9 @@ describe("documents filters and order", () => {
     await openSheet();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Duplicate" }));
     await apply();
-    expect(screen.getByText("Nothing matches that.")).toBeTruthy();
+    expect(await screen.findByText("Nothing matches that.")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Clear filters" }));
-    expect(order()).toHaveLength(3);
+    await waitFor(() => expect(order()).toHaveLength(3));
   });
 
   it("clears all in the sheet but keeps the search", async () => {
@@ -151,7 +151,7 @@ describe("documents filters and order", () => {
     await fireEvent.press(screen.getByRole("checkbox", { name: "Failed" }));
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await apply();
-    expect(order()).toHaveLength(3);
+    await waitFor(() => expect(order()).toHaveLength(3));
     expect(screen.getByLabelText("Search documents").props.value).toBe("pdf");
   });
 });
@@ -173,7 +173,7 @@ describe("what the website flags on a document", () => {
     await renderScreen();
     expect(await screen.findByText("I had trouble with bad.pdf. Want me to try again?")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Show failed" }));
-    expect(order()).toEqual(["bad.pdf"]);
+    await waitFor(() => expect(order()).toEqual(["bad.pdf"]));
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
   });
 
