@@ -173,10 +173,10 @@ jobs:
         # database in tests/conftest.py is per-worker and stays isolated.
         run: uv run pytest -q -m "not integration" -n auto
 
-  frontend-build:
+  frontend-checks:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
-    name: frontend-build / mybookkeeper
+    name: frontend-checks / mybookkeeper
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -211,17 +211,60 @@ jobs:
         # The build only typechecks src/, so type errors in e2e/ went unseen.
         run: npm run typecheck:e2e --workspace=mybookkeeper-frontend
 
-      - name: Test frontend
-        # The website's unit tests. Until this ran, failures here went unnoticed.
-        run: npm test --workspace=mybookkeeper-frontend
-
       - name: Check API client
-        # Runs even when the website tests fail, so one red run shows both problems.
+        # Runs even when the website lint fails, so one red run shows both problems.
         if: ${{ !cancelled() }}
         run: |
           npm run typecheck --workspace=@mybookkeeper/api-client
           npm run lint --workspace=@mybookkeeper/api-client
           npm test --workspace=@mybookkeeper/api-client
+
+  frontend-tests:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    name: frontend-tests / mybookkeeper (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        # `npm install`, not `npm ci`: see the frontend-checks job.
+        run: npm install
+
+      - name: Test frontend
+        # The website's unit tests, split in two so each half stays well inside the timeout.
+        run: npm test --workspace=mybookkeeper-frontend -- --shard=${{ matrix.shard }}/2
+
+  frontend-build:
+    # The required check: passes only when the checks and both test halves pass (or were skipped as irrelevant).
+    needs: [frontend-checks, frontend-tests]
+    if: ${{ always() }}
+    name: frontend-build / mybookkeeper
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require frontend checks and tests
+        env:
+          CHECKS: ${{ needs.frontend-checks.result }}
+          TESTS: ${{ needs.frontend-tests.result }}
+        run: |
+          echo "frontend-checks: $CHECKS, frontend-tests: $TESTS"
+          for r in "$CHECKS" "$TESTS"; do
+            case "$r" in success|skipped) ;; *) exit 1 ;; esac
+          done
 
   # The `frontend-lockfile-drift` job was removed 2026-05-11 (PR 6 of React 19
   # migration). MBK's caddy.Dockerfile now uses the workspace pattern (mirrors
@@ -229,7 +272,7 @@ jobs:
   # package-lock.json via `npm ci` at the monorepo root inside the build
   # container. The per-app `apps/mybookkeeper/frontend/package-lock.json` is
   # deleted because it cannot represent workspace deps like `@platform/ui`,
-  # and the docker build no longer reads it. The `frontend-build` job above
+  # and the docker build no longer reads it. The `frontend-checks` job above
   # already validates the workspace lockfile resolves cleanly.
 
   frontend-layout-e2e:
@@ -260,7 +303,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install workspace dependencies
-        # See frontend-build job above for why npm install vs npm ci.
+        # See frontend-checks job above for why npm install vs npm ci.
         run: npm install
 
       - name: Cache Playwright browsers
