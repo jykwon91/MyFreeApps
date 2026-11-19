@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { addDays, format } from "date-fns";
 import { Button } from "@platform/ui";
-import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
+import { useInsurancePoliciesPages } from "@mybookkeeper/api-client/hooks/useInsurancePoliciesPages";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
 import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePoliciesListBody";
 import RateWatchSection from "@/app/features/insurance/RateWatchSection";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 
 /**
  * All-policies view: lists insurance policies across all properties.
@@ -24,18 +25,8 @@ export default function InsurancePolicies() {
     ? format(addDays(new Date(), 30), "yyyy-MM-dd")
     : undefined;
 
-  const query = useGetInsurancePoliciesQuery(
-    expiringBefore ? { expiring_before: expiringBefore } : {},
-  );
-  const { error, refetch, isFetching } = query;
-  const data = query.currentData;
-
-  const policies = data?.items ?? [];
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: policies.length,
-  });
+  const pages = useInsurancePoliciesPages(expiringBefore ? { expiring_before: expiringBefore } : {});
+  const { mode, rows: policies } = pagedListView(pages, pages.policies);
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -55,9 +46,7 @@ export default function InsurancePolicies() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="Couldn't load insurance policies." isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="insurance policies" loadMessage="Couldn't load insurance policies." />
 
       <InsuranceBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />
 
@@ -80,6 +69,10 @@ export default function InsurancePolicies() {
         policies={policies}
         showExpiringSoon={showExpiringSoon}
       />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       {/* Below the policy list, mirroring the utility page: what you hold
           first, then what the market is doing to it. */}

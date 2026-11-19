@@ -50,6 +50,7 @@ from app.services.properties._utility_plan_helpers import (
     _MergedPlan,
     current_plan_ids,
     days_until_term_end,
+    needs_renewing,
     renewal_status,
     to_detail,
     to_summary,
@@ -153,11 +154,24 @@ async def list_plans(
     property_id: uuid.UUID | None = None,
     service_type: str | None = None,
     expiring_before: _dt.date | None = None,
+    needs_renewal: bool = False,
     limit: int = 50,
     offset: int = 0,
     today: _dt.date,
 ) -> UtilityPlanListResponse:
     async with unit_of_work() as db:
+        # Which plan is current is a property of the whole set, so it is resolved
+        # against every active plan rather than just this page. "Needs renewing"
+        # depends on it, so that filter is narrowed to plan ids before paging.
+        all_active = await utility_plan_repo.list_all_active_for_org(
+            db, user_id=user_id, organization_id=organization_id,
+        )
+        current_ids = current_plan_ids(all_active)
+        plan_ids = (
+            {p.id for p in all_active if needs_renewing(p, current_ids=current_ids, today=today)}
+            if needs_renewal
+            else None
+        )
         rows = await utility_plan_repo.list_for_org(
             db,
             user_id=user_id,
@@ -165,6 +179,7 @@ async def list_plans(
             property_id=property_id,
             service_type=service_type,
             expiring_before=expiring_before,
+            plan_ids=plan_ids,
             limit=limit,
             offset=offset,
         )
@@ -175,14 +190,9 @@ async def list_plans(
             property_id=property_id,
             service_type=service_type,
             expiring_before=expiring_before,
+            plan_ids=plan_ids,
         )
         names = await property_repo.get_name_map(db, organization_id)
-        # Currency is a property of the whole set, so it is resolved against
-        # every active plan rather than just this page.
-        all_active = await utility_plan_repo.list_all_active_for_org(
-            db, user_id=user_id, organization_id=organization_id,
-        )
-        current_ids = current_plan_ids(all_active)
 
     items = [
         to_summary(r, property_names=names, current_ids=current_ids, today=today)

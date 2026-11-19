@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
+import type { UtilityPlanListResponse } from "@mybookkeeper/api-client/types/utility/utility-plan-list-response";
 import { failedBody } from "./failedBody";
 
 export interface UtilityRequest {
@@ -23,6 +24,8 @@ export interface UtilityServer {
   /** Status every write is refused with, or "offline" for no answer at all. 200 lets writes through. */
   write: number | "offline";
   requests: UtilityRequest[];
+  /** The params of the last paged list request (the list screen's; a one-row "are there any" check isn't paged). */
+  listParams: unknown;
 }
 
 export const NO_ALERTS = { window_days: 45, expired: [], expiring_soon: [], total_needing_attention: 0 };
@@ -33,6 +36,23 @@ function reply(answer: Answer, config: InternalAxiosRequestConfig) {
   if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
   if (answer === "gone") return Promise.reject({ response: { status: 404, data: {} }, config, isAxiosError: true });
   return Promise.resolve({ data: answer, status: 200, statusText: "OK", headers: {}, config });
+}
+
+const NEEDS_RENEWING = new Set(["expired", "expiring_soon"]);
+
+function isPage(answer: Answer): answer is UtilityPlanListResponse {
+  return typeof answer === "object" && answer !== null && "items" in answer;
+}
+
+/** Narrows a page the way the server does for service_type and needs_renewal, so a filter reaches the phone as the server answers it. */
+function narrowedList(answer: Answer, params: Record<string, unknown> | undefined): Answer {
+  if (!isPage(answer) || !params || (params.service_type === undefined && params.needs_renewal === undefined)) return answer;
+  const items = answer.items.filter(
+    (plan) =>
+      (params.service_type === undefined || plan.service_type === params.service_type) &&
+      (!params.needs_renewal || (plan.is_current && NEEDS_RENEWING.has(plan.renewal_status))),
+  );
+  return { items, total: items.length, has_more: false };
 }
 
 /** Answers every utility-plan route the phone calls. Change a field on the result to change what the next request gets. */
@@ -48,6 +68,7 @@ export function startUtilityServer(overrides: Partial<UtilityServer> = {}): Util
     properties: [{ id: "pr1", name: "Oak Street" }],
     write: 200,
     requests: [],
+    listParams: undefined,
     ...overrides,
   };
   const adapter: AxiosAdapter = (config) => {
@@ -61,7 +82,10 @@ export function startUtilityServer(overrides: Partial<UtilityServer> = {}): Util
     const url = config.url ?? "";
     if (url === "/properties") return reply(server.properties, config);
     if (url === "/market-rate-benchmarks") return reply(server.benchmarks, config);
-    if (url === "/utility-plans") return reply(server.list, config);
+    if (url === "/utility-plans") {
+      if (config.params?.offset !== undefined) server.listParams = config.params;
+      return reply(narrowedList(server.list, config.params), config);
+    }
     if (url === "/utility-plans/renewal-alerts") return reply(server.alerts, config);
     if (url === "/utility-plans/rate-comparison") return reply(server.comparison, config);
     if (url === "/utility-plans/offers") return reply(server.offers, config);

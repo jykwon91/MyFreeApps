@@ -581,6 +581,7 @@ class TestList:
                     "property_id": str(PROPERTY_ID),
                     "service_type": "natural_gas",
                     "expiring_before": "2026-12-31",
+                    "needs_renewal": "true",
                     "limit": 10,
                     "offset": 20,
                 },
@@ -591,8 +592,18 @@ class TestList:
         assert kwargs["property_id"] == PROPERTY_ID
         assert kwargs["service_type"] == "natural_gas"
         assert kwargs["expiring_before"] == _dt.date(2026, 12, 31)
+        assert kwargs["needs_renewal"] is True
         assert kwargs["limit"] == 10
         assert kwargs["offset"] == 20
+
+    def test_needs_renewal_is_off_unless_asked(self, client: TestClient) -> None:
+        empty = UtilityPlanListResponse(items=[], total=0, has_more=False)
+        with patch(
+            f"{_SERVICE}.list_plans", new_callable=AsyncMock, return_value=empty,
+        ) as mock_list:
+            client.get("/utility-plans", params=utc_today_params())
+
+        assert mock_list.await_args.kwargs["needs_renewal"] is False
 
     def test_limit_above_the_cap_returns_422(self, client: TestClient) -> None:
         response = client.get(

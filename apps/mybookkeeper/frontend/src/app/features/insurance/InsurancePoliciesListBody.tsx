@@ -7,7 +7,7 @@ import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 
 export interface InsurancePoliciesListBodyProps {
   mode: ListLoadMode;
-  policies: InsurancePolicySummary[];
+  policies: readonly InsurancePolicySummary[];
   showExpiringSoon: boolean;
 }
 

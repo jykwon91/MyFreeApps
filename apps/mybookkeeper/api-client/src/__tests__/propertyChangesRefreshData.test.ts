@@ -46,7 +46,7 @@ async function mutateWithSubscriptions(
   const subscriptions = [
     store.dispatch(summaryApi.endpoints.getSummary.initiate()),
     store.dispatch(transactionsApi.endpoints.listTransactions.initiate({})),
-    store.dispatch(mortgagesApi.endpoints.getMortgages.initiate()),
+    store.dispatch(mortgagesApi.endpoints.listMortgagePages.initiate()),
     store.dispatch(listingsApi.endpoints.getListings.initiate()),
   ];
   await Promise.all(subscriptions);

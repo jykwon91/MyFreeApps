@@ -1,12 +1,14 @@
 import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { localToday } from "@platform/core/utils/localToday";
+import { UTILITY_PLAN_PAGE_SIZE } from "../constants/utilityPlanPaging";
 import { UTILITY_PLAN_UPLOAD_TIMEOUT_MS } from "../constants/utilityPlanUpload";
 import type { UtilityPlanCreateRequest } from "../types/utility/utility-plan-create-request";
 import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";
 import type { UtilityPlanDraft } from "../types/utility/utility-plan-draft";
 import type { UtilityPlanListArgs } from "../types/utility/utility-plan-list-args";
 import type { UtilityPlanListResponse } from "../types/utility/utility-plan-list-response";
+import type { UtilityPlanPageArgs } from "../types/utility/utility-plan-page-args";
 import type { UtilityPlanRateComparison } from "../types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRenewalAlert } from "../types/utility/utility-plan-renewal-alert";
 import type { UtilityPlanUpdateRequest } from "../types/utility/utility-plan-update-request";
@@ -50,6 +52,21 @@ export const utilityPlansApi = baseApi.enhanceEndpoints({
               { type: "UtilityPlan" as const, id: "LIST" },
             ]
           : [{ type: "UtilityPlan" as const, id: "LIST" }],
+    }),
+    listUtilityPlanPages: builder.infiniteQuery<UtilityPlanListResponse, UtilityPlanPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + UTILITY_PLAN_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/utility-plans",
+        params: { today: localToday(), ...queryArg, limit: UTILITY_PLAN_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((plan) => ({ type: "UtilityPlan" as const, id: plan.id })) ?? []),
+        { type: "UtilityPlan" as const, id: "LIST" },
+      ],
     }),
     getUtilityPlanById: builder.query<UtilityPlanDetail, string>({
       query: (id) => ({ url: `/utility-plans/${id}`, params: { today: localToday() } }),
@@ -121,6 +138,7 @@ export const utilityPlansApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetUtilityPlansQuery,
+  useListUtilityPlanPagesInfiniteQuery,
   useGetUtilityPlanByIdQuery,
   useGetUtilityPlanRenewalAlertsQuery,
   useGetUtilityPlanRateComparisonQuery,

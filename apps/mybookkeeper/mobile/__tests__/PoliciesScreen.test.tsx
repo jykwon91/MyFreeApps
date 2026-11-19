@@ -1,3 +1,4 @@
+import { INSURANCE_POLICY_PAGE_SIZE } from "@mybookkeeper/api-client/constants/insurancePolicyPaging";
 import { insurancePoliciesApi } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
@@ -73,7 +74,7 @@ const NOTHING_TRACKED = {
 type Answer = unknown | "fail" | "gone" | "hold";
 
 function startServer(list: Answer, detail: Answer = aPolicy()) {
-  const server = { list, detail };
+  const server = { list, detail, listParams: undefined as unknown };
   const adapter: AxiosAdapter = async (config) => {
     if (config.url === "/organizations") {
       return { data: [{ id: "w1", name: "Mine", org_role: "owner" }], status: 200, statusText: "OK", headers: {}, config };
@@ -81,6 +82,7 @@ function startServer(list: Answer, detail: Answer = aPolicy()) {
     if (config.url === "/insurance-policies/premium-comparison") {
       return { data: { ...NOTHING_TRACKED }, status: 200, statusText: "OK", headers: {}, config };
     }
+    if (config.url === "/insurance-policies") server.listParams = config.params;
     const answer = config.url === "/insurance-policies" ? server.list : server.detail;
     if (answer === "hold") return new Promise(() => undefined);
     if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
@@ -173,10 +175,19 @@ describe("PoliciesScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/insurance/p1");
   });
 
-  it("says when there are more than it shows", async () => {
-    startServer(aPage([aInsurancePolicySummary()], true));
+  it("loads the next page when the list is scrolled to the end, so a policy past the first page shows", async () => {
+    const server = startServer(aPage([aInsurancePolicySummary()], true));
     await show(<PoliciesScreen />);
-    await screen.findByText(INSURANCE_MESSAGES.moreThanShown);
+    await screen.findByText("Landlord policy");
+    expect(server.listParams).toEqual({ limit: INSURANCE_POLICY_PAGE_SIZE, offset: 0 });
+    expect(screen.queryByText("Flood")).toBeNull();
+    server.list = aPage([aInsurancePolicySummary({ id: "p2", policy_name: "Flood" })]);
+    await act(async () => {
+      await screen.getByTestId("policies-list").props.onEndReached();
+    });
+    await screen.findByText("Flood");
+    expect(server.listParams).toEqual({ limit: INSURANCE_POLICY_PAGE_SIZE, offset: INSURANCE_POLICY_PAGE_SIZE });
+    expect(screen.getByText("Landlord policy")).toBeTruthy();
   });
 
   it("sends a writer with no policies to the add screen", async () => {

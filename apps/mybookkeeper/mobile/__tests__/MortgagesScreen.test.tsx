@@ -1,3 +1,4 @@
+import { MORTGAGE_PAGE_SIZE } from "@mybookkeeper/api-client/constants/mortgagePaging";
 import { mortgagesApi } from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import api from "@platform/core/lib/api";
@@ -56,9 +57,10 @@ function aLoan(overrides: Partial<Mortgage> = {}): Mortgage {
 type Answer = unknown | "fail" | "gone" | "hold";
 
 function startServer(list: Answer, detail: Answer = aLoan()) {
-  const server = { list, detail, role: "owner" };
+  const server = { list, detail, role: "owner", listParams: undefined as unknown };
   const adapter: AxiosAdapter = async (config) => {
     if (config.url === "/organizations") return { data: [{ id: "w1", name: "Mine", org_role: server.role }], status: 200, statusText: "OK", headers: {}, config };
+    if (config.url === "/mortgages") server.listParams = config.params;
     const answer = config.url === "/mortgages" ? server.list : server.detail;
     if (answer === "hold") return new Promise(() => undefined);
     if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
@@ -193,10 +195,19 @@ describe("MortgagesScreen", () => {
     await screen.findByText("Adjustable");
   });
 
-  it("says when there are more than it shows", async () => {
-    startServer(aPage([aLoan()], true));
+  it("loads the next page when the list is scrolled to the end, so a loan past the first page shows", async () => {
+    const server = startServer(aPage([aLoan()], true));
     await show(<MortgagesScreen />);
-    await screen.findByText(MORTGAGE_MESSAGES.firstOnly);
+    await screen.findByText("Oak Street");
+    expect(server.listParams).toEqual({ limit: MORTGAGE_PAGE_SIZE, offset: 0 });
+    expect(screen.queryByText("Elm Street")).toBeNull();
+    server.list = aPage([aLoan({ id: "m2", property_name: "Elm Street" })]);
+    await act(async () => {
+      await screen.getByTestId("mortgages-list").props.onEndReached();
+    });
+    await screen.findByText("Elm Street");
+    expect(server.listParams).toEqual({ limit: MORTGAGE_PAGE_SIZE, offset: MORTGAGE_PAGE_SIZE });
+    expect(screen.getByText("Oak Street")).toBeTruthy();
   });
 
   it("offers to add the first one when there are none", async () => {

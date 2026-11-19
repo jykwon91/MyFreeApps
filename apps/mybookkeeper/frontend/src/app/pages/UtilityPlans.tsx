@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
+import { useUtilityPlansPages } from "@mybookkeeper/api-client/hooks/useUtilityPlansPages";
 import { useDeleteUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
 import BetterPlansSection from "@/app/features/utility/BetterPlansSection";
@@ -9,9 +9,10 @@ import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmar
 import MarketRateBenchmarkSummary from "@/app/features/utility/MarketRateBenchmarkSummary";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { pagedListView } from "@/shared/lib/paged-list-view";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
 
 /**
  * All-plans view: every utility contract across every property.
@@ -27,27 +28,12 @@ export default function UtilityPlans() {
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [planPendingDelete, setPlanPendingDelete] = useState<UtilityPlanSummary | null>(null);
 
-  const { data, error, isFetching, refetch } = useGetUtilityPlansQuery({});
+  // "Needs renewing" is the server's call: it rests on which plan is current and on
+  // the derived renewal status (a regulated plan has no renewal to act on), and the
+  // server applies it to the whole list, not just the pages loaded so far.
+  const pages = useUtilityPlansPages(showExpiringOnly ? { needs_renewal: true } : {});
   const [deletePlan] = useDeleteUtilityPlanMutation();
-
-  const allPlans = data?.items ?? [];
-  // Filtered client-side rather than through ``expiring_before``: the server
-  // filter keys off the raw date, but what the operator means by "needs
-  // attention" is the derived status, which already accounts for rate type —
-  // a regulated plan has no renewal to act on.
-  const plans = showExpiringOnly
-    ? allPlans.filter(
-        (plan) =>
-          plan.is_current &&
-          (plan.renewal_status === "expired" || plan.renewal_status === "expiring_soon"),
-      )
-    : allPlans;
-
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: plans.length,
-  });
+  const { mode, rows: plans } = pagedListView(pages, pages.plans);
 
   async function handleConfirmDelete() {
     const plan = planPendingDelete;
@@ -96,9 +82,7 @@ export default function UtilityPlans() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="Couldn't load utility plans." isRetrying={isFetching} onRetry={() => void refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="utility plans" loadMessage="Couldn't load utility plans." />
 
       <MarketRateBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />
 
@@ -125,6 +109,10 @@ export default function UtilityPlans() {
         onEdit={(plan) => setEditingPlanId(plan.id)}
         onDelete={(plan) => setPlanPendingDelete(plan)}
       />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       {showAddDialog ? (
         <AddUtilityPlanDialog onClose={() => setShowAddDialog(false)} />

@@ -1,9 +1,9 @@
 import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
-export const MORTGAGE_LIST_LIMIT = 100;
 export const MORTGAGE_SKELETON_ROWS = ["a", "b", "c", "d"];
 
 export const MORTGAGE_MESSAGES = {
   loadingList: "Loading your mortgages",
+  loadingMore: "Loading more mortgages",
   loadingOne: "Loading this mortgage",
   couldntLoadList: "I couldn't load your mortgages.",
   couldntLoadOne: "I couldn't load that mortgage.",
@@ -27,7 +27,6 @@ export const MORTGAGE_MESSAGES = {
   removeFailed: "I couldn't remove that mortgage. Want me to try again?",
   removeViewOnly: "You have view-only access, so I can't remove it.",
   removeUnsure: unsureRepeatableMessage("that mortgage was removed"),
-  firstOnly: `I'm showing the first ${MORTGAGE_LIST_LIMIT} mortgages.`,
   unassigned: "Unassigned property",
   adjustable: "Adjustable",
   balance: "Balance",

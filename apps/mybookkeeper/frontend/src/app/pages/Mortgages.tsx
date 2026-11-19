@@ -5,10 +5,11 @@ import AddMortgageDialog from "@/app/features/mortgages/AddMortgageDialog";
 import EditMortgageDialog from "@/app/features/mortgages/EditMortgageDialog";
 import MortgageRateWatchSection from "@/app/features/mortgages/MortgageRateWatchSection";
 import MortgagesListBody from "@/app/features/mortgages/MortgagesListBody";
-import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
+import { pagedListView } from "@/shared/lib/paged-list-view";
+import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
+import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";
+import { useMortgagesPages } from "@mybookkeeper/api-client/hooks/useMortgagesPages";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
-import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Every loan on record, then what the market is doing to them.
@@ -22,14 +23,8 @@ export default function Mortgages() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editing, setEditing] = useState<Mortgage | null>(null);
 
-  const { data, error, refetch, isFetching } = useGetMortgagesQuery();
-
-  const mortgages = data?.items ?? [];
-  const mode = resolveListLoadMode({
-    hasData: data !== undefined,
-    hasError: error !== undefined,
-    itemCount: mortgages.length,
-  });
+  const pages = useMortgagesPages();
+  const { mode, rows: mortgages } = pagedListView(pages, pages.mortgages);
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -49,15 +44,17 @@ export default function Mortgages() {
         }
       />
 
-      {error ? (
-        <LoadErrorAlert message="Couldn't load mortgages." isRetrying={isFetching} onRetry={() => refetch()} />
-      ) : null}
+      <ListPagesErrorAlert pages={pages} noun="mortgages" loadMessage="Couldn't load mortgages." />
 
       <MortgagesListBody
         mode={mode}
         mortgages={mortgages}
         onEdit={setEditing}
       />
+
+      {mode === "list" ? (
+        <LoadMoreButton hasNextPage={pages.hasNextPage} isFetchingNextPage={pages.isFetchingNextPage} onLoadMore={pages.loadMore} />
+      ) : null}
 
       <MortgageRateWatchSection />
 

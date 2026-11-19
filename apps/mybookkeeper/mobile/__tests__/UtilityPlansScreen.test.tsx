@@ -1,3 +1,4 @@
+import { UTILITY_PLAN_PAGE_SIZE } from "@mybookkeeper/api-client/constants/utilityPlanPaging";
 import { utilityPlansApi } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
@@ -195,10 +196,19 @@ describe("UtilityPlansScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/utility-plans/u1");
   });
 
-  it("says when there are more than it shows", async () => {
-    startServer(aPage([aUtilityPlanSummary()], true));
+  it("loads the next page when the list is scrolled to the end, so a plan past the first page shows", async () => {
+    const server = startServer(aPage([aUtilityPlanSummary()], true));
     await show(<UtilityPlansScreen />);
-    await screen.findByText(UTILITY_PLAN_MESSAGES.showingFirst);
+    await screen.findByText("Oak Street · Electricity");
+    expect(server.listParams).toMatchObject({ limit: UTILITY_PLAN_PAGE_SIZE, offset: 0 });
+    expect(screen.queryByText("Oak Street · Water")).toBeNull();
+    server.list = aPage([aUtilityPlanSummary({ id: "u2", service_type: "water" })]);
+    await act(async () => {
+      await screen.getByTestId("utility-plans-list").props.onEndReached();
+    });
+    await screen.findByText("Oak Street · Water");
+    expect(server.listParams).toMatchObject({ limit: UTILITY_PLAN_PAGE_SIZE, offset: UTILITY_PLAN_PAGE_SIZE });
+    expect(screen.getByText("Oak Street · Electricity")).toBeTruthy();
   });
 
   it("invites a writer to add the first plan", async () => {
@@ -266,14 +276,15 @@ describe("UtilityPlansScreen", () => {
   });
 
   it("narrows by service from the filter sheet, and says when nothing matches", async () => {
-    startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", provider_name: "City" })]));
+    const server = startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", provider_name: "City" })]));
     await show(<UtilityPlansScreen />);
     await screen.findByText("Oak Street · Water");
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterButton }));
     await fireEvent.press(await screen.findByRole("radio", { name: "Water" }));
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
+    await screen.findByText("Oak Street · Water");
     expect(screen.queryByText("Oak Street · Electricity")).toBeNull();
-    expect(screen.getByText("Oak Street · Water")).toBeTruthy();
+    expect(server.listParams).toMatchObject({ service_type: "water", offset: 0 });
     await fireEvent.press(screen.getByRole("button", { name: `${UTILITY_PLAN_MESSAGES.filterButton}: Water` }));
     await fireEvent.press(await screen.findByRole("radio", { name: "Internet" }));
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
@@ -282,15 +293,16 @@ describe("UtilityPlansScreen", () => {
     await screen.findByText("Oak Street · Electricity");
   });
 
-  it("keeps only the plans that need renewing when asked", async () => {
-    startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", term_end_date: "2000-01-01", renewal_status: "expired" })]));
+  it("asks the server for only the plans that need renewing", async () => {
+    const server = startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", term_end_date: "2000-01-01", renewal_status: "expired" })]));
     await show(<UtilityPlansScreen />);
     await screen.findByText("Oak Street · Water");
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterButton }));
     await fireEvent.press(await screen.findByLabelText(UTILITY_PLAN_MESSAGES.needsRenewing));
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
+    await screen.findByText("Oak Street · Water");
     expect(screen.queryByText("Oak Street · Electricity")).toBeNull();
-    expect(screen.getByText("Oak Street · Water")).toBeTruthy();
+    expect(server.listParams).toMatchObject({ needs_renewal: true, offset: 0 });
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {

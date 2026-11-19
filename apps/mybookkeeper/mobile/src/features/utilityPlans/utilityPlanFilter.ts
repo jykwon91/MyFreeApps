@@ -1,8 +1,7 @@
-import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import type { UtilityPlanPageArgs } from "@mybookkeeper/api-client/types/utility/utility-plan-page-args";
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import { UTILITY_PLAN_MESSAGES as MESSAGES } from "../../constants/utilityPlans";
 import type { UtilityPlanFilter } from "../../types/UtilityPlanFilter";
-import { renewalStatusOn } from "./utilityPlanDisplay";
 
 export const NO_UTILITY_PLAN_FILTER: UtilityPlanFilter = { needsRenewing: false, serviceType: null };
 
@@ -11,16 +10,14 @@ export function isNarrowed(filter: UtilityPlanFilter): boolean {
 }
 
 /**
- * Filtered here rather than by the server's date filter: what "needs renewing" means is the
- * derived status, which already accounts for rate type, since a regulated plan has no renewal to act on.
+ * What the server is asked for. The server narrows the whole list, not just the pages loaded so far, and
+ * "needs renewing" is the derived status (a regulated plan has no renewal to act on), which it owns.
  */
-export function filteredPlans(plans: readonly UtilityPlanSummary[], filter: UtilityPlanFilter, todayIso: string): UtilityPlanSummary[] {
-  return plans.filter((plan) => {
-    if (filter.serviceType && plan.service_type !== filter.serviceType) return false;
-    if (!filter.needsRenewing) return true;
-    const status = renewalStatusOn(plan, todayIso);
-    return plan.is_current && (status === "expired" || status === "expiring_soon");
-  });
+export function pageArgsFor(filter: UtilityPlanFilter): UtilityPlanPageArgs {
+  return {
+    ...(filter.serviceType ? { service_type: filter.serviceType } : {}),
+    ...(filter.needsRenewing ? { needs_renewal: true } : {}),
+  };
 }
 
 /** What the filter button says: what's narrowing the list, or an invitation to narrow it. */

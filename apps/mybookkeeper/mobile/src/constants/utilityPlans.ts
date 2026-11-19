@@ -1,10 +1,10 @@
-export const UTILITY_PLAN_LIST_LIMIT = 100;
 /** Same window as EXPIRING_SOON_DAYS in backend/app/core/utility_plan_constants.py. */
 export const EXPIRING_SOON_DAYS = 45;
 export const UTILITY_PLAN_SKELETON_ROWS = ["a", "b", "c", "d"];
 
 export const UTILITY_PLAN_MESSAGES = {
   loadingList: "Loading your utility plans",
+  loadingMore: "Loading more plans",
   loadingOne: "Loading this plan",
   couldntLoadList: "I couldn't load your utility plans.",
   couldntLoadOne: "I couldn't load that plan.",
@@ -24,7 +24,6 @@ export const UTILITY_PLAN_MESSAGES = {
   removeBody: "The rate history it holds is what a new offer gets compared against, so removing it leaves nothing to measure the next plan against.",
   removed: "Utility plan removed.",
   alreadyRemoved: "That plan was already removed.",
-  showingFirst: `I'm showing the first ${UTILITY_PLAN_LIST_LIMIT} plans.`,
   perMonth: "/mo",
   atThousandKwh: "at 1,000 kWh",
   creditAtKwh: (amount: string, kwh: string) => `${amount} at ${kwh} kWh`,
