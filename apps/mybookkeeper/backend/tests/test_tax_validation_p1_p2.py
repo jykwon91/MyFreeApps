@@ -502,38 +502,88 @@ class TestMultiPropertyAllocation:
         assert len(alloc) == 1
 
 
+def _capital_improvement(
+    org: Organization, user: User, amount: Decimal, *, is_capital_improvement: bool = True,
+) -> Transaction:
+    return Transaction(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        transaction_date=datetime.date(2025, 6, 15),
+        tax_year=2025,
+        vendor="Ace Roofing",
+        amount=amount,
+        transaction_type="expense",
+        category="maintenance",
+        tags=["maintenance"],
+        schedule_e_line="line_7_cleaning_maintenance",
+        status="approved",
+        tax_relevant=True,
+        is_capital_improvement=is_capital_improvement,
+        placed_in_service_date=datetime.date(2025, 6, 15) if is_capital_improvement else None,
+    )
+
+
 class TestDeMinimis:
-    """Rule 33: De minimis safe harbor."""
+    """Rule 33: De minimis safe harbor, judged per item on the capital-improvement flag."""
+
+    async def _de_minimis(
+        self, db: AsyncSession, org: Organization, transactions: list[Transaction],
+    ) -> list:
+        tr = _make_return(org)
+        db.add(tr)
+        db.add_all(transactions)
+        await db.commit()
+        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+            results = await tax_validation_service.validate(org.id, tr.id)
+        return [r for r in results if "de minimis" in r.message.lower()]
 
     @pytest.mark.asyncio
-    async def test_suggests_de_minimis_for_capital_improvements(
+    async def test_fires_for_a_flagged_item_at_or_under_the_threshold(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        tr = _make_return(test_org)
-        db.add(tr)
-        await db.flush()
-        await db.commit()
+        dm = await self._de_minimis(db, test_org, [
+            _capital_improvement(test_org, test_user, Decimal("1800.00")),
+            _capital_improvement(test_org, test_user, Decimal("2500.00")),
+        ])
 
-        async def _sum(db, org_id, year, cat):
-            if cat == "capital_improvement":
-                return Decimal("5000.00")
-            return Decimal("0")
-
-        async def _count(db, org_id, year, cat):
-            if cat == "capital_improvement":
-                return 3
-            return 0
-
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)), \
-             patch("app.services.tax.tax_validation.deduction_rules.transaction_repo") as mock_txn:
-            mock_txn.sum_by_category = AsyncMock(side_effect=_sum)
-            mock_txn.count_by_category = AsyncMock(side_effect=_count)
-            mock_txn.sum_expenses_by_year = AsyncMock(return_value=Decimal("0"))
-            results = await tax_validation_service.validate(test_org.id, tr.id)
-
-        dm = [r for r in results if "de minimis" in r.message.lower()]
         assert len(dm) == 1
+        assert "2 capital improvement(s)" in dm[0].message
         assert "$2,500" in dm[0].message
+        assert dm[0].actual_value == Decimal("4300.00")
+
+    @pytest.mark.asyncio
+    async def test_counts_only_the_items_under_the_threshold(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        dm = await self._de_minimis(db, test_org, [
+            _capital_improvement(test_org, test_user, Decimal("1800.00")),
+            _capital_improvement(test_org, test_user, Decimal("15000.00")),
+        ])
+
+        assert len(dm) == 1
+        assert "1 capital improvement(s)" in dm[0].message
+        assert dm[0].actual_value == Decimal("1800.00")
+
+    @pytest.mark.asyncio
+    async def test_does_not_fire_for_a_flagged_item_over_the_threshold(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        dm = await self._de_minimis(db, test_org, [
+            _capital_improvement(test_org, test_user, Decimal("15000.00")),
+        ])
+
+        assert dm == []
+
+    @pytest.mark.asyncio
+    async def test_does_not_fire_for_an_unflagged_repair(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        dm = await self._de_minimis(db, test_org, [
+            _capital_improvement(test_org, test_user, Decimal("1800.00"), is_capital_improvement=False),
+        ])
+
+        assert dm == []
 
 
 class TestForeignTaxCredit:

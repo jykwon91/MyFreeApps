@@ -250,11 +250,16 @@ async def bulk_set_capital_improvement(
     async with unit_of_work() as db:
         locked = await transaction_repo.lock_live_transactions(db, ids, ctx.organization_id)
         expenses = [txn for txn in locked if txn.transaction_type == "expense"]
+        totals_moved = False
         for txn in expenses:
+            old_tax_inputs = tax_total_inputs(txn)
             txn.is_capital_improvement = is_capital_improvement
             txn.placed_in_service_date = placed_in_service_date_for(
                 is_capital_improvement, txn.placed_in_service_date, txn.transaction_date,
             )
+            totals_moved = totals_moved or tax_total_inputs(txn) != old_tax_inputs
+        if totals_moved:
+            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
         return {"updated": len(expenses), "skipped": len(set(ids)) - len(expenses)}
 
 

@@ -268,7 +268,10 @@ async def list_schedule_e_transaction_details(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> list[Row]:
-    """Return (id, property_id, schedule_e_line, amount) for audit-trail use."""
+    """Return (id, property_id, schedule_e_line, amount) for audit-trail use.
+
+    Capital improvements are left out: they are depreciated, not deducted.
+    """
     stmt = (
         select(
             Transaction.id,
@@ -285,10 +288,29 @@ async def list_schedule_e_transaction_details(
             Transaction.property_id.isnot(None),
             Transaction.schedule_e_line.isnot(None),
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
+            Transaction.is_capital_improvement.is_(False),
         )
     )
     result = await db.execute(stmt)
     return result.all()
+
+
+async def list_capital_improvement_amounts(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    tax_year: int,
+) -> list[Decimal]:
+    """Return the amount of each approved, tax-relevant capital improvement in the tax year."""
+    stmt = select(Transaction.amount).where(
+        Transaction.organization_id == organization_id,
+        Transaction.tax_year == tax_year,
+        Transaction.status == "approved",
+        Transaction.tax_relevant.is_(True),
+        Transaction.deleted_at.is_(None),
+        Transaction.is_capital_improvement.is_(True),
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def list_by_activity_ids(
@@ -297,7 +319,10 @@ async def list_by_activity_ids(
     tax_year: int,
     activity_ids: list[uuid.UUID],
 ) -> list[Row]:
-    """Return (activity_id, category, amount, id) for Schedule C computation."""
+    """Return (activity_id, category, amount, id) for Schedule C computation.
+
+    Capital improvements are left out: they are depreciated, not deducted.
+    """
     if not activity_ids:
         return []
     stmt = (
@@ -314,6 +339,7 @@ async def list_by_activity_ids(
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
             Transaction.activity_id.in_(activity_ids),
+            Transaction.is_capital_improvement.is_(False),
         )
     )
     result = await db.execute(stmt)
@@ -380,7 +406,10 @@ async def sum_schedule_e_by_property_line(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> list[Row]:
-    """Return (property_id, schedule_e_line, total) for tax-relevant approved transactions."""
+    """Return (property_id, schedule_e_line, total) for tax-relevant approved transactions.
+
+    Capital improvements are left out: they are depreciated, not deducted.
+    """
     stmt = (
         select(
             Transaction.property_id,
@@ -396,6 +425,7 @@ async def sum_schedule_e_by_property_line(
             Transaction.property_id.isnot(None),
             Transaction.schedule_e_line.isnot(None),
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
+            Transaction.is_capital_improvement.is_(False),
         )
         .group_by(Transaction.property_id, Transaction.schedule_e_line)
     )

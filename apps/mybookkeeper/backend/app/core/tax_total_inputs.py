@@ -15,6 +15,7 @@ TAX_TOTAL_INPUT_FIELDS = (
     "activity_id",
     "category",
     "schedule_e_line",
+    "is_capital_improvement",
 )
 
 

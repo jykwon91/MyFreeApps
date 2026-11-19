@@ -324,6 +324,7 @@ async def schedule_e_report(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> list[Row]:
+    """Schedule E totals by property and line; capital improvements are depreciated, not deducted."""
     stmt = (
         select(
             Transaction.property_id,
@@ -337,6 +338,7 @@ async def schedule_e_report(
             Transaction.tax_relevant.is_(True),
             Transaction.tax_year == tax_year,
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
+            Transaction.is_capital_improvement.is_(False),
         )
         .group_by(Transaction.property_id, Transaction.schedule_e_line)
     )

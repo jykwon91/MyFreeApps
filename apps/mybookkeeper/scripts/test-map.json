@@ -1924,7 +1924,8 @@
         "test_schedule_e_backfill_migration.py",
         "test_tax_field_empty_migration.py",
         "test_core_parsers.py",
-        "test_tax_return_staleness.py"
+        "test_tax_return_staleness.py",
+        "test_capital_improvements_not_deducted.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
@@ -2117,6 +2118,7 @@
         "test_transaction_service.py",
         "test_capital_improvement_save.py",
         "test_bulk_capital_improvement.py",
+        "test_capital_improvements_not_deducted.py",
         "test_vendor_normalization.py",
         "test_metered_usage_extraction.py",
         "test_cleanup_seed_routes.py",

@@ -199,31 +199,28 @@ def _validate_qbi_opportunity(
 async def _validate_de_minimis_safe_harbor(
     db: AsyncSession, tax_return: TaxReturn,
 ) -> list[ValidationResult]:
-    """Rule 33: De minimis safe harbor — capital improvements under $2,500."""
-    cap_improvement_total = await transaction_repo.sum_by_category(
-        db, tax_return.organization_id, tax_return.tax_year, "capital_improvement",
+    """Rule 33: De minimis safe harbor — capital improvements of $2,500 or less each."""
+    amounts = await transaction_repo.list_capital_improvement_amounts(
+        db, tax_return.organization_id, tax_return.tax_year,
     )
-
-    if cap_improvement_total <= Decimal("0"):
+    eligible = [amount for amount in amounts if amount <= DE_MINIMIS_SAFE_HARBOR]
+    if not eligible:
         return []
 
-    cap_improvement_count = await transaction_repo.count_by_category(
-        db, tax_return.organization_id, tax_return.tax_year, "capital_improvement",
-    )
-
+    eligible_total = sum(eligible, Decimal("0"))
     return [ValidationResult(
         severity="info",
         form_name="schedule_e",
         field_id=None,
         message=(
-            f"You have {cap_improvement_count} capital improvement transaction(s) "
-            f"totaling ${cap_improvement_total:,.2f}. Items under "
-            f"${DE_MINIMIS_SAFE_HARBOR:,.0f} each may qualify for the de minimis "
+            f"You have {len(eligible)} capital improvement(s) of "
+            f"${DE_MINIMIS_SAFE_HARBOR:,.0f} or less each, totaling "
+            f"${eligible_total:,.2f}. They may qualify for the de minimis "
             f"safe harbor election, allowing immediate expensing instead of "
             f"capitalization and depreciation."
         ),
         expected_value=None,
-        actual_value=cap_improvement_total,
+        actual_value=eligible_total,
     )]
 
 
