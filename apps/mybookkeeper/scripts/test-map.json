@@ -2212,6 +2212,7 @@
         "test_attribution_matcher.py",
         "test_attribution_repo.py",
         "test_attribution_routes.py",
+        "test_property_pnl_service.py",
         "test_attribution_service_attribute_manually.py",
         "test_attribution_service_confirm_property.py",
         "test_airbnb_payout_matcher.py",

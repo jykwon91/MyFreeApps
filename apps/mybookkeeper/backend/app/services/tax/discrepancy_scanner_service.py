@@ -11,6 +11,7 @@ from decimal import Decimal
 from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tags import NEUTRAL_TAGS
 from app.core.vendors import normalize_vendor
 from app.db.session import AsyncSessionLocal
 from app.repositories import (
@@ -184,7 +185,9 @@ async def _scan_missing_income(
     property_ids_with_income: set[uuid.UUID] = {
         row.property_id
         for row in income_rows
-        if row.property_id and row.transaction_type == "income"
+        if row.property_id
+        and row.transaction_type == "income"
+        and row.category not in NEUTRAL_TAGS
     }
 
     missing_property_ids = property_ids_with_reservations - property_ids_with_income
