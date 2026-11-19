@@ -9,7 +9,8 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import ReceiptGmailBanner from "./ReceiptGmailBanner";
 import { receiptsWaitingLine } from "@mybookkeeper/api-client/utils/receiptsWaitingLine";
 import ReceiptRow from "./ReceiptRow";
-import ReceiptsSkeleton, { ReceiptSkeletonRow } from "./ReceiptsSkeleton";
+import ReceiptSkeletonRow from "./ReceiptSkeletonRow";
+import ReceiptsSkeleton from "./ReceiptsSkeleton";
 
 export default function ReceiptsScreen() {
   const { colors, spacing, fontSize } = useTheme();
