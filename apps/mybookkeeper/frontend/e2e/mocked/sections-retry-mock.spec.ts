@@ -62,8 +62,8 @@ const SECTIONS: Section[] = [
     name: "pending receipts",
     path: "/receipts",
     endpoint: /\/api\/rent-receipts\/pending(\?|$)/,
-    error: "Couldn't load pending receipts.",
-    emptyAnswer: { items: [], total: 0, pending_count: 0, gmail_state: "ready" },
+    error: "I couldn't load your pending receipts. Want me to try again?",
+    emptyAnswer: { items: [], total: 0, has_more: false, pending_count: 0, gmail_state: "ready" },
     empty: (p) => p.getByText(/I'll queue a receipt here/),
   },
   {

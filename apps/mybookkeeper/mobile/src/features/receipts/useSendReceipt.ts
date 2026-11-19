@@ -1,6 +1,6 @@
 import { useSendReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
-import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
+import type { PendingReceiptLookupResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-lookup-response";
 import { useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
@@ -14,9 +14,9 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 /**
  * Sends one receipt, after asking. The server sends at most once, so a retry is always safe;
- * what changes is how sure I can be about what happened. `reload` returns the list, or null if it can't.
+ * what changes is how sure I can be about what happened. `reload` looks the receipt up again, or returns null if it can't.
  */
-export function useSendReceipt(reload: () => Promise<PendingReceiptListResponse | null>) {
+export function useSendReceipt(reload: () => Promise<PendingReceiptLookupResponse | null>) {
   const { showToast } = useToast();
   const dropReceipt = useDropReceipt();
   const [sendReceipt] = useSendReceiptMutation();
@@ -43,9 +43,9 @@ export function useSendReceipt(reload: () => Promise<PendingReceiptListResponse 
       return;
     }
     const latest = await reload();
-    const row = latest?.items.find((item) => item.transaction_id === receipt.transaction_id);
+    const row = latest?.item;
     if (outcome.kind === "unsure") {
-      // Gone from the list means it went out, or someone handled it elsewhere. Still listed, or no list, means I can't tell yet.
+      // No longer waiting means it went out, or someone handled it elsewhere. Still waiting, or no answer, means I can't tell yet.
       if (latest && !row) finish(receipt, MESSAGES.offList);
       else setFailure(MESSAGES.sendUnsure);
       return;

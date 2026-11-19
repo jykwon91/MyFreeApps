@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from typing import Any
 
-from sqlalchemy import ColumnElement, and_, func, select, update
+from sqlalchemy import ColumnElement, Select, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -50,14 +51,7 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def list_open(
-    db: AsyncSession,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-    *,
-    limit: int = 100,
-    offset: int = 0,
-) -> list[PendingReceiptListRow]:
+def _open_rows(organization_id: uuid.UUID, user_id: uuid.UUID) -> Select[tuple[Any, ...]]:
     """Receipts still waiting on the host: ``pending`` and ``sending``.
 
     ``sending`` rows stay listed so a send whose outcome was unknown can be
@@ -77,7 +71,7 @@ async def list_open(
         )
         .exists()
     )
-    result = await db.execute(
+    return (
         select(
             PendingRentReceipt.id.label("id"),
             PendingRentReceipt.transaction_id.label("transaction_id"),
@@ -133,11 +127,39 @@ async def list_open(
             PendingRentReceipt.status.in_(OPEN_RECEIPT_STATUSES),
             PendingRentReceipt.deleted_at.is_(None),
         )
+    )
+
+
+async def list_open(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[PendingReceiptListRow]:
+    """One page of open receipts, newest first."""
+    result = await db.execute(
+        _open_rows(organization_id, user_id)
         .order_by(PendingRentReceipt.created_at.desc(), PendingRentReceipt.id.desc())
         .limit(limit)
         .offset(offset)
     )
     return [PendingReceiptListRow.model_validate(dict(r._mapping)) for r in result.all()]
+
+
+async def get_open_by_transaction_id(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+) -> PendingReceiptListRow | None:
+    """The open receipt for one payment, as ``list_open`` lists it; None when it isn't open."""
+    result = await db.execute(
+        _open_rows(organization_id, user_id).where(PendingRentReceipt.transaction_id == transaction_id)
+    )
+    row = result.one_or_none()
+    return PendingReceiptListRow.model_validate(dict(row._mapping)) if row is not None else None
 
 
 async def count_open(

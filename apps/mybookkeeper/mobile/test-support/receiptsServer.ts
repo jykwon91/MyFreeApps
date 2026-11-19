@@ -1,10 +1,19 @@
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
+import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
 
 export const PENDING_URL = "/rent-receipts/pending";
+/** The most receipts the real server answers per list request (`limit: Query(le=500)`); more is refused with a 422. */
+export const SERVER_LIMIT_CAP = 500;
+
+/** The Receipts list's loaded pages in the store, read straight from its cache entry. */
+export function cachedReceiptPages(state: { api: { queries: Record<string, { data?: unknown } | undefined> } }): PendingReceiptListResponse[] {
+  const entry = state.api.queries["listPendingReceiptPages(undefined)"]?.data as { pages: PendingReceiptListResponse[] } | undefined;
+  return entry?.pages ?? [];
+}
 
 export function aReceipt(overrides: Partial<PendingReceipt> = {}): PendingReceipt {
   return {
@@ -38,7 +47,7 @@ export interface FakeReceiptServer {
   /** Open receipts on the server, past the ones returned. Defaults to the list's length. */
   pendingCount: number | null;
   gmailState: ReceiptGmailState;
-  /** Fails list reads with this status while set. */
+  /** Fails reads (the list's pages and one receipt's lookup) with this status while set. */
   listStatus: number | null;
   /** No answer to anything while set. */
   offline: boolean;
@@ -46,9 +55,10 @@ export interface FakeReceiptServer {
   /** With `noAnswer`, whether the send happened anyway. */
   sendLandsAnyway: boolean;
   dismissReply: FakeReply | null;
-  /** Runs before a list read answers, to change what it says. */
+  /** Runs before a read answers, to change what it says. */
   beforeListRead: (() => void) | null;
   writes: { url: string; body: unknown }[];
+  /** Every read: the list's pages and one receipt's lookups. */
   listReads: AxiosRequestConfig[];
   /** Every request to start connecting Gmail. */
   connectStarts: AxiosRequestConfig[];
@@ -88,13 +98,22 @@ export function startReceiptServer(receipts: PendingReceipt[]): FakeReceiptServe
       server.connectStarts.push(config);
       return respond(200, { auth_url: GOOGLE_AUTH_URL });
     }
-    if (url === PENDING_URL) {
+    if (url === PENDING_URL || url.startsWith(`${PENDING_URL}/`)) {
       server.listReads.push(config);
       server.beforeListRead?.();
       if (server.listStatus) return respond(server.listStatus, { detail: "nope" });
-      const limit = Number((config.params as { limit?: number } | undefined)?.limit ?? 50);
+      if (url !== PENDING_URL) {
+        const lookedUp = url.slice(PENDING_URL.length + 1);
+        const item = server.receipts.find((receipt) => receipt.transaction_id === lookedUp) ?? null;
+        return respond(200, { item, gmail_state: server.gmailState });
+      }
+      const params = (config.params ?? {}) as { limit?: number; offset?: number };
+      const limit = Number(params.limit ?? 100);
+      const offset = Number(params.offset ?? 0);
+      if (!(limit >= 1 && limit <= SERVER_LIMIT_CAP)) return respond(422, { detail: "limit out of range" });
       const count = server.pendingCount ?? server.receipts.length;
-      return respond(200, { items: server.receipts.slice(0, limit), total: count, pending_count: count, gmail_state: server.gmailState });
+      const items = server.receipts.slice(offset, offset + limit);
+      return respond(200, { items, total: count, has_more: offset + items.length < count, pending_count: count, gmail_state: server.gmailState });
     }
     const [, , transactionId, action] = url.split("/");
     server.writes.push({ url, body: config.data ? JSON.parse(String(config.data)) : undefined });
