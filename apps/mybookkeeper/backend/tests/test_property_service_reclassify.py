@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import worker_context
 from app.models.properties.property import Property, PropertyType
 from app.models.properties.property_classification import PropertyClassification
+from app.schemas.properties.property import PropertyRead
 from app.services.properties import property_service
 
 
@@ -165,3 +167,21 @@ async def test_unrelated_edits_leave_the_rental_type_alone(db: AsyncSession):
     assert stored.name == "6734 Peerless (unit A)"
     assert stored.classification is PropertyClassification.INVESTMENT
     assert stored.type is PropertyType.SHORT_TERM
+
+
+@pytest.mark.asyncio
+async def test_rented_since_saves_and_reads_back(db: AsyncSession):
+    """Rental ROI counts from this date, so the PATCH has to be allowed to set it."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prop = _rental(org_id, user_id)
+    db.add(prop)
+    await db.flush()
+
+    result = await _reclassify(db, org_id, user_id, prop.id, {"rented_since": date(2026, 4, 1)})
+    assert result is not None
+    await db.flush()
+
+    stored = (await db.execute(select(Property).where(Property.id == prop.id))).scalar_one()
+    assert stored.rented_since == date(2026, 4, 1)
+    assert PropertyRead.model_validate(stored).rented_since == date(2026, 4, 1)
+    assert stored.date_placed_in_service is None

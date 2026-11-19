@@ -145,4 +145,36 @@ describe("PropertyEditCard", () => {
     expect(screen.getByText("A saved purchase price can be changed but not removed.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
+
+  it("saves the date the home started being rented", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.type(screen.getByLabelText("Rented since"), "2026-04-01");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(updateProperty).toHaveBeenCalled());
+    expect(updateProperty.mock.calls[0][0].data.rented_since).toBe("2026-04-01");
+  });
+
+  it("leaves the rented-since date out when it is blank", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(updateProperty).toHaveBeenCalled());
+    expect(updateProperty.mock.calls[0][0].data).not.toHaveProperty("rented_since");
+  });
+
+  it("blocks clearing a saved rented-since date instead of silently keeping it", async () => {
+    const user = userEvent.setup();
+    renderCard(vi.fn(), { ...rental, rented_since: "2026-04-01" });
+
+    expect(screen.getByLabelText("Rented since")).toHaveValue("2026-04-01");
+    await user.clear(screen.getByLabelText("Rented since"));
+
+    expect(screen.getByText("A saved rented-since date can be changed but not removed.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
 });

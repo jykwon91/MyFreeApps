@@ -17,5 +17,6 @@ class PropertyUpdate(BaseModel):
     purchase_price: Optional[Decimal] = None
     land_value: Optional[Decimal] = None
     date_placed_in_service: Optional[date] = None
+    rented_since: Optional[date] = None
     property_class: Optional[str] = None
     personal_use_days: Optional[int] = None

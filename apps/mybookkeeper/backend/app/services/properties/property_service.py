@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 UPDATABLE_FIELDS = frozenset({
     "name", "address", "classification", "type", "is_active",
-    "purchase_price", "land_value", "date_placed_in_service",
+    "purchase_price", "land_value", "date_placed_in_service", "rented_since",
     "property_class", "personal_use_days",
 })
 

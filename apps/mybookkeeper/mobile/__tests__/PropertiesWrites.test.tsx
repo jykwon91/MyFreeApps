@@ -7,6 +7,7 @@ import { Provider } from "react-redux";
 import { FORM_MESSAGES } from "../src/constants/forms";
 import { DELETE_PROPERTY_BODY, deletePropertyTitle, PROPERTY_MESSAGES } from "../src/constants/properties";
 import { PROPERTY_FORM_MESSAGES as FORM } from "../src/constants/propertyForm";
+import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
 import PropertiesScreen from "../src/features/properties/PropertiesScreen";
 import PropertyCreateScreen from "../src/features/properties/PropertyCreateScreen";
 import PropertyDetailScreen from "../src/features/properties/PropertyDetailScreen";
@@ -31,6 +32,10 @@ jest.mock("expo-router", () => ({
   },
 }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
+jest.mock("@react-native-community/datetimepicker", () => {
+  const { View } = jest.requireActual("react-native");
+  return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
+});
 
 const originalAdapter = api.defaults.adapter;
 let alertSpy: jest.SpyInstance;
@@ -415,6 +420,29 @@ describe("changing a property", () => {
     await fireEvent.press(button(FORM.save));
     await screen.findByText(FORM.saved);
     expect(writesOf(server, "patch")[0].body).toEqual({ name: "Elm Cottage" });
+  });
+
+  it("saves the date the home started being rented", async () => {
+    const server = serverWith();
+    await show(<PropertyEditScreen id="p1" />);
+    await screen.findByLabelText("Property name, required");
+    await fireEvent.press(button("Choose rented since"));
+    await act(async () => {
+      screen.getByTestId("Rented since-picker").props.onChange({ type: "set" }, new Date(2026, 3, 1));
+    });
+    await fireEvent.press(button(FORM.save));
+    await screen.findByText(FORM.saved);
+    expect(writesOf(server, "patch")).toEqual([{ url: "/properties/p1", body: { rented_since: "2026-04-01" } }]);
+  });
+
+  it("won't clear a saved rented-since date, and says why", async () => {
+    const server = serverWith([aProperty({ rented_since: "2026-04-01" })]);
+    await show(<PropertyEditScreen id="p1" />);
+    await screen.findByLabelText("Property name, required");
+    await fireEvent.press(button("Clear rented since"));
+    await fireEvent.press(button(FORM.save));
+    expect(await screen.findByText(RENTED_SINCE_MESSAGES.removed)).toBeTruthy();
+    expect(writesOf(server, "patch")).toEqual([]);
   });
 
   it("classifies an unclassified property", async () => {

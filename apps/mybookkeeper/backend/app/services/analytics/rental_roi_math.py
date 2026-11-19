@@ -45,15 +45,25 @@ def trailing_window(today: date) -> tuple[date, date]:
     return _first_of_month_offset(this_month, -WINDOW_MONTHS), this_month - timedelta(days=1)
 
 
-def months_in_service(window_start: date, window_end: date, placed_in_service: date | None) -> int:
+def rental_start(rented_since: date | None, placed_in_service: date | None) -> date | None:
+    """When a property began renting: the day the owner says, else when it was placed in service."""
+    return rented_since or placed_in_service
+
+
+def counting_from(window_start: date, rented_from: date | None) -> date:
+    """The first month of the window that counts: the month renting began, or the window's start."""
+    if rented_from is None:
+        return window_start
+    return max(window_start, rented_from.replace(day=1))
+
+
+def months_in_service(window_start: date, window_end: date, rented_from: date | None) -> int:
     """Months of the window the property was renting — the divisor for every average.
 
-    Unknown in-service date means the whole window. Always at least one, so a
-    property placed in service this month still divides by something.
+    Unknown start means the whole window. Always at least one, so a property
+    that started renting this month still divides by something.
     """
-    if placed_in_service is None:
-        return WINDOW_MONTHS
-    start = max(window_start, placed_in_service.replace(day=1))
+    start = counting_from(window_start, rented_from)
     months = (window_end.year - start.year) * 12 + window_end.month - start.month + 1
     return min(WINDOW_MONTHS, max(1, months))
 

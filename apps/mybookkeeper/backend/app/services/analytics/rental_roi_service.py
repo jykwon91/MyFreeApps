@@ -50,6 +50,10 @@ async def get_rental_roi(
             db, user_id=ctx.user_id, organization_id=ctx.organization_id, today=today,
         )
 
+    rented_from = {
+        p.id: rental_roi_math.rental_start(p.rented_since, p.date_placed_in_service)
+        for p in active_properties
+    }
     totals_by_property: dict[uuid.UUID, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
     unassigned_revenue = Decimal(0)
     for row in rows:
@@ -57,6 +61,12 @@ async def get_rental_roi(
         if row.property_id is None:
             if row.tag in RENTAL_ROI_REVENUE_TAGS:
                 unassigned_revenue += amount
+            continue
+        if row.property_id not in rented_from:
+            continue
+        # Costs and income from before a home was rented don't describe what renting it takes.
+        month = date(int(row.year), int(row.month), 1)
+        if month < rental_roi_math.counting_from(window_start, rented_from[row.property_id]):
             continue
         totals_by_property[row.property_id][row.tag] += amount
 
@@ -78,7 +88,7 @@ async def get_rental_roi(
             prop.name,
             rental_roi_math.compute_property_figures(
                 category_totals=totals_by_property.get(prop.id, {}),
-                months=rental_roi_math.months_in_service(window_start, window_end, prop.date_placed_in_service),
+                months=rental_roi_math.months_in_service(window_start, window_end, rented_from[prop.id]),
                 loans=loans_by_property.get(prop.id, []),
                 purchase_price=prop.purchase_price,
                 target_return_pct=target_return_pct,

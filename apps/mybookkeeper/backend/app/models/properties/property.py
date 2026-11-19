@@ -61,6 +61,8 @@ class Property(Base):
     purchase_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     land_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     date_placed_in_service: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # When the home started collecting rent; Rental ROI counts from here.
+    rented_since: Mapped[date | None] = mapped_column(Date, nullable=True)
     property_class: Mapped[str | None] = mapped_column(String(20), nullable=True)
     personal_use_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
