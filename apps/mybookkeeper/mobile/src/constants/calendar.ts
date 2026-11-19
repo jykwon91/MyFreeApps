@@ -1,4 +1,3 @@
-export const CALENDAR_LISTINGS_CHECK = { limit: 1, offset: 0 };
 export const CALENDAR_OPEN_RETRY_LIMIT = 5;
 export const CALENDAR_OPEN_RETRY_MS = 100;
 export const CALENDAR_SKELETON_GROUPS = [

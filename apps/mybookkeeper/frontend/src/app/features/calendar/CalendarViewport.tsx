@@ -1,3 +1,4 @@
+import { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
 import CalendarGrid from "@/app/features/calendar/CalendarGrid";
 import CalendarMonthGrid from "@/app/features/calendar/CalendarMonthGrid";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
@@ -23,7 +24,7 @@ export default function CalendarViewport({
   anchorIso,
   todayIso,
 }: CalendarViewportProps) {
-  if (view === "timeline") {
+  if (view === CALENDAR_VIEW_MODE.TIMELINE) {
     return <CalendarGrid events={events} fromIso={fromIso} toIso={toIso} />;
   }
 
