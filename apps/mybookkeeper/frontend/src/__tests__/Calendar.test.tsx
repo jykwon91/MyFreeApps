@@ -264,6 +264,24 @@ describe("Calendar page", () => {
     expect(screen.getByRole("link", { name: /add a listing/i })).toHaveAttribute("href", "/listings");
   });
 
+  it("asks for one listing, reading the total, rather than a page of them", () => {
+    renderCalendar();
+    expect(useGetListingsQuery).toHaveBeenCalledWith({ limit: 1, offset: 0 });
+  });
+
+  it("knows listings exist even when they are many and only one is fetched", () => {
+    vi.mocked(useGetListingsQuery).mockReturnValue(
+      { data: { items: [], total: 250, has_more: true }, isLoading: false } as unknown as ReturnType<
+        typeof useGetListingsQuery
+      >,
+    );
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
+      { ...defaultEventsState, ...queryData([]) } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+    );
+    renderCalendar();
+    expect(screen.queryByTestId("calendar-no-listings")).not.toBeInTheDocument();
+  });
+
   it("shows the events, not the no-listings prompt, when a lease has no listing behind it", () => {
     // A signed lease can exist before it's linked to a listing, so an org with
     // zero listings can still have real tenancies. Showing "add a listing"

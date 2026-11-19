@@ -4,6 +4,7 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import { CALENDAR_LISTINGS_CHECK } from "@mybookkeeper/api-client/constants/calendarListingsCheck";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import {
   CALENDAR_DEFAULT_WINDOW_DAYS,
@@ -89,7 +90,7 @@ export default function Calendar() {
   const { error, isFetching, refetch } = eventsQuery;
   const events = eventsQuery.currentData;
   const { data: properties = [] } = useGetPropertiesQuery();
-  const { data: listingsEnvelope } = useGetListingsQuery({ limit: 100, offset: 0 });
+  const { data: listingsEnvelope } = useGetListingsQuery(CALENDAR_LISTINGS_CHECK);
 
   const hasNoListings = (listingsEnvelope?.total ?? 0) === 0;
 
