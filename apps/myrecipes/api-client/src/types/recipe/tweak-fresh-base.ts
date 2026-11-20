@@ -12,5 +12,7 @@ export interface TweakFreshBase {
   /** The load failed since opening (a failure cached from before doesn't count). */
   hasFailed: boolean;
   error: ApiError | SerializedError | undefined;
+  /** A request for the recipe is in flight (a retry after a failure included). */
+  isFetching: boolean;
   refetch: () => PromiseLike<unknown>;
 }

@@ -6,7 +6,7 @@ import { VERSIONS_BACK_TITLE } from "../../constants/backTitles";
 import { VERSION_VIEW_MESSAGES as MESSAGES } from "../../constants/versions";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { goBackOrOpenRecipe } from "../../utils/goBackOrOpenRecipe";
-import { isNotFoundError } from "../../utils/isNotFoundError";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import VersionContent from "./VersionContent";
 import VersionSkeleton from "./VersionSkeleton";
 

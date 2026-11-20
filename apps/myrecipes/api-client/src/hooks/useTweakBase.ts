@@ -11,7 +11,7 @@ import { useErrorSinceOpening } from "./useErrorSinceOpening";
  * the tweak starts from. Shared by the web page and the phone screen.
  */
 export function useTweakBase(recipeId: string): TweakFreshBase {
-  const { currentData, error, isError, fulfilledTimeStamp, refetch } = useGetRecipeQuery(recipeId, {
+  const { currentData, error, isError, isFetching, fulfilledTimeStamp, refetch } = useGetRecipeQuery(recipeId, {
     refetchOnMountOrArgChange: true,
   });
   const hasFailed = useErrorSinceOpening(error, isError);
@@ -21,5 +21,5 @@ export function useTweakBase(recipeId: string): TweakFreshBase {
   const [base, setBase] = useState<TweakBase | null>(null);
   if (!base && freshRecipe?.latest_version) setBase({ recipe: freshRecipe, version: freshRecipe.latest_version });
 
-  return { base, freshRecipe, hasFailed, error, refetch };
+  return { base, freshRecipe, hasFailed, error, isFetching, refetch };
 }

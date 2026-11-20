@@ -2,8 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { ChefHat } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
 import { useTweakBase } from "@myrecipes/api-client/hooks/useTweakBase";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
+import RecipeLoadFailed from "@/features/recipes/RecipeLoadFailed";
 
 interface TweakEditorProps {
   recipeId: string;
@@ -18,8 +20,13 @@ interface TweakEditorProps {
  */
 export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
   const navigate = useNavigate();
-  const { base, freshRecipe, hasFailed } = useTweakBase(recipeId);
-  const isMissing = !base && (hasFailed || (!!freshRecipe && !freshRecipe.latest_version));
+  const { base, freshRecipe, hasFailed, error, isFetching, refetch } = useTweakBase(recipeId);
+  const isMissing = !base && ((hasFailed && isNotFoundError(error)) || (!!freshRecipe && !freshRecipe.latest_version));
+  const isLoadFailed = !base && !isMissing && hasFailed;
+
+  if (isLoadFailed) {
+    return <RecipeLoadFailed onRetry={() => void refetch()} isRetrying={isFetching} />;
+  }
 
   if (!base && !isMissing) {
     return (

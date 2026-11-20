@@ -19,9 +19,11 @@ import {
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
 import { VERSION_LOAD_FAILED_MESSAGES } from "@/constants/recipe-detail-messages";
+import RecipeLoadFailed from "@/features/recipes/RecipeLoadFailed";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
 import VersionBody from "@/features/recipes/VersionBody";
@@ -102,7 +104,11 @@ export default function RecipeDetail() {
     );
   }
 
-  // A failed refetch keeps the recipe on screen; the message is for when there is none to show.
+  // A failed refetch keeps the recipe on screen; the messages are for when there is none to show.
+  if (!recipeQuery.data && !isNotFoundError(recipeQuery.error)) {
+    return <RecipeLoadFailed onRetry={() => void recipeQuery.refetch()} isRetrying={recipeQuery.isFetching} />;
+  }
+
   if (!recipeQuery.data) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
