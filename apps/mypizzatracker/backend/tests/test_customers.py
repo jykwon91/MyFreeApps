@@ -56,7 +56,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
             is_active=True,
         )
         db.add(user)
-        await db.flush()
+        await db.commit()
 
     resp = await client.post(
         "/auth/jwt/login",
@@ -160,14 +160,14 @@ async def _set_pizza_active(db: AsyncSession, pizza_id: str, active: bool) -> No
     await db.execute(
         update(PizzaType).where(PizzaType.id == pizza_id).values(active=active),
     )
-    await db.flush()
+    await db.commit()
 
 
 async def _set_topping_active(db: AsyncSession, topping_id: str, active: bool) -> None:
     await db.execute(
         update(ToppingType).where(ToppingType.id == topping_id).values(active=active),
     )
-    await db.flush()
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +289,7 @@ async def test_list_customers_search_treats_wildcards_literally(
         ("Plain Name", "7778889999"),
     ]:
         db.add(Customer(name=name, phone=phone))
-    await db.flush()
+    await db.commit()
 
     resp = await auth_client.get("/customers", params={"search": search})
 
@@ -567,7 +567,7 @@ async def test_lookup_excludes_no_show_orders_from_the_usual(
     await db.execute(
         update(Order).where(Order.id == no_show_id).values(status="no_show"),
     )
-    await db.flush()
+    await db.commit()
 
     client.headers.pop("Authorization", None)
     resp = await client.get(

@@ -73,12 +73,9 @@ async def list_customers(
 async def update_customer_notes(
     customer_id: uuid.UUID,
     body: CustomerNotesUpdate,
-    db: AsyncSession = Depends(get_db),
 ) -> CustomerRead:
     try:
-        customer = await customer_service.update_notes(
-            db, customer_id, body.notes,
-        )
+        customer = await customer_service.update_notes(customer_id, body.notes)
     except CustomerServiceError as exc:
         raise _service_error(exc) from exc
     return CustomerRead.model_validate(customer)

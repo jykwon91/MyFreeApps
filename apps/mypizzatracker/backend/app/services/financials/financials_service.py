@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
 from app.models.order.order import Order
 from app.models.order.order_pizza import OrderPizza
@@ -93,15 +94,14 @@ async def get_financials(db: AsyncSession, drop_id: uuid.UUID) -> DropFinancials
     )
 
 
-async def update_tip(
-    db: AsyncSession, drop_id: uuid.UUID, tip_total: Decimal,
-) -> Drop:
-    drop = await _get_drop(db, drop_id)
-    if drop.status == "closed":
-        raise DropClosedForFinancialsError(
-            "Drop is closed; tip is read-only.",
-        )
-    return await drop_repo.update_drop(db, drop, {"tip_total": tip_total})
+async def update_tip(drop_id: uuid.UUID, tip_total: Decimal) -> Drop:
+    async with unit_of_work() as db:
+        drop = await _get_drop(db, drop_id)
+        if drop.status == "closed":
+            raise DropClosedForFinancialsError(
+                "Drop is closed; tip is read-only.",
+            )
+        return await drop_repo.update_drop(db, drop, {"tip_total": tip_total})
 
 
 # ---------------------------------------------------------------------------

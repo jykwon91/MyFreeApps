@@ -24,12 +24,17 @@ from app.models.order.order_pizza import OrderPizza
 from app.models.order.order_pizza_topping import OrderPizzaTopping
 
 
-async def get_order(db: AsyncSession, order_id: uuid.UUID) -> Optional[Order]:
+async def get_order(
+    db: AsyncSession, order_id: uuid.UUID, *, for_update: bool = False,
+) -> Optional[Order]:
+    """``for_update`` locks the order row until the transaction ends."""
     stmt = (
         select(Order)
         .where(Order.id == order_id)
         .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
     )
+    if for_update:
+        stmt = stmt.with_for_update(of=Order)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 

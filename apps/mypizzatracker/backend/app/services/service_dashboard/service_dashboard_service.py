@@ -21,18 +21,18 @@ The 6-status order state machine (from ``app/models/order/order.py``):
     picked_up: terminal
     no_show: terminal
 
-Transitioning into ``ready_text_sent`` stamps ``ready_text_sent_at`` AND
-fires a Twilio SMS to the customer (best-effort: a Twilio outage logs +
-returns the failure to the operator but does NOT roll back the status
-change — the operator is the authoritative record of "order is ready",
-the SMS is a courtesy notification).
+Transitioning into ``ready_text_sent`` stamps ``ready_text_sent_at`` AND,
+once that change has committed, fires a Twilio SMS to the customer
+(best-effort: a Twilio outage logs + returns the failure to the operator
+but does NOT roll back the status change — the operator is the
+authoritative record of "order is ready", the SMS is a courtesy
+notification). Each mutation owns its transaction via ``unit_of_work``.
 
 Mutations are rejected entirely if the drop is in ``closed`` status --
 service is over, history is frozen.
 """
 from __future__ import annotations
 
-import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -50,6 +50,7 @@ from app.models.menu.pizza_type import PizzaType
 from app.models.menu.topping_type import ToppingType
 from app.models.order.order import Order
 from app.models.order.order_pizza import OrderPizza
+from app.db.session import unit_of_work
 from app.repositories.order import order_repo
 from app.schemas.service.service_schemas import (
     DashboardCustomer,
@@ -60,14 +61,11 @@ from app.schemas.service.service_schemas import (
     DashboardSlot,
     ServiceDashboard,
 )
-from app.services.sms import sms_sender
-from app.services.sms.order_ready_notification import render_order_ready_body
-from platform_shared.services.sms_service import (
-    SmsNotConfiguredError,
-    SmsSendError,
+from app.services.service_dashboard.order_ready_text import (
+    compose_ready_text,
+    send_ready_text,
 )
-
-logger = logging.getLogger(__name__)
+from app.services.service_dashboard.ready_text import ReadyText
 
 # ---------------------------------------------------------------------------
 # State machine
@@ -222,52 +220,57 @@ async def get_dashboard(db: AsyncSession, drop_id: uuid.UUID) -> ServiceDashboar
 # ---------------------------------------------------------------------------
 
 async def advance_order_status(
-    db: AsyncSession, order_id: uuid.UUID, target_status: str,
+    order_id: uuid.UUID, target_status: str,
 ) -> AdvanceOrderResult:
     """Transition an order to ``target_status``.
 
     Side effects for ``target_status == "ready_text_sent"``:
       1. Stamp ``ready_text_sent_at = now()``.
-      2. Send the customer a Twilio SMS announcing the pickup. The SMS is
-         best-effort — if Twilio rejects the message, the status change
-         still commits and the failure is surfaced via
-         ``AdvanceOrderResult.sms_error`` so the operator can text the
-         customer manually.
+      2. After the status change commits, send the customer a Twilio SMS
+         announcing the pickup. The SMS is best-effort — if Twilio rejects
+         the message the status change stays saved and the failure is
+         surfaced via ``AdvanceOrderResult.sms_error`` so the operator can
+         text the customer manually.
+
+    The order row is locked for the transition, so two concurrent advances
+    can't both pass the state-machine check and text the customer twice.
 
     All other transitions return ``AdvanceOrderResult(order, None, None)``.
     """
-    order = await _get_order(db, order_id)
-    drop = await _get_drop(db, order.drop_id)
-    _ensure_drop_open(drop)
+    ready_text: Optional[ReadyText] = None
+    async with unit_of_work() as db:
+        order = await _get_order(db, order_id, for_update=True)
+        drop = await _get_drop(db, order.drop_id)
+        _ensure_drop_open(drop)
 
-    if target_status not in ORDER_STATUSES:
-        raise InvalidTransitionError(f"Unknown status: {target_status!r}")
+        if target_status not in ORDER_STATUSES:
+            raise InvalidTransitionError(f"Unknown status: {target_status!r}")
 
-    if target_status == order.status:
-        # Idempotent no-op rather than 409; lets the UI safely re-fire.
-        return AdvanceOrderResult(order=order)
+        if target_status == order.status:
+            # Idempotent no-op rather than 409; lets the UI safely re-fire.
+            return AdvanceOrderResult(order=order)
 
-    pair = (order.status, target_status)
-    if pair not in _ALLOWED_TRANSITIONS:
-        raise InvalidTransitionError(
-            f"Cannot transition from {order.status!r} to {target_status!r}.",
-        )
+        pair = (order.status, target_status)
+        if pair not in _ALLOWED_TRANSITIONS:
+            raise InvalidTransitionError(
+                f"Cannot transition from {order.status!r} to {target_status!r}.",
+            )
 
-    order.status = target_status
-    if target_status == "ready_text_sent":
-        order.ready_text_sent_at = datetime.now(timezone.utc)
+        order.status = target_status
+        if target_status == "ready_text_sent":
+            order.ready_text_sent_at = datetime.now(timezone.utc)
+            ready_text = await compose_ready_text(db, order, drop)
 
-    await db.flush()
-    refreshed = await order_repo.get_order(db, order.id)
-    assert refreshed is not None, "Order disappeared during transition"
+        await db.flush()
+        refreshed = await order_repo.get_order(db, order.id)
+        assert refreshed is not None, "Order disappeared during transition"
 
-    if target_status != "ready_text_sent":
+    if ready_text is None:
         return AdvanceOrderResult(order=refreshed)
 
-    # Fire the SMS AFTER the flush so a Twilio outage doesn't roll back
-    # the operator's intent. The status is the source of truth; the SMS
-    # is a courtesy.
-    sms_dispatched, sms_error = await _send_ready_text(db, refreshed, drop)
+    # The status change is committed, so the text can't be undone by a
+    # rollback; a Twilio outage can't undo the operator's intent either.
+    sms_dispatched, sms_error = send_ready_text(ready_text, order_id)
     return AdvanceOrderResult(
         order=refreshed,
         sms_dispatched=sms_dispatched,
@@ -275,95 +278,44 @@ async def advance_order_status(
     )
 
 
-async def _send_ready_text(
-    db: AsyncSession, order: Order, drop: Drop,
-) -> tuple[bool, Optional[str]]:
-    """Dispatch the order-ready SMS. Returns (sent_ok, error_message).
-
-    Best-effort: every failure path returns ``(False, "<reason>")`` and
-    logs at WARNING; the caller surfaces ``error_message`` to the
-    operator. We never re-raise — the operator already advanced the
-    order and a Twilio outage shouldn't block the dashboard.
-    """
-    customer = await db.get(Customer, order.customer_id)
-    slot = await db.get(Slot, order.slot_id)
-    if customer is None or slot is None:
-        # Should be impossible given the FK constraints, but the SMS
-        # path is best-effort by design — log + return rather than
-        # raise.
-        logger.warning(
-            "Skipping ready-text SMS: missing customer or slot for order %s",
-            order.id,
-        )
-        return False, "Customer or slot missing; cannot text"
-    if not customer.phone:
-        return False, "Customer has no phone number on file"
-
-    body = render_order_ready_body(
-        customer_name=customer.name,
-        drop_name=drop.name,
-        pickup_time=slot.pickup_time,
-    )
-    try:
-        sms_sender.send_sms_or_raise(customer.phone, body)
-    except SmsNotConfiguredError as e:
-        logger.warning(
-            "Ready-text SMS skipped (Twilio not configured) for order %s: %s",
-            order.id, e,
-        )
-        return False, "SMS service is not configured"
-    except SmsSendError as e:
-        logger.warning(
-            "Ready-text SMS rejected by Twilio for order %s: %s",
-            order.id, e,
-        )
-        return False, str(e)
-    except ValueError as e:
-        logger.warning(
-            "Ready-text SMS rejected (invalid args) for order %s: %s",
-            order.id, e,
-        )
-        return False, str(e)
-    return True, None
-
-
 async def move_order_to_slot(
-    db: AsyncSession, order_id: uuid.UUID, target_slot_id: uuid.UUID,
+    order_id: uuid.UUID, target_slot_id: uuid.UUID,
 ) -> Order:
     """Move an order to a different slot within the same drop.
 
     Capacity is checked against non-no-show pizza counts; no-op when the
     target equals the current slot.
     """
-    order = await _get_order(db, order_id)
-    drop = await _get_drop(db, order.drop_id)
-    _ensure_drop_open(drop)
+    async with unit_of_work() as db:
+        order = await _get_order(db, order_id)
+        drop = await _get_drop(db, order.drop_id)
+        _ensure_drop_open(drop)
 
-    if target_slot_id == order.slot_id:
-        return order
+        if target_slot_id == order.slot_id:
+            return order
 
-    target_slot = await _get_slot(db, target_slot_id)
-    if target_slot.drop_id != order.drop_id:
-        raise SlotNotInDropError(
-            f"Slot {target_slot_id} does not belong to drop {order.drop_id}.",
-        )
-
-    # No-show orders don't consume capacity, so moving one in is free.
-    if order.status != "no_show":
-        existing_count = await order_repo.count_pizzas_in_slot(db, target_slot_id)
-        requested = len(order.pizzas)
-        if existing_count + requested > target_slot.max_pizzas:
-            remaining = max(target_slot.max_pizzas - existing_count, 0)
-            raise TargetSlotCapacityError(
-                f"Only {remaining} pizza(s) left in target slot. "
-                f"This order has {requested}.",
+        target_slot = await _get_slot(db, target_slot_id)
+        if target_slot.drop_id != order.drop_id:
+            raise SlotNotInDropError(
+                f"Slot {target_slot_id} does not belong to drop {order.drop_id}.",
             )
 
-    order.slot_id = target_slot_id
-    await db.flush()
-    refreshed = await order_repo.get_order(db, order.id)
-    assert refreshed is not None, "Order disappeared during move"
-    return refreshed
+        # No-show orders don't consume capacity, so moving one in is free.
+        if order.status != "no_show":
+            existing_count = await order_repo.count_pizzas_in_slot(db, target_slot_id)
+            requested = len(order.pizzas)
+            if existing_count + requested > target_slot.max_pizzas:
+                remaining = max(target_slot.max_pizzas - existing_count, 0)
+                raise TargetSlotCapacityError(
+                    f"Only {remaining} pizza(s) left in target slot. "
+                    f"This order has {requested}.",
+                )
+
+        order.slot_id = target_slot_id
+        await db.flush()
+        refreshed = await order_repo.get_order(db, order.id)
+        assert refreshed is not None, "Order disappeared during move"
+        return refreshed
 
 
 # ---------------------------------------------------------------------------
@@ -384,8 +336,10 @@ async def _get_slot(db: AsyncSession, slot_id: uuid.UUID) -> Slot:
     return slot
 
 
-async def _get_order(db: AsyncSession, order_id: uuid.UUID) -> Order:
-    order = await order_repo.get_order(db, order_id)
+async def _get_order(
+    db: AsyncSession, order_id: uuid.UUID, *, for_update: bool = False,
+) -> Order:
+    order = await order_repo.get_order(db, order_id, for_update=for_update)
     if order is None:
         raise OrderNotFoundError(f"Order {order_id} not found")
     return order

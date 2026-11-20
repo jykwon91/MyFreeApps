@@ -57,11 +57,10 @@ async def get_dashboard(
 async def advance_order(
     order_id: uuid.UUID,
     body: AdvanceOrderRequest,
-    db: AsyncSession = Depends(get_db),
 ) -> AdvanceOrderResponse:
     try:
         result = await service_dashboard_service.advance_order_status(
-            db, order_id, body.target_status,
+            order_id, body.target_status,
         )
     except DashboardServiceError as exc:
         raise _service_error(exc) from exc
@@ -76,11 +75,10 @@ async def advance_order(
 async def move_order(
     order_id: uuid.UUID,
     body: MoveOrderRequest,
-    db: AsyncSession = Depends(get_db),
 ) -> OrderRead:
     try:
         order = await service_dashboard_service.move_order_to_slot(
-            db, order_id, body.slot_id,
+            order_id, body.slot_id,
         )
     except DashboardServiceError as exc:
         raise _service_error(exc) from exc

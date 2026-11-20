@@ -24,6 +24,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.customer.customer import Customer
 from app.repositories.customer import customer_repo
 from app.schemas.customer.customer_schemas import CustomerCreate
@@ -96,7 +97,7 @@ async def find_by_normalized_phone(
 
 
 async def update_notes(
-    db: AsyncSession, customer_id: uuid.UUID, notes: Optional[str],
+    customer_id: uuid.UUID, notes: Optional[str],
 ) -> Customer:
     """Replace the customer's ``notes`` field.
 
@@ -104,12 +105,12 @@ async def update_notes(
     blank rows. Notes are operator-only freeform text; no length validation
     beyond the schema's max_length.
     """
-    customer = await customer_repo.get_customer_by_id(db, customer_id)
-    if customer is None:
-        raise CustomerNotFoundError(f"Customer {customer_id} not found.")
-
     cleaned: Optional[str] = (notes or "").strip() or None
-    return await customer_repo.update_customer(db, customer, {"notes": cleaned})
+    async with unit_of_work() as db:
+        customer = await customer_repo.get_customer_by_id(db, customer_id)
+        if customer is None:
+            raise CustomerNotFoundError(f"Customer {customer_id} not found.")
+        return await customer_repo.update_customer(db, customer, {"notes": cleaned})
 
 
 async def list_with_stats(

@@ -35,7 +35,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
             is_verified=True,
             is_active=True,
         ))
-        await db.flush()
+        await db.commit()
 
     resp = await client.post(
         "/auth/jwt/login",
@@ -256,7 +256,7 @@ async def test_public_order_blank_field_422(
 async def test_customer_notes_trimmed(auth_client: AsyncClient, db: AsyncSession):
     customer = Customer(name="Jonathan", phone="5125551234")
     db.add(customer)
-    await db.flush()
+    await db.commit()
 
     resp = await auth_client.patch(
         f"/customers/{customer.id}/notes", json={"notes": "  likes it well done "},

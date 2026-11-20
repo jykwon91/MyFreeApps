@@ -38,7 +38,7 @@ from app.schemas.drop.drop_schemas import (
     SlotUpdate,
 )
 from app.services.drop import drop_service
-from app.services.drop.drop_service import DropServiceError, SlotNotFoundError
+from app.services.drop.drop_service import DropServiceError
 
 router = APIRouter(
     prefix="/drops",
@@ -52,11 +52,8 @@ def _service_error(exc: DropServiceError) -> HTTPException:
 
 
 @router.post("", response_model=DropRead, status_code=201)
-async def create_drop(
-    body: DropCreate,
-    db: AsyncSession = Depends(get_db),
-) -> DropRead:
-    drop = await drop_service.create_drop(db, body)
+async def create_drop(body: DropCreate) -> DropRead:
+    drop = await drop_service.create_drop(body)
     return DropRead.model_validate(drop)
 
 
@@ -85,27 +82,18 @@ async def get_drop(
 
 
 @router.patch("/{drop_id}", response_model=DropRead)
-async def update_drop(
-    drop_id: uuid.UUID,
-    body: DropUpdate,
-    db: AsyncSession = Depends(get_db),
-) -> DropRead:
+async def update_drop(drop_id: uuid.UUID, body: DropUpdate) -> DropRead:
     try:
-        drop = await drop_service.get_drop_or_404(db, drop_id)
-        drop = await drop_service.update_drop(db, drop, body)
+        drop = await drop_service.update_drop(drop_id, body)
     except DropServiceError as exc:
         raise _service_error(exc) from exc
     return DropRead.model_validate(drop)
 
 
 @router.delete("/{drop_id}", status_code=204)
-async def delete_drop(
-    drop_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-) -> None:
+async def delete_drop(drop_id: uuid.UUID) -> None:
     try:
-        drop = await drop_service.get_drop_or_404(db, drop_id)
-        await drop_service.delete_drop(db, drop)
+        await drop_service.delete_drop(drop_id)
     except DropServiceError as exc:
         raise _service_error(exc) from exc
 
@@ -115,14 +103,9 @@ async def delete_drop(
 # ---------------------------------------------------------------------------
 
 @router.post("/{drop_id}/slots", response_model=SlotRead, status_code=201)
-async def add_slot(
-    drop_id: uuid.UUID,
-    body: SlotCreate,
-    db: AsyncSession = Depends(get_db),
-) -> SlotRead:
+async def add_slot(drop_id: uuid.UUID, body: SlotCreate) -> SlotRead:
     try:
-        drop = await drop_service.get_drop_or_404(db, drop_id)
-        slot = await drop_service.add_slot(db, drop, body)
+        slot = await drop_service.add_slot(drop_id, body)
     except DropServiceError as exc:
         raise _service_error(exc) from exc
     return SlotRead.model_validate(slot)
@@ -133,30 +116,17 @@ async def update_slot(
     drop_id: uuid.UUID,
     slot_id: uuid.UUID,
     body: SlotUpdate,
-    db: AsyncSession = Depends(get_db),
 ) -> SlotRead:
     try:
-        drop = await drop_service.get_drop_or_404(db, drop_id)
-        slot = await drop_service.get_slot_or_404(db, slot_id)
-        if slot.drop_id != drop.id:
-            raise SlotNotFoundError(f"Slot {slot_id} not under drop {drop_id}")
-        slot = await drop_service.update_slot(db, drop, slot, body)
+        slot = await drop_service.update_slot(drop_id, slot_id, body)
     except DropServiceError as exc:
         raise _service_error(exc) from exc
     return SlotRead.model_validate(slot)
 
 
 @router.delete("/{drop_id}/slots/{slot_id}", status_code=204)
-async def delete_slot(
-    drop_id: uuid.UUID,
-    slot_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-) -> None:
+async def delete_slot(drop_id: uuid.UUID, slot_id: uuid.UUID) -> None:
     try:
-        drop = await drop_service.get_drop_or_404(db, drop_id)
-        slot = await drop_service.get_slot_or_404(db, slot_id)
-        if slot.drop_id != drop.id:
-            raise SlotNotFoundError(f"Slot {slot_id} not under drop {drop_id}")
-        await drop_service.remove_slot(db, drop, slot)
+        await drop_service.remove_slot(drop_id, slot_id)
     except DropServiceError as exc:
         raise _service_error(exc) from exc

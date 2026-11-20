@@ -49,7 +49,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
             is_active=True,
         )
         db.add(user)
-        await db.flush()
+        await db.commit()
 
     resp = await client.post(
         "/auth/jwt/login",
