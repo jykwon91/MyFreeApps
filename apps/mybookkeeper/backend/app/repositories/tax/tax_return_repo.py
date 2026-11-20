@@ -6,6 +6,7 @@ from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.tax_return_enums import TAX_RETURN_STATUS_FILED
 from app.core.tax_total_inputs import tax_total_inputs
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
@@ -82,7 +83,7 @@ async def flag_unfiled_for_recompute(
 ) -> None:
     await db.execute(
         sa_update(TaxReturn)
-        .where(TaxReturn.organization_id == organization_id, TaxReturn.status != "filed")
+        .where(TaxReturn.organization_id == organization_id, TaxReturn.status != TAX_RETURN_STATUS_FILED)
         .values(needs_recompute=True)
     )
 

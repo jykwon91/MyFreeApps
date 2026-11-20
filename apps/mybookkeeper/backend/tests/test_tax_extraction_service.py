@@ -1,12 +1,16 @@
 import uuid
+from contextlib import asynccontextmanager
 from decimal import Decimal
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.organization.organization import Organization
+from app.models.tax.tax_return import TaxReturn
 from app.models.user.user import User
 from app.repositories import tax_form_repo, tax_return_repo
+from app.services.extraction import document_extraction_service
 from app.services.tax.tax_extraction_service import (
     is_tax_source_document,
     process_tax_document,
@@ -476,3 +480,47 @@ class TestExtractionColumnChoice:
         assert fields["box_1"].value_numeric == Decimal("1500.50")
         assert fields["box_7"].value_numeric == Decimal("7")
         assert fields["box_8"].value_text == "note"
+
+
+class TestFiledReturnIsNotFlaggedOrRecomputedAutomatically:
+    @pytest.mark.asyncio
+    async def test_extraction_into_a_filed_year_does_not_flag_it(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        filed = TaxReturn(organization_id=test_org.id, tax_year=2024, status="filed", needs_recompute=False)
+        db.add(filed)
+        await db.commit()
+
+        await process_tax_document(
+            db,
+            organization_id=test_org.id,
+            document_id=uuid.uuid4(),
+            extraction_id=uuid.uuid4(),
+            document_type="w2",
+            tax_form_data={"issuer_ein": "12-3456789", "issuer_name": "Acme", "tax_year": 2024, "fields": {"box_1": 1.0}},
+        )
+        await db.refresh(filed)
+
+        assert filed.needs_recompute is False
+
+    @pytest.mark.asyncio
+    async def test_post_extraction_recompute_skips_filed_but_runs_unfiled(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        draft = TaxReturn(organization_id=test_org.id, tax_year=2025, needs_recompute=True)
+        filed = TaxReturn(organization_id=test_org.id, tax_year=2024, status="filed", needs_recompute=True)
+        db.add_all([draft, filed])
+        await db.commit()
+
+        @asynccontextmanager
+        async def _session():
+            yield db
+
+        recompute = AsyncMock()
+        with (
+            patch.object(document_extraction_service, "AsyncSessionLocal", _session),
+            patch.object(document_extraction_service, "recompute_tax_return", recompute),
+        ):
+            await document_extraction_service.recompute_stale_unfiled_returns(test_org.id)
+
+        recompute.assert_awaited_once_with(test_org.id, draft.id)

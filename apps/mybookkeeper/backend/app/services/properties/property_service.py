@@ -138,9 +138,7 @@ async def _cascade_classification_change(
             property_id, new_classification.value, tax_form,
         )
 
-    tax_returns = await tax_return_repo.list_by_org(db, organization_id)
-    for tr in tax_returns:
-        tr.needs_recompute = True
+    await tax_return_repo.flag_unfiled_for_recompute(db, organization_id)
 
 
 async def delete_property(

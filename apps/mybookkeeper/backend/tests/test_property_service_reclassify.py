@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import worker_context
 from app.models.properties.property import Property, PropertyType
 from app.models.properties.property_classification import PropertyClassification
+from app.models.tax.tax_return import TaxReturn
 from app.schemas.properties.property import PropertyRead
 from app.services.properties import property_service
 
@@ -185,3 +186,23 @@ async def test_rented_since_saves_and_reads_back(db: AsyncSession):
     assert stored.rented_since == date(2026, 4, 1)
     assert PropertyRead.model_validate(stored).rented_since == date(2026, 4, 1)
     assert stored.date_placed_in_service is None
+
+
+@pytest.mark.asyncio
+async def test_reclassifying_flags_unfiled_returns_but_never_a_filed_one(db: AsyncSession):
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prop = _rental(org_id, user_id)
+    draft = TaxReturn(organization_id=org_id, tax_year=2025, needs_recompute=False)
+    filed = TaxReturn(organization_id=org_id, tax_year=2024, status="filed", needs_recompute=False)
+    db.add_all([prop, draft, filed])
+    await db.flush()
+
+    await _reclassify(
+        db, org_id, user_id, prop.id,
+        {"classification": PropertyClassification.PRIMARY_RESIDENCE},
+    )
+    await db.refresh(draft)
+    await db.refresh(filed)
+
+    assert draft.needs_recompute is True
+    assert filed.needs_recompute is False

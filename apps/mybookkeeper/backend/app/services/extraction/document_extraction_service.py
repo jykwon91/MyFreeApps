@@ -24,6 +24,7 @@ from app.services.extraction.extractor_service import (
     extract_text_from_docx,
     extract_text_from_spreadsheet,
 )
+from app.core.tax_return_enums import TAX_RETURN_STATUS_FILED
 from app.mappers.booking_statement_mapper import build_booking_statements_from_line_items
 from app.mappers.tax_form_mapper import normalize_tax_doc_type, build_tax_form_data
 from app.mappers.transaction_mapper import build_transaction_from_mapped_item
@@ -422,13 +423,18 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
     # Auto-recompute tax returns after extraction commits (must be outside unit_of_work
     # so the recompute's own session sees the newly committed transactions)
     try:
-        async with AsyncSessionLocal() as recompute_db:
-            tax_returns = await tax_return_repo.list_by_org(recompute_db, ctx.organization_id)
-            for tr in tax_returns:
-                if tr.needs_recompute:
-                    await recompute_tax_return(ctx.organization_id, tr.id)
-                    logger.info("Auto-recomputed tax return %s after extraction", tr.id)
+        await recompute_stale_unfiled_returns(ctx.organization_id)
     except Exception:
         logger.warning("Auto-recompute failed after extraction", exc_info=True)
 
     return result
+
+
+async def recompute_stale_unfiled_returns(organization_id: uuid.UUID) -> None:
+    """Recompute the org's out-of-date returns; a filed return is never touched automatically."""
+    async with AsyncSessionLocal() as recompute_db:
+        tax_returns = await tax_return_repo.list_by_org(recompute_db, organization_id)
+        for tr in tax_returns:
+            if tr.needs_recompute and tr.status != TAX_RETURN_STATUS_FILED:
+                await recompute_tax_return(organization_id, tr.id)
+                logger.info("Auto-recomputed tax return %s after extraction", tr.id)
