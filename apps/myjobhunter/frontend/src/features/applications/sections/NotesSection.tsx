@@ -46,13 +46,14 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   const saveGenerationRef = useRef(0);
   const mountedRef = useRef(true);
 
-  // Re-sync from server on prop change (e.g. drawer reopens with a different
-  // application id) — but only when the user hasn't typed anything yet.
+  // Re-sync whenever the server value changes (a refetch after an edit made elsewhere, or another
+  // application) — whatever the save status. An unsaved or in-flight edit differs from the last
+  // saved text, so it is never overwritten.
   useEffect(() => {
-    if (saveState.status === "idle" && value === lastSavedRef.current) {
-      setValue(initialValue);
-      lastSavedRef.current = initialValue;
-    }
+    if (value !== lastSavedRef.current) return;
+    setValue(initialValue);
+    valueRef.current = initialValue;
+    lastSavedRef.current = initialValue;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialValue, applicationId]);
 
