@@ -16,8 +16,9 @@ unlock lockout in ``welcome_manual_share_service``.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.rate_limit import check_welcome_manual_unlock_rate_limit
 from app.schemas.welcome_manuals.public_welcome_manual_response import (
     PublicWelcomeManualResponse,
 )
@@ -42,14 +43,18 @@ async def get_share_gate(token: str) -> WelcomeManualShareGateResponse:
     return WelcomeManualShareGateResponse()
 
 
-@router.post("/{token}/unlock", response_model=PublicWelcomeManualResponse)
+@router.post(
+    "/{token}/unlock",
+    response_model=PublicWelcomeManualResponse,
+    dependencies=[Depends(check_welcome_manual_unlock_rate_limit)],
+)
 async def unlock_share(
     token: str,
     payload: WelcomeManualUnlockRequest,
 ) -> PublicWelcomeManualResponse:
     """Verify the PIN and, on success, return the guest-safe manual
     projection. Brute-force lockout is per-manual (persisted on the row),
-    not per client IP — see ``welcome_manual_share_service.unlock_public``.
+    plus a per-IP rate limit — see ``welcome_manual_share_service.unlock_public``.
     A locked manual surfaces as the service's ``HTTPException(429)``, which
     propagates unchanged."""
     try:
