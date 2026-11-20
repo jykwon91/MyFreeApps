@@ -1,7 +1,8 @@
 """ExtractionLog repository — Phase 1 stub."""
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.system.extraction_log import ExtractionLog
@@ -19,6 +20,19 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[ExtractionL
         select(ExtractionLog).where(ExtractionLog.user_id == user_id)
     )
     return list(result.scalars().all())
+
+
+async def sum_cost_since(
+    db: AsyncSession, user_id: uuid.UUID, *, since: datetime,
+) -> float:
+    """Total ``cost_usd`` of the user's extraction logs created at or after ``since``."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(ExtractionLog.cost_usd), 0)).where(
+            ExtractionLog.user_id == user_id,
+            ExtractionLog.created_at >= since,
+        )
+    )
+    return float(result.scalar_one() or 0)
 
 
 async def create(

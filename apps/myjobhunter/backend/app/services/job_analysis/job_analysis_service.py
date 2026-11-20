@@ -46,15 +46,17 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
+from platform_shared.repositories.soft_delete import soft_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.loggable_url import loggable_url
+from app.db.session import unit_of_work
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
+from app.repositories.discovery import discovery_repository
 from app.repositories.job_analysis import job_analysis_repository
 from app.services.extraction import claude_service
 from app.services.extraction.jd_url_extractor import (
@@ -247,7 +249,6 @@ _MAX_RATIONALE_CHARS = 600
 
 
 async def analyze(
-    db: AsyncSession,
     user_id: uuid.UUID,
     *,
     url: str | None,
@@ -264,7 +265,7 @@ async def analyze(
     the chrome extension), prefer :func:`score` directly — it skips URL
     resolution and accepts pre-extracted fields as a hint.
 
-    Returns the persisted :class:`JobAnalysis` row.
+    Returns the :class:`JobAnalysis` row, committed in its own ``unit_of_work``.
 
     Raises:
         JobAnalysisInvalidUrlError: URL malformed.
@@ -307,12 +308,13 @@ async def analyze(
         source_url = None
         resolved_jd_text = jd_text.strip()
 
-    return await score(
-        db,
-        user_id,
-        jd_text=resolved_jd_text,
-        source_url=source_url,
-    )
+    async with unit_of_work() as db:
+        return await score(
+            db,
+            user_id,
+            jd_text=resolved_jd_text,
+            source_url=source_url,
+        )
 
 
 async def score(
@@ -330,7 +332,7 @@ async def score(
     Pure JD-text-in, JobAnalysis-out: no URL fetching, no extra IO. Both
     :func:`analyze` (paste-URL flow) and the discovery score worker call
     this function so the scoring rubric, validation, and persistence
-    shape stay consistent across surfaces.
+    shape stay consistent across surfaces. The caller's ``unit_of_work`` commits.
 
     Args:
         jd_text: The full JD text body. Must be non-empty after stripping.
@@ -349,7 +351,7 @@ async def score(
         discovered_job: Optional ORM row for the same discovered_jobs
             posting. When provided, ``score``, ``score_reason``, and
             ``scored_at`` are written to the row within the same
-            ``db.commit()`` that persists the JobAnalysis — collapsing
+            transaction that persists the JobAnalysis — collapsing
             what was previously two separate transactions into one so a
             crash between them cannot leave ``discovered_job.score`` NULL
             while the JobAnalysis + cost record already exist.
@@ -426,12 +428,12 @@ async def score(
     # discovered_job.score = NULL while the JobAnalysis + cost record
     # already existed, causing the next refresh to re-pay for scoring.
     if discovered_job is not None:
-        discovered_job.score = _verdict_to_score(validated["verdict"])
-        discovered_job.score_reason = validated["verdict_summary"]
-        discovered_job.scored_at = datetime.now(timezone.utc)
-        db.add(discovered_job)
-
-    await db.commit()
+        await discovery_repository.record_score(
+            db,
+            discovered_job,
+            score=_verdict_to_score(validated["verdict"]),
+            score_reason=validated["verdict_summary"],
+        )
     return analysis
 
 
@@ -445,21 +447,18 @@ async def get_analysis(
 
 
 async def soft_delete_analysis(
-    db: AsyncSession,
     user_id: uuid.UUID,
     analysis_id: uuid.UUID,
 ) -> bool:
     """Set ``deleted_at`` on the analysis. Idempotent — second DELETE
     on an already-deleted row also returns True."""
-    analysis = await job_analysis_repository.get_by_id(
-        db, analysis_id, user_id, include_deleted=True,
-    )
-    if analysis is None:
-        return False
-    if analysis.deleted_at is None:
-        analysis.deleted_at = datetime.now(timezone.utc)
-        await db.flush()
-        await db.commit()
+    async with unit_of_work() as db:
+        analysis = await job_analysis_repository.get_by_id(
+            db, analysis_id, user_id, include_deleted=True,
+        )
+        if analysis is None:
+            return False
+        await soft_delete(db, analysis)
     return True
 
 

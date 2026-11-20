@@ -313,6 +313,17 @@ async def dismiss_discovered(
     await db.flush()
 
 
+async def record_score(
+    db: AsyncSession, job: DiscoveredJob, *, score: int, score_reason: str,
+) -> None:
+    """Write a scoring result onto a loaded discovered job, timestamped now."""
+    job.score = score
+    job.score_reason = score_reason
+    job.scored_at = datetime.now(timezone.utc)
+    db.add(job)
+    await db.flush()
+
+
 async def save_discovered(db: AsyncSession, job: DiscoveredJob) -> None:
     """Mark a loaded discovered job as saved (kept for later). Idempotent."""
     if job.dismissed_at is not None:

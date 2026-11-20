@@ -26,8 +26,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.db.session import unit_of_work
 from app.models.application.application import Application
 from app.repositories.application import application_repository
 from app.repositories.job_analysis import job_analysis_repository
@@ -41,7 +40,6 @@ from app.services.job_analysis._job_analysis_utils import (
 
 
 async def apply_to_application(
-    db: AsyncSession,
     user_id: uuid.UUID,
     analysis_id: uuid.UUID,
 ) -> Application | None:
@@ -49,8 +47,8 @@ async def apply_to_application(
 
     Looks up or creates the Company by name, creates the Application
     with the extracted role title + salary + location + remote_type fields, logs an initial
-    ``applied`` event, sets ``analysis.applied_application_id``, and
-    commits.
+    ``applied`` event and sets ``analysis.applied_application_id``, all in
+    one ``unit_of_work``.
 
     Returns ``None`` if the analysis doesn't exist or belongs to
     another user. Returns the created Application otherwise.
@@ -60,49 +58,48 @@ async def apply_to_application(
     Idempotency: if ``analysis.applied_application_id`` is already set,
     returns the existing application without creating a duplicate.
     """
-    analysis = await job_analysis_repository.get_by_id(
-        db, analysis_id, user_id, for_update=True,
-    )
-    if analysis is None:
-        return None
-
-    if analysis.applied_application_id is not None:
-        existing = await application_repository.get_by_id(
-            db, analysis.applied_application_id, user_id,
+    async with unit_of_work() as db:
+        analysis = await job_analysis_repository.get_by_id(
+            db, analysis_id, user_id, for_update=True,
         )
-        if existing is not None:
-            return existing
-        # The previous link points at a deleted/missing app — fall
-        # through and create a fresh one.
+        if analysis is None:
+            return None
 
-    extracted = analysis.extracted or {}
-    company_name = (extracted.get("company") or "Unknown company").strip() or "Unknown company"
-    role_title = (extracted.get("title") or "Untitled role").strip() or "Untitled role"
+        if analysis.applied_application_id is not None:
+            existing = await application_repository.get_by_id(
+                db, analysis.applied_application_id, user_id,
+            )
+            if existing is not None:
+                return existing
+            # The previous link points at a deleted/missing app — fall
+            # through and create a fresh one.
 
-    company = await company_service.find_or_create_by_name(db, user_id, company_name)
+        extracted = analysis.extracted or {}
+        company_name = (extracted.get("company") or "Unknown company").strip() or "Unknown company"
+        role_title = (extracted.get("title") or "Untitled role").strip() or "Untitled role"
 
-    application = Application(
-        user_id=user_id,
-        company_id=company.id,
-        role_title=role_title[:200],
-        url=analysis.source_url,
-        jd_text=analysis.jd_text,
-        location=(extracted.get("location") or None),
-        remote_type=_safe_remote_type(extracted.get("remote_type")),
-        posted_salary_min=_safe_float(extracted.get("posted_salary_min")),
-        posted_salary_max=_safe_float(extracted.get("posted_salary_max")),
-        posted_salary_currency=(
-            (extracted.get("posted_salary_currency") or "USD")[:3].upper()
-        ),
-        posted_salary_period=_map_salary_period(extracted.get("posted_salary_period")),
-        notes=(analysis.verdict_summary or None),
-    )
-    application = await create_applied_application(db, application, event_source="system")
+        company = await company_service.find_or_create_by_name(db, user_id, company_name)
 
-    await job_analysis_repository.update(
-        db, analysis, {"applied_application_id": application.id},
-    )
+        application = Application(
+            user_id=user_id,
+            company_id=company.id,
+            role_title=role_title[:200],
+            url=analysis.source_url,
+            jd_text=analysis.jd_text,
+            location=(extracted.get("location") or None),
+            remote_type=_safe_remote_type(extracted.get("remote_type")),
+            posted_salary_min=_safe_float(extracted.get("posted_salary_min")),
+            posted_salary_max=_safe_float(extracted.get("posted_salary_max")),
+            posted_salary_currency=(
+                (extracted.get("posted_salary_currency") or "USD")[:3].upper()
+            ),
+            posted_salary_period=_map_salary_period(extracted.get("posted_salary_period")),
+            notes=(analysis.verdict_summary or None),
+        )
+        application = await create_applied_application(db, application, event_source="system")
 
-    await db.commit()
+        await job_analysis_repository.update(
+            db, analysis, {"applied_application_id": application.id},
+        )
     return application
 

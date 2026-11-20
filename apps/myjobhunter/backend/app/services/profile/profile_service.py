@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.screening_questions import ALLOWED_KEYS, is_eeoc as _is_eeoc
+from app.db.session import AsyncSessionLocal, unit_of_work
 from app.db.violated_constraint import violated_constraint_name
 from app.models.profile.education import Education
 from app.models.profile.profile import Profile
@@ -83,8 +84,8 @@ async def refresh_profile_embedding_best_effort(
     so the caller's commit still succeeds.
 
     Call it AFTER committing the profile change. Used by the profile
-    routes and by the resume parser worker once a parse has merged rows
-    into the profile.
+    writes below and by the resume parser worker once a parse has merged
+    rows into the profile.
 
     This is the ONE place where embedding failures are caught — and
     only because the alternative (failing the user-facing profile save
@@ -104,6 +105,15 @@ async def refresh_profile_embedding_best_effort(
             "committed but embedding is stale",
             user_id,
         )
+
+
+async def _refresh_profile_embedding_after_commit(user_id: uuid.UUID) -> None:
+    """Refresh the embedding from the committed profile, in a session of its own.
+
+    The embedding repository commits its own write.
+    """
+    async with AsyncSessionLocal() as db:
+        await refresh_profile_embedding_best_effort(db, user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -149,33 +159,37 @@ async def get_profile(db: AsyncSession, user_id: uuid.UUID) -> Profile | None:
     return await profile_repository.get_by_user_id(db, user_id)
 
 
-async def get_or_create_profile(db: AsyncSession, user_id: uuid.UUID) -> Profile:
-    """Return the user's Profile, creating it lazily on first access."""
+async def _get_or_create_profile_in(db: AsyncSession, user_id: uuid.UUID) -> Profile:
+    """The user's Profile within ``db``'s transaction, created (flushed) if missing."""
     profile = await profile_repository.get_by_user_id(db, user_id)
     if profile is None:
-        profile = Profile(user_id=user_id)
-        profile = await profile_repository.create(db, profile)
-        await db.commit()
+        profile = await profile_repository.create(db, Profile(user_id=user_id))
     return profile
 
 
+async def get_or_create_profile(user_id: uuid.UUID) -> Profile:
+    """Return the user's Profile, creating (and committing) it lazily on first access."""
+    async with unit_of_work() as db:
+        return await _get_or_create_profile_in(db, user_id)
+
+
 async def update_profile(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: ProfileUpdateRequest,
 ) -> Profile:
     """Apply a partial update to the user's profile.
 
-    Lazily creates the profile row if it doesn't exist yet.
-    Commits at the end so the write survives the request lifecycle.
+    Lazily creates the profile row if it doesn't exist yet (its own commit),
+    then commits the update in a second ``unit_of_work``.
     """
-    profile = await get_or_create_profile(db, user_id)
+    profile = await get_or_create_profile(user_id)
     updates = request.to_update_dict()
     if updates:
-        profile = await profile_repository.update(db, profile, updates)
-        await db.commit()
+        async with unit_of_work() as db:
+            profile = await _get_or_create_profile_in(db, user_id)
+            profile = await profile_repository.update(db, profile, updates)
         if _profile_update_affects_embedding(updates):
-            await refresh_profile_embedding_best_effort(db, user_id)
+            await _refresh_profile_embedding_after_commit(user_id)
     return profile
 
 
@@ -195,11 +209,10 @@ async def get_work_history(
 
 
 async def create_work_history(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: WorkHistoryCreateRequest,
 ) -> WorkHistory:
-    profile = await get_or_create_profile(db, user_id)
+    profile = await get_or_create_profile(user_id)
     entry = WorkHistory(
         user_id=user_id,
         profile_id=profile.id,
@@ -210,23 +223,24 @@ async def create_work_history(
         is_current=request.is_current,
         bullets=request.bullets,
     )
-    entry = await work_history_repository.create(db, entry)
-    await db.commit()
-    await refresh_profile_embedding_best_effort(db, user_id)
+    async with unit_of_work() as db:
+        entry = await work_history_repository.create(db, entry)
+    await _refresh_profile_embedding_after_commit(user_id)
     return entry
 
 
 async def update_work_history(
-    db: AsyncSession,
     user_id: uuid.UUID,
     work_history_id: uuid.UUID,
     request: WorkHistoryUpdateRequest,
 ) -> WorkHistory | None:
-    entry = await work_history_repository.get_by_id(db, work_history_id, user_id)
-    if entry is None:
-        return None
     updates = request.to_update_dict()
-    if updates:
+    async with unit_of_work() as db:
+        entry = await work_history_repository.get_by_id(db, work_history_id, user_id)
+        if entry is None:
+            return None
+        if not updates:
+            return entry
         # Partial update — validate the MERGED row, not just the patch:
         # a patch that flips is_current on while the row still has an end
         # date (or vice versa) must be rejected before it hits the DB
@@ -239,22 +253,20 @@ async def update_work_history(
                 "or unset is_current in the same request."
             )
         entry = await work_history_repository.update(db, entry, updates)
-        await db.commit()
-        await refresh_profile_embedding_best_effort(db, user_id)
+    await _refresh_profile_embedding_after_commit(user_id)
     return entry
 
 
 async def delete_work_history(
-    db: AsyncSession,
     user_id: uuid.UUID,
     work_history_id: uuid.UUID,
 ) -> bool:
-    entry = await work_history_repository.get_by_id(db, work_history_id, user_id)
-    if entry is None:
-        return False
-    await work_history_repository.delete(db, entry)
-    await db.commit()
-    await refresh_profile_embedding_best_effort(db, user_id)
+    async with unit_of_work() as db:
+        entry = await work_history_repository.get_by_id(db, work_history_id, user_id)
+        if entry is None:
+            return False
+        await work_history_repository.delete(db, entry)
+    await _refresh_profile_embedding_after_commit(user_id)
     return True
 
 
@@ -274,11 +286,10 @@ async def get_education(
 
 
 async def create_education(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: EducationCreateRequest,
 ) -> Education:
-    profile = await get_or_create_profile(db, user_id)
+    profile = await get_or_create_profile(user_id)
     entry = Education(
         user_id=user_id,
         profile_id=profile.id,
@@ -289,37 +300,32 @@ async def create_education(
         end_year=request.end_year,
         gpa=request.gpa,
     )
-    entry = await education_repository.create(db, entry)
-    await db.commit()
-    return entry
+    async with unit_of_work() as db:
+        return await education_repository.create(db, entry)
 
 
 async def update_education(
-    db: AsyncSession,
     user_id: uuid.UUID,
     education_id: uuid.UUID,
     request: EducationUpdateRequest,
 ) -> Education | None:
-    entry = await education_repository.get_by_id(db, education_id, user_id)
-    if entry is None:
-        return None
     updates = request.to_update_dict()
-    if updates:
-        entry = await education_repository.update(db, entry, updates)
-        await db.commit()
-    return entry
+    async with unit_of_work() as db:
+        entry = await education_repository.get_by_id(db, education_id, user_id)
+        if entry is None or not updates:
+            return entry
+        return await education_repository.update(db, entry, updates)
 
 
 async def delete_education(
-    db: AsyncSession,
     user_id: uuid.UUID,
     education_id: uuid.UUID,
 ) -> bool:
-    entry = await education_repository.get_by_id(db, education_id, user_id)
-    if entry is None:
-        return False
-    await education_repository.delete(db, entry)
-    await db.commit()
+    async with unit_of_work() as db:
+        entry = await education_repository.get_by_id(db, education_id, user_id)
+        if entry is None:
+            return False
+        await education_repository.delete(db, entry)
     return True
 
 
@@ -333,11 +339,10 @@ async def list_skills(db: AsyncSession, user_id: uuid.UUID) -> list[Skill]:
 
 
 async def create_skill(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: SkillCreateRequest,
 ) -> Skill:
-    profile = await get_or_create_profile(db, user_id)
+    profile = await get_or_create_profile(user_id)
     skill = Skill(
         user_id=user_id,
         profile_id=profile.id,
@@ -346,30 +351,28 @@ async def create_skill(
         category=request.category,
     )
     try:
-        skill = await skill_repository.create(db, skill)
-        await db.commit()
+        async with unit_of_work() as db:
+            skill = await skill_repository.create(db, skill)
     except IntegrityError as exc:
-        await db.rollback()
         if violated_constraint_name(exc) != SKILL_NAME_UNIQUE_NAME:
             raise
         raise DuplicateSkillError(
             f"A skill named {request.name!r} already exists (case-insensitive).",
         ) from exc
-    await refresh_profile_embedding_best_effort(db, user_id)
+    await _refresh_profile_embedding_after_commit(user_id)
     return skill
 
 
 async def delete_skill(
-    db: AsyncSession,
     user_id: uuid.UUID,
     skill_id: uuid.UUID,
 ) -> bool:
-    skill = await skill_repository.get_by_id(db, skill_id, user_id)
-    if skill is None:
-        return False
-    await skill_repository.delete(db, skill)
-    await db.commit()
-    await refresh_profile_embedding_best_effort(db, user_id)
+    async with unit_of_work() as db:
+        skill = await skill_repository.get_by_id(db, skill_id, user_id)
+        if skill is None:
+            return False
+        await skill_repository.delete(db, skill)
+    await _refresh_profile_embedding_after_commit(user_id)
     return True
 
 
@@ -391,7 +394,6 @@ async def get_screening_answer(
 
 
 async def create_screening_answer(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: ScreeningAnswerCreateRequest,
 ) -> ScreeningAnswer:
@@ -400,7 +402,7 @@ async def create_screening_answer(
             f"question_key {request.question_key!r} is not allowed. "
             f"Must be one of the keys defined in screening_questions.ALLOWED_KEYS.",
         )
-    profile = await get_or_create_profile(db, user_id)
+    profile = await get_or_create_profile(user_id)
     # Derive is_eeoc from question_key — callers cannot override this.
     answer = ScreeningAnswer(
         user_id=user_id,
@@ -410,10 +412,9 @@ async def create_screening_answer(
         is_eeoc=_is_eeoc(request.question_key),
     )
     try:
-        answer = await screening_answer_repository.create(db, answer)
-        await db.commit()
+        async with unit_of_work() as db:
+            answer = await screening_answer_repository.create(db, answer)
     except IntegrityError as exc:
-        await db.rollback()
         if violated_constraint_name(exc) != SCREENING_ANSWER_UNIQUE_NAME:
             raise
         raise DuplicateScreeningAnswerError(
@@ -424,29 +425,25 @@ async def create_screening_answer(
 
 
 async def update_screening_answer(
-    db: AsyncSession,
     user_id: uuid.UUID,
     answer_id: uuid.UUID,
     request: ScreeningAnswerUpdateRequest,
 ) -> ScreeningAnswer | None:
-    answer = await screening_answer_repository.get_by_id(db, answer_id, user_id)
-    if answer is None:
-        return None
     updates = request.to_update_dict()
-    if updates:
-        answer = await screening_answer_repository.update(db, answer, updates)
-        await db.commit()
-    return answer
+    async with unit_of_work() as db:
+        answer = await screening_answer_repository.get_by_id(db, answer_id, user_id)
+        if answer is None or not updates:
+            return answer
+        return await screening_answer_repository.update(db, answer, updates)
 
 
 async def delete_screening_answer(
-    db: AsyncSession,
     user_id: uuid.UUID,
     answer_id: uuid.UUID,
 ) -> bool:
-    answer = await screening_answer_repository.get_by_id(db, answer_id, user_id)
-    if answer is None:
-        return False
-    await screening_answer_repository.delete(db, answer)
-    await db.commit()
+    async with unit_of_work() as db:
+        answer = await screening_answer_repository.get_by_id(db, answer_id, user_id)
+        if answer is None:
+            return False
+        await screening_answer_repository.delete(db, answer)
     return True

@@ -20,7 +20,8 @@ from pathlib import Path
 # SelectorEventLoop by default — this is a Windows-only adjustment.
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
@@ -157,6 +158,55 @@ def _disable_discovery_scoring_background(monkeypatch: pytest.MonkeyPatch) -> No
         return None
 
     monkeypatch.setattr(discovery_score_service, "score_user_inbox", _noop_score)
+
+
+# ---------------------------------------------------------------------------
+# Service transactions see the test session's setup rows.
+#
+# Write services open their own ``unit_of_work``. Tests build fixtures through
+# the ``db`` session and often only flush them, so a fresh session would not
+# see those rows. When a test uses ``db``, each service ``unit_of_work`` first
+# commits what ``db`` holds, then runs as a real, separate transaction (its own
+# session, commit on exit, rollback on error), so returned rows are detached
+# exactly as in production.
+# ---------------------------------------------------------------------------
+
+
+UNIT_OF_WORK_SERVICE_MODULES: tuple[str, ...] = (
+    "app.services.application.application_service",
+    "app.services.application.application_transition_service",
+    "app.services.company.company_service",
+    "app.services.discovery.discovery_fetch_reaper",
+    "app.services.discovery.discovery_fetch_service",
+    "app.services.discovery.discovery_inbox_service",
+    "app.services.discovery.discovery_promote_service",
+    "app.services.discovery.discovery_score_service",
+    "app.services.discovery.discovery_source_service",
+    "app.services.documents.document_service",
+    "app.services.job_analysis.job_analysis_promote_service",
+    "app.services.job_analysis.job_analysis_service",
+    "app.services.profile.profile_service",
+)
+
+
+@pytest.fixture(autouse=True)
+def _service_unit_of_work_sees_test_rows(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if "db" not in request.fixturenames:
+        return
+    test_db: AsyncSession = request.getfixturevalue("db")
+    from app.db.session import unit_of_work as real_unit_of_work
+
+    @asynccontextmanager
+    async def _unit_of_work() -> AsyncIterator[AsyncSession]:
+        if test_db.in_transaction():
+            await test_db.commit()
+        async with real_unit_of_work() as session:
+            yield session
+
+    for module in UNIT_OF_WORK_SERVICE_MODULES:
+        monkeypatch.setattr(f"{module}.unit_of_work", _unit_of_work)
 
 
 # ---------------------------------------------------------------------------

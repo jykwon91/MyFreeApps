@@ -45,7 +45,6 @@ _NOT_FOUND_DETAIL = "Document not found"
 @router.post("", response_model=DocumentResponse, status_code=201)
 async def create_document(
     payload: DocumentTextCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DocumentResponse:
     """Create a text-body document (e.g. a cover-letter draft).
@@ -54,7 +53,7 @@ async def create_document(
     Returns 422 if ``application_id`` does not belong to the caller.
     """
     try:
-        return await document_service.create_text_document(db, user.id, payload)
+        return await document_service.create_text_document(user.id, payload)
     except ApplicationNotOwnedError as exc:
         raise HTTPException(
             status_code=422,
@@ -73,7 +72,6 @@ async def upload_document(
     kind: DocumentKindLiteral = Form(...),
     application_id: uuid.UUID | None = Form(default=None),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DocumentResponse:
     """Upload a file-backed document (PDF, DOCX, or plain text).
@@ -94,7 +92,6 @@ async def upload_document(
 
     try:
         return await document_service.create_file_document(
-            db,
             user.id,
             title=title,
             kind=kind,
@@ -181,7 +178,6 @@ async def get_document(
 async def update_document(
     document_id: uuid.UUID,
     payload: DocumentUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DocumentResponse:
     """Partially update a document (title, body, kind, application_id).
@@ -191,7 +187,7 @@ async def update_document(
     does not belong to the caller.
     """
     try:
-        doc = await document_service.update_document(db, user.id, document_id, payload)
+        doc = await document_service.update_document(user.id, document_id, payload)
     except ApplicationNotOwnedError as exc:
         raise HTTPException(
             status_code=422,
@@ -210,11 +206,10 @@ async def update_document(
 @router.delete("/{document_id}", status_code=204)
 async def delete_document(
     document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
     """Soft-delete a document. Idempotent. Returns 404 if not found."""
-    deleted = await document_service.soft_delete_document(db, user.id, document_id)
+    deleted = await document_service.soft_delete_document(user.id, document_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return Response(status_code=204)

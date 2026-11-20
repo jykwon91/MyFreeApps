@@ -54,7 +54,7 @@ async def upload_resume(
     """
     check_user_rate_limit(user.id, _UPLOAD_LIMITER)
     content = await file.read()
-    profile = await get_or_create_profile(db, user.id)
+    profile = await get_or_create_profile(user.id)
 
     try:
         job = await create_upload(

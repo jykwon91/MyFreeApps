@@ -25,8 +25,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.db.session import unit_of_work
 from app.repositories.discovery import discovery_repository
 
 logger = logging.getLogger(__name__)
@@ -34,12 +33,11 @@ logger = logging.getLogger(__name__)
 REAP_AFTER_MINUTES = 30
 
 
-async def reap_stale_running_fetches(db: AsyncSession) -> int:
+async def reap_stale_running_fetches() -> int:
     """Update discovery_fetches stuck in ``'running'`` for >30 min to ``'error'``.
 
     Returns the number of rows reaped so the caller can log it.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=REAP_AFTER_MINUTES)
-    count = await discovery_repository.reap_stale_fetches(db, cutoff=cutoff)
-    await db.commit()
-    return count
+    async with unit_of_work() as db:
+        return await discovery_repository.reap_stale_fetches(db, cutoff=cutoff)

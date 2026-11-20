@@ -245,7 +245,7 @@ async def test_analyze_text_path_persists_row(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await analyze(
-            db, user_id, url=None, jd_text="Senior Backend Engineer at Acme.",
+            user_id, url=None, jd_text="Senior Backend Engineer at Acme.",
         )
 
     assert isinstance(result, JobAnalysis)
@@ -266,9 +266,9 @@ async def test_analyze_rejects_both_or_neither(db: AsyncSession, user_factory) -
     user_id = uuid.UUID(user["id"])
 
     with pytest.raises(JobAnalysisError):
-        await analyze(db, user_id, url=None, jd_text=None)
+        await analyze(user_id, url=None, jd_text=None)
     with pytest.raises(JobAnalysisError):
-        await analyze(db, user_id, url="https://x.com/a", jd_text="some text")
+        await analyze(user_id, url="https://x.com/a", jd_text="some text")
 
 
 @pytest.mark.asyncio
@@ -282,7 +282,7 @@ async def test_analyze_propagates_malformed_claude_response(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta(bad_envelope)):
         with pytest.raises(JobAnalysisError):
-            await analyze(db, user_id, url=None, jd_text="Some JD text.")
+            await analyze(user_id, url=None, jd_text="Some JD text.")
 
 
 @pytest.mark.asyncio
@@ -299,7 +299,7 @@ async def test_analyze_url_auth_walled_translates_to_specific_error(
     ):
         with pytest.raises(JobAnalysisFetchAuthRequiredError):
             await analyze(
-                db, user_id, url="https://linkedin.com/jobs/123", jd_text=None,
+                user_id, url="https://linkedin.com/jobs/123", jd_text=None,
             )
 
 
@@ -317,10 +317,10 @@ async def test_apply_creates_application_with_initial_event(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         analysis = await analyze(
-            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+            user_id, url=None, jd_text="Senior Backend at Acme.",
         )
 
-    application = await apply_to_application(db, user_id, analysis.id)
+    application = await apply_to_application(user_id, analysis.id)
     assert application is not None
     assert application.role_title == "Senior Backend Engineer"
     assert application.user_id == user_id
@@ -340,11 +340,11 @@ async def test_apply_is_idempotent(db: AsyncSession, user_factory) -> None:
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         analysis = await analyze(
-            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+            user_id, url=None, jd_text="Senior Backend at Acme.",
         )
 
-    a1 = await apply_to_application(db, user_id, analysis.id)
-    a2 = await apply_to_application(db, user_id, analysis.id)
+    a1 = await apply_to_application(user_id, analysis.id)
+    a2 = await apply_to_application(user_id, analysis.id)
     assert a1 is not None
     assert a2 is not None
     assert a1.id == a2.id
@@ -365,13 +365,13 @@ async def test_apply_dates_application_now_not_analysis_created_at(
     user_id = uuid.UUID(user["id"])
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         analysis = await analyze(
-            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+            user_id, url=None, jd_text="Senior Backend at Acme.",
         )
     analysis.created_at = datetime.now(timezone.utc) - timedelta(days=5)
     await db.commit()
 
     before = datetime.now(timezone.utc)
-    application = await apply_to_application(db, user_id, analysis.id)
+    application = await apply_to_application(user_id, analysis.id)
     assert application is not None
     assert application.applied_at is not None
     assert application.applied_at >= before
@@ -397,7 +397,7 @@ async def test_apply_locks_the_analysis_row(db: AsyncSession, user_factory) -> N
     user_id = uuid.UUID(user["id"])
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         analysis = await analyze(
-            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+            user_id, url=None, jd_text="Senior Backend at Acme.",
         )
 
     with patch.object(
@@ -405,7 +405,7 @@ async def test_apply_locks_the_analysis_row(db: AsyncSession, user_factory) -> N
         "get_by_id",
         wraps=job_analysis_repository.get_by_id,
     ) as spy:
-        await apply_to_application(db, user_id, analysis.id)
+        await apply_to_application(user_id, analysis.id)
     assert spy.call_args.kwargs.get("for_update") is True
 
 
@@ -418,10 +418,10 @@ async def test_apply_returns_none_for_cross_tenant(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         analysis = await analyze(
-            db, uuid.UUID(user_a["id"]), url=None, jd_text="A JD.",
+            uuid.UUID(user_a["id"]), url=None, jd_text="A JD.",
         )
 
-    result = await apply_to_application(db, uuid.UUID(user_b["id"]), analysis.id)
+    result = await apply_to_application(uuid.UUID(user_b["id"]), analysis.id)
     assert result is None
 
 

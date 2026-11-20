@@ -9,6 +9,8 @@ read it (it times out instead of deciding on stale state).
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 import pytest
 from sqlalchemy import text
@@ -24,7 +26,7 @@ LOCK_NOT_AVAILABLE = "55P03"
 
 @pytest.mark.asyncio
 async def test_dismiss_waits_for_a_session_holding_the_posting(
-    db: AsyncSession, db_engine: AsyncEngine, user_factory,
+    db: AsyncSession, db_engine: AsyncEngine, user_factory, monkeypatch: pytest.MonkeyPatch,
 ):
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
@@ -40,16 +42,22 @@ async def test_dismiss_waits_for_a_session_holding_the_posting(
     await db.commit()
 
     sessions = async_sessionmaker(db_engine, expire_on_commit=False)
-    async with sessions() as holder, sessions() as other:
+
+    @asynccontextmanager
+    async def _unit_of_work_with_lock_timeout() -> AsyncIterator[AsyncSession]:
+        async with sessions() as other, other.begin():
+            await other.execute(text("SET LOCAL lock_timeout = '100ms'"))
+            yield other
+
+    monkeypatch.setattr(discovery_inbox_service, "unit_of_work", _unit_of_work_with_lock_timeout)
+    async with sessions() as holder:
         assert await discovery_repository.get_discovered(
             holder, job.id, user_id, for_update=True,
         ) is not None
-        await other.execute(text("SET LOCAL lock_timeout = '100ms'"))
 
         with pytest.raises(DBAPIError) as raised:
-            await discovery_inbox_service.dismiss_discovered(other, job.id, user_id)
+            await discovery_inbox_service.dismiss_discovered(job.id, user_id)
 
-        await other.rollback()
         await holder.rollback()
 
     assert getattr(raised.value.orig, "sqlstate", None) == LOCK_NOT_AVAILABLE

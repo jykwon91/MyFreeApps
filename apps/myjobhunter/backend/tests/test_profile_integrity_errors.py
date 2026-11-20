@@ -28,7 +28,7 @@ async def test_skill_check_violation_propagates(
     request = SkillCreateRequest.model_construct(name="Python", years_experience=None, category="bogus")
 
     with pytest.raises(IntegrityError):
-        await profile_service.create_skill(db, uuid.UUID(user["id"]), request)
+        await profile_service.create_skill(uuid.UUID(user["id"]), request)
 
 
 @pytest.mark.asyncio
@@ -36,10 +36,10 @@ async def test_duplicate_skill_still_maps_to_duplicate_error(
     db: AsyncSession, user_factory: Callable[..., Any],
 ) -> None:
     user_id = uuid.UUID((await user_factory())["id"])
-    await profile_service.create_skill(db, user_id, SkillCreateRequest(name="Python"))
+    await profile_service.create_skill(user_id, SkillCreateRequest(name="Python"))
 
     with pytest.raises(profile_service.DuplicateSkillError):
-        await profile_service.create_skill(db, user_id, SkillCreateRequest(name="python"))
+        await profile_service.create_skill(user_id, SkillCreateRequest(name="python"))
 
 
 @pytest.mark.asyncio
@@ -49,10 +49,10 @@ async def test_duplicate_screening_answer_still_maps_to_duplicate_error(
     user_id = uuid.UUID((await user_factory())["id"])
     key = sorted(profile_service.ALLOWED_KEYS)[0]
     await profile_service.create_screening_answer(
-        db, user_id, ScreeningAnswerCreateRequest(question_key=key, answer="yes"),
+        user_id, ScreeningAnswerCreateRequest(question_key=key, answer="yes"),
     )
 
     with pytest.raises(profile_service.DuplicateScreeningAnswerError):
         await profile_service.create_screening_answer(
-            db, user_id, ScreeningAnswerCreateRequest(question_key=key, answer="no"),
+            user_id, ScreeningAnswerCreateRequest(question_key=key, answer="no"),
         )

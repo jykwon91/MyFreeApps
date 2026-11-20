@@ -28,6 +28,7 @@ from typing import Any, Awaitable, Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.session import unit_of_work
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository, discovery_source_repository
 from app.schemas.discovery.greenhouse_source_config import (
@@ -272,7 +273,6 @@ _GREENHOUSE_ADAPTER = _run_greenhouse
 
 
 async def fetch_source(
-    db: AsyncSession,
     user_id: uuid.UUID,
     source_id: uuid.UUID,
 ) -> dict:
@@ -296,6 +296,28 @@ async def fetch_source(
         DiscoverySourceInactiveError: source is deactivated.
         DiscoveryUnsupportedSourceError: no adapter for this source kind.
         DiscoveryFetchError: adapter raised an unexpected error.
+
+    The cycle runs in one ``unit_of_work``. When the adapter fails, the audit
+    row and the source's failure are committed first, then the adapter's
+    exception is raised.
+    """
+    async with unit_of_work() as db:
+        result, adapter_error = await _fetch_in_transaction(db, user_id, source_id)
+    if adapter_error is not None:
+        raise adapter_error
+    assert result is not None
+    return result
+
+
+async def _fetch_in_transaction(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    source_id: uuid.UUID,
+) -> tuple[dict | None, Exception | None]:
+    """One fetch cycle within ``db``'s transaction.
+
+    Returns ``(summary, None)`` on success, or ``(None, adapter_error)`` once
+    the failure has been recorded, so the caller raises it after the commit.
     """
     source = await discovery_source_repository.get_source(db, source_id, user_id)
     if source is None:
@@ -364,8 +386,7 @@ async def fetch_source(
         await discovery_source_repository.mark_source_fetched(
             db, source, success=False, error_message=str(exc),
         )
-        await db.commit()
-        raise
+        return None, exc
 
     fetched_count = len(postings)
 
@@ -426,17 +447,13 @@ async def fetch_source(
     # When the adapter resolved a company display name that differs from
     # whatever was previously cached (or it's the first fetch), write it
     # back into the source's config JSONB so the next fetch can skip the
-    # metadata round-trip.  We mutate the ORM instance directly — the
-    # same db.commit() below will persist the change.
+    # metadata round-trip.  It commits with the rest of this fetch.
     if is_greenhouse and greenhouse_resolved_name is not None:
         current_cached = (source.config or {}).get("resolved_company_name")
         if greenhouse_resolved_name != current_cached:
-            # SQLAlchemy won't detect in-place dict mutation on JSONB columns;
-            # replace the column reference entirely to trigger change detection.
-            updated_config = dict(source.config or {})
-            updated_config["resolved_company_name"] = greenhouse_resolved_name
-            source.config = updated_config
-            await db.flush()
+            await discovery_source_repository.cache_resolved_company_name(
+                db, source, greenhouse_resolved_name,
+            )
 
     # ---- Audit complete + source watermark ----
     await discovery_repository.complete_fetch(
@@ -453,8 +470,6 @@ async def fetch_source(
         success=True,
         seen_posted_at=max_posted_at,
     )
-    await db.commit()
-    await db.refresh(fetch)
 
     logger.info(
         "discovery fetch ok: source=%s fetch_id=%s fetched=%d new=%d updated=%d",
@@ -469,4 +484,4 @@ async def fetch_source(
         "updated_count": fetch.updated_count,
         "duration_ms": fetch.duration_ms,
         "error_message": fetch.error_message,
-    }
+    }, None

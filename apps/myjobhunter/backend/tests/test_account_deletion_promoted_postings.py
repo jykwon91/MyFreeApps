@@ -44,8 +44,9 @@ async def _promote_a_posting(db: AsyncSession, user_id: uuid.UUID) -> Discovered
         company_name="Acme",
     )
     db.add(job)
-    await db.flush()
-    await promote_discovered_job(db, user_id, job.id)
+    # Promote runs in its own transaction, so it only sees committed rows.
+    await db.commit()
+    await promote_discovered_job(user_id, job.id)
     return job
 
 

@@ -180,6 +180,9 @@ async def test_dismiss_moves_posting_to_dismissed_and_restore_moves_it_back(
 
     async with await as_user(user) as a:
         assert (await a.post(f"/discover/{job.id}/dismiss", json={"reason": "not_remote"})).status_code == 204
+        # The dismiss committed in its own unit_of_work; the list routes read through
+        # this test's ``db`` session, so drop its stale copy (a real request starts fresh).
+        db.expunge(job)
 
         dismissed = (await a.get("/discover", params={"state": "dismissed"})).json()
         assert dismissed["state"] == "dismissed"
@@ -192,6 +195,7 @@ async def test_dismiss_moves_posting_to_dismissed_and_restore_moves_it_back(
         assert (await a.get("/discover")).json()["total"] == 0
 
         assert (await a.post(f"/discover/{job.id}/undo-dismiss")).status_code == 204
+        db.expunge_all()
 
         assert (await a.get("/discover", params={"state": "dismissed"})).json()["total"] == 0
         inbox = (await a.get("/discover")).json()

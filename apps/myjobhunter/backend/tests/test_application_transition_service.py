@@ -18,7 +18,7 @@ import uuid
 
 import pytest
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import EventType
 from app.models.application.application_event import ApplicationEvent
@@ -180,14 +180,14 @@ class TestIdempotency:
 
     @pytest.mark.asyncio
     async def test_same_key_sent_twice_at_once_writes_one_event(
-        self, db: AsyncSession, db_engine: AsyncEngine, user_factory, as_user,
+        self, db: AsyncSession, user_factory, as_user,
     ) -> None:
         """A retry of a move whose answer was lost can arrive while the first is still running.
 
-        Each move runs in its own session and connection, as two real requests
-        do; the application's row lock makes the second wait for the first's
-        commit and then find its event. The sessions commit for real, and the
-        ``db`` fixture empties every table afterwards.
+        Each move runs in its own ``unit_of_work`` session and connection, as two
+        real requests do; the application's row lock makes the second wait for
+        the first's commit and then find its event. The sessions commit for
+        real, and the ``db`` fixture empties every table afterwards.
         """
         user = await user_factory()
         user_id = uuid.UUID(user["id"])
@@ -195,19 +195,16 @@ class TestIdempotency:
         async with await as_user(user) as authed:
             app_id = uuid.UUID(await _create_application(authed, company.id))
         key = uuid.uuid4().hex
-        sessions = async_sessionmaker(db_engine, expire_on_commit=False)
 
         async def move() -> uuid.UUID:
-            async with sessions() as session:
-                event = await transition_application(
-                    session,
-                    application_id=app_id,
-                    target_column="interviewing",
-                    user_id=user_id,
-                    idempotency_key=key,
-                )
-                assert event is not None
-                return event.id
+            event = await transition_application(
+                application_id=app_id,
+                target_column="interviewing",
+                user_id=user_id,
+                idempotency_key=key,
+            )
+            assert event is not None
+            return event.id
 
         first, second = await asyncio.gather(move(), move())
 

@@ -236,7 +236,6 @@ async def extract_from_url_endpoint(
 @router.post("/applications", response_model=ApplicationResponse, status_code=201)
 async def create_application(
     payload: ApplicationCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationResponse:
     """Create a new Application scoped to the caller.
@@ -246,7 +245,7 @@ async def create_application(
     nothing about which companies exist in another user's account.
     """
     try:
-        application = await application_service.create_application(db, user.id, payload)
+        application = await application_service.create_application(user.id, payload)
     except CompanyNotOwnedError as exc:
         raise HTTPException(
             status_code=422,
@@ -259,7 +258,6 @@ async def create_application(
 async def update_application(
     application_id: uuid.UUID,
     payload: ApplicationUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationResponse:
     """Apply a partial update to an Application.
@@ -280,7 +278,7 @@ async def update_application(
     )
     try:
         application = await application_service.update_application(
-            db, user.id, application_id, payload,
+            user.id, application_id, payload,
         )
     except CompanyNotOwnedError as exc:
         raise HTTPException(
@@ -300,7 +298,6 @@ async def update_application(
 async def create_application_transition(
     application_id: uuid.UUID,
     payload: ApplicationTransitionRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationEventResponse:
     """Persist a kanban-column drag as an event_log row.
@@ -326,7 +323,6 @@ async def create_application_transition(
 
     try:
         event = await transition_application(
-            db,
             application_id=application_id,
             target_column=payload.target_column,
             user_id=user.id,
@@ -343,7 +339,6 @@ async def create_application_transition(
 @router.delete("/applications/{application_id}", status_code=204)
 async def delete_application(
     application_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
     """Soft-delete an Application by setting ``deleted_at``.
@@ -352,7 +347,7 @@ async def delete_application(
     204 as long as the row exists under the caller's ``user_id``. Returns
     404 if the row does not exist or belongs to another user.
     """
-    deleted = await application_service.soft_delete_application(db, user.id, application_id)
+    deleted = await application_service.soft_delete_application(user.id, application_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return Response(status_code=204)
@@ -389,7 +384,6 @@ async def list_application_events(
 async def create_application_event(
     application_id: uuid.UUID,
     payload: ApplicationEventCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationEventResponse:
     """Log a new event against an application.
@@ -401,7 +395,7 @@ async def create_application_event(
     intentionally don't carry email_message_id and so always insert.
     """
     event = await application_service.log_application_event(
-        db, user.id, application_id, payload,
+        user.id, application_id, payload,
     )
     if event is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
@@ -416,7 +410,6 @@ async def update_application_event(
     application_id: uuid.UUID,
     event_id: uuid.UUID,
     payload: ApplicationEventUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationEventResponse:
     """Apply a partial update to an ApplicationEvent.
@@ -449,7 +442,7 @@ async def update_application_event(
     )
     try:
         event = await application_service.update_application_event(
-            db, user.id, application_id, event_id, payload,
+            user.id, application_id, event_id, payload,
         )
     except EventTypeNotEditableError as exc:
         raise HTTPException(
@@ -469,7 +462,6 @@ async def update_application_event(
 async def create_application_contact(
     application_id: uuid.UUID,
     payload: ApplicationContactCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationContactResponse:
     """Add a contact (recruiter, HM, interviewer, etc.) to an application.
@@ -479,7 +471,7 @@ async def create_application_contact(
     name nor email provided, extra fields).
     """
     contact = await application_service.create_application_contact(
-        db, user.id, application_id, payload,
+        user.id, application_id, payload,
     )
     if contact is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
@@ -490,7 +482,6 @@ async def create_application_contact(
 async def delete_application_contact(
     application_id: uuid.UUID,
     contact_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
     """Remove a contact from an application.
@@ -502,7 +493,7 @@ async def delete_application_contact(
     two cases.
     """
     deleted = await application_service.delete_application_contact(
-        db, user.id, application_id, contact_id,
+        user.id, application_id, contact_id,
     )
     if not deleted:
         raise HTTPException(status_code=404, detail=_CONTACT_NOT_FOUND_DETAIL)

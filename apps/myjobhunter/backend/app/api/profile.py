@@ -81,22 +81,20 @@ _NOT_FOUND_SCREENING_ANSWER = "Screening answer not found"
 
 @router.get("/profile", response_model=ProfileResponse)
 async def get_profile(
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ProfileResponse:
     """Return the user's profile, lazily creating it on first access."""
-    profile = await profile_service.get_or_create_profile(db, user.id)
+    profile = await profile_service.get_or_create_profile(user.id)
     return ProfileResponse.model_validate(profile)
 
 
 @router.patch("/profile", response_model=ProfileResponse)
 async def update_profile(
     payload: ProfileUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ProfileResponse:
     """Partially update the user's profile."""
-    profile = await profile_service.update_profile(db, user.id, payload)
+    profile = await profile_service.update_profile(user.id, payload)
     return ProfileResponse.model_validate(profile)
 
 
@@ -120,10 +118,9 @@ async def list_work_history(
 @router.post("/work-history", response_model=WorkHistoryResponse, status_code=201)
 async def create_work_history(
     payload: WorkHistoryCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> WorkHistoryResponse:
-    entry = await profile_service.create_work_history(db, user.id, payload)
+    entry = await profile_service.create_work_history(user.id, payload)
     return WorkHistoryResponse.model_validate(entry)
 
 
@@ -143,11 +140,10 @@ async def get_work_history(
 async def update_work_history(
     work_history_id: uuid.UUID,
     payload: WorkHistoryUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> WorkHistoryResponse:
     try:
-        entry = await profile_service.update_work_history(db, user.id, work_history_id, payload)
+        entry = await profile_service.update_work_history(user.id, work_history_id, payload)
     except CurrentRoleEndDateError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if entry is None:
@@ -158,10 +154,9 @@ async def update_work_history(
 @router.delete("/work-history/{work_history_id}", status_code=204)
 async def delete_work_history(
     work_history_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await profile_service.delete_work_history(db, user.id, work_history_id)
+    deleted = await profile_service.delete_work_history(user.id, work_history_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_WORK_HISTORY)
     return Response(status_code=204)
@@ -187,10 +182,9 @@ async def list_education(
 @router.post("/education", response_model=EducationResponse, status_code=201)
 async def create_education(
     payload: EducationCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> EducationResponse:
-    entry = await profile_service.create_education(db, user.id, payload)
+    entry = await profile_service.create_education(user.id, payload)
     return EducationResponse.model_validate(entry)
 
 
@@ -210,10 +204,9 @@ async def get_education(
 async def update_education(
     education_id: uuid.UUID,
     payload: EducationUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> EducationResponse:
-    entry = await profile_service.update_education(db, user.id, education_id, payload)
+    entry = await profile_service.update_education(user.id, education_id, payload)
     if entry is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_EDUCATION)
     return EducationResponse.model_validate(entry)
@@ -222,10 +215,9 @@ async def update_education(
 @router.delete("/education/{education_id}", status_code=204)
 async def delete_education(
     education_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await profile_service.delete_education(db, user.id, education_id)
+    deleted = await profile_service.delete_education(user.id, education_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_EDUCATION)
     return Response(status_code=204)
@@ -251,11 +243,10 @@ async def list_skills(
 @router.post("/skills", response_model=SkillResponse, status_code=201)
 async def create_skill(
     payload: SkillCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SkillResponse:
     try:
-        skill = await profile_service.create_skill(db, user.id, payload)
+        skill = await profile_service.create_skill(user.id, payload)
     except DuplicateSkillError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return SkillResponse.model_validate(skill)
@@ -264,10 +255,9 @@ async def create_skill(
 @router.delete("/skills/{skill_id}", status_code=204)
 async def delete_skill(
     skill_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await profile_service.delete_skill(db, user.id, skill_id)
+    deleted = await profile_service.delete_skill(user.id, skill_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_SKILL)
     return Response(status_code=204)
@@ -295,11 +285,10 @@ async def list_screening_answers(
 @router.post("/screening-answers", response_model=ScreeningAnswerResponse, status_code=201)
 async def create_screening_answer(
     payload: ScreeningAnswerCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ScreeningAnswerResponse:
     try:
-        answer = await profile_service.create_screening_answer(db, user.id, payload)
+        answer = await profile_service.create_screening_answer(user.id, payload)
     except InvalidScreeningKeyError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DuplicateScreeningAnswerError as exc:
@@ -323,10 +312,9 @@ async def get_screening_answer(
 async def update_screening_answer(
     answer_id: uuid.UUID,
     payload: ScreeningAnswerUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ScreeningAnswerResponse:
-    answer = await profile_service.update_screening_answer(db, user.id, answer_id, payload)
+    answer = await profile_service.update_screening_answer(user.id, answer_id, payload)
     if answer is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_SCREENING_ANSWER)
     return ScreeningAnswerResponse.model_validate(answer)
@@ -335,10 +323,9 @@ async def update_screening_answer(
 @router.delete("/screening-answers/{answer_id}", status_code=204)
 async def delete_screening_answer(
     answer_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await profile_service.delete_screening_answer(db, user.id, answer_id)
+    deleted = await profile_service.delete_screening_answer(user.id, answer_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_SCREENING_ANSWER)
     return Response(status_code=204)

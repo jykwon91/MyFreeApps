@@ -7,8 +7,8 @@ Services orchestrate (load → validate → persist), repositories own queries.
 Tenant isolation: every public function takes ``user_id`` and forwards it
 to the repo. The repo also filters by ``user_id`` — defense in depth.
 
-Audit: writes happen inside the request-scoped ``AsyncSession`` provided by
-the route via ``Depends(get_db)``. The shared SQLAlchemy session listener
+Audit: each write runs in its own ``unit_of_work`` (commit on clean exit,
+rollback on error). The shared SQLAlchemy session listener
 (registered in ``app.main`` lifespan via ``register_audit_listeners``) emits
 ``audit_logs`` rows automatically — no manual instrumentation needed.
 """
@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.services.stored_file_removal import remove_stored_files
 
 from app.core.storage import get_storage
+from app.db.session import unit_of_work
 from app.db.violated_constraint import violated_constraint_name
 from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
@@ -106,7 +107,6 @@ async def get_company(
 
 
 async def create_company(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: CompanyCreateRequest,
 ) -> Company:
@@ -117,7 +117,7 @@ async def create_company(
     to HTTP 409 so the UI can surface "company with that domain already
     exists" without round-tripping a list query first.
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
     # ``logo_url`` is typed as ``AnyHttpUrl`` on the Pydantic schema for
     # input validation. In Pydantic v2 that's a ``Url`` wrapper object,
@@ -138,10 +138,9 @@ async def create_company(
         crunchbase_id=request.crunchbase_id,
     )
     try:
-        company = await company_repository.create(db, company)
-        await db.commit()
+        async with unit_of_work() as db:
+            company = await company_repository.create(db, company)
     except IntegrityError as exc:
-        await db.rollback()
         if not _is_domain_unique_violation(exc):
             raise
         raise DuplicatePrimaryDomainError(
@@ -151,7 +150,6 @@ async def create_company(
 
 
 async def update_company(
-    db: AsyncSession,
     user_id: uuid.UUID,
     company_id: uuid.UUID,
     request: CompanyUpdateRequest,
@@ -165,21 +163,16 @@ async def update_company(
     Raises ``DuplicatePrimaryDomainError`` if the new ``primary_domain``
     collides with another company owned by the same user.
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    company = await company_repository.get_by_id(db, company_id, user_id)
-    if company is None:
-        return None
-
     updates = request.to_update_dict()
-    if not updates:
-        return company
-
     try:
-        company = await company_repository.update(db, company, updates)
-        await db.commit()
+        async with unit_of_work() as db:
+            company = await company_repository.get_by_id(db, company_id, user_id)
+            if company is None or not updates:
+                return company
+            company = await company_repository.update(db, company, updates)
     except IntegrityError as exc:
-        await db.rollback()
         if not _is_domain_unique_violation(exc):
             raise
         raise DuplicatePrimaryDomainError(
@@ -189,7 +182,6 @@ async def update_company(
 
 
 async def delete_company(
-    db: AsyncSession,
     user_id: uuid.UUID,
     company_id: uuid.UUID,
 ) -> Callable[[], None] | None:
@@ -208,26 +200,24 @@ async def delete_company(
     on the applications FK at delete time is mapped to the same error as a
     backstop.
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    company = await company_repository.get_by_id_for_update(db, company_id, user_id)
-    if company is None:
-        return None
-    live_count = await application_repository.count_live_for_company(db, company_id, user_id)
-    if live_count > 0:
-        await db.rollback()
-        raise CompanyHasApplicationsError(live_count)
     try:
-        storage_keys = await _purge_soft_deleted_applications(db, company_id, user_id)
-        await company_repository.delete(db, company)
-        await db.commit()
+        async with unit_of_work() as db:
+            company = await company_repository.get_by_id_for_update(db, company_id, user_id)
+            if company is None:
+                return None
+            live_count = await application_repository.count_live_for_company(db, company_id, user_id)
+            if live_count > 0:
+                raise CompanyHasApplicationsError(live_count)
+            storage_keys = await _purge_soft_deleted_applications(db, company_id, user_id)
+            await company_repository.delete(db, company)
     except IntegrityError as exc:
-        await db.rollback()
         if not _is_applications_fk_violation(exc):
             raise
-        raise CompanyHasApplicationsError(
-            await application_repository.count_live_for_company(db, company_id, user_id),
-        ) from exc
+        async with unit_of_work() as db:
+            live_count = await application_repository.count_live_for_company(db, company_id, user_id)
+        raise CompanyHasApplicationsError(live_count) from exc
     return partial(remove_stored_files, get_storage, storage_keys)
 
 

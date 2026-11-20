@@ -28,7 +28,6 @@ from app.core.rate_limit import (
     require_turnstile,
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from app.db.session import AsyncSessionLocal
 from app.services.discovery import discovery_embedding_service
 from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
@@ -52,12 +51,11 @@ async def _on_startup() -> None:
     """
     discovery_embedding_service.load_model_eager()
 
-    async with AsyncSessionLocal() as db:
-        reaped = await reap_stale_running_fetches(db)
-        if reaped > 0:
-            logger.info(
-                "discovery_fetch_reaper: reaped %d stale rows on startup", reaped
-            )
+    reaped = await reap_stale_running_fetches()
+    if reaped > 0:
+        logger.info(
+            "discovery_fetch_reaper: reaped %d stale rows on startup", reaped
+        )
 
 
 # Used by the deploy workflow's freshness tripwire and by /api/version +

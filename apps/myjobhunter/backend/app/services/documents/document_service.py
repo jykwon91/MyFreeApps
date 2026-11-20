@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
 from app.core.storage import StorageNotConfiguredError, get_storage
+from app.db.session import unit_of_work
 from app.models.application.document import Document
 from app.repositories.documents import document_repo
 from app.repositories.application import application_repository
@@ -74,9 +75,16 @@ async def _verify_application_ownership(
     db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> None:
-    """Raise ``ApplicationNotOwnedError`` if the application doesn't belong to the user."""
-    app = await application_repository.get_by_id(db, application_id, user_id)
+    """Raise ``ApplicationNotOwnedError`` if the application doesn't belong to the user.
+
+    ``for_update`` locks the application row until the transaction ends.
+    """
+    app = await application_repository.get_by_id(
+        db, application_id, user_id, for_update=for_update,
+    )
     if app is None:
         raise ApplicationNotOwnedError(
             f"Application {application_id} not found under user {user_id}",
@@ -84,7 +92,6 @@ async def _verify_application_ownership(
 
 
 async def create_text_document(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: DocumentTextCreateRequest,
 ) -> DocumentResponse:
@@ -92,23 +99,22 @@ async def create_text_document(
 
     Validates that ``application_id`` (if supplied) belongs to the caller.
     """
-    if request.application_id is not None:
-        await _verify_application_ownership(db, user_id, request.application_id)
+    async with unit_of_work() as db:
+        if request.application_id is not None:
+            await _verify_application_ownership(db, user_id, request.application_id)
 
-    doc = Document(
-        user_id=user_id,
-        application_id=request.application_id,
-        title=request.title,
-        kind=request.kind,
-        body=request.body,
-    )
-    doc = await document_repo.create(db, doc)
-    await db.commit()
+        doc = Document(
+            user_id=user_id,
+            application_id=request.application_id,
+            title=request.title,
+            kind=request.kind,
+            body=request.body,
+        )
+        doc = await document_repo.create(db, doc)
     return _to_response(doc)
 
 
 async def create_file_document(
-    db: AsyncSession,
     user_id: uuid.UUID,
     *,
     title: str,
@@ -126,7 +132,8 @@ async def create_file_document(
         StorageNotConfiguredError: if MinIO env vars are missing in production.
     """
     if application_id is not None:
-        await _verify_application_ownership(db, user_id, application_id)
+        async with unit_of_work() as db:
+            await _verify_application_ownership(db, user_id, application_id)
 
     sniffed_type = validate_resume(
         file_bytes, declared_content_type, max_bytes=_MAX_UPLOAD_BYTES,
@@ -147,8 +154,15 @@ async def create_file_document(
             content_type=sniffed_type,
             size_bytes=len(file_bytes),
         )
-        doc = await document_repo.create(db, doc)
-        await db.commit()
+        async with unit_of_work() as db:
+            # Check again: the application may have been deleted during the
+            # upload, which ran outside any transaction. The lock holds it until
+            # the document row commits.
+            if application_id is not None:
+                await _verify_application_ownership(
+                    db, user_id, application_id, for_update=True,
+                )
+            doc = await document_repo.create(db, doc)
     except Exception:
         # Best-effort cleanup: delete the uploaded object to avoid orphans.
         try:
@@ -221,7 +235,6 @@ async def list_by_application(
 
 
 async def update_document(
-    db: AsyncSession,
     user_id: uuid.UUID,
     document_id: uuid.UUID,
     request: DocumentUpdateRequest,
@@ -232,23 +245,21 @@ async def update_document(
     Raises ``ApplicationNotOwnedError`` if the new ``application_id`` is set but
     not owned by the caller.
     """
-    doc = await document_repo.get_by_id_for_user(db, document_id, user_id)
-    if doc is None:
-        return None
-
     updates = request.to_update_dict()
+    async with unit_of_work() as db:
+        doc = await document_repo.get_by_id_for_user(db, document_id, user_id)
+        if doc is None:
+            return None
 
-    # Verify the new application_id if it's being changed.
-    if "application_id" in updates and updates["application_id"] is not None:
-        await _verify_application_ownership(db, user_id, updates["application_id"])
+        # Verify the new application_id if it's being changed.
+        if "application_id" in updates and updates["application_id"] is not None:
+            await _verify_application_ownership(db, user_id, updates["application_id"])
 
-    doc = await document_repo.update(db, doc, updates)
-    await db.commit()
+        doc = await document_repo.update(db, doc, updates)
     return _to_response(doc)
 
 
 async def soft_delete_document(
-    db: AsyncSession,
     user_id: uuid.UUID,
     document_id: uuid.UUID,
 ) -> bool:
@@ -256,14 +267,13 @@ async def soft_delete_document(
 
     Idempotent — a second soft-delete on the same document returns True.
     """
-    doc = await document_repo.get_by_id_for_user(
-        db, document_id, user_id, include_deleted=True,
-    )
-    if doc is None:
-        return False
-
-    await document_repo.soft_delete(db, doc)
-    await db.commit()
+    async with unit_of_work() as db:
+        doc = await document_repo.get_by_id_for_user(
+            db, document_id, user_id, include_deleted=True,
+        )
+        if doc is None:
+            return False
+        await document_repo.soft_delete(db, doc)
     return True
 
 

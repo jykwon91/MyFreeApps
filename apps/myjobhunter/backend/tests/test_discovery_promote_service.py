@@ -62,7 +62,7 @@ class TestPromoteHappyPath:
         db.add(job)
         await db.flush()
 
-        application = await promote_discovered_job(db, user_id, job.id)
+        application = await promote_discovered_job(user_id, job.id)
 
         assert application.user_id == user_id
         assert application.role_title == "Senior Backend Engineer"
@@ -95,7 +95,7 @@ class TestPromoteHappyPath:
         db.add(job)
         await db.flush()
 
-        application = await promote_discovered_job(db, user_id, job.id)
+        application = await promote_discovered_job(user_id, job.id)
 
         assert application.posted_salary_currency == expected
         assert float(application.posted_salary_min) == 17.5
@@ -113,7 +113,7 @@ class TestPromoteHappyPath:
         db.add(job)
         await db.flush()
 
-        application = await promote_discovered_job(db, user_id, job.id)
+        application = await promote_discovered_job(user_id, job.id)
 
         from sqlalchemy import select
         from app.models.company.company import Company as CompanyModel
@@ -142,7 +142,7 @@ class TestPromoteHappyPath:
         db.add(job)
         await db.flush()
 
-        application = await promote_discovered_job(db, user_id, job.id)
+        application = await promote_discovered_job(user_id, job.id)
 
         assert application.company_id == existing_company.id
 
@@ -164,8 +164,8 @@ class TestPromoteIdempotency:
         db.add(job)
         await db.flush()
 
-        first = await promote_discovered_job(db, user_id, job.id)
-        second = await promote_discovered_job(db, user_id, job.id)
+        first = await promote_discovered_job(user_id, job.id)
+        second = await promote_discovered_job(user_id, job.id)
 
         assert first.id == second.id
 
@@ -205,7 +205,7 @@ class TestSourceMapping:
             db.add(job)
             await db.flush()
 
-            application = await promote_discovered_job(db, user_id, job.id)
+            application = await promote_discovered_job(user_id, job.id)
             assert application.source == expected_source, (
                 f"publisher={publisher_lower!r} expected source={expected_source!r}, "
                 f"got {application.source!r}"
@@ -223,7 +223,7 @@ class TestSourceMapping:
         db.add(job)
         await db.flush()
 
-        application = await promote_discovered_job(db, user_id, job.id)
+        application = await promote_discovered_job(user_id, job.id)
         assert application.source == "direct"
 
 
@@ -247,11 +247,11 @@ class TestPromoteTenantIsolation:
         await db.flush()
 
         with pytest.raises(DiscoveryPromoteError):
-            await promote_discovered_job(db, attacker_id, job.id)
+            await promote_discovered_job(attacker_id, job.id)
 
     @pytest.mark.asyncio
     async def test_nonexistent_job_raises_promote_error(
         self, db: AsyncSession,
     ) -> None:
         with pytest.raises(DiscoveryPromoteError):
-            await promote_discovered_job(db, uuid.uuid4(), uuid.uuid4())
+            await promote_discovered_job(uuid.uuid4(), uuid.uuid4())

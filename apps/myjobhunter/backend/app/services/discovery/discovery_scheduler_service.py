@@ -322,24 +322,24 @@ async def _run_scheduled_fetch(source_id: uuid.UUID, user_id: uuid.UUID) -> None
                 pass
             return
 
-        logger.info(
-            "discovery_scheduler_service: running scheduled fetch source=%s user=%s",
-            source_id, user_id,
-        )
-        try:
-            result = await discovery_fetch_service.fetch_source(
-                db, user_id, source_id,
-            )
-        except (
-            DiscoverySourceNotFoundError,
-            DiscoverySourceInactiveError,
-            DiscoveryUnsupportedSourceError,
-            DiscoveryFetchError,
-        ):
-            # These are surfaced + structured-logged by fetch_source;
-            # re-raise so APScheduler counts the job as failed and
-            # Sentry captures the traceback.
-            raise
+    # The fetch runs in its own unit_of_work; this read session is closed
+    # first so it doesn't sit idle in a transaction while the adapter calls out.
+    logger.info(
+        "discovery_scheduler_service: running scheduled fetch source=%s user=%s",
+        source_id, user_id,
+    )
+    try:
+        result = await discovery_fetch_service.fetch_source(user_id, source_id)
+    except (
+        DiscoverySourceNotFoundError,
+        DiscoverySourceInactiveError,
+        DiscoveryUnsupportedSourceError,
+        DiscoveryFetchError,
+    ):
+        # These are surfaced + structured-logged by fetch_source;
+        # re-raise so APScheduler counts the job as failed and
+        # Sentry captures the traceback.
+        raise
 
     # Embedding + scoring run in their own sessions (each opens its own
     # AsyncSessionLocal context). Mirror the route layer's chain.

@@ -21,6 +21,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.application.application import Application
 from app.models.application.application_contact import ApplicationContact
 from app.models.application.application_event import ApplicationEvent
@@ -118,7 +119,6 @@ async def get_application(
 
 
 async def create_application(
-    db: AsyncSession,
     user_id: uuid.UUID,
     request: ApplicationCreateRequest,
 ) -> Application:
@@ -134,62 +134,59 @@ async def create_application(
     new application has a baseline status in the event log (``latest_status``
     is never ``None``) and a stage change dated after the day applied wins.
 
-    Commits at the end so the write survives the request lifecycle —
-    ``get_db`` does NOT auto-commit (see ``platform_shared.db.session``),
-    matching the explicit-commit pattern used by ``app.api.totp``.
+    Commits in its own ``unit_of_work``.
     """
-    company = await company_repository.get_by_id(db, request.company_id, user_id)
-    if company is None:
-        raise CompanyNotOwnedError(
-            f"Company {request.company_id} not found under user {user_id}",
+    async with unit_of_work() as db:
+        company = await company_repository.get_by_id(db, request.company_id, user_id)
+        if company is None:
+            raise CompanyNotOwnedError(
+                f"Company {request.company_id} not found under user {user_id}",
+            )
+
+        applied_at = request.applied_at or _dt.datetime.now(_dt.timezone.utc)
+
+        # ``url`` is typed as Pydantic ``AnyHttpUrl`` for input validation.
+        # In Pydantic v2 that's a ``Url`` wrapper object — NOT a str
+        # subclass — so passing it directly to SQLAlchemy / asyncpg raises
+        # at parameter-bind time (HTTP 500). Coerce to plain str before
+        # persistence. Same pattern as company_service.create_company's
+        # logo_url fix from PR #363.
+        application = Application(
+            user_id=user_id,
+            company_id=request.company_id,
+            role_title=request.role_title,
+            url=str(request.url) if request.url is not None else None,
+            jd_text=request.jd_text,
+            jd_parsed=request.jd_parsed,
+            source=request.source,
+            applied_at=applied_at,
+            posted_salary_min=request.posted_salary_min,
+            posted_salary_max=request.posted_salary_max,
+            posted_salary_currency=request.posted_salary_currency,
+            posted_salary_period=request.posted_salary_period,
+            location=request.location,
+            remote_type=request.remote_type,
+            fit_score=request.fit_score,
+            notes=request.notes,
+            archived=request.archived,
+            external_ref=request.external_ref,
+            external_source=request.external_source,
         )
+        application = await application_repository.create(db, application)
 
-    applied_at = request.applied_at or _dt.datetime.now(_dt.timezone.utc)
+        initial_event = ApplicationEvent(
+            user_id=user_id,
+            application_id=application.id,
+            event_type="applied",
+            occurred_at=applied_at,
+            source="system",
+        )
+        await application_event_repository.create(db, initial_event)
 
-    # ``url`` is typed as Pydantic ``AnyHttpUrl`` for input validation.
-    # In Pydantic v2 that's a ``Url`` wrapper object — NOT a str
-    # subclass — so passing it directly to SQLAlchemy / asyncpg raises
-    # at parameter-bind time (HTTP 500). Coerce to plain str before
-    # persistence. Same pattern as company_service.create_company's
-    # logo_url fix from PR #363.
-    application = Application(
-        user_id=user_id,
-        company_id=request.company_id,
-        role_title=request.role_title,
-        url=str(request.url) if request.url is not None else None,
-        jd_text=request.jd_text,
-        jd_parsed=request.jd_parsed,
-        source=request.source,
-        applied_at=applied_at,
-        posted_salary_min=request.posted_salary_min,
-        posted_salary_max=request.posted_salary_max,
-        posted_salary_currency=request.posted_salary_currency,
-        posted_salary_period=request.posted_salary_period,
-        location=request.location,
-        remote_type=request.remote_type,
-        fit_score=request.fit_score,
-        notes=request.notes,
-        archived=request.archived,
-        external_ref=request.external_ref,
-        external_source=request.external_source,
-    )
-    application = await application_repository.create(db, application)
-
-    initial_event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application.id,
-        event_type="applied",
-        occurred_at=applied_at,
-        source="system",
-    )
-    await application_event_repository.create(db, initial_event)
-
-    await db.commit()
     return application
 
 
 async def update_application(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
     request: ApplicationUpdateRequest,
@@ -203,28 +200,27 @@ async def update_application(
     If the PATCH body changes ``company_id``, the new company must also belong
     to ``user_id``; otherwise :class:`CompanyNotOwnedError` is raised.
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    application = await application_repository.get_by_id(db, application_id, user_id)
-    if application is None:
-        return None
+    async with unit_of_work() as db:
+        application = await application_repository.get_by_id(db, application_id, user_id)
+        if application is None:
+            return None
 
-    updates = request.to_update_dict()
+        updates = request.to_update_dict()
 
-    if "company_id" in updates:
-        new_company = await company_repository.get_by_id(db, updates["company_id"], user_id)
-        if new_company is None:
-            raise CompanyNotOwnedError(
-                f"Company {updates['company_id']} not found under user {user_id}",
-            )
+        if "company_id" in updates:
+            new_company = await company_repository.get_by_id(db, updates["company_id"], user_id)
+            if new_company is None:
+                raise CompanyNotOwnedError(
+                    f"Company {updates['company_id']} not found under user {user_id}",
+                )
 
-    application = await application_repository.update(db, application, updates)
-    await db.commit()
+        application = await application_repository.update(db, application, updates)
     return application
 
 
 async def soft_delete_application(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
 ) -> bool:
@@ -236,18 +232,17 @@ async def soft_delete_application(
     an already-deleted row still returns 204.
 
     Clears the link from any discovered posting promoted to it, so that
-    posting returns to Discover. Commits at the end so the write survives the
-    request lifecycle.
+    posting returns to Discover. Commits in its own ``unit_of_work``.
     """
-    application = await application_repository.get_by_id(
-        db, application_id, user_id, include_deleted=True,
-    )
-    if application is None:
-        return False
-    await application_repository.soft_delete(db, application)
-    # A posting promoted to it becomes a posting again, back in Discover.
-    await discovery_promotion_repository.clear_promotion_links(db, user_id, application.id)
-    await db.commit()
+    async with unit_of_work() as db:
+        application = await application_repository.get_by_id(
+            db, application_id, user_id, include_deleted=True,
+        )
+        if application is None:
+            return False
+        await application_repository.soft_delete(db, application)
+        # A posting promoted to it becomes a posting again, back in Discover.
+        await discovery_promotion_repository.clear_promotion_links(db, user_id, application.id)
     return True
 
 
@@ -270,7 +265,6 @@ async def list_application_events(
 
 
 async def log_application_event(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
     request: ApplicationEventCreateRequest,
@@ -282,39 +276,38 @@ async def log_application_event(
     from the parent application; the route never trusts a body-provided
     ``user_id`` (the schema's ``extra='forbid'`` rejects it anyway).
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    application = await application_repository.get_by_id(db, application_id, user_id)
-    if application is None:
-        return None
+    async with unit_of_work() as db:
+        application = await application_repository.get_by_id(db, application_id, user_id)
+        if application is None:
+            return None
 
-    # Serialise the nested InterviewDetailsRequest to a plain dict for JSONB
-    # storage.  ``model_dump(mode="json")`` converts datetime fields to ISO
-    # strings (JSONB-safe) and drops None sub-fields so the stored blob stays
-    # compact.  When ``interview_details`` is None the column stores NULL.
-    interview_details_dict: dict | None = None
-    if request.interview_details is not None:
-        interview_details_dict = request.interview_details.model_dump(
-            mode="json",
-            exclude_none=True,
+        # Serialise the nested InterviewDetailsRequest to a plain dict for JSONB
+        # storage.  ``model_dump(mode="json")`` converts datetime fields to ISO
+        # strings (JSONB-safe) and drops None sub-fields so the stored blob stays
+        # compact.  When ``interview_details`` is None the column stores NULL.
+        interview_details_dict: dict | None = None
+        if request.interview_details is not None:
+            interview_details_dict = request.interview_details.model_dump(
+                mode="json",
+                exclude_none=True,
+            )
+
+        event = ApplicationEvent(
+            user_id=user_id,
+            application_id=application_id,
+            event_type=request.event_type,
+            occurred_at=request.occurred_at,
+            source=request.source,
+            note=request.note,
+            interview_details=interview_details_dict,
         )
-
-    event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application_id,
-        event_type=request.event_type,
-        occurred_at=request.occurred_at,
-        source=request.source,
-        note=request.note,
-        interview_details=interview_details_dict,
-    )
-    event = await application_event_repository.create(db, event)
-    await db.commit()
+        event = await application_event_repository.create(db, event)
     return event
 
 
 async def update_application_event(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
     event_id: uuid.UUID,
@@ -337,40 +330,32 @@ async def update_application_event(
     untouched on the row; fields explicitly set to ``null`` clear the
     column.  Mirrors the application-level PATCH on update_application.
     """
-    event = await application_event_repository.get_by_id(
-        db, user_id, application_id, event_id,
-    )
-    if event is None:
-        return None
-
-    if event.event_type not in _EDITABLE_EVENT_TYPES:
-        raise EventTypeNotEditableError(
-            f"event_type {event.event_type!r} is not editable",
-        )
-
-    updates = request.model_dump(exclude_unset=True)
-
-    if "interview_details" in updates:
+    provided = request.model_dump(exclude_unset=True)
+    updates: dict[str, object] = {}
+    if "interview_details" in provided:
         details = request.interview_details
-        if details is None:
-            event.interview_details = None
-        else:
-            event.interview_details = details.model_dump(
-                mode="json",
-                exclude_none=True,
+        updates["interview_details"] = (
+            None if details is None else details.model_dump(mode="json", exclude_none=True)
+        )
+    if "note" in provided:
+        updates["note"] = request.note
+
+    async with unit_of_work() as db:
+        event = await application_event_repository.get_by_id(
+            db, user_id, application_id, event_id,
+        )
+        if event is None:
+            return None
+
+        if event.event_type not in _EDITABLE_EVENT_TYPES:
+            raise EventTypeNotEditableError(
+                f"event_type {event.event_type!r} is not editable",
             )
 
-    if "note" in updates:
-        event.note = request.note
-
-    await db.flush()
-    await db.refresh(event)
-    await db.commit()
-    return event
+        return await application_event_repository.update_user_fields(db, event, updates)
 
 
 async def create_application_contact(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
     request: ApplicationContactCreateRequest,
@@ -382,27 +367,26 @@ async def create_application_contact(
     from the parent application context — the route never trusts a
     body-provided ``user_id`` (the schema's ``extra='forbid'`` rejects it).
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    application = await application_repository.get_by_id(db, application_id, user_id)
-    if application is None:
-        return None
-    contact = ApplicationContact(
-        user_id=user_id,
-        application_id=application_id,
-        name=request.name,
-        email=str(request.email) if request.email is not None else None,
-        linkedin_url=request.linkedin_url,
-        role=request.role,
-        notes=request.notes,
-    )
-    contact = await application_contact_repository.create(db, contact)
-    await db.commit()
+    async with unit_of_work() as db:
+        application = await application_repository.get_by_id(db, application_id, user_id)
+        if application is None:
+            return None
+        contact = ApplicationContact(
+            user_id=user_id,
+            application_id=application_id,
+            name=request.name,
+            email=str(request.email) if request.email is not None else None,
+            linkedin_url=request.linkedin_url,
+            role=request.role,
+            notes=request.notes,
+        )
+        contact = await application_contact_repository.create(db, contact)
     return contact
 
 
 async def delete_application_contact(
-    db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
     contact_id: uuid.UUID,
@@ -417,13 +401,13 @@ async def delete_application_contact(
     found (or if the application/contact IDs are cross-tenant — the route
     layer maps both to 404 so callers cannot distinguish the two cases).
 
-    Commits at the end so the write survives the request lifecycle.
+    Commits in its own ``unit_of_work``.
     """
-    contact = await application_contact_repository.get_by_id(
-        db, contact_id, application_id, user_id,
-    )
-    if contact is None:
-        return False
-    await application_contact_repository.delete(db, contact)
-    await db.commit()
+    async with unit_of_work() as db:
+        contact = await application_contact_repository.get_by_id(
+            db, contact_id, application_id, user_id,
+        )
+        if contact is None:
+            return False
+        await application_contact_repository.delete(db, contact)
     return True
