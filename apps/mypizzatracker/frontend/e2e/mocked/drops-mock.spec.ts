@@ -14,6 +14,8 @@ import { apiPath } from "@platform/ui/test-support/apiPath";
 import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
+import { expenseOf } from "./fixtures/financialsFixtures";
+import { stubFinancialsApi } from "./fixtures/stubFinancialsApi";
 
 const DROPS_LIST = apiPath(/^\/drops$/);
 
@@ -128,4 +130,20 @@ test("creates a drop, adds its first slot and activates it", async ({ page }) =>
   expect(slot).toEqual({ method: "POST", path: expect.stringMatching(/^\/drops\/[^/]+\/slots$/), body: { pickup_time: "17:15:00", max_pizzas: 8 } });
   expect(activated).toEqual({ method: "PATCH", path: slot.path.replace(/\/slots$/, ""), body: { status: "active" } });
   expect(api.writes).toHaveLength(3);
+});
+
+test("deleting a planning drop warns how many expenses go with it", async ({ page }) => {
+  await stubDropsApi(page);
+  await stubFinancialsApi(page, [
+    expenseOf(1, { drop_id: PLANNING_DROP_ID }),
+    expenseOf(2, { drop_id: PLANNING_DROP_ID, vendor: "Sysco" }),
+    expenseOf(3, { drop_id: PLANNING_DROP_ID, vendor: "Restaurant Depot" }),
+  ]);
+
+  await page.goto("/drops");
+  const card = page.getByRole("main").locator(CARD).filter({ has: page.getByRole("heading", { name: "Holiday Drop" }) });
+  await card.getByRole("button", { name: "Delete drop" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("The drop, its slots and its 3 expenses will be removed. This can't be undone.")).toBeVisible();
 });
