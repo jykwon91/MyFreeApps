@@ -8,11 +8,11 @@ export function companyFieldHint(company: ReviewCompanyState): string {
     case "tracked":
       return MESSAGES.companyTracked;
     case "new":
-      return MESSAGES.companyAdded;
+      return MESSAGES.companyNew;
     case "manual":
       return MESSAGES.companyChosen;
     case "autoCreateFailed":
       if (!company.name) return MESSAGES.companyNotFound;
-      return companyNameProblem(company.name) ?? MESSAGES.companyAddFailed;
+      return companyNameProblem(company.name) ?? MESSAGES.companyUnchecked;
   }
 }

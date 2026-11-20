@@ -6,7 +6,8 @@
  * ========
  * - "tracked":  green-ish neutral pill, "tracked" badge — company already
  *               existed in the operator's list, we just selected it.
- * - "new":      neutral pill — company was just auto-created from the JD.
+ * - "new":      neutral pill — a company not tracked yet; saving the
+ *               application adds it (nothing is added before then).
  * - "error":    amber border + "couldn't auto-create — type a name" hint.
  *               Used when the auto-create threw and we need the operator
  *               to retry / correct via the combobox below.
@@ -15,9 +16,9 @@
  * "not right? change" affordance that, when clicked, asks the parent
  * to expand the combobox in its place.
  */
-import { Building2 } from "lucide-react";
-
-export type CompanyPillVariant = "tracked" | "new" | "error";
+import type { CompanyPillVariant } from "@/types/company/company-pill-variant";
+import CompanyLogo from "@/features/applications/CompanyLogo";
+import CompanyPillBadge from "@/features/applications/CompanyPillBadge";
 
 export interface CompanyConfirmationPillProps {
   /** Display name. Required. */
@@ -45,7 +46,7 @@ export default function CompanyConfirmationPill({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{name}</p>
         <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-          <PillBadge variant={variant} />
+          <CompanyPillBadge variant={variant} />
           <span aria-hidden="true">·</span>
           <button
             type="button"
@@ -60,65 +61,8 @@ export default function CompanyConfirmationPill({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components — flat, no nested ternaries.
-// ---------------------------------------------------------------------------
-
 function pickBorderClass(variant: CompanyPillVariant): string {
   if (variant === "error") return "border-amber-400";
   if (variant === "tracked") return "border-green-500/40";
   return "border-border";
-}
-
-interface PillBadgeProps {
-  variant: CompanyPillVariant;
-}
-
-function PillBadge({ variant }: PillBadgeProps) {
-  if (variant === "tracked") {
-    return <span className="text-green-700 dark:text-green-400">tracked</span>;
-  }
-  if (variant === "new") {
-    return <span>added</span>;
-  }
-  return <span className="text-amber-700 dark:text-amber-400">needs attention</span>;
-}
-
-interface CompanyLogoProps {
-  logoUrl: string | null;
-  name: string;
-}
-
-function CompanyLogo({ logoUrl, name }: CompanyLogoProps) {
-  if (logoUrl) {
-    return (
-      <img
-        src={logoUrl}
-        alt=""
-        className="w-8 h-8 rounded-md object-contain bg-muted shrink-0"
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
-        }}
-      />
-    );
-  }
-  const initial = name.trim().slice(0, 1).toUpperCase();
-  if (initial) {
-    return (
-      <span
-        aria-hidden="true"
-        className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-muted text-sm font-medium shrink-0"
-      >
-        {initial}
-      </span>
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-muted shrink-0"
-    >
-      <Building2 size={16} />
-    </span>
-  );
 }

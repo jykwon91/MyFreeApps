@@ -1,14 +1,17 @@
 import CompanyConfirmationPill from "../CompanyConfirmationPill";
 import type { ReviewCompanyDisplayProps } from "@/types/application/review-company-display-props";
 
-/** The company on the review step: a pill, tracked, new or failed, that offers to change it. */
+/**
+ * The company on the review step: a pill, tracked, new or failed, that offers to change it. One picked
+ * from your companies is tracked; a new one isn't added until the application is saved.
+ */
 export default function ReviewCompanyDisplay({ company, onChangeRequest, onCompanyNameChange }: ReviewCompanyDisplayProps) {
   function handleChange() {
     onCompanyNameChange(company.name);
     onChangeRequest();
   }
 
-  if (company.kind === "tracked") {
+  if (company.kind === "tracked" || company.kind === "manual") {
     return (
       <CompanyConfirmationPill
         name={company.name}
@@ -18,7 +21,7 @@ export default function ReviewCompanyDisplay({ company, onChangeRequest, onCompa
       />
     );
   }
-  if (company.kind === "new" || company.kind === "manual") {
+  if (company.kind === "new") {
     return (
       <CompanyConfirmationPill
         name={company.name}

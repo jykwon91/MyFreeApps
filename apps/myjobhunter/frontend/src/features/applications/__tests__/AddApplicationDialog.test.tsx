@@ -244,7 +244,7 @@ describe("AddApplicationDialog — URL happy path", () => {
     );
   });
 
-  it("URL → extract → review auto-creates a new company when no match", async () => {
+  it("URL → extract → review holds an unmatched company as new, adding nothing until Save", async () => {
     const user = userEvent.setup();
     const mockExtract = vi.fn().mockReturnValue({
       unwrap: () =>
@@ -293,13 +293,10 @@ describe("AddApplicationDialog — URL happy path", () => {
     await user.click(screen.getByRole("button", { name: /auto-fill/i }));
 
     await waitFor(() => {
-      expect(mockCreateCompany).toHaveBeenCalledWith({ name: "Pivotal Health" });
-    });
-
-    await waitFor(() => {
       expect(screen.getByText("Pivotal Health")).toBeInTheDocument();
     });
-    expect(screen.getByText(/added/i)).toBeInTheDocument();
+    expect(screen.getByText(/added when you save/i)).toBeInTheDocument();
+    expect(mockCreateCompany).not.toHaveBeenCalled();
   });
 });
 
@@ -335,7 +332,7 @@ describe("AddApplicationDialog — text-paste path", () => {
     expect(screen.queryByLabelText(/job posting url/i)).not.toBeInTheDocument();
   });
 
-  it("text → parse → review pre-fills + auto-creates company", async () => {
+  it("text → parse → review pre-fills, holding the new company for Save", async () => {
     const user = userEvent.setup();
     const mockParse = vi.fn().mockReturnValue({
       unwrap: () =>
@@ -393,11 +390,9 @@ describe("AddApplicationDialog — text-paste path", () => {
       expect(mockParse).toHaveBeenCalledWith({ jd_text: "JD text mentioning Pivotal Health" });
     });
     await waitFor(() => {
-      expect(mockCreateCompany).toHaveBeenCalledWith({ name: "Pivotal Health" });
-    });
-    await waitFor(() => {
       expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
     });
+    expect(mockCreateCompany).not.toHaveBeenCalled();
   });
 });
 
@@ -646,16 +641,15 @@ describe("AddApplicationDialog — manual company-name path", () => {
 
     const input = screen.getByLabelText(/company name/i);
     await user.type(input, "Acme Corp");
-    // Press Enter — typed name does not match any existing → triggers create.
+    // Press Enter — typed name does not match any existing → a new company, added on Save.
     await user.keyboard("{Enter}");
 
-    await waitFor(() => {
-      expect(mockCreateCompany).toHaveBeenCalledWith({ name: "Acme Corp" });
-    });
     await waitFor(() => {
       expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
     });
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    expect(screen.getByText(/added when you save/i)).toBeInTheDocument();
+    expect(mockCreateCompany).not.toHaveBeenCalled();
   });
 });
 
@@ -738,7 +732,7 @@ describe("AddApplicationDialog — pill change request", () => {
 // Auto-create failure → amber pill + combobox affordance + submit fallback
 // ---------------------------------------------------------------------------
 
-describe("AddApplicationDialog — auto-create failure recovery", () => {
+describe("AddApplicationDialog — company add failure at Save", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
@@ -747,7 +741,7 @@ describe("AddApplicationDialog — auto-create failure recovery", () => {
     );
   });
 
-  it("renders error pill on auto-create failure; submit fallback retries the create", async () => {
+  it("says when adding the company at Save failed, keeps the dialog, and a second Save adds it", async () => {
     const user = userEvent.setup();
     const mockExtract = vi.fn().mockReturnValue({
       unwrap: () =>
@@ -763,8 +757,7 @@ describe("AddApplicationDialog — auto-create failure recovery", () => {
           source_url: "https://jobs.example.com/x",
         }),
     });
-    // First call rejects (the auto-create from extract), second call succeeds
-    // (the submit-time fallback).
+    // The first Save's add rejects, the second's succeeds.
     const mockCreateCompany = vi
       .fn()
       .mockReturnValueOnce({
@@ -812,18 +805,15 @@ describe("AddApplicationDialog — auto-create failure recovery", () => {
     await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/x");
     await user.click(screen.getByRole("button", { name: /auto-fill/i }));
 
-    // Amber pill rendered with the error affordance text.
-    await waitFor(() => {
-      expect(screen.getByText(/needs attention/i)).toBeInTheDocument();
-    });
-    expect(
-      screen.getByRole("button", { name: /couldn't auto-create — type a name/i }),
-    ).toBeInTheDocument();
+    await screen.findByText(/added when you save/i);
+    expect(mockCreateCompany).not.toHaveBeenCalled();
 
-    // Submit triggers the inline retry — second createCompany call succeeds,
-    // and the application gets created with the retry's company id.
     await user.click(screen.getByRole("button", { name: /add application/i }));
+    await waitFor(() => expect(vi.mocked(showError)).toHaveBeenCalledWith(expect.stringContaining("Couldn't add company")));
+    expect(mockCreateApp).not.toHaveBeenCalled();
+    expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: /add application/i }));
     await waitFor(() => {
       expect(mockCreateCompany).toHaveBeenCalledTimes(2);
       expect(mockCreateApp).toHaveBeenCalledWith(
@@ -1280,7 +1270,7 @@ describe("AddApplicationDialog — races", () => {
     expect(createCompany).not.toHaveBeenCalled();
   });
 
-  it("the save-time retry refetches the companies, finding one added in another tab, instead of adding a duplicate", async () => {
+  it("Save refetches the companies, finding one added in another tab, instead of adding a duplicate", async () => {
     const user = userEvent.setup();
     // The cache still holds the list from before; only a refetch sees Flaky Co, added in another tab.
     const cached = { items: [], total: 0 };
@@ -1292,13 +1282,13 @@ describe("AddApplicationDialog — races", () => {
 
     renderDialog();
     await readLink(user);
-    await screen.findByText(/needs attention/i);
+    await screen.findByText(/added when you save/i);
     await user.click(screen.getByRole("button", { name: /add application/i }));
 
     await waitFor(() =>
       expect(createApp).toHaveBeenCalledWith(expect.objectContaining({ company_id: "co-flaky" })),
     );
-    expect(createCompany).toHaveBeenCalledTimes(1);
+    expect(createCompany).not.toHaveBeenCalled();
     expect(loadList.mock.calls.map(([, preferCacheValue]) => preferCacheValue)).toEqual([true, false]);
   });
 

@@ -17,6 +17,7 @@ import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { rateLimitedMessage } from "@myjobhunter/api-client/utils/rateLimitedMessage";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
+import { typedCompany } from "@myjobhunter/api-client/utils/typedCompany";
 import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import * as Clipboard from "expo-clipboard";
@@ -31,15 +32,15 @@ import type { AddApplicationSource } from "../../types/AddApplicationSource";
 
 /**
  * Adding an application, as the website's Add application dialog does it: read a link or pasted
- * text into the form (matching or adding its company), or choose the company and type the rest,
- * then review and save. Reading's failures are said in `failure`, a banner above the form; saving's
+ * text into the form (matching its company), or choose the company and type the rest, then review
+ * and save. A company that isn't tracked yet is only added by Save, so leaving adds nothing. Reading's failures are said in `failure`, a banner above the form; saving's
  * are toasted, as the website toasts them. Nothing runs on once the screen has gone.
  */
 export function useAddApplicationFlow() {
   const { showToast } = useToast();
   // Starts loading the companies as the screen opens; matching waits for them (useCompanyResolver).
   useListCompaniesQuery();
-  const { addCompany, resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
+  const { resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
   const [extractJdFromUrl] = useExtractJdFromUrlMutation();
   const [parseJobDescription] = useParseJobDescriptionMutation();
   const [createApplication] = useCreateApplicationMutation();
@@ -59,8 +60,8 @@ export function useAddApplicationFlow() {
   const [hasTried, setHasTried] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // False once the screen has gone, so a read that finishes later neither adds a company nor
-  // fills a form nobody sees; the read itself is aborted then.
+  // False once the screen has gone, so a read that finishes later doesn't fill a form nobody
+  // sees; the read itself is aborted then.
   const isMounted = useRef(true);
   const inFlightRead = useRef<{ abort: () => void } | null>(null);
 
@@ -100,13 +101,12 @@ export function useAddApplicationFlow() {
     setValues({ ...emptyAddApplicationFormValues(), ...next });
   }
 
-  /** The company a read posting names: tracked, added now, or left to fix. Null once the screen has gone. */
   function readFailureMessage(outcome: Extract<ReadCompanyOutcome, { kind: "failed" }>): string {
     if (outcome.reason === "listUnavailable") return MESSAGES.couldntLoadCompanies;
-    if (outcome.reason === "nameTooLong") return companyNameProblem(outcome.company.name) ?? MESSAGES.couldntAddCompany;
-    return MESSAGES.couldntAddCompany;
+    return companyNameProblem(outcome.company.name) ?? MESSAGES.couldntAddCompany;
   }
 
+  /** The company a read posting names: tracked, new (added on Save), or left to fix. Null once the screen has gone. */
   async function resolveCompany(name: string | null, hints: ExtractedCompanyHints): Promise<ReviewCompanyState | null> {
     const outcome = await resolveReadCompany(name, hints, () => isMounted.current);
     if (outcome.kind === "stale") return null;
@@ -205,11 +205,10 @@ export function useAddApplicationFlow() {
     setReview((current) => ({ sourceUrl: current?.sourceUrl ?? null, summary: current?.summary ?? null, company: chosen }));
   }
 
-  /** Adds a company typed into the picker. Throws, so the picker can say it failed and stay open. */
-  async function addTypedCompany(name: string): Promise<void> {
-    const created = await addCompany({ name: name.trim() });
+  /** A company typed into the picker, not tracked yet: Save adds it. */
+  function addTypedCompany(name: string): void {
     setFailure(null);
-    const added: ReviewCompanyState = { kind: "new", companyId: created.id, name: created.name, logoUrl: created.logo_url };
+    const added = typedCompany(name);
     setReview((current) => ({ sourceUrl: current?.sourceUrl ?? null, summary: current?.summary ?? null, company: added }));
   }
 
@@ -236,12 +235,12 @@ export function useAddApplicationFlow() {
         return;
       }
       try {
-        companyId = await companyIdForSave(review.company, () => isMounted.current);
+        // Not stopped by leaving: a company added here always gets its application.
+        companyId = await companyIdForSave(review.company);
       } catch {
         if (isMounted.current) saveFailed(MESSAGES.couldntAddCompany);
         return;
       }
-      if (!isMounted.current) return;
       if (!companyId) {
         saveFailed(MESSAGES.companyRequired);
         return;

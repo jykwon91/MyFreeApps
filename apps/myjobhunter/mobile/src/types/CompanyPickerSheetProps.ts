@@ -5,7 +5,7 @@ export interface CompanyPickerSheetProps {
   /** What the search starts on, like the company the posting named. */
   initialQuery: string;
   onSelect: (company: Company) => void;
-  /** Adds the typed name. A rejection keeps the sheet open, saying it failed. */
-  onAdd: (name: string) => Promise<void>;
+  /** Takes the typed name as a new company, added when the application is saved. */
+  onAdd: (name: string) => void;
   onClose: () => void;
 }

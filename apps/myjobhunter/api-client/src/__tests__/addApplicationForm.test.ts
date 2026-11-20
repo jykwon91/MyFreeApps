@@ -131,9 +131,9 @@ describe("resolveExtractedCompany", () => {
 });
 
 describe("readCompanyId", () => {
-  it("is the company's id, or null when adding it failed", () => {
+  it("is the company's id, or null when it doesn't exist yet", () => {
     expect(readCompanyId({ kind: "tracked", companyId: "a", name: "A", logoUrl: null })).toBe("a");
-    expect(readCompanyId({ kind: "new", companyId: "b", name: "B", logoUrl: null })).toBe("b");
+    expect(readCompanyId({ kind: "new", request: { name: "B" }, name: "B", logoUrl: null })).toBeNull();
     expect(readCompanyId({ kind: "manual", companyId: null, name: "C", logoUrl: null })).toBeNull();
     expect(readCompanyId({ kind: "autoCreateFailed", name: "D" })).toBeNull();
   });

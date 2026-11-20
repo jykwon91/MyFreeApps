@@ -20,8 +20,8 @@ export default function AddApplicationScreen() {
     setIsPickerOpen(true);
   }
 
-  async function addCompany(name: string): Promise<void> {
-    await flow.addTypedCompany(name);
+  function addCompany(name: string): void {
+    flow.addTypedCompany(name);
     setIsPickerOpen(false);
   }
 

@@ -14,15 +14,13 @@ import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
 
 /**
  * The website's company combobox as a sheet: search your companies by name or website, or add
- * the name typed. A failed add is said here, and the sheet stays open to try again. Give it a new
- * `key` each time it opens, so it starts on `initialQuery` without the last opening's failure.
+ * the name typed (it's added when the application is saved). Give it a new `key` each time it
+ * opens, so it starts on `initialQuery`.
  */
 export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onAdd, onClose }: CompanyPickerSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { currentData, isFetching, error, refetch } = useListCompaniesQuery();
   const [query, setQuery] = useState(initialQuery);
-  const [isAdding, setIsAdding] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
 
   const companies = currentData?.items;
   const matches = companies ? filterCompanies(companies, query) : [];
@@ -33,21 +31,6 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
   const counter = characterCounter(typedName, COMPANY_NAME_MAX_LENGTH);
   const canAdd = companies !== undefined && typedName !== "" && !nameTooLong && !findCompanyByName(companies, typedName);
 
-  async function add(): Promise<void> {
-    setFailure(null);
-    setIsAdding(true);
-    try {
-      await onAdd(typedName);
-    } catch {
-      setFailure(MESSAGES.couldntAddCompany);
-    } finally {
-      setIsAdding(false);
-    }
-  }
-
-  function close(): void {
-    if (!isAdding) onClose();
-  }
 
   function renderEmpty() {
     if (!companies && (isFetching || !error)) return <CompanyPickerSkeleton />;
@@ -68,7 +51,7 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }} testID="company-picker">
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
@@ -76,16 +59,13 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: isAdding }}
-            disabled={isAdding}
-            onPress={close}
+            onPress={onClose}
             style={{ minHeight: MIN_TOUCH_TARGET, minWidth: MIN_TOUCH_TARGET, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg }}
           >
             <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{MESSAGES.close}</Text>
           </Pressable>
         </View>
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
-          {failure ? <Banner message={failure} /> : null}
           <SearchField
             accessibilityHint={nameTooLong ? nameProblem : undefined}
             accessibilityLabel={MESSAGES.searchLabel}
@@ -97,7 +77,7 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           <FieldError message={nameTooLong ? nameProblem : undefined} name={MESSAGES.searchLabel} />
           {counter ? <CharacterCounter counter={counter} isOver={nameTooLong} /> : null}
           {canAdd ? (
-            <LoadingButton isLoading={isAdding} loadingText={MESSAGES.addingCompany} onPress={add} variant="secondary">
+            <LoadingButton onPress={() => onAdd(typedName)} variant="secondary">
               {`${MESSAGES.addCompany} “${typedName}”`}
             </LoadingButton>
           ) : null}
@@ -110,7 +90,7 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           // The keyboard covers the bottom of the list while searching, so the last companies need room to scroll above it.
           renderScrollComponent={(props) => <KeyboardAwareScroll {...props} />}
           renderItem={({ item }) => (
-            <CompanyPickerRow detail={item.primary_domain} disabled={isAdding} label={item.name} onPress={() => onSelect(item)} />
+            <CompanyPickerRow detail={item.primary_domain} label={item.name} onPress={() => onSelect(item)} />
           )}
         />
       </View>

@@ -189,7 +189,7 @@ describe("from a link", () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
-  it("adds a company the posting names that isn't tracked yet, with its website and logo, and starts its research", async () => {
+  it("adds a company the posting names that isn't tracked yet on Save, with its website and logo, and starts its research", async () => {
     const sent = serveAdd({
       "POST /applications/extract-from-url": ok(
         extracted({ company: "Linear", company_website: "https://www.linear.app/about", company_logo_url: "https://cdn.linear.app/logo.png" }),
@@ -199,16 +199,18 @@ describe("from a link", () => {
     await openAddScreen();
     await readLink();
 
-    expect(await screen.findByText(MESSAGES.companyAdded)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
     expect(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, Linear` })).toBeTruthy();
-    expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([
-      { name: "Linear", primary_domain: "linear.app", logo_url: "https://cdn.linear.app/logo.png" },
-    ]);
-    await waitFor(() => expect(requestsTo(sent, "POST /companies/co-new/research")).toHaveLength(1));
+    // Nothing is added until Save.
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
 
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
     await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([
+      { name: "Linear", primary_domain: "linear.app", logo_url: "https://cdn.linear.app/logo.png" },
+    ]);
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-new" });
+    await waitFor(() => expect(requestsTo(sent, "POST /companies/co-new/research")).toHaveLength(1));
   });
 
   it("pastes a link from the clipboard and reads it straight away, as pasting does on the website", async () => {
@@ -324,7 +326,7 @@ describe("from a link", () => {
     expect(screen.queryByText(MESSAGES.reviewHeading)).toBeNull();
   });
 
-  it("adds the company when saving if adding it after the read failed", async () => {
+  it("says when adding the company on Save failed, keeping the form, and adds it on a second Save", async () => {
     let failAdd = true;
     const sent = serveAdd({
       "POST /applications/extract-from-url": ok(extracted({ company: "Linear" })),
@@ -334,15 +336,16 @@ describe("from a link", () => {
     await openAddScreen();
     await readLink();
 
-    expect(await screen.findByText(MESSAGES.companyAddFailed)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.couldntAddCompany)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+    expect(await screen.findByText(MESSAGES.couldntAddCompany)).toBeTruthy();
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
 
     failAdd = false;
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
     await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([{ name: "Linear" }, { name: "Linear" }]);
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-linear" });
-    // Added at save time, it's researched as one added by the read would be.
     await waitFor(() => expect(requestsTo(sent, "POST /companies/co-linear/research")).toHaveLength(1));
   });
 
@@ -354,7 +357,7 @@ describe("from a link", () => {
     await openAddScreen();
     await readLink();
 
-    expect(await screen.findByText(MESSAGES.companyAddFailed)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.companyUnchecked)).toBeTruthy();
     expect(screen.getByText(MESSAGES.couldntLoadCompanies)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.couldntAddCompany)).toBeNull();
     expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
@@ -369,6 +372,45 @@ describe("from a link", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
     expect(await screen.findByText(MESSAGES.companyRequired)).toBeTruthy();
     expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
+  });
+  it("adds no company when left after reading a posting whose company isn't tracked", async () => {
+    const sent = serveAdd({
+      "POST /applications/extract-from-url": ok(extracted({ company: "Linear", company_website: "https://linear.app/" })),
+      "POST /companies": ok(companyRecord({ id: "co-new", name: "Linear" })),
+    });
+    await openAddScreen({ fromList: true });
+    await readLink();
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
+
+    await act(async () => router.back());
+    await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
+    await waitFor(() => expect(screen).toHavePathname("/applications"));
+
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
+  });
+
+  it("saves under the company that already has the domain when adding it is refused for that", async () => {
+    const linearInc = companyRecord({ id: "co-linear-inc", name: "Linear Inc", primary_domain: "linear.app" });
+    // Added elsewhere under another name after the read; only the refused add's refetch sees it.
+    let refused = false;
+    const sent = serveAdd({
+      "POST /applications/extract-from-url": ok(extracted({ company: "Linear", company_website: "https://linear.app/" })),
+      "GET /companies": () => ok({ items: refused ? [STRIPE, linearInc] : [STRIPE], total: refused ? 2 : 1 })(),
+      "POST /companies": () => {
+        refused = true;
+        return fail(409, "A company with primary_domain='linear.app' already exists.")();
+      },
+    });
+    await openAddScreen();
+    await readLink();
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+    await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([{ name: "Linear", primary_domain: "linear.app" }]);
+    expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-linear-inc" });
+    expect(screen.queryByText(MESSAGES.couldntAddCompany)).toBeNull();
   });
 });
 
@@ -470,7 +512,7 @@ describe("typed in", () => {
     ]);
   });
 
-  it("adds a new company typed into the picker, but not one already tracked", async () => {
+  it("adds a new company typed into the picker on Save, but not one already tracked", async () => {
     const sent = serveAdd({ "POST /companies": ok(companyRecord({ id: "co-new", name: "Linear" })) });
     await openAddScreen();
     await chooseSource("Type it in");
@@ -484,35 +526,19 @@ describe("typed in", () => {
     expect(screen.getByText(MESSAGES.noMatches)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.addCompany} “Linear”` }));
 
-    expect(await screen.findByText(MESSAGES.companyAdded)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
     expect(screen.queryByTestId("company-picker")).toBeNull();
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
+
+    await fireEvent.changeText(field(ROLE_FIELD), "Staff Engineer");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+    await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([{ name: "Linear" }]);
-  });
-
-  it("says in the picker when adding a company failed, and stays open to try again", async () => {
-    let failAdd = true;
-    serveAdd({
-      "POST /companies": () => (failAdd ? fail(500)() : ok(companyRecord({ id: "co-new", name: "Linear" }))()),
-    });
-    await openAddScreen();
-    await chooseSource("Type it in");
-    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, ${MESSAGES.chooseCompany}` }));
-    await fireEvent.changeText(await screen.findByLabelText(MESSAGES.searchLabel), "Linear");
-    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.addCompany} “Linear”` }));
-
-    expect(await screen.findByText(MESSAGES.couldntAddCompany)).toBeTruthy();
-    expect(screen.getByTestId("company-picker")).toBeTruthy();
-
-    failAdd = false;
-    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.addCompany} “Linear”` }));
-    expect(await screen.findByText(MESSAGES.companyAdded)).toBeTruthy();
+    expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-new" });
   });
 
   it("changes the company a posting matched, starting the search on its name, and keeps it on Close", async () => {
-    const sent = serveAdd({
-      "POST /applications/extract-from-url": ok(extracted()),
-      "POST /companies": fail(500),
-    });
+    const sent = serveAdd({ "POST /applications/extract-from-url": ok(extracted()) });
     await openAddScreen();
     await readLink();
     await fireEvent.press(await screen.findByRole("button", { name: `${MESSAGES.companyLabel}, Stripe` }));
@@ -520,15 +546,12 @@ describe("typed in", () => {
     const search = await screen.findByLabelText(MESSAGES.searchLabel);
     expect(search.props.value).toBe("Stripe");
     await fireEvent.changeText(search, "Linear");
-    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.addCompany} “Linear”` }));
-    expect(await screen.findByText(MESSAGES.couldntAddCompany)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.close }));
     expect(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, Stripe` })).toBeTruthy();
 
     // Opening it again starts afresh.
     await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, Stripe` }));
     expect((await screen.findByLabelText(MESSAGES.searchLabel)).props.value).toBe("Stripe");
-    expect(screen.queryByText(MESSAGES.couldntAddCompany)).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "Clear search" }));
     await fireEvent.press(screen.getByRole("button", { name: "Airbnb, airbnb.com" }));
 

@@ -8,7 +8,9 @@
  *     is useApplicationSave's
  *   - The long-running timer that swaps spinner copy at 3 s
  *   - Abandoning a read on close: reset() aborts it and ends the run, so a
- *     read that finishes later neither adds a company nor fills the form
+ *     read that finishes later doesn't fill the form
+ *   - No company is added before Save: one that isn't tracked is held as
+ *     "new" and added by the save, so cancelling adds nothing
  *
  * Does NOT own:
  *   - The react-hook-form instance (stays in the orchestrator so the form
@@ -37,12 +39,14 @@ import type { IsCurrent } from "@myjobhunter/api-client/types/application/compan
 import type { ExtractedCompanyHints } from "@myjobhunter/api-client/types/application/extracted-company-hints";
 import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 import type { Company } from "@myjobhunter/api-client/types/company";
+import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
+import { typedCompany } from "@myjobhunter/api-client/utils/typedCompany";
 import {
   INITIAL_STATE,
   type DialogInputMode,
@@ -88,12 +92,12 @@ interface UseAddApplicationFlowReturn {
   handleUrlSubmit: () => void;
   handleTextSubmit: () => void;
   handleCompanyNameSelectExisting: (companyId: string, name: string) => void;
-  handleCompanyNameCreateOnTheFly: (name: string) => Promise<void>;
+  handleCompanyNameCreateOnTheFly: (name: string) => void;
 
   /** Step-3 handlers */
   handlePillChangeRequest: () => void;
   handleReviewSelectExisting: (companyId: string, name: string) => void;
-  handleReviewCreateOnTheFly: (name: string) => Promise<void>;
+  handleReviewCreateOnTheFly: (name: string) => void;
   handleCancelChangingCompany: () => void;
   setCompanyNameValue: (next: string) => void;
   setTextValue: (next: string) => void;
@@ -113,7 +117,7 @@ export function useAddApplicationFlow(
 ): UseAddApplicationFlowReturn {
   // Starts loading the companies as the dialog mounts; matching waits for them (useCompanyResolver).
   const { data: companiesData } = useListCompaniesQuery();
-  const { addCompany, resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
+  const { resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
   const { creatingApplication, save, resetSave } = useApplicationSave(companyIdForSave);
   const [parseJobDescription] = useParseJobDescriptionMutation();
   const [extractJdFromUrl] = useExtractJdFromUrlMutation();
@@ -218,37 +222,25 @@ export function useAddApplicationFlow(
     });
   }
 
-  async function handleCompanyNameCreateOnTheFly(name: string) {
+  /** A typed company isn't added yet: Save adds it, so closing the dialog leaves nothing behind. */
+  function handleCompanyNameCreateOnTheFly(name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const isCurrent = startRun();
     setCompanyNameValue(trimmed);
-    try {
-      const created = await addCompany({ name: trimmed });
-      if (!isCurrent()) return;
-      setState({
-        kind: "review",
-        sourceUrl: null,
-        summary: null,
-        company: {
-          kind: "new",
-          companyId: created.id,
-          name: created.name,
-          logoUrl: created.logo_url,
-        },
-        changingCompany: false,
-      });
-    } catch (err) {
-      if (!isCurrent()) return;
-      showError(`Couldn't create company "${trimmed}": ${extractErrorMessage(err)}`);
-      setState({
-        kind: "review",
-        sourceUrl: null,
-        summary: null,
-        company: { kind: "autoCreateFailed", name: trimmed },
-        changingCompany: false,
-      });
-    }
+    setState({
+      kind: "review",
+      sourceUrl: null,
+      summary: null,
+      company: typedCompanyAndSayProblem(trimmed),
+      changingCompany: false,
+    });
+  }
+
+  /** The typed company, saying why when its name is too long to add. */
+  function typedCompanyAndSayProblem(name: string): ReviewCompanyState {
+    const nameProblem = companyNameProblem(name);
+    if (nameProblem) showError(`Couldn't create company "${name}": ${nameProblem}`);
+    return typedCompany(name);
   }
 
   // -------------------------------------------------------------------------
@@ -351,7 +343,7 @@ export function useAddApplicationFlow(
     });
   }
 
-  /** Tracked, added now, or left for saving to retry. Null once the run is stale. */
+  /** Tracked, or left for Save to add. Null once the run is stale. */
   async function resolveCompany(
     name: string | null,
     hints: ExtractedCompanyHints,
@@ -362,9 +354,7 @@ export function useAddApplicationFlow(
     if (outcome.kind === "failed" && outcome.reason === "listUnavailable") {
       showError(MESSAGES.couldntLoadCompanies);
     } else if (outcome.kind === "failed") {
-      showError(
-        `Couldn't auto-create company "${outcome.company.name}": ${extractErrorMessage(outcome.error)}`,
-      );
+      showError(`Couldn't auto-create company "${outcome.company.name}": ${extractErrorMessage(outcome.error)}`);
     }
     return outcome.company;
   }
@@ -393,33 +383,11 @@ export function useAddApplicationFlow(
     });
   }
 
-  async function handleReviewCreateOnTheFly(name: string) {
+  function handleReviewCreateOnTheFly(name: string) {
     if (state.kind !== "review") return;
     const trimmed = name.trim();
     if (!trimmed) return;
-    const isCurrent = startRun();
-    try {
-      const created = await addCompany({ name: trimmed });
-      if (!isCurrent()) return;
-      setState({
-        ...state,
-        company: {
-          kind: "new",
-          companyId: created.id,
-          name: created.name,
-          logoUrl: created.logo_url,
-        },
-        changingCompany: false,
-      });
-    } catch (err) {
-      if (!isCurrent()) return;
-      showError(`Couldn't create company "${trimmed}": ${extractErrorMessage(err)}`);
-      setState({
-        ...state,
-        company: { kind: "autoCreateFailed", name: trimmed },
-        changingCompany: false,
-      });
-    }
+    setState({ ...state, company: typedCompanyAndSayProblem(trimmed), changingCompany: false });
   }
 
   function handleCancelChangingCompany() {
