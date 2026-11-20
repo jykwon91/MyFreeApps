@@ -39,16 +39,17 @@ const MISSING_LANGUAGE_QUERY: ValidationErrorBody = {
 
 export async function stubTutorApi(
   page: Page,
-  { profile: initialProfile = profileOf(), usage = PLENTY_LEFT, languages = [SPANISH], turns = [], holdTurns, failWith = [] }: TutorApiStubOptions = {},
+  { profile: initialProfile = profileOf(), usage: initialUsage = PLENTY_LEFT, languages = [SPANISH], turns = [], holdTurns, failWith = [] }: TutorApiStubOptions = {},
 ): Promise<TutorApi> {
   let profile: Profile | null = initialProfile;
+  let usage = initialUsage;
   const sessions = new Map<string, TutorSession>();
   const failing = new Set(failWith);
   const scripts: TurnScript[] = [...turns];
   let turnsSent = 0;
   /** Turn rows saved per session, failed ones included: what next_seq counts. */
   const savedTurns = new Map<string, number>();
-  const api: TutorApi = { writes: [], reads: [], turnRequests: [], stopFailing: (key) => failing.delete(key), startFailing: (key) => failing.add(key) };
+  const api: TutorApi = { writes: [], reads: [], turnRequests: [], stopFailing: (key) => failing.delete(key), startFailing: (key) => failing.add(key), setUsage: (next) => { usage = next; } };
 
   const unknownLanguage = (code: string) => json({ detail: `Unsupported language: ${code}` }, 422);
   const supported = (code: string) => languages.some((language) => language.code === code);

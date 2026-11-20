@@ -14,12 +14,10 @@ import SessionBlockNotice from "@/features/session/SessionBlockNotice";
 import TurnErrorAlert from "@/features/session/TurnErrorAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
-import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
-import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import type { PracticeSessionProps } from "@/types/session/practice-session-props";
 
@@ -40,11 +38,10 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     stopSpeaking: synthesis.cancel,
   });
   const recognition = useSpeechRecognition(language.stt_locale, session.send);
-  const usage = useGetUsageTodayQuery();
   const [privacyAcked, setPrivacyAcked] = useState(hasAckedVoicePrivacy);
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const textInput = useRef<HTMLInputElement>(null);
-  const block = session.block ?? usageBlock(usage.data);
+  const block = session.block;
   const voice = useVoiceInput({
     recognition,
     speaking: synthesis.speaking,
