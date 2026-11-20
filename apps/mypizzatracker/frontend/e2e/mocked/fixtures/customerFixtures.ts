@@ -27,6 +27,20 @@ export function sampleCustomers(): CustomerListItem[] {
   ]);
 }
 
+/** More customers than a page holds: "Customer 001" .. "Customer <count>", none of whom has ordered. */
+export function manyCustomers(count: number): CustomerListItem[] {
+  return listOrder(
+    Array.from({ length: count }, (_, i) => ({
+      id: customerIdAt(i + 1),
+      name: `Customer ${String(i + 1).padStart(3, "0")}`,
+      phone: `51255${String(i + 1).padStart(5, "0")}`,
+      notes: null,
+      order_count: 0,
+      last_order_at: null,
+    })),
+  );
+}
+
 /** What PATCH /customers/{id}/notes answers: the customer with the new notes. */
 export function customerReadOf(item: CustomerListItem): CustomerRead {
   return { id: item.id, name: item.name, phone: item.phone, notes: item.notes, created_at: FIXTURE_NOW, updated_at: FIXTURE_NOW };

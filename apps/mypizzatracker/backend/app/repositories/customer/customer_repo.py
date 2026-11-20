@@ -70,20 +70,43 @@ async def get_recent_order_for_customer(
     return result.scalar_one_or_none()
 
 
+def _search_clauses(search: Optional[str]) -> list:
+    """WHERE clauses for the operator's search box (empty when there is no search).
+
+    Matches case-insensitively against name and against the digits-only phone
+    substring, so ``"512"`` matches both ``"512-555-1234"`` and a customer
+    named ``"512 Pizza Co"``.
+    """
+    if not search or not search.strip():
+        return []
+    digits = re.sub(r"\D+", "", search)
+    clauses = [Customer.name.icontains(search.strip(), autoescape=True)]
+    if digits:
+        clauses.append(Customer.phone.like(f"%{digits}%"))
+    return [or_(*clauses)]
+
+
+async def count_customers(
+    db: AsyncSession, *, search: Optional[str] = None,
+) -> int:
+    """How many customers match ``search`` across every page."""
+    stmt = select(func.count(Customer.id)).where(*_search_clauses(search))
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
+
+
 async def list_customers_with_stats(
     db: AsyncSession,
     *,
     search: Optional[str] = None,
-    limit: int = 200,
+    limit: int,
+    offset: int = 0,
 ) -> list[dict]:
-    """Return customers with order_count + last_order_at.
+    """Return one page of customers with order_count + last_order_at.
 
     Sorted by most-recent-order desc (customers who never ordered come last,
-    alphabetised by name within each bucket).
-
-    ``search`` matches case-insensitively against name and against the
-    digits-only phone substring, so ``"512"`` matches both ``"512-555-1234"``
-    and a customer named ``"512 Pizza Co"``.
+    alphabetised by name within each bucket). ``Customer.id`` breaks remaining
+    ties so ``offset`` paging never repeats or skips a row.
 
     The shape is a list of dicts (not Customer rows) so callers don't need
     to know about the underlying join + subquery.
@@ -105,19 +128,15 @@ async def list_customers_with_stats(
             order_agg.c.last_order_at,
         )
         .outerjoin(order_agg, Customer.id == order_agg.c.customer_id)
+        .where(*_search_clauses(search))
+        .order_by(
+            order_agg.c.last_order_at.desc().nullslast(),
+            Customer.name,
+            Customer.id,
+        )
+        .limit(limit)
+        .offset(offset)
     )
-
-    if search and search.strip():
-        digits = re.sub(r"\D+", "", search)
-        clauses = [Customer.name.icontains(search.strip(), autoescape=True)]
-        if digits:
-            clauses.append(Customer.phone.like(f"%{digits}%"))
-        stmt = stmt.where(or_(*clauses))
-
-    stmt = stmt.order_by(
-        order_agg.c.last_order_at.desc().nullslast(),
-        Customer.name,
-    ).limit(limit)
 
     result = await db.execute(stmt)
     return [

@@ -11,6 +11,7 @@ import { toast } from "@platform/ui/test-support/toast";
 import { FIXTURE_NOW } from "./constants/fixtureTimes";
 import { CARD } from "./constants/layoutSelectors";
 import { apiPath } from "@platform/ui/test-support/apiPath";
+import { manyCustomers } from "./fixtures/customerFixtures";
 import { customerIdAt } from "./fixtures/fixtureIds";
 import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
@@ -112,4 +113,71 @@ test("saves a customer's notes and shows them", async ({ page }) => {
   expect(api.writes).toEqual([
     { method: "PATCH", path: `/customers/${customerIdAt(2)}/notes`, body: { notes: "Allergic to mushrooms" } },
   ]);
+});
+
+test.describe("more customers than one page", () => {
+  const TOTAL = 130;
+
+  test("Load more brings in the rest, so the last customer is reachable without searching", async ({ page }) => {
+    await stubCustomersApi(page, manyCustomers(TOTAL));
+    const cards = page.getByRole("main").getByRole("listitem");
+    const loadMore = page.getByRole("button", { name: "Load more" });
+
+    await page.goto("/customers");
+    await expect(cards).toHaveCount(50);
+    await expect(page.getByText(`Showing 50 of ${TOTAL}`)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Customer 130" })).toHaveCount(0);
+
+    await loadMore.click();
+    await expect(cards).toHaveCount(100);
+    await loadMore.click();
+    await expect(cards).toHaveCount(TOTAL);
+    await expect(page.getByRole("heading", { name: "Customer 130" })).toBeVisible();
+    await expect(page.getByText(`Showing ${TOTAL} of ${TOTAL}`)).toBeVisible();
+    await expect(loadMore).toHaveCount(0);
+  });
+
+  test("Load more shows it is loading and cannot be pressed twice", async ({ page }) => {
+    await stubCustomersApi(page, manyCustomers(TOTAL));
+    await page.goto("/customers");
+    await expect(page.getByRole("button", { name: "Load more" })).toBeVisible();
+
+    const gate = await holdReads(page, CUSTOMERS_READ);
+    try {
+      await page.getByRole("button", { name: "Load more" }).click();
+      await expect(page.getByRole("button", { name: /Loading/ })).toBeDisabled();
+      await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(50);
+    } finally {
+      gate.release();
+    }
+    await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(100);
+  });
+
+  test("a search pages too", async ({ page }) => {
+    await stubCustomersApi(page, manyCustomers(TOTAL));
+    const cards = page.getByRole("main").getByRole("listitem");
+    await page.goto("/customers");
+
+    await page.getByPlaceholder("Search by name or phone...").fill("customer");
+    await expect(page.getByText(`Showing 50 of ${TOTAL}`)).toBeVisible();
+    await page.getByRole("button", { name: "Load more" }).click();
+    await expect(cards).toHaveCount(100);
+    await expect(page.getByText(`Showing 100 of ${TOTAL}`)).toBeVisible();
+  });
+
+  test("a failed Load more keeps the rows, says so, and retries", async ({ page }) => {
+    await stubCustomersApi(page, manyCustomers(TOTAL));
+    const cards = page.getByRole("main").getByRole("listitem");
+    await page.goto("/customers");
+    await expect(cards).toHaveCount(50);
+
+    await failReads(page, CUSTOMERS_READ);
+    await page.getByRole("button", { name: "Load more" }).click();
+    await expect(page.getByRole("alert")).toContainText("Could not load more customers");
+    await expect(cards).toHaveCount(50);
+
+    await page.getByRole("button", { name: "Load more" }).click();
+    await expect(cards).toHaveCount(100);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
 });

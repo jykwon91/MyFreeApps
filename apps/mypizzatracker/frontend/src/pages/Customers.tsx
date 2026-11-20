@@ -3,7 +3,6 @@ import {
   Card,
   Button,
   LoadingButton,
-  Skeleton,
   EmptyState,
   showError,
   showSuccess,
@@ -11,10 +10,10 @@ import {
   useDebouncedValue,
 } from "@platform/ui";
 import { Check, Pencil, Phone, Search, X } from "lucide-react";
-import {
-  useListCustomersQuery,
-  useUpdateCustomerNotesMutation,
-} from "@/store/customersApi";
+import CustomersListSkeleton from "@/features/customers/CustomersListSkeleton";
+import LoadMoreCustomers from "@/features/customers/LoadMoreCustomers";
+import { useCustomersPages } from "@/hooks/useCustomersPages";
+import { useUpdateCustomerNotesMutation } from "@/store/customersApi";
 import type { CustomerListItem } from "@/types/customer/customer";
 
 /**
@@ -32,9 +31,12 @@ export default function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
 
-  const query = useListCustomersQuery(
-    debouncedSearch ? { search: debouncedSearch } : undefined,
-  );
+  const pages = useCustomersPages(debouncedSearch ? { search: debouncedSearch } : {});
+  // While a new search loads its first page, and after that page failed, `items` still hold the
+  // previous search's rows: the list shows its skeleton, then its error, never those rows.
+  const isCurrent = pages.hasData && !pages.isFiltering && pages.loadError === undefined;
+  const rows = isCurrent ? pages.items : [];
+  const loadFailed = pages.loadError !== undefined;
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
@@ -59,19 +61,18 @@ export default function CustomersPage() {
         </label>
       </Card>
 
-      {/* currentData is this search's result; data would keep the previous search's rows. */}
-      {query.currentData === undefined && !query.isError ? <ListSkeleton /> : null}
+      {!isCurrent && !loadFailed ? <CustomersListSkeleton /> : null}
 
-      {query.isError ? (
+      {loadFailed ? (
         <EmptyState
           heading="Could not load customers"
-          body={extractErrorMessage(query.error) || "Please try again."}
-          action={{ label: "Retry", onClick: () => query.refetch() }}
+          body={extractErrorMessage(pages.loadError) || "Please try again."}
+          action={{ label: "Retry", onClick: () => void pages.refetch() }}
         />
       ) : null}
 
-      {query.currentData ? (
-        query.currentData.length === 0 ? (
+      {isCurrent ? (
+        rows.length === 0 ? (
           <EmptyState
             heading={
               debouncedSearch
@@ -85,22 +86,20 @@ export default function CustomersPage() {
             }
           />
         ) : (
-          <CustomerList rows={query.currentData} />
+          <>
+            <CustomerList rows={rows} />
+            <p className="text-center text-xs text-muted-foreground">
+              Showing {rows.length} of {pages.total}
+            </p>
+            <LoadMoreCustomers
+              hasNextPage={pages.hasNextPage}
+              isFetchingNextPage={pages.isFetchingNextPage}
+              failed={pages.isLoadMoreError}
+              onLoadMore={pages.loadMore}
+            />
+          </>
         )
       ) : null}
-    </div>
-  );
-}
-
-function ListSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <Card key={i}>
-          <Skeleton className="h-4 w-1/3 mb-2" />
-          <Skeleton className="h-3 w-1/2" />
-        </Card>
-      ))}
     </div>
   );
 }
