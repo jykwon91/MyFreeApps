@@ -1,7 +1,7 @@
 """Tests for GET /users/me/export (data export endpoint).
 
 Covers:
-- Returns the expected top-level keys for all 15 MJH domain tables
+- Returns the expected top-level keys for every user-owned MJH table
 - User row is exported with the public fields, not the secrets
 - Excludes hashed_password, totp_secret, totp_recovery_codes,
   job_board_credentials.encrypted_credentials
@@ -15,7 +15,7 @@ from datetime import date, datetime, timezone
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
@@ -25,7 +25,13 @@ from app.models.application.application_contact import ApplicationContact
 from app.models.application.application_event import ApplicationEvent
 from app.models.application.document import Document
 from app.models.company.company import Company
+from app.models.discovery.discovered_job import DiscoveredJob
+from app.models.discovery.discovery_fetch import DiscoveryFetch
+from app.models.discovery.discovery_source import DiscoverySource
 from app.models.integration.job_board_credential import JobBoardCredential
+from app.models.job_analysis.job_analysis import JobAnalysis
+from app.models.resume_refinement.session import ResumeRefinementSession
+from app.models.resume_refinement.turn import ResumeRefinementTurn
 from app.models.profile.profile import Profile
 from app.models.profile.skill import Skill
 from app.models.system.auth_event import AuthEvent
@@ -55,6 +61,12 @@ EXPECTED_TOP_LEVEL_KEYS: list[str] = [
     "job_board_credentials",
     "resume_upload_jobs",
     "extraction_logs",
+    "job_analyses",
+    "discovery_sources",
+    "discovery_fetches",
+    "discovered_jobs",
+    "resume_refinement_sessions",
+    "resume_refinement_turns",
 ]
 
 
@@ -306,16 +318,86 @@ async def test_export_writes_data_exported_auth_event(db: AsyncSession) -> None:
 
     assert response.status_code == 200
 
-    event_rows = (
-        await db.execute(
-            select(AuthEvent).where(
-                AuthEvent.user_id == user.id,
-                AuthEvent.event_type == "data.exported",
+    # Read through a separate session: only a COMMITTED row is visible to it,
+    # so this fails if the audit event is merely flushed on the request session.
+    async with async_sessionmaker(db.bind)() as other:
+        event_rows = (
+            await other.execute(
+                select(AuthEvent).where(
+                    AuthEvent.user_id == user.id,
+                    AuthEvent.event_type == "data.exported",
+                )
             )
-        )
-    ).scalars().all()
+        ).scalars().all()
     assert len(event_rows) == 1
     assert event_rows[0].succeeded is True
+
+
+@pytest.mark.asyncio
+async def test_export_includes_analysis_discovery_and_refinement_data(db: AsyncSession) -> None:
+    user = _make_user()
+    db.add(user)
+    await db.flush()
+
+    analysis = JobAnalysis(
+        user_id=user.id, jd_text="Build things", fingerprint="f" * 64,
+        extracted={"title": "Engineer"}, verdict="strong_fit", verdict_summary="Good fit",
+        dimensions=[], red_flags=["long hours"], green_flags=["remote"],
+    )
+    source = DiscoverySource(user_id=user.id, source="jsearch", name="Saved search", config={"q": "python"})
+    db.add_all([analysis, source])
+    await db.flush()
+    fetch = DiscoveryFetch(
+        user_id=user.id, discovery_source_id=source.id, source="jsearch",
+        started_at=datetime.now(timezone.utc), status="success",
+    )
+    db.add(fetch)
+    await db.flush()
+    job = DiscoveredJob(
+        user_id=user.id, source="jsearch", source_external_id="ext-1", title="Python Dev",
+        company_name="Acme", fetch_id=fetch.id, embedding=[0.1] * 384, raw_payload={"secret": "x"},
+    )
+    session = ResumeRefinementSession(user_id=user.id, current_draft="My draft")
+    db.add_all([job, session])
+    await db.flush()
+    db.add(ResumeRefinementTurn(session_id=session.id, turn_index=0, role="ai_proposal", proposed_text="Better"))
+    await db.flush()
+
+    _override_deps(user, db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/users/me/export")
+    finally:
+        app.dependency_overrides.clear()
+
+    data = response.json()
+    assert [a["verdict"] for a in data["job_analyses"]] == ["strong_fit"]
+    assert [d["name"] for d in data["discovery_sources"]] == ["Saved search"]
+    assert [f["discovery_source_id"] for f in data["discovery_fetches"]] == [str(source.id)]
+    assert [j["title"] for j in data["discovered_jobs"]] == ["Python Dev"]
+    assert "embedding" not in data["discovered_jobs"][0]
+    assert "raw_payload" not in data["discovered_jobs"][0]
+    assert [r["current_draft"] for r in data["resume_refinement_sessions"]] == ["My draft"]
+    assert "proposal_cache" not in data["resume_refinement_sessions"][0]
+    assert [t["proposed_text"] for t in data["resume_refinement_turns"]] == ["Better"]
+
+
+@pytest.mark.asyncio
+async def test_export_does_not_include_other_users_new_sections(db: AsyncSession) -> None:
+    owner, other = _make_user(), _make_user()
+    db.add_all([owner, other])
+    await db.flush()
+    db.add(DiscoverySource(user_id=other.id, source="jsearch", name="Theirs", config={}))
+    await db.flush()
+
+    _override_deps(owner, db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/users/me/export")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.json()["discovery_sources"] == []
 
 
 # ---------------------------------------------------------------------------
