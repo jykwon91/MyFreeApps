@@ -3,7 +3,7 @@ import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
+import { GMAIL_COMPLETE_URL, GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
 
 export const PENDING_URL = "/rent-receipts/pending";
 /** The most receipts the real server answers per list request (`limit: Query(le=500)`); more is refused with a 422. */
@@ -98,6 +98,7 @@ export function startReceiptServer(receipts: PendingReceipt[]): FakeReceiptServe
       server.connectStarts.push(config);
       return respond(200, { auth_url: GOOGLE_AUTH_URL });
     }
+    if (url === GMAIL_COMPLETE_URL) return respond(204, null);
     if (url === PENDING_URL || url.startsWith(`${PENDING_URL}/`)) {
       server.listReads.push(config);
       server.beforeListRead?.();

@@ -87,6 +87,12 @@ describe("integrationsApi writes", () => {
     expect(seen[0].params).toBeUndefined();
   });
 
+  it("finishes the connection with Google's code and the state in a POST", async () => {
+    await newStore().dispatch(integrationsApi.endpoints.completeGmailConnect.initiate({ code: "c0de", state: "signed" }));
+    expect(seen[0]).toMatchObject({ method: "post", url: "/integrations/gmail/complete" });
+    expect(JSON.parse(String(seen[0].data))).toEqual({ code: "c0de", state: "signed" });
+  });
+
   it("says when the phone is the one connecting", async () => {
     await newStore().dispatch(integrationsApi.endpoints.connectGmail.initiate("mobile"));
     expect(seen[0]).toMatchObject({ method: "get", url: "/integrations/gmail/connect", params: { client: "mobile" } });

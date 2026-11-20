@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from app.core.config import settings
+from app.core.auth import current_active_user
 from app.core.gmail_connect_client import GmailConnectClient
-from app.core.gmail_connect_constants import GMAIL_CONNECT_NO_CODE_DETAIL
+from app.core.gmail_connect_constants import GMAIL_CONNECT_FORBIDDEN_FAILURES
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.models.responses.connect_response import ConnectResponse
@@ -18,6 +18,8 @@ from app.models.responses.queue_item_response import QueueItemResponse
 from app.models.responses.retry_all_response import RetryAllResponse
 from app.models.responses.retry_response import RetryResponse
 from app.models.responses.sync_log_response import SyncLogResponse
+from app.models.user.user import User
+from app.schemas.integrations.gmail_connect_complete import GmailConnectComplete
 from app.schemas.integrations.gmail_label_update import GmailLabelUpdate
 from app.schemas.integrations.gmail_sync_response import GmailSyncResponse
 from app.services.email.constants import (
@@ -26,7 +28,8 @@ from app.services.email.constants import (
     GMAIL_LABEL_NOT_FOUND_MESSAGE,
 )
 from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
-from app.services.integrations import gmail_mobile_connect_service, integration_service
+from app.services.integrations import gmail_connect_return_service, integration_service
+from app.services.integrations.gmail_connect_error import GmailConnectError
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -54,21 +57,19 @@ async def gmail_callback(
     code: str | None = None,
     error: str | None = None,
 ) -> RedirectResponse:
-    if integration_service.gmail_connect_client(state) is GmailConnectClient.MOBILE:
-        return RedirectResponse(
-            url=await gmail_mobile_connect_service.finish_mobile_gmail_connect(code, error, state),
-        )
-    if code is None:
-        logger.warning("Gmail OAuth callback without a code: error=%s", error)
-        raise HTTPException(status_code=400, detail=GMAIL_CONNECT_NO_CODE_DETAIL)
+    return RedirectResponse(url=gmail_connect_return_service.gmail_connect_return_url(state, code, error))
+
+
+@router.post("/gmail/complete", status_code=204)
+async def complete_gmail_connect(
+    body: GmailConnectComplete,
+    user: User = Depends(current_active_user),
+) -> None:
     try:
-        await integration_service.handle_gmail_callback(code, state)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        logger.exception("Gmail OAuth callback failed — exception class and traceback above")
-        raise
-    return RedirectResponse(url=f"{settings.frontend_url}/oauth-callback")
+        await integration_service.complete_gmail_connect(user.id, body.code, body.state)
+    except GmailConnectError as refused:
+        status = 403 if refused.failure in GMAIL_CONNECT_FORBIDDEN_FAILURES else 400
+        raise HTTPException(status_code=status, detail=refused.failure.value)
 
 
 @router.get("")

@@ -26,6 +26,7 @@ import { usePendingReceiptActions } from "../src/features/receipts/usePendingRec
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
+import { GOOGLE_ANSWER_QUERY } from "../test-support/googleAuthUrl";
 import { aReceipt, cachedReceiptPages, startReceiptServer } from "../test-support/receiptsServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
@@ -289,7 +290,7 @@ describe("what the list shows", () => {
     }
     jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
       server.gmailState = "ready";
-      return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}?result=connected` };
+      return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}#${GOOGLE_ANSWER_QUERY}` };
     });
     await fireEvent.press(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect }));
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
@@ -7,6 +7,7 @@ import { store } from "@/shared/store";
 import Integrations from "@/app/pages/Integrations";
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
+import { GMAIL_CONNECT_FAILURE_MESSAGES } from "@mybookkeeper/api-client/constants/gmailConnect";
 
 const mockGmailIntegration: Integration = {
   provider: "gmail",
@@ -61,8 +62,10 @@ vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useUpdateGmailLabelMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
+const toast = vi.hoisted(() => ({ showSuccess: vi.fn(), showError: vi.fn() }));
+
 vi.mock("@/shared/hooks/useToast", () => ({
-  useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
+  useToast: () => toast,
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({
@@ -573,5 +576,51 @@ describe("Integrations — viewer role", () => {
     } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
     renderWithProviders(<Integrations />);
     expect(screen.getByText(/Currently filtering by: "Receipts"/)).toBeInTheDocument();
+  });
+});
+
+describe("Integrations — hearing from the Gmail connect popup", () => {
+  let refetch: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    refetch = vi.fn();
+    vi.mocked(useGetIntegrationsQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+      refetch,
+    } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
+    vi.mocked(useGetSyncLogsQuery).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useGetSyncLogsQuery>);
+    vi.mocked(useGetEmailQueueQuery).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useGetEmailQueueQuery>);
+  });
+
+  function popupSays(data: unknown, origin = window.location.origin) {
+    act(() => {
+      window.dispatchEvent(new MessageEvent("message", { data, origin }));
+    });
+  }
+
+  it("reloads Gmail and says it's connected", () => {
+    renderWithProviders(<Integrations />);
+    popupSays({ type: "gmail_connected" });
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(toast.showSuccess).toHaveBeenCalledWith("Gmail's connected.");
+  });
+
+  it("says why it didn't connect, without reloading", () => {
+    renderWithProviders(<Integrations />);
+    popupSays({ type: "gmail_connect_failed", reason: "wrong_account" });
+
+    expect(toast.showError).toHaveBeenCalledWith(GMAIL_CONNECT_FAILURE_MESSAGES.wrong_account);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("ignores messages from other sites", () => {
+    renderWithProviders(<Integrations />);
+    popupSays({ type: "gmail_connected" }, "https://evil.example");
+
+    expect(refetch).not.toHaveBeenCalled();
+    expect(toast.showSuccess).not.toHaveBeenCalled();
   });
 });
