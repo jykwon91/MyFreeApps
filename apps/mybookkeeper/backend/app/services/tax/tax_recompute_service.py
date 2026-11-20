@@ -320,8 +320,10 @@ async def _compute_1040_aggregation(db: AsyncSession, tax_return: TaxReturn) -> 
         )
 
     # Schedule E Line 26 -> Schedule 1 Line 5 -> 1040 Line 8
-    se_line_26 = field_map.get("schedule_e", {}).get("line_26", Decimal("0"))
-    if se_line_26:
+    # Written whenever Schedule E has a line 26, zero included, so a total that falls
+    # to zero doesn't leave the last figure on Schedule 1 and the 1040.
+    se_line_26 = field_map.get("schedule_e", {}).get("line_26")
+    if se_line_26 is not None:
         inst_sched_1 = await tax_return_repo.upsert_form_instance(
             db, tax_return.id, "schedule_1", "computed",
             instance_label="Schedule 1",

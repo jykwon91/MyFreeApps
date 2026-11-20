@@ -2,7 +2,7 @@
 
 # Changing any of these moves an unfiled return's depreciation.
 DEPRECIATION_INPUT_FIELDS: frozenset[str] = frozenset({
-    "purchase_price", "land_value", "date_placed_in_service", "property_class",
+    "purchase_price", "land_value", "date_placed_in_service", "property_class", "is_active",
 })
 
 # Same wording as the web and phone edit screens (api-client constants/depreciationInputs.ts).

@@ -11,6 +11,10 @@ from app.repositories import property_repo, tax_return_repo
 
 DEPRECIATION_AMOUNT_FIELD = "depreciation_amount"
 DEPRECIATION_AMOUNT_LABEL = "Annual depreciation"
+DEPRECIABLE_BASIS_FIELD = "depreciable_basis"
+DEPRECIABLE_BASIS_LABEL = "Depreciable basis (cost minus land)"
+USEFUL_LIFE_FIELD = "useful_life_years"
+USEFUL_LIFE_LABEL = "Recovery period (years)"
 
 
 def _annual_depreciation(prop: Property, tax_year: int) -> tuple[Decimal, Decimal, Decimal] | None:
@@ -67,7 +71,8 @@ async def compute_form_4562(
 
     The amount returned is what the form ends up saying, so an override on it carries
     through to Schedule E. A property that no longer depreciates this year (reclassified,
-    fully depreciated) has its earlier computed amount written back to zero.
+    sold, fully depreciated) has its earlier computed figures cleared, except any the
+    user overrode; an overridden amount is still returned so it reaches line 18.
     """
     properties = await property_repo.list_depreciable(db, tax_return.organization_id)
 
@@ -87,13 +92,11 @@ async def compute_form_4562(
             value_numeric=annual_depreciation, is_calculated=True,
         )
         await tax_return_repo.upsert_field(
-            db, instance.id, "depreciable_basis",
-            "Depreciable basis (cost minus land)",
+            db, instance.id, DEPRECIABLE_BASIS_FIELD, DEPRECIABLE_BASIS_LABEL,
             value_numeric=depreciable_basis, is_calculated=True,
         )
         await tax_return_repo.upsert_field(
-            db, instance.id, "useful_life_years",
-            "Recovery period (years)",
+            db, instance.id, USEFUL_LIFE_FIELD, USEFUL_LIFE_LABEL,
             value_numeric=useful_life, is_calculated=True,
         )
         claimed[prop.id] = PropertyDepreciation(
@@ -107,9 +110,22 @@ async def compute_form_4562(
             continue
         if instance.property_id in claimed:
             continue
-        await tax_return_repo.upsert_field(
+        amount_field = await tax_return_repo.upsert_field(
             db, instance.id, DEPRECIATION_AMOUNT_FIELD, DEPRECIATION_AMOUNT_LABEL,
             value_numeric=Decimal("0"), is_calculated=True,
         )
+        await tax_return_repo.upsert_field(
+            db, instance.id, DEPRECIABLE_BASIS_FIELD, DEPRECIABLE_BASIS_LABEL,
+            value_numeric=None, is_calculated=True,
+        )
+        await tax_return_repo.upsert_field(
+            db, instance.id, USEFUL_LIFE_FIELD, USEFUL_LIFE_LABEL,
+            value_numeric=None, is_calculated=True,
+        )
+        if amount_field.is_overridden:
+            claimed[instance.property_id] = PropertyDepreciation(
+                form_instance_id=instance.id,
+                amount=amount_field.value_numeric or Decimal("0"),
+            )
 
     return claimed

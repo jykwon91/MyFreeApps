@@ -43,9 +43,10 @@ async def compute_schedule_e(
 ) -> int:
     """Compute Schedule E per property from approved, tax-relevant transactions.
 
-    Each property's Form 4562 depreciation (``depreciation``, by property) is added to
-    its line 18. Only includes properties classified as INVESTMENT. Unclassified,
-    primary residence, and second home properties are excluded from Schedule E.
+    Each property's Form 4562 depreciation (``depreciation``, by property) is its line 18,
+    in place of any transactions tagged as depreciation. Only includes properties
+    classified as INVESTMENT. Unclassified, primary residence, and second home
+    properties are excluded from Schedule E.
     Totals are built from what each line ends up saying, so an overridden line
     carries through to lines 20, 21 and 26.
     """
@@ -62,19 +63,10 @@ async def compute_schedule_e(
             property_data[prop_id] = {}
         property_data[prop_id][se_line] = row.total
 
+    # A claimed Form 4562 is the property's depreciation; transactions tagged as
+    # depreciation only stand in for it when there is no Form 4562.
     for prop_id, claimed in depreciation.items():
-        lines = property_data.setdefault(prop_id, {})
-        lines[DEPRECIATION_LINE] = lines.get(DEPRECIATION_LINE, Decimal("0")) + claimed.amount
-
-    # Filter to only investment properties
-    if property_data:
-        classifications = await property_repo.get_classifications_by_ids(
-            db, list(property_data.keys()),
-        )
-        property_data = {
-            pid: lines for pid, lines in property_data.items()
-            if classifications.get(pid) == "INVESTMENT"
-        }
+        property_data.setdefault(prop_id, {})[DEPRECIATION_LINE] = claimed.amount
 
     # A property or line with nothing left still has to be written back as zero,
     # or the return keeps the figure from the last recompute.
@@ -84,6 +76,13 @@ async def compute_schedule_e(
         for i in instances
         if i.source_type == "computed" and i.property_id is not None
     }
+
+    # Only investment properties are on Schedule E. One that no longer is keeps its
+    # saved form (zeroed, bar any override) but stays out of line 26.
+    prop_ids = list(property_data.keys() | saved_lines.keys())
+    classifications = await property_repo.get_classifications_by_ids(db, prop_ids) if prop_ids else {}
+    rentals = {pid for pid in prop_ids if classifications.get(pid) == "INVESTMENT"}
+    property_data = {pid: lines for pid, lines in property_data.items() if pid in rentals}
     for pid in saved_lines:
         property_data.setdefault(pid, {})
 
@@ -97,8 +96,7 @@ async def compute_schedule_e(
             txn_by_prop_line[key] = []
         txn_by_prop_line[key].append((txn.id, txn.amount))
 
-    prop_ids = list(property_data.keys())
-    prop_labels = await property_repo.get_labels_by_ids(db, prop_ids)
+    prop_labels = await property_repo.get_labels_by_ids(db, list(property_data))
 
     forms_updated = 0
     total_net = Decimal("0")
@@ -127,24 +125,25 @@ async def compute_schedule_e(
                 value_numeric=amount, is_calculated=True,
             )
             stated[line_id] = field.value_numeric or Decimal("0")
-            sources = [
-                TaxFormFieldSource(
-                    field_id=field.id,
-                    source_type="transaction",
-                    source_id=txn_id,
-                    amount=txn_amount,
-                )
-                for txn_id, txn_amount in txn_by_prop_line.get((prop_id, line_id), [])
-            ]
-            claimed = depreciation.get(prop_id)
+            claimed = depreciation.get(prop_id) if prop_id in rentals else None
             if line_id == DEPRECIATION_LINE and claimed is not None:
-                sources.append(TaxFormFieldSource(
+                sources = [TaxFormFieldSource(
                     field_id=field.id,
                     source_type="tax_form_instance",
                     source_id=claimed.form_instance_id,
                     amount=claimed.amount,
                     description=FORM_4562_SOURCE_DESCRIPTION,
-                ))
+                )]
+            else:
+                sources = [
+                    TaxFormFieldSource(
+                        field_id=field.id,
+                        source_type="transaction",
+                        source_id=txn_id,
+                        amount=txn_amount,
+                    )
+                    for txn_id, txn_amount in txn_by_prop_line.get((prop_id, line_id), [])
+                ]
             await tax_return_repo.replace_field_sources(db, field.id, sources)
 
         line_20 = await tax_return_repo.upsert_field(
@@ -161,7 +160,8 @@ async def compute_schedule_e(
             value_numeric=income - (line_20.value_numeric or Decimal("0")),
             is_calculated=True,
         )
-        total_net += line_21.value_numeric or Decimal("0")
+        if prop_id in rentals:
+            total_net += line_21.value_numeric or Decimal("0")
 
     # Line 26 (sum of all property Line 21s) as a single-instance aggregate
     if property_data:

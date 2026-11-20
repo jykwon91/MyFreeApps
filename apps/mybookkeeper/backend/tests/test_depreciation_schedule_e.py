@@ -307,3 +307,130 @@ class TestOverrides:
 
         schedule_e = await _instances(db, tax_return, "schedule_e")
         assert _values(_property_schedule_e(schedule_e, prop))["line_18"] == Decimal("9000.00")
+
+
+async def _override(
+    db: AsyncSession, tax_return: TaxReturn, form_name: str, prop: Property, field_id: str, value: Decimal,
+) -> None:
+    instance = _property_schedule_e(await _instances(db, tax_return, form_name), prop)
+    field = next(f for f in instance.fields if f.field_id == field_id)
+    field.value_numeric = value
+    field.is_overridden = True
+    await db.commit()
+
+
+class TestStaleForm4562:
+    @pytest.mark.asyncio
+    async def test_a_deactivated_rental_stops_depreciating_and_its_form_is_cleared(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_rental(db, test_org, test_user)
+        tax_return = await _new_return(db, test_org)
+        await _recompute(db, test_org, tax_return)
+
+        prop.is_active = False
+        await db.commit()
+        await _recompute(db, test_org, tax_return)
+
+        form_4562 = _values((await _instances(db, tax_return, "form_4562"))[0])
+        assert form_4562 == {"depreciation_amount": Decimal("0"), "depreciable_basis": None, "useful_life_years": None}
+        schedule_e = await _instances(db, tax_return, "schedule_e")
+        assert _values(_property_schedule_e(schedule_e, prop))["line_18"] == Decimal("0")
+
+    @pytest.mark.asyncio
+    async def test_an_overridden_amount_still_reaches_line_18_once_the_property_stops_computing(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_rental(db, test_org, test_user)
+        tax_return = await _new_return(db, test_org)
+        await _recompute(db, test_org, tax_return)
+        await _override(db, tax_return, "form_4562", prop, "depreciation_amount", Decimal("9000.00"))
+
+        prop.land_value = prop.purchase_price
+        await db.commit()
+        await _recompute(db, test_org, tax_return)
+
+        form_4562 = _values((await _instances(db, tax_return, "form_4562"))[0])
+        assert form_4562["depreciation_amount"] == Decimal("9000.00")
+        assert form_4562["depreciable_basis"] is None
+        schedule_e = await _instances(db, tax_return, "schedule_e")
+        assert _values(_property_schedule_e(schedule_e, prop))["line_18"] == Decimal("9000.00")
+        assert _line_26(schedule_e) == RENT - CLEANING - Decimal("9000.00")
+
+
+class TestDepreciationTransactions:
+    async def _seed_with_depreciation_txn(
+        self, db: AsyncSession, org: Organization, user: User, **kwargs,
+    ) -> Property:
+        prop = await _seed_rental(db, org, user, **kwargs)
+        db.add(_txn(
+            org, user, prop, amount=Decimal("3000.00"), transaction_type="expense",
+            category="other_expense", schedule_e_line="line_18_depreciation",
+        ))
+        await db.flush()
+        return prop
+
+    @pytest.mark.asyncio
+    async def test_a_form_4562_replaces_transactions_tagged_as_depreciation(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await self._seed_with_depreciation_txn(db, test_org, test_user)
+        tax_return = await _new_return(db, test_org)
+
+        await _recompute(db, test_org, tax_return)
+
+        schedule_e = await _instances(db, tax_return, "schedule_e")
+        line_18 = next(f for f in _property_schedule_e(schedule_e, prop).fields if f.field_id == "line_18")
+        assert line_18.value_numeric == ANNUAL_DEPRECIATION
+        assert [s.source_type for s in line_18.sources] == ["tax_form_instance"]
+
+    @pytest.mark.asyncio
+    async def test_without_a_form_4562_the_tagged_transactions_still_count(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await self._seed_with_depreciation_txn(db, test_org, test_user, date_placed_in_service=None)
+        tax_return = await _new_return(db, test_org)
+
+        await _recompute(db, test_org, tax_return)
+
+        schedule_e = await _instances(db, tax_return, "schedule_e")
+        assert _values(_property_schedule_e(schedule_e, prop))["line_18"] == Decimal("3000.00")
+
+
+class TestTotals:
+    @pytest.mark.asyncio
+    async def test_a_reclassified_property_with_an_override_stays_out_of_line_26(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        await _seed_rental(db, test_org, test_user)
+        home = await _seed_rental(db, test_org, test_user, name="Elm", address="1 Elm St")
+        tax_return = await _new_return(db, test_org)
+        await _recompute(db, test_org, tax_return)
+        await _override(db, tax_return, "schedule_e", home, "line_18", Decimal("8000.00"))
+
+        home.classification = PropertyClassification.PRIMARY_RESIDENCE
+        home.type = None
+        await db.commit()
+        await _recompute(db, test_org, tax_return)
+
+        schedule_e = await _instances(db, tax_return, "schedule_e")
+        assert _line_26(schedule_e) == RENT - CLEANING - ANNUAL_DEPRECIATION
+
+    @pytest.mark.asyncio
+    async def test_schedule_1_follows_line_26_down_to_zero(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_rental(db, test_org, test_user, date_placed_in_service=None)
+        tax_return = await _new_return(db, test_org)
+        await _recompute(db, test_org, tax_return)
+
+        db.add(_txn(
+            test_org, test_user, prop, amount=RENT - CLEANING, transaction_type="expense",
+            category="other_expense", schedule_e_line="line_19_other",
+        ))
+        await db.commit()
+        await _recompute(db, test_org, tax_return)
+
+        assert _line_26(await _instances(db, tax_return, "schedule_e")) == Decimal("0")
+        assert _values((await _instances(db, tax_return, "schedule_1"))[0])["line_5"] == Decimal("0")
+        assert _values((await _instances(db, tax_return, "1040"))[0])["line_8"] == Decimal("0")

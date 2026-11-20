@@ -168,6 +168,20 @@ class TestUnfiledReturnsGoStale:
         assert unfiled.needs_recompute is True
 
     @pytest.mark.asyncio
+    async def test_deactivating_a_rental_flags_unfiled_returns(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = _rental(test_org, test_user)
+        unfiled = _return(test_org, 2025, "draft")
+        db.add_all([prop, unfiled])
+        await db.flush()
+
+        await _update(db, test_org, test_user, prop, {"is_active": False})
+        await db.refresh(unfiled)
+
+        assert unfiled.needs_recompute is True
+
+    @pytest.mark.asyncio
     async def test_a_rename_leaves_returns_alone(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
