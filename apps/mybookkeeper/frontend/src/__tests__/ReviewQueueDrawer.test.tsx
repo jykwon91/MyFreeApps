@@ -49,6 +49,11 @@ const mockItems: ReviewQueueItem[] = [
 // Mocks
 // ---------------------------------------------------------------------------
 
+let canWriteValue = true;
+vi.mock("@/shared/hooks/useOrgRole", () => ({
+  useCanWrite: () => canWriteValue,
+}));
+
 vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
   useGetReviewQueueQuery: vi.fn(() => ({
     data: mockItems,
@@ -94,6 +99,7 @@ describe("ReviewQueueDrawer", () => {
   }
 
   beforeEach(() => {
+    canWriteValue = true;
     mockQuery({ data: mockItems, isLoading: false, isError: false });
   });
 

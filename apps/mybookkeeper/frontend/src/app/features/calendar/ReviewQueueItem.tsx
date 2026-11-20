@@ -11,6 +11,7 @@ import {
 import { reviewQueueChannelLabel } from "@mybookkeeper/api-client/constants/reviewQueueChannels";
 import ReviewQueueChannelBadge from "@/app/features/calendar/ReviewQueueChannelBadge";
 import { useToast } from "@/shared/hooks/useToast";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 export interface ReviewQueueItemProps {
   item: ReviewQueueItemType;
@@ -48,6 +49,7 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
   const [ignoreItem, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
   const [dismissItem, { isLoading: isDismissing }] = useDismissQueueItemMutation();
   const { showSuccess, showError } = useToast();
+  const canWrite = useCanWrite();
 
   const payload = item.parsed_payload;
   const channelLabel = reviewQueueChannelLabel(item.source_channel);
@@ -136,59 +138,61 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
         )}
       </div>
 
-      {/* Row 3: action buttons */}
-      <div className="flex flex-wrap items-center gap-2">
-        <LoadingButton
-          variant="primary"
-          size="sm"
-          isLoading={isResolving}
-          loadingText="Adding..."
-          onClick={() => setIsExpanded((v) => !v)}
-          aria-expanded={isExpanded}
-          aria-controls={`resolve-panel-${item.id}`}
-          data-testid="review-queue-add-btn"
-          className="min-h-[44px]"
-        >
-          {isExpanded ? (
-            <>
-              <ChevronDown className="h-4 w-4 mr-1.5" aria-hidden="true" />
-              Add to MBK
-            </>
-          ) : (
-            <>
-              <ChevronRight className="h-4 w-4 mr-1.5" aria-hidden="true" />
-              Add to MBK
-            </>
-          )}
-        </LoadingButton>
+      {/* Row 3: action buttons — viewers are read-only */}
+      {canWrite && (
+        <div className="flex flex-wrap items-center gap-2">
+          <LoadingButton
+            variant="primary"
+            size="sm"
+            isLoading={isResolving}
+            loadingText="Adding..."
+            onClick={() => setIsExpanded((v) => !v)}
+            aria-expanded={isExpanded}
+            aria-controls={`resolve-panel-${item.id}`}
+            data-testid="review-queue-add-btn"
+            className="min-h-[44px]"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronDown className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Add to MBK
+              </>
+            ) : (
+              <>
+                <ChevronRight className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Add to MBK
+              </>
+            )}
+          </LoadingButton>
 
-        <LoadingButton
-          variant="secondary"
-          size="sm"
-          isLoading={isIgnoring}
-          loadingText="Ignoring..."
-          onClick={handleIgnore}
-          disabled={isAnyLoading}
-          data-testid="review-queue-ignore-btn"
-          className="min-h-[44px]"
-        >
-          Ignore forever
-        </LoadingButton>
+          <LoadingButton
+            variant="secondary"
+            size="sm"
+            isLoading={isIgnoring}
+            loadingText="Ignoring..."
+            onClick={handleIgnore}
+            disabled={isAnyLoading}
+            data-testid="review-queue-ignore-btn"
+            className="min-h-[44px]"
+          >
+            Ignore forever
+          </LoadingButton>
 
-        <button
-          type="button"
-          onClick={handleDismiss}
-          disabled={isAnyLoading}
-          aria-label="Dismiss"
-          className="ml-auto text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground min-h-[44px] px-2"
-          data-testid="review-queue-dismiss-btn"
-        >
-          {isDismissing ? "Dismissing…" : "Dismiss"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            disabled={isAnyLoading}
+            aria-label="Dismiss"
+            className="ml-auto text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground min-h-[44px] px-2"
+            data-testid="review-queue-dismiss-btn"
+          >
+            {isDismissing ? "Dismissing…" : "Dismiss"}
+          </button>
+        </div>
+      )}
 
       {/* Inline listing picker (expanded) */}
-      {isExpanded && (
+      {canWrite && isExpanded && (
         <div
           id={`resolve-panel-${item.id}`}
           className="border-t pt-3 space-y-3"
