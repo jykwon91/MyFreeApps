@@ -12,7 +12,7 @@ that is already soft-deleted is a no-op (returns the existing row unchanged).
 
 Status query: ``list_with_status`` returns
 ``(Application, str | None, str)`` tuples where the second element is the
-latest ``event_type`` from ``application_events`` via a LATERAL join on the
+latest stage-defining ``event_type`` from ``application_events`` via a LATERAL join on the
 covering index ``ix_appevent_app_occurred(application_id, occurred_at)
 INCLUDE (event_type)`` (ties on ``occurred_at`` broken by ``created_at`` then
 ``id``; see ``application_list_query``), and the third element is the ``companies.name`` of
@@ -36,6 +36,7 @@ from sqlalchemy.orm import selectinload
 from platform_shared.repositories import soft_delete as _soft_delete
 
 from app.core.application_list_constants import DEFAULT_PAGE_SIZE, DEFAULT_SORT_FIELD, DEFAULT_SORT_ORDER
+from app.core.enums import EventType
 from app.core.application_sort_field import ApplicationSortField
 from app.core.sort_order import SortOrder
 from app.models.application.application import Application
@@ -49,19 +50,6 @@ from app.repositories.application.application_list_query import (
     sort_expressions,
 )
 
-
-# Event types that DEFINE a kanban stage. Filtered out: ``note_added``,
-# ``email_received``, ``follow_up_sent`` — these record activity but
-# don't transition the application to a different column.
-_STAGE_EVENT_TYPES: tuple[str, ...] = (
-    "applied",
-    "interview_scheduled",
-    "interview_completed",
-    "offer_received",
-    "rejected",
-    "withdrawn",
-    "ghosted",
-)
 
 # Allowlist of columns that can be applied via the dynamic ``update``
 # function. Per the project security rule: "Always validate field names
@@ -317,7 +305,7 @@ async def list_for_kanban(
         .where(
             ApplicationEvent.application_id == Application.id,
             ApplicationEvent.user_id == user_id,
-            ApplicationEvent.event_type.in_(_STAGE_EVENT_TYPES),
+            ApplicationEvent.event_type.in_(EventType.STAGE_DEFINING),
         )
         .order_by(*LATEST_EVENT_ORDER)
         .limit(1)

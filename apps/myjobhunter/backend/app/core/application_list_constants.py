@@ -22,19 +22,16 @@ MAX_PAGE_SIZE = 500
 DEFAULT_SORT_FIELD: ApplicationSortField = "applied"
 DEFAULT_SORT_ORDER: SortOrder = "desc"
 
-# Pipeline order: applied, then in process, then offer, then closed out, then
-# the events that don't move an application along.
+# Pipeline order: applied, then in process, then offer, then closed out.
+# Only stage-defining events are ranked (``EventType.STAGE_DEFINING``).
 STATUS_SORT_RANKS: dict[str, int] = {
     EventType.APPLIED: 0,
-    EventType.EMAIL_RECEIVED: 1,
-    EventType.INTERVIEW_SCHEDULED: 2,
-    EventType.INTERVIEW_COMPLETED: 3,
-    EventType.OFFER_RECEIVED: 4,
-    EventType.REJECTED: 5,
-    EventType.WITHDRAWN: 6,
-    EventType.GHOSTED: 7,
-    EventType.NOTE_ADDED: 8,
-    EventType.FOLLOW_UP_SENT: 9,
+    EventType.INTERVIEW_SCHEDULED: 1,
+    EventType.INTERVIEW_COMPLETED: 2,
+    EventType.OFFER_RECEIVED: 3,
+    EventType.REJECTED: 4,
+    EventType.WITHDRAWN: 5,
+    EventType.GHOSTED: 6,
 }
 
 # An event type with no rank above sorts after every ranked one. Applications

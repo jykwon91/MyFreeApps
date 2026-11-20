@@ -18,12 +18,13 @@ from app.core.application_list_constants import (
     STATUS_SORT_RANKS,
     UNKNOWN_STATUS_SORT_RANK,
 )
+from app.core.enums import EventType
 from app.core.application_sort_field import ApplicationSortField
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 
-# Which event is an application's latest. Two events can share an
+# Which event is an application's latest stage event. Two events can share an
 # ``occurred_at`` (a kanban move and its note, an import), so the later-written
 # one wins, then the higher id, and the same event is chosen on every read.
 LATEST_EVENT_ORDER: tuple[UnaryExpression[Any], ...] = (
@@ -34,7 +35,10 @@ LATEST_EVENT_ORDER: tuple[UnaryExpression[Any], ...] = (
 
 
 def latest_event_lateral(user_id: uuid.UUID) -> Lateral:
-    """The application's most recent event, as a LATERAL row.
+    """The application's most recent stage-defining event, as a LATERAL row.
+
+    Activity events (notes, follow-ups, emails) are skipped, matching the
+    kanban board, so the list status is the stage the application is in.
 
     Read once per application and shared by the selected ``latest_status``,
     the ``status`` filter and the ``status`` sort, so all three always agree
@@ -50,6 +54,7 @@ def latest_event_lateral(user_id: uuid.UUID) -> Lateral:
         .where(
             ApplicationEvent.application_id == Application.id,
             ApplicationEvent.user_id == user_id,
+            ApplicationEvent.event_type.in_(EventType.STAGE_DEFINING),
         )
         .order_by(*LATEST_EVENT_ORDER)
         .limit(1)
