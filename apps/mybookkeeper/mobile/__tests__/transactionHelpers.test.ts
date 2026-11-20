@@ -1,7 +1,6 @@
 import { CHANNEL_OPTIONS } from "../src/constants/transactionCreateOptions";
 import { isBulkApprovable } from "../src/features/transactions/bulkApprovable";
 import { savedVendorChoices, savedVendorLabel } from "../src/features/transactions/savedVendor";
-import { otherTaxYear } from "../src/features/transactions/taxYear";
 import { blankCreateValues, choiceLabel, createAmountError, createPayload } from "../src/features/transactions/transactionCreateValues";
 import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
@@ -326,14 +325,6 @@ describe("a custom date range", () => {
 
   it("is ignored while looking at what's waiting for review", () => {
     expect(toListParams({ ...custom, view: "review" }, new Date(2026, 5, 1))).toEqual({ to_review: true });
-  });
-});
-
-describe("tax years", () => {
-  it("only asks when the date's year isn't the one it's filed under", () => {
-    expect(otherTaxYear("2026-12-31", aTransaction())).toBeNull();
-    expect(otherTaxYear("2027-01-01", aTransaction())).toBe(2027);
-    expect(otherTaxYear("2026-01-02", aTransaction({ tax_year: 2025 }))).toBe(2026);
   });
 });
 

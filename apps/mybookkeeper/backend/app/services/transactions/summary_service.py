@@ -1,6 +1,6 @@
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,17 +175,17 @@ async def get_transaction_years(ctx: RequestContext) -> list[int]:
 async def get_tax_summary(
     ctx: RequestContext, year: int,
 ) -> TaxSummaryData:
-    start = datetime(year, 1, 1, tzinfo=timezone.utc)
-    end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
-
     async with AsyncSessionLocal() as db:
-        # Capital improvements are depreciated, not deducted in the year paid.
+        # Grouped by the tax year each row is filed under, not its date, so a
+        # payment dated early January but filed for the prior year lands where
+        # Schedule E and the return put it. Capital improvements are
+        # depreciated, not deducted in the year paid.
         rows = await summary_repo.txn_sum_by_category(
-            db, ctx.organization_id, start_date=start, end_date=end,
+            db, ctx.organization_id, tax_year=year,
             tax_relevant_only=True, exclude_capital_improvements=True,
         )
         prop_rows = await summary_repo.txn_sum_by_property_and_category(
-            db, ctx.organization_id, start_date=start, end_date=end,
+            db, ctx.organization_id, tax_year=year,
             tax_relevant_only=True, exclude_capital_improvements=True,
         )
         by_tag: dict[str, float] = {row.tag: float(row.total) for row in rows}

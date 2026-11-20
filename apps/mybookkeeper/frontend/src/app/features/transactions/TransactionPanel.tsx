@@ -13,6 +13,8 @@ import TransactionStatusBadge from "@/app/features/transactions/TransactionStatu
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
 import UnsavedChangesDialog from "@/app/features/transactions/UnsavedChangesDialog";
+import TaxYearChangeDialog from "@/app/features/transactions/TaxYearChangeDialog";
+import { useTaxYearQuestion } from "@/app/features/transactions/useTaxYearQuestion";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
@@ -70,6 +72,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   // later, and a second click in that gap would save twice and close twice.
   const closeInFlight = useRef(false);
   const [isSavingAndClosing, setIsSavingAndClosing] = useState(false);
+  const taxYearQuestion = useTaxYearQuestion(transaction);
 
   const dupOther = duplicatePair
     ? duplicatePair.transaction_a.id === transaction.id
@@ -105,12 +108,21 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
     }
   }
 
+  /** What a date moved into another year adds to the save, or null if the person went back to editing. */
+  function decideTaxYear(data: TransactionFormValues) {
+    return taxYearQuestion.decide(dirtyFields.transaction_date ? data.transaction_date : null, Boolean(dirtyFields.tax_year));
+  }
+
   async function onSave(data: TransactionFormValues) {
-    if (await save(data) === null) onClose();
+    const taxYear = await decideTaxYear(data);
+    if (taxYear === null) return;
+    if (await save(data, taxYear) === null) onClose();
   }
 
   async function onApproveAndSave(data: TransactionFormValues) {
-    if (await save(data, { status: "approved" }) === null) onClose();
+    const taxYear = await decideTaxYear(data);
+    if (taxYear === null) return;
+    if (await save(data, { ...taxYear, status: "approved" }) === null) onClose();
   }
 
   function requestClose(afterClose: () => void) {
@@ -152,7 +164,12 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   }
 
   async function onSaveAndClose(data: TransactionFormValues) {
-    const failure = await save(data);
+    const taxYear = await decideTaxYear(data);
+    if (taxYear === null) {
+      setPendingClose(null);
+      return;
+    }
+    const failure = await save(data, taxYear);
     if (failure === null) {
       const afterClose = pendingClose;
       setPendingClose(null);
@@ -292,6 +309,8 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         onDiscard={handleDiscard}
         onSave={handleSaveAndClose}
       />
+
+      <TaxYearChangeDialog question={taxYearQuestion.question} onChoose={taxYearQuestion.answer} />
 
       <ConfirmDialog
         open={showDeleteDialog}
