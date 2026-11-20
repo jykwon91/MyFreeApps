@@ -75,9 +75,16 @@ async def _verify_application_ownership(
     db: AsyncSession,
     user_id: uuid.UUID,
     application_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> None:
-    """Raise ``ApplicationNotOwnedError`` if the application doesn't belong to the user."""
-    app = await application_repository.get_by_id(db, application_id, user_id)
+    """Raise ``ApplicationNotOwnedError`` if the application doesn't belong to the user.
+
+    ``for_update`` locks the application row until the transaction ends.
+    """
+    app = await application_repository.get_by_id(
+        db, application_id, user_id, for_update=for_update,
+    )
     if app is None:
         raise ApplicationNotOwnedError(
             f"Application {application_id} not found under user {user_id}",
@@ -148,6 +155,13 @@ async def create_file_document(
             size_bytes=len(file_bytes),
         )
         async with unit_of_work() as db:
+            # Check again: the application may have been deleted during the
+            # upload, which ran outside any transaction. The lock holds it until
+            # the document row commits.
+            if application_id is not None:
+                await _verify_application_ownership(
+                    db, user_id, application_id, for_update=True,
+                )
             doc = await document_repo.create(db, doc)
     except Exception:
         # Best-effort cleanup: delete the uploaded object to avoid orphans.
