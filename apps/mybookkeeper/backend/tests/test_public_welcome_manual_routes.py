@@ -9,16 +9,20 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import public_welcome_manuals
+from app.core.rate_limit import RateLimiter
 from app.core.welcome_manual_constants import SHARE_UNLOCK_MAX_ATTEMPTS
 from app.main import app
 from app.models.organization.organization import Organization
 from app.models.user.user import User
+from app.models.welcome_manuals.welcome_manual import WelcomeManual
 from app.repositories.welcome_manuals import welcome_manual_repo
 from app.schemas.welcome_manuals.public_welcome_manual_response import (
     PublicWelcomeManualResponse,
@@ -28,6 +32,11 @@ from app.services.welcome_manuals import welcome_manual_share_service
 
 def patch_share_service(name: str, **kwargs):
     return patch.object(welcome_manual_share_service, name, **kwargs)
+
+
+@pytest.fixture(autouse=True)
+def _reset_unlock_limiter() -> None:
+    public_welcome_manuals.welcome_manual_unlock_limiter.reset()
 
 
 class TestGate:
@@ -179,3 +188,79 @@ class TestUnlockEndToEnd:
                 headers={"X-Forwarded-For": "203.0.113.7"},
             )
         assert locked.status_code == 429
+
+
+class TestUnlockAttemptLimits:
+    @pytest.mark.asyncio
+    async def test_lockout_uses_committed_count_not_stale_loaded_state(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Concurrent guesses must not each count against a stale snapshot.
+
+        The manual is already loaded in the session with a count of 0 when
+        another connection commits SHARE_UNLOCK_MAX_ATTEMPTS - 1 failures. One
+        more wrong guess must hit the lockout; reading the stale 0 would not.
+        """
+        manual = await welcome_manual_repo.create_manual(
+            db, organization_id=test_org.id, user_id=test_user.id,
+            property_id=None, title="Cabin Guide", intro_text=None,
+        )
+        await db.commit()
+
+        with TestUnlockEndToEnd._patch_db(db):
+            enabled = await welcome_manual_share_service.enable_share(
+                test_org.id, test_user.id, manual.id,
+            )
+            await db.commit()
+            assert manual.failed_unlock_count == 0  # stale copy now in the identity map
+
+            await db.execute(
+                update(WelcomeManual)
+                .where(WelcomeManual.id == manual.id)
+                .values(failed_unlock_count=SHARE_UNLOCK_MAX_ATTEMPTS - 1)
+                .execution_options(synchronize_session=False)
+            )
+            await db.commit()
+
+            wrong = "0000" if enabled.share_pin != "0000" else "1111"
+            with pytest.raises(welcome_manual_share_service.IncorrectPinError):
+                await welcome_manual_share_service.unlock_public(enabled.share_token, wrong)
+
+            locked = await welcome_manual_repo.get_by_share_token(db, enabled.share_token)
+        assert locked is not None
+        assert locked.unlock_locked_until is not None
+
+    @pytest.mark.asyncio
+    async def test_lookup_for_update_emits_row_lock(self) -> None:
+        statements: list[object] = []
+
+        class _Recorder:
+            async def execute(self, query: object) -> MagicMock:
+                statements.append(query)
+                result = MagicMock()
+                result.scalar_one_or_none.return_value = None
+                return result
+
+        await welcome_manual_repo.get_by_share_token(_Recorder(), "nope", for_update=True)  # type: ignore[arg-type]
+        await welcome_manual_repo.get_by_share_token(_Recorder(), "nope")  # type: ignore[arg-type]
+        locked, unlocked = statements
+        assert locked._for_update_arg is not None  # type: ignore[attr-defined]
+        assert locked.get_execution_options()["populate_existing"] is True  # type: ignore[attr-defined]
+        assert unlocked._for_update_arg is None  # type: ignore[attr-defined]
+
+    def test_per_ip_limit_returns_429(self) -> None:
+        limiter = RateLimiter(max_attempts=2, window_seconds=900)
+        client = TestClient(app)
+        with patch.object(
+            public_welcome_manuals, "welcome_manual_unlock_limiter", limiter,
+        ), patch_share_service(
+            "unlock_public",
+            side_effect=welcome_manual_share_service.ManualNotFoundError("nope"),
+        ):
+            codes = [
+                client.post(
+                    "/public/welcome-manuals/unknown-token/unlock", json={"pin": "1234"},
+                ).status_code
+                for _ in range(3)
+            ]
+        assert codes == [404, 404, 429]

@@ -16,8 +16,11 @@ unlock lockout in ``welcome_manual_share_service``.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from app.core.config import settings
+from app.core.rate_limit import RateLimiter
+from app.core.request_utils import get_client_ip
 from app.schemas.welcome_manuals.public_welcome_manual_response import (
     PublicWelcomeManualResponse,
 )
@@ -28,6 +31,13 @@ from app.schemas.welcome_manuals.welcome_manual_unlock_request import (
     WelcomeManualUnlockRequest,
 )
 from app.services.welcome_manuals import welcome_manual_share_service
+
+# Per-IP cap on PIN attempts. The per-manual lockout stops guessing one guide;
+# this stops one client sweeping many guides or racing the lockout.
+welcome_manual_unlock_limiter = RateLimiter(
+    max_attempts=settings.welcome_manual_unlock_rate_limit_max,
+    window_seconds=settings.welcome_manual_unlock_rate_limit_window_seconds,
+)
 
 router = APIRouter(prefix="/public/welcome-manuals", tags=["public-welcome-manuals"])
 
@@ -46,12 +56,14 @@ async def get_share_gate(token: str) -> WelcomeManualShareGateResponse:
 async def unlock_share(
     token: str,
     payload: WelcomeManualUnlockRequest,
+    request: Request,
 ) -> PublicWelcomeManualResponse:
     """Verify the PIN and, on success, return the guest-safe manual
     projection. Brute-force lockout is per-manual (persisted on the row),
-    not per client IP — see ``welcome_manual_share_service.unlock_public``.
+    plus a per-IP rate limit — see ``welcome_manual_share_service.unlock_public``.
     A locked manual surfaces as the service's ``HTTPException(429)``, which
     propagates unchanged."""
+    welcome_manual_unlock_limiter.check(get_client_ip(request) or "unknown")
     try:
         return await welcome_manual_share_service.unlock_public(token, payload.pin)
     except welcome_manual_share_service.ManualNotFoundError as exc:

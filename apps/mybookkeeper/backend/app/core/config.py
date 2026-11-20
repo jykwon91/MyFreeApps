@@ -144,6 +144,9 @@ class Settings(BaseAppSettings):
     inquiry_public_rate_limit_max: int = 5
     inquiry_public_rate_limit_window_seconds: int = 3600
     inquiry_min_why_this_room_chars: int = 30
+    # Per-IP cap on guest welcome-manual PIN attempts (on top of the per-manual lockout)
+    welcome_manual_unlock_rate_limit_max: int = 20
+    welcome_manual_unlock_rate_limit_window_seconds: int = 900
 
     # ------------------------------------------------------------------
     # Cost accounting + alerts

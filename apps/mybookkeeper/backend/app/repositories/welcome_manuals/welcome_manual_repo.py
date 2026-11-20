@@ -263,15 +263,24 @@ async def reset_unlock_state(
 async def get_by_share_token(
     db: AsyncSession,
     share_token: str,
+    *,
+    for_update: bool = False,
 ) -> WelcomeManual | None:
     """Public lookup by share token — deliberately NOT org-scoped (the
     caller has no organization context yet). Respects soft-delete so a
     deleted manual's stale token can never resolve.
+
+    ``for_update=True`` row-locks the manual until the transaction ends and
+    reloads it (``populate_existing``) so the lockout counters the caller reads
+    are the committed ones. Concurrent PIN guesses then queue behind each other
+    and each sees the previous guess's increment. SQLite ignores FOR UPDATE;
+    Postgres honours it.
     """
-    result = await db.execute(
-        select(WelcomeManual).where(
-            WelcomeManual.share_token == share_token,
-            WelcomeManual.deleted_at.is_(None),
-        )
+    query = select(WelcomeManual).where(
+        WelcomeManual.share_token == share_token,
+        WelcomeManual.deleted_at.is_(None),
     )
+    if for_update:
+        query = query.with_for_update().execution_options(populate_existing=True)
+    result = await db.execute(query)
     return result.scalar_one_or_none()

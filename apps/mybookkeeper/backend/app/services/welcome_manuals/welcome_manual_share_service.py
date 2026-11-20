@@ -40,6 +40,7 @@ from fastapi import HTTPException
 
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 
+from app.core.datetime_utils import as_utc
 from app.core.welcome_manual_constants import (
     SHARE_PIN_LENGTH,
     SHARE_TOKEN_BYTES,
@@ -261,12 +262,15 @@ async def unlock_public(
     Never logs the submitted or stored PIN.
     """
     async with unit_of_work() as db:
-        manual = await welcome_manual_repo.get_by_share_token(db, token)
+        # Row-lock for the whole verify path: concurrent guesses serialize, so
+        # the lockout check and the failure increment can't both read the same
+        # stale count and let extra guesses through.
+        manual = await welcome_manual_repo.get_by_share_token(db, token, for_update=True)
         if manual is None or manual.share_pin is None:
             raise ManualNotFoundError("Share token not found")
 
         now = datetime.now(timezone.utc)
-        if manual.unlock_locked_until is not None and manual.unlock_locked_until > now:
+        if manual.unlock_locked_until is not None and as_utc(manual.unlock_locked_until) > now:
             # Locked — reject before comparing, so a correct guess during the
             # lockout window is indistinguishable from a wrong one.
             raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
