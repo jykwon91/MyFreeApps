@@ -213,7 +213,10 @@ async def get_cached_advice(
     return_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
 ) -> TaxAdvisorCachedResponse:
-    result = await tax_advisor_service.get_cached_advice(ctx.organization_id, return_id)
+    try:
+        result = await tax_advisor_service.get_cached_advice(ctx.organization_id, return_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     if result is None:
         raise HTTPException(status_code=404, detail="No advisor suggestions found for this return")
     return result
@@ -249,7 +252,10 @@ async def update_suggestion_status(
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Suggestion not found")
-    cached = await tax_advisor_service.get_cached_advice(ctx.organization_id, return_id)
+    try:
+        cached = await tax_advisor_service.get_cached_advice(ctx.organization_id, return_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     if cached is None:
         raise HTTPException(status_code=404, detail="No advisor suggestions found for this return")
     return cached
