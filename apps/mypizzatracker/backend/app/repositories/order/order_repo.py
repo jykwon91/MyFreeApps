@@ -39,6 +39,42 @@ async def get_order(
     return result.scalar_one_or_none()
 
 
+async def update_order(db: AsyncSession, order: Order, patch: dict) -> Order:
+    """Apply ``patch`` and return the order re-read with pizzas + toppings."""
+    for key, value in patch.items():
+        setattr(order, key, value)
+    await db.flush()
+    refreshed = await get_order(db, order.id)
+    assert refreshed is not None, "Order disappeared during update"
+    return refreshed
+
+
+async def list_counted_orders_for_drop(
+    db: AsyncSession, drop_id: uuid.UUID,
+) -> list[Order]:
+    """Non-no-show orders for a drop, with pizzas + toppings loaded."""
+    stmt = (
+        select(Order)
+        .where(Order.drop_id == drop_id)
+        .where(Order.status != "no_show")
+        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def list_orders_for_slots(
+    db: AsyncSession, slot_ids: list[uuid.UUID],
+) -> list[Order]:
+    """Orders in any of ``slot_ids``, oldest first, with pizzas + toppings."""
+    stmt = (
+        select(Order)
+        .where(Order.slot_id.in_(slot_ids))
+        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
+        .order_by(Order.created_at.asc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
 async def count_pizzas_in_slot(db: AsyncSession, slot_id: uuid.UUID) -> int:
     """Sum of pizza line items in non-no-show orders for ``slot_id``."""
     stmt = (

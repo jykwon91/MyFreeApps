@@ -39,18 +39,16 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
+from app.db.session import unit_of_work
 from app.models.customer.customer import Customer
 from app.models.drop.drop import Drop
 from app.models.drop.slot import Slot
-from app.models.menu.pizza_type import PizzaType
-from app.models.menu.topping_type import ToppingType
 from app.models.order.order import Order
-from app.models.order.order_pizza import OrderPizza
-from app.db.session import unit_of_work
+from app.repositories.customer import customer_repo
+from app.repositories.drop import drop_repo
+from app.repositories.menu import menu_repo
 from app.repositories.order import order_repo
 from app.schemas.service.service_schemas import (
     DashboardCustomer,
@@ -168,7 +166,7 @@ async def get_dashboard(db: AsyncSession, drop_id: uuid.UUID) -> ServiceDashboar
     """Return the enriched dashboard payload for a single drop."""
     drop = await _get_drop(db, drop_id)
 
-    slots = await _load_slots(db, drop_id)
+    slots = await drop_repo.list_slots_for_drop(db, drop_id)
     slot_ids = [slot.id for slot in slots]
     orders_by_slot = await _load_orders_by_slot(db, slot_ids)
     pizza_names, topping_names = await _load_menu_names(db, orders_by_slot)
@@ -256,14 +254,12 @@ async def advance_order_status(
                 f"Cannot transition from {order.status!r} to {target_status!r}.",
             )
 
-        order.status = target_status
+        patch: dict[str, object] = {"status": target_status}
         if target_status == "ready_text_sent":
-            order.ready_text_sent_at = datetime.now(timezone.utc)
-            ready_text = await compose_ready_text(db, order, drop)
-
-        await db.flush()
-        refreshed = await order_repo.get_order(db, order.id)
-        assert refreshed is not None, "Order disappeared during transition"
+            patch["ready_text_sent_at"] = datetime.now(timezone.utc)
+        refreshed = await order_repo.update_order(db, order, patch)
+        if target_status == "ready_text_sent":
+            ready_text = await compose_ready_text(db, refreshed, drop)
 
     if ready_text is None:
         return AdvanceOrderResult(order=refreshed)
@@ -311,11 +307,7 @@ async def move_order_to_slot(
                     f"This order has {requested}.",
                 )
 
-        order.slot_id = target_slot_id
-        await db.flush()
-        refreshed = await order_repo.get_order(db, order.id)
-        assert refreshed is not None, "Order disappeared during move"
-        return refreshed
+        return await order_repo.update_order(db, order, {"slot_id": target_slot_id})
 
 
 # ---------------------------------------------------------------------------
@@ -323,14 +315,14 @@ async def move_order_to_slot(
 # ---------------------------------------------------------------------------
 
 async def _get_drop(db: AsyncSession, drop_id: uuid.UUID) -> Drop:
-    drop = await db.get(Drop, drop_id)
+    drop = await drop_repo.get_drop(db, drop_id)
     if drop is None:
         raise DropNotFoundError(f"Drop {drop_id} not found")
     return drop
 
 
 async def _get_slot(db: AsyncSession, slot_id: uuid.UUID) -> Slot:
-    slot = await db.get(Slot, slot_id)
+    slot = await drop_repo.get_slot(db, slot_id)
     if slot is None:
         raise TargetSlotNotFoundError(f"Slot {slot_id} not found")
     return slot
@@ -352,36 +344,18 @@ def _ensure_drop_open(drop: Drop) -> None:
         )
 
 
-async def _load_slots(db: AsyncSession, drop_id: uuid.UUID) -> list[Slot]:
-    stmt = (
-        select(Slot)
-        .where(Slot.drop_id == drop_id)
-        .order_by(Slot.pickup_time.asc())
-    )
-    return list((await db.execute(stmt)).scalars().all())
-
-
 async def _load_orders_by_slot(
     db: AsyncSession, slot_ids: list[uuid.UUID],
 ) -> dict[uuid.UUID, list[Order]]:
     if not slot_ids:
         return {}
-    stmt = (
-        select(Order)
-        .where(Order.slot_id.in_(slot_ids))
-        .options(
-            selectinload(Order.pizzas).selectinload(OrderPizza.toppings),
-        )
-        .order_by(Order.created_at.asc())
-    )
-    rows: list[Order] = list((await db.execute(stmt)).scalars().all())
+    rows = await order_repo.list_orders_for_slots(db, slot_ids)
 
     # Eager-load customers in one batch.
     customer_ids = {row.customer_id for row in rows}
     customers_by_id: dict[uuid.UUID, Customer] = {}
     if customer_ids:
-        cust_stmt = select(Customer).where(Customer.id.in_(customer_ids))
-        for cust in (await db.execute(cust_stmt)).scalars().all():
+        for cust in await customer_repo.list_customers_by_ids(db, customer_ids):
             customers_by_id[cust.id] = cust
     # Attach to a transient attr so the builder can use them without
     # touching the relationship (which would lazy-load).
@@ -408,19 +382,11 @@ async def _load_menu_names(
 
     pizza_names: dict[uuid.UUID, str] = {}
     if pizza_type_ids:
-        stmt = select(PizzaType.id, PizzaType.name).where(
-            PizzaType.id.in_(pizza_type_ids),
-        )
-        for pid, pname in (await db.execute(stmt)).all():
-            pizza_names[pid] = pname
+        pizza_names = await menu_repo.get_pizza_names(db, pizza_type_ids)
 
     topping_names: dict[uuid.UUID, str] = {}
     if topping_type_ids:
-        stmt = select(ToppingType.id, ToppingType.name).where(
-            ToppingType.id.in_(topping_type_ids),
-        )
-        for tid, tname in (await db.execute(stmt)).all():
-            topping_names[tid] = tname
+        topping_names = await menu_repo.get_topping_names(db, topping_type_ids)
 
     return pizza_names, topping_names
 

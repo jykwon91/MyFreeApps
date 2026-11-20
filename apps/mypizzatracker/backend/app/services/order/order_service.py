@@ -26,9 +26,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
@@ -37,6 +35,7 @@ from app.models.menu.pizza_type import PizzaType
 from app.models.menu.topping_type import ToppingType
 from app.models.order.order import Order
 from app.repositories.drop import drop_repo
+from app.repositories.menu import menu_repo
 from app.repositories.order import order_repo
 from app.schemas.customer.customer_schemas import CustomerCreate
 from app.services.customer import customer_service
@@ -229,9 +228,7 @@ async def _load_pizza_types(
 ) -> dict[uuid.UUID, PizzaType]:
     if not ids:
         return {}
-    stmt = select(PizzaType).where(PizzaType.id.in_(ids))
-    result = await db.execute(stmt)
-    return {row.id: row for row in result.scalars().all()}
+    return {row.id: row for row in await menu_repo.list_pizzas_by_ids(db, ids)}
 
 
 async def _load_topping_types(
@@ -239,9 +236,7 @@ async def _load_topping_types(
 ) -> dict[uuid.UUID, ToppingType]:
     if not ids:
         return {}
-    stmt = select(ToppingType).where(ToppingType.id.in_(ids))
-    result = await db.execute(stmt)
-    return {row.id: row for row in result.scalars().all()}
+    return {row.id: row for row in await menu_repo.list_toppings_by_ids(db, ids)}
 
 
 async def get_current_drop(db: AsyncSession) -> Drop | None:
@@ -250,15 +245,7 @@ async def get_current_drop(db: AsyncSession) -> Drop | None:
     Used by the public landing page. Returns ``None`` if no active drop
     exists -- the route maps that to a 404.
     """
-    stmt = (
-        select(Drop)
-        .where(Drop.status == "active")
-        .options(selectinload(Drop.slots))
-        .order_by(Drop.date.desc(), Drop.created_at.desc())
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    return await drop_repo.get_current_active_drop(db)
 
 
 async def slot_remaining_capacity(

@@ -20,16 +20,13 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
-from app.models.order.order import Order
-from app.models.order.order_pizza import OrderPizza
 from app.repositories.drop import drop_repo
 from app.repositories.expense import expense_repo
+from app.repositories.order import order_repo
 from app.schemas.expense.expense_schemas import ExpenseRead
 from app.schemas.financials.financials_schemas import (
     DropFinancials,
@@ -125,13 +122,7 @@ async def _compute_revenue(
     snapshot) stay readable. Drops are bounded in size (a single
     selling event) so the row count is fine for in-memory aggregation.
     """
-    stmt = (
-        select(Order)
-        .where(Order.drop_id == drop_id)
-        .where(Order.status != "no_show")
-        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
-    )
-    orders = list((await db.execute(stmt)).scalars().all())
+    orders = await order_repo.list_counted_orders_for_drop(db, drop_id)
 
     pizza_count = 0
     revenue = Decimal("0.00")
