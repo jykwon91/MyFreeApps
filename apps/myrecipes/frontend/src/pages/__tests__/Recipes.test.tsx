@@ -7,7 +7,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/ui";
 import api from "@/lib/api";
@@ -16,6 +16,13 @@ import type { RecipeListPage } from "@myrecipes/api-client/types/recipe/recipe-l
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import Recipes from "@/pages/Recipes";
+
+const auth = vi.hoisted(() => ({ isAuthenticated: true }));
+
+vi.mock("@platform/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/ui")>();
+  return { ...actual, useIsAuthenticated: () => auth.isAuthenticated };
+});
 
 const TOTAL = 60;
 
@@ -63,18 +70,25 @@ function makeStore() {
   });
 }
 
-function renderRecipes() {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname + location.search}</output>;
+}
+
+function renderRecipes(initialEntry = "/") {
   store = makeStore();
   render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Recipes />
+        <LocationProbe />
       </MemoryRouter>
     </Provider>,
   );
 }
 
 beforeEach(() => {
+  auth.isAuthenticated = true;
   listCalls.length = 0;
   api.defaults.adapter = adapter;
   respond = (config) => {
@@ -143,5 +157,24 @@ describe("Recipes", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load more recipes.");
     expect(screen.getByRole("heading", { name: "Recipe 50" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("loads the public list and clears ?owner=me when signed out", async () => {
+    auth.isAuthenticated = false;
+    renderRecipes("/?owner=me");
+
+    expect(await screen.findByRole("heading", { name: "Recipe 1" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/));
+    expect(listCalls.length).toBeGreaterThan(0);
+    expect(listCalls.every((config) => config.params?.owner === undefined)).toBe(true);
+    expect(screen.queryByRole("button", { name: "My recipes" })).not.toBeInTheDocument();
+  });
+
+  it("still sends owner=me when signed in", async () => {
+    renderRecipes("/?owner=me");
+
+    expect(await screen.findByRole("heading", { name: "Recipe 1" })).toBeInTheDocument();
+    expect(listCalls[0]?.params?.owner).toBe("me");
+    expect(screen.getByTestId("location")).toHaveTextContent("/?owner=me");
   });
 });

@@ -26,7 +26,9 @@ export default function Recipes() {
   // The URL is the source of truth: ?q= drives the free-text search and
   // ?owner=me narrows to the signed-in user's own recipes.
   const query = searchParams.get("q") ?? "";
-  const ownerMe = searchParams.get("owner") === "me";
+  // "My recipes" only means something when signed in; the server answers 401
+  // to it otherwise, so a signed-out visitor gets the public list instead.
+  const ownerMe = isAuthenticated && searchParams.get("owner") === "me";
 
   // Local input keeps typing responsive; the debounced value is what gets
   // written back to ?q= so each keystroke neither stacks a history entry nor
@@ -45,6 +47,19 @@ export default function Recipes() {
       { replace: true },
     );
   }, [debouncedInput, setSearchParams]);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    setSearchParams(
+      (prev) => {
+        if (!prev.has("owner")) return prev;
+        const next = new URLSearchParams(prev);
+        next.delete("owner");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [isAuthenticated, setSearchParams]);
 
   const list = useRecipesPages({
     search: query || undefined,
