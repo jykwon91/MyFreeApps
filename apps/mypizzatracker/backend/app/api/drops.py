@@ -17,7 +17,7 @@ Endpoints (paths registered here; production URLs prepend ``/api``):
 
   POST   /drops/{drop_id}/slots             -- add a slot
   PATCH  /drops/{drop_id}/slots/{slot_id}   -- update a slot
-  DELETE /drops/{drop_id}/slots/{slot_id}   -- remove a slot
+  DELETE /drops/{drop_id}/slots/{slot_id}   -- remove a slot (409 if orders use it)
 """
 from __future__ import annotations
 

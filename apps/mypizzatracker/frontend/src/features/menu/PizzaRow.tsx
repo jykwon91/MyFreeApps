@@ -32,6 +32,7 @@ export default function PizzaRow({ pizza }: PizzaRowProps) {
       await deletePizza(pizza.id).unwrap();
       showSuccess("Pizza deleted");
     } catch (err) {
+      setConfirmDelete(false);
       showError(extractErrorMessage(err) || "Failed to delete");
     }
   };
@@ -89,7 +90,7 @@ export default function PizzaRow({ pizza }: PizzaRowProps) {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={onDelete}
         title={`Delete ${pizza.name}?`}
-        description="This removes the pizza type entirely. Use the 86 toggle if you just want to hide it temporarily."
+        description="This removes the pizza type entirely. Pizzas that are in past orders can't be deleted -- use the 86 toggle to hide them instead."
         confirmLabel="Delete"
         variant="destructive"
         isLoading={isDeleting}

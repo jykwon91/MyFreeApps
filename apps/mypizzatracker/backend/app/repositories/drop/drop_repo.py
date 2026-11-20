@@ -7,9 +7,10 @@ checks) live in the service layer.
 from __future__ import annotations
 
 import uuid
+from datetime import time
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -132,3 +133,18 @@ async def count_slots_for_drop(db: AsyncSession, drop_id: uuid.UUID) -> int:
     stmt = select(func.count(Slot.id)).where(Slot.drop_id == drop_id)
     result = await db.execute(stmt)
     return int(result.scalar_one())
+
+
+async def pickup_time_taken(
+    db: AsyncSession,
+    drop_id: uuid.UUID,
+    pickup_time: time,
+    *,
+    exclude_slot_id: Optional[uuid.UUID] = None,
+) -> bool:
+    """Whether another slot in ``drop_id`` already uses ``pickup_time``."""
+    condition = (Slot.drop_id == drop_id) & (Slot.pickup_time == pickup_time)
+    if exclude_slot_id is not None:
+        condition = condition & (Slot.id != exclude_slot_id)
+    stmt = select(exists().where(condition))
+    return bool((await db.execute(stmt)).scalar_one())

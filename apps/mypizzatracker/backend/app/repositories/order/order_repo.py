@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -85,6 +85,28 @@ async def count_pizzas_in_slot(db: AsyncSession, slot_id: uuid.UUID) -> int:
     )
     result = await db.execute(stmt)
     return int(result.scalar_one())
+
+
+async def slot_has_orders(db: AsyncSession, slot_id: uuid.UUID) -> bool:
+    """Whether any order (of any status, no-shows included) points at ``slot_id``."""
+    stmt = select(exists().where(Order.slot_id == slot_id))
+    return bool((await db.execute(stmt)).scalar_one())
+
+
+async def pizza_type_has_orders(db: AsyncSession, pizza_type_id: uuid.UUID) -> bool:
+    """Whether any order line uses ``pizza_type_id``."""
+    stmt = select(exists().where(OrderPizza.pizza_type_id == pizza_type_id))
+    return bool((await db.execute(stmt)).scalar_one())
+
+
+async def topping_type_has_orders(
+    db: AsyncSession, topping_type_id: uuid.UUID,
+) -> bool:
+    """Whether any order line has ``topping_type_id`` on it."""
+    stmt = select(
+        exists().where(OrderPizzaTopping.topping_type_id == topping_type_id),
+    )
+    return bool((await db.execute(stmt)).scalar_one())
 
 
 async def create_order_with_lines(

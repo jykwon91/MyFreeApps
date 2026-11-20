@@ -9,11 +9,11 @@ Endpoints (paths registered here; production URLs prepend ``/api``):
   POST   /menu/pizzas                   -- add a pizza type
   GET    /menu/pizzas                   -- list all pizza types (incl. 86'd)
   PATCH  /menu/pizzas/{pizza_id}        -- edit / toggle 86'd
-  DELETE /menu/pizzas/{pizza_id}        -- delete (allowed today; orders FK later)
+  DELETE /menu/pizzas/{pizza_id}        -- delete (409 if any order uses it)
   POST   /menu/toppings                 -- add a topping type
   GET    /menu/toppings                 -- list all topping types
   PATCH  /menu/toppings/{topping_id}    -- edit / toggle 86'd
-  DELETE /menu/toppings/{topping_id}    -- delete
+  DELETE /menu/toppings/{topping_id}    -- delete (409 if any order uses it)
 """
 from __future__ import annotations
 

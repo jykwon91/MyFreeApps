@@ -32,6 +32,7 @@ export default function ToppingRow({ topping }: ToppingRowProps) {
       await deleteTopping(topping.id).unwrap();
       showSuccess("Topping deleted");
     } catch (err) {
+      setConfirmDelete(false);
       showError(extractErrorMessage(err) || "Failed to delete");
     }
   };
@@ -86,7 +87,7 @@ export default function ToppingRow({ topping }: ToppingRowProps) {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={onDelete}
         title={`Delete ${topping.name}?`}
-        description="This removes the topping entirely. Use the 86 toggle if you just want to hide it temporarily."
+        description="This removes the topping entirely. Toppings that are in past orders can't be deleted -- use the 86 toggle to hide them instead."
         confirmLabel="Delete"
         variant="destructive"
         isLoading={isDeleting}

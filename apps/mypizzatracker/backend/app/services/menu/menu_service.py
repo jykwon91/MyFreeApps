@@ -8,10 +8,11 @@ Owns:
 - The transaction for every mutation (``unit_of_work`` commits on return
   and rolls back when a rule violation is raised).
 
-Hard DELETE is allowed for now because no Order rows exist yet. When orders
-land in PR 5, ``OrderPizza.pizza_type_id`` will FK to PizzaType and we'll
-need to decide RESTRICT vs SET NULL. Until then, the owner can clean up
-typos freely.
+Hard DELETE is only allowed for pizzas and toppings no order has ever used.
+Order lines keep a RESTRICT foreign key to them (``order_pizza.pizza_type_id``,
+``order_pizza_topping.topping_type_id``) so past orders stay intact. Deleting
+one that is in use raises ``MenuItemInUseError`` (409) telling the owner to
+mark it unavailable (86 it) instead.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ from app.db.session import unit_of_work
 from app.models.menu.pizza_type import PizzaType
 from app.models.menu.topping_type import ToppingType
 from app.repositories.menu import menu_repo
+from app.repositories.order import order_repo
 from app.schemas.menu.menu_schemas import (
     PizzaTypeCreate,
     PizzaTypeUpdate,
@@ -42,6 +44,12 @@ class MenuNotFoundError(MenuServiceError):
 
 
 class DuplicateMenuNameError(MenuServiceError):
+    http_status = 409
+
+
+class MenuItemInUseError(MenuServiceError):
+    """A pizza or topping that past orders reference cannot be deleted."""
+
     http_status = 409
 
 
@@ -93,6 +101,11 @@ async def update_pizza(pizza_id: uuid.UUID, body: PizzaTypeUpdate) -> PizzaType:
 async def delete_pizza(pizza_id: uuid.UUID) -> None:
     async with unit_of_work() as db:
         pizza = await get_pizza_or_404(db, pizza_id)
+        if await order_repo.pizza_type_has_orders(db, pizza.id):
+            raise MenuItemInUseError(
+                f"{pizza.name} is in past orders, so it can't be deleted. "
+                f"Mark it unavailable (86 it) instead.",
+            )
         await menu_repo.delete_pizza(db, pizza)
 
 
@@ -144,4 +157,9 @@ async def update_topping(topping_id: uuid.UUID, body: ToppingTypeUpdate) -> Topp
 async def delete_topping(topping_id: uuid.UUID) -> None:
     async with unit_of_work() as db:
         topping = await get_topping_or_404(db, topping_id)
+        if await order_repo.topping_type_has_orders(db, topping.id):
+            raise MenuItemInUseError(
+                f"{topping.name} is in past orders, so it can't be deleted. "
+                f"Mark it unavailable (86 it) instead.",
+            )
         await menu_repo.delete_topping(db, topping)
