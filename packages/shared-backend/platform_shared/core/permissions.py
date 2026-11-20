@@ -41,15 +41,18 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
-from typing import Awaitable, Callable, Optional, Protocol
+from typing import Any, Awaitable, Callable, Optional, Protocol
 
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
 from jwt.exceptions import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.auth.refuse_as_locked import refuse_as_locked
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.db.session import release_connection
 from platform_shared.services.auth_event_service import log_auth_event
+from platform_shared.services.guard_outcome import GuardOutcome
 
 _iat_logger = logging.getLogger(__name__)
 
@@ -170,6 +173,27 @@ class _StrictSuperuserUser(Protocol):
     is_superuser: bool
 
 
+class _StepUpGuard(Protocol):
+    """The part of ``AccountGuardService`` the gate uses. Typed structurally because
+    that service's imports lead back to this module."""
+
+    async def spend_step_up_code(
+        self,
+        user_id: uuid.UUID,
+        code: str,
+        verify: Callable[[AsyncSession, uuid.UUID, str], Awaitable[bool]],
+        *,
+        request: Request | None = None,
+    ) -> GuardOutcome: ...
+
+
+class _GuardedUserManager(Protocol):
+    """The app's user manager: the gate counts wrong codes through its lockout."""
+
+    @property
+    def account_guard(self) -> _StepUpGuard: ...
+
+
 def make_decode_token_auth_time(
     *,
     secret_key: str,
@@ -233,6 +257,7 @@ def make_strict_superuser_gate(
     *,
     current_active_user: Callable[..., Awaitable[_StrictSuperuserUser]],
     get_db: Callable[..., AsyncIterator[AsyncSession]],
+    get_user_manager: Callable[..., Any],
     verify_totp_step_up: Callable[[AsyncSession, uuid.UUID, str], Awaitable[bool]],
     decode_token_auth_time: Callable[[Request], Optional[float]],
     max_token_age_seconds: int = 900,
@@ -249,7 +274,9 @@ def make_strict_superuser_gate(
     3. **TOTP step-up** — the request must include an ``X-TOTP-Code``
        header with a fresh valid 6-digit code. Even if a bad actor has
        a stolen, fresh JWT, they cannot exploit this gate without a
-       second factor.
+       second factor. Wrong codes count toward the same lockout as a
+       wrong password, so the code can't be guessed by brute force; a
+       locked account is refused with the usual 429 even with a right code.
 
     Every evaluation (pass or each fail mode) writes an auth_event row
     via the shared ``log_auth_event`` helper for SOC visibility and
@@ -267,6 +294,8 @@ def make_strict_superuser_gate(
             dependency. Resolves the JWT to a User-shaped object.
         get_db: The app's ``get_db`` dependency. The gate writes and commits
             auth_event rows on it.
+        get_user_manager: The app's ``get_user_manager`` dependency. Its
+            ``account_guard`` spends the code and counts a wrong one.
         verify_totp_step_up: A callable taking ``(db, user_id, totp_code)``
             that spends the code and returns whether it was valid: the app's
             ``totp_service.verify_totp_code``.
@@ -299,6 +328,7 @@ def make_strict_superuser_gate(
         user: _StrictSuperuserUser = Depends(current_active_user),
         x_totp_code: Optional[str] = Header(default=None, alias="X-TOTP-Code"),
         db: AsyncSession = Depends(get_db),
+        user_manager: _GuardedUserManager = Depends(get_user_manager),
     ) -> _StrictSuperuserUser:
         user_id = user.id
 
@@ -351,10 +381,14 @@ def make_strict_superuser_gate(
                 headers={"X-Require-Step-Up": "totp"},
             )
 
-        code_ok = await verify_totp_step_up(db, user_id, x_totp_code)
-        # Keeps a spent code spent, and lets go of the row before the route runs.
-        await db.commit()
-        if not code_ok:
+        # The guard spends the code on its own connection, so hand this one back first.
+        await release_connection(db)
+        outcome = await user_manager.account_guard.spend_step_up_code(
+            user_id, x_totp_code, verify_totp_step_up, request=request,
+        )
+        if outcome is GuardOutcome.LOCKED:
+            refuse_as_locked()
+        if outcome is not GuardOutcome.ALLOWED:
             await _record(AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP, succeeded=False)
             raise HTTPException(
                 status_code=401,

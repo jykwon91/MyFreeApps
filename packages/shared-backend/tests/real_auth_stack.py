@@ -33,6 +33,7 @@ from platform_shared.auth.refresh_session import RefreshSessionMixin
 from platform_shared.auth.session_invalidation import SessionInvalidationMixin
 from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
 from platform_shared.auth.user_manager import PlatformBaseUserManager
+from platform_shared.core.permissions import make_decode_token_auth_time, make_strict_superuser_gate
 from platform_shared.db.models.auth_event import AuthEvent
 from platform_shared.services.refresh_session_service import RefreshSessionService
 from platform_shared.services.totp_account_service import TotpAccountService
@@ -44,6 +45,7 @@ SECRET = "test-secret-key-that-is-long-enough-to-sign-with"
 PASSWORD = "the-right-password"
 EMAIL_DOMAIN = "example.com"
 WEB_TOKEN_SECONDS = 3600
+STRICT_SUPERUSER_PATH = "/admin/strict-superuser-action"
 
 
 class _Base(DeclarativeBase):
@@ -148,6 +150,18 @@ class RealAuthStack:
                 prepare_deletion=self._prepare_deletion,
             )
         )
+        strict_superuser = make_strict_superuser_gate(
+            current_active_user=current_active_user,
+            get_db=self.get_db,
+            get_user_manager=get_user_manager,
+            verify_totp_step_up=self.totp.verify_totp_code,
+            decode_token_auth_time=make_decode_token_auth_time(secret_key=SECRET),
+        )
+
+        @app.post(STRICT_SUPERUSER_PATH, status_code=204, dependencies=[Depends(strict_superuser)])
+        async def strict_superuser_action() -> None:
+            return None
+
         self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
     @property

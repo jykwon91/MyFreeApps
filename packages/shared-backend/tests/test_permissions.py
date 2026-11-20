@@ -12,6 +12,7 @@ from platform_shared.core.permissions import (
     make_current_superuser,
     require_role,
 )
+from platform_shared.services.guard_outcome import GuardOutcome
 
 
 class _FakeUser:
@@ -130,6 +131,7 @@ class TestMakeStrictSuperuserGate:
         token_auth_time: float | None,
         good_totp: str | None = "123456",
         max_token_age_seconds: int = 900,
+        locked: bool = False,
     ):
         """Build a FastAPI app + a list capturing every audit-event emission.
 
@@ -151,6 +153,10 @@ class TestMakeStrictSuperuserGate:
 
         class _FakeDb:
             """Stand-in for AsyncSession — ``add`` and ``commit`` are exercised."""
+
+            new: tuple[object, ...] = ()
+            dirty: tuple[object, ...] = ()
+            deleted: tuple[object, ...] = ()
 
             async def commit(self) -> None:
                 if events:
@@ -175,9 +181,25 @@ class TestMakeStrictSuperuserGate:
         def fake_decode_auth_time(_request) -> float | None:
             return token_auth_time
 
+        class _FakeGuard:
+            """Spends the code through the verifier as the real guard does."""
+
+            async def spend_step_up_code(self, uid, code, verify, *, request=None) -> GuardOutcome:
+                valid = await verify(None, uid, code)
+                if locked:
+                    return GuardOutcome.LOCKED
+                return GuardOutcome.ALLOWED if valid else GuardOutcome.WRONG
+
+        class _FakeUserManager:
+            account_guard = _FakeGuard()
+
+        async def fake_get_user_manager() -> _FakeUserManager:
+            return _FakeUserManager()
+
         gate = make_strict_superuser_gate(
             current_active_user=fake_current_active_user,
             get_db=fake_get_db,
+            get_user_manager=fake_get_user_manager,
             verify_totp_step_up=fake_verify_totp,
             decode_token_auth_time=fake_decode_auth_time,
             max_token_age_seconds=max_token_age_seconds,
@@ -297,6 +319,15 @@ class TestMakeStrictSuperuserGate:
             events[0]["event_type"] == AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP
         )
         assert events[0]["committed"] is True
+
+    def test_locked_account_is_refused_even_with_the_right_code(self) -> None:
+        app, events, _user_id = self._build_app(
+            is_superuser=True, token_auth_time=time.time() - 60, locked=True
+        )
+        client = TestClient(app)
+        resp = client.delete("/superuser-action", headers={"X-TOTP-Code": "123456"})
+        assert resp.status_code == 429
+        assert events == []
 
     def test_evaluates_gates_in_order_is_superuser_first(self) -> None:
         """Non-superuser short-circuits before token/TOTP evaluation.
