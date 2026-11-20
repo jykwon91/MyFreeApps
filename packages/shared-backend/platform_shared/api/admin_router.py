@@ -96,6 +96,8 @@ def build_admin_router(
     ) -> Any:
         try:
             return await service.update_user_role(user_id, body.role, admin)
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except LookupError as exc:
@@ -110,6 +112,8 @@ def build_admin_router(
     ) -> Any:
         try:
             return await service.activate_user(user_id, admin)
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except LookupError as exc:
@@ -124,6 +128,8 @@ def build_admin_router(
     ) -> Any:
         try:
             return await service.deactivate_user(user_id, admin)
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except LookupError as exc:
