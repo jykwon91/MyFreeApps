@@ -39,7 +39,14 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
         ) : null}
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
           {properties.map((property) => (
-            <OptionRow isSelected={selectedIds.includes(property.id)} key={property.id} kind="checkbox" label={property.name} onPress={() => toggle(property.id)} />
+            <OptionRow
+              disabled={isAtLimit && !selectedIds.includes(property.id)}
+              isSelected={selectedIds.includes(property.id)}
+              key={property.id}
+              kind="checkbox"
+              label={property.name}
+              onPress={() => toggle(property.id)}
+            />
           ))}
           <View style={{ padding: spacing.lg }}>
             <LoadingButton disabled={selectedIds.length === 0} onPress={() => onChange([])} variant="secondary">
