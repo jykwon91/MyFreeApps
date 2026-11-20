@@ -183,6 +183,50 @@ async def test_current_drop_returns_active_with_slots(
     assert body["slots"][0]["remaining_pizzas"] == 10
 
 
+@pytest.mark.asyncio
+async def test_current_drop_remaining_per_slot_reflects_orders(
+    client: AsyncClient, auth_client: AsyncClient,
+):
+    drop_id, slot_id = await _create_active_drop(
+        auth_client, pickup_time="12:00:00", max_pizzas=5,
+    )
+    other = await auth_client.post(
+        f"/drops/{drop_id}/slots", json={"pickup_time": "13:00:00", "max_pizzas": 4},
+    )
+    assert other.status_code == 201, other.text
+    other_id = other.json()["id"]
+    empty = await auth_client.post(
+        f"/drops/{drop_id}/slots", json={"pickup_time": "14:00:00", "max_pizzas": 3},
+    )
+    assert empty.status_code == 201, empty.text
+    empty_id = empty.json()["id"]
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+
+    client.headers.pop("Authorization", None)
+    for slot, phone, count in ((slot_id, "5125550011", 2), (other_id, "5125550012", 4)):
+        placed = await client.post(
+            "/public/orders",
+            json={
+                "drop_id": drop_id,
+                "slot_id": slot,
+                "customer_name": "A",
+                "customer_phone": phone,
+                "payment_method_tag": "cash",
+                "pizzas": [
+                    {"pizza_type_id": pizza_id, "topping_type_ids": []}
+                    for _ in range(count)
+                ],
+            },
+        )
+        assert placed.status_code == 201, placed.text
+
+    resp = await client.get("/public/drops/current")
+    assert resp.status_code == 200
+    slots = resp.json()["slots"]
+    assert [s["id"] for s in slots] == [slot_id, other_id, empty_id]
+    assert [s["remaining_pizzas"] for s in slots] == [3, 0, 3]
+
+
 # ---------------------------------------------------------------------------
 # Order placement -- happy path
 # ---------------------------------------------------------------------------

@@ -5,6 +5,8 @@ Read patterns:
 - ``count_pizzas_in_slot(db, slot_id)`` -- live count for capacity check (excludes
   no-show orders so a cancelled/no-show frees up capacity if the operator later
   reopens the slot).
+- ``count_pizzas_by_slot(db, slot_ids)`` -- the same count for many slots in one
+  grouped query (slots with no pizzas map to 0).
 
 Write patterns:
 - ``create_order_with_lines`` -- atomic create of order + N pizzas + their toppings
@@ -85,6 +87,27 @@ async def count_pizzas_in_slot(db: AsyncSession, slot_id: uuid.UUID) -> int:
     )
     result = await db.execute(stmt)
     return int(result.scalar_one())
+
+
+async def count_pizzas_by_slot(
+    db: AsyncSession, slot_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, int]:
+    """Per-slot pizza counts (same rules as ``count_pizzas_in_slot``) in one query.
+
+    Every id in ``slot_ids`` is present in the result; slots with no counted
+    pizzas map to 0.
+    """
+    if not slot_ids:
+        return {}
+    stmt = (
+        select(Order.slot_id, func.count(OrderPizza.id))
+        .join(OrderPizza, OrderPizza.order_id == Order.id)
+        .where(Order.slot_id.in_(slot_ids))
+        .where(Order.status != "no_show")
+        .group_by(Order.slot_id)
+    )
+    counts = {slot_id: int(n) for slot_id, n in (await db.execute(stmt)).all()}
+    return {slot_id: counts.get(slot_id, 0) for slot_id in slot_ids}
 
 
 async def slot_has_orders(db: AsyncSession, slot_id: uuid.UUID) -> bool:
