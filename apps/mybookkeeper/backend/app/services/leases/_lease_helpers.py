@@ -93,6 +93,14 @@ class SuccessorAlreadyExistsError(ValueError):
     """``parent_lease_id`` already has a live successor — only one allowed."""
 
 
+class ApplicantNotFoundError(LookupError):
+    """``applicant_id`` is not one of the caller's live applicants."""
+
+
+class ListingNotFoundError(LookupError):
+    """``listing_id`` is not one of the organization's live listings."""
+
+
 # Statuses a parent lease must be in for the host to create a successor.
 # ``draft`` / ``generated`` / ``sent`` are still being edited — the host
 # should finish the original instead. ``terminated`` is closed-and-final.

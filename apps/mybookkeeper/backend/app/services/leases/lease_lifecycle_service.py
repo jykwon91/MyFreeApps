@@ -16,7 +16,7 @@ from app.db.session import unit_of_work
 from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_repo
 from app.services.leases.lease_documents_lock import lease_documents_locked
-from app.services.leases.listing_resolution import default_listing_id
+from app.services.leases.lease_references import resolve_lease_listing_id
 from app.repositories.leases import (
     lease_template_placeholder_repo,
     lease_template_repo,
@@ -120,7 +120,7 @@ async def create_lease(
 
         starts, ends = _denormalise_dates(values)
 
-        listing_id = await default_listing_id(
+        listing_id = await resolve_lease_listing_id(
             db,
             listing_id=listing_id,
             applicant_id=applicant_id,

@@ -141,6 +141,8 @@ async def create_inquiry(
         )
     except inquiry_service.InquiryConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except inquiry_service.InquiryListingNotOwnedError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{inquiry_id}", response_model=InquiryResponse)
@@ -166,6 +168,8 @@ async def update_inquiry(
         return await inquiry_service.update_inquiry(
             ctx.organization_id, ctx.user_id, inquiry_id, payload,
         )
+    except inquiry_service.InquiryListingNotOwnedError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Inquiry not found") from exc
 

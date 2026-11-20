@@ -11,7 +11,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import Row, delete, desc, func, select, update
+from sqlalchemy import Row, and_, delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.inquiry_enums import INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX
@@ -300,7 +300,15 @@ async def list_with_last_message(
             last_msg.created_at.label("last_message_at"),
         )
         .outerjoin(last_msg, last_msg.id == latest_msg_id_sq)
-        .outerjoin(Listing, Listing.id == Inquiry.listing_id)
+        # The org condition sits in the ON clause: a listing_id that names
+        # another organization's listing reads as no listing, never its title.
+        .outerjoin(
+            Listing,
+            and_(
+                Listing.id == Inquiry.listing_id,
+                Listing.organization_id == organization_id,
+            ),
+        )
         .where(
             Inquiry.organization_id == organization_id,
             Inquiry.deleted_at.is_(None),

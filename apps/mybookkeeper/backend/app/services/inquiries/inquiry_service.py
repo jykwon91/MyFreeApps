@@ -14,7 +14,8 @@ Key responsibilities:
   analytics can see the host-driven retirement.
 
 Dedup conflicts (same ``(organization_id, source, external_inquiry_id)``)
-raise ``InquiryConflictError`` so the route can map to 409.
+raise ``InquiryConflictError`` so the route can map to 409. A ``listing_id``
+from another organization raises ``InquiryListingNotOwnedError`` (422).
 """
 from __future__ import annotations
 
@@ -39,10 +40,15 @@ from app.schemas.inquiries.inquiry_spam_assessment_response import (
 )
 from app.schemas.inquiries.inquiry_summary import InquirySummary
 from app.schemas.inquiries.inquiry_update_request import InquiryUpdateRequest
+from app.services.listings.listing_ownership import owns_listing
 
 
 class InquiryConflictError(Exception):
     """Raised when (organization_id, source, external_inquiry_id) collides."""
+
+
+class InquiryListingNotOwnedError(ValueError):
+    """``listing_id`` is not one of the organization's live listings."""
 
 
 def _to_response(
@@ -92,6 +98,11 @@ async def create_inquiry(
     ``(organization_id, source, external_inquiry_id)`` within the same org.
     """
     async with unit_of_work() as db:
+        if payload.listing_id is not None and not await owns_listing(
+            db, organization_id=organization_id, listing_id=payload.listing_id,
+        ):
+            raise InquiryListingNotOwnedError("listing_id does not name a listing")
+
         if payload.external_inquiry_id is not None:
             existing = await inquiry_repo.find_by_source_and_external_id(
                 db, organization_id, payload.source, payload.external_inquiry_id,
@@ -217,6 +228,18 @@ async def update_inquiry(
         existing = await inquiry_repo.get_by_id(db, inquiry_id, organization_id)
         if existing is None:
             raise LookupError(f"Inquiry {inquiry_id} not found")
+
+        # Re-sending the listing the inquiry already has is not a new
+        # reference, so a listing deleted since then does not block the edit.
+        listing_id = fields.get("listing_id")
+        if (
+            isinstance(listing_id, uuid.UUID)
+            and listing_id != existing.listing_id
+            and not await owns_listing(
+                db, organization_id=organization_id, listing_id=listing_id,
+            )
+        ):
+            raise InquiryListingNotOwnedError("listing_id does not name a listing")
 
         new_stage = fields.get("stage")
         old_stage = existing.stage

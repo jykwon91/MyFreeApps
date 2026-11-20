@@ -13,9 +13,7 @@ import uuid
 from app.core.config import settings as _settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
-from app.repositories.listings import listing_repo
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
@@ -25,7 +23,7 @@ from app.services.leases._lease_helpers import (
     _validate_parent_lease,
 )
 from app.services.leases.lease_lifecycle_service import get_lease
-from app.services.leases.listing_resolution import resolve_inquiry_listing_id
+from app.services.leases.lease_references import resolve_lease_listing_id
 from app.services.storage.attachment_content import (
     UnreadableImage,
     UnsupportedAttachmentType,
@@ -33,18 +31,6 @@ from app.services.storage.attachment_content import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Exceptions specific to import
-# ---------------------------------------------------------------------------
-
-class ApplicantNotFoundError(LookupError):
-    pass
-
-
-class ListingNotFoundError(LookupError):
-    pass
 
 
 # ---------------------------------------------------------------------------
@@ -159,23 +145,13 @@ async def import_signed_lease(
     # One moment for the lease's signed_at and every file's uploaded_at: the files are the lock point itself.
     now = _dt.datetime.now(_dt.timezone.utc)
     async with unit_of_work() as db:
-        applicant = await applicant_repo.get(
+        listing_id = await resolve_lease_listing_id(
             db,
             applicant_id=applicant_id,
+            listing_id=listing_id,
             organization_id=organization_id,
             user_id=user_id,
         )
-        if applicant is None:
-            raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
-
-        if listing_id is not None:
-            listing = await listing_repo.get_by_id(
-                db,
-                listing_id=listing_id,
-                organization_id=organization_id,
-            )
-            if listing is None:
-                raise ListingNotFoundError(f"Listing {listing_id} not found")
 
         if parent_lease_id is not None:
             await _validate_parent_lease(
@@ -183,11 +159,6 @@ async def import_signed_lease(
                 parent_lease_id=parent_lease_id,
                 user_id=user_id,
                 organization_id=organization_id,
-            )
-
-        if listing_id is None:
-            listing_id = await resolve_inquiry_listing_id(
-                db, applicant=applicant, organization_id=organization_id,
             )
 
         lease = await signed_lease_repo.create(

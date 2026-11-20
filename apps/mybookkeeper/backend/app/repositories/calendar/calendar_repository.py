@@ -125,6 +125,11 @@ async def query_lease_events(
     join's ON clause rather than the WHERE so a deleted listing degrades the
     lease to unassigned instead of erasing it.
 
+    Every join also matches on ``organization_id``, so a lease row that names
+    another organization's listing, property or applicant never shows their
+    names here: a foreign listing degrades to unassigned, and a lease whose
+    tenant belongs to another organization is left out.
+
     Narrowing by ``listing_ids`` or ``property_ids`` does drop unassigned
     leases, which is correct: the host asked for one listing's occupancy, and
     a lease with no listing is not part of that answer.
@@ -135,11 +140,24 @@ async def query_lease_events(
             Listing,
             and_(
                 Listing.id == SignedLease.listing_id,
+                Listing.organization_id == organization_id,
                 Listing.deleted_at.is_(None),
             ),
         )
-        .outerjoin(Property, Property.id == Listing.property_id)
-        .join(Applicant, Applicant.id == SignedLease.applicant_id)
+        .outerjoin(
+            Property,
+            and_(
+                Property.id == Listing.property_id,
+                Property.organization_id == organization_id,
+            ),
+        )
+        .join(
+            Applicant,
+            and_(
+                Applicant.id == SignedLease.applicant_id,
+                Applicant.organization_id == organization_id,
+            ),
+        )
         .where(
             # Scoped on the lease, not the listing — an unassigned lease has
             # no listing to carry the organization. ``signed_leases`` owns an
