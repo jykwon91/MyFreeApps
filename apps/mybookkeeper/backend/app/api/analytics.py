@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.core.rate_limit import RateLimiter
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.analytics.rental_roi_response import RentalRoiResponse
 from app.schemas.analytics.utility_trends import UtilityTrendsResponse
 from app.services.analytics import rental_roi_service, utility_trends_service
@@ -49,7 +50,14 @@ async def get_utility_trends(
 @router.get("/rental-roi", response_model=RentalRoiResponse)
 async def get_rental_roi(
     target_return_pct: Decimal = Query(_DEFAULT_TARGET_RETURN_PCT, ge=0, le=100),
+    today: ClientLocalDate | None = Query(
+        None,
+        description=(
+            "The caller's local date; the 12-month window and which loans are "
+            "still active are measured from it. Defaults to the server's date."
+        ),
+    ),
     ctx: RequestContext = Depends(current_org_member),
 ) -> RentalRoiResponse:
     _analytics_limiter.check(f"analytics:{ctx.user_id}")
-    return await rental_roi_service.get_rental_roi(ctx, target_return_pct=target_return_pct)
+    return await rental_roi_service.get_rental_roi(ctx, target_return_pct=target_return_pct, today=today)

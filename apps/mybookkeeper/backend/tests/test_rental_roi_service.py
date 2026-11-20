@@ -19,7 +19,7 @@ from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories.mortgage import mortgage_repo
 from app.repositories.transactions import summary_repo
-from app.services.analytics import rental_roi_service
+from app.services.analytics import rental_roi_math, rental_roi_service
 
 TODAY = date(2026, 11, 17)
 IN_WINDOW = date(2026, 3, 10)
@@ -367,3 +367,38 @@ class TestGetRentalRoi:
         assert result.properties == []
         assert result.summary.property_count == 0
         assert result.summary.gap_basis == "break_even"
+
+
+class TestClientLocalDate:
+    """The window and active loans follow the caller's date, not the server's."""
+
+    @pytest.mark.asyncio
+    async def test_the_month_ends_on_the_callers_date(self, db: AsyncSession, roi_sessions: None) -> None:
+        org_id, user_id = await _org_and_user(db)
+        prop = _property(org_id, user_id, "Elm")
+        db.add(prop)
+        db.add(_txn(org_id, user_id, prop.id, "rental_revenue", "1200.00", txn_date=date(2026, 10, 20)))
+        await db.commit()
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+
+        # 6pm Pacific on Oct 31: still October for the user, already Nov 1 on the server.
+        local = await rental_roi_service.get_rental_roi(
+            ctx, target_return_pct=Decimal("8"), today=date(2026, 10, 31),
+        )
+        server = await rental_roi_service.get_rental_roi(
+            ctx, target_return_pct=Decimal("8"), today=date(2026, 11, 1),
+        )
+
+        assert local.window_end == date(2026, 9, 30)
+        assert local.properties[0].actual_revenue_monthly_cents == 0
+        assert server.window_end == date(2026, 10, 31)
+        assert server.properties[0].actual_revenue_monthly_cents == 10_000
+
+    @pytest.mark.asyncio
+    async def test_without_a_date_the_server_date_is_used(self, db: AsyncSession, roi_sessions: None) -> None:
+        org_id, user_id = await _org_and_user(db)
+        ctx = RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
+
+        result = await rental_roi_service.get_rental_roi(ctx, target_return_pct=Decimal("8"))
+
+        assert result.window_end == rental_roi_math.trailing_window(date.today())[1]

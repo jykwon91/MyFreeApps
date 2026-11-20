@@ -17,6 +17,7 @@ from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
+from app.repositories import transaction_repo
 from app.services.tax import tax_validation_service
 
 
@@ -418,6 +419,51 @@ class TestDepreciationDollarImpact:
 # ---------------------------------------------------------------------------
 
 
+def _expense(
+    org: Organization, user: User, year: int, amount: str, **fields: object,
+) -> Transaction:
+    defaults: dict[str, object] = dict(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        transaction_date=datetime.date(year, 6, 15),
+        tax_year=year,
+        amount=Decimal(amount),
+        transaction_type="expense",
+        category="maintenance",
+        status="approved",
+        tax_relevant=True,
+    )
+    defaults.update(fields)
+    return Transaction(**defaults)
+
+
+class TestSumExpensesByYear:
+    """Amounts are always positive, so expenses are found by type and category."""
+
+    @pytest.mark.asyncio
+    async def test_sums_only_deductible_approved_expenses(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        db.add_all([
+            _expense(test_org, test_user, 2025, "100.00"),
+            _expense(test_org, test_user, 2025, "50.00", category="utilities"),
+            _expense(test_org, test_user, 2025, "9000.00", is_capital_improvement=True,
+                     placed_in_service_date=datetime.date(2025, 6, 15)),
+            _expense(test_org, test_user, 2025, "700.00", category="mortgage_principal"),
+            _expense(test_org, test_user, 2025, "800.00", status="pending"),
+            _expense(test_org, test_user, 2025, "900.00", tax_relevant=False),
+            _expense(test_org, test_user, 2025, "1000.00", deleted_at=datetime.datetime.now(datetime.timezone.utc)),
+            _expense(test_org, test_user, 2025, "2000.00", transaction_type="income", category="rental_revenue"),
+            _expense(test_org, test_user, 2024, "3000.00"),
+        ])
+        await db.commit()
+
+        total = await transaction_repo.sum_expenses_by_year(db, test_org.id, 2025)
+
+        assert total == Decimal("150.00")
+
+
 class TestYoYExpenseAnomaly:
     """Rule 30: Year-over-year expense anomaly."""
 
@@ -443,6 +489,42 @@ class TestYoYExpenseAnomaly:
         yoy = [r for r in results if "year-over-year" in r.message.lower() or "increased" in r.message.lower()]
         assert len(yoy) == 1
         assert "100%" in yoy[0].message
+
+    @pytest.mark.asyncio
+    async def test_fires_from_real_transactions(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        tr = _make_return(test_org)
+        db.add(tr)
+        db.add_all([
+            _expense(test_org, test_user, 2024, "1000.00"),
+            _expense(test_org, test_user, 2025, "2000.00"),
+        ])
+        await db.commit()
+
+        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+            results = await tax_validation_service.validate(test_org.id, tr.id)
+
+        yoy = [r for r in results if "year-over-year" in r.message.lower()]
+        assert len(yoy) == 1
+        assert "increased by 100%" in yoy[0].message
+
+    @pytest.mark.asyncio
+    async def test_stays_quiet_for_a_small_change(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        tr = _make_return(test_org)
+        db.add(tr)
+        db.add_all([
+            _expense(test_org, test_user, 2024, "1000.00"),
+            _expense(test_org, test_user, 2025, "1100.00"),
+        ])
+        await db.commit()
+
+        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+            results = await tax_validation_service.validate(test_org.id, tr.id)
+
+        assert not [r for r in results if "year-over-year" in r.message.lower()]
 
 
 class TestCleaningFeeMismatch:

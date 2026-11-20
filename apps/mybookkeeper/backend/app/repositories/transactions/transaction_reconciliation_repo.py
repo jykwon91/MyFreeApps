@@ -8,7 +8,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.sql.expression import FunctionElement
 
-from app.core.tags import NEUTRAL_TAGS, NON_DEDUCTIBLE_TAGS
+from app.core.tags import DEDUCTIBLE_TAGS, NEUTRAL_TAGS, NON_DEDUCTIBLE_TAGS
 from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
@@ -472,16 +472,23 @@ async def sum_expenses_by_year(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> Decimal:
-    """Sum all approved expense transactions for a given tax year (negative amounts)."""
+    """Sum approved, tax-relevant deductible expenses for a tax year.
+
+    Amounts are always positive; an expense is identified by its type and
+    category. Capital improvements are depreciated rather than deducted in the
+    year paid, and loan principal is not an expense, so both are left out.
+    """
     stmt = (
-        select(func.coalesce(func.sum(func.abs(Transaction.amount)), Decimal("0")))
+        select(func.coalesce(func.sum(Transaction.amount), Decimal("0")))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.status == "approved",
             Transaction.deleted_at.is_(None),
             Transaction.tax_relevant.is_(True),
-            Transaction.amount < 0,
+            Transaction.transaction_type == "expense",
+            Transaction.category.in_(DEDUCTIBLE_TAGS),
+            Transaction.is_capital_improvement.is_(False),
         )
     )
     result = await db.execute(stmt)
