@@ -34,6 +34,12 @@ def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     return RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
 
 
+def _ctx_with_role(role: OrgRole) -> RequestContext:
+    return RequestContext(
+        organization_id=uuid.uuid4(), user_id=uuid.uuid4(), org_role=role,
+    )
+
+
 def _make_item(*, status: str = "pending") -> ReviewQueueItemResponse:
     return ReviewQueueItemResponse(
         id=uuid.uuid4(),
@@ -317,3 +323,61 @@ class TestDismissQueueItem:
 
         assert response.status_code == 404
         app.dependency_overrides.clear()
+
+
+class TestReviewQueueWriteRoles:
+    """Viewers are read-only: every mutating route returns 403 and never reaches the service."""
+
+    @pytest.mark.parametrize(
+        ("method", "path_suffix", "body", "service_fn"),
+        [
+            ("post", "/resolve", {"listing_id": str(uuid.uuid4())}, "resolve_item"),
+            ("post", "/ignore", {"source_listing_id": "123"}, "ignore_item"),
+            ("delete", "", None, "dismiss_item"),
+        ],
+    )
+    def test_viewer_gets_403(
+        self, method: str, path_suffix: str, body: dict | None, service_fn: str,
+    ) -> None:
+        item_id = uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx_with_role(OrgRole.VIEWER)
+        try:
+            with patch(f"app.api.calendar.review_queue_service.{service_fn}") as service:
+                client = TestClient(app)
+                url = f"/calendar/review-queue/{item_id}{path_suffix}"
+                response = (
+                    client.delete(url) if method == "delete" else client.post(url, json=body)
+                )
+            assert response.status_code == 403
+            service.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.parametrize("role", [OrgRole.OWNER, OrgRole.ADMIN, OrgRole.USER])
+    def test_non_viewer_can_resolve(self, role: OrgRole) -> None:
+        item_id, listing_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx_with_role(role)
+        try:
+            with patch(
+                "app.api.calendar.review_queue_service.resolve_item",
+                return_value=_make_resolve_response(item_id=item_id, listing_id=listing_id),
+            ):
+                response = TestClient(app).post(
+                    f"/calendar/review-queue/{item_id}/resolve",
+                    json={"listing_id": str(listing_id)},
+                )
+            assert response.status_code == 200
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_viewer_can_still_read(self) -> None:
+        app.dependency_overrides[current_org_member] = lambda: _ctx_with_role(OrgRole.VIEWER)
+        try:
+            with patch(
+                "app.api.calendar.review_queue_service.list_pending_items",
+                return_value=[],
+            ):
+                response = TestClient(app).get("/calendar/review-queue")
+            assert response.status_code == 200
+        finally:
+            app.dependency_overrides.clear()

@@ -21,7 +21,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member
+from app.core.permissions import current_org_member, require_write_access
 from app.schemas.calendar.calendar_event_response import CalendarEventResponse
 from app.schemas.calendar.resolve_queue_item_response import ResolveQueueItemResponse
 from app.schemas.calendar.review_queue_requests import (
@@ -176,7 +176,7 @@ async def count_review_queue(
 async def resolve_queue_item(
     item_id: uuid.UUID,
     body: ResolveQueueItemRequest,
-    ctx: RequestContext = Depends(current_org_member),
+    ctx: RequestContext = Depends(require_write_access),
 ) -> ResolveQueueItemResponse:
     """Resolve a pending item — creates a listing_blackout and marks the queue row resolved.
 
@@ -207,7 +207,7 @@ async def resolve_queue_item(
 async def ignore_queue_item(
     item_id: uuid.UUID,
     body: IgnoreQueueItemRequest,
-    ctx: RequestContext = Depends(current_org_member),
+    ctx: RequestContext = Depends(require_write_access),
 ) -> ReviewQueueItemResponse:
     """Ignore a pending item and add its listing to the blocklist."""
     try:
@@ -230,7 +230,7 @@ async def ignore_queue_item(
 )
 async def dismiss_queue_item(
     item_id: uuid.UUID,
-    ctx: RequestContext = Depends(current_org_member),
+    ctx: RequestContext = Depends(require_write_access),
 ) -> None:
     """Soft-delete a queue item (user dismisses without acting)."""
     try:

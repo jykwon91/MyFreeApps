@@ -54,6 +54,11 @@ const mockDismiss = vi.fn().mockResolvedValue({});
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
 
+let canWriteValue = true;
+vi.mock("@/shared/hooks/useOrgRole", () => ({
+  useCanWrite: () => canWriteValue,
+}));
+
 vi.mock("@/shared/hooks/useToast", () => ({
   useToast: vi.fn(() => ({
     showSuccess: mockShowSuccess,
@@ -110,6 +115,7 @@ function renderItem(item = mockItem) {
 
 describe("ReviewQueueItem", () => {
   beforeEach(() => {
+    canWriteValue = true;
     vi.mocked(useResolveQueueItemMutation).mockReturnValue([
       mockResolve,
       { isLoading: false } as unknown as ReturnType<typeof useResolveQueueItemMutation>[1],
@@ -305,5 +311,20 @@ describe("ReviewQueueItem — skeleton matches loaded structure", () => {
     // Must have at least two interactive buttons
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("ReviewQueueItem — read-only viewer", () => {
+  beforeEach(() => {
+    canWriteValue = false;
+  });
+
+  it("shows the booking details but no Add, Ignore or Dismiss actions", () => {
+    renderItem();
+    expect(screen.getByTestId("review-queue-subject")).toBeInTheDocument();
+    expect(screen.queryByTestId("review-queue-add-btn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("review-queue-ignore-btn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("review-queue-dismiss-btn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("review-queue-resolve-panel")).not.toBeInTheDocument();
   });
 });
