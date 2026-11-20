@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tax_return_enums import TAX_RETURN_STATUS_FILED
 from app.core.tax_form_fields import TAX_FORM_FIELD_DEFINITIONS, TAX_SOURCE_FORM_TYPES
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
@@ -108,6 +109,7 @@ async def process_tax_document(
         )
         await tax_form_repo.create_field_source(db, field_source)
 
-    await tax_return_repo.set_needs_recompute(db, tax_return, value=True)
+    if tax_return.status != TAX_RETURN_STATUS_FILED:
+        await tax_return_repo.set_needs_recompute(db, tax_return, value=True)
 
     return instance
