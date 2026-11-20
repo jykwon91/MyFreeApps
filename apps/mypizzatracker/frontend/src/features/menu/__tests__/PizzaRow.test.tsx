@@ -1,11 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import PizzaRow from "../PizzaRow";
 import type { PizzaType } from "@/types/menu/menu";
 
+const { deletePizza, showError } = vi.hoisted(() => ({
+  deletePizza: vi.fn(),
+  showError: vi.fn(),
+}));
+
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError,
+}));
+
 vi.mock("@/store/menuApi", () => ({
   useUpdatePizzaMutation: () => [vi.fn(), { isLoading: false }],
-  useDeletePizzaMutation: () => [vi.fn(), { isLoading: false }],
+  useDeletePizzaMutation: () => [deletePizza, { isLoading: false }],
 }));
 
 const pizza: PizzaType = {
@@ -43,5 +53,22 @@ describe("PizzaRow editor", () => {
     fireEvent.click(screen.getByLabelText("Edit"));
 
     expect(nameInput().value).toBe("Margherita");
+  });
+});
+
+describe("PizzaRow delete", () => {
+  it("shows why a pizza in past orders can't be deleted and closes the dialog", async () => {
+    const detail = "Margherita is in past orders, so it can't be deleted. Mark it unavailable (86 it) instead.";
+    deletePizza.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail } }),
+    });
+    render(<PizzaRow pizza={pizza} />);
+
+    fireEvent.click(screen.getByLabelText("Delete"));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(detail));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "86" })).toBeTruthy();
   });
 });

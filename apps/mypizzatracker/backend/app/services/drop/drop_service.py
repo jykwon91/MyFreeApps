@@ -17,6 +17,11 @@ Owns the state machine and edit policy:
     active   : blocked (must close first)
     closed   : blocked (financial history)
 
+  Slot policy:
+    - pickup times are unique within a drop (checked before writing, 409)
+    - a slot that any order points at cannot be removed (409); the orders
+      have to be moved to another slot first
+
 Repositories handle the SQL; this layer enforces the rules and raises
 domain exceptions the API layer translates to HTTP. Every mutation owns its
 transaction through ``unit_of_work``: it commits when the function returns
@@ -25,6 +30,7 @@ and rolls back when a rule violation is raised.
 from __future__ import annotations
 
 import uuid
+from datetime import time
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +39,7 @@ from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
 from app.models.drop.slot import Slot
 from app.repositories.drop import drop_repo
+from app.repositories.order import order_repo
 from app.schemas.drop.drop_schemas import (
     DropCreate,
     DropUpdate,
@@ -91,6 +98,18 @@ class SlotNotFoundError(DropServiceError):
 
 class SlotEditingClosedError(DropServiceError):
     """Cannot modify slots on a closed drop."""
+
+
+class SlotHasOrdersError(DropServiceError):
+    """Cannot remove a slot that orders point at."""
+
+    http_status = 409
+
+
+class DuplicatePickupTimeError(DropServiceError):
+    """Another slot in the drop already has this pickup time."""
+
+    http_status = 409
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +208,7 @@ async def add_slot(drop_id: uuid.UUID, body: SlotCreate) -> Slot:
     async with unit_of_work() as db:
         drop = await get_drop_or_404(db, drop_id)
         _ensure_slots_mutable(drop)
+        await _ensure_pickup_time_free(db, drop, body.pickup_time)
         return await drop_repo.create_slot(db, drop.id, body.model_dump())
 
 
@@ -202,6 +222,11 @@ async def update_slot(
         _ensure_slots_mutable(drop)
         if not patch:
             return slot
+        new_pickup_time = patch.get("pickup_time")
+        if new_pickup_time is not None:
+            await _ensure_pickup_time_free(
+                db, drop, new_pickup_time, exclude_slot_id=slot.id,
+            )
         return await drop_repo.update_slot(db, slot, patch)
 
 
@@ -210,6 +235,11 @@ async def remove_slot(drop_id: uuid.UUID, slot_id: uuid.UUID) -> None:
         drop = await get_drop_or_404(db, drop_id)
         slot = await _get_slot_in_drop(db, drop, slot_id)
         _ensure_slots_mutable(drop)
+        if await order_repo.slot_has_orders(db, slot.id):
+            raise SlotHasOrdersError(
+                f"The {slot.pickup_time.strftime('%H:%M')} slot has orders, "
+                f"so it can't be removed. Move those orders to another slot first.",
+            )
         await drop_repo.delete_slot(db, slot)
 
 
@@ -228,4 +258,21 @@ def _ensure_slots_mutable(drop: Drop) -> None:
     if drop.status == "closed":
         raise SlotEditingClosedError(
             "Cannot modify slots on a closed drop.",
+        )
+
+
+async def _ensure_pickup_time_free(
+    db: AsyncSession,
+    drop: Drop,
+    pickup_time: time,
+    *,
+    exclude_slot_id: Optional[uuid.UUID] = None,
+) -> None:
+    taken = await drop_repo.pickup_time_taken(
+        db, drop.id, pickup_time, exclude_slot_id=exclude_slot_id,
+    )
+    if taken:
+        raise DuplicatePickupTimeError(
+            f"This drop already has a {pickup_time.strftime('%H:%M')} slot. "
+            f"Pick a different time.",
         )
