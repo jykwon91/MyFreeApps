@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.domain.languages import get_language
 from app.domain.scenarios import get_scenario
 from app.domain.session_status import SessionStatus
@@ -33,26 +34,25 @@ class InvalidSessionRequestError(ValueError):
 
 
 async def create_session(
-    db: AsyncSession, user_id: uuid.UUID, payload: SessionCreateRequest,
+    user_id: uuid.UUID, payload: SessionCreateRequest,
 ) -> SessionSummary:
     if get_language(payload.language_code) is None:
         raise InvalidSessionRequestError(f"Unsupported language: {payload.language_code}")
     if get_scenario(payload.scenario_slug) is None:
         raise InvalidSessionRequestError(f"Unknown scenario: {payload.scenario_slug}")
 
-    session = await tutor_session_repository.create(
-        db,
-        TutorSession(
-            user_id=user_id,
-            language_code=payload.language_code,
-            scenario_slug=payload.scenario_slug,
-            level=payload.level.value,
-            status=SessionStatus.ACTIVE.value,
-        ),
-    )
-    summary = to_session_summary(session)
-    await db.commit()
-    return summary
+    async with unit_of_work() as db:
+        session = await tutor_session_repository.create(
+            db,
+            TutorSession(
+                user_id=user_id,
+                language_code=payload.language_code,
+                scenario_slug=payload.scenario_slug,
+                level=payload.level.value,
+                status=SessionStatus.ACTIVE.value,
+            ),
+        )
+        return to_session_summary(session)
 
 
 async def list_sessions(
@@ -81,30 +81,26 @@ async def get_session(
 
 
 async def end_session(
-    db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID,
+    user_id: uuid.UUID, session_id: uuid.UUID,
 ) -> SessionSummary | None:
     """Mark a session ended. Idempotent: ending an ended session keeps the
     original ``ended_at``."""
-    session = await tutor_session_repository.get_by_id(db, session_id, user_id)
-    if session is None:
-        return None
-    if session.status != SessionStatus.ENDED.value:
-        session.status = SessionStatus.ENDED.value
-        session.ended_at = datetime.now(timezone.utc)
-        await db.flush()
-        await db.refresh(session)
-    summary = to_session_summary(session)
-    await db.commit()
-    return summary
+    async with unit_of_work() as db:
+        session = await tutor_session_repository.get_by_id(db, session_id, user_id)
+        if session is None:
+            return None
+        if session.status != SessionStatus.ENDED.value:
+            session = await tutor_session_repository.mark_ended(
+                db, session, datetime.now(timezone.utc),
+            )
+        return to_session_summary(session)
 
 
-async def delete_session(
-    db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID,
-) -> bool:
+async def delete_session(user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
     """Hard-delete a session and (via FK cascade) its turns. False if not found."""
-    session = await tutor_session_repository.get_by_id(db, session_id, user_id)
-    if session is None:
-        return False
-    await tutor_session_repository.delete(db, session)
-    await db.commit()
-    return True
+    async with unit_of_work() as db:
+        session = await tutor_session_repository.get_by_id(db, session_id, user_id)
+        if session is None:
+            return False
+        await tutor_session_repository.delete(db, session)
+        return True

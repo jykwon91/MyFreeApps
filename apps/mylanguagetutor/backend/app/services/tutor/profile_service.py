@@ -5,6 +5,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.domain.languages import get_language
 from app.repositories.tutor import tutor_profile_repository
 from app.schemas.tutor.profile_schemas import ProfileResponse, ProfileUpdateRequest
@@ -21,13 +22,12 @@ async def get_profile(db: AsyncSession, user_id: uuid.UUID) -> ProfileResponse |
 
 
 async def save_profile(
-    db: AsyncSession, user_id: uuid.UUID, payload: ProfileUpdateRequest,
+    user_id: uuid.UUID, payload: ProfileUpdateRequest,
 ) -> ProfileResponse:
     if get_language(payload.language_code) is None:
         raise InvalidProfileError(f"Unsupported language: {payload.language_code}")
-    profile = await tutor_profile_repository.upsert(
-        db, user_id, payload.language_code, payload.level.value,
-    )
-    response = ProfileResponse.model_validate(profile)
-    await db.commit()
-    return response
+    async with unit_of_work() as db:
+        profile = await tutor_profile_repository.upsert(
+            db, user_id, payload.language_code, payload.level.value,
+        )
+        return ProfileResponse.model_validate(profile)

@@ -43,11 +43,10 @@ _MAX_PAGE_SIZE = 100
 @router.post("", response_model=SessionSummary, status_code=201)
 async def create_session(
     payload: SessionCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionSummary:
     try:
-        return await session_service.create_session(db, user.id, payload)
+        return await session_service.create_session(user.id, payload)
     except InvalidSessionRequestError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -77,10 +76,9 @@ async def get_session(
 @router.post("/{session_id}/end", response_model=SessionSummary)
 async def end_session(
     session_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionSummary:
-    summary = await session_service.end_session(db, user.id, session_id)
+    summary = await session_service.end_session(user.id, session_id)
     if summary is None:
         raise HTTPException(status_code=404, detail=_SESSION_NOT_FOUND)
     return summary
@@ -89,10 +87,9 @@ async def end_session(
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
     session_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await session_service.delete_session(db, user.id, session_id)
+    deleted = await session_service.delete_session(user.id, session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_SESSION_NOT_FOUND)
     return Response(status_code=204)
