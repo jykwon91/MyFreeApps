@@ -212,6 +212,12 @@ export function useAddApplicationFlow() {
     setReview((current) => ({ sourceUrl: current?.sourceUrl ?? null, summary: current?.summary ?? null, company: added }));
   }
 
+  /** Back from the review step: the source step again, with the link or text still in it. */
+  function backToSource(): void {
+    setFailure(null);
+    setReview(null);
+  }
+
   function edit<Field extends keyof AddApplicationFormValues>(field: Field, value: AddApplicationFormValues[Field]): void {
     setValues((current) => ({ ...current, [field]: value }));
   }
@@ -282,6 +288,7 @@ export function useAddApplicationFlow() {
     readText,
     chooseCompany,
     addTypedCompany,
+    backToSource,
     save,
   };
 }
