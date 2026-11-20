@@ -48,7 +48,7 @@ async def export_user_data(
     user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
-    """Export all user data as JSON. Populate domain rows in account_service.build_export."""
+    """Export all user data as JSON. Assembled by account_service.build_export."""
     payload = await account_service.build_export(db, user)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return JSONResponse(

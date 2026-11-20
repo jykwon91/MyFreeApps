@@ -99,3 +99,13 @@ async def create_order_with_lines(
     refreshed = await get_order(db, order.id)
     assert refreshed is not None, "Order disappeared during create"
     return refreshed
+
+
+async def list_all_orders(db: AsyncSession) -> list[Order]:
+    """Every order with its pizzas and toppings, oldest first (used by the data export)."""
+    stmt = (
+        select(Order)
+        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
+        .order_by(Order.created_at.asc(), Order.id.asc())
+    )
+    return list((await db.execute(stmt)).scalars().all())

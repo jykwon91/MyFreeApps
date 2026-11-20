@@ -128,3 +128,9 @@ async def list_customers_with_stats(
         }
         for row in result.all()
     ]
+
+
+async def list_all_customers(db: AsyncSession) -> list[Customer]:
+    """Every customer, oldest first (used by the data export)."""
+    stmt = select(Customer).order_by(Customer.created_at.asc(), Customer.id.asc())
+    return list((await db.execute(stmt)).scalars().all())
