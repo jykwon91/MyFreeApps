@@ -5,6 +5,9 @@ import {
   useUpdateDropMutation,
   useDeleteDropMutation,
 } from "@/store/dropsApi";
+import { useGetFinancialsQuery } from "@/store/financialsApi";
+import { dropDeleteMessage } from "@/utils/dropDeleteMessage";
+import { DROP_DELETE_CONFIRM_LABEL, DROP_DELETE_TITLE } from "@/constants/dropDelete";
 import { type DropStatus, DROP_STATUS_LABELS } from "@/types/drop/drop";
 import type { DropActionsProps } from "@/types/drop/DropActionsProps";
 
@@ -14,6 +17,8 @@ export default function DropActions({ drop }: DropActionsProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // Deleting a drop removes its expenses too, so the confirm reads them (only while it is open).
+  const { data: financials, isLoading: isCountingExpenses } = useGetFinancialsQuery(drop.id, { skip: !confirmDelete });
 
   const setStatus = async (status: DropStatus) => {
     try {
@@ -67,6 +72,7 @@ export default function DropActions({ drop }: DropActionsProps) {
           <Button
             size="sm"
             variant="ghost"
+            aria-label="Delete drop"
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -85,11 +91,11 @@ export default function DropActions({ drop }: DropActionsProps) {
         open={confirmDelete}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={onDelete}
-        title="Delete this drop?"
-        description="The drop and all its slots will be removed. This can't be undone."
-        confirmLabel="Delete"
+        title={DROP_DELETE_TITLE}
+        description={dropDeleteMessage(financials?.expenses.length)}
+        confirmLabel={DROP_DELETE_CONFIRM_LABEL}
         variant="destructive"
-        isLoading={isDeleting}
+        isLoading={isDeleting || isCountingExpenses}
       />
       <ConfirmDialog
         open={confirmCancel}
