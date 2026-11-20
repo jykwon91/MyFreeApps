@@ -5,6 +5,7 @@ repositories own all queries. Tenant isolation is via `organization_id`; `user_i
 is accepted for the audit-log context but is not used as a filter (per
 RENTALS_PLAN.md §4.1: organization_id is the primary scoping column).
 """
+import logging
 import uuid
 
 from app.db.session import AsyncSessionLocal, unit_of_work
@@ -21,6 +22,7 @@ from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
+from app.schemas.listings.public_listing_response import PublicListingResponse
 from app.services.listings.listing_slug import generate_slug
 from app.services.listings.photo_response_builder import attach_presigned_urls
 
@@ -29,6 +31,8 @@ from app.services.listings.photo_response_builder import attach_presigned_urls
 # the retry loop is cheap defense in depth — and important if a future
 # operator has thousands of listings.
 _SLUG_GENERATION_ATTEMPTS = 5
+
+logger = logging.getLogger(__name__)
 
 
 def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse:
@@ -65,6 +69,29 @@ async def get_listing(
         photos = await listing_photo_repo.list_by_listing(db, listing.id)
         external_ids = await listing_external_id_repo.list_by_listing(db, listing.id)
     return _to_listing_response(listing, photos, external_ids)
+
+
+async def get_public_listing(slug: str) -> PublicListingResponse:
+    """Public listing lookup for the inquiry form header.
+
+    Raises LookupError for unknown / soft-deleted slugs. Before raising, logs a
+    WARNING with the slug AND whether it exists in an archived state, so the
+    operator can tell a typo'd URL from a still-live link to an archived listing.
+    """
+    async with AsyncSessionLocal() as db:
+        listing = await listing_repo.get_by_slug(db, slug)
+        if listing is None:
+            archived_match = await listing_repo.slug_exists_including_archived(
+                db, slug,
+            )
+    if listing is None:
+        logger.warning(
+            "public_listing.not_found slug=%r archived_match=%s",
+            slug,
+            archived_match,
+        )
+        raise LookupError(f"Listing slug {slug!r} not found")
+    return PublicListingResponse.model_validate(listing)
 
 
 async def list_listings(

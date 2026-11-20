@@ -13,8 +13,6 @@ doesn't require a logged-in user. Defense-in-depth lives in the service layer
 """
 from __future__ import annotations
 
-import logging
-
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.core.config import settings
@@ -25,10 +23,9 @@ from app.schemas.inquiries.public_inquiry_request import (
     PublicInquiryRequest,
 )
 from app.schemas.listings.public_listing_response import PublicListingResponse
-from app.db.session import AsyncSessionLocal
-from app.repositories.listings import listing_repo
 from app.services.inquiries import public_inquiry_service
 from app.services.inquiries.public_inquiry_service import PublicInquiryOutcome
+from app.services.listings import listing_service
 from app.services.system.inquiry_notification_email import (
     send_inquiry_notification,
 )
@@ -41,8 +38,6 @@ public_inquiry_limiter = RateLimiter(
     max_attempts=settings.inquiry_public_rate_limit_max,
     window_seconds=settings.inquiry_public_rate_limit_window_seconds,
 )
-
-logger = logging.getLogger(__name__)
 
 # Generic message returned on EVERY filter failure except the friendly
 # "tell us more" gate. Keeps anti-spam intel out of the response so an
@@ -75,20 +70,10 @@ async def get_public_listing(slug: str) -> PublicListingResponse:
     URL is still live in external descriptions" (slug exists but archived) —
     without SSHing into the DB to triage every public-form 404.
     """
-    async with AsyncSessionLocal() as db:
-        listing = await listing_repo.get_by_slug(db, slug)
-        if listing is None:
-            archived_match = await listing_repo.slug_exists_including_archived(
-                db, slug,
-            )
-    if listing is None:
-        logger.warning(
-            "public_listing.not_found slug=%r archived_match=%s",
-            slug,
-            archived_match,
-        )
-        raise HTTPException(status_code=404, detail="Listing not found")
-    return PublicListingResponse.model_validate(listing)
+    try:
+        return await listing_service.get_public_listing(slug)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Listing not found") from exc
 
 
 @router.post("/inquiries/public", status_code=200)

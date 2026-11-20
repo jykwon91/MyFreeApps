@@ -4,8 +4,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.db.session import AsyncSessionLocal
-from app.repositories import channel_repo
 from app.schemas.listings.channel_listing_create_request import (
     ChannelListingCreateRequest,
 )
@@ -30,6 +28,7 @@ from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
 from app.services.listings import (
     channel_listing_service,
+    channel_service,
     listing_external_id_service,
     listing_photo_service,
     listing_service,
@@ -58,9 +57,7 @@ async def list_channels(
     catalogue is shared across all tenants. Powers the "Add channel"
     dropdown on the listing detail page.
     """
-    async with AsyncSessionLocal() as db:
-        rows = await channel_repo.list_all(db)
-    return [ChannelResponse.model_validate(row) for row in rows]
+    return await channel_service.list_channels()
 
 
 @router.get("", response_model=ListingListResponse)
