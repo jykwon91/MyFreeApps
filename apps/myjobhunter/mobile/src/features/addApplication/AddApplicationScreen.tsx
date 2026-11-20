@@ -1,4 +1,4 @@
-import { Banner, KeyboardAwareScroll, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, confirmDiscard, KeyboardAwareScroll, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import CompanyPickerSheet from "./CompanyPickerSheet";
@@ -13,7 +13,14 @@ export default function AddApplicationScreen() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   // Each opening is a fresh picker, starting on the company named so far.
   const [pickerOpenings, setPickerOpenings] = useState(0);
-  useDiscardPrompt(flow.isDirty && !flow.isLeaving, flow.isSaving);
+  const hasReview = flow.review !== null;
+  // Back (header, swipe or Android's button) steps from the review to the source step first, and
+  // only leaves from there, asking before throwing away what was entered.
+  useConfirmLeave(flow.isDirty && !flow.isLeaving, (leave) => {
+    if (flow.isSaving) return;
+    if (hasReview) flow.backToSource();
+    else confirmDiscard(leave);
+  });
 
   function openPicker(): void {
     setPickerOpenings((count) => count + 1);

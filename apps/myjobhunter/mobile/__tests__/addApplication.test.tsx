@@ -383,6 +383,7 @@ describe("from a link", () => {
     expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
 
     await act(async () => router.back());
+    await act(async () => router.back());
     await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
     await waitFor(() => expect(screen).toHavePathname("/applications"));
 
@@ -874,15 +875,34 @@ describe("leaving", () => {
     expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
   });
 
-  it("asks before throwing away a read posting", async () => {
+  it("goes back from the review to the step it was read from, keeping the link, and asks only when leaving from there", async () => {
     serveAdd({ "POST /applications/extract-from-url": ok(extracted()) });
     await openAddScreen({ fromList: true });
     await readLink();
     await screen.findByText(MESSAGES.reviewHeading);
-    await fireEvent.changeText(field(ROLE_FIELD), "Changed");
+
+    await act(async () => router.back());
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen).toHavePathname("/applications/new");
+    expect(screen.queryByText(MESSAGES.reviewHeading)).toBeNull();
+    expect(field(MESSAGES.linkLabel).props.value).toBe(LINK);
 
     await act(async () => router.back());
     expect(alert).toHaveBeenCalledTimes(1);
     expect(screen).toHavePathname("/applications/new");
+  });
+
+  it("goes back from the review of pasted text with the text still entered", async () => {
+    serveAdd({ "POST /applications/parse-jd": ok(parsed()) });
+    await openAddScreen({ fromList: true });
+    await chooseSource("Paste text");
+    await fireEvent.changeText(field(MESSAGES.textLabel), "We're hiring a Senior Engineer at Airbnb.");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
+    await screen.findByText(MESSAGES.reviewHeading);
+
+    await act(async () => router.back());
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.queryByText(MESSAGES.reviewHeading)).toBeNull();
+    expect(field(MESSAGES.textLabel).props.value).toBe("We're hiring a Senior Engineer at Airbnb.");
   });
 });
