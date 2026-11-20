@@ -11,9 +11,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.schemas.menu.menu_price import MenuPrice
+from app.schemas.patch_base import PatchModel
 from app.schemas.text_fields.pizza_description import PizzaDescription
 from app.schemas.text_fields.required_name import RequiredName
 
@@ -29,19 +30,13 @@ class PizzaTypeCreate(BaseModel):
     active: bool = True
 
 
-class PizzaTypeUpdate(BaseModel):
+class PizzaTypeUpdate(PatchModel):
+    non_nullable_fields = frozenset({"name", "price", "active"})
+
     name: Optional[RequiredName] = None
     price: Optional[MenuPrice] = None
     description: Optional[PizzaDescription] = None
     active: Optional[bool] = None
-
-    @field_validator("price")
-    @classmethod
-    def _price_not_null(cls, value: Decimal | None) -> Decimal | None:
-        """Omit the field to leave it unchanged; an explicit null would NULL a NOT NULL column."""
-        if value is None:
-            raise ValueError("must not be null")
-        return value
 
 
 class PizzaTypeRead(BaseModel):
@@ -66,18 +61,12 @@ class ToppingTypeCreate(BaseModel):
     active: bool = True
 
 
-class ToppingTypeUpdate(BaseModel):
+class ToppingTypeUpdate(PatchModel):
+    non_nullable_fields = frozenset({"name", "price_delta", "active"})
+
     name: Optional[RequiredName] = None
     price_delta: Optional[MenuPrice] = None
     active: Optional[bool] = None
-
-    @field_validator("price_delta")
-    @classmethod
-    def _price_not_null(cls, value: Decimal | None) -> Decimal | None:
-        """Omit the field to leave it unchanged; an explicit null would NULL a NOT NULL column."""
-        if value is None:
-            raise ValueError("must not be null")
-        return value
 
 
 class ToppingTypeRead(BaseModel):
