@@ -65,11 +65,11 @@ class TestPublicListingLookup:
         client = TestClient(app)
         with (
             patch(
-                "app.api.public_inquiries.listing_repo.get_by_slug",
+                "app.services.listings.listing_service.listing_repo.get_by_slug",
                 return_value=None,
             ),
             patch(
-                "app.api.public_inquiries.listing_repo.slug_exists_including_archived",
+                "app.services.listings.listing_service.listing_repo.slug_exists_including_archived",
                 return_value=False,
             ),
         ):
@@ -89,14 +89,14 @@ class TestPublicListingLookup:
         client = TestClient(app)
         with (
             patch(
-                "app.api.public_inquiries.listing_repo.get_by_slug",
+                "app.services.listings.listing_service.listing_repo.get_by_slug",
                 return_value=None,
             ),
             patch(
-                "app.api.public_inquiries.listing_repo.slug_exists_including_archived",
+                "app.services.listings.listing_service.listing_repo.slug_exists_including_archived",
                 return_value=True,
             ),
-            caplog.at_level(logging.WARNING, logger="app.api.public_inquiries"),
+            caplog.at_level(logging.WARNING, logger="app.services.listings.listing_service"),
         ):
             r = client.get("/listings/public/archived-slug-abc123")
         assert r.status_code == 404
@@ -117,14 +117,14 @@ class TestPublicListingLookup:
         client = TestClient(app)
         with (
             patch(
-                "app.api.public_inquiries.listing_repo.get_by_slug",
+                "app.services.listings.listing_service.listing_repo.get_by_slug",
                 return_value=None,
             ),
             patch(
-                "app.api.public_inquiries.listing_repo.slug_exists_including_archived",
+                "app.services.listings.listing_service.listing_repo.slug_exists_including_archived",
                 return_value=False,
             ),
-            caplog.at_level(logging.WARNING, logger="app.api.public_inquiries"),
+            caplog.at_level(logging.WARNING, logger="app.services.listings.listing_service"),
         ):
             r = client.get("/listings/public/never-existed")
         assert r.status_code == 404
@@ -157,7 +157,7 @@ class TestPublicListingLookup:
         )
         client = TestClient(app)
         with patch(
-            "app.api.public_inquiries.listing_repo.get_by_slug",
+            "app.services.listings.listing_service.listing_repo.get_by_slug",
             return_value=listing,
         ):
             r = client.get("/listings/public/master-bedroom-abc123")
@@ -271,11 +271,11 @@ class TestPublicInquiryRouting:
         client = TestClient(app)
         with (
             patch(
-                "app.api.public_inquiries.listing_repo.get_by_slug",
+                "app.services.listings.listing_service.listing_repo.get_by_slug",
                 return_value=None,
             ),
             patch(
-                "app.api.public_inquiries.listing_repo.slug_exists_including_archived",
+                "app.services.listings.listing_service.listing_repo.slug_exists_including_archived",
                 return_value=False,
             ),
         ):

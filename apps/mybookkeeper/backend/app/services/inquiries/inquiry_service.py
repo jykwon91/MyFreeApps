@@ -27,12 +27,16 @@ from app.repositories import (
     inquiry_event_repo,
     inquiry_message_repo,
     inquiry_repo,
+    inquiry_spam_assessment_repo,
 )
 from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
 from app.schemas.inquiries.inquiry_event_response import InquiryEventResponse
 from app.schemas.inquiries.inquiry_list_response import InquiryListResponse
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_response import InquiryResponse
+from app.schemas.inquiries.inquiry_spam_assessment_response import (
+    InquirySpamAssessmentResponse,
+)
 from app.schemas.inquiries.inquiry_summary import InquirySummary
 from app.schemas.inquiries.inquiry_update_request import InquiryUpdateRequest
 
@@ -156,6 +160,24 @@ async def get_inquiry(
         events=events,
         linked_applicant_id=linked_applicant.id if linked_applicant else None,
     )
+
+
+async def list_spam_assessments(
+    organization_id: uuid.UUID,
+    inquiry_id: uuid.UUID,
+) -> list[InquirySpamAssessmentResponse]:
+    """Return the audit trail of every spam check ever run on an inquiry.
+
+    Org-scoping is enforced by reading the inquiry first — assessments are
+    never exposed without confirming the caller has access to the parent.
+    Raises LookupError if the inquiry is missing or in another organization.
+    """
+    async with AsyncSessionLocal() as db:
+        inquiry = await inquiry_repo.get_by_id(db, inquiry_id, organization_id)
+        if inquiry is None:
+            raise LookupError(f"Inquiry {inquiry_id} not found")
+        rows = await inquiry_spam_assessment_repo.list_by_inquiry(db, inquiry_id)
+    return [InquirySpamAssessmentResponse.model_validate(r) for r in rows]
 
 
 async def list_inbox(

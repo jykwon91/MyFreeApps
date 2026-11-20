@@ -7,6 +7,7 @@
         "backend/app/api/admin.py",
         "backend/app/cli/inspect.py",
         "backend/app/api/db_admin.py",
+        "backend/app/services/system/db_admin_service.py",
         "frontend/src/admin/pages/UserActivity.tsx",
         "backend/app/repositories/db_admin_repo.py",
         "backend/app/test_helpers/"
@@ -28,6 +29,7 @@
         "test_blackout_seed_routes.py",
         "test_signed_lease_seed_routes.py",
         "test_db_admin.py",
+        "test_db_admin_service.py",
         "test_seed_applicant_request.py",
         "test_seed_lease_template.py",
         "test_cleanup_seed_routes.py"
@@ -657,6 +659,9 @@
         "test_listing_repo.py",
         "test_listing_seed_routes.py",
         "test_listing_service.py",
+        "test_public_listing_service.py",
+        "test_channel_service.py",
+        "test_public_inquiries_api.py",
         "test_listing_routes.py",
         "test_listing_photo_service.py",
         "test_listing_external_id_repo.py",
@@ -838,6 +843,7 @@
         "test_inquiry_message_repo.py",
         "test_inquiry_event_repo.py",
         "test_inquiry_service.py",
+        "test_inquiry_spam_assessments.py",
         "test_inquiries_api.py",
         "test_inquiry_audit_masking.py",
         "test_inquiry_reply_routes.py",

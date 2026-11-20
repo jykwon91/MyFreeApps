@@ -20,7 +20,6 @@ from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.schemas.inquiries.inquiry_response import InquiryResponse
 from app.schemas.inquiries.inquiry_update_request import InquiryUpdateRequest
 from app.schemas.inquiries.rendered_template_response import RenderedTemplateResponse
-from app.repositories.inquiries import inquiry_spam_assessment_repo
 from app.schemas.inquiries.inquiry_spam_assessment_response import (
     InquirySpamAssessmentResponse,
 )
@@ -51,7 +50,6 @@ from app.services.inquiries.reply_send_error_details import (
     REPLY_SENT_FROM_OTHER_GMAIL,
     REPLY_SENT_NOT_RECORDED,
 )
-from app.db.session import AsyncSessionLocal
 
 router = APIRouter(prefix="/inquiries", tags=["inquiries"])
 
@@ -88,13 +86,12 @@ async def list_spam_assessments(
     Org-scoping is enforced by reading the inquiry first — we never expose
     assessments without confirming the caller has access to the parent.
     """
-    async with AsyncSessionLocal() as db:
-        from app.repositories.inquiries import inquiry_repo as _inquiry_repo
-        inquiry = await _inquiry_repo.get_by_id(db, inquiry_id, ctx.organization_id)
-        if inquiry is None:
-            raise HTTPException(status_code=404, detail="Inquiry not found")
-        rows = await inquiry_spam_assessment_repo.list_by_inquiry(db, inquiry_id)
-    return [InquirySpamAssessmentResponse.model_validate(r) for r in rows]
+    try:
+        return await inquiry_service.list_spam_assessments(
+            ctx.organization_id, inquiry_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Inquiry not found") from exc
 
 
 @router.post("/{inquiry_id}/mark-not-spam", status_code=204)
