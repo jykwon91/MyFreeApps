@@ -71,6 +71,11 @@ export function cutAfterReply(reply: string): TurnStream {
   return { kind: "stream", events: [...deltas(reply), { event: "reply.done", data: {} }] };
 }
 
+/** The connection dropped after the corrections arrived but before done. */
+export function cutAfterCorrections(options: CompleteTurnOptions): TurnStream {
+  return { kind: "stream", events: completeTurn(options).events.slice(0, -1) };
+}
+
 /** A turn refused before the stream opens. */
 export function refusedTurn(status: number, detail: string): TurnRefusal {
   return { kind: "refusal", status, detail };

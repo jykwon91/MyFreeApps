@@ -163,7 +163,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
         }
 
         const chunker = createSentenceChunker(ttsLocale);
-        const outcome: StreamOutcome = { error: null, replyDone: false, finished: false };
+        const outcome: StreamOutcome = { error: null, replyDone: false, correctionsArrived: false, finished: false };
         const onEvent = (event: TurnStreamEvent) => {
           // A stopped turn takes nothing more, whatever a platform's ``streamTurn`` still delivers:
           // speech stopped with it must not start again.
@@ -180,6 +180,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
               chunker.flush().forEach((sentence) => speak(sentence));
               break;
             case "corrections":
+              outcome.correctionsArrived = true;
               patchEntry(key, (e) => ({
                 ...e,
                 corrections: event.payload.items,
@@ -217,8 +218,8 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
 
         if (outcome.replyDone && !outcome.finished && !outcome.error) {
           // The learner has the whole reply, and the server kept the turn: sending it again would
-          // count it twice. Only its corrections are lost.
-          patchEntry(key, (e) => ({ ...e, status: "complete", correctionsMissing: true }));
+          // count it twice. Only its corrections can be lost, if they hadn't arrived yet.
+          patchEntry(key, (e) => ({ ...e, status: "complete", correctionsMissing: !outcome.correctionsArrived }));
           return;
         }
 

@@ -14,10 +14,12 @@ transactions around the model calls (the MGA item_extractor pattern):
    ``turn_count`` and settles the quota reservation.
 
 Client disconnect cancels the generator; the ``finally`` block settles the
-turn under a shielded cancel scope. Before any reply token streamed the turn is
-``failed`` and settled like a pre-token upstream error (only usage known to have
-happened is charged, usually a full refund). Once tokens streamed the quota
-reservation is KEPT (they were generated but are uncounted); the status is
+turn under a shielded cancel scope. Once the turn's result is worked out (its
+corrections, translation and goal progress) it is settled exactly like a normal
+completion, even if the client left before ``done``. Before that, a turn with no
+reply token yet is ``failed`` and settled like a pre-token upstream error (only
+usage known to have happened is charged, usually a full refund); once tokens
+streamed the quota reservation is KEPT (they were generated but are uncounted); the status is
 ``complete`` once ``reply.done`` was sent -- the learner has the whole reply,
 only its corrections are missing -- and ``partial`` before that.
 
@@ -402,7 +404,9 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
             )
 
         settle_attempted = True
-        remaining = await _settle(prepared, outcome)
+        # Shielded so a disconnect can't cut the settlement off halfway.
+        with anyio.CancelScope(shield=True):
+            remaining = await _settle(prepared, outcome)
         yield TurnEvent(
             EVENT_DONE,
             TurnDoneEvent(status=outcome.status.value, usage=TurnUsage(remaining_fraction=remaining)),
@@ -415,7 +419,11 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
             await cancel_task(translation_task)
             if not settle_attempted:
                 # Client went away (or an unexpected error) before settlement.
-                if not reply_parts:
+                if outcome is not None:
+                    # The turn's result was already worked out (and maybe sent):
+                    # save and charge it exactly as the normal settlement would.
+                    abandoned = outcome
+                elif not reply_parts:
                     # No reply reached the learner: a failed turn, not a charge.
                     abandoned = _no_reply_outcome(
                         reply_usage, corrections_usage_if_done(corrections_task),
