@@ -6,7 +6,9 @@ missed, both inserted, and the second hit the unique phone constraint (a 500
 that lost that customer's order).
 
 The race is made deterministic with a barrier: neither request is allowed to
-write its customer until both have reached the customer step.
+write its customer until both have reached the customer step. The two orders
+go to different slots: placing an order locks its slot, so two orders for the
+same slot would never both reach the customer step at once.
 """
 from __future__ import annotations
 
@@ -34,7 +36,7 @@ BARRIER_TIMEOUT_SECONDS = 5
 
 
 @pytest_asyncio.fixture
-async def open_slot(db: AsyncSession) -> tuple[str, str, str]:
+async def open_slots(db: AsyncSession) -> tuple[str, str, str, str]:
     drop = Drop(
         date=date(2026, 12, 25),
         name="Dec 25th",
@@ -45,10 +47,11 @@ async def open_slot(db: AsyncSession) -> tuple[str, str, str]:
     pizza = PizzaType(name="La Clasica", price=Decimal("17.00"), active=True)
     db.add_all([drop, pizza])
     await db.flush()
-    slot = Slot(drop_id=drop.id, pickup_time=time(12, 0), max_pizzas=10)
-    db.add(slot)
+    noon = Slot(drop_id=drop.id, pickup_time=time(12, 0), max_pizzas=10)
+    one_pm = Slot(drop_id=drop.id, pickup_time=time(13, 0), max_pizzas=10)
+    db.add_all([noon, one_pm])
     await db.commit()
-    return str(drop.id), str(slot.id), str(pizza.id)
+    return str(drop.id), str(noon.id), str(one_pm.id), str(pizza.id)
 
 
 @pytest.fixture
@@ -80,8 +83,7 @@ def both_orders_reach_customer_step(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(customer_service, "upsert_by_phone", wait_then_upsert)
 
 
-def _order_body(slot: tuple[str, str, str], name: str) -> dict:
-    drop_id, slot_id, pizza_id = slot
+def _order_body(drop_id: str, slot_id: str, pizza_id: str, name: str) -> dict:
     return {
         "drop_id": drop_id,
         "slot_id": slot_id,
@@ -96,12 +98,13 @@ def _order_body(slot: tuple[str, str, str], name: str) -> dict:
 async def test_two_first_orders_from_same_new_phone_both_succeed(
     client: AsyncClient,
     db: AsyncSession,
-    open_slot: tuple[str, str, str],
+    open_slots: tuple[str, str, str, str],
     both_orders_reach_customer_step: None,
 ):
+    drop_id, noon_id, one_pm_id, pizza_id = open_slots
     first, second = await asyncio.gather(
-        client.post("/public/orders", json=_order_body(open_slot, "Jose")),
-        client.post("/public/orders", json=_order_body(open_slot, "Jose P.")),
+        client.post("/public/orders", json=_order_body(drop_id, noon_id, pizza_id, "Jose")),
+        client.post("/public/orders", json=_order_body(drop_id, one_pm_id, pizza_id, "Jose P.")),
     )
 
     assert first.status_code == 201, first.text
