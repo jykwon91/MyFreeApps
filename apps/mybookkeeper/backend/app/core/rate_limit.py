@@ -95,6 +95,9 @@ mortgage_statement_extract_limiter = RateLimiter(max_attempts=30, window_seconds
 # a caller deliberately hammering the PUCT host through us.
 utility_offer_search_limiter = RateLimiter(max_attempts=60, window_seconds=3600)
 frontend_error_limiter = RateLimiter(max_attempts=50, window_seconds=3600)
+# Guest welcome-manual PIN attempts. The per-manual lockout stops guessing one
+# guide; this stops one client sweeping many guides.
+welcome_manual_unlock_limiter = RateLimiter(max_attempts=20, window_seconds=900)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +131,10 @@ async def check_totp_rate_limit(
 
 async def check_password_reset_rate_limit(request: Request) -> None:
     password_reset_limiter.check(get_client_ip(request))
+
+
+async def check_welcome_manual_unlock_rate_limit(request: Request) -> None:
+    welcome_manual_unlock_limiter.check(get_client_ip(request))
 
 
 async def _verify_turnstile(*args: object, **kwargs: object) -> tuple[bool, list[str]]:

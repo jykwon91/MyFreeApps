@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import public_welcome_manuals
+from app.core import rate_limit
 from app.core.rate_limit import RateLimiter
 from app.core.welcome_manual_constants import SHARE_UNLOCK_MAX_ATTEMPTS
 from app.main import app
@@ -36,7 +36,7 @@ def patch_share_service(name: str, **kwargs):
 
 @pytest.fixture(autouse=True)
 def _reset_unlock_limiter() -> None:
-    public_welcome_manuals.welcome_manual_unlock_limiter.reset()
+    rate_limit.welcome_manual_unlock_limiter.reset()
 
 
 class TestGate:
@@ -252,7 +252,7 @@ class TestUnlockAttemptLimits:
         limiter = RateLimiter(max_attempts=2, window_seconds=900)
         client = TestClient(app)
         with patch.object(
-            public_welcome_manuals, "welcome_manual_unlock_limiter", limiter,
+            rate_limit, "welcome_manual_unlock_limiter", limiter,
         ), patch_share_service(
             "unlock_public",
             side_effect=welcome_manual_share_service.ManualNotFoundError("nope"),
