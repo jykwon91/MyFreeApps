@@ -1,3 +1,4 @@
+import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 import type { SentRequest } from "@platform/ui/test-support/types/SentRequest";
 import type { TurnRequest } from "./TurnRequest";
 
@@ -13,4 +14,6 @@ export interface TutorApi {
   stopFailing: (key: string) => void;
   /** Makes an endpoint answer with a server error from now on, as a flaky connection does. */
   startFailing: (key: string) => void;
+  /** What GET /usage/today answers from now on, as when the day's budget resets. */
+  setUsage: (usage: UsageToday) => void;
 }

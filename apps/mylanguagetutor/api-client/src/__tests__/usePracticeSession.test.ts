@@ -7,6 +7,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { usePracticeSession } from "../hooks/usePracticeSession";
+import { nextUtcMidnight } from "../utils/nextUtcMidnight";
+import type { UsageToday } from "../types/tutor/usage-today";
+import type { UsageRequestState } from "../types/session/usage-request-state";
 import type { StreamTurnFn } from "../types/stream/stream-turn-fn";
 import type { StreamTurnOptions } from "../types/stream/stream-turn-options";
 import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
@@ -17,6 +20,27 @@ const streamTurn = vi.fn<StreamTurnFn>();
 vi.mock("../store/sessionsApi", () => ({
   useCreateSessionMutation: () => [createSession],
 }));
+
+const BUDGET_LEFT: UsageToday = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true };
+const USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+
+/** What GET /usage/today has answered, as the hook's usage query reports it. */
+let usage: UsageRequestState & { data?: UsageToday } = { isSuccess: false, isFetching: false };
+
+vi.mock("../store/usageApi", () => ({
+  useGetUsageTodayQuery: () => usage,
+  usageApiUtil: { invalidateTags: () => ({ type: "usage/invalidated" }) },
+}));
+
+/** Usage answered by a request sent at ``startedTimeStamp``. */
+function answered(data: UsageToday, startedTimeStamp: number) {
+  return { isSuccess: true, isFetching: false, startedTimeStamp, data };
+}
+
+/** Just after the next daily reset, as seen from now. */
+function afterReset(): number {
+  return nextUtcMidnight(new Date()).getTime() + 1000;
+}
 
 const store = configureStore({ reducer: () => ({}) });
 
@@ -70,6 +94,7 @@ describe("usePracticeSession", () => {
   beforeEach(() => {
     createSession.mockReset();
     streamTurn.mockReset();
+    usage = answered(BUDGET_LEFT, Date.now());
     createSession.mockReturnValue({ unwrap: () => Promise.resolve({ id: "s1" }) });
   });
 
@@ -119,6 +144,80 @@ describe("usePracticeSession", () => {
     await waitFor(() => expect(result.current.block).toBe("daily_limit"));
     expect(result.current.entries).toHaveLength(0);
     expect(result.current.failure).toBeNull();
+  });
+
+  it("blocks up front when today's usage says the budget is spent, and sends nothing", () => {
+    usage = answered(USED_UP, Date.now());
+    const { result } = setup();
+
+    expect(result.current.block).toBe("daily_limit");
+    act(() => result.current.send("hola"));
+    expect(streamTurn).not.toHaveBeenCalled();
+    expect(result.current.entries).toHaveLength(0);
+  });
+
+  it("keeps the daily-limit block while usage from before the reset still says a turn fits", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(429, "daily_limit_reached"));
+    const { result, rerender } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("daily_limit"));
+
+    // Usage's estimate is for the cheapest turn, so it can say a turn fits when this one didn't.
+    usage = answered(BUDGET_LEFT, Date.now());
+    rerender();
+
+    expect(result.current.block).toBe("daily_limit");
+  });
+
+  it("lifts the daily-limit block once usage fetched after the reset shows budget, and sends again", async () => {
+    streamTurn.mockRejectedValueOnce(new TurnRequestError(429, "daily_limit_reached"));
+    const { result, rerender } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("daily_limit"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+
+    // A refetch sent after the reset that hasn't answered yet leaves the block up.
+    usage = { ...answered(BUDGET_LEFT, afterReset()), isFetching: true };
+    rerender();
+    expect(result.current.block).toBe("daily_limit");
+
+    usage = answered(BUDGET_LEFT, afterReset());
+    rerender();
+    await waitFor(() => expect(result.current.block).toBeNull());
+
+    // A later refetch in flight keeps the answer it has: the block doesn't come back meanwhile.
+    usage = { ...answered(BUDGET_LEFT, afterReset() + 1000), isFetching: true };
+    rerender();
+    expect(result.current.block).toBeNull();
+
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(streamTurn).toHaveBeenCalledTimes(2);
+  });
+
+  it("after the reset, usage that still says the budget is spent keeps the learner blocked", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(429, "daily_limit_reached"));
+    const { result, rerender } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("daily_limit"));
+
+    usage = answered(USED_UP, afterReset());
+    rerender();
+
+    expect(result.current.block).toBe("daily_limit");
+  });
+
+  it("a block for the whole conversation stays, whatever usage says later", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(409, "session_ended"));
+    const { result, rerender } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("session_ended"));
+
+    usage = answered(BUDGET_LEFT, afterReset());
+    rerender();
+
+    expect(result.current.block).toBe("session_ended");
   });
 
   it("a stream cut off before done is a retryable failure; retry resends the same text", async () => {

@@ -6,7 +6,6 @@ import CorrectionCard from "@/features/session/CorrectionCard";
 import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
 import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
-import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
@@ -16,7 +15,6 @@ const cancelSpeech = vi.fn();
 const speakAll = vi.fn();
 let recognition: SpeechRecognitionControls;
 let sessionState: PracticeSessionState;
-let usage: UsageToday | undefined;
 
 vi.mock("@mylanguagetutor/api-client/hooks/usePracticeSession", () => ({
   usePracticeSession: () => sessionState,
@@ -32,9 +30,6 @@ vi.mock("@/features/speech/useSpeechSynthesis", () => ({
     speakAll,
     cancel: cancelSpeech,
   }),
-}));
-vi.mock("@mylanguagetutor/api-client/store/usageApi", () => ({
-  useGetUsageTodayQuery: () => ({ data: usage }),
 }));
 
 const LANGUAGE: Language = {
@@ -78,7 +73,6 @@ describe("PracticeSession", () => {
     startRecognition.mockReset();
     cancelSpeech.mockReset();
     speakAll.mockReset();
-    usage = { remaining_fraction: 1, cap_reached: false, tutor_available: true };
     recognition = {
       supported: true,
       listening: false,
@@ -206,9 +200,9 @@ describe("PracticeSession", () => {
     expect(screen.getByLabelText("Type your answer")).toBeInTheDocument();
   });
 
-  it("checks the daily cap before recording", () => {
+  it("shows the daily-limit block in place of the microphone", () => {
     localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
-    usage = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+    sessionState = { ...sessionState, block: "daily_limit" };
     renderScreen();
 
     expect(screen.getByText(/used today's practice time/)).toBeInTheDocument();

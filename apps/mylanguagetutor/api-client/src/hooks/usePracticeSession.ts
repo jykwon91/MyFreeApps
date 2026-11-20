@@ -4,6 +4,9 @@ import { createSentenceChunker } from "../utils/sentenceChunker";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "../utils/turnRefusal";
 import { isConnectionLost } from "../utils/isConnectionLost";
+import { nextUtcMidnight } from "../utils/nextUtcMidnight";
+import { usageAnsweredSince } from "../utils/usageAnsweredSince";
+import { usageBlock } from "../utils/usageBlock";
 import { MAX_TURN_CHARS } from "../constants/turnLimits";
 import {
   CONNECTION_LOST,
@@ -12,7 +15,7 @@ import {
   SESSION_NOT_FOUND,
 } from "../constants/turnFailureCodes";
 import { useCreateSessionMutation } from "../store/sessionsApi";
-import { usageApiUtil } from "../store/usageApi";
+import { useGetUsageTodayQuery, usageApiUtil } from "../store/usageApi";
 import type { ScenarioState } from "../types/tutor/scenario-state";
 import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
 import type { TranscriptEntry } from "../types/session/transcript-entry";
@@ -48,6 +51,8 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * The conversation loop's state machine (no rendering): creates the session
  * on the first turn, streams each turn, feeds finished sentences to speech,
  * attaches corrections, and turns refusals into retry / blocked states.
+ * Today's usage decides whether the learner can start a turn; a daily-limit refusal stands in
+ * for it until a usage answer from after the next daily reset arrives.
  * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
@@ -58,7 +63,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [requestPhase, setRequestPhase] = useState<RequestPhase>("idle");
   const [failure, setFailure] = useState<TurnFailure | null>(null);
-  const [block, setBlock] = useState<SessionBlock | null>(null);
+  const usage = useGetUsageTodayQuery();
+  // A refusal that blocks this conversation for good (ended, too long, tutor off).
+  const [turnBlock, setTurnBlock] = useState<SessionBlock | null>(null);
+  // When the budget a daily-limit refusal said was spent comes back (ms since the epoch). Until
+  // then usage may still say a turn fits, as its estimate is for the cheapest turn.
+  const [limitResetsAt, setLimitResetsAt] = useState<number | null>(null);
   const [scenarioState, setScenarioState] = useState<ScenarioState>(EMPTY_STATE);
   const sessionRef = useRef<string | null>(null);
   const inFlight = useRef(false);
@@ -73,6 +83,13 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const gaveUp = useRef<AbortController | null>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
+
+  const limitLifted = limitResetsAt !== null && usageAnsweredSince(usage, limitResetsAt);
+  useEffect(() => {
+    if (limitLifted) setLimitResetsAt(null);
+  }, [limitLifted]);
+  const limitBlock: SessionBlock | null = limitResetsAt !== null && !limitLifted ? "daily_limit" : null;
+  const block = turnBlock ?? limitBlock ?? usageBlock(usage.data);
 
   const patchEntry = useCallback(
     (key: string, patch: (entry: TranscriptEntry) => TranscriptEntry) => {
@@ -101,8 +118,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     const refusal = err instanceof TurnRequestError ? err : null;
     const code = refusal ? normaliseRefusalCode(refusal.status, refusal.detail) : NETWORK_ERROR;
     const blocked = blockForCode(code);
+    if (blocked === "daily_limit") {
+      setLimitResetsAt(nextUtcMidnight(new Date()).getTime());
+      return;
+    }
     if (blocked) {
-      setBlock(blocked);
+      setTurnBlock(blocked);
       return;
     }
     if (code === SESSION_NOT_FOUND) {

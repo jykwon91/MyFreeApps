@@ -1,10 +1,8 @@
 import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
 import { useVoiceInput } from "@mylanguagetutor/api-client/hooks/useVoiceInput";
-import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
-import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import { HeaderKeyboardAvoidingView, PinnedBar, useAnnouncement, useTheme } from "@platform/mobile";
 import { type ComponentRef, useCallback, useRef, useState } from "react";
 import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput } from "react-native";
@@ -55,7 +53,6 @@ export default function Conversation({ language, scenario, level }: Conversation
     speak: synthesis.enqueue,
     stopSpeaking: synthesis.cancel,
   });
-  const usage = useGetUsageTodayQuery();
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const { scroller, onScroll, onContentSizeChange, onLayout, stick } = useStickToBottom();
@@ -70,7 +67,7 @@ export default function Conversation({ language, scenario, level }: Conversation
   const privacy = recognizerPrivacy(onDevice);
   const privacyAck = useVoicePrivacy(privacy);
   const busy = session.requestPhase !== "idle";
-  const block = session.block ?? usageBlock(usage.data);
+  const block = session.block;
   const voice = useVoiceInput({
     recognition,
     speaking: synthesis.speaking,

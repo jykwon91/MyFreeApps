@@ -21,6 +21,10 @@ import { renderApp } from "../test-support/renderApp";
 import { CORRECTION, TUTOR_SESSION, USAGE_LEFT, USAGE_USED_UP } from "../test-support/tutorRecords";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
+/** 15:00 UTC, before that day's 00:00 UTC reset of the practice budget, and just after the reset. */
+const BEFORE_RESET = new Date("2026-01-15T15:00:00Z");
+const PAST_RESET = new Date("2026-01-16T00:01:00Z");
+
 const mockKeepAwake = { active: 0 };
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
@@ -111,6 +115,39 @@ describe("a typed conversation", () => {
     expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
     expect(screen.queryByText("Hola")).toBeNull();
+  });
+
+  it("lets the learner answer again on coming back after the day's reset, once usage shows budget", async () => {
+    const sent = serveConversation({ "GET /usage/today": () => ({ status: 200, data: USAGE_LEFT }) });
+    let refusing = true;
+    const stream = turnStream();
+    const turns = serveTurns(() => (refusing ? { status: 429, data: { detail: "daily_limit_reached" } } : { stream }));
+    await openCafe();
+    jest.setSystemTime(BEFORE_RESET);
+    const usageRequests = () => sent.filter((request) => request.route === "GET /usage/today").length;
+
+    await write("Hola");
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
+    // Usage refetched the same day may still say a turn fits (it estimates the cheapest turn): the block stays.
+    const beforeSameDayReturn = usageRequests();
+    await moveApp("background");
+    await moveApp("active");
+    await waitFor(() => expect(usageRequests()).toBeGreaterThan(beforeSameDayReturn));
+    expect(screen.getByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
+
+    jest.setSystemTime(PAST_RESET);
+    refusing = false;
+    await moveApp("background");
+    await moveApp("active");
+
+    expect(await screen.findByRole("button", { name: PRACTICE_COPY.send })).toBeTruthy();
+    expect(screen.queryByText(sessionBlockMessage("daily_limit"))).toBeNull();
+    await write("Hola");
+    await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola! Bienvenido" }));
+    await finish(stream);
+    expect(screen.getByText("¡Hola! Bienvenido")).toBeTruthy();
+    expect(turns).toHaveLength(2);
   });
 
   it("says when the last message is still being answered, and sends it again", async () => {

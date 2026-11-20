@@ -9,6 +9,10 @@ export interface PracticeSession {
   entries: TranscriptEntry[];
   requestPhase: RequestPhase;
   failure: TurnFailure | null;
+  /**
+   * Why no turn can be sent now, from today's usage or a refusal; null when the learner can go on.
+   * A daily-limit block lifts once usage fetched after the daily reset shows budget again.
+   */
   block: SessionBlock | null;
   scenarioState: ScenarioState;
   send: (text: string) => void;
