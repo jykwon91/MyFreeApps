@@ -285,3 +285,59 @@ async def test_list_users_default_limit_is_50():
     _, kwargs = mock.call_args
     assert kwargs["limit"] == 50
     assert kwargs["offset"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Only a superuser may act on a superuser
+# ---------------------------------------------------------------------------
+
+_GET_BY_ID = "platform_shared.services.admin_user_service.admin_user_repo.get_by_id"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["role", "deactivate", "activate"])
+async def test_non_superuser_admin_cannot_act_on_superuser(action: str):
+    target = _FakeUser(is_superuser=True, is_active=action == "activate")
+    service, _ = _build_service(target=target)
+    admin = _FakeUser(role=Role.ADMIN, is_superuser=False)
+    calls = {
+        "role": lambda: service.update_user_role(target.id, Role.USER, admin),
+        "deactivate": lambda: service.deactivate_user(target.id, admin),
+        "activate": lambda: service.activate_user(target.id, admin),
+    }
+
+    with patch(_GET_BY_ID, new=AsyncMock(return_value=target)):
+        with pytest.raises(PermissionError, match="Only superusers"):
+            await calls[action]()
+
+    assert target.role == Role.USER
+    assert target.is_active is (action == "activate")
+
+
+@pytest.mark.asyncio
+async def test_superuser_can_manage_another_superuser():
+    target = _FakeUser(role=Role.ADMIN, is_superuser=True)
+    service, _ = _build_service(target=target)
+    admin = _FakeUser(role=Role.ADMIN, is_superuser=True)
+
+    with patch(_GET_BY_ID, new=AsyncMock(return_value=target)):
+        await service.update_user_role(target.id, Role.USER, admin)
+        await service.deactivate_user(target.id, admin)
+
+    assert target.role == Role.USER
+    assert target.is_active is False
+
+
+@pytest.mark.asyncio
+async def test_non_superuser_admin_can_still_manage_plain_users():
+    target = _FakeUser()
+    service, _ = _build_service(target=target)
+    admin = _FakeUser(role=Role.ADMIN, is_superuser=False)
+
+    with patch(_GET_BY_ID, new=AsyncMock(return_value=target)):
+        await service.update_user_role(target.id, Role.ADMIN, admin)
+        await service.deactivate_user(target.id, admin)
+        await service.activate_user(target.id, admin)
+
+    assert target.role == Role.ADMIN
+    assert target.is_active is True

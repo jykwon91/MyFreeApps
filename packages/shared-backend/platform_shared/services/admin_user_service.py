@@ -80,6 +80,8 @@ class AdminUserService(Generic[TUser]):
         """Change a user's role.
 
         Raises:
+            PermissionError: when the target is a superuser and the
+                admin is not.
             ValueError: when the admin tries to change their own role.
             LookupError: when the target user does not exist.
         """
@@ -92,6 +94,7 @@ class AdminUserService(Generic[TUser]):
             )
             if target is None:
                 raise LookupError("User not found")
+            _ensure_may_modify(target, admin)
 
             old_role = getattr(target, "role", None)
             result = await admin_user_repo.update_role(db, target, role)
@@ -110,6 +113,8 @@ class AdminUserService(Generic[TUser]):
         """Set is_active=False on a user.
 
         Raises:
+            PermissionError: when the target is a superuser and the
+                admin is not.
             ValueError: when the admin tries to deactivate themselves.
             LookupError: when the target user does not exist.
         """
@@ -122,6 +127,7 @@ class AdminUserService(Generic[TUser]):
             )
             if target is None:
                 raise LookupError("User not found")
+            _ensure_may_modify(target, admin)
 
             result = await admin_user_repo.set_active(
                 db, target, is_active=False,
@@ -136,7 +142,14 @@ class AdminUserService(Generic[TUser]):
     async def activate_user(
         self, user_id: uuid.UUID, admin: TUser,
     ) -> TUser:
-        """Set is_active=True on a user."""
+        """Set is_active=True on a user.
+
+        Raises:
+            PermissionError: when the target is a superuser and the
+                admin is not.
+            ValueError: when the admin tries to activate themselves.
+            LookupError: when the target user does not exist.
+        """
         if user_id == _admin_id(admin):
             raise ValueError("Cannot activate yourself")
 
@@ -146,6 +159,7 @@ class AdminUserService(Generic[TUser]):
             )
             if target is None:
                 raise LookupError("User not found")
+            _ensure_may_modify(target, admin)
 
             result = await admin_user_repo.set_active(
                 db, target, is_active=True,
@@ -205,6 +219,14 @@ class AdminUserService(Generic[TUser]):
                 active_users=active,
                 inactive_users=inactive,
             )
+
+
+def _ensure_may_modify(target: Any, admin: Any) -> None:
+    """Only a superuser may act on a superuser, so an admin cannot lock one out."""
+    if getattr(target, "is_superuser", False) and not getattr(
+        admin, "is_superuser", False,
+    ):
+        raise PermissionError("Only superusers can modify a superuser")
 
 
 def _admin_id(admin: Any) -> Any:
