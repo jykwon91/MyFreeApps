@@ -8,10 +8,11 @@ Phone normalization rule:
   at SMS time).
 
 Upsert-by-phone:
-- Lookup by normalized phone. If found, update name if it changed (keeps the
-  "most recent name" view; e.g., customer originally typed "Jose" then later
-  used "Jose P." -- the latter sticks).
-- If not found, create.
+- One atomic repository upsert on the normalized phone. An existing customer's
+  name is updated if it changed (keeps the "most recent name" view; e.g.,
+  customer originally typed "Jose" then later used "Jose P." -- the latter
+  sticks); otherwise a customer is created. Atomic so two first orders from the
+  same new phone cannot collide on the unique constraint.
 
 The service raises :class:`CustomerServiceError` for validation issues so the
 public order route can translate them to HTTP 400 with a friendly message.
@@ -68,16 +69,7 @@ async def upsert_by_phone(
 
     phone = normalize_phone(body.phone)
 
-    existing = await customer_repo.get_customer_by_phone(db, phone)
-    if existing is None:
-        return await customer_repo.create_customer(
-            db, {"name": name, "phone": phone},
-        )
-
-    if existing.name != name:
-        return await customer_repo.update_customer(db, existing, {"name": name})
-
-    return existing
+    return await customer_repo.upsert_customer_by_phone(db, name=name, phone=phone)
 
 
 async def find_by_normalized_phone(

@@ -1,6 +1,6 @@
 """Customer repository.
 
-Thin ORM layer: lookup-by-phone + insert. Phone normalization is the service's
+Thin ORM layer: lookup-by-phone + atomic upsert. Phone normalization is the service's
 responsibility -- the repo just takes the already-normalized value.
 """
 from __future__ import annotations
@@ -10,6 +10,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -41,11 +42,30 @@ async def list_customers_by_ids(
     return list((await db.execute(stmt)).scalars().all())
 
 
-async def create_customer(db: AsyncSession, data: dict) -> Customer:
-    customer = Customer(**data)
-    db.add(customer)
-    await db.flush()
-    return customer
+async def upsert_customer_by_phone(
+    db: AsyncSession, *, name: str, phone: str,
+) -> Customer:
+    """Create the customer for ``phone`` or update its name, in one atomic statement.
+
+    ``INSERT ... ON CONFLICT (phone)`` closes the lookup-then-insert race: two
+    first orders from the same new phone both succeed and share one customer
+    row instead of the second hitting the unique constraint. The name is only
+    rewritten (and ``updated_at`` bumped) when it actually changed.
+    """
+    stmt = pg_insert(Customer).values(name=name, phone=phone)
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_customer_phone",
+        set_={"name": stmt.excluded.name, "updated_at": func.now()},
+        where=Customer.name.is_distinct_from(stmt.excluded.name),
+    )
+    await db.execute(stmt)
+    # populate_existing so a customer already in the session shows the new name.
+    result = await db.execute(
+        select(Customer)
+        .where(Customer.phone == phone)
+        .execution_options(populate_existing=True),
+    )
+    return result.scalar_one()
 
 
 async def update_customer(
