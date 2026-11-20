@@ -21,7 +21,7 @@ async def save_advice(
     input_tokens: int | None = None,
     output_tokens: int | None = None,
 ) -> tuple[TaxAdvisorGeneration, list[TaxAdvisorSuggestion]]:
-    await tax_advisor_repo.delete_active_for_return(db, tax_return_id)
+    await tax_advisor_repo.delete_active_for_return(db, tax_return_id, organization_id)
 
     generation = TaxAdvisorGeneration(
         id=uuid.uuid4(),

@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration
 from app.models.tax.tax_advisor_suggestion import TaxAdvisorSuggestion
@@ -13,10 +12,14 @@ from app.models.tax.tax_advisor_suggestion import TaxAdvisorSuggestion
 async def get_latest_generation(
     db: AsyncSession,
     tax_return_id: uuid.UUID,
+    organization_id: uuid.UUID,
 ) -> TaxAdvisorGeneration | None:
     result = await db.execute(
         select(TaxAdvisorGeneration)
-        .where(TaxAdvisorGeneration.tax_return_id == tax_return_id)
+        .where(
+            TaxAdvisorGeneration.tax_return_id == tax_return_id,
+            TaxAdvisorGeneration.organization_id == organization_id,
+        )
         .order_by(TaxAdvisorGeneration.created_at.desc())
         .limit(1)
     )
@@ -30,7 +33,7 @@ async def list_active_for_return(
 ) -> Sequence[TaxAdvisorSuggestion]:
     """Return all suggestions where status != 'dismissed' for the latest generation,
     plus any dismissed/resolved from older generations."""
-    latest_gen = await get_latest_generation(db, tax_return_id)
+    latest_gen = await get_latest_generation(db, tax_return_id, organization_id)
     if not latest_gen:
         return []
 
@@ -73,10 +76,12 @@ async def create_generation_with_suggestions(
 async def delete_active_for_return(
     db: AsyncSession,
     tax_return_id: uuid.UUID,
+    organization_id: uuid.UUID,
 ) -> None:
     await db.execute(
         delete(TaxAdvisorSuggestion).where(
             TaxAdvisorSuggestion.tax_return_id == tax_return_id,
+            TaxAdvisorSuggestion.organization_id == organization_id,
             TaxAdvisorSuggestion.status == "active",
         )
     )
@@ -105,16 +110,3 @@ async def update_suggestion_status(
     await db.flush()
     return suggestion
 
-
-async def get_latest_generation_with_suggestions(
-    db: AsyncSession,
-    tax_return_id: uuid.UUID,
-) -> TaxAdvisorGeneration | None:
-    result = await db.execute(
-        select(TaxAdvisorGeneration)
-        .where(TaxAdvisorGeneration.tax_return_id == tax_return_id)
-        .options(selectinload(TaxAdvisorGeneration.suggestions))
-        .order_by(TaxAdvisorGeneration.created_at.desc())
-        .limit(1)
-    )
-    return result.scalar_one_or_none()

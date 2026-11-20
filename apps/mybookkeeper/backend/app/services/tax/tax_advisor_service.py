@@ -164,28 +164,24 @@ async def get_cached_advice(
     organization_id: uuid.UUID,
     tax_return_id: uuid.UUID,
 ) -> TaxAdvisorCachedResponse | None:
-    """Read persisted suggestions from DB. Returns None if no generation exists."""
+    """Read persisted suggestions from DB. Returns None if no generation exists.
+
+    Raises LookupError when the tax return is not in the caller's organization.
+    """
     async with AsyncSessionLocal() as db:
+        if not await tax_return_repo.get_by_id(db, tax_return_id, organization_id):
+            raise LookupError("Tax return not found")
+
         suggestions = await tax_advisor_repo.list_active_for_return(db, tax_return_id, organization_id)
-        if not suggestions:
-            generation = await tax_advisor_repo.get_latest_generation(db, tax_return_id)
-            if not generation:
-                return None
-            return TaxAdvisorCachedResponse(
-                suggestions=[],
-                disclaimer=HARDCODED_DISCLAIMER,
-                generated_at=generation.created_at,
-                model_version=generation.model_version,
-            )
+        generation = await tax_advisor_repo.get_latest_generation(db, tax_return_id, organization_id)
 
-        generation = await tax_advisor_repo.get_latest_generation(db, tax_return_id)
-
-    suggestion_reads = [tax_advisor_mapper.to_suggestion_read(s) for s in suggestions]
+    if not generation:
+        return None
     return TaxAdvisorCachedResponse(
-        suggestions=suggestion_reads,
+        suggestions=[tax_advisor_mapper.to_suggestion_read(s) for s in suggestions],
         disclaimer=HARDCODED_DISCLAIMER,
-        generated_at=generation.created_at if generation else None,
-        model_version=generation.model_version if generation else None,
+        generated_at=generation.created_at,
+        model_version=generation.model_version,
     )
 
 
