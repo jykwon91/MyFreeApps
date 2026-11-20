@@ -51,16 +51,6 @@ same problem.
 **Recommendation:** lazy-load the auth and settings routes with `React.lazy`.
 The conversation screen has landed (PR 4), so this can be done now.
 
-### [Backend] Quota rows are not purged on account deletion
-
-**Effort:** S
-**Location:** `platform_shared` account-deletion router; `daily_usage_counters`
-**Problem:** the shared deletion router has no per-app hook, so the
-`ltutor:user:<uuid>` quota rows outlive the user until they age out. They
-hold only a UUID and a count (no PII), so this is hygiene, not a leak.
-**Recommendation:** add an `on_delete_user` hook to the shared deletion flow
-and purge `daily_usage_counters` rows for the user in it.
-
 ### [Cost] Corrections weight assumes Sonnet 5 costs 2x Haiku 4.5
 
 **Effort:** S
