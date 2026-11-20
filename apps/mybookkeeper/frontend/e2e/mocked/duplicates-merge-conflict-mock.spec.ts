@@ -18,6 +18,12 @@ import { json } from "@platform/ui/test-support/mockResponse";
 const REASON =
   "These transactions are linked to different tenants. Set the same one on both, or clear it on one of them, then try again.";
 
+// Radix also keeps a screen-reader copy of a toast for about a second, so a
+// bare text match can find two; the visible toast lives in this region.
+function notifications(page: Page) {
+  return page.getByRole("region", { name: "Notifications" });
+}
+
 function side(id: string, description: string | null) {
   return {
     id,
@@ -97,8 +103,8 @@ test.describe("Duplicates: a refused merge", () => {
   test("says why when the two are linked to different tenants", async ({ page }) => {
     await confirmMerge(page);
 
-    await expect(page.getByText(REASON)).toBeVisible();
-    await expect(page.getByText("Failed to merge transactions")).toHaveCount(0);
+    await expect(notifications(page).getByText(REASON)).toBeVisible();
+    await expect(notifications(page).getByText("Failed to merge transactions")).toHaveCount(0);
     expect(server.merges).toHaveLength(1);
   });
 
@@ -106,6 +112,6 @@ test.describe("Duplicates: a refused merge", () => {
     server.refuse = false;
     await confirmMerge(page);
 
-    await expect(page.getByText("Transactions merged successfully")).toBeVisible();
+    await expect(notifications(page).getByText("Transactions merged successfully")).toBeVisible();
   });
 });
