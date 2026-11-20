@@ -7,6 +7,7 @@ from app.core.permissions import current_org_member, require_org_role
 from app.models.organization.organization_member import OrgRole
 from app.schemas.organization.activity import ActivityCreate, ActivityRead, ActivityUpdate
 from app.services.organization import activity_service
+from app.services.transactions.foreign_reference_error import ForeignReferenceError
 
 router = APIRouter(prefix="/activities", tags=["activities"])
 
@@ -24,13 +25,16 @@ async def create_activity(
     body: ActivityCreate,
     ctx: RequestContext = Depends(require_org_role(OrgRole.OWNER, OrgRole.ADMIN)),
 ) -> ActivityRead:
-    activity = await activity_service.create_activity(
-        ctx,
-        label=body.label,
-        activity_type=body.activity_type,
-        tax_form=body.tax_form,
-        property_id=body.property_id,
-    )
+    try:
+        activity = await activity_service.create_activity(
+            ctx,
+            label=body.label,
+            activity_type=body.activity_type,
+            tax_form=body.tax_form,
+            property_id=body.property_id,
+        )
+    except ForeignReferenceError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     return ActivityRead.model_validate(activity)
 
 

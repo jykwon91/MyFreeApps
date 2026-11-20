@@ -40,10 +40,13 @@ async def get_by_id(
 
 
 async def get_by_property_id(
-    db: AsyncSession, property_id: uuid.UUID
+    db: AsyncSession, property_id: uuid.UUID, organization_id: uuid.UUID,
 ) -> Activity | None:
     result = await db.execute(
-        select(Activity).where(Activity.property_id == property_id)
+        select(Activity).where(
+            Activity.property_id == property_id,
+            Activity.organization_id == organization_id,
+        )
     )
     return result.scalar_one_or_none()
 

@@ -19,6 +19,7 @@ from app.schemas.rent.rent_schedule_create_request import RentScheduleCreateRequ
 from app.schemas.rent.rent_schedule_response import RentScheduleResponse
 from app.schemas.rent.rent_schedule_update_request import RentScheduleUpdateRequest
 from app.services.rent import rent_ledger_service, rent_schedule_service
+from app.services.transactions.foreign_reference_error import ForeignReferenceError
 
 router = APIRouter(prefix="/rent-ledger", tags=["rent-ledger"])
 
@@ -76,6 +77,8 @@ async def create_schedule(
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
     except rent_schedule_service.OverlappingScheduleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ForeignReferenceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.patch("/schedules/{schedule_id}", response_model=RentScheduleResponse)

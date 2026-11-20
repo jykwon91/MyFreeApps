@@ -89,14 +89,15 @@ async def get_name_map(
 
 
 async def get_labels_by_ids(
-    db: AsyncSession, property_ids: list[uuid.UUID],
+    db: AsyncSession, organization_id: uuid.UUID, property_ids: list[uuid.UUID],
 ) -> dict[uuid.UUID, str]:
-    """Return {property_id: address_or_name} for a set of property IDs."""
+    """Return {property_id: address_or_name} for the org's properties among ``property_ids``."""
     if not property_ids:
         return {}
     result = await db.execute(
         select(Property.id, Property.name, Property.address).where(
-            Property.id.in_(property_ids)
+            Property.organization_id == organization_id,
+            Property.id.in_(property_ids),
         )
     )
     return {
@@ -106,14 +107,15 @@ async def get_labels_by_ids(
 
 
 async def get_classifications_by_ids(
-    db: AsyncSession, property_ids: list[uuid.UUID],
+    db: AsyncSession, organization_id: uuid.UUID, property_ids: list[uuid.UUID],
 ) -> dict[uuid.UUID, str]:
-    """Return {property_id: classification_name} for a set of property IDs."""
+    """Return {property_id: classification_name} for the org's properties among ``property_ids``."""
     if not property_ids:
         return {}
     result = await db.execute(
         select(Property.id, Property.classification).where(
-            Property.id.in_(property_ids)
+            Property.organization_id == organization_id,
+            Property.id.in_(property_ids),
         )
     )
     return {

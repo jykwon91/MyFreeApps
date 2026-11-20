@@ -10,6 +10,7 @@ from app.schemas.classification.classification_rule import (
     ClassificationRuleRead,
 )
 from app.services.classification import rule_service
+from app.services.transactions.foreign_reference_error import ForeignReferenceError
 
 router = APIRouter(prefix="/classification-rules", tags=["classification-rules"])
 
@@ -27,11 +28,14 @@ async def create_classification_rule(
     data: ClassificationRuleCreate,
     ctx: RequestContext = Depends(require_org_role(OrgRole.OWNER, OrgRole.ADMIN)),
 ):
-    return await rule_service.create_rule(
-        organization_id=ctx.organization_id,
-        user_id=ctx.user_id,
-        data=data.model_dump(),
-    )
+    try:
+        return await rule_service.create_rule(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            data=data.model_dump(),
+        )
+    except ForeignReferenceError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.delete("/{rule_id}", status_code=204)

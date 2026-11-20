@@ -180,7 +180,9 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
     prop_classification: str | None = None
     if property_id:
         async with AsyncSessionLocal() as db:
-            classifications = await property_repo.get_classifications_by_ids(db, [property_id])
+            classifications = await property_repo.get_classifications_by_ids(
+                db, ctx.organization_id, [property_id],
+            )
             prop_classification = classifications.get(property_id)
 
     # Phase 2: Call Claude (no DB connection held)

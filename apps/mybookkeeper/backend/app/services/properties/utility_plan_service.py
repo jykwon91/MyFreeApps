@@ -46,6 +46,7 @@ from app.schemas.properties.utility_plan_summary import UtilityPlanSummary
 from app.schemas.properties.utility_plan_validation import validate_plan_fields
 from app.services.documents.document_ownership import owns_document
 from app.services.extraction.utility_account_service import normalize_account_number
+from app.services.properties.property_ownership import owns_property
 from app.services.properties._utility_plan_helpers import (
     _MergedPlan,
     current_plan_ids,
@@ -120,6 +121,10 @@ async def create_plan(
         payload["account_number"] = normalize_account_number(account_number)
 
     async with unit_of_work() as db:
+        if not await owns_property(
+            db, organization_id=organization_id, property_id=payload["property_id"],
+        ):
+            raise InvalidUtilityPlanError("property_id does not name a property")
         await _assert_source_document_is_ours(
             db, organization_id=organization_id, payload=payload,
         )
@@ -310,9 +315,16 @@ async def sweep_plans_needing_renewal(
         candidates = await utility_plan_repo.list_active_for_expiring_properties(
             db, cutoff=cutoff,
         )
-        names = await property_repo.get_labels_by_ids(
-            db, [p.property_id for p in candidates],
-        )
+        # Labels are looked up per organization so a plan can only ever be
+        # named by a property of its own tenant.
+        property_ids_by_org: dict[uuid.UUID, list[uuid.UUID]] = {}
+        for plan in candidates:
+            property_ids_by_org.setdefault(plan.organization_id, []).append(plan.property_id)
+        names: dict[uuid.UUID, str] = {}
+        for organization_id, property_ids in property_ids_by_org.items():
+            names.update(
+                await property_repo.get_labels_by_ids(db, organization_id, property_ids),
+            )
 
     current_ids = current_plan_ids(candidates)
 

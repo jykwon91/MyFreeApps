@@ -80,7 +80,7 @@ async def compute_schedule_e(
     # Only investment properties are on Schedule E. One that no longer is keeps its
     # saved form (zeroed, bar any override) but stays out of line 26.
     prop_ids = list(property_data.keys() | saved_lines.keys())
-    classifications = await property_repo.get_classifications_by_ids(db, prop_ids) if prop_ids else {}
+    classifications = await property_repo.get_classifications_by_ids(db, org_id, prop_ids) if prop_ids else {}
     rentals = {pid for pid in prop_ids if classifications.get(pid) == "INVESTMENT"}
     property_data = {pid: lines for pid, lines in property_data.items() if pid in rentals}
     for pid in saved_lines:
@@ -96,7 +96,7 @@ async def compute_schedule_e(
             txn_by_prop_line[key] = []
         txn_by_prop_line[key].append((txn.id, txn.amount))
 
-    prop_labels = await property_repo.get_labels_by_ids(db, list(property_data))
+    prop_labels = await property_repo.get_labels_by_ids(db, org_id, list(property_data))
 
     forms_updated = 0
     total_net = Decimal("0")

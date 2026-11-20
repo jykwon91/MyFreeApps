@@ -129,7 +129,7 @@ async def _cascade_classification_change(
         new_classification.value, ("unclassified", "schedule_e"),
     )
 
-    activity = await activity_repo.get_by_property_id(db, property_id)
+    activity = await activity_repo.get_by_property_id(db, property_id, organization_id)
     if activity:
         activity.activity_type = activity_type
         activity.tax_form = tax_form

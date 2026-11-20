@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.classification.classification_rule import ClassificationRule
 from app.repositories.classification import classification_rule_repo
+from app.services.transactions.reference_ownership import assert_references_owned
 
 
 async def list_rules(
@@ -21,6 +22,17 @@ async def create_rule(
     data: dict,
 ) -> ClassificationRule:
     async with unit_of_work() as db:
+        # Every transaction the rule later matches inherits these, so a foreign
+        # id here would spread across the tenant boundary on each extraction.
+        await assert_references_owned(
+            db,
+            organization_id=organization_id,
+            user_id=user_id,
+            fields={
+                "property_id": data.get("property_id"),
+                "activity_id": data.get("activity_id"),
+            },
+        )
         return await classification_rule_repo.upsert_rule(
             db,
             organization_id=organization_id,
