@@ -144,9 +144,10 @@ class _Outcome:
     usage: CallUsage = field(default_factory=CallUsage)
 
 
-def _nothing_streamed_outcome(reply_usage: CallUsage, corrections_usage: CallUsage) -> _Outcome:
-    """A turn that ends before any reply token streamed (upstream error, empty
-    reply, or the client leaving): charge only what we know was used -- the
+def _no_reply_outcome(reply_usage: CallUsage, corrections_usage: CallUsage) -> _Outcome:
+    """A turn that ends without a reply (upstream error before any token, an
+    empty or whitespace-only reply, or the client leaving before any token):
+    charge only what we know was used -- the reply call's reported usage and the
     corrections call, if it had already finished -- and release the rest."""
     return _Outcome(
         status=TurnStatus.FAILED,
@@ -354,15 +355,16 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                 code, retryable = _EMPTY_REPLY_CODE, True
             else:
                 code, retryable = _ERROR_CODES[failure.kind]
-            if reply_parts:
+            if reply_text:
                 # Cut off mid-stream: tokens were billed but uncounted.
                 outcome = _Outcome(
                     status=TurnStatus.PARTIAL,
                     settlement=_Settlement.KEEP,
-                    reply_text=reply_text or None,
+                    reply_text=reply_text,
                 )
             else:
-                outcome = _nothing_streamed_outcome(reply_usage, corrections_usage)
+                # The tutor said nothing (no tokens, or only whitespace).
+                outcome = _no_reply_outcome(reply_usage, corrections_usage)
             yield TurnEvent(EVENT_ERROR, TurnErrorEvent(code=code, retryable=retryable))
         else:
             yield TurnEvent(EVENT_REPLY_DONE, _EmptyPayload())
@@ -415,7 +417,7 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                 # Client went away (or an unexpected error) before settlement.
                 if not reply_parts:
                     # No reply reached the learner: a failed turn, not a charge.
-                    abandoned = _nothing_streamed_outcome(
+                    abandoned = _no_reply_outcome(
                         reply_usage, corrections_usage_if_done(corrections_task),
                     )
                 else:
