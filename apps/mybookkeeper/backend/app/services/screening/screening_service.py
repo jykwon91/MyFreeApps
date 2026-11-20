@@ -21,19 +21,20 @@ import logging
 import uuid
 from typing import Protocol
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
 
 from app.core.applicant_enums import SCREENING_PROVIDERS, SCREENING_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.models.applicants.screening_result import ScreeningResult
-from app.models.inquiries.inquiry import Inquiry
-from app.models.system.audit_log import AuditLog
 from app.repositories.applicants import (
     applicant_event_repo,
     applicant_repo,
     screening_result_repo,
 )
+from app.repositories.inquiries import inquiry_repo
+from app.repositories.system import audit_repo
 from app.schemas.applicants.screening_eligibility_response import (
     ScreeningEligibilityResponse,
 )
@@ -46,7 +47,6 @@ from app.services.screening.keycheck_provider import KeyCheckProvider
 from app.services.screening.rentspree_provider import RentSpreeProvider
 from app.services.screening.report_processor import (
     ProcessedReport,
-    ReportRejected,
     process_report,
 )
 
@@ -195,7 +195,7 @@ def _build_storage_key(applicant_id: uuid.UUID, content_type: str) -> str:
 # --------------------------------------------------------------------------- #
 
 def _audit_event(
-    db,
+    db: AsyncSession,
     *,
     record_id: str,
     operation: str,
@@ -211,7 +211,8 @@ def _audit_event(
     "screening.result_uploaded" in the timeline without joining 12 column
     rows together.
     """
-    db.add(AuditLog(
+    audit_repo.add_entry(
+        db,
         table_name="screening_results",
         record_id=record_id,
         operation=operation,
@@ -219,7 +220,7 @@ def _audit_event(
         old_value=None,
         new_value=new_value,
         changed_by=str(user_id),
-    ))
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -433,8 +434,6 @@ async def get_eligibility(
     Raises ``LookupError`` if the applicant doesn't exist in the calling
     tenant (same contract as every other service function here).
     """
-    from sqlalchemy import select
-
     async with unit_of_work() as db:
         applicant = await applicant_repo.get(
             db,
@@ -446,25 +445,13 @@ async def get_eligibility(
             raise LookupError(f"Applicant {applicant_id} not found")
 
         # Check for in-flight pending screening result.
-        pending_result = await db.execute(
-            select(ScreeningResult).where(
-                ScreeningResult.applicant_id == applicant_id,
-                ScreeningResult.status == "pending",
-            ).limit(1)
-        )
-        has_pending = pending_result.scalar_one_or_none() is not None
+        has_pending = await screening_result_repo.has_pending_for_applicant(db, applicant_id)
 
         # Derive contact info from linked Inquiry.
         has_email = False
         has_phone = False
         if applicant.inquiry_id is not None:
-            inq_result = await db.execute(
-                select(
-                    Inquiry.inquirer_email,
-                    Inquiry.inquirer_phone,
-                ).where(Inquiry.id == applicant.inquiry_id)
-            )
-            row = inq_result.one_or_none()
+            row = await inquiry_repo.get_contact_fields(db, applicant.inquiry_id)
             if row is not None:
                 has_email = bool(row.inquirer_email and str(row.inquirer_email).strip())
                 has_phone = bool(row.inquirer_phone and str(row.inquirer_phone).strip())

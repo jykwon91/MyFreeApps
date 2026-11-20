@@ -5,6 +5,7 @@ Used by:
 - the inbound iCal poll job (``upsert_by_uid``, ``delete_missing_uids``)
 - the service that removes a channel_listing (``delete_by_listing_and_source``)
 - the blackout notes + attachment endpoints (``get_by_id_scoped``, ``update_notes``)
+- booking-email ingestion and the review queue (``upsert_by_uid``, ``set_host_notes``, ``refresh``)
 """
 import uuid
 from datetime import date
@@ -251,3 +252,14 @@ async def delete_by_listing_and_source(
         )
     )
     return result.rowcount or 0
+
+
+async def set_host_notes(db: AsyncSession, blackout: ListingBlackout, host_notes: str) -> None:
+    """Set host_notes on a blackout just created by booking-email ingestion."""
+    blackout.host_notes = host_notes
+    await db.flush()
+
+
+async def refresh(db: AsyncSession, blackout: ListingBlackout) -> None:
+    """Reload a flushed blackout so server-set columns are populated."""
+    await db.refresh(blackout)

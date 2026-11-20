@@ -14,7 +14,7 @@ Tests:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -101,11 +101,10 @@ class TestResolveItemHappyPath:
         mock_db = AsyncMock()
         mock_db.__aenter__ = AsyncMock(return_value=mock_db)
         mock_db.__aexit__ = AsyncMock(return_value=False)
-        mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -164,13 +163,12 @@ class TestResolveItemHappyPath:
         mock_db = AsyncMock()
         mock_db.__aenter__ = AsyncMock(return_value=mock_db)
         mock_db.__aexit__ = AsyncMock(return_value=False)
-        mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 
         upsert_mock = AsyncMock(return_value=blackout)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -218,7 +216,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=None,
@@ -239,7 +237,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -260,7 +258,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -286,7 +284,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -313,7 +311,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -340,7 +338,7 @@ class TestResolveItemErrorCases:
         mock_db.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -358,7 +356,7 @@ class TestResolveItemErrorCases:
         """If upsert_by_uid raises, the queue item must NOT be marked resolved.
 
         Both writes share one transaction — the context-manager rolls back on
-        any exception before the commit() call.
+        any exception raised inside unit_of_work, so nothing commits.
         """
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         item_id, listing_id = uuid.uuid4(), uuid.uuid4()
@@ -368,12 +366,11 @@ class TestResolveItemErrorCases:
         mock_db = AsyncMock()
         mock_db.__aenter__ = AsyncMock(return_value=mock_db)
         mock_db.__aexit__ = AsyncMock(return_value=False)
-        mock_db.commit = AsyncMock()
 
         mark_resolved_mock = AsyncMock()
 
         with (
-            patch("app.services.calendar.review_queue_service.AsyncSessionLocal", return_value=mock_db),
+            patch("app.services.calendar.review_queue_service.unit_of_work", return_value=mock_db),
             patch(
                 "app.services.calendar.review_queue_service.review_queue_repo.get_by_id_scoped",
                 return_value=queue_item,
@@ -396,5 +393,6 @@ class TestResolveItemErrorCases:
 
         # mark_resolved must not have been called — it comes after upsert_by_uid.
         mark_resolved_mock.assert_not_awaited()
-        # commit must not have been called either.
-        mock_db.commit.assert_not_awaited()
+        # unit_of_work saw the exception, so it rolled back instead of committing.
+        exc_type = mock_db.__aexit__.await_args.args[0]
+        assert exc_type is RuntimeError

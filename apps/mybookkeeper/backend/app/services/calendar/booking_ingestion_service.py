@@ -179,9 +179,10 @@ async def _route_parsed_booking(
             # Write host_notes only on INSERT (source_event_id was just set),
             # so we don't stomp over any existing annotation from a prior match.
             if blackout.host_notes is None:
-                blackout.host_notes = _build_host_notes(parse_result)
-            await db.commit()
-            await db.refresh(blackout)
+                await listing_blackout_repo.set_host_notes(
+                    db, blackout, _build_host_notes(parse_result),
+                )
+            await listing_blackout_repo.refresh(db, blackout)
             logger.debug(
                 "Booking auto-matched: email_message_id=%r listing_id=%s blackout_id=%s",
                 email_message_id,
@@ -203,7 +204,6 @@ async def _route_parsed_booking(
             source_channel=source_channel,
             parsed_payload=parse_result.to_payload(),
         )
-        await db.commit()
 
         queue_item_id: uuid.UUID | None = queue_item.id if queue_item is not None else None
         logger.debug(

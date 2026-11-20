@@ -42,6 +42,7 @@ async def update(db: AsyncSession, org: Organization, name: str) -> Organization
 
 async def delete(db: AsyncSession, org: Organization) -> None:
     await db.delete(org)
+    await db.flush()
 
 
 async def list_created_by(db: AsyncSession, user_id: uuid.UUID) -> Sequence[Organization]:

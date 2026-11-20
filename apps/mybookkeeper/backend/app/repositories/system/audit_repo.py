@@ -36,3 +36,26 @@ async def list_filtered(
 
     result = await db.execute(query)
     return result.scalars().all()
+
+
+def add_entry(
+    db: AsyncSession,
+    *,
+    table_name: str,
+    record_id: str,
+    operation: str,
+    field_name: str,
+    old_value: str | None,
+    new_value: str,
+    changed_by: str,
+) -> None:
+    """Stage an audit-log row; it is written with the caller's transaction."""
+    db.add(AuditLog(
+        table_name=table_name,
+        record_id=record_id,
+        operation=operation,
+        field_name=field_name,
+        old_value=old_value,
+        new_value=new_value,
+        changed_by=changed_by,
+    ))

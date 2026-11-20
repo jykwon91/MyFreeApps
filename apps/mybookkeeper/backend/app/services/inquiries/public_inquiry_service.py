@@ -45,7 +45,6 @@ from app.repositories.inquiries import (
 )
 from app.repositories.listings import listing_repo
 from app.schemas.inquiries.public_inquiry_request import (
-    PUBLIC_INQUIRY_FRIENDLY_ERROR_TELL_MORE,
     PublicInquiryRequest,
     is_valid_employment_status,
 )
@@ -420,8 +419,7 @@ async def manual_override(
         # ``update_inquiry`` does include ``spam_status`` for the inbox
         # buttons but we want to avoid emitting a stage event by accident.
         # Fetch + assign keeps the SQL surface tight.
-        inquiry.spam_status = new_spam_status
-        await db.flush()
+        await inquiry_repo.set_spam_status(db, inquiry, new_spam_status)
 
 
 # Re-export for the route layer.

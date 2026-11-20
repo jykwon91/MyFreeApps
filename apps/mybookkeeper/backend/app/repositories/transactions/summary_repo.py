@@ -126,6 +126,28 @@ async def txn_sum_by_property_and_category(
     return result.all()
 
 
+async def txn_sum_by_attributed_property_and_category(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    *,
+    start_date: date,
+    end_date: date,
+) -> Sequence[Row]:
+    """Approved transaction totals per (property_id, category), only for rows with a property."""
+    filters = _build_txn_filters(organization_id, start_date=start_date, end_date=end_date)
+    filters.append(Transaction.property_id.is_not(None))
+    result = await db.execute(
+        select(
+            Transaction.property_id,
+            Transaction.category,
+            func.sum(Transaction.amount).label("total"),
+        )
+        .where(and_(*filters))
+        .group_by(Transaction.property_id, Transaction.category)
+    )
+    return result.all()
+
+
 async def txn_sum_by_month_and_category(
     db: AsyncSession,
     organization_id: uuid.UUID,

@@ -154,3 +154,17 @@ async def hard_delete_by_id(
         )
     )
     return (result.rowcount or 0) > 0
+
+
+async def has_pending_for_applicant(db: AsyncSession, applicant_id: uuid.UUID) -> bool:
+    """Whether a ``pending`` screening result is already in flight for an applicant.
+
+    The caller has already proven applicant ownership.
+    """
+    result = await db.execute(
+        select(ScreeningResult).where(
+            ScreeningResult.applicant_id == applicant_id,
+            ScreeningResult.status == "pending",
+        ).limit(1)
+    )
+    return result.scalar_one_or_none() is not None

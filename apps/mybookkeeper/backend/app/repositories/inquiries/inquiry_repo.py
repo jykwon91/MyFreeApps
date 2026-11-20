@@ -11,7 +11,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, desc, func, select, update
+from sqlalchemy import Row, delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.inquiry_enums import INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX
@@ -399,3 +399,21 @@ async def get_by_applicant_inquiry_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_contact_fields(db: AsyncSession, inquiry_id: uuid.UUID) -> Row[tuple[str | None, str | None]] | None:
+    """Return ``(inquirer_email, inquirer_phone)`` for an inquiry, or None if it doesn't exist.
+
+    Unscoped by tenant: callers pass an ``inquiry_id`` read from a row they
+    already proved they own (an applicant's ``inquiry_id``).
+    """
+    result = await db.execute(
+        select(Inquiry.inquirer_email, Inquiry.inquirer_phone).where(Inquiry.id == inquiry_id)
+    )
+    return result.one_or_none()
+
+
+async def set_spam_status(db: AsyncSession, inquiry: Inquiry, spam_status: str) -> None:
+    """Set only ``spam_status`` on an already-loaded inquiry (operator triage override)."""
+    inquiry.spam_status = spam_status
+    await db.flush()
