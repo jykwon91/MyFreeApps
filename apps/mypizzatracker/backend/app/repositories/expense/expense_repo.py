@@ -60,3 +60,9 @@ async def sum_expenses_for_drop(db: AsyncSession, drop_id: uuid.UUID) -> Decimal
         Expense.drop_id == drop_id,
     )
     return Decimal((await db.execute(stmt)).scalar_one())
+
+
+async def list_all_expenses(db: AsyncSession) -> list[Expense]:
+    """Every expense across all drops, oldest first (used by the data export)."""
+    stmt = select(Expense).order_by(Expense.created_at.asc(), Expense.id.asc())
+    return list((await db.execute(stmt)).scalars().all())
