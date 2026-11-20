@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.security import admin_api_key_matches
 from app.main import app
 from app.schemas.system.db_admin import (
     BulkPropertyReassignRequest,
@@ -170,6 +171,36 @@ class TestDbAdminRoutes:
         assert response.json() == {"columns": ["n"], "rows": [[1]], "row_count": 1}
         svc.assert_awaited_once_with("SELECT 1 AS n")
 
+    def test_wrong_api_key_is_403(self) -> None:
+        with patch(
+            "app.api.db_admin.db_admin_service.run_readonly_query", new=AsyncMock(),
+        ) as svc:
+            response = TestClient(app).post(
+                "/admin/db/query", json={"sql": "SELECT 1"},
+                headers={"X-Admin-Api-Key": "wrong-key"},
+            )
+        assert response.status_code == 403
+        svc.assert_not_awaited()
+
+    def test_unset_key_keeps_route_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("app.api.db_admin.settings.admin_api_key", "")
+        with patch(
+            "app.api.db_admin.db_admin_service.run_readonly_query", new=AsyncMock(),
+        ) as svc:
+            response = TestClient(app).post(
+                "/admin/db/query", json={"sql": "SELECT 1"},
+                headers={"X-Admin-Api-Key": _API_KEY},
+            )
+        assert response.status_code == 503
+        svc.assert_not_awaited()
+
+    def test_non_ascii_key_is_403_not_500(self) -> None:
+        response = TestClient(app).post(
+            "/admin/db/query", json={"sql": "SELECT 1"},
+            headers={"X-Admin-Api-Key": "kéy".encode("latin-1")},
+        )
+        assert response.status_code == 403
+
     def test_query_requires_api_key(self) -> None:
         with patch(
             "app.api.db_admin.db_admin_service.run_readonly_query", new=AsyncMock(),
@@ -209,3 +240,14 @@ class TestDbAdminRoutes:
         assert response.json() == {"updated": 5}
         svc.assert_awaited_once()
         assert str(svc.await_args.args[0].organization_id) == body["organization_id"]
+
+
+class TestAdminApiKeyMatches:
+    def test_equal_keys_match(self) -> None:
+        assert admin_api_key_matches(_API_KEY, _API_KEY)
+
+    def test_different_keys_do_not_match(self) -> None:
+        assert not admin_api_key_matches("other", _API_KEY)
+
+    def test_non_ascii_does_not_raise(self) -> None:
+        assert not admin_api_key_matches("kéy", _API_KEY)
