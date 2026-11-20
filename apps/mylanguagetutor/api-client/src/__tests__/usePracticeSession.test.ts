@@ -26,9 +26,14 @@ const USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_av
 
 /** What GET /usage/today has answered, as the hook's usage query reports it. */
 let usage: UsageRequestState & { data?: UsageToday } = { isSuccess: false, isFetching: false };
+/** The session id each render asked usage about (undefined before the conversation exists). */
+const usageSessionIds: (string | undefined)[] = [];
 
 vi.mock("../store/usageApi", () => ({
-  useGetUsageTodayQuery: () => usage,
+  useGetUsageTodayQuery: (sessionId?: string) => {
+    usageSessionIds.push(sessionId);
+    return usage;
+  },
   usageApiUtil: { invalidateTags: () => ({ type: "usage/invalidated" }) },
 }));
 
@@ -135,15 +140,41 @@ describe("usePracticeSession", () => {
     expect(createSession).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks on the daily limit and drops the unsent entry", async () => {
+  it("blocks on the daily limit and keeps the learner's words, unanswered", async () => {
     streamTurn.mockRejectedValue(new TurnRequestError(429, "daily_limit_reached"));
     const { result } = setup();
 
     act(() => result.current.send("hola"));
 
     await waitFor(() => expect(result.current.block).toBe("daily_limit"));
-    expect(result.current.entries).toHaveLength(0);
-    expect(result.current.failure).toBeNull();
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]).toMatchObject({ learnerText: "hola", replyText: "", status: "failed" });
+    // Nothing can be sent until the budget is back, so "Try again" isn't offered yet.
+    expect(result.current.failure).toEqual({
+      code: "daily_limit_reached",
+      text: "hola",
+      retryable: false,
+      entryKey: result.current.entries[0].key,
+    });
+
+    act(() => result.current.retry());
+    expect(streamTurn).toHaveBeenCalledTimes(1);
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.failure?.text).toBe("hola");
+  });
+
+  it("asks usage about the conversation's next turn once the conversation exists", async () => {
+    usageSessionIds.length = 0;
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    const { result } = setup();
+    expect(usageSessionIds[usageSessionIds.length - 1]).toBeUndefined();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+
+    expect(result.current.sessionId).toBe("s1");
+    expect(usageSessionIds[usageSessionIds.length - 1]).toBe("s1");
   });
 
   it("blocks up front when today's usage says the budget is spent, and sends nothing", () => {
@@ -162,14 +193,14 @@ describe("usePracticeSession", () => {
     act(() => result.current.send("hola"));
     await waitFor(() => expect(result.current.block).toBe("daily_limit"));
 
-    // Usage's estimate is for the cheapest turn, so it can say a turn fits when this one didn't.
+    // Usage read before the refusal, or before budget was spent elsewhere, can say a turn fits.
     usage = answered(BUDGET_LEFT, Date.now());
     rerender();
 
     expect(result.current.block).toBe("daily_limit");
   });
 
-  it("lifts the daily-limit block once usage fetched after the reset shows budget, and sends again", async () => {
+  it("lifts the daily-limit block once usage fetched after the reset shows budget, and resends the kept words", async () => {
     streamTurn.mockRejectedValueOnce(new TurnRequestError(429, "daily_limit_reached"));
     const { result, rerender } = setup();
     act(() => result.current.send("hola"));
@@ -190,10 +221,13 @@ describe("usePracticeSession", () => {
     rerender();
     expect(result.current.block).toBeNull();
 
+    expect(result.current.failure?.retryable).toBe(true);
     streamTurn.mockImplementation(emitting(COMPLETE_TURN));
-    act(() => result.current.send("hola"));
+    act(() => result.current.retry());
     await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(result.current.entries).toHaveLength(1);
     expect(streamTurn).toHaveBeenCalledTimes(2);
+    expect(streamTurn.mock.calls[1][0].text).toBe("hola");
   });
 
   it("after the reset, usage that still says the budget is spent keeps the learner blocked", async () => {

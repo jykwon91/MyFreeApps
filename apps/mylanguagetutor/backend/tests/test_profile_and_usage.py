@@ -12,7 +12,8 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 from app.repositories.tutor import tutor_profile_repository
 from app.services.tutor import quota_service
-from app.services.tutor.turn_service import minimum_turn_units
+from app.schemas.tutor.turn_schemas import MAX_TURN_CHARS
+from app.services.tutor.turn_estimate import first_turn_units, next_turn_units
 
 
 class TestProfile:
@@ -112,6 +113,23 @@ class TestProfile:
         assert (await client.get("/profile")).status_code == 401
 
 
+async def _set_used(bucket: str, units: int) -> None:
+    """Today's usage for ``bucket`` becomes exactly ``units`` (turns may have written the row)."""
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO daily_usage_counters (bucket, day, count, updated_at) "
+                    "VALUES (:b, (now() AT TIME ZONE 'utc')::date, :n, now()) "
+                    "ON CONFLICT (bucket, day) DO UPDATE SET count = :n"
+                ),
+                {"b": bucket, "n": units},
+            )
+    finally:
+        await engine.dispose()
+
+
 async def _consume(bucket: str, units: int) -> None:
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
     try:
@@ -152,12 +170,77 @@ class TestUsageToday:
         user = await user_factory()
         cap = settings.ltutor_user_daily_units
         await _consume(
-            quota_service.user_bucket(uuid.UUID(user["id"])), cap - minimum_turn_units() + 1,
+            quota_service.user_bucket(uuid.UUID(user["id"])), cap - first_turn_units() + 1,
         )
         async with await as_user(user) as authed:
             body = (await authed.get("/usage/today")).json()
         assert body["cap_reached"] is True
         assert 0.0 < body["remaining_fraction"] < 0.2
+
+    @pytest.mark.asyncio
+    async def test_session_check_is_sized_for_its_next_turn(
+        self, user_factory, as_user, fake_claude, db,
+    ) -> None:
+        """A long conversation makes each turn dearer: with room for a first turn but not
+        for this conversation's next one, the session-scoped check says the cap is reached,
+        and the longest answer the learner may send is refused -- the check and the
+        reservation agree."""
+        fake_claude.reply_chunks = ["Muy bien. " * 60]
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = (
+                await authed.post(
+                    "/sessions",
+                    json={"language_code": "es", "scenario_slug": "cafe", "level": "beginner"},
+                )
+            ).json()["id"]
+            for _ in range(6):
+                turn = await authed.post(
+                    f"/sessions/{session_id}/turns", json={"text": "y" * MAX_TURN_CHARS},
+                )
+                assert turn.status_code == 200, turn.text
+            next_units = await next_turn_units(db, user_id, uuid.UUID(session_id))
+            first_units = first_turn_units()
+            assert next_units > first_units
+
+            cap = settings.ltutor_user_daily_units
+            bucket = quota_service.user_bucket(user_id)
+            await _set_used(bucket, cap - next_units + 1)
+            in_session = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+            no_session = (await authed.get("/usage/today")).json()
+            refused = await authed.post(
+                f"/sessions/{session_id}/turns", json={"text": "y" * MAX_TURN_CHARS},
+            )
+
+            await _set_used(bucket, cap - next_units)
+            fits = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+            accepted = await authed.post(
+                f"/sessions/{session_id}/turns", json={"text": "y" * MAX_TURN_CHARS},
+            )
+
+        assert in_session["cap_reached"] is True
+        assert no_session["cap_reached"] is False
+        assert refused.status_code == 429
+        assert refused.json()["detail"] == "daily_limit_reached"
+        assert fits["cap_reached"] is False
+        assert accepted.status_code == 200, accepted.text
+
+    @pytest.mark.asyncio
+    async def test_another_users_session_is_404(self, user_factory, as_user, fake_claude) -> None:
+        owner = await user_factory()
+        other = await user_factory()
+        async with await as_user(owner) as authed:
+            session_id = (
+                await authed.post(
+                    "/sessions",
+                    json={"language_code": "es", "scenario_slug": "cafe", "level": "beginner"},
+                )
+            ).json()["id"]
+        async with await as_user(other) as authed:
+            resp = await authed.get(f"/usage/today?session_id={session_id}")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "session_not_found"
 
     @pytest.mark.asyncio
     async def test_kill_switch_reports_unavailable(

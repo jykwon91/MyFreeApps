@@ -10,3 +10,6 @@ export const RATE_LIMITED_COPY = "That was a lot of messages in a short time. Wa
 export const TURN_IN_PROGRESS_COPY = "Your last message is still being answered. Try again in a moment.";
 export const SESSION_NOT_FOUND_COPY = "This conversation is no longer available. Try again to start a new one.";
 export const CONNECTION_LOST_COPY = "The connection dropped before the tutor finished. Try again.";
+/** A turn the daily limit refused: its words stay on screen to send again later. */
+export const DAILY_LIMIT_KEPT_COPY =
+  "That answer wasn't sent because today's practice time ran out. It's kept above, so you can send it again once your practice time is back.";

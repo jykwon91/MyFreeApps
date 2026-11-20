@@ -28,13 +28,11 @@ Never log transcript text -- ids, counts and Anthropic ``error.type`` only.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 import anthropic
 import anyio
@@ -47,12 +45,8 @@ from platform_shared.extraction.anthropic_errors import (
 
 from app.core.config import settings
 from app.db.session import unit_of_work
-from app.domain.languages import LANGUAGES, get_language, get_prompt_pack
-from app.domain.levels import Level
-from app.domain.scenarios import get_scenario, list_scenarios
 from app.domain.session_status import SessionStatus
 from app.domain.turn_status import TurnStatus
-from app.domain.tutoring.level_rules import rules_for
 from app.models.tutor.tutor_turn import TutorTurn
 from app.repositories.tutor import tutor_session_repository, tutor_turn_repository
 from app.schemas.tutor.turn_schemas import (
@@ -63,7 +57,7 @@ from app.schemas.tutor.turn_schemas import (
     TurnStartedEvent,
     TurnUsage,
 )
-from app.services.tutor import quota_service
+from app.services.tutor import quota_service, turn_estimate
 from app.services.tutor.claude_client import get_client
 from app.services.tutor.corrections_mapper import (
     CorrectionsResult,
@@ -71,10 +65,6 @@ from app.services.tutor.corrections_mapper import (
 )
 from app.services.tutor.prepared_turn import PreparedTurn
 from app.services.tutor.prompt_builder import (
-    ClaudeRequest,
-    HistoryTurn,
-    SessionPromptContext,
-    TurnPromptContext,
     build_corrections_request,
     build_reply_request,
 )
@@ -91,11 +81,7 @@ from app.services.tutor.turn_errors import (
     SessionNotFoundError,
     SessionTurnLimitError,
 )
-from app.services.tutor.usage_units import (
-    CallUsage,
-    estimate_input_tokens,
-    reservation_units,
-)
+from app.services.tutor.usage_units import CallUsage
 
 logger = logging.getLogger(__name__)
 
@@ -164,80 +150,6 @@ def _no_reply_outcome(reply_usage: CallUsage, corrections_usage: CallUsage) -> _
 # ---------------------------------------------------------------------------
 
 
-def _session_prompt_context(language_code: str, scenario_slug: str, level: str) -> SessionPromptContext:
-    language = get_language(language_code)
-    pack = get_prompt_pack(language_code)
-    scenario = get_scenario(scenario_slug)
-    if language is None or pack is None or scenario is None:
-        # The CHECK constraints make this unreachable; fail as "not found"
-        # rather than calling Claude with a half-built prompt.
-        raise SessionNotFoundError(f"unsupported session config {language_code}/{scenario_slug}")
-    return SessionPromptContext(
-        language=language, pack=pack, scenario=scenario, rules=rules_for(level),
-    )
-
-
-def _stored_corrections(turn: TutorTurn) -> dict[str, Any]:
-    if not turn.corrections_json:
-        return {}
-    try:
-        data = json.loads(turn.corrections_json)
-    except json.JSONDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _progress_from_history(turns: list[TutorTurn]) -> tuple[tuple[int, ...], int | None]:
-    """(goals met so far, learner turns since the last retry prompt).
-
-    ``scenario_state`` is cumulative, so the newest turn that has one wins.
-    ``None`` for the retry distance = no retry prompt in the history window.
-    """
-    goals: tuple[int, ...] | None = None
-    since_retry: int | None = None
-    for distance, turn in enumerate(reversed(turns), start=1):
-        data = _stored_corrections(turn)
-        state = data.get("scenario_state")
-        if goals is None and isinstance(state, dict) and isinstance(state.get("goals_met"), list):
-            goals = tuple(g for g in state["goals_met"] if isinstance(g, int))
-        if since_retry is None and data.get("retry_prompt"):
-            since_retry = distance
-        if goals is not None and since_retry is not None:
-            break
-    return goals or (), since_retry
-
-
-def _reservation_for(prompt: TurnPromptContext, reply: ClaudeRequest, corrections: ClaudeRequest) -> int:
-    reply_units = reservation_units(
-        input_tokens_est=estimate_input_tokens(reply.prompt_chars()),
-        max_tokens=settings.ltutor_reply_max_tokens,
-        weight=settings.ltutor_reply_unit_weight,
-    )
-    corrections_units = reservation_units(
-        input_tokens_est=estimate_input_tokens(corrections.prompt_chars()),
-        max_tokens=settings.ltutor_corrections_max_tokens,
-        weight=settings.ltutor_corrections_unit_weight,
-    )
-    # The translation's input is the reply itself (<= reply max_tokens).
-    translation_units = reservation_units(
-        input_tokens_est=estimate_input_tokens(0) + settings.ltutor_reply_max_tokens,
-        max_tokens=settings.ltutor_translation_max_tokens,
-        weight=settings.ltutor_translation_unit_weight,
-    )
-    return reply_units + corrections_units + translation_units
-
-
-def minimum_turn_units() -> int:
-    """Reservation for a short first turn (no history) -- roughly the cheapest
-    turn possible. Used by GET /usage/today to say whether another turn can
-    start; ``reserve`` stays the authoritative check."""
-    language_code = next(iter(LANGUAGES))
-    scenario_slug = list_scenarios()[0].slug
-    session_ctx = _session_prompt_context(language_code, scenario_slug, Level.BEGINNER.value)
-    prompt = TurnPromptContext(session=session_ctx, learner_text="x" * 40)
-    return _reservation_for(prompt, build_reply_request(prompt), build_corrections_request(prompt))
-
-
 async def prepare_turn(
     *, user_id: uuid.UUID, session_id: uuid.UUID, text: str,
 ) -> PreparedTurn:
@@ -255,32 +167,14 @@ async def prepare_turn(
         if session.turn_count >= settings.ltutor_max_turns_per_session:
             raise SessionTurnLimitError("session turn limit reached")
 
-        session_ctx = _session_prompt_context(
-            session.language_code, session.scenario_slug, session.level,
-        )
-        recent = await tutor_turn_repository.list_recent_answered(
-            db, session_id, user_id, limit=settings.ltutor_history_turns,
-        )
-        goals_met, since_retry = _progress_from_history(recent)
-        prompt = TurnPromptContext(
-            session=session_ctx,
-            learner_text=text,
-            history=tuple(
-                HistoryTurn(learner_text=t.learner_text, reply_text=t.reply_text or "")
-                for t in recent
-            ),
-            goals_met=goals_met,
-            turn_number=session.turn_count + 1,
-            max_turns=settings.ltutor_max_turns_per_session,
-            turns_since_retry_prompt=since_retry,
-        )
+        prompt = await turn_estimate.next_turn_prompt(db, session, text)
         reply_request = build_reply_request(prompt)
         corrections_request = build_corrections_request(prompt)
         seq = await tutor_turn_repository.next_seq(db, session_id)
         reservation = await quota_service.reserve(
             db,
             user_id=user_id,
-            units=_reservation_for(prompt, reply_request, corrections_request),
+            units=turn_estimate.reservation_for(reply_request, corrections_request),
         )
         turn = await tutor_turn_repository.create(
             db,

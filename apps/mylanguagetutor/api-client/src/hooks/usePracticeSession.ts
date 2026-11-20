@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { createSentenceChunker } from "../utils/sentenceChunker";
 import { TurnRequestError } from "../errors/TurnRequestError";
@@ -51,8 +51,9 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * The conversation loop's state machine (no rendering): creates the session
  * on the first turn, streams each turn, feeds finished sentences to speech,
  * attaches corrections, and turns refusals into retry / blocked states.
- * Today's usage decides whether the learner can start a turn; a daily-limit refusal stands in
- * for it until a usage answer from after the next daily reset arrives.
+ * Today's usage, sized for this conversation's next turn, decides whether the learner can start a
+ * turn; a daily-limit refusal stands in for it until a usage answer from after the next daily reset
+ * arrives. A turn refused for the daily limit keeps the learner's words, to send after the reset.
  * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
@@ -63,11 +64,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [requestPhase, setRequestPhase] = useState<RequestPhase>("idle");
   const [failure, setFailure] = useState<TurnFailure | null>(null);
-  const usage = useGetUsageTodayQuery();
+  const usage = useGetUsageTodayQuery(sessionId ?? undefined);
   // A refusal that blocks this conversation for good (ended, too long, tutor off).
   const [turnBlock, setTurnBlock] = useState<SessionBlock | null>(null);
   // When the budget a daily-limit refusal said was spent comes back (ms since the epoch). Until
-  // then usage may still say a turn fits, as its estimate is for the cheapest turn.
+  // then usage may still say a turn fits: it was read before the refusal, or budget was spent
+  // elsewhere (another tab or device) after it was read.
   const [limitResetsAt, setLimitResetsAt] = useState<number | null>(null);
   const [scenarioState, setScenarioState] = useState<ScenarioState>(EMPTY_STATE);
   const sessionRef = useRef<string | null>(null);
@@ -114,14 +116,19 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     return session.id;
   }, [createSession, languageCode, scenarioSlug, level]);
 
-  const handleRefusal = useCallback((err: unknown, text: string) => {
+  const handleRefusal = useCallback((err: unknown, text: string, key: string) => {
     const refusal = err instanceof TurnRequestError ? err : null;
     const code = refusal ? normaliseRefusalCode(refusal.status, refusal.detail) : NETWORK_ERROR;
     const blocked = blockForCode(code);
     if (blocked === "daily_limit") {
+      // The learner's words stay in the transcript, unanswered, and "Try again" sends them once
+      // the budget is back.
       setLimitResetsAt(nextUtcMidnight(new Date()).getTime());
+      patchEntry(key, (e) => ({ ...e, status: "failed" }));
+      setFailure({ code, text, retryable: true, entryKey: key });
       return;
     }
+    removeEntry(key);
     if (blocked) {
       setTurnBlock(blocked);
       return;
@@ -137,7 +144,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
       retryable: isRetryableRefusal(refusal?.status ?? 0, code),
       entryKey: null,
     });
-  }, []);
+  }, [patchEntry, removeEntry]);
 
   const send = useCallback(
     (rawText: string) => {
@@ -210,8 +217,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
           // went quiet also ends like a dropped one, keeping what arrived.
           if (controller.signal.aborted && !wasInterrupted() && gaveUp.current !== controller) return;
           if (!controller.signal.aborted && !outcome.replyDone && !isConnectionLost(err)) {
-            removeEntry(key);
-            handleRefusal(err, text);
+            handleRefusal(err, text, key);
             return;
           }
         }
@@ -242,12 +248,19 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   );
 
   const retry = useCallback(() => {
-    if (!failure) return;
+    // Nothing can be sent while blocked: the failed turn and its words stay until it lifts.
+    if (!failure || block) return;
     const { text, entryKey } = failure;
     if (entryKey) removeEntry(entryKey);
     setFailure(null);
     send(text);
-  }, [failure, removeEntry, send]);
+  }, [block, failure, removeEntry, send]);
+
+  // "Try again" is offered only when a turn can be sent.
+  const shownFailure = useMemo(
+    () => (failure && block && failure.retryable ? { ...failure, retryable: false } : failure),
+    [block, failure],
+  );
 
   const interrupt = useCallback(() => {
     parked.current = abort.current;
@@ -275,7 +288,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     sessionId,
     entries,
     requestPhase,
-    failure,
+    failure: shownFailure,
     block,
     scenarioState,
     send,

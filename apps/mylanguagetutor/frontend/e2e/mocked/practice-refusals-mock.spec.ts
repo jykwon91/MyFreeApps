@@ -6,7 +6,8 @@
  * a session deleted elsewhere, a rejected token, and a turn the server never
  * answers. Transient failures offer
  * Try again, which sends exactly what the learner said; blocks say why and stop
- * further turns; a rejected token signs the learner out.
+ * further turns (a daily-cap refusal keeps the learner's answer on screen); a
+ * rejected token signs the learner out.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import {
@@ -26,6 +27,7 @@ import { CREATE_SESSION } from "./constants/stubbedEndpoints";
 import { TURN_RESPONSE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
 import {
   CONNECTION_LOST_COPY,
+  DAILY_LIMIT_KEPT_COPY,
   RATE_LIMITED_COPY,
   SESSION_CREATE_FAILED_COPY,
   SESSION_NOT_FOUND_COPY,
@@ -167,7 +169,7 @@ for (const [label, now, copy] of [
   ["before", BEFORE_RESET, DAILY_LIMIT_COPY],
   ["after", AFTER_RESET, DAILY_LIMIT_AFTER_RESET_COPY],
 ] as const) {
-  test(`the daily cap reached mid-conversation (${label} the day's reset hour) blocks further turns, with no way round it`, async ({ page }) => {
+  test(`the daily cap reached mid-conversation (${label} the day's reset hour) blocks further turns, with no way round it, keeping the refused answer`, async ({ page }) => {
     await page.clock.setFixedTime(now);
     await signedInTutor(page, { turns: [refusedTurn(429, DAILY_LIMIT_REACHED)] });
 
@@ -175,7 +177,10 @@ for (const [label, now, copy] of [
     await sendTyped(page, LEARNER_GREETING);
 
     await expect(page.getByText(copy, { exact: true })).toBeVisible();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    // The refused answer stays on screen, and says why it wasn't sent; it can't be sent again yet.
+    await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText(DAILY_LIMIT_KEPT_COPY);
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Pick a scenario" })).toHaveCount(0);
     // A block replaces the composer: there is nothing left to answer with.
     await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
