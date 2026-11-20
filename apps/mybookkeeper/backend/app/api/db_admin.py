@@ -1,16 +1,16 @@
 """Admin-only database query and maintenance endpoints.
 
-These endpoints allow superusers to run read-only SQL queries and
+These endpoints allow the operator to run read-only SQL queries and
 perform common data maintenance operations (property reassignment,
 sub_category fixes, duplicate cleanup, re-extraction).
 
-Supports two auth methods:
-- Bearer token (superuser JWT)
-- X-Admin-Api-Key header (for MCP/CLI tooling without 2FA)
+Gated solely by the static X-Admin-Api-Key header (for MCP/CLI tooling
+without 2FA); no user role or JWT is involved.
 """
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.core.config import settings
+from app.core.security import admin_api_key_matches
 from app.schemas.system.db_admin import (
     BulkPropertyReassignRequest,
     BulkSoftDeleteRequest,
@@ -28,11 +28,11 @@ router = APIRouter(prefix="/admin/db", tags=["admin-db"])
 async def _require_admin_access(
     x_admin_api_key: str | None = Header(None),
 ) -> None:
-    """Accept either a valid API key or fall through to JWT superuser check."""
+    """Require a valid static admin API key (compared in constant time)."""
     if x_admin_api_key:
         if not settings.admin_api_key:
             raise HTTPException(status_code=503, detail="Admin API key not configured")
-        if x_admin_api_key != settings.admin_api_key:
+        if not admin_api_key_matches(x_admin_api_key, settings.admin_api_key):
             raise HTTPException(status_code=403, detail="Invalid admin API key")
         return
     raise HTTPException(status_code=401, detail="X-Admin-Api-Key header required")

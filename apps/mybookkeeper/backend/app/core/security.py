@@ -1,4 +1,5 @@
 import base64
+import hmac
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
@@ -90,3 +91,12 @@ def decrypt_pii(ciphertext: str) -> str:
     Same `(str) -> str` signature as before — call sites are unchanged.
     """
     return _get_pii_suite().decrypt(ciphertext)
+
+
+def admin_api_key_matches(provided: str, configured: str) -> bool:
+    """Constant-time comparison of the static admin API key.
+
+    Both sides are encoded to bytes so ``hmac.compare_digest`` accepts
+    non-ASCII header values instead of raising ``TypeError``.
+    """
+    return hmac.compare_digest(provided.encode(), configured.encode())

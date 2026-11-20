@@ -33,7 +33,8 @@ async def execute_readonly_query(
     #   - `_FORBIDDEN_KEYWORDS` regex blocks DDL/DML keywords (DROP/ALTER/INSERT/...)
     #   - First-token check enforces SELECT-only
     #   - `SET TRANSACTION READ ONLY` prevents writes regardless of any bypass
-    #   - Endpoint at `api/admin.py` requires `Role.ADMIN`
+    #   - Endpoint at `api/db_admin.py` is gated by the static X-Admin-Api-Key header
+    #     (no user role involved)
     result = await db.execute(text(limited))  # codeql[py/sql-injection]
     columns = list(result.keys())
     rows = [[_serialize(v) for v in row] for row in result.fetchall()]
