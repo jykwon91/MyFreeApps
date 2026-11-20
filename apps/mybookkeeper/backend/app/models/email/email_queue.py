@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, ForeignKey, DateTime, UniqueConstraint, Integer, LargeBinary
+from sqlalchemy import String, ForeignKey, DateTime, Index, UniqueConstraint, Integer, LargeBinary
 from sqlalchemy.orm import Mapped, mapped_column, relationship, deferred
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -25,6 +25,11 @@ class EmailQueue(Base):
     error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint("user_id", "message_id", "attachment_id", name="uq_email_queue_user_message_attachment"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "message_id", "attachment_id", name="uq_email_queue_user_message_attachment"),
+        Index("ix_email_queue_org_status_created", "organization_id", "status", "created_at"),
+        Index("ix_email_queue_org_created", "organization_id", "created_at"),
+        Index("ix_email_queue_sync_log_status", "sync_log_id", "status"),
+    )
 
     user = relationship("User", back_populates="email_queue")

@@ -316,6 +316,7 @@
       ],
       "backend_tests": [
         "test_email_queue_split.py",
+        "test_email_queue_indexes.py",
         "test_document_photo_metadata.py",
         "test_stored_file_missing.py",
         "test_sync_log_cancel.py",
