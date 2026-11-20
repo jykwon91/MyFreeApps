@@ -2,7 +2,7 @@ import type { InternalAxiosRequestConfig } from "axios";
 
 type QueryValue = string | number | boolean | string[];
 
-const BOOLEAN_KEYS = new Set(["unassigned", "to_review", "tax_relevant", "active_properties_only"]);
+const BOOLEAN_KEYS = new Set(["unassigned", "to_review", "tax_relevant"]);
 const NUMBER_KEYS = new Set(["tax_year", "limit", "offset"]);
 const LIST_KEYS = new Set(["statuses", "transaction_types", "categories", "property_ids", "sort"]);
 

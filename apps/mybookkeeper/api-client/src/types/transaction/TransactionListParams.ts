@@ -21,8 +21,6 @@ export interface TransactionListParams {
   tax_relevant?: boolean;
   /** Only the categories the dashboard summary adds up as revenue, or as expenses. */
   summary_kind?: "revenue" | "expenses";
-  /** Leave out rows of inactive properties, as the dashboard summary does. */
-  active_properties_only?: boolean;
   /**
    * Any-of filters (the website's column filters). Each narrows on top of the single-value filter
    * of the same column; property_ids takes UNASSIGNED_PROPERTY_ID for rows with no property.

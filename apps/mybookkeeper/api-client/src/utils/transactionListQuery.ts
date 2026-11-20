@@ -27,7 +27,6 @@ export function transactionListQuery(params: TransactionListParams): string {
     tax_year: optionalString(params.tax_year),
     tax_relevant: optionalString(params.tax_relevant),
     summary_kind: params.summary_kind,
-    active_properties_only: params.active_properties_only ? "true" : undefined,
     statuses: params.statuses,
     transaction_types: params.transaction_types,
     categories: params.categories,

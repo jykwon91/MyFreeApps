@@ -38,8 +38,6 @@ class TransactionFilters(BaseModel):
     tax_relevant: bool | None = None
     # Opt-in: only the categories the dashboard summary adds up as revenue or as expenses.
     summary_kind: Literal["revenue", "expenses"] | None = None
-    # Opt-in: skip transactions of inactive properties, as the dashboard summary does.
-    active_properties_only: bool = False
     # Any-of filters (the web table's column filters). Each narrows on top of the single-value
     # filter of the same column; an empty list leaves the column alone. property_ids takes
     # "unassigned" for rows with no property.

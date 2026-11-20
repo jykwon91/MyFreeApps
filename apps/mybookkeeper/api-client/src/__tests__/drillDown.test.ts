@@ -18,7 +18,6 @@ describe("drillDownListParams", () => {
       end_date: "2026-01-31",
       status: "approved",
       summary_kind: undefined,
-      active_properties_only: true,
     });
   });
 

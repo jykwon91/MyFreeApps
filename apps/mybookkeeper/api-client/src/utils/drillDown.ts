@@ -6,7 +6,7 @@ import type { TransactionListParams } from "../types/transaction/TransactionList
 
 /**
  * The approved transactions behind a number, cut the way the summary cut them: approved rows in the
- * range, in active properties, with revenue and expenses told apart by category rather than by the
+ * range, in every property (a deactivated one's history still counts), with revenue and expenses told apart by category rather than by the
  * transaction's income or expense type. Every part of the filter goes to the server, so its count and
  * total cover every matching row. The Unassigned bucket has no property by definition, so a property
  * allowlist would always empty it and is left off.
@@ -23,7 +23,6 @@ export function drillDownListParams(filter: DrillDownFilter): TransactionListPar
     end_date: filter.endDate,
     status: "approved",
     summary_kind: filter.type,
-    active_properties_only: true,
   };
 }
 

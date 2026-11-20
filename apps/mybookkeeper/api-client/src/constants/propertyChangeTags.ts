@@ -1,5 +1,5 @@
-// Cached data that embeds a property's name or active state: totals and
-// transaction lists hide inactive properties, and other lists show the name.
+// Cached data that embeds a property's name or active state: totals and lists
+// show the name, and pickers and rental ROI leave inactive properties out.
 export const PROPERTY_CHANGE_TAGS = [
   "Property",
   "Summary",
