@@ -51,11 +51,17 @@ test("a refused delete shows the backend message and stays on the company", asyn
 test("a successful delete toasts and returns to the companies list", async ({ page }) => {
   await stubSignedInShell(page);
   await stubDetail(page, { status: 204 });
-  page.on("dialog", (dialog) => dialog.accept());
+  const confirmMessages: string[] = [];
+  page.on("dialog", (dialog) => {
+    confirmMessages.push(dialog.message());
+    void dialog.accept();
+  });
 
   await page.goto(`/companies/${COMPANY.id}`);
   await page.getByRole("button", { name: "Delete" }).click();
 
   await expect(page.getByText('"Acme Corp" deleted', { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/companies$/);
+  expect(confirmMessages).toHaveLength(1);
+  expect(confirmMessages[0]).toContain("any applications you already deleted");
 });

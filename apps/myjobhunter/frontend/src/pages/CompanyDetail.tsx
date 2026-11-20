@@ -25,7 +25,7 @@ export default function CompanyDetail() {
 
   async function handleDelete() {
     if (!company) return;
-    if (!window.confirm(`Delete "${company.name}"? This permanently removes the company and cannot be undone.`)) {
+    if (!window.confirm(`Delete "${company.name}"? This permanently removes the company and any applications you already deleted, and cannot be undone.`)) {
       return;
     }
     try {

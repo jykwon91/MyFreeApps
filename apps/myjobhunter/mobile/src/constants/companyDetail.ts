@@ -20,7 +20,7 @@ export const COMPANY_DETAIL_MESSAGES = {
   delete: "Delete company",
   deleting: "Deleting…",
   deleteTitle: (name: string) => `Delete “${name}”?`,
-  deleteBody: "This permanently removes the company and can't be undone.",
+  deleteBody: "This permanently removes the company and any applications you already deleted, and can't be undone.",
   keep: "Keep",
   deleted: (name: string) => `“${name}” deleted.`,
   couldntDelete: "I couldn't delete it. Want to try again?",

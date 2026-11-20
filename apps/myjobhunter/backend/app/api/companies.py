@@ -25,7 +25,7 @@ import uuid
 
 import anthropic
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
@@ -145,6 +145,7 @@ async def update_company(
 @router.delete("/companies/{company_id}", status_code=204)
 async def delete_company(
     company_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
@@ -152,12 +153,13 @@ async def delete_company(
 
     Returns 404 if the company does not exist or belongs to another user.
     Returns 409 ``{"code": "COMPANY_HAS_APPLICATIONS", "message", "application_count"}``
-    when applications (soft-deleted ones included) still reference the company —
+    when live applications still reference the company —
     ``applications.company_id`` is ON DELETE RESTRICT, so applications keep their
-    company. Only the company's research records are cascade-deleted.
+    company. Soft-deleted applications don't block: they are permanently removed
+    with the company, and so are its research records.
     """
     try:
-        deleted = await company_service.delete_company(db, user.id, company_id)
+        after_commit = await company_service.delete_company(db, user.id, company_id)
     except CompanyHasApplicationsError as exc:
         raise HTTPException(
             status_code=409,
@@ -166,14 +168,14 @@ async def delete_company(
                 "message": (
                     f"This company still has {exc.application_count} "
                     f"application{'' if exc.application_count == 1 else 's'} "
-                    "linked to it (including any archived or deleted), so it "
-                    "can't be deleted."
+                    "linked to it, so it can't be deleted."
                 ),
                 "application_count": exc.application_count,
             },
         ) from exc
-    if not deleted:
+    if after_commit is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    background_tasks.add_task(after_commit)
     return Response(status_code=204)
 
 
