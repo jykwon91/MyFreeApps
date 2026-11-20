@@ -1,7 +1,8 @@
 /**
  * No-backend E2E for the recipes list (/): the signed-in user searches by title
  * and narrows to their own recipes (each sends the filter to the server and
- * keeps it in the URL), an empty library and an empty search each say so, a
+ * keeps it in the URL), a signed-out visitor on /?owner=me gets the public list
+ * with the filter dropped, an empty library and an empty search each say so, a
  * failed load says so instead of showing an empty library, the loading
  * skeleton has the same grid as the loaded list, and Load more brings in the
  * next page (recipe 51 on) until every recipe is showing.
@@ -10,7 +11,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
-import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
+import { stubSignedInShell, stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
@@ -102,6 +103,21 @@ test("My recipes narrows the list to the user's own and toggles back", async ({ 
   await expect(mine).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
   await expect(page).not.toHaveURL(/owner=/);
+});
+
+test("a signed-out visitor opening /?owner=me sees the public list and the filter is dropped", async ({ page }) => {
+  await stubUnmatchedApi(page);
+  const calls = await stubList(page, ({ owner }) => (
+    owner === "me" ? { body: { detail: "Not authenticated" }, status: 401 } : { body: listPageOf([TOMATO, SOMEONE_ELSES]) }
+  ));
+
+  await page.goto("/?owner=me");
+
+  await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Couldn't load recipes" })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/owner=/);
+  await expect(page.getByRole("button", { name: "My recipes" })).toHaveCount(0);
+  expect(calls.every((c) => c.owner === null)).toBe(true);
 });
 
 test("a recipe card shows its rollups and opens the recipe", async ({ page }) => {
