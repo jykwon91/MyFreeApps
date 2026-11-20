@@ -435,6 +435,49 @@ class TestClientDisconnect:
         assert sessions[0][0] == 1
 
     @pytest.mark.asyncio
+    async def test_disconnect_after_corrections_keeps_the_result_and_charges_actual_usage(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """The learner saw the corrections (and the goal they met ticked), then the
+        stream dropped before ``done``: the turn keeps its corrections and translation,
+        the goal stays met for the next turn, and only actual usage is charged."""
+        fake_claude.corrections_json = (
+            '{"corrections": [], "retry_prompt": null, "goals_met_this_turn": [0]}'
+        )
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        stream = turn_service.stream_turn(prepared)
+        names = [(await stream.__anext__()).name for _ in range(5)]
+        assert names == ["turn.started", "reply.delta", "reply.delta", "reply.done", "corrections"]
+        await stream.aclose()
+
+        rows = await _fetch(
+            "SELECT status, corrections_json, translation_text, cost_units FROM tutor_turn WHERE id = :id",
+            id=prepared.turn_id,
+        )
+        assert rows[0][0] == "complete"
+        assert rows[0][1] is not None  # the corrections, encrypted
+        assert rows[0][2] is not None  # the translation, encrypted
+        expected = _expected_units(fake_claude)
+        assert expected < prepared.reservation.units
+        assert rows[0][3] == expected
+        assert await _bucket(quota_service.user_bucket(user_id)) == expected
+        assert await _bucket(quota_service.GLOBAL_BUCKET) == expected
+        sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
+        assert sessions[0][0] == 1
+
+        fake_claude.corrections_json = (
+            '{"corrections": [], "retry_prompt": null, "goals_met_this_turn": [1]}'
+        )
+        async with await as_user(user) as authed:
+            resp = await _turn(authed, str(session_id), "un cafe por favor")
+        assert dict(_parse_sse(resp.text))["corrections"]["scenario_state"]["goals_met"] == [0, 1]
+
+    @pytest.mark.asyncio
     async def test_disconnect_while_reply_done_is_unsent_stays_partial(
         self, user_factory, as_user, fake_claude,
     ) -> None:

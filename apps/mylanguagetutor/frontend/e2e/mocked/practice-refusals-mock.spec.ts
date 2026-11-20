@@ -21,7 +21,7 @@ import {
 } from "./constants/refusalDetails";
 import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
 import { LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING } from "./constants/practiceText";
-import { CORRECTIONS_MISSING, REPLY_CUT_OFF, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
+import { CORRECTIONS_MISSING, GOAL_MET, RECAST_LINE, REPLY_CUT_OFF, SUGGESTIONS_LABEL, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { CREATE_SESSION } from "./constants/stubbedEndpoints";
 import { TURN_RESPONSE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
 import {
@@ -35,10 +35,10 @@ import {
 } from "./constants/turnErrorCopy";
 import { GREETINGS } from "./fixtures/catalogFixtures";
 import { sessionIdAt } from "./fixtures/fixtureIds";
-import { openPractice, sendTyped } from "./fixtures/practiceScreen";
+import { goal, openPractice, sendTyped } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
-import { completeTurn, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
-import { TUTOR_OFF } from "./fixtures/tutorFixtures";
+import { completeTurn, cutAfterCorrections, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
+import { TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
 
@@ -141,6 +141,23 @@ test("a stream cut after the whole reply keeps the reply, notes the missing sugg
 
   await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
   await expect(page.getByText(CORRECTIONS_MISSING)).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
+  expect(api.turnRequests).toHaveLength(1);
+});
+
+test("a stream cut after the suggestions arrived shows them, with no missing-suggestions note, and isn't resent", async ({ page }) => {
+  const api = await signedInTutor(page, {
+    turns: [cutAfterCorrections({ reply: TUTOR_GREETING, corrections: [correctionOf()], goalsMet: [0] })],
+  });
+
+  await openPractice(page, GREETINGS.title);
+  await sendTyped(page, LEARNER_GREETING);
+
+  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: SUGGESTIONS_LABEL })).toContainText(RECAST_LINE);
+  await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
+  await expect(page.getByText(CORRECTIONS_MISSING)).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   expect(api.turnRequests).toHaveLength(1);

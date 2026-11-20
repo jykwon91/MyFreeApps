@@ -380,6 +380,22 @@ describe("usePracticeSession", () => {
     expect(result.current.failure).toBeNull();
   });
 
+  it("shows corrections that arrived before the stream dropped, without the missing-corrections note", async () => {
+    streamTurn.mockImplementationOnce(emitting(COMPLETE_TURN.slice(0, 5)));
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({
+      status: "complete",
+      correctionsMissing: false,
+      retryPrompt: "Try: Quiero un café.",
+      translation: "Hi! What do you want?",
+    });
+    expect(result.current.scenarioState).toEqual({ goals_met: [0], complete: false });
+    expect(result.current.failure).toBeNull();
+  });
+
   it("stops waiting on the interrupted turn's corrections when asked: complete, with them marked missing", async () => {
     const turn = replyThenHold();
     streamTurn.mockImplementationOnce(turn.stream);
