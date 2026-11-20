@@ -1,9 +1,11 @@
 import { Text, TextInput, View } from "react-native";
 import CharacterCounter from "./CharacterCounter";
 import FieldError from "./FieldError";
+import FieldLabel from "./FieldLabel";
 import { MULTILINE_FIELD_MIN_HEIGHT } from "../constants/multilineField";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
+import { requiredFieldLabel } from "../utils/requiredFieldLabel";
 import type { FormFieldProps } from "../types/FormFieldProps";
 
 export default function FormField({
@@ -24,20 +26,13 @@ export default function FormField({
 
   return (
     <View style={[{ gap: spacing.xs }, style]}>
-      <Text
-        importantForAccessibility="no"
-        accessibilityElementsHidden
-        style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "500" }}
-      >
-        {label}
-        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
-      </Text>
+      <FieldLabel label={label} required={required} />
       <View style={{ justifyContent: "center" }}>
         <TextInput
           placeholderTextColor={colors.mutedForeground}
           {...inputProps}
           multiline={multiline}
-          accessibilityLabel={accessibilityLabel ?? (required ? `${label}, required` : label)}
+          accessibilityLabel={accessibilityLabel ?? requiredFieldLabel(label, required)}
           accessibilityHint={error ?? accessibilityHint ?? hint}
           style={[
             {

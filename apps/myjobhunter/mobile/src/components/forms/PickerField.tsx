@@ -1,5 +1,5 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { FieldError, LoadingButton, useTheme } from "@platform/mobile";
+import { FieldError, FieldLabel, LoadingButton, requiredFieldLabel, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import { DATE_TIME_FIELD_MESSAGES as MESSAGES } from "../../constants/dateTimeField";
@@ -44,15 +44,12 @@ export default function PickerField({
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={{ fontSize: fontSize.xs, fontWeight: "500", color: colors.foreground }}>
-        {label}
-        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
-      </Text>
+      <FieldLabel label={label} required={required} />
       <Text style={{ fontSize: fontSize.md, color: hasValue ? colors.foreground : colors.mutedForeground }}>{valueText ?? MESSAGES.notSet}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton
           accessibilityHint={error}
-          accessibilityLabel={`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`}
+          accessibilityLabel={requiredFieldLabel(`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`, required)}
           disabled={disabled}
           onPress={press}
           style={{ flex: 1 }}
@@ -78,7 +75,7 @@ export default function PickerField({
       {isPicking ? (
         <DateTimePicker
           accentColor={colors.primary}
-          accessibilityLabel={label}
+          accessibilityLabel={requiredFieldLabel(label, required)}
           display="spinner"
           maximumDate={maximumDate}
           minimumDate={minimumDate}

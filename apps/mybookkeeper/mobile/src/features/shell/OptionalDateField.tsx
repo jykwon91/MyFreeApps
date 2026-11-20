@@ -1,5 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { FieldError, LoadingButton, useTheme } from "@platform/mobile";
+import { FieldError, FieldLabel, LoadingButton, requiredFieldLabel, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import { dateFromIso, fullDateLabel, isoFromDate } from "../../lib/localDate";
@@ -49,13 +49,10 @@ export default function OptionalDateField({
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>
-        {label}
-        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
-      </Text>
+      <FieldLabel label={label} required={required} size="sm" />
       <Text style={{ fontSize: fontSize.md, color: value ? colors.foreground : colors.mutedForeground }}>{value ? fullDateLabel(value) : "Not set"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <LoadingButton accessibilityHint={error} accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} disabled={disabled} onPress={pick} style={{ flex: 1 }} variant="secondary">
+        <LoadingButton accessibilityHint={error} accessibilityLabel={requiredFieldLabel(`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`, required)} disabled={disabled} onPress={pick} style={{ flex: 1 }} variant="secondary">
           {isPicking ? "Done" : value ? "Change" : "Choose"}
         </LoadingButton>
         {value ? (
@@ -75,7 +72,7 @@ export default function OptionalDateField({
       </View>
       {isPicking && !disabled ? (
         <DateTimePicker
-          accessibilityLabel={label}
+          accessibilityLabel={requiredFieldLabel(label, required)}
           display="spinner"
           maximumDate={maximumDate}
           mode="date"

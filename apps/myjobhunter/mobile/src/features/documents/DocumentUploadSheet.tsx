@@ -8,7 +8,7 @@ import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUpl
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
-import { FieldError, filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
+import { FieldError, FieldLabel, filePart, FormField, FormSheet, LoadingButton, requiredFieldLabel, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
@@ -73,17 +73,14 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
   return (
     <FormSheet failure={failure} hasUnsavedChanges={file !== null || title.trim() !== "" || kind !== "cover_letter"} isBusy={isBusy} isOpen onRequestClose={onClose} title={MESSAGES.uploadTitle}>
       <View style={{ gap: spacing.xs }}>
-        <Text style={{ fontSize: fontSize.xs, fontWeight: "500", color: colors.foreground }}>
-          {MESSAGES.fileLabel}
-          <Text style={{ color: colors.destructiveText }}> *</Text>
-        </Text>
+        <FieldLabel label={MESSAGES.fileLabel} required />
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.fileHint}</Text>
         {file ? (
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }} testID="upload-file">
             {file.size == null ? file.name : `${file.name} (${formatFileSize(file.size)})`}
           </Text>
         ) : null}
-        <LoadingButton accessibilityHint={fileError} disabled={isUploading} isLoading={isPicking} loadingText={MESSAGES.choosing} onPress={choose} variant="secondary">
+        <LoadingButton accessibilityHint={fileError} accessibilityLabel={isPicking ? undefined : requiredFieldLabel(file ? MESSAGES.chooseAnother : MESSAGES.chooseFile, true)} disabled={isUploading} isLoading={isPicking} loadingText={MESSAGES.choosing} onPress={choose} variant="secondary">
           {file ? MESSAGES.chooseAnother : MESSAGES.chooseFile}
         </LoadingButton>
         <FieldError message={fileError} name={MESSAGES.fileLabel} />
