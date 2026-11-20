@@ -1,4 +1,4 @@
-import type { GmailConnectFailure } from "@mybookkeeper/api-client/types/integration/gmail-connect-failure";
+import type { GmailConnectReturn } from "@mybookkeeper/api-client/types/integration/gmail-connect-return";
 
-/** How a trip to Google's sign-in ended. */
-export type GmailConnectOutcome = { kind: "connected" } | { kind: "closed" } | { kind: "failed"; reason: GmailConnectFailure };
+/** How a trip to Google's sign-in ended: closed, or Google's answer as the server sent it on. */
+export type GmailConnectOutcome = { kind: "closed" } | GmailConnectReturn;

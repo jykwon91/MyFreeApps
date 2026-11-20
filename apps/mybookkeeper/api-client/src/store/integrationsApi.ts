@@ -3,6 +3,7 @@ import { GMAIL_SYNC_TIMEOUT_MS } from "../constants/gmailSync";
 import { SYNC_INVALIDATED_TAGS } from "../constants/emailDerivedTags";
 import type { EmailQueueItem } from "../types/integration/email-queue-item";
 import type { GmailConnectClient } from "../types/integration/gmail-connect-client";
+import type { GmailConnectCompletion } from "../types/integration/gmail-connect-completion";
 import type { Integration } from "../types/integration/integration";
 import type { SyncLog } from "../types/integration/sync-log";
 
@@ -17,6 +18,11 @@ export const integrationsApi = baseApi.enhanceEndpoints({
     // The website leaves `client` off; the phone says so, and Google's answer comes back to the app.
     connectGmail: builder.mutation<{ auth_url: string }, GmailConnectClient | void>({
       query: (client) => ({ url: "/integrations/gmail/connect", params: client ? { client } : undefined }),
+    }),
+    // Google's answer comes back to the app that started it, which finishes it here, signed in,
+    // so it only ever connects the Gmail of the person who started it.
+    completeGmailConnect: builder.mutation<void, GmailConnectCompletion>({
+      query: (data) => ({ url: "/integrations/gmail/complete", method: "POST", data }),
     }),
     disconnectGmail: builder.mutation<void, void>({
       query: () => ({ url: "/integrations/gmail", method: "DELETE" }),
@@ -68,6 +74,7 @@ export const integrationsApi = baseApi.enhanceEndpoints({
 export const {
   useGetIntegrationsQuery,
   useConnectGmailMutation,
+  useCompleteGmailConnectMutation,
   useDisconnectGmailMutation,
   useSyncGmailMutation,
   useGetSyncLogsQuery,

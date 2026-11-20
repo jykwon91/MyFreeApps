@@ -428,7 +428,13 @@
         "mobile/test-support/IntegrationsFailure.ts",
         "mobile/test-support/IntegrationsRoute.ts",
         "mobile/test-support/applyIntegrationsWrite.ts",
-        "mobile/test-support/renderScreen.tsx"
+        "mobile/test-support/renderScreen.tsx",
+        "frontend/src/app/pages/OAuthCallback.tsx",
+        "frontend/src/shared/lib/gmail-connect-messages.ts",
+        "frontend/src/shared/utils/gmail-connect-message.ts",
+        "frontend/src/shared/types/integration/",
+        "api-client/src/constants/gmailConnect.ts",
+        "api-client/src/utils/gmailConnectReturn.ts"
       ],
       "backend_tests": [
         "test_gmail_auth_expired.py",
@@ -438,21 +444,24 @@
         "test_integration_org_key_migration.py",
         "test_gmail_label_filter.py",
         "test_gmail_missing_label.py",
-        "test_gmail_mobile_connect.py",
         "test_gmail_oauth_callback.py",
         "test_oauth_callback_logging.py",
-        "test_oauth_state_session_cutoff.py"
+        "test_gmail_connect_return.py",
+        "test_gmail_connect_complete.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",
         "useInvalidateOnExtractionComplete.test.ts",
         "summaryInvalidation.test.ts",
-        "syncCacheInvalidation.test.ts"
+        "syncCacheInvalidation.test.ts",
+        "OAuthCallback.test.tsx",
+        "gmailConnectMessage.test.ts"
       ],
       "e2e_specs": [
         "integrations.spec.ts",
         "gmail-label-filter.spec.ts",
-        "summary-invalidation.spec.ts"
+        "summary-invalidation.spec.ts",
+        "mocked/gmail-connect-finish-mock.spec.ts"
       ]
     },
     "mappers": {

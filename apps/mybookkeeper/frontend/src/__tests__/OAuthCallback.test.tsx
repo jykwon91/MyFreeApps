@@ -1,126 +1,105 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { GMAIL_CONNECT_FAILURE_MESSAGES } from "@mybookkeeper/api-client/constants/gmailConnect";
+import { GMAIL_CONNECT_POPUP_COPY } from "@/shared/lib/gmail-connect-messages";
 import OAuthCallback from "@/app/pages/OAuthCallback";
 
-function renderOAuthCallback() {
-  return render(<OAuthCallback />);
+const complete = vi.fn();
+
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
+  useCompleteGmailConnectMutation: () => [complete],
+}));
+
+function answers(outcome: "connects" | { status: number; data: { detail: string } }) {
+  complete.mockImplementation(() => ({
+    unwrap: () => (outcome === "connects" ? Promise.resolve() : Promise.reject(outcome)),
+  }));
 }
 
-describe("OAuthCallback — UI", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+function landOn(query: string) {
+  window.history.replaceState(null, "", `/oauth-callback?${query}`);
+  return render(
+    <StrictMode>
+      <OAuthCallback />
+    </StrictMode>,
+  );
+}
 
-  it("renders the connecting status message", () => {
-    renderOAuthCallback();
+let postMessage: ReturnType<typeof vi.fn>;
+let close: ReturnType<typeof vi.fn>;
 
-    expect(
-      screen.getByText(/Connecting/i)
-    ).toBeInTheDocument();
-  });
+function openedAsPopup(opened: boolean) {
+  postMessage = vi.fn();
+  close = vi.fn();
+  Object.defineProperty(window, "opener", { value: opened ? { postMessage } : null, writable: true, configurable: true });
+  Object.defineProperty(window, "close", { value: close, writable: true, configurable: true });
+}
 
-  it("tells the user the window will close automatically", () => {
-    renderOAuthCallback();
-
-    expect(
-      screen.getByText(/this window will close automatically/i)
-    ).toBeInTheDocument();
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  openedAsPopup(true);
 });
 
-describe("OAuthCallback — when opened as a popup (window.opener exists)", () => {
-  let originalOpener: typeof window.opener;
-  let postMessageSpy: ReturnType<typeof vi.fn>;
-  let closeSpy: ReturnType<typeof vi.fn>;
+afterEach(() => {
+  Object.defineProperty(window, "opener", { value: null, writable: true, configurable: true });
+  window.history.replaceState(null, "", "/");
+});
 
-  beforeEach(() => {
-    originalOpener = window.opener;
-    postMessageSpy = vi.fn();
-    closeSpy = vi.fn();
+describe("OAuthCallback", () => {
+  it("finishes the connection once, signed in, with Google's code and the state, then tells the opener and closes", async () => {
+    answers("connects");
+    landOn("code=c0de&state=signed.jwt");
 
-    Object.defineProperty(window, "opener", {
-      value: { postMessage: postMessageSpy },
-      writable: true,
-      configurable: true,
-    });
-    Object.defineProperty(window, "close", {
-      value: closeSpy,
-      writable: true,
-      configurable: true,
-    });
+    expect(screen.getByRole("status")).toHaveTextContent(GMAIL_CONNECT_POPUP_COPY.connecting);
+    await waitFor(() => expect(postMessage).toHaveBeenCalledWith({ type: "gmail_connected" }, window.location.origin));
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(complete).toHaveBeenCalledWith({ code: "c0de", state: "signed.jwt" });
+    expect(close).toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    Object.defineProperty(window, "opener", {
-      value: originalOpener,
-      writable: true,
-      configurable: true,
-    });
-  });
+  it("passes on why the server refused, someone else's connection included", async () => {
+    answers({ status: 403, data: { detail: "wrong_account" } });
+    landOn("code=c0de&state=signed.jwt");
 
-  it("posts a gmail_connected message to the opener", () => {
-    renderOAuthCallback();
-
-    expect(postMessageSpy).toHaveBeenCalledWith(
-      { type: "gmail_connected" },
-      window.location.origin
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith({ type: "gmail_connect_failed", reason: "wrong_account" }, window.location.origin),
     );
+    expect(close).toHaveBeenCalled();
   });
 
-  it("closes the popup window after posting the message", () => {
-    renderOAuthCallback();
+  it("sends nothing to the server when Google's answer was a refusal", async () => {
+    landOn("result=error&reason=denied");
 
-    expect(closeSpy).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith({ type: "gmail_connect_failed", reason: "denied" }, window.location.origin),
+    );
+    expect(complete).not.toHaveBeenCalled();
   });
 
-  it("posts the message before closing the window", () => {
-    const callOrder: string[] = [];
-    postMessageSpy.mockImplementation(() => callOrder.push("postMessage"));
-    closeSpy.mockImplementation(() => callOrder.push("close"));
+  it("says why on the page when nothing opened it to tell", async () => {
+    openedAsPopup(false);
+    answers({ status: 403, data: { detail: "wrong_account" } });
+    landOn("code=c0de&state=signed.jwt");
 
-    renderOAuthCallback();
-
-    expect(callOrder).toEqual(["postMessage", "close"]);
-  });
-});
-
-describe("OAuthCallback — when not opened as a popup (no window.opener)", () => {
-  let originalOpener: typeof window.opener;
-  let closeSpy: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    originalOpener = window.opener;
-    closeSpy = vi.fn();
-
-    Object.defineProperty(window, "opener", {
-      value: null,
-      writable: true,
-      configurable: true,
-    });
-    Object.defineProperty(window, "close", {
-      value: closeSpy,
-      writable: true,
-      configurable: true,
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(GMAIL_CONNECT_FAILURE_MESSAGES.wrong_account);
+    expect(close).not.toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    Object.defineProperty(window, "opener", {
-      value: originalOpener,
-      writable: true,
-      configurable: true,
-    });
+  it("says it's connected on the page when nothing opened it to tell", async () => {
+    openedAsPopup(false);
+    answers("connects");
+    landOn("code=c0de&state=signed.jwt");
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(GMAIL_CONNECT_POPUP_COPY.connected));
+    expect(close).not.toHaveBeenCalled();
   });
 
-  it("does not call window.close when there is no opener", () => {
-    renderOAuthCallback();
+  it("treats an address with no code and state as a plain failure", async () => {
+    openedAsPopup(false);
+    landOn("");
 
-    expect(closeSpy).not.toHaveBeenCalled();
-  });
-
-  it("still renders the status message when there is no opener", () => {
-    renderOAuthCallback();
-
-    expect(screen.getByText(/Connecting/i)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(GMAIL_CONNECT_FAILURE_MESSAGES.failed);
+    expect(complete).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/list
 import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
+import { GMAIL_COMPLETE_URL, GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
 import { answerTemplateWrite } from "./replyTemplateWrites";
 
 export function aMessage(overrides: Partial<InquiryMessage> = {}): InquiryMessage {
@@ -129,6 +129,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/integrations") return respond(server.integrations);
     if (config.url === GMAIL_CONNECT_URL) return respond({ auth_url: GOOGLE_AUTH_URL });
+    if (config.url === GMAIL_COMPLETE_URL) return respond(undefined, 204);
     if (config.url === "/reply-templates" && config.method === "get") {
       const includeArchived = Boolean((config.params as { include_archived?: boolean } | undefined)?.include_archived);
       const rows = includeArchived ? [...server.templates, ...server.archivedTemplates] : [...server.templates];

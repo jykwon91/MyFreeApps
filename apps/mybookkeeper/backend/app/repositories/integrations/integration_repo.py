@@ -88,7 +88,7 @@ async def set_gmail_address_if_unchanged(
 async def clear_reauth_state(db: AsyncSession, integration: Integration) -> None:
     """Clear the reauth flag after a successful OAuth re-flow.
 
-    Called from handle_gmail_callback when fresh tokens are written back.
+    Called from complete_gmail_connect when fresh tokens are written back.
     """
     integration.needs_reauth = False
     integration.last_reauth_error = None

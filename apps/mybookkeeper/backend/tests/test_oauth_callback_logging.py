@@ -1,8 +1,8 @@
-"""Tests for Gmail OAuth callback exception logging.
+"""Tests for Gmail OAuth connect exception logging.
 
-The route ``GET /integrations/gmail/callback`` must log the full traceback
+The route ``POST /integrations/gmail/complete`` must log the full traceback
 (including exception class) to stdout/docker-logs before propagating any
-non-ValueError exception. This guarantees that production failures are
+exception that isn't a refusal. This guarantees that production failures are
 visible in ``docker logs mybookkeeper-api-1`` even when Sentry is not yet
 configured.
 
@@ -17,112 +17,83 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Iterator
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.auth import current_active_user
+from app.core.gmail_connect_failure import GmailConnectFailure
+from app.main import app
+from app.services.integrations import integration_service
+from app.services.integrations.gmail_connect_error import GmailConnectError
+
+COMPLETE = "/integrations/gmail/complete"
+_BODY = {"code": "fake-code", "state": "fake-state"}
+_USER_ID = uuid.uuid4()
+
 
 # ---------------------------------------------------------------------------
 # Route-layer tests
 # ---------------------------------------------------------------------------
-class TestGmailCallbackRouteLogging:
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    app.dependency_overrides[current_active_user] = lambda: SimpleNamespace(id=uuid.uuid4())
+    # raise_server_exceptions=False so the TestClient returns a 500 response
+    # instead of re-raising the exception in the test process.
+    yield TestClient(app, raise_server_exceptions=False)
+    app.dependency_overrides.pop(current_active_user, None)
+
+
+class TestGmailCompleteRouteLogging:
     """The route handler must log unexpected exceptions before re-raising."""
 
-    def _make_client(self) -> TestClient:
-        from app.main import app
-        # raise_server_exceptions=False so the TestClient returns a 500 response
-        # instead of re-raising the exception in the test process.
-        return TestClient(app, raise_server_exceptions=False)
-
     def test_logs_and_returns_500_on_unexpected_exception(
-        self, caplog: pytest.LogCaptureFixture
+        self, client: TestClient, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """When handle_gmail_callback raises a non-ValueError, the route logs
-        the full traceback (logger.exception) and returns HTTP 500."""
-        from app.api import integrations as integrations_module
-
         class _FakeOAuthError(Exception):
             pass
 
         with patch.object(
-            integrations_module.integration_service,
-            "handle_gmail_callback",
+            integration_service,
+            "complete_gmail_connect",
             new=AsyncMock(side_effect=_FakeOAuthError("token exchange failed")),
-        ):
-            with caplog.at_level(logging.ERROR, logger="app.api.integrations"):
-                client = self._make_client()
-                response = client.get(
-                    "/integrations/gmail/callback",
-                    params={"code": "fake-code", "state": "fake-state"},
-                    follow_redirects=False,
-                )
+        ), caplog.at_level(logging.ERROR, logger="app.api.integrations"):
+            response = client.post(COMPLETE, json=_BODY)
 
         assert response.status_code == 500
-        # The logger.exception call emits at ERROR level with exc_info=True.
         error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
-        assert any("Gmail OAuth callback failed" in m for m in error_messages), (
-            f"Expected 'Gmail OAuth callback failed' in logs; got: {error_messages}"
+        assert any("Gmail OAuth connect failed" in m for m in error_messages), (
+            f"Expected 'Gmail OAuth connect failed' in logs; got: {error_messages}"
         )
 
-    def test_still_returns_400_for_value_error(self) -> None:
-        """ValueError (bad state token) continues to return HTTP 400, not 500."""
-        from app.api import integrations as integrations_module
-
+    def test_a_refusal_is_a_400_and_not_logged_as_a_crash(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        refusal = GmailConnectError(GmailConnectFailure.INVALID_STATE, "Invalid OAuth state")
         with patch.object(
-            integrations_module.integration_service,
-            "handle_gmail_callback",
-            new=AsyncMock(side_effect=ValueError("Invalid OAuth state")),
-        ):
-            client = self._make_client()
-            response = client.get(
-                "/integrations/gmail/callback",
-                params={"code": "fake-code", "state": "bad-state"},
-                follow_redirects=False,
-            )
+            integration_service, "complete_gmail_connect", new=AsyncMock(side_effect=refusal),
+        ), caplog.at_level(logging.ERROR, logger="app.api.integrations"):
+            response = client.post(COMPLETE, json=_BODY)
 
         assert response.status_code == 400
-
-    def test_does_not_log_for_value_error(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """ValueError must NOT trigger the logger.exception path."""
-        from app.api import integrations as integrations_module
-
-        with patch.object(
-            integrations_module.integration_service,
-            "handle_gmail_callback",
-            new=AsyncMock(side_effect=ValueError("bad state")),
-        ):
-            with caplog.at_level(logging.ERROR, logger="app.api.integrations"):
-                client = self._make_client()
-                client.get(
-                    "/integrations/gmail/callback",
-                    params={"code": "fake-code", "state": "bad-state"},
-                    follow_redirects=False,
-                )
-
         error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
-        # ValueError should be handled as 400 without logging the full trace
-        assert not any("Gmail OAuth callback failed" in m for m in error_messages), (
-            "ValueError should not trigger the exception logger; "
-            f"got unexpected log messages: {error_messages}"
-        )
+        assert not any("Gmail OAuth connect failed" in m for m in error_messages)
 
 
 # ---------------------------------------------------------------------------
 # Service-layer tests
 # ---------------------------------------------------------------------------
-class TestHandleGmailCallbackServiceLogging:
-    """handle_gmail_callback must log at the failure site before re-raising."""
+class TestCompleteGmailConnectServiceLogging:
+    """complete_gmail_connect must log at the failure site before re-raising."""
 
     @pytest.mark.asyncio
     async def test_logs_fetch_token_failure(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """fetch_token() raising triggers logger.exception in the service layer."""
-        from app.services.integrations import integration_service
-
         class _TokenError(Exception):
             pass
 
@@ -133,19 +104,15 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier", 0),
-            ), patch.object(
-                integration_service,
-                "_require_state_outlives_session_cutoff",
-                new=AsyncMock(),
+                return_value=(str(_USER_ID), str(uuid.uuid4()), "test-code-verifier"),
             ):
                 with caplog.at_level(
                     logging.ERROR,
                     logger="app.services.integrations.integration_service",
                 ):
                     with pytest.raises(_TokenError):
-                        await integration_service.handle_gmail_callback(
-                            code="code", state="state"
+                        await integration_service.complete_gmail_connect(
+                            _USER_ID, code="code", state="state"
                         )
 
         error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
@@ -158,8 +125,6 @@ class TestHandleGmailCallbackServiceLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """upsert_gmail() raising triggers logger.exception in the service layer."""
-        from app.services.integrations import integration_service
-
         class _DbError(Exception):
             pass
 
@@ -176,11 +141,7 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier", 0),
-            ), patch.object(
-                integration_service,
-                "_require_state_outlives_session_cutoff",
-                new=AsyncMock(),
+                return_value=(str(_USER_ID), str(uuid.uuid4()), "test-code-verifier"),
             ):
                 with patch.object(
                     integration_service.integration_repo,
@@ -207,8 +168,8 @@ class TestHandleGmailCallbackServiceLogging:
                             logger="app.services.integrations.integration_service",
                         ):
                             with pytest.raises(_DbError):
-                                await integration_service.handle_gmail_callback(
-                                    code="code", state="state"
+                                await integration_service.complete_gmail_connect(
+                                    _USER_ID, code="code", state="state"
                                 )
 
         error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]

@@ -15,6 +15,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
+import { GOOGLE_ANSWER_QUERY } from "../test-support/googleAuthUrl";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 
 // The waits while an earlier copy is still sending.
@@ -314,7 +315,7 @@ describe("InquiryReplyScreen", () => {
       server.integrations = integrations;
       jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
         server.integrations = [{ provider: "gmail", has_send_scope: true, needs_reauth: false }];
-        return { type: "success", url: "mybookkeeper://oauth-callback?result=connected" };
+        return { type: "success", url: `mybookkeeper://oauth-callback?${GOOGLE_ANSWER_QUERY}` };
       });
       await renderScreen();
       expect(await screen.findByText(words)).toBeTruthy();

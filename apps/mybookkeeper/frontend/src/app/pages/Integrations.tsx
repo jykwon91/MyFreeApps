@@ -1,5 +1,5 @@
 import { formatCount } from "@/shared/utils/count";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
@@ -11,6 +11,10 @@ import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import IntegrationsSkeleton from "@/app/features/integrations/IntegrationsSkeleton";
 import GmailHeaderActions from "@/app/features/integrations/GmailHeaderActions";
+import { useGmailConnectPopupMessages } from "@/app/features/integrations/useGmailConnectPopupMessages";
+import { GMAIL_CONNECT_FAILURE_MESSAGES } from "@mybookkeeper/api-client/constants/gmailConnect";
+import { GMAIL_CONNECT_FAILED_MESSAGE, GMAIL_CONNECTED_TOAST } from "@/shared/lib/gmail-connect-messages";
+import type { GmailConnectMessage } from "@/shared/types/integration/gmail-connect-message";
 import { LoadingButton } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import SyncLogRow from "@/app/features/integrations/SyncLogRow";
@@ -65,14 +69,18 @@ export default function Integrations() {
   const failedCount = useMemo(() => queue.filter((i) => i.status === "failed").length, [queue]);
   const isExtracting = extractingCount > 0;
 
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      if ((event.data as { type?: string })?.type === "gmail_connected") refetch();
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [refetch]);
+  const handlePopupMessage = useCallback(
+    (message: GmailConnectMessage) => {
+      if (message.type === GMAIL_CONNECT_FAILED_MESSAGE) {
+        showError(GMAIL_CONNECT_FAILURE_MESSAGES[message.reason]);
+        return;
+      }
+      refetch();
+      showSuccess(GMAIL_CONNECTED_TOAST);
+    },
+    [refetch, showError, showSuccess],
+  );
+  useGmailConnectPopupMessages(handlePopupMessage);
 
   const handleConnect = useCallback(() => {
     connectGmail()

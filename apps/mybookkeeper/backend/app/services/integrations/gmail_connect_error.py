@@ -2,9 +2,9 @@ from app.core.gmail_connect_failure import GmailConnectFailure
 
 
 class GmailConnectError(ValueError):
-    """A Gmail connection the callback refused to finish, with the reason why.
+    """A Gmail connection the server refused to finish, with the reason why.
 
-    A ``ValueError``, so the website's callback still answers 400 with the message.
+    The route answers with ``failure`` as its ``detail``, so the app can say why.
     """
 
     def __init__(self, failure: GmailConnectFailure, message: str) -> None:

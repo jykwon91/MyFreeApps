@@ -21,11 +21,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.gmail_connect_constants import GMAIL_CONNECT_NOT_ALLOWED_DETAIL
+from app.core.gmail_connect_failure import GmailConnectFailure
 from app.models.organization.organization import Organization
 from app.models.system.auth_event import AuthEvent
 from app.models.user.user import User
 from app.repositories import integration_repo, organization_repo
 from app.services.integrations import integration_service
+from app.services.integrations.gmail_connect_error import GmailConnectError
 from app.services.integrations.gmail_connect_not_allowed_error import GmailConnectNotAllowedError
 from app.services.organization import organization_service
 
@@ -177,7 +179,7 @@ async def test_lock_member_finds_only_a_current_membership(
 
 @pytest.fixture
 def finish_connect(db: AsyncSession, same_session) -> Iterator[MagicMock]:
-    """Run ``handle_gmail_callback`` to the save, with Google's side mocked."""
+    """Run ``complete_gmail_connect`` to the save, with Google's side mocked."""
     creds = MagicMock(
         token="ya29.new",
         refresh_token="rt-new",
@@ -188,7 +190,6 @@ def finish_connect(db: AsyncSession, same_session) -> Iterator[MagicMock]:
     with (
         patch.object(integration_service, "_get_flow", return_value=MagicMock(credentials=creds)),
         patch.object(integration_service, "_verify_oauth_state", state),
-        patch.object(integration_service, "_require_state_outlives_session_cutoff", new=AsyncMock()),
         patch.object(
             integration_service.gmail_mailbox, "address_of_new_connection",
             new=AsyncMock(return_value="host@gmail.com"),
@@ -198,7 +199,7 @@ def finish_connect(db: AsyncSession, same_session) -> Iterator[MagicMock]:
 
 
 def _started_by(state: MagicMock, org: Organization, user: User) -> None:
-    state.return_value = (str(user.id), str(org.id), "verifier", 0)
+    state.return_value = (str(user.id), str(org.id), "verifier")
 
 
 @pytest.mark.asyncio
@@ -208,7 +209,7 @@ async def test_a_connect_finished_by_a_current_member_is_saved(
     await _join(db, test_org, member, "admin", test_user)
     _started_by(finish_connect, test_org, member)
 
-    await integration_service.handle_gmail_callback("code", "state")
+    await integration_service.complete_gmail_connect(member.id, "code", "state")
 
     [saved] = await integration_repo.list_by_org(db, test_org.id)
     assert (saved.user_id, saved.gmail_address) == (member.id, "host@gmail.com")
@@ -230,6 +231,22 @@ async def test_a_connect_finished_after_losing_access_saves_nothing(
         await db.flush()
 
     with pytest.raises(GmailConnectNotAllowedError, match=re.escape(GMAIL_CONNECT_NOT_ALLOWED_DETAIL)):
-        await integration_service.handle_gmail_callback("code", "state")
+        await integration_service.complete_gmail_connect(member.id, "code", "state")
 
+    assert await integration_repo.list_by_org(db, test_org.id) == []
+
+
+@pytest.mark.asyncio
+async def test_a_connect_finished_by_someone_else_saves_nothing(
+    db: AsyncSession, test_user: User, test_org: Organization, member: User, finish_connect,
+) -> None:
+    """The member starts it and passes Google's consent link on; the owner, signed in,
+    finishes it. Their Gmail must not land in the workspace under the member's name."""
+    await _join(db, test_org, member, "admin", test_user)
+    _started_by(finish_connect, test_org, member)
+
+    with pytest.raises(GmailConnectError) as refused:
+        await integration_service.complete_gmail_connect(test_user.id, "code", "state")
+
+    assert refused.value.failure is GmailConnectFailure.WRONG_ACCOUNT
     assert await integration_repo.list_by_org(db, test_org.id) == []

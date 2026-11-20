@@ -5,7 +5,7 @@ import api from "@platform/core/lib/api";
 import type { AxiosAdapter } from "axios";
 import { applyIntegrationsWrite } from "./applyIntegrationsWrite";
 import type { FakeIntegrationsServer } from "./FakeIntegrationsServer";
-import { GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
+import { GMAIL_COMPLETE_URL, GMAIL_CONNECT_URL, GOOGLE_AUTH_URL } from "./googleAuthUrl";
 import type { IntegrationsRoute } from "./IntegrationsRoute";
 
 export function aGmail(overrides: Partial<Integration> = {}): Integration {
@@ -67,6 +67,7 @@ export function startIntegrationsServer(overrides: Partial<FakeIntegrationsServe
       return respond({}, 404);
     }
     server.requests.push(config);
+    if (url === GMAIL_COMPLETE_URL) return outcome("complete", null);
     if (server.failures.write) return outcome("write", {});
     return outcome("write", applyIntegrationsWrite(server, method, url, config.data));
   };
