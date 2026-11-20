@@ -121,8 +121,10 @@ async def place_order(
                 f"Drop is not currently accepting orders (status={drop.status!r}).",
             )
 
-        # 2. Slot must exist and belong to the drop.
-        slot = await drop_repo.get_slot(db, slot_id)
+        # 2. Slot must exist and belong to the drop. The slot row stays locked
+        # until commit, so concurrent orders for it serialize and the capacity
+        # check below always counts every order committed before this one.
+        slot = await drop_repo.get_slot(db, slot_id, for_update=True)
         if slot is None:
             raise SlotNotFoundError(f"Slot {slot_id} not found")
         if slot.drop_id != drop_id:

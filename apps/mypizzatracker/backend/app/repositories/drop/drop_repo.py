@@ -89,8 +89,19 @@ async def create_slot(db: AsyncSession, drop_id: uuid.UUID, data: dict) -> Slot:
     return slot
 
 
-async def get_slot(db: AsyncSession, slot_id: uuid.UUID) -> Optional[Slot]:
+async def get_slot(
+    db: AsyncSession, slot_id: uuid.UUID, *, for_update: bool = False,
+) -> Optional[Slot]:
+    """``for_update`` locks the slot row until the transaction ends.
+
+    Capacity writers take this lock before counting the slot's pizzas, so
+    two orders racing for the last places in a slot run one after the other.
+    The locked read also refreshes a slot the session already loaded, so
+    ``max_pizzas`` is the committed value at lock time.
+    """
     stmt = select(Slot).where(Slot.id == slot_id)
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
