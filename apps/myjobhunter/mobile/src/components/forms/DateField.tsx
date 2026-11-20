@@ -5,16 +5,18 @@ import { isoDateToDate } from "../../lib/isoDateToDate";
 import type { DateFieldProps } from "../../types/DateFieldProps";
 import PickerField from "./PickerField";
 
-/** A calendar day, no earlier than `minimumDate` when one is given. */
-export default function DateField({ label, value, onChange, minimumDate, required, error, disabled }: DateFieldProps) {
+/** A calendar day, between `minimumDate` and `maximumDate` when they're given. */
+export default function DateField({ label, value, onChange, minimumDate, maximumDate, required, error, disabled }: DateFieldProps) {
   const pickerDate = value ? isoDateToDate(value) : new Date();
   const earliest = minimumDate ? isoDateToDate(minimumDate) : undefined;
+  const latest = maximumDate ? isoDateToDate(maximumDate) : undefined;
   const pick = (date: Date) => onChange(dateToIsoDate(date));
   return (
     <PickerField
       disabled={disabled}
       error={error}
       label={label}
+      maximumDate={latest}
       minimumDate={earliest}
       mode="date"
       onClear={() => onChange("")}
@@ -24,6 +26,7 @@ export default function DateField({ label, value, onChange, minimumDate, require
           mode: "date",
           value: pickerDate,
           minimumDate: earliest,
+          maximumDate: latest,
           onChange: (event, day) => {
             if (event.type === "set" && day) pick(day);
           },

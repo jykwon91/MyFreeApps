@@ -23,6 +23,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { X } from "lucide-react";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
+import { emptyAddApplicationFormValues } from "@myjobhunter/api-client/utils/emptyAddApplicationFormValues";
 import { useAddApplicationFlow } from "./add-application-dialog/useAddApplicationFlow";
 import PasteLinkStep from "./add-application-dialog/PasteLinkStep";
 import PasteTextStep from "./add-application-dialog/PasteTextStep";
@@ -46,12 +47,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     watch,
   } = useForm<AddApplicationFormValues>({
     resolver: addApplicationFormResolver,
-    defaultValues: {
-      role_title: "",
-      location: "",
-      remote_type: "unknown",
-      notes: "",
-    },
+    defaultValues: emptyAddApplicationFormValues(),
   });
 
   const flow = useAddApplicationFlow({ setValue });
@@ -61,7 +57,8 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   // -------------------------------------------------------------------------
   function handleOpenChange(next: boolean) {
     if (!next) {
-      resetForm();
+      // Fresh values, so a dialog reopened after midnight defaults to the new today.
+      resetForm(emptyAddApplicationFormValues());
       flow.reset();
     }
     onOpenChange(next);

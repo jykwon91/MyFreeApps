@@ -1,13 +1,15 @@
 import { addApplicationFormCounters } from "@myjobhunter/api-client/utils/addApplicationFormCounters";
 import type { RemoteType } from "@myjobhunter/api-client/types/application/remote-type";
 import { FormField, LoadingButton, OptionSheet, PickerField } from "@platform/mobile";
+import { localToday } from "@platform/core/utils/localToday";
 import { useState } from "react";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT, REMOTE_TYPE_OPTIONS } from "../../constants/addApplication";
 import type { ReviewStepProps } from "../../types/ReviewStepProps";
+import DateField from "../../components/forms/DateField";
 import CompanyField from "./CompanyField";
 import ReviewSummary from "./ReviewSummary";
 
-/** The form to check and save: company, role, location, remote and notes, as on the website. */
+/** The form to check and save: company, role, location, remote, the day applied and notes, as on the website. */
 export default function ReviewStep({ review, values, errors, onEdit, onChangeCompany, onSave, isSaving, isLocked }: ReviewStepProps) {
   const [isRemoteOpen, setIsRemoteOpen] = useState(false);
   const locked = isSaving || isLocked;
@@ -39,6 +41,15 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         value={values.location}
       />
       <PickerField disabled={locked} label={MESSAGES.remoteLabel} onPress={() => setIsRemoteOpen(true)} valueLabel={remoteLabel} />
+      <DateField
+        disabled={locked}
+        error={errors.applied_on}
+        label={MESSAGES.appliedOnLabel}
+        maximumDate={localToday()}
+        onChange={(day) => onEdit("applied_on", day)}
+        required
+        value={values.applied_on}
+      />
       <FormField
         editable={!locked}
         counter={counters.notes}

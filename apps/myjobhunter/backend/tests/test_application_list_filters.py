@@ -20,6 +20,7 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.application.application import Application
 from app.models.company.company import Company
 
 
@@ -250,15 +251,19 @@ class TestSinceFilter:
     async def test_since_null_applied_at_excluded(
         self, db: AsyncSession, user_factory, as_user,
     ) -> None:
-        """Applications with null applied_at are excluded when since is set."""
+        """Applications with null applied_at are excluded when since is set.
+
+        POST /applications always stores applied_at now, so the row stands in
+        for one saved before it did, inserted directly.
+        """
         user = await user_factory()
-        company = await _create_company(db, uuid.UUID(user["id"]), "Corp")
+        user_id = uuid.UUID(user["id"])
+        company = await _create_company(db, user_id, "Corp")
         cutoff = _dt.datetime(2025, 1, 1, tzinfo=_dt.timezone.utc)
+        db.add(Application(user_id=user_id, company_id=company.id, role_title="Legacy", applied_at=None))
+        await db.flush()
 
         async with await as_user(user) as authed:
-            # applied_at is null (default).
-            await authed.post("/applications", json=_app_payload(company.id))
-
             list_resp = await authed.get(f"/applications?since={_encode_dt(cutoff)}")
 
         assert list_resp.status_code == 200, list_resp.text

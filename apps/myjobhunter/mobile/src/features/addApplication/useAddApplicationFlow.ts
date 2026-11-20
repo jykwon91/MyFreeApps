@@ -11,6 +11,7 @@ import { addApplicationFormProblems } from "@myjobhunter/api-client/utils/addApp
 import { buildApplicationCreateRequest } from "@myjobhunter/api-client/utils/buildApplicationCreateRequest";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
+import { emptyAddApplicationFormValues } from "@myjobhunter/api-client/utils/emptyAddApplicationFormValues";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
@@ -20,7 +21,7 @@ import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useRef, useState } from "react";
-import { ADD_APPLICATION_MESSAGES as MESSAGES, EMPTY_ADD_APPLICATION_FORM } from "../../constants/addApplication";
+import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import { htmlTextContent } from "../../lib/htmlTextContent";
 import { createFailure } from "../../lib/writeFailure";
 import { urlHostname } from "../../lib/urlHostname";
@@ -53,7 +54,7 @@ export function useAddApplicationFlow() {
   const [failure, setFailure] = useState<string | null>(null);
   // Null until the source is read, or a company is chosen for one typed in by hand.
   const [review, setReview] = useState<AddApplicationReview | null>(null);
-  const [values, setValues] = useState<AddApplicationFormValues>(EMPTY_ADD_APPLICATION_FORM);
+  const [values, setValues] = useState<AddApplicationFormValues>(emptyAddApplicationFormValues);
   const [submittedJdText, setSubmittedJdText] = useState("");
   const [hasTried, setHasTried] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +97,7 @@ export function useAddApplicationFlow() {
   }
 
   function prefill(next: Partial<AddApplicationFormValues>): void {
-    setValues({ ...EMPTY_ADD_APPLICATION_FORM, ...next });
+    setValues({ ...emptyAddApplicationFormValues(), ...next });
   }
 
   /** The company a read posting names: tracked, added now, or left to fix. Null once the screen has gone. */

@@ -128,12 +128,11 @@ async def create_application(
     persisting. Raises :class:`CompanyNotOwnedError` if not — the route
     handler maps this to HTTP 422 with a generic detail message.
 
-    Automatically logs an ``applied`` event after the application row is
-    created, using ``applied_at`` from the request as the ``occurred_at``
-    (falling back to ``datetime.now(UTC)`` when not supplied). This ensures
-    every newly-created application has a baseline status in the event log
-    so ``latest_status`` in the list endpoint is never ``None`` for a brand-
-    new application.
+    ``applied_at`` is the request's, or now when it's left out (older phone
+    builds don't send it), so a new application is never stored without one.
+    The same moment dates the ``applied`` event logged alongside it, so every
+    new application has a baseline status in the event log (``latest_status``
+    is never ``None``) and a stage change dated after the day applied wins.
 
     Commits at the end so the write survives the request lifecycle —
     ``get_db`` does NOT auto-commit (see ``platform_shared.db.session``),
@@ -144,6 +143,8 @@ async def create_application(
         raise CompanyNotOwnedError(
             f"Company {request.company_id} not found under user {user_id}",
         )
+
+    applied_at = request.applied_at or _dt.datetime.now(_dt.timezone.utc)
 
     # ``url`` is typed as Pydantic ``AnyHttpUrl`` for input validation.
     # In Pydantic v2 that's a ``Url`` wrapper object — NOT a str
@@ -159,7 +160,7 @@ async def create_application(
         jd_text=request.jd_text,
         jd_parsed=request.jd_parsed,
         source=request.source,
-        applied_at=request.applied_at,
+        applied_at=applied_at,
         posted_salary_min=request.posted_salary_min,
         posted_salary_max=request.posted_salary_max,
         posted_salary_currency=request.posted_salary_currency,
@@ -174,14 +175,11 @@ async def create_application(
     )
     application = await application_repository.create(db, application)
 
-    # Auto-log the initial "applied" event so latest_status is never None
-    # for a freshly-created application. The occurred_at mirrors applied_at
-    # (user-supplied submission date) or falls back to now.
     initial_event = ApplicationEvent(
         user_id=user_id,
         application_id=application.id,
         event_type="applied",
-        occurred_at=request.applied_at or _dt.datetime.now(_dt.timezone.utc),
+        occurred_at=applied_at,
         source="system",
     )
     await application_event_repository.create(db, initial_event)

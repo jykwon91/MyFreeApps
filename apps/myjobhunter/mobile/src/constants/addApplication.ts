@@ -1,5 +1,4 @@
 import type { RemoteType } from "@myjobhunter/api-client/types/application/remote-type";
-import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import type { AddApplicationSource } from "../types/AddApplicationSource";
 
 /** Copy for adding an application: where it comes from, the review form, and the company picker. */
@@ -44,6 +43,7 @@ export const ADD_APPLICATION_MESSAGES = {
   locationPlaceholder: "e.g. SF, NYC, Remote-EU",
   remoteLabel: "Remote",
   remoteTitle: "Remote, hybrid or on site?",
+  appliedOnLabel: "Applied on",
   notesLabel: "Notes",
   notesPlaceholder: "Anything to remember about this role…",
   save: "Add application",
@@ -76,13 +76,6 @@ export const REMOTE_TYPE_OPTIONS: readonly { value: RemoteType; label: string }[
   { value: "hybrid", label: "Hybrid" },
   { value: "onsite", label: "Onsite" },
 ];
-
-export const EMPTY_ADD_APPLICATION_FORM: AddApplicationFormValues = {
-  role_title: "",
-  location: "",
-  remote_type: "unknown",
-  notes: "",
-};
 
 /** Placeholder rows while the company list loads. */
 export const COMPANY_PICKER_SKELETON_ROWS = ["a", "b", "c", "d", "e"] as const;

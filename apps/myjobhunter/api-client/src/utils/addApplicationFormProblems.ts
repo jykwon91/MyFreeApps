@@ -7,6 +7,7 @@ import { APPLICATION_NOTES_MAX_LENGTH } from "../constants/textFieldLimits";
 import type { AddApplicationFormProblems } from "../types/application/add-application-form-problems";
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
 import { textLength } from "@platform/core/utils/textLength";
+import { isLocalDateInFuture } from "./isLocalDateInFuture";
 
 /** What stops the form saving, checked against what is sent (trimmed). Empty when it can be saved. */
 export function addApplicationFormProblems(values: AddApplicationFormValues): AddApplicationFormProblems {
@@ -16,5 +17,7 @@ export function addApplicationFormProblems(values: AddApplicationFormValues): Ad
   else if (textLength(roleTitle) > ROLE_TITLE_MAX_LENGTH) problems.role_title = PROBLEMS.roleTitleTooLong;
   if (textLength(values.location.trim()) > LOCATION_MAX_LENGTH) problems.location = PROBLEMS.locationTooLong;
   if (textLength(values.notes.trim()) > APPLICATION_NOTES_MAX_LENGTH) problems.notes = PROBLEMS.notesTooLong;
+  if (!values.applied_on) problems.applied_on = PROBLEMS.appliedOnRequired;
+  else if (isLocalDateInFuture(values.applied_on)) problems.applied_on = PROBLEMS.appliedOnInFuture;
   return problems;
 }

@@ -11,9 +11,11 @@
  */
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { showError, showSuccess } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
+import { ADD_APPLICATION_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/companyFieldLimits";
 import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
@@ -890,6 +892,76 @@ describe("AddApplicationDialog — review form validation", () => {
     expect(await screen.findByText("Role title is required")).toBeInTheDocument();
     expect(mockCreateApp).not.toHaveBeenCalled();
     expect(vi.mocked(showError)).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review form — "Applied on" day
+// ---------------------------------------------------------------------------
+
+describe("AddApplicationDialog — applied on", () => {
+  let mockCreateApp: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
+    );
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+    mockUseCreateCompanyMutation.mockReturnValue([
+      vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({ id: "co-manual", name: "Acme Corp" }) }),
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useCreateCompanyMutation>);
+    mockCreateApp = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({ id: "app-1" }) });
+    mockUseCreateApplicationMutation.mockReturnValue(
+      [mockCreateApp, { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+    );
+  });
+
+  async function openManualReview(user: ReturnType<typeof userEvent.setup>) {
+    renderDialog();
+    await user.click(screen.getByText(/adding manually\? type a company name/i));
+    await user.type(screen.getByLabelText(/company name/i), "Acme Corp");
+    await user.keyboard("{Enter}");
+    await screen.findByText(/review and adjust before saving/i);
+    await user.type(screen.getByPlaceholderText(/senior backend engineer/i), "Engineer");
+  }
+
+  function appliedOnInput(): HTMLInputElement {
+    return screen.getByLabelText(/applied on/i) as HTMLInputElement;
+  }
+
+  it("defaults to today and can't be set past it", async () => {
+    const user = userEvent.setup();
+    await openManualReview(user);
+    expect(appliedOnInput().value).toBe(localToday());
+    expect(appliedOnInput().max).toBe(localToday());
+  });
+
+  it("refuses a day in the future and sends nothing", async () => {
+    const user = userEvent.setup();
+    await openManualReview(user);
+    fireEvent.change(appliedOnInput(), { target: { value: "2999-01-01" } });
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.appliedOnInFuture)).toBeInTheDocument();
+    expect(mockCreateApp).not.toHaveBeenCalled();
+  });
+
+  it("sends a backdated day as applied_at at that day's local midnight", async () => {
+    const user = userEvent.setup();
+    await openManualReview(user);
+    fireEvent.change(appliedOnInput(), { target: { value: "2026-01-05" } });
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+
+    await waitFor(() => {
+      expect(mockCreateApp).toHaveBeenCalledWith(
+        expect.objectContaining({ company_id: "co-manual", applied_at: new Date(2026, 0, 5).toISOString() }),
+      );
+    });
   });
 });
 

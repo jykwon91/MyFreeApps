@@ -26,4 +26,6 @@ export const ADD_APPLICATION_FORM_PROBLEMS = {
   notesTooLong: `Keep the notes to ${APPLICATION_NOTES_MAX_LENGTH} characters.`,
   jobUrlTooLong: `That link is longer than ${JOB_URL_MAX_LENGTH} characters, which is more than can be read.`,
   jdTextTooLong: `Keep the job description to ${JD_TEXT_MAX_LENGTH.toLocaleString("en-US")} characters.`,
+  appliedOnRequired: "Choose the day you applied",
+  appliedOnInFuture: "The day you applied can't be in the future.",
 } as const;
