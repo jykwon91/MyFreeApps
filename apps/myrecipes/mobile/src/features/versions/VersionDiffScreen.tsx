@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { VERSION_DIFF_MESSAGES as MESSAGES } from "../../constants/versions";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
-import { isDiffRetryable } from "../../utils/isDiffRetryable";
+import { isDiffRetryable } from "@myrecipes/api-client/utils/isDiffRetryable";
 import { diffBackTitle } from "../../utils/diffBackTitle";
 import { goBackOrOpenRecipe } from "../../utils/goBackOrOpenRecipe";
 import VersionDiffContent from "./VersionDiffContent";

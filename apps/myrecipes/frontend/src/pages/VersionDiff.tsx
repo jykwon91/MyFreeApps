@@ -3,7 +3,7 @@ import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
-import { isRetryableDiffError } from "@myrecipes/api-client/utils/isRetryableDiffError";
+import { isDiffRetryable } from "@myrecipes/api-client/utils/isDiffRetryable";
 import { diffErrorMessage } from "@myrecipes/api-client/utils/diffErrorMessage";
 import { diffSummary } from "@myrecipes/api-client/utils/diffSummary";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
@@ -65,7 +65,7 @@ export default function VersionDiff() {
           heading={VERSION_COPY.loadFailedHeading}
           body={diffErrorMessage(error)}
           action={
-            isRetryableDiffError(error)
+            isDiffRetryable(error)
               ? { label: "Try again", onClick: () => void refetch(), loading: isFetching }
               : { label: "Back to recipe", onClick: () => navigate(`/recipes/${recipeId}`) }
           }

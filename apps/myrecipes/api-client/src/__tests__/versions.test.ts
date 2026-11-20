@@ -103,6 +103,7 @@ describe("diffErrorMessage", () => {
   it("falls back to the general message otherwise", () => {
     expect(diffErrorMessage({ status: 500 })).toBe(VERSION_COPY.loadFailedBody);
     expect(diffErrorMessage(undefined)).toBe(VERSION_COPY.loadFailedBody);
+    expect(VERSION_COPY.loadFailedBody).toBe("Something went wrong loading this comparison. Try again in a moment.");
   });
 
   it("says the server can't be reached when no answer came back", () => {

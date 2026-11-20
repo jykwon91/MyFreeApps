@@ -4,6 +4,9 @@ import type { DiffChangeKind } from "../types/recipe/diff";
 /** How many versions a comparison takes. */
 export const COMPARE_VERSION_COUNT = 2;
 
+/** Statuses where asking for a comparison again can't help: a bad id in the link, or a recipe or version that's gone. */
+export const DIFF_PERMANENT_ERROR_STATUSES: readonly number[] = [400, 404, 422];
+
 /** The version timeline and diff (GET /recipes/{id}/versions, .../diff), worded the same on the website and the phone. */
 export const VERSION_COPY = {
   latest: "latest",
@@ -20,7 +23,7 @@ export const VERSION_COPY = {
   noIngredientChanges: "No ingredient changes.",
   noStepChanges: "No step changes.",
   loadFailedHeading: "Couldn't load this comparison",
-  loadFailedBody: "One of these versions may not exist. Go back and pick two versions to compare.",
+  loadFailedBody: "Something went wrong loading this comparison. Try again in a moment.",
   recipeOrVersionGone: "This recipe or one of its versions no longer exists.",
   notInRecipe: "One of these versions isn't part of this recipe, or no longer exists. Go back and pick two versions to compare.",
   invalidLink: "This link isn't valid. Go back and pick two versions to compare.",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isNotFoundError } from "../utils/isNotFoundError";
-import { isRetryableDiffError } from "../utils/isRetryableDiffError";
+import { isDiffRetryable } from "../utils/isDiffRetryable";
 
 describe("isNotFoundError", () => {
   it.each([404, 422])("is true for a %i", (status) => {
@@ -15,12 +15,12 @@ describe("isNotFoundError", () => {
   );
 });
 
-describe("isRetryableDiffError", () => {
+describe("isDiffRetryable", () => {
   it.each([[{ status: 500 }], [{ status: "FETCH_ERROR" }], [undefined]])("is true for %j", (error) => {
-    expect(isRetryableDiffError(error)).toBe(true);
+    expect(isDiffRetryable(error)).toBe(true);
   });
 
   it.each([400, 404, 422])("is false for a %i: asking again gets the same answer", (status) => {
-    expect(isRetryableDiffError({ status })).toBe(false);
+    expect(isDiffRetryable({ status })).toBe(false);
   });
 });
