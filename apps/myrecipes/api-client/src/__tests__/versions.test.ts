@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
-import { DIFF_CHANGE_DISPLAY, VERSION_COPY } from "../constants/versions";
+import { DIFF_CHANGE_DISPLAY, VERSION_COPY, VERSION_DIFF_FIELD_LABELS } from "../constants/versions";
 import type { DiffResponse } from "../types/recipe/diff";
 import { diffErrorMessage } from "../utils/diffErrorMessage";
 import { diffSummary } from "../utils/diffSummary";
+import { fieldChangeValue } from "../utils/fieldChangeValue";
 import { ingredientChangeLine } from "../utils/ingredientChangeLine";
 import { newestFirst } from "../utils/newestFirst";
 import { orderForCompare } from "../utils/orderForCompare";
@@ -18,6 +19,7 @@ function diff(patch: Partial<DiffResponse> = {}): DiffResponse {
     from_version_number: 1,
     to_version_id: "v2",
     to_version_number: 2,
+    field_changes: [],
     ingredient_changes: [],
     step_changes: [],
     ...patch,
@@ -39,6 +41,7 @@ describe("diffSummary", () => {
       fromLabel: "v1",
       toLabel: "v2",
       title: "v1 to v2",
+      fieldCount: 0,
       ingredientCount: 2,
       stepCount: 1,
       total: 3,
@@ -50,6 +53,21 @@ describe("diffSummary", () => {
   it("says one change in the singular", () => {
     const summary = diffSummary(diff({ step_changes: [{ position: 1, change: "added", before: null, after: "Stir." }] }));
     expect(summary.subtitle).toBe("1 change — 0 ingredients, 1 step.");
+  });
+
+  it("counts a servings or time change, so a tweak that only changes those isn't identical", () => {
+    const summary = diffSummary(
+      diff({
+        field_changes: [
+          { field: "servings", before: "4", after: "8" },
+          { field: "cook_minutes", before: 30, after: 45 },
+        ],
+      }),
+    );
+    expect(summary.isIdentical).toBe(false);
+    expect(summary.fieldCount).toBe(2);
+    expect(summary.total).toBe(2);
+    expect(summary.subtitle).toBe("2 changes — 2 details, 0 ingredients, 0 steps.");
   });
 
   it("calls two versions with nothing between them identical", () => {
@@ -122,6 +140,26 @@ describe("ingredientChangeLine", () => {
   it("shows a fractional quantity in the given decimal separator", () => {
     const change = { lineage_key: "a", change: "added" as const, before: null, after: { ...SALT, quantity: 1.5 } };
     expect(ingredientChangeLine(change, "after", ",")).toBe("1,5 tsp salt");
+  });
+});
+
+describe("fieldChangeValue", () => {
+  it("shows servings as typed and minutes as a cook reads them", () => {
+    expect(fieldChangeValue({ field: "servings", before: "4", after: "8" }, "after")).toBe("8");
+    expect(fieldChangeValue({ field: "cook_minutes", before: 30, after: 90 }, "before")).toBe("30 min");
+    expect(fieldChangeValue({ field: "cook_minutes", before: 30, after: 90 }, "after")).toBe("1 hr 30 min");
+  });
+
+  it("shows an empty side as a dash, and zero minutes as zero, not empty", () => {
+    expect(fieldChangeValue({ field: "servings", before: null, after: "4" }, "before")).toBe("—");
+    expect(fieldChangeValue({ field: "prep_minutes", before: 10, after: null }, "after")).toBe("—");
+    expect(fieldChangeValue({ field: "prep_minutes", before: null, after: 0 }, "after")).toBe("0 min");
+  });
+});
+
+describe("VERSION_DIFF_FIELD_LABELS", () => {
+  it("names every field the diff compares", () => {
+    expect(VERSION_DIFF_FIELD_LABELS).toEqual({ servings: "Servings", prep_minutes: "Prep time", cook_minutes: "Cook time" });
   });
 });
 

@@ -1,5 +1,6 @@
 import type { DiffChangeDisplay } from "../types/recipe/diff-change-display";
 import type { DiffChangeKind } from "../types/recipe/diff";
+import type { VersionDiffField } from "../types/recipe/version-diff-field";
 
 /** How many versions a comparison takes. */
 export const COMPARE_VERSION_COUNT = 2;
@@ -17,7 +18,9 @@ export const VERSION_COPY = {
   to: "to",
   noDifferences: "No differences between these versions.",
   identicalHeading: "Identical",
-  identicalBody: "These two versions have the same ingredients and steps.",
+  identicalBody: "These two versions have the same servings, times, ingredients and steps.",
+  details: "Details",
+  emptyValue: "—",
   ingredients: "Ingredients",
   steps: "Steps",
   noIngredientChanges: "No ingredient changes.",
@@ -37,4 +40,11 @@ export const DIFF_CHANGE_DISPLAY: Record<DiffChangeKind, DiffChangeDisplay> = {
   added: { label: "Added", symbol: "+" },
   removed: { label: "Removed", symbol: "−" },
   changed: { label: "Changed", symbol: "~" },
+};
+
+/** What each per-version field is called in a diff: "Cook time: 30 min → 45 min". */
+export const VERSION_DIFF_FIELD_LABELS: Record<VersionDiffField, string> = {
+  servings: "Servings",
+  prep_minutes: "Prep time",
+  cook_minutes: "Cook time",
 };

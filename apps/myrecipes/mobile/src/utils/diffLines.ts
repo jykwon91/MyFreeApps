@@ -1,12 +1,21 @@
+import { VERSION_DIFF_FIELD_LABELS } from "@myrecipes/api-client/constants/versions";
 import type { DiffResponse } from "@myrecipes/api-client/types/recipe/diff";
+import { fieldChangeValue } from "@myrecipes/api-client/utils/fieldChangeValue";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
 import { deviceDecimalSeparator } from "@platform/mobile";
 import type { DiffLines } from "../types/DiffLines";
 
-/** A diff's ingredient and step changes as text, keyed as the website keys them. */
+/** A diff's servings/time, ingredient and step changes as text, keyed as the website keys them. */
 export function diffLines(diff: DiffResponse): DiffLines {
   const decimalSeparator = deviceDecimalSeparator();
   return {
+    fields: diff.field_changes.map((change) => ({
+      key: change.field,
+      change: "changed",
+      label: VERSION_DIFF_FIELD_LABELS[change.field],
+      before: fieldChangeValue(change, "before"),
+      after: fieldChangeValue(change, "after"),
+    })),
     ingredients: diff.ingredient_changes.map((change) => ({
       key: change.lineage_key,
       change: change.change,

@@ -391,8 +391,8 @@ async def diff_public_versions(
 
     None for a missing/soft-deleted recipe or a ``version_id`` that isn't part
     of it. Raises InvalidBaseVersionError (route -> 400) when an explicit
-    ``against`` isn't a version of this recipe. Diffs expose only ingredient/
-    step content — no cook data — so no viewer gating is required.
+    ``against`` isn't a version of this recipe. Diffs expose only version
+    content — no cook data — so no viewer gating is required.
     """
     recipe = await recipe_repository.get_public_by_id(db, recipe_id)
     if recipe is None:
@@ -427,6 +427,7 @@ async def diff_public_versions(
         from_version_number=from_version.version_number if from_version else None,
         to_version_id=to_version.id,
         to_version_number=to_version.version_number,
+        field_changes=version_diff.diff_fields(from_version, to_version),
         ingredient_changes=version_diff.diff_ingredients(from_ingredients, to_ingredients),
         step_changes=version_diff.diff_steps(from_steps, to_steps),
     )

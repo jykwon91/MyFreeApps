@@ -2,17 +2,18 @@ import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom"
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
-import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
+import { VERSION_COPY, VERSION_DIFF_FIELD_LABELS } from "@myrecipes/api-client/constants/versions";
 import { isDiffRetryable } from "@myrecipes/api-client/utils/isDiffRetryable";
 import { diffErrorMessage } from "@myrecipes/api-client/utils/diffErrorMessage";
 import { diffSummary } from "@myrecipes/api-client/utils/diffSummary";
+import { fieldChangeValue } from "@myrecipes/api-client/utils/fieldChangeValue";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import DiffRow from "@/features/recipes/DiffRow";
 
 /**
- * The version diff — the signature screen. Renders ingredient_changes and
- * step_changes between two versions so "what changed and did it get better" is
+ * The version diff — the signature screen. Renders field_changes (servings,
+ * prep and cook time), ingredient_changes and step_changes between two versions so "what changed and did it get better" is
  * obvious at a glance: additions in green, removals in red, edits as
  * before -> after in amber.
  */
@@ -97,6 +98,23 @@ export default function VersionDiff() {
         />
       ) : (
         <div className="space-y-6">
+          {data.field_changes.length > 0 ? (
+            <section className="bg-card border rounded-lg p-6">
+              <h2 className="text-base font-medium mb-3">{VERSION_COPY.details}</h2>
+              <ul className="space-y-2">
+                {data.field_changes.map((change) => (
+                  <DiffRow
+                    key={change.field}
+                    change="changed"
+                    label={VERSION_DIFF_FIELD_LABELS[change.field]}
+                    before={fieldChangeValue(change, "before")}
+                    after={fieldChangeValue(change, "after")}
+                  />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <section className="bg-card border rounded-lg p-6">
             <h2 className="text-base font-medium mb-3">{VERSION_COPY.ingredients}</h2>
             {data.ingredient_changes.length === 0 ? (
