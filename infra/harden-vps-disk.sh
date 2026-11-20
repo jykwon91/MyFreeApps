@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent host hardening to stop the shared 24GB droplet from filling up.
+# Idempotent host hardening for the shared prod droplet (2 vCPU / 4GB RAM / 25GB root disk).
 #
 # Usage:
 #   sudo bash infra/harden-vps-disk.sh
@@ -15,12 +15,24 @@
 # (infra/templates/.github/workflows/deploy.yml.j2). This script handles the
 # two host-daemon configs that a deploy step cannot reach.
 #
+# Two memory/boot gaps caused the 2026-11-20 outage:
+#   3. No swap. The host idles at ~3.5GB used across ~20 containers, so any burst
+#      exhausted RAM and the kernel evicted the page cache holding program code
+#      (100% disk reads, 95% system CPU — a thrash that stalled every app).
+#   4. Host caddy.service (terminates TLS for every app) came up `inactive` +
+#      `disabled` after a power cycle, taking every site down until someone ran
+#      `systemctl enable --now caddy`. Second occurrence (also June).
+#
 # What this script does (each step is idempotent + a no-op when already set):
 #   1. /etc/docker/daemon.json — set json-file logging with rotation
 #      (max-size 10m, max-file 3). MERGES with any existing keys (notably
 #      `data-root`) instead of clobbering. Restarts dockerd only if changed.
 #   2. /etc/systemd/journald.conf — set SystemMaxUse=200M. Restarts
 #      systemd-journald only if changed.
+#   3. /swapfile (SWAP_SIZE_MB) — fallocate (dd fallback), chmod 600, mkswap,
+#      swapon, persisted once in /etc/fstab; plus vm.swappiness in
+#      /etc/sysctl.d/99-swap.conf. No restarts.
+#   4. caddy.service — `systemctl enable --now` only when not enabled/active.
 #
 # Re-running is safe: if both configs already match, the script makes no
 # change and restarts nothing. Run it on every (re-)provision of a host so a
@@ -38,6 +50,17 @@ JOURNALD_CONF="/etc/systemd/journald.conf"
 LOG_MAX_SIZE="10m"
 LOG_MAX_FILE="3"
 JOURNALD_MAX_USE="200M"
+# Root disk is only 25GB, so keep swap small. 2GiB is enough to absorb bursts
+# and park idle anonymous pages without eating meaningful disk.
+SWAPFILE="/swapfile"
+SWAP_SIZE_MB=2048
+FSTAB="/etc/fstab"
+SWAPPINESS_CONF="/etc/sysctl.d/99-swap.conf"
+# 20 (kernel default is 60): prefer paging out idle anonymous memory (containers'
+# cold heaps) over evicting the page cache that holds program code, while still
+# letting the kernel use swap before the OOM killer. Low enough to avoid eager
+# swapping, high enough that swap is actually used under pressure.
+SWAPPINESS=20
 
 CHECK_ONLY=0
 for arg in "$@"; do
@@ -71,7 +94,7 @@ JOURNALD_CHANGED=0
 # ──────────────────────────────────────────────────────────────────────────
 # 1. Docker daemon log rotation — merge into existing daemon.json
 # ──────────────────────────────────────────────────────────────────────────
-blue "Step 1/2: Docker container-log rotation ($DOCKER_DAEMON_JSON)"
+blue "Step 1/4: Docker container-log rotation ($DOCKER_DAEMON_JSON)"
 
 # Desired log-opts as JSON. We MERGE these into whatever already exists so a
 # pre-existing `data-root` (or any other key) is preserved. python3 is present
@@ -138,7 +161,7 @@ fi
 # ──────────────────────────────────────────────────────────────────────────
 # 2. journald size cap
 # ──────────────────────────────────────────────────────────────────────────
-blue "Step 2/2: journald size cap ($JOURNALD_CONF SystemMaxUse=$JOURNALD_MAX_USE)"
+blue "Step 2/4: journald size cap ($JOURNALD_CONF SystemMaxUse=$JOURNALD_MAX_USE)"
 
 journald_is_capped() {
   [[ -f "$JOURNALD_CONF" ]] && grep -Eq "^[[:space:]]*SystemMaxUse=${JOURNALD_MAX_USE}[[:space:]]*$" "$JOURNALD_CONF"
@@ -161,6 +184,76 @@ else
   printf 'SystemMaxUse=%s\n' "$JOURNALD_MAX_USE" >> "$JOURNALD_CONF"
   JOURNALD_CHANGED=1
   green "  set SystemMaxUse=$JOURNALD_MAX_USE (backup at ${JOURNALD_CONF}.bak)"
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
+# 3. Swap file + swappiness
+# ──────────────────────────────────────────────────────────────────────────
+blue "Step 3/4: swap file ($SWAPFILE, ${SWAP_SIZE_MB}MB) + vm.swappiness=$SWAPPINESS"
+
+swap_active() {
+  # Active and exactly the desired size (swapon reports KiB with --noheadings --bytes).
+  local bytes
+  bytes="$(swapon --noheadings --bytes --show=NAME,SIZE 2>/dev/null | awk -v f="$SWAPFILE" '$1==f {print $2}')"
+  [[ -n "$bytes" ]] && (( bytes >= SWAP_SIZE_MB * 1024 * 1024 * 95 / 100 ))
+}
+swap_in_fstab() {
+  grep -Eq "^[[:space:]]*${SWAPFILE}[[:space:]]+none[[:space:]]+swap[[:space:]]" "$FSTAB" 2>/dev/null
+}
+
+if swap_active; then
+  green "  $SWAPFILE already active at ~${SWAP_SIZE_MB}MB — no change"
+elif [[ "$CHECK_ONLY" == "1" ]]; then
+  yellow "  [check] would create and enable ${SWAP_SIZE_MB}MB $SWAPFILE"
+else
+  if swapon --noheadings --show=NAME 2>/dev/null | grep -qx "$SWAPFILE"; then
+    swapoff "$SWAPFILE"
+  fi
+  rm -f "$SWAPFILE"
+  fallocate -l "${SWAP_SIZE_MB}M" "$SWAPFILE" 2>/dev/null     || dd if=/dev/zero of="$SWAPFILE" bs=1M count="$SWAP_SIZE_MB" status=none
+  chmod 600 "$SWAPFILE"
+  mkswap "$SWAPFILE" >/dev/null
+  swapon "$SWAPFILE"
+  green "  created and enabled ${SWAP_SIZE_MB}MB $SWAPFILE"
+fi
+
+if swap_in_fstab; then
+  green "  $FSTAB entry present — no change"
+elif [[ "$CHECK_ONLY" == "1" ]]; then
+  yellow "  [check] would add $SWAPFILE to $FSTAB"
+else
+  printf '%s none swap sw 0 0
+' "$SWAPFILE" >> "$FSTAB"
+  green "  added $SWAPFILE to $FSTAB"
+fi
+
+DESIRED_SWAPPINESS_LINE="vm.swappiness=$SWAPPINESS"
+if [[ -f "$SWAPPINESS_CONF" ]] && [[ "$(cat "$SWAPPINESS_CONF")" == "$DESIRED_SWAPPINESS_LINE" ]]    && [[ "$(sysctl -n vm.swappiness 2>/dev/null)" == "$SWAPPINESS" ]]; then
+  green "  vm.swappiness=$SWAPPINESS already set — no change"
+elif [[ "$CHECK_ONLY" == "1" ]]; then
+  yellow "  [check] would set vm.swappiness=$SWAPPINESS via $SWAPPINESS_CONF"
+else
+  printf '%s
+' "$DESIRED_SWAPPINESS_LINE" > "$SWAPPINESS_CONF"
+  sysctl -q -p "$SWAPPINESS_CONF"
+  green "  set vm.swappiness=$SWAPPINESS ($SWAPPINESS_CONF)"
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
+# 4. Host Caddy enabled + running at boot
+# ──────────────────────────────────────────────────────────────────────────
+blue "Step 4/4: host caddy.service enabled and active"
+
+caddy_enabled() { systemctl is-enabled --quiet caddy 2>/dev/null; }
+caddy_active()  { systemctl is-active --quiet caddy 2>/dev/null; }
+
+if caddy_enabled && caddy_active; then
+  green "  caddy.service enabled and active — no change"
+elif [[ "$CHECK_ONLY" == "1" ]]; then
+  yellow "  [check] caddy.service enabled=$(caddy_enabled && echo yes || echo NO) active=$(caddy_active && echo yes || echo NO) — would run: systemctl enable --now caddy"
+else
+  systemctl enable --now caddy
+  green "  caddy.service enabled and started"
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
