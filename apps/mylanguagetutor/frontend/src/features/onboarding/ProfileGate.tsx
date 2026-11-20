@@ -16,8 +16,8 @@ interface ProfileGateProps {
  */
 export default function ProfileGate({ children }: ProfileGateProps) {
   const { data: profile, isError, refetch } = useGetProfileQuery();
+  if (profile) return <>{children(profile)}</>;
   if (isError) return <CatalogError onRetry={() => void refetch()} />;
   if (profile === undefined) return <PageSkeleton />;
-  if (profile === null) return <Navigate to={ONBOARDING_LANGUAGE_PATH} replace />;
-  return <>{children(profile)}</>;
+  return <Navigate to={ONBOARDING_LANGUAGE_PATH} replace />;
 }
