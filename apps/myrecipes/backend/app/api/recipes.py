@@ -186,10 +186,9 @@ async def diff_version(
 @auth_router.post("", response_model=RecipeDetailResponse, status_code=201)
 async def create_recipe(
     payload: RecipeCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> RecipeDetailResponse:
-    return await recipe_service.create_recipe(db, user.id, payload)
+    return await recipe_service.create_recipe(user.id, payload)
 
 
 @auth_router.post(
@@ -234,10 +233,9 @@ async def extract_recipe_photo(
 async def update_recipe(
     recipe_id: uuid.UUID,
     payload: RecipeUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> RecipeDetailResponse:
-    detail = await recipe_service.update_recipe(db, user.id, recipe_id, payload)
+    detail = await recipe_service.update_recipe(user.id, recipe_id, payload)
     if detail is None:
         raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
     return detail
@@ -246,10 +244,9 @@ async def update_recipe(
 @auth_router.delete("/{recipe_id}", status_code=204)
 async def delete_recipe(
     recipe_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await recipe_service.delete_recipe(db, user.id, recipe_id)
+    deleted = await recipe_service.delete_recipe(user.id, recipe_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
     return Response(status_code=204)
@@ -259,11 +256,10 @@ async def delete_recipe(
 async def create_version(
     recipe_id: uuid.UUID,
     payload: VersionCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> VersionResponse:
     try:
-        version = await recipe_service.create_version(db, user.id, recipe_id, payload)
+        version = await recipe_service.create_version(user.id, recipe_id, payload)
     except InvalidBaseVersionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if version is None:
@@ -279,10 +275,9 @@ async def create_version(
 async def restore_version(
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> VersionResponse:
-    version = await recipe_service.restore_version(db, user.id, recipe_id, version_id)
+    version = await recipe_service.restore_version(user.id, recipe_id, version_id)
     if version is None:
         raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
     return version
@@ -302,10 +297,9 @@ async def log_cook(
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
     payload: CookLogCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> CookLogResponse:
-    cook = await recipe_service.log_cook(db, user.id, recipe_id, version_id, payload)
+    cook = await recipe_service.log_cook(user.id, recipe_id, version_id, payload)
     if cook is None:
         raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
     return cook
@@ -343,10 +337,9 @@ async def list_recipe_cooks(
 async def delete_cook(
     recipe_id: uuid.UUID,
     cook_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
-    deleted = await recipe_service.delete_cook(db, user.id, recipe_id, cook_id)
+    deleted = await recipe_service.delete_cook(user.id, recipe_id, cook_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=_COOK_NOT_FOUND)
     return Response(status_code=204)
