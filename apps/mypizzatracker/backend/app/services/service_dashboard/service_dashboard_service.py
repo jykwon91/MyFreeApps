@@ -290,7 +290,10 @@ async def move_order_to_slot(
         if target_slot_id == order.slot_id:
             return order
 
-        target_slot = await _get_slot(db, target_slot_id)
+        # Lock the target slot before counting, so a concurrent order or move
+        # into it waits for this one to commit. Only the target is locked: the
+        # order's current slot only loses pizzas, so it needs no capacity check.
+        target_slot = await _get_slot(db, target_slot_id, for_update=True)
         if target_slot.drop_id != order.drop_id:
             raise SlotNotInDropError(
                 f"Slot {target_slot_id} does not belong to drop {order.drop_id}.",
@@ -321,8 +324,10 @@ async def _get_drop(db: AsyncSession, drop_id: uuid.UUID) -> Drop:
     return drop
 
 
-async def _get_slot(db: AsyncSession, slot_id: uuid.UUID) -> Slot:
-    slot = await drop_repo.get_slot(db, slot_id)
+async def _get_slot(
+    db: AsyncSession, slot_id: uuid.UUID, *, for_update: bool = False,
+) -> Slot:
+    slot = await drop_repo.get_slot(db, slot_id, for_update=for_update)
     if slot is None:
         raise TargetSlotNotFoundError(f"Slot {slot_id} not found")
     return slot
