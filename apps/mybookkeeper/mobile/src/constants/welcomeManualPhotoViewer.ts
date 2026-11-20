@@ -31,9 +31,10 @@ export function photoViewerEditLabel(index: number, total: number): string {
   return `Edit photo ${index + 1} of ${total}`;
 }
 
-export function photoViewerPageLabel(index: number, total: number, caption: string | null): string {
+export function photoViewerPageLabel(index: number, total: number, caption: string | null, hasFailed = false): string {
   const position = `Photo ${index + 1} of ${total}`;
-  return caption ? `${position}, ${caption}` : position;
+  const named = caption ? `${position}, ${caption}` : position;
+  return hasFailed ? `${named}, ${WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES.couldntLoad}` : named;
 }
 
 /** The page a horizontal scroll has settled on, kept inside the photos there are. */

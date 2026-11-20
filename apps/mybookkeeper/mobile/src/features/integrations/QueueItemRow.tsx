@@ -17,25 +17,28 @@ export default function QueueItemRow({ item }: { item: EmailQueueItem }) {
   const busy = actions.retry.isBusy || actions.dismiss.isBusy;
 
   return (
-    <View
-      accessibilityLabel={[name, item.email_subject, EMAIL_QUEUE_STATUS_LABELS[item.status], item.error].filter(Boolean).join(", ")}
-      accessible
-      style={{ gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}
-    >
-      <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-        {name}
-      </ClampedText>
-      {item.email_subject ? (
-        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-          {item.email_subject}
+    <View style={{ gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {/* Only the facts are one labelled stop: Retry and Dismiss stay separate stops for VoiceOver. */}
+      <View
+        accessibilityLabel={[name, item.email_subject, EMAIL_QUEUE_STATUS_LABELS[item.status], item.error].filter(Boolean).join(", ")}
+        accessible
+        style={{ gap: spacing.xs }}
+      >
+        <ClampedText numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+          {name}
         </ClampedText>
-      ) : null}
-      <Chip label={EMAIL_QUEUE_STATUS_LABELS[item.status]} />
-      {item.error ? (
-        <Text selectable style={{ fontSize: fontSize.sm, color: item.status === "failed" ? colors.destructiveText : colors.mutedForeground }}>
-          {item.error}
-        </Text>
-      ) : null}
+        {item.email_subject ? (
+          <ClampedText numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+            {item.email_subject}
+          </ClampedText>
+        ) : null}
+        <Chip label={EMAIL_QUEUE_STATUS_LABELS[item.status]} />
+        {item.error ? (
+          <Text selectable style={{ fontSize: fontSize.sm, color: item.status === "failed" ? colors.destructiveText : colors.mutedForeground }}>
+            {item.error}
+          </Text>
+        ) : null}
+      </View>
       {canWrite && item.status !== "done" ? (
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           {item.status === "failed" ? (
