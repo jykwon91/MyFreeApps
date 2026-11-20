@@ -10,7 +10,9 @@ For each queued job:
   3. Extract plain text (PDF / DOCX / TXT).
   4. Call Claude with the resume extraction prompt.
   5. Map the JSON response to WorkHistory / Education / Skill rows.
-  6. Bulk-insert the profile rows (skills via ON CONFLICT DO NOTHING).
+  6. Merge the profile rows: work history / education matched against the
+     user's existing rows (no duplicates on re-upload), skills via
+     ON CONFLICT DO NOTHING.
   7. Mark the job ``complete`` with the raw Claude response + parser version.
 
 On any failure: mark the job ``failed`` with ``error_message=str(exc)[:1000]``.
@@ -42,6 +44,7 @@ from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
 )
+from app.services.profile.resume_profile_merge_service import merge_parsed_profile_rows
 
 logger = logging.getLogger(__name__)
 
@@ -178,11 +181,11 @@ async def _run_extraction(
             logger.warning("Job %s disappeared before completion — skipping", job_id)
             return
 
-        # Insert work_history and education rows.
-        for entry in work_entries:
-            db.add(entry)
-        for entry in edu_entries:
-            db.add(entry)
+        # Merge work_history and education: a re-upload carries rows the
+        # profile already holds, so match before inserting.
+        merge_result = await merge_parsed_profile_rows(
+            db, user_id, work_entries, edu_entries,
+        )
 
         # Skills use ON CONFLICT DO NOTHING for UNIQUE(user_id, lower(name)).
         for skill in skill_entries:
@@ -199,8 +202,14 @@ async def _run_extraction(
         )
 
     logger.info(
-        "Job %s complete: %d work, %d edu, %d skills",
-        job_id, len(work_entries), len(edu_entries), len(skill_entries),
+        "Job %s complete: work %d added / %d matched, edu %d added / %d matched, "
+        "%d skills",
+        job_id,
+        merge_result.work_history_added,
+        merge_result.work_history_matched,
+        merge_result.education_added,
+        merge_result.education_matched,
+        len(skill_entries),
     )
 
 

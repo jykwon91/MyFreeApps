@@ -7,6 +7,7 @@ orchestrate, repositories return ORM rows. Every public function takes
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -50,6 +51,12 @@ async def create(db: AsyncSession, entry: WorkHistory) -> WorkHistory:
     await db.flush()
     await db.refresh(entry)
     return entry
+
+
+async def add_all(db: AsyncSession, entries: Sequence[WorkHistory]) -> None:
+    """Stage several new rows and flush them in one round trip."""
+    db.add_all(entries)
+    await db.flush()
 
 
 async def update(
