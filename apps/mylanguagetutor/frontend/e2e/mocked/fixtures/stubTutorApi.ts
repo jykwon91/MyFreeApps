@@ -3,7 +3,8 @@
  * catalog.py, profile.py, sessions.py, turns.py, usage.py): reads come from
  * state the writes change, request bodies are checked like the pydantic
  * schemas (422), unknown languages and scenarios are 422 like the registries,
- * a turn for a session the server never created is 404 session_not_found, and
+ * a turn (or a usage check) for a session the server never created is 404
+ * session_not_found, and
  * accepted turns stream SSE. Each streamed turn takes the next seq (failed ones
  * too, like tutor_turn_repository.next_seq); only a turn that wasn't failed
  * adds to turn_count. Endpoints named in `failWith` answer an unhandled 500
@@ -101,7 +102,11 @@ export async function stubTutorApi(
       return route.fulfill(supported(language) ? json(SCENARIOS) : unknownLanguage(language));
     }
     if (method === "GET" && path === "/profile") return route.fulfill(json(profile));
-    if (method === "GET" && path === "/usage/today") return route.fulfill(json(usage));
+    if (method === "GET" && path === "/usage/today") {
+      const sessionId = url.searchParams.get("session_id");
+      if (sessionId && !sessions.has(sessionId)) return route.fulfill(json({ detail: SESSION_NOT_FOUND }, 404));
+      return route.fulfill(json(usage));
+    }
 
     if (turnSession) return answerTurn(route, turnSession, body);
     if (method === "PUT" && path === "/profile") {

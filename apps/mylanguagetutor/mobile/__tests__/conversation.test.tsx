@@ -106,7 +106,7 @@ describe("a typed conversation", () => {
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.pickScenario })).toBeNull();
   });
 
-  it("stops the learner when the server refuses a turn for today's limit", async () => {
+  it("stops the learner when the server refuses a turn for today's limit, keeping what they wrote", async () => {
     serveConversation();
     serveTurns(() => ({ status: 429, data: { detail: "daily_limit_reached" } }));
     await openCafe();
@@ -114,7 +114,10 @@ describe("a typed conversation", () => {
     await write("Hola");
     expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
-    expect(screen.queryByText("Hola")).toBeNull();
+    expect(screen.getByText("Hola")).toBeTruthy();
+    expect(screen.getByText(turnErrorCopy("daily_limit_reached"))).toBeTruthy();
+    // Nothing can be sent before the budget is back, so "Try again" waits for it.
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).toBeNull();
   });
 
   it("lets the learner answer again on coming back after the day's reset, once usage shows budget", async () => {
@@ -128,7 +131,7 @@ describe("a typed conversation", () => {
 
     await write("Hola");
     expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
-    // Usage refetched the same day may still say a turn fits (it estimates the cheapest turn): the block stays.
+    // Usage refetched the same day may still say a turn fits (read before budget was spent elsewhere): the block stays.
     const beforeSameDayReturn = usageRequests();
     await moveApp("background");
     await moveApp("active");
@@ -143,10 +146,14 @@ describe("a typed conversation", () => {
 
     expect(await screen.findByRole("button", { name: PRACTICE_COPY.send })).toBeTruthy();
     expect(screen.queryByText(sessionBlockMessage("daily_limit"))).toBeNull();
-    await write("Hola");
+    // Usage is asked about this conversation's next turn.
+    expect(sent.filter((request) => request.route === "GET /usage/today").at(-1)?.params).toEqual({ session_id: TUTOR_SESSION.id });
+    // The words the limit refused are sent again as they were.
+    await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
     await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola! Bienvenido" }));
     await finish(stream);
     expect(screen.getByText("¡Hola! Bienvenido")).toBeTruthy();
+    expect(screen.getAllByText("Hola")).toHaveLength(1);
     expect(turns).toHaveLength(2);
   });
 

@@ -44,7 +44,7 @@ user at the router level): `GET /languages`, `GET /scenarios?language=es`,
 `POST /sessions`, `GET /sessions` (paginated, newest first),
 `GET /sessions/{id}` (turns by seq), `POST /sessions/{id}/end`,
 `DELETE /sessions/{id}`, `GET|PUT /profile` (`null` before onboarding),
-`GET /usage/today` (caller's remaining fraction only),
+`GET /usage/today[?session_id=]` (caller's remaining fraction only; `cap_reached` sized for that conversation's next turn, or a first turn),
 `POST /sessions/{id}/turns` (SSE).
 
 Phone sign-in (`backend/app/api/mobile_auth.py`, routes from
