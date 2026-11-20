@@ -6,7 +6,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { act, renderHook } from "@testing-library/react";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ENTRY_POINTS: readonly (readonly [string, () => Promise<unknown>])[] = [
   ["store/baseApi", () => import("../store/baseApi")],
@@ -36,6 +36,15 @@ function okAdapter(seen: InternalAxiosRequestConfig[]): AxiosAdapter {
 
 // Every auth client a test makes, disposed after it so no cache reset outlives the test.
 const clientDisposers: (() => void)[] = [];
+
+// The index pulls in every module of the package. Transforming them all the first time
+// can outlast a single test's timeout on a slow CI runner, so pay it once here: the
+// transforms are cached, and each test still evaluates fresh modules after resetModules.
+const INDEX_WARMUP_TIMEOUT_MS = 60_000;
+
+beforeAll(async () => {
+  await import("../index");
+}, INDEX_WARMUP_TIMEOUT_MS);
 
 beforeEach(() => {
   vi.resetModules();
