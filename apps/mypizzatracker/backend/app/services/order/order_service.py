@@ -24,6 +24,7 @@ error first.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -250,9 +251,9 @@ async def get_current_drop(db: AsyncSession) -> Drop | None:
     return await drop_repo.get_current_active_drop(db)
 
 
-async def slot_remaining_capacity(
-    db: AsyncSession, slot: Slot,
-) -> int:
-    """Return remaining pizza capacity for a single slot."""
-    count = await order_repo.count_pizzas_in_slot(db, slot.id)
-    return max(slot.max_pizzas - count, 0)
+async def remaining_capacity_by_slot(
+    db: AsyncSession, slots: Sequence[Slot],
+) -> dict[uuid.UUID, int]:
+    """Return remaining pizza capacity for each slot, counted in one query."""
+    counts = await order_repo.count_pizzas_by_slot(db, [s.id for s in slots])
+    return {s.id: max(s.max_pizzas - counts[s.id], 0) for s in slots}

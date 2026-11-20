@@ -69,18 +69,19 @@ async def build_current_drop(db: AsyncSession) -> PublicDropRead | None:
     if drop is None:
         return None
 
-    slot_payloads: list[PublicSlotRead] = []
+    remaining_by_slot = await order_service.remaining_capacity_by_slot(
+        db, drop.slots,
+    )
     # Sort slots by pickup_time for predictable rendering.
-    for slot in sorted(drop.slots, key=lambda s: s.pickup_time):
-        remaining = await order_service.slot_remaining_capacity(db, slot)
-        slot_payloads.append(
-            PublicSlotRead(
-                id=slot.id,
-                pickup_time=slot.pickup_time,
-                max_pizzas=slot.max_pizzas,
-                remaining_pizzas=remaining,
-            ),
+    slot_payloads = [
+        PublicSlotRead(
+            id=slot.id,
+            pickup_time=slot.pickup_time,
+            max_pizzas=slot.max_pizzas,
+            remaining_pizzas=remaining_by_slot[slot.id],
         )
+        for slot in sorted(drop.slots, key=lambda s: s.pickup_time)
+    ]
 
     return PublicDropRead(
         id=drop.id,
