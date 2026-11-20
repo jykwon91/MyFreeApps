@@ -15,15 +15,22 @@ the route via ``Depends(get_db)``. The shared SQLAlchemy session listener
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
+from functools import partial
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.services.stored_file_removal import remove_stored_files
+
+from app.core.storage import get_storage
 from app.db.violated_constraint import violated_constraint_name
 from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
 from app.repositories.application import application_repository
 from app.repositories.company import company_repository, company_research_repository
+from app.repositories.discovery import discovery_promotion_repository
+from app.repositories.documents import document_repo
 from app.schemas.company.company_create_request import CompanyCreateRequest
 from app.schemas.company.company_update_request import CompanyUpdateRequest
 
@@ -47,7 +54,7 @@ class CompanyHasApplicationsError(Exception):
 
     ``applications.company_id`` is ON DELETE RESTRICT (applications must keep
     their company), so such a company cannot be removed. ``application_count``
-    includes soft-deleted applications, which still hold the FK.
+    counts live applications only; soft-deleted ones are purged with the company.
     """
 
     def __init__(self, application_count: int) -> None:
@@ -185,30 +192,33 @@ async def delete_company(
     db: AsyncSession,
     user_id: uuid.UUID,
     company_id: uuid.UUID,
-) -> bool:
+) -> Callable[[], None] | None:
     """Hard-delete a Company scoped to ``user_id``.
 
-    Returns ``True`` if a row was found and deleted, ``False`` if the company
-    does not exist or belongs to another user.
+    Returns ``None`` if the company does not exist or belongs to another user.
+    Otherwise returns what to run once the deletion has committed: removing
+    stored files can't be undone by a rollback, so it can't happen before then.
 
-    Raises ``CompanyHasApplicationsError`` when any application (soft-deleted
-    included) still references the company. The check runs under a row lock on
-    the company so a concurrently created application cannot slip in; an
-    ``IntegrityError`` on the applications FK at delete time is mapped to the
-    same error as a backstop.
+    Raises ``CompanyHasApplicationsError`` when a live application still
+    references the company. Soft-deleted applications don't block: nothing in
+    the app can restore or purge them, so they are permanently removed with the
+    company, along with their events, contacts and documents (and the stored
+    files of those documents). The count runs under a row lock on the company
+    so a concurrently created application cannot slip in; an ``IntegrityError``
+    on the applications FK at delete time is mapped to the same error as a
+    backstop.
 
     Commits at the end so the write survives the request lifecycle.
     """
     company = await company_repository.get_by_id_for_update(db, company_id, user_id)
     if company is None:
-        return False
-    application_count = await application_repository.count_for_company_including_deleted(
-        db, company_id, user_id,
-    )
-    if application_count > 0:
+        return None
+    live_count = await application_repository.count_live_for_company(db, company_id, user_id)
+    if live_count > 0:
         await db.rollback()
-        raise CompanyHasApplicationsError(application_count)
+        raise CompanyHasApplicationsError(live_count)
     try:
+        storage_keys = await _purge_soft_deleted_applications(db, company_id, user_id)
         await company_repository.delete(db, company)
         await db.commit()
     except IntegrityError as exc:
@@ -216,11 +226,29 @@ async def delete_company(
         if not _is_applications_fk_violation(exc):
             raise
         raise CompanyHasApplicationsError(
-            await application_repository.count_for_company_including_deleted(
-                db, company_id, user_id,
-            ),
+            await application_repository.count_live_for_company(db, company_id, user_id),
         ) from exc
-    return True
+    return partial(remove_stored_files, get_storage, storage_keys)
+
+
+async def _purge_soft_deleted_applications(
+    db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID,
+) -> list[str]:
+    """Hard-delete the company's soft-deleted applications; return their stored-file keys.
+
+    A discovered posting promoted to one of them goes back to Discover, the same
+    as when the application was deleted.
+    """
+    application_ids = await application_repository.list_soft_deleted_ids_for_company(
+        db, company_id, user_id,
+    )
+    if not application_ids:
+        return []
+    storage_keys = await document_repo.list_storage_keys_for_applications(db, application_ids, user_id)
+    for application_id in application_ids:
+        await discovery_promotion_repository.clear_promotion_links(db, user_id, application_id)
+    await application_repository.delete_by_ids(db, application_ids, user_id)
+    return storage_keys
 
 
 def _is_applications_fk_violation(exc: IntegrityError) -> bool:

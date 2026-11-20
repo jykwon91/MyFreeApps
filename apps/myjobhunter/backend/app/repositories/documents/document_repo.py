@@ -205,3 +205,17 @@ async def soft_delete(db: AsyncSession, document: Document) -> Document:
     if was_deleted:
         await db.refresh(document)
     return document
+
+
+async def list_storage_keys_for_applications(
+    db: AsyncSession, application_ids: list[uuid.UUID], user_id: uuid.UUID,
+) -> list[str]:
+    """Stored-file keys of every document on the applications, soft-deleted ones included."""
+    result = await db.execute(
+        select(Document.file_path).where(
+            Document.application_id.in_(application_ids),
+            Document.user_id == user_id,
+            Document.file_path.is_not(None),
+        )
+    )
+    return sorted(set(result.scalars().all()))

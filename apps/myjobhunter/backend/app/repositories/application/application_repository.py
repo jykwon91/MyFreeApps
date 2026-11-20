@@ -106,20 +106,49 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def count_for_company_including_deleted(
+async def count_live_for_company(
     db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID,
 ) -> int:
-    """Count every application linked to the company, soft-deleted rows included.
-
-    Soft-deleted rows still hold the ``applications.company_id`` RESTRICT FK,
-    so they must be counted when deciding whether a company can be removed.
-    """
+    """Count the company's applications that are not soft-deleted."""
     result = await db.execute(
         select(func.count())
         .select_from(Application)
-        .where(Application.company_id == company_id, Application.user_id == user_id)
+        .where(
+            Application.company_id == company_id,
+            Application.user_id == user_id,
+            Application.deleted_at.is_(None),
+        )
     )
     return int(result.scalar_one())
+
+
+async def list_soft_deleted_ids_for_company(
+    db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID,
+) -> list[uuid.UUID]:
+    """Ids of the company's soft-deleted applications."""
+    result = await db.execute(
+        select(Application.id).where(
+            Application.company_id == company_id,
+            Application.user_id == user_id,
+            Application.deleted_at.is_not(None),
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def delete_by_ids(
+    db: AsyncSession, application_ids: list[uuid.UUID], user_id: uuid.UUID,
+) -> None:
+    """Hard-delete the given applications.
+
+    Events, contacts and documents go with them through their
+    ``ON DELETE CASCADE`` keys.
+    """
+    await db.execute(
+        delete(Application).where(
+            Application.id.in_(application_ids), Application.user_id == user_id,
+        )
+    )
 
 
 async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application]:

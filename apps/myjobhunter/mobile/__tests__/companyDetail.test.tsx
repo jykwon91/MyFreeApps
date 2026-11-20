@@ -360,7 +360,7 @@ describe("deleting a company", () => {
   });
 
   it("says the server's reason when it refuses because applications still use the company, and reloads them so Delete turns off", async () => {
-    const reason = "This company still has 1 application (including deleted ones).";
+    const reason = "This company still has 1 application linked to it, so it can't be deleted.";
     // An application added elsewhere since the list loaded: the server sees it, the screen doesn't yet.
     let applications: ReturnType<typeof applicationRecord>[] = [];
     const sent = serve({
