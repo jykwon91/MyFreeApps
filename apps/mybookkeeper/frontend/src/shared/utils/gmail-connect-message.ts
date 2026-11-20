@@ -1,4 +1,4 @@
-import { GMAIL_CONNECT_FAILURES } from "@mybookkeeper/api-client/constants/gmailConnect";
+import { toGmailConnectFailure } from "@mybookkeeper/api-client/utils/gmailConnectReturn";
 import { GMAIL_CONNECT_FAILED_MESSAGE, GMAIL_CONNECTED_MESSAGE } from "@/shared/lib/gmail-connect-messages";
 import type { GmailConnectFinish } from "@/shared/types/integration/gmail-connect-finish";
 import type { GmailConnectMessage } from "@/shared/types/integration/gmail-connect-message";
@@ -15,6 +15,5 @@ export function readGmailConnectMessage(data: unknown): GmailConnectMessage | nu
   const message = data as { type?: unknown; reason?: unknown } | null;
   if (message?.type === GMAIL_CONNECTED_MESSAGE) return { type: GMAIL_CONNECTED_MESSAGE };
   if (message?.type !== GMAIL_CONNECT_FAILED_MESSAGE) return null;
-  const reason = GMAIL_CONNECT_FAILURES.find((failure) => failure === message.reason) ?? "failed";
-  return { type: GMAIL_CONNECT_FAILED_MESSAGE, reason };
+  return { type: GMAIL_CONNECT_FAILED_MESSAGE, reason: toGmailConnectFailure(message.reason) };
 }

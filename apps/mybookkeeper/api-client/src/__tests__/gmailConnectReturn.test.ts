@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GMAIL_CONNECT_FAILURES } from "../constants/gmailConnect";
-import { gmailConnectRefusalReason, readGmailConnectReturn } from "../utils/gmailConnectReturn";
+import { gmailConnectRefusalReason, readGmailConnectReturn, toGmailConnectFailure } from "../utils/gmailConnectReturn";
 
 const read = (query: string) => readGmailConnectReturn(new URLSearchParams(query));
 
@@ -21,6 +21,16 @@ describe("readGmailConnectReturn", () => {
     ["nothing at all", ""],
   ])("treats %s as a plain failure", (_name, query) => {
     expect(read(query)).toEqual({ kind: "failed", reason: "failed" });
+  });
+});
+
+describe("toGmailConnectFailure", () => {
+  it.each(GMAIL_CONNECT_FAILURES.map((reason) => [reason]))("keeps the reason %s", (reason) => {
+    expect(toGmailConnectFailure(reason)).toBe(reason);
+  });
+
+  it.each([["<script>"], [null], [undefined], [403], [{ reason: "expired" }]])("treats %p as failed", (reason) => {
+    expect(toGmailConnectFailure(reason)).toBe("failed");
   });
 });
 

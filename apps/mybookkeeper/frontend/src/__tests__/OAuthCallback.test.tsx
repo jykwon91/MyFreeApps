@@ -18,7 +18,7 @@ function answers(outcome: "connects" | { status: number; data: { detail: string 
 }
 
 function landOn(query: string) {
-  window.history.replaceState(null, "", `/oauth-callback?${query}`);
+  window.history.replaceState(null, "", `/oauth-callback#${query}`);
   return render(
     <StrictMode>
       <OAuthCallback />
@@ -93,6 +93,25 @@ describe("OAuthCallback", () => {
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(GMAIL_CONNECT_POPUP_COPY.connected));
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it("takes Google's answer out of the address bar and history as soon as it's read", async () => {
+    answers("connects");
+    landOn("code=c0de&state=signed.jwt");
+
+    expect(window.location.pathname).toBe("/oauth-callback");
+    expect(window.location.hash).toBe("");
+    expect(window.location.search).toBe("");
+    await waitFor(() => expect(complete).toHaveBeenCalledWith({ code: "c0de", state: "signed.jwt" }));
+  });
+
+  it("ignores a code and state sent in the query instead of the fragment", async () => {
+    openedAsPopup(false);
+    window.history.replaceState(null, "", "/oauth-callback?code=c0de&state=signed.jwt");
+    render(<OAuthCallback />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(GMAIL_CONNECT_FAILURE_MESSAGES.failed);
+    expect(complete).not.toHaveBeenCalled();
   });
 
   it("treats an address with no code and state as a plain failure", async () => {

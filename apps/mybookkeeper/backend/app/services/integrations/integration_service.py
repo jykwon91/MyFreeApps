@@ -6,6 +6,7 @@ from typing import Any
 from google_auth_oauthlib.flow import Flow
 import jwt
 from jwt.exceptions import ExpiredSignatureError, PyJWTError as JWTError
+from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 
 from platform_shared.core.auth_events import AuthEventType
 
@@ -82,7 +83,6 @@ def _create_oauth_state(
             # JWT keeps the OAuth handshake stateless on the server side.
             "cv": code_verifier,
             "type": "oauth_state",
-            "iat": datetime.now(timezone.utc),
             "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
         },
         settings.secret_key,
@@ -189,6 +189,13 @@ async def complete_gmail_connect(user_id: uuid.UUID, code: str, state: str) -> N
     flow.code_verifier = code_verifier
     try:
         flow.fetch_token(code=code)
+    except InvalidGrantError:
+        # The code was already spent (a reloaded page sending it again) or ran out.
+        logger.warning("Gmail OAuth token exchange refused by Google: invalid_grant")
+        raise GmailConnectError(
+            GmailConnectFailure.EXPIRED,
+            "Google's authorization code was already used or has expired — restart the connection flow",
+        )
     except Exception as exc:
         # oauthlib's errors carry Google's code (invalid_grant, redirect_uri_mismatch, ...).
         logger.exception("Gmail OAuth token exchange failed (fetch_token): error=%s", getattr(exc, "error", None))

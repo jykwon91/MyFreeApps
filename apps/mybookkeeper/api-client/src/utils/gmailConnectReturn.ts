@@ -4,19 +4,20 @@ import type { GmailConnectReturn } from "../types/integration/gmail-connect-retu
 import type { QueryParams } from "../types/integration/query-params";
 import { errorDetail } from "./errorDetail";
 
-function asFailure(reason: unknown): GmailConnectFailure {
+/** A reason the server or the popup gave, if it's one the app knows. Anything else is a plain failure. */
+export function toGmailConnectFailure(reason: unknown): GmailConnectFailure {
   return GMAIL_CONNECT_FAILURES.find((failure) => failure === reason) ?? "failed";
 }
 
-/** Reads the query the server sent Google's answer on with. Anything it doesn't recognise is a plain failure. */
+/** Reads Google's answer from the fragment the server forwarded it in. Anything it doesn't recognise is a plain failure. */
 export function readGmailConnectReturn(params: QueryParams): GmailConnectReturn {
   const code = params.get("code");
   const state = params.get("state");
   if (code && state) return { kind: "authorized", code, state };
-  return { kind: "failed", reason: params.get("result") === GMAIL_CONNECT_RESULT_ERROR ? asFailure(params.get("reason")) : "failed" };
+  return { kind: "failed", reason: params.get("result") === GMAIL_CONNECT_RESULT_ERROR ? toGmailConnectFailure(params.get("reason")) : "failed" };
 }
 
 /** Why the server refused to finish the connection, from its answer. Anything else, an outage included, is `failed`. */
 export function gmailConnectRefusalReason(error: unknown): GmailConnectFailure {
-  return asFailure(errorDetail(error));
+  return toGmailConnectFailure(errorDetail(error));
 }

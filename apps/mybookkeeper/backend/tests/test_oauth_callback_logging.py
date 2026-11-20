@@ -1,17 +1,11 @@
 """Tests for Gmail OAuth connect exception logging.
 
-The route ``POST /integrations/gmail/complete`` must log the full traceback
-(including exception class) to stdout/docker-logs before propagating any
-exception that isn't a refusal. This guarantees that production failures are
-visible in ``docker logs mybookkeeper-api-1`` even when Sentry is not yet
-configured.
-
-Two layers are covered:
-1. The route handler (``app/api/integrations.py``) — catches ``Exception``,
-   calls ``logger.exception()``, then re-raises.
-2. The service layer (``app/services/integrations/integration_service.py``) —
-   ``fetch_token`` and ``upsert_gmail`` failure points each call
-   ``logger.exception()`` before propagating.
+The service (``app/services/integrations/integration_service.py``) logs the full
+traceback at each failure site (``fetch_token``, ``upsert_gmail``) before
+propagating, so production failures are visible in ``docker logs`` even without
+Sentry. The route (``POST /integrations/gmail/complete``) doesn't log them again:
+it answers a refusal with its reason, and anything else is a 500. Google
+refusing a spent code is a refusal, not a crash.
 """
 from __future__ import annotations
 
@@ -47,10 +41,10 @@ def client() -> Iterator[TestClient]:
     app.dependency_overrides.pop(current_active_user, None)
 
 
-class TestGmailCompleteRouteLogging:
-    """The route handler must log unexpected exceptions before re-raising."""
+class TestGmailCompleteRoute:
+    """The route answers; the service already logged anything unexpected, once."""
 
-    def test_logs_and_returns_500_on_unexpected_exception(
+    def test_an_unexpected_exception_is_a_500_not_logged_again(
         self, client: TestClient, caplog: pytest.LogCaptureFixture
     ) -> None:
         class _FakeOAuthError(Exception):
@@ -64,10 +58,7 @@ class TestGmailCompleteRouteLogging:
             response = client.post(COMPLETE, json=_BODY)
 
         assert response.status_code == 500
-        error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
-        assert any("Gmail OAuth connect failed" in m for m in error_messages), (
-            f"Expected 'Gmail OAuth connect failed' in logs; got: {error_messages}"
-        )
+        assert not [r for r in caplog.records if r.name == "app.api.integrations" and r.levelno >= logging.ERROR]
 
     def test_a_refusal_is_a_400_and_not_logged_as_a_crash(
         self, client: TestClient, caplog: pytest.LogCaptureFixture
@@ -75,12 +66,11 @@ class TestGmailCompleteRouteLogging:
         refusal = GmailConnectError(GmailConnectFailure.INVALID_STATE, "Invalid OAuth state")
         with patch.object(
             integration_service, "complete_gmail_connect", new=AsyncMock(side_effect=refusal),
-        ), caplog.at_level(logging.ERROR, logger="app.api.integrations"):
+        ), caplog.at_level(logging.ERROR):
             response = client.post(COMPLETE, json=_BODY)
 
         assert response.status_code == 400
-        error_messages = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
-        assert not any("Gmail OAuth connect failed" in m for m in error_messages)
+        assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
 # ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ test.describe("OAuth callback — error handling", () => {
   });
 
   test("callback with invalid code does not crash the app", async ({ page }) => {
-    const response = await page.goto("/oauth-callback?code=fake&state=invalid");
+    const response = await page.goto("/oauth-callback#code=fake&state=invalid");
     expect(response?.status()).toBeLessThan(500);
     await page.waitForLoadState("domcontentloaded");
     // Should not show a blank page — some content should render

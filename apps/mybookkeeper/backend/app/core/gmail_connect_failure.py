@@ -10,7 +10,7 @@ class GmailConnectFailure(StrEnum):
 
     # The person said no on Google's consent screen.
     DENIED = "denied"
-    # The 10-minute state ran out.
+    # The 10-minute state ran out, or Google's code was already used (a reloaded page) or ran out.
     EXPIRED = "expired"
     # They were removed from the workspace, or made a viewer, since starting it.
     NOT_ALLOWED = "not_allowed"

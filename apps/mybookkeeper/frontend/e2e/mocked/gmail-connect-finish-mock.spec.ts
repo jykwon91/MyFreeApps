@@ -40,7 +40,7 @@ async function openIntegrations(page: Page, integrations: () => Integration[]) {
   await stubWorkspaceShell(page, "owner");
   await page.route("**/api/integrations", (route) => route.fulfill(json(integrations())));
   await page.route("**/api/integrations/gmail/connect", (route) =>
-    route.fulfill(json({ auth_url: `/oauth-callback?code=${GOOGLE_ANSWER.code}&state=${GOOGLE_ANSWER.state}` })),
+    route.fulfill(json({ auth_url: `/oauth-callback#code=${GOOGLE_ANSWER.code}&state=${GOOGLE_ANSWER.state}` })),
   );
   await page.goto("/integrations");
 }

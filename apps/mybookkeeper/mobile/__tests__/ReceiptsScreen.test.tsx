@@ -290,7 +290,7 @@ describe("what the list shows", () => {
     }
     jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
       server.gmailState = "ready";
-      return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}?${GOOGLE_ANSWER_QUERY}` };
+      return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}#${GOOGLE_ANSWER_QUERY}` };
     });
     await fireEvent.press(screen.getByRole("button", { name: GMAIL_CONNECT_MESSAGES.reconnect }));
 

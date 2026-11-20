@@ -315,7 +315,7 @@ describe("InquiryReplyScreen", () => {
       server.integrations = integrations;
       jest.mocked(openAuthSessionAsync).mockImplementation(async () => {
         server.integrations = [{ provider: "gmail", has_send_scope: true, needs_reauth: false }];
-        return { type: "success", url: `mybookkeeper://oauth-callback?${GOOGLE_ANSWER_QUERY}` };
+        return { type: "success", url: `mybookkeeper://oauth-callback#${GOOGLE_ANSWER_QUERY}` };
       });
       await renderScreen();
       expect(await screen.findByText(words)).toBeTruthy();

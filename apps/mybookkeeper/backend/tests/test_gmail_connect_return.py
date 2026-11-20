@@ -39,7 +39,6 @@ def _state(app_client: GmailConnectClient, **overrides: object) -> str:
         "cv": "verifier",
         "client": app_client.value,
         "type": "oauth_state",
-        "iat": datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
         **overrides,
     }
@@ -56,11 +55,11 @@ def _with_payload(state: str, **changes: object) -> str:
 
 
 def _forwarded(base: str, state: str) -> str:
-    return f"{base}?{urlencode({'code': 'code', 'state': state})}"
+    return f"{base}#{urlencode({'code': 'code', 'state': state})}"
 
 
 def _ended(base: str, reason: str) -> str:
-    return f"{base}?result=error&reason={reason}"
+    return f"{base}#result=error&reason={reason}"
 
 
 @pytest.fixture
@@ -124,6 +123,8 @@ class TestCallbackForwards:
 
         assert response.status_code == 307
         assert response.headers["location"] == _forwarded(base, state)
+        # In the fragment, which browsers never send to a server: not in access logs or Referer.
+        assert "?" not in response.headers["location"]
 
     def test_declining_at_google_says_so(
         self, client: TestClient, never_finishes: AsyncMock, app_client: GmailConnectClient, base: str,
@@ -180,7 +181,7 @@ class TestTamperedClient:
         )
         response = _callback(client, code="code", state=forged)
 
-        assert response.headers["location"].startswith(f"{WEB_RETURN}?")
+        assert response.headers["location"].startswith(f"{WEB_RETURN}#")
 
 
 def test_only_a_signed_state_naming_the_phone_is_the_phones() -> None:

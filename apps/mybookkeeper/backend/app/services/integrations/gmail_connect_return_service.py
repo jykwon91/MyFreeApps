@@ -7,6 +7,8 @@ which only connects Gmail for the person who started it.
 
 The phone's sign-in browser closes on reaching ``MOBILE_OAUTH_CALLBACK_URL``, and
 the website's popup lands on its own page, so every outcome ends with a redirect.
+The answer rides in the fragment, which browsers never send to a server, so the
+code and state stay out of access logs and Referer headers.
 """
 import logging
 from urllib.parse import urlencode
@@ -33,7 +35,7 @@ def _return_address(client: GmailConnectClient) -> str:
 
 def gmail_connect_return_url(state: str, code: str | None, google_error: str | None) -> str:
     """The fixed address of the app that started the connection, with Google's code
-    and the state to finish it, or an allowlisted reason it ended at Google."""
+    and the state to finish it, or an allowlisted reason it ended at Google, in its fragment."""
     client = integration_service.gmail_connect_client(state)
     if google_error is not None or not code:
         failure = GmailConnectFailure.DENIED if google_error == GOOGLE_OAUTH_ACCESS_DENIED else GmailConnectFailure.FAILED
@@ -41,4 +43,4 @@ def gmail_connect_return_url(state: str, code: str | None, google_error: str | N
         query = {"result": GMAIL_CONNECT_RESULT_ERROR, "reason": failure.value}
     else:
         query = {"code": code, "state": state}
-    return f"{_return_address(client)}?{urlencode(query)}"
+    return f"{_return_address(client)}#{urlencode(query)}"

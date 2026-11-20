@@ -70,9 +70,6 @@ async def complete_gmail_connect(
     except GmailConnectError as refused:
         status = 403 if refused.failure in GMAIL_CONNECT_FORBIDDEN_FAILURES else 400
         raise HTTPException(status_code=status, detail=refused.failure.value)
-    except Exception:
-        logger.exception("Gmail OAuth connect failed — exception class and traceback above")
-        raise
 
 
 @router.get("")

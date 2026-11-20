@@ -9,6 +9,7 @@ is signed in, and refuses any state issued to someone else before reaching Googl
 from __future__ import annotations
 
 import datetime as _dt
+import logging
 import uuid
 from collections.abc import Iterator
 from contextlib import asynccontextmanager
@@ -19,6 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import jwt
 import pytest
 from fastapi.testclient import TestClient
+from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 
 from app.core.auth import current_active_user
 from app.core.config import settings
@@ -165,6 +167,22 @@ def test_a_state_without_its_verifier_is_invalid(client: TestClient, google: dic
     _never_reached_google(google)
 
 
+def test_a_spent_code_sent_again_is_expired_not_a_crash(
+    client: TestClient, google: dict[str, Any], caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Reloading the popup after it finished sends Google's code again, which Google refuses."""
+    _signed_in_as(STARTER)
+    google["flow"].fetch_token.side_effect = InvalidGrantError(description="Bad Request")
+
+    with caplog.at_level(logging.WARNING):
+        response = client.post(COMPLETE, json={"code": "code", "state": _state()})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == GmailConnectFailure.EXPIRED.value
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    google["upsert"].assert_not_awaited()
+
+
 def test_losing_access_since_starting_it_is_not_allowed(client: TestClient, google: dict[str, Any]) -> None:
     _signed_in_as(STARTER)
     google["member"].return_value = None
@@ -197,3 +215,9 @@ def test_a_malformed_body_is_refused(client: TestClient, google: dict[str, Any],
 
     assert client.post(COMPLETE, json=body).status_code == 422
     _never_reached_google(google)
+
+
+def test_the_state_carries_no_more_than_the_connection_needs() -> None:
+    claims = jwt.decode(_state(), settings.secret_key, algorithms=["HS256"])
+
+    assert set(claims) == {"sub", "org_id", "client", "cv", "type", "exp"}

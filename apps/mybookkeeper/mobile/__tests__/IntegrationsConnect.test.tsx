@@ -23,7 +23,7 @@ const originalAdapter = api.defaults.adapter;
 function signInConnects(server: FakeIntegrationsServer): void {
   openBrowser.mockImplementation(async () => {
     server.integrations = [aGmail()];
-    return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}?${GOOGLE_ANSWER_QUERY}` };
+    return { type: "success", url: `${GMAIL_CONNECT_RETURN_URL}#${GOOGLE_ANSWER_QUERY}` };
   });
 }
 
@@ -64,7 +64,7 @@ describe("connecting Gmail from the phone", () => {
 
   it("keeps the button and gives the reason when Google's answer is a refusal", async () => {
     startIntegrationsServer({ integrations: [] });
-    openBrowser.mockResolvedValue({ type: "success", url: `${GMAIL_CONNECT_RETURN_URL}?result=error&reason=denied` });
+    openBrowser.mockResolvedValue({ type: "success", url: `${GMAIL_CONNECT_RETURN_URL}#result=error&reason=denied` });
     await renderScreen(<IntegrationsScreen />);
 
     await fireEvent.press(await screen.findByRole("button", { name: CONNECT.connect }));

@@ -43,7 +43,7 @@ function invalidations(dispatch: jest.SpyInstance): unknown[] {
     .map((action) => action.payload);
 }
 
-const returned = (query: string) => ({ type: "success" as const, url: `${GMAIL_CONNECT_RETURN_URL}?${query}` });
+const returned = (query: string) => ({ type: "success" as const, url: `${GMAIL_CONNECT_RETURN_URL}#${query}` });
 
 beforeEach(() => {
   resetSignedInStore();
@@ -121,7 +121,8 @@ describe("useConnectGmail", () => {
     ["a reason it doesn't know", returned("result=error&reason=<script>")],
     ["an answer it doesn't know", returned("result=maybe")],
     ["the server saying it's connected without the app finishing it", returned("result=connected")],
-    ["another address", { type: "success" as const, url: `https://evil.example/oauth-callback?${GOOGLE_ANSWER_QUERY}` }],
+    ["another address", { type: "success" as const, url: `https://evil.example/oauth-callback#${GOOGLE_ANSWER_QUERY}` }],
+    ["the answer in the query instead of the fragment", { type: "success" as const, url: `${GMAIL_CONNECT_RETURN_URL}?${GOOGLE_ANSWER_QUERY}` }],
   ])("treats %s as a plain failure, never as connected", async (_name, answer) => {
     const server = startIntegrationsServer({ integrations: [] });
     openBrowser.mockResolvedValue(answer);
