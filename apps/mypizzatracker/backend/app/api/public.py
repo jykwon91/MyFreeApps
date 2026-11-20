@@ -79,7 +79,6 @@ async def place_public_order(
 ) -> PublicOrderConfirmation:
     try:
         order = await order_service.place_order(
-            db,
             drop_id=body.drop_id,
             slot_id=body.slot_id,
             customer=CustomerCreate(

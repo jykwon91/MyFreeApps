@@ -3,7 +3,8 @@
 The drop is the unit of read/write authority: a closed drop's financial
 history is frozen, so expense create / update / delete are all rejected
 once ``drop.status == "closed"``. Mirrors the service_dashboard pattern
-where transitions are rejected against closed drops.
+where transitions are rejected against closed drops. Each mutation owns its
+transaction through ``unit_of_work``.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
 from app.models.expense.expense import Expense
 from app.repositories.drop import drop_repo
@@ -33,28 +35,30 @@ class DropClosedForExpenseError(ExpenseServiceError):
     http_status = 409
 
 
-async def create_expense(
-    db: AsyncSession, drop_id: uuid.UUID, data: dict,
-) -> Expense:
-    drop = await _get_drop(db, drop_id)
-    _ensure_drop_open(drop)
-    return await expense_repo.create_expense(db, drop_id, data)
+async def create_expense(drop_id: uuid.UUID, data: dict) -> Expense:
+    async with unit_of_work() as db:
+        drop = await _get_drop(db, drop_id)
+        _ensure_drop_open(drop)
+        return await expense_repo.create_expense(db, drop_id, data)
 
 
-async def update_expense(
-    db: AsyncSession, expense_id: uuid.UUID, patch: dict,
-) -> Expense:
+async def update_expense(expense_id: uuid.UUID, patch: dict) -> Expense:
+    async with unit_of_work() as db:
+        expense = await _get_open_expense(db, expense_id)
+        return await expense_repo.update_expense(db, expense, patch)
+
+
+async def delete_expense(expense_id: uuid.UUID) -> None:
+    async with unit_of_work() as db:
+        expense = await _get_open_expense(db, expense_id)
+        await expense_repo.delete_expense(db, expense)
+
+
+async def _get_open_expense(db: AsyncSession, expense_id: uuid.UUID) -> Expense:
     expense = await _get_expense(db, expense_id)
     drop = await _get_drop(db, expense.drop_id)
     _ensure_drop_open(drop)
-    return await expense_repo.update_expense(db, expense, patch)
-
-
-async def delete_expense(db: AsyncSession, expense_id: uuid.UUID) -> None:
-    expense = await _get_expense(db, expense_id)
-    drop = await _get_drop(db, expense.drop_id)
-    _ensure_drop_open(drop)
-    await expense_repo.delete_expense(db, expense)
+    return expense
 
 
 async def list_expenses(db: AsyncSession, drop_id: uuid.UUID) -> list[Expense]:

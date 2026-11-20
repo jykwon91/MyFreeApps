@@ -63,10 +63,9 @@ async def get_drop_financials(
 async def update_drop_tip(
     drop_id: uuid.UUID,
     body: TipUpdate,
-    db: AsyncSession = Depends(get_db),
 ) -> DropRead:
     try:
-        drop = await financials_service.update_tip(db, drop_id, body.tip_total)
+        drop = await financials_service.update_tip(drop_id, body.tip_total)
     except FinancialsServiceError as exc:
         raise _financials_error(exc) from exc
     return DropRead.model_validate(drop)
@@ -92,12 +91,9 @@ async def list_drop_expenses(
 async def create_drop_expense(
     drop_id: uuid.UUID,
     body: ExpenseCreate,
-    db: AsyncSession = Depends(get_db),
 ) -> ExpenseRead:
     try:
-        expense = await expense_service.create_expense(
-            db, drop_id, body.model_dump(),
-        )
+        expense = await expense_service.create_expense(drop_id, body.model_dump())
     except ExpenseServiceError as exc:
         raise _expense_error(exc) from exc
     return ExpenseRead.model_validate(expense)
@@ -109,22 +105,18 @@ async def create_drop_expense(
 async def update_expense(
     expense_id: uuid.UUID,
     body: ExpenseUpdate,
-    db: AsyncSession = Depends(get_db),
 ) -> ExpenseRead:
     patch = body.model_dump(exclude_unset=True)
     try:
-        expense = await expense_service.update_expense(db, expense_id, patch)
+        expense = await expense_service.update_expense(expense_id, patch)
     except ExpenseServiceError as exc:
         raise _expense_error(exc) from exc
     return ExpenseRead.model_validate(expense)
 
 
 @router.delete("/expenses/{expense_id}", status_code=204)
-async def delete_expense(
-    expense_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-) -> None:
+async def delete_expense(expense_id: uuid.UUID) -> None:
     try:
-        await expense_service.delete_expense(db, expense_id)
+        await expense_service.delete_expense(expense_id)
     except ExpenseServiceError as exc:
         raise _expense_error(exc) from exc

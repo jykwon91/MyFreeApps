@@ -24,14 +24,55 @@ from app.models.order.order_pizza import OrderPizza
 from app.models.order.order_pizza_topping import OrderPizzaTopping
 
 
-async def get_order(db: AsyncSession, order_id: uuid.UUID) -> Optional[Order]:
+async def get_order(
+    db: AsyncSession, order_id: uuid.UUID, *, for_update: bool = False,
+) -> Optional[Order]:
+    """``for_update`` locks the order row until the transaction ends."""
     stmt = (
         select(Order)
         .where(Order.id == order_id)
         .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
     )
+    if for_update:
+        stmt = stmt.with_for_update(of=Order)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def update_order(db: AsyncSession, order: Order, patch: dict) -> Order:
+    """Apply ``patch`` and return the order re-read with pizzas + toppings."""
+    for key, value in patch.items():
+        setattr(order, key, value)
+    await db.flush()
+    refreshed = await get_order(db, order.id)
+    assert refreshed is not None, "Order disappeared during update"
+    return refreshed
+
+
+async def list_counted_orders_for_drop(
+    db: AsyncSession, drop_id: uuid.UUID,
+) -> list[Order]:
+    """Non-no-show orders for a drop, with pizzas + toppings loaded."""
+    stmt = (
+        select(Order)
+        .where(Order.drop_id == drop_id)
+        .where(Order.status != "no_show")
+        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def list_orders_for_slots(
+    db: AsyncSession, slot_ids: list[uuid.UUID],
+) -> list[Order]:
+    """Orders in any of ``slot_ids``, oldest first, with pizzas + toppings."""
+    stmt = (
+        select(Order)
+        .where(Order.slot_id.in_(slot_ids))
+        .options(selectinload(Order.pizzas).selectinload(OrderPizza.toppings))
+        .order_by(Order.created_at.asc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def count_pizzas_in_slot(db: AsyncSession, slot_id: uuid.UUID) -> int:

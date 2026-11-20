@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -30,6 +30,19 @@ async def get_drop(db: AsyncSession, drop_id: uuid.UUID) -> Optional[Drop]:
         select(Drop)
         .where(Drop.id == drop_id)
         .options(selectinload(Drop.slots))
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_current_active_drop(db: AsyncSession) -> Optional[Drop]:
+    """The most recent ``active`` drop, with slots loaded."""
+    stmt = (
+        select(Drop)
+        .where(Drop.status == "active")
+        .options(selectinload(Drop.slots))
+        .order_by(Drop.date.desc(), Drop.created_at.desc())
+        .limit(1)
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -105,7 +118,6 @@ async def delete_slot(db: AsyncSession, slot: Slot) -> None:
 
 
 async def count_slots_for_drop(db: AsyncSession, drop_id: uuid.UUID) -> int:
-    from sqlalchemy import func
     stmt = select(func.count(Slot.id)).where(Slot.drop_id == drop_id)
     result = await db.execute(stmt)
     return int(result.scalar_one())

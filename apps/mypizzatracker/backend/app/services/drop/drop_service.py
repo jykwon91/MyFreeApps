@@ -18,7 +18,9 @@ Owns the state machine and edit policy:
     closed   : blocked (financial history)
 
 Repositories handle the SQL; this layer enforces the rules and raises
-domain exceptions the API layer translates to HTTP.
+domain exceptions the API layer translates to HTTP. Every mutation owns its
+transaction through ``unit_of_work``: it commits when the function returns
+and rolls back when a rule violation is raised.
 """
 from __future__ import annotations
 
@@ -27,6 +29,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.drop.drop import Drop
 from app.models.drop.slot import Slot
 from app.repositories.drop import drop_repo
@@ -94,11 +97,12 @@ class SlotEditingClosedError(DropServiceError):
 # Drops
 # ---------------------------------------------------------------------------
 
-async def create_drop(db: AsyncSession, body: DropCreate) -> Drop:
+async def create_drop(body: DropCreate) -> Drop:
     """Create a new drop in ``planning`` state."""
     data = body.model_dump()
     # Status defaults to "planning" via the model; do not let callers override.
-    return await drop_repo.create_drop(db, data)
+    async with unit_of_work() as db:
+        return await drop_repo.create_drop(db, data)
 
 
 async def get_drop_or_404(db: AsyncSession, drop_id: uuid.UUID) -> Drop:
@@ -114,49 +118,48 @@ async def list_drops(db: AsyncSession, *, status: Optional[str] = None) -> list[
     return await drop_repo.list_drops(db, status=status)
 
 
-async def update_drop(
-    db: AsyncSession, drop: Drop, body: DropUpdate,
-) -> Drop:
+async def update_drop(drop_id: uuid.UUID, body: DropUpdate) -> Drop:
     """Apply a partial update respecting the per-status edit policy."""
     patch = body.model_dump(exclude_unset=True)
 
     new_status = patch.pop("status", None)
 
-    # Reject edits to non-editable fields for the current status.
-    editable = _EDITABLE_FIELDS[drop.status]
-    bad_fields = set(patch.keys()) - editable
-    if bad_fields:
-        raise DropNotEditableError(
-            f"Cannot edit {sorted(bad_fields)} when drop is in '{drop.status}'",
-        )
+    async with unit_of_work() as db:
+        drop = await get_drop_or_404(db, drop_id)
 
-    # If a status change is requested, validate and apply.
-    if new_status is not None and new_status != drop.status:
-        await _transition_status(db, drop, new_status)
-        # _transition_status mutates drop.status; combine with field patch.
+        # Reject edits to non-editable fields for the current status.
+        editable = _EDITABLE_FIELDS[drop.status]
+        bad_fields = set(patch.keys()) - editable
+        if bad_fields:
+            raise DropNotEditableError(
+                f"Cannot edit {sorted(bad_fields)} when drop is in '{drop.status}'",
+            )
 
-    # Validate combined window if both bounds present after merge.
-    candidate_start = patch.get("slot_window_start", drop.slot_window_start)
-    candidate_end = patch.get("slot_window_end", drop.slot_window_end)
-    if candidate_start >= candidate_end:
-        raise DropServiceError("slot_window_start must be before slot_window_end")
+        # If a status change is requested, validate and apply.
+        if new_status is not None and new_status != drop.status:
+            await _transition_status(db, drop, new_status)
+            # _transition_status mutates drop.status; combine with field patch.
 
-    if patch:
+        # Validate combined window if both bounds present after merge.
+        candidate_start = patch.get("slot_window_start", drop.slot_window_start)
+        candidate_end = patch.get("slot_window_end", drop.slot_window_end)
+        if candidate_start >= candidate_end:
+            raise DropServiceError("slot_window_start must be before slot_window_end")
+
+        # A status-only change still goes through the repo so it is flushed
+        # and the slots are reloaded for the response.
         return await drop_repo.update_drop(db, drop, patch)
 
-    # Status changed but no other fields -- still flush refresh.
-    await db.flush()
-    await db.refresh(drop, attribute_names=["slots"])
-    return drop
 
-
-async def delete_drop(db: AsyncSession, drop: Drop) -> None:
-    if drop.status != "planning":
-        raise DropNotDeletableError(
-            f"Cannot delete a drop in '{drop.status}' -- only planning drops "
-            f"can be deleted.",
-        )
-    await drop_repo.delete_drop(db, drop)
+async def delete_drop(drop_id: uuid.UUID) -> None:
+    async with unit_of_work() as db:
+        drop = await get_drop_or_404(db, drop_id)
+        if drop.status != "planning":
+            raise DropNotDeletableError(
+                f"Cannot delete a drop in '{drop.status}' -- only planning drops "
+                f"can be deleted.",
+            )
+        await drop_repo.delete_drop(db, drop)
 
 
 async def _transition_status(
@@ -182,31 +185,43 @@ async def _transition_status(
 # Slots
 # ---------------------------------------------------------------------------
 
-async def add_slot(db: AsyncSession, drop: Drop, body: SlotCreate) -> Slot:
-    _ensure_slots_mutable(drop)
-    return await drop_repo.create_slot(db, drop.id, body.model_dump())
-
-
-async def get_slot_or_404(db: AsyncSession, slot_id: uuid.UUID) -> Slot:
-    slot = await drop_repo.get_slot(db, slot_id)
-    if slot is None:
-        raise SlotNotFoundError(f"Slot {slot_id} not found")
-    return slot
+async def add_slot(drop_id: uuid.UUID, body: SlotCreate) -> Slot:
+    async with unit_of_work() as db:
+        drop = await get_drop_or_404(db, drop_id)
+        _ensure_slots_mutable(drop)
+        return await drop_repo.create_slot(db, drop.id, body.model_dump())
 
 
 async def update_slot(
-    db: AsyncSession, drop: Drop, slot: Slot, body: SlotUpdate,
+    drop_id: uuid.UUID, slot_id: uuid.UUID, body: SlotUpdate,
 ) -> Slot:
-    _ensure_slots_mutable(drop)
     patch = body.model_dump(exclude_unset=True)
-    if not patch:
-        return slot
-    return await drop_repo.update_slot(db, slot, patch)
+    async with unit_of_work() as db:
+        drop = await get_drop_or_404(db, drop_id)
+        slot = await _get_slot_in_drop(db, drop, slot_id)
+        _ensure_slots_mutable(drop)
+        if not patch:
+            return slot
+        return await drop_repo.update_slot(db, slot, patch)
 
 
-async def remove_slot(db: AsyncSession, drop: Drop, slot: Slot) -> None:
-    _ensure_slots_mutable(drop)
-    await drop_repo.delete_slot(db, slot)
+async def remove_slot(drop_id: uuid.UUID, slot_id: uuid.UUID) -> None:
+    async with unit_of_work() as db:
+        drop = await get_drop_or_404(db, drop_id)
+        slot = await _get_slot_in_drop(db, drop, slot_id)
+        _ensure_slots_mutable(drop)
+        await drop_repo.delete_slot(db, slot)
+
+
+async def _get_slot_in_drop(
+    db: AsyncSession, drop: Drop, slot_id: uuid.UUID,
+) -> Slot:
+    slot = await drop_repo.get_slot(db, slot_id)
+    if slot is None:
+        raise SlotNotFoundError(f"Slot {slot_id} not found")
+    if slot.drop_id != drop.id:
+        raise SlotNotFoundError(f"Slot {slot_id} not under drop {drop.id}")
+    return slot
 
 
 def _ensure_slots_mutable(drop: Drop) -> None:

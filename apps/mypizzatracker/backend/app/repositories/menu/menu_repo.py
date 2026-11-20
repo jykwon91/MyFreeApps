@@ -101,3 +101,35 @@ async def update_topping(
 async def delete_topping(db: AsyncSession, topping: ToppingType) -> None:
     await db.delete(topping)
     await db.flush()
+
+
+# ---------------------------------------------------------------------------
+# Batch lookups
+# ---------------------------------------------------------------------------
+
+async def list_pizzas_by_ids(
+    db: AsyncSession, ids: set[uuid.UUID],
+) -> list[PizzaType]:
+    stmt = select(PizzaType).where(PizzaType.id.in_(ids))
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def list_toppings_by_ids(
+    db: AsyncSession, ids: set[uuid.UUID],
+) -> list[ToppingType]:
+    stmt = select(ToppingType).where(ToppingType.id.in_(ids))
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def get_pizza_names(
+    db: AsyncSession, ids: set[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    stmt = select(PizzaType.id, PizzaType.name).where(PizzaType.id.in_(ids))
+    return {pid: name for pid, name in (await db.execute(stmt)).all()}
+
+
+async def get_topping_names(
+    db: AsyncSession, ids: set[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    stmt = select(ToppingType.id, ToppingType.name).where(ToppingType.id.in_(ids))
+    return {tid: name for tid, name in (await db.execute(stmt)).all()}

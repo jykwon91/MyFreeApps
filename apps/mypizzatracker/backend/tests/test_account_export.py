@@ -24,14 +24,14 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
             is_verified=True,
             is_active=True,
         ))
-        await db.flush()
+        await db.commit()
     resp = await client.post(
         "/auth/jwt/login",
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     if resp.status_code != 200:
-        pytest.skip(f"Auth failed: {resp.status_code} {resp.text}")
+        pytest.fail(f"Auth failed: {resp.status_code} {resp.text}")
     client.headers["Authorization"] = f"Bearer {resp.json().get('access_token', '')}"
     return client
 

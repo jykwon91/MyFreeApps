@@ -34,6 +34,13 @@ async def get_customer_by_id(
     return result.scalar_one_or_none()
 
 
+async def list_customers_by_ids(
+    db: AsyncSession, ids: set[uuid.UUID],
+) -> list[Customer]:
+    stmt = select(Customer).where(Customer.id.in_(ids))
+    return list((await db.execute(stmt)).scalars().all())
+
+
 async def create_customer(db: AsyncSession, data: dict) -> Customer:
     customer = Customer(**data)
     db.add(customer)

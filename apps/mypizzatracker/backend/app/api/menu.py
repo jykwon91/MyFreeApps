@@ -66,12 +66,9 @@ async def get_menu(db: AsyncSession = Depends(get_db)) -> MenuRead:
 # ---------------------------------------------------------------------------
 
 @router.post("/pizzas", response_model=PizzaTypeRead, status_code=201)
-async def create_pizza(
-    body: PizzaTypeCreate,
-    db: AsyncSession = Depends(get_db),
-) -> PizzaTypeRead:
+async def create_pizza(body: PizzaTypeCreate) -> PizzaTypeRead:
     try:
-        pizza = await menu_service.create_pizza(db, body)
+        pizza = await menu_service.create_pizza(body)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
     return PizzaTypeRead.model_validate(pizza)
@@ -86,27 +83,18 @@ async def list_pizzas(
 
 
 @router.patch("/pizzas/{pizza_id}", response_model=PizzaTypeRead)
-async def update_pizza(
-    pizza_id: uuid.UUID,
-    body: PizzaTypeUpdate,
-    db: AsyncSession = Depends(get_db),
-) -> PizzaTypeRead:
+async def update_pizza(pizza_id: uuid.UUID, body: PizzaTypeUpdate) -> PizzaTypeRead:
     try:
-        pizza = await menu_service.get_pizza_or_404(db, pizza_id)
-        pizza = await menu_service.update_pizza(db, pizza, body)
+        pizza = await menu_service.update_pizza(pizza_id, body)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
     return PizzaTypeRead.model_validate(pizza)
 
 
 @router.delete("/pizzas/{pizza_id}", status_code=204)
-async def delete_pizza(
-    pizza_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-) -> None:
+async def delete_pizza(pizza_id: uuid.UUID) -> None:
     try:
-        pizza = await menu_service.get_pizza_or_404(db, pizza_id)
-        await menu_service.delete_pizza(db, pizza)
+        await menu_service.delete_pizza(pizza_id)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
 
@@ -116,12 +104,9 @@ async def delete_pizza(
 # ---------------------------------------------------------------------------
 
 @router.post("/toppings", response_model=ToppingTypeRead, status_code=201)
-async def create_topping(
-    body: ToppingTypeCreate,
-    db: AsyncSession = Depends(get_db),
-) -> ToppingTypeRead:
+async def create_topping(body: ToppingTypeCreate) -> ToppingTypeRead:
     try:
-        topping = await menu_service.create_topping(db, body)
+        topping = await menu_service.create_topping(body)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
     return ToppingTypeRead.model_validate(topping)
@@ -136,26 +121,17 @@ async def list_toppings(
 
 
 @router.patch("/toppings/{topping_id}", response_model=ToppingTypeRead)
-async def update_topping(
-    topping_id: uuid.UUID,
-    body: ToppingTypeUpdate,
-    db: AsyncSession = Depends(get_db),
-) -> ToppingTypeRead:
+async def update_topping(topping_id: uuid.UUID, body: ToppingTypeUpdate) -> ToppingTypeRead:
     try:
-        topping = await menu_service.get_topping_or_404(db, topping_id)
-        topping = await menu_service.update_topping(db, topping, body)
+        topping = await menu_service.update_topping(topping_id, body)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
     return ToppingTypeRead.model_validate(topping)
 
 
 @router.delete("/toppings/{topping_id}", status_code=204)
-async def delete_topping(
-    topping_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-) -> None:
+async def delete_topping(topping_id: uuid.UUID) -> None:
     try:
-        topping = await menu_service.get_topping_or_404(db, topping_id)
-        await menu_service.delete_topping(db, topping)
+        await menu_service.delete_topping(topping_id)
     except MenuServiceError as exc:
         raise _service_error(exc) from exc
