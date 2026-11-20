@@ -10,7 +10,7 @@ Soft-deleted (``deleted_at``) because users expect to undo a deleted recipe.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,7 +19,20 @@ from app.db.base import Base
 
 class Recipe(Base):
     __tablename__ = "recipe"
-    __table_args__ = (Index("ix_recipe_user_id", "user_id"),)
+    __table_args__ = (
+        Index("ix_recipe_user_id", "user_id"),
+        # Match the list ORDER BY (updated_at DESC, id DESC) so a page reads off the index.
+        Index(
+            "ix_recipe_live_updated_at_id",
+            text("updated_at DESC"), text("id DESC"),
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        Index(
+            "ix_recipe_user_live_updated_at_id",
+            "user_id", text("updated_at DESC"), text("id DESC"),
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
