@@ -3,5 +3,4 @@ export interface CompanyPickerRowProps {
   /** A second line, like the company's website. */
   detail?: string | null;
   onPress: () => void;
-  disabled?: boolean;
 }

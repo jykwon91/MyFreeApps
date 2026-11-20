@@ -1,12 +1,14 @@
 /**
  * useApplicationSave — the Add application dialog's save: the company to save
- * under (adding one whose auto-add failed), then POST /applications.
+ * under (adding it now when it isn't tracked yet, or linking the company that
+ * already has its name or domain), then POST /applications.
  *
  * One save at a time: a ref stops a second submit in the same tick (a fast
  * double-click), and `creatingApplication` drives the Save button for the
  * whole save, company included. A save whose run has gone stale (the dialog
- * was closed, maybe reopened) still says it saved, but neither closes nor
- * resets the dialog now showing, nor clears that dialog's own save.
+ * was closed, maybe reopened) still runs to the end, so a company it added
+ * gets its application, and says it saved, but neither closes nor resets the
+ * dialog now showing, nor clears that dialog's own save.
  */
 import { useRef, useState } from "react";
 import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
@@ -65,16 +67,15 @@ export function useApplicationSave(
   ): Promise<void> {
     let companyId: string | null;
     try {
-      companyId = await companyIdForSave(company, isCurrent);
+      companyId = await companyIdForSave(company);
     } catch (err) {
       if (isCurrent()) {
-        showError(`Couldn't auto-create company "${company.name}": ${extractErrorMessage(err)}`);
+        showError(`Couldn't add company "${company.name}": ${extractErrorMessage(err)}`);
       }
       return;
     }
-    if (!isCurrent()) return;
     if (!companyId) {
-      showError("Pick a company before saving the application.");
+      if (isCurrent()) showError("Pick a company before saving the application.");
       return;
     }
     try {

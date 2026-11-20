@@ -6,7 +6,8 @@
  * ========
  * - "tracked":  green-ish neutral pill, "tracked" badge — company already
  *               existed in the operator's list, we just selected it.
- * - "new":      neutral pill — company was just auto-created from the JD.
+ * - "new":      neutral pill — a company not tracked yet; saving the
+ *               application adds it (nothing is added before then).
  * - "error":    amber border + "couldn't auto-create — type a name" hint.
  *               Used when the auto-create threw and we need the operator
  *               to retry / correct via the combobox below.
@@ -79,7 +80,7 @@ function PillBadge({ variant }: PillBadgeProps) {
     return <span className="text-green-700 dark:text-green-400">tracked</span>;
   }
   if (variant === "new") {
-    return <span>added</span>;
+    return <span>new — added when you save</span>;
   }
   return <span className="text-amber-700 dark:text-amber-400">needs attention</span>;
 }

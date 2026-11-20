@@ -1,6 +1,6 @@
 import type { ReviewCompanyState } from "../types/application/review-company-state";
 
-/** The id to save the application under, or null when there's no company to save it to yet. */
+/** The id of a company that already exists, or null when there's none yet (it's added on Save, if at all). */
 export function readCompanyId(company: ReviewCompanyState): string | null {
-  return company.kind === "autoCreateFailed" ? null : company.companyId;
+  return company.kind === "autoCreateFailed" || company.kind === "new" ? null : company.companyId;
 }

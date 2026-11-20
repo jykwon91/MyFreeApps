@@ -11,7 +11,11 @@ import type { UrlHostname } from "../types/application/url-hostname";
 import type { Company } from "../types/company";
 import type { CompanyCreateRequest } from "../types/company-create-request";
 import { companyNameProblem } from "../utils/companyNameProblem";
+import { companyToAdd } from "../utils/companyToAdd";
+import { findCompanyByDomain } from "../utils/findCompanyByDomain";
 import { findCompanyByName } from "../utils/findCompanyByName";
+import { isDuplicateCompanyDomainError } from "../utils/isDuplicateCompanyDomainError";
+import { newCompanyDraft } from "../utils/newCompanyDraft";
 import { readCompanyId } from "../utils/readCompanyId";
 import { resolveExtractedCompany } from "../utils/resolveExtractedCompany";
 
@@ -19,6 +23,9 @@ import { resolveExtractedCompany } from "../utils/resolveExtractedCompany";
  * Matches against the companies fetched now, waiting for GET /companies if it hasn't loaded, never
  * against a list captured when the read began: that one is empty until the list loads, and a company
  * already tracked would be added twice (with no domain, nothing on the server stops it).
+ *
+ * Reading only matches: a company that isn't tracked is held as new and added by Save, so a form
+ * closed without saving leaves no company behind.
  */
 export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
   const [loadCompanies] = useLazyListCompaniesQuery();
@@ -31,8 +38,6 @@ export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
   }
 
   async function addCompany(request: CompanyCreateRequest): Promise<Company> {
-    const nameProblem = companyNameProblem(request.name);
-    if (nameProblem) throw new Error(nameProblem);
     const created = await createCompany(request).unwrap();
     void triggerCompanyResearch(created.id)
       .unwrap()
@@ -66,29 +71,33 @@ export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
       const company = { kind: "autoCreateFailed", name: resolution.request.name } as const;
       return { kind: "failed", reason: "nameTooLong", company, error: new Error(nameProblem) };
     }
+    return { kind: "resolved", company: newCompanyDraft(resolution.request) };
+  }
+
+  /** The company already tracked under this name or domain, else undefined. */
+  function findTracked(companies: readonly Company[], request: CompanyCreateRequest): Company | undefined {
+    return findCompanyByName(companies, request.name) ?? findCompanyByDomain(companies, request.primary_domain);
+  }
+
+  async function companyIdForSave(company: ReviewCompanyState): Promise<string | null> {
+    const id = readCompanyId(company);
+    if (id) return id;
+    const request = companyToAdd(company);
+    if (!request) return null;
+    const nameProblem = companyNameProblem(request.name);
+    if (nameProblem) throw new Error(nameProblem);
+    const tracked = findTracked(await trackedCompanies(true), request);
+    if (tracked) return tracked.id;
     try {
-      const created = await addCompany(resolution.request);
-      if (!isCurrent()) return { kind: "stale" };
-      return {
-        kind: "resolved",
-        company: { kind: "new", companyId: created.id, name: created.name, logoUrl: created.logo_url },
-      };
+      return (await addCompany(request)).id;
     } catch (error) {
-      if (!isCurrent()) return { kind: "stale" };
-      const company = { kind: "autoCreateFailed", name: resolution.request.name } as const;
-      return { kind: "failed", reason: "addFailed", company, error };
+      // Another of your companies has this domain (added meanwhile, or under another name): use it.
+      if (!request.primary_domain || !isDuplicateCompanyDomainError(error)) throw error;
+      const holder = findCompanyByDomain(await trackedCompanies(true), request.primary_domain);
+      if (!holder) throw error;
+      return holder.id;
     }
   }
 
-  async function companyIdForSave(company: ReviewCompanyState, isCurrent: IsCurrent): Promise<string | null> {
-    const id = readCompanyId(company);
-    if (id || company.kind !== "autoCreateFailed" || !company.name) return id;
-    const tracked = await trackedCompanies(true);
-    if (!isCurrent()) return null;
-    const existing = findCompanyByName(tracked, company.name);
-    if (existing) return existing.id;
-    return (await addCompany({ name: company.name })).id;
-  }
-
-  return { addCompany, resolveReadCompany, companyIdForSave };
+  return { resolveReadCompany, companyIdForSave };
 }
