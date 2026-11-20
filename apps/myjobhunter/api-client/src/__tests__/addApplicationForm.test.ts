@@ -8,6 +8,7 @@ import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-r
 import { addApplicationFormProblems } from "../utils/addApplicationFormProblems";
 import { buildApplicationCreateRequest } from "../utils/buildApplicationCreateRequest";
 import { combineNotes } from "../utils/combineNotes";
+import { emptyAddApplicationFormValues } from "../utils/emptyAddApplicationFormValues";
 import { filterCompanies } from "../utils/filterCompanies";
 import { findCompanyByName } from "../utils/findCompanyByName";
 import { htmlToPlainText } from "../utils/htmlToPlainText";
@@ -71,7 +72,7 @@ const PARSE: JdParseResponse = {
   summary: null,
 };
 
-const VALUES: AddApplicationFormValues = { role_title: "Engineer", location: "", remote_type: "unknown", notes: "" };
+const VALUES: AddApplicationFormValues = { ...emptyAddApplicationFormValues(), role_title: "Engineer" };
 
 describe("findCompanyByName", () => {
   it("matches ignoring case and surrounding spaces", () => {
@@ -201,10 +202,11 @@ describe("buildApplicationCreateRequest", () => {
   it("trims what's typed and sends blanks as null", () => {
     expect(
       buildApplicationCreateRequest(
-        { role_title: " Eng ", location: " ", remote_type: "remote", notes: " Note " },
+        { role_title: " Eng ", location: " ", remote_type: "remote", notes: " Note ", applied_on: "2026-01-02" },
         { companyId: "c1", sourceUrl: "https://jobs.example.com/1", jdText: "  " },
       ),
     ).toEqual({
+      applied_at: new Date(2026, 0, 2).toISOString(),
       company_id: "c1",
       role_title: "Eng",
       url: "https://jobs.example.com/1",

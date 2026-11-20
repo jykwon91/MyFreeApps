@@ -14,12 +14,14 @@ import type { JdParseResponse } from "@myjobhunter/api-client/types/application/
 import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { baseApi } from "@platform/core/store/baseApi";
+import { localToday } from "@platform/core/utils/localToday";
 import { DISCARD_MESSAGES } from "@platform/mobile";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { Alert } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../src/constants/addApplication";
+import { formatIsoDate } from "../src/lib/formatIsoDate";
 import { APPLICATION_MESSAGES } from "../src/constants/applications";
 import { store } from "../src/lib/store";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
@@ -39,6 +41,10 @@ jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-su
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("expo-clipboard", () => ({ getStringAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
+jest.mock("@react-native-community/datetimepicker", () => {
+  const { View } = jest.requireActual("react-native");
+  return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
+});
 
 const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -169,6 +175,8 @@ describe("from a link", () => {
         remote_type: "unknown",
         notes: "Payments platform role.\n\nBuild payments infra.\n\nMust have:\n- Go",
         jd_text: null,
+        // Applied today, so it's the moment of saving; the "day applied" tests pin it.
+        applied_at: expect.any(String),
       },
     ]);
     // Back on the list, which reloads to show the new application.
@@ -385,6 +393,7 @@ describe("from pasted text", () => {
         remote_type: "remote",
         notes: null,
         jd_text: "We're hiring a Senior Engineer at Airbnb.",
+        applied_at: expect.any(String),
       },
     ]);
   });
@@ -452,7 +461,7 @@ describe("typed in", () => {
     await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
     expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([
-      { company_id: "co-airbnb", role_title: "Data Engineer", url: null, location: null, remote_type: "hybrid", notes: "Referred by Sam", jd_text: null },
+      { company_id: "co-airbnb", role_title: "Data Engineer", url: null, location: null, remote_type: "hybrid", notes: "Referred by Sam", jd_text: null, applied_at: expect.any(String) },
     ]);
   });
 
@@ -677,6 +686,62 @@ describe("checking and saving", () => {
     expect(requestsTo(sent, "POST /applications")).toHaveLength(1);
     await act(async () => answer({ status: 201, data: applicationRecord({ id: "app-new" }) }));
     await screen.findByText(MESSAGES.added);
+  });
+});
+
+describe("the day applied", () => {
+  const APPLIED_ON = MESSAGES.appliedOnLabel.toLowerCase();
+
+  /** The typed-in path, up to a saveable form with Stripe and a role title. */
+  async function typeInStripe(): Promise<ReturnType<typeof serve>> {
+    const sent = serveAdd();
+    await openAddScreen();
+    await chooseSource("Type it in");
+    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, ${MESSAGES.chooseCompany}` }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Stripe, stripe.com" }));
+    await fireEvent.changeText(field(ROLE_FIELD), "Engineer");
+    return sent;
+  }
+
+  /** Opens the "Applied on" picker, turns it to `date`, and closes it again. */
+  async function pickAppliedOn(date: Date): Promise<void> {
+    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}` }));
+    await fireEvent(screen.getByTestId(`${MESSAGES.appliedOnLabel}-picker`), "change", {}, date);
+    await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${APPLIED_ON}` }));
+  }
+
+  function daysFromToday(days: number): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+  }
+
+  it("starts at today and offers no later day", async () => {
+    await typeInStripe();
+    expect(screen.getByText(formatIsoDate(localToday()))).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}` }));
+    expect(screen.getByTestId(`${MESSAGES.appliedOnLabel}-picker`).props.maximumDate).toEqual(daysFromToday(0));
+  });
+
+  it("sends a day two weeks back as applied_at, at that day's local midnight", async () => {
+    const sent = await typeInStripe();
+    const twoWeeksAgo = daysFromToday(-14);
+    await pickAppliedOn(twoWeeksAgo);
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([
+      expect.objectContaining({ company_id: "co-stripe", applied_at: twoWeeksAgo.toISOString() }),
+    ]);
+  });
+
+  it("won't save a day in the future, saying so under the field", async () => {
+    const sent = await typeInStripe();
+    await pickAppliedOn(daysFromToday(1));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.appliedOnInFuture, SHOWN)).toBeTruthy();
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
   });
 });
 

@@ -1,6 +1,7 @@
 import type { ApplicationCreateRequest } from "../types/application-create-request";
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
 import type { ApplicationCreateContext } from "../types/application/application-create-context";
+import { appliedAtFromLocalDate } from "./appliedAtFromLocalDate";
 
 /** The POST /applications body for a reviewed form. Blank optional fields go as null. */
 export function buildApplicationCreateRequest(
@@ -15,5 +16,6 @@ export function buildApplicationCreateRequest(
     remote_type: values.remote_type,
     notes: values.notes.trim() || null,
     jd_text: jdText.trim() || null,
+    applied_at: appliedAtFromLocalDate(values.applied_on),
   };
 }

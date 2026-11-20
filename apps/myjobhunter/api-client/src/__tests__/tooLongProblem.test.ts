@@ -7,6 +7,7 @@ import { LOCATION_MAX_LENGTH, ROLE_TITLE_MAX_LENGTH } from "../constants/addAppl
 import type { HtmlTextContent } from "../types/application/html-text-content";
 import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-response";
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
+import { emptyAddApplicationFormValues } from "../utils/emptyAddApplicationFormValues";
 import { emptyFormValues } from "../utils/interviewEventForm";
 import { addApplicationFormProblems } from "../utils/addApplicationFormProblems";
 import { combineNotes } from "../utils/combineNotes";
@@ -17,7 +18,7 @@ import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 // One emoji is two UTF-16 units but one code point, which is how the backend counts.
 const EMOJI = "😀";
-const EMPTY_ADD_APPLICATION_FORM: AddApplicationFormValues = { role_title: "", location: "", remote_type: "unknown", notes: "" };
+const EMPTY_ADD_APPLICATION_FORM: AddApplicationFormValues = emptyAddApplicationFormValues();
 
 describe("eventTextProblems", () => {
   const values = emptyFormValues();

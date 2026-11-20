@@ -6,7 +6,7 @@
  *   AI-extracted summary and source URL.
  * - Company confirmation: either the pill (read-only) or the combobox
  *   (when the operator clicked "not right? change").
- * - The role-title, location, remote-type, and notes fields.
+ * - The role-title, location, remote-type, applied-on, and notes fields.
  * - Cancel + "Add application" submit buttons.
  *
  * All async logic is owned by the parent hook; this component is
@@ -16,6 +16,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useId } from "react";
 import { type UseFormRegister, type UseFormWatch, type FieldErrors } from "react-hook-form";
 import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
 import { addApplicationFormCounters } from "@myjobhunter/api-client/utils/addApplicationFormCounters";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import type { DialogState } from "../useAddApplicationDialogState";
@@ -64,7 +65,7 @@ export default function CompanyConfirmStep({
 }: CompanyConfirmStepProps) {
   const uid = useId();
   const counters = addApplicationFormCounters(watch());
-  const feedback = (field: "role_title" | "location" | "notes") => ({
+  const feedback = (field: "role_title" | "location" | "notes" | "applied_on") => ({
     id: `${uid}-${field}`,
     error: errors[field]?.message,
     counter: counters[field],
@@ -146,6 +147,21 @@ export default function CompanyConfirmStep({
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label htmlFor={`${uid}-applied_on`} className="block text-sm font-medium mb-1">
+            Applied on <span className="text-destructive">*</span>
+          </label>
+          <input
+            id={`${uid}-applied_on`}
+            type="date"
+            max={localToday()}
+            {...fieldFeedbackAria(feedback("applied_on"))}
+            {...register("applied_on")}
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+          />
+          <FieldFeedback {...feedback("applied_on")} />
         </div>
 
         <div>

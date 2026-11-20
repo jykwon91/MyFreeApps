@@ -13,6 +13,11 @@ Application status is NOT a column — per the project's
 "No latest_status column" rule, status is computed from
 ``application_events`` via lateral join. ``archived`` is the only writable
 state flag exposed here.
+
+``applied_at`` dates the application's initial ``applied`` event, so like an
+event's ``occurred_at`` it may not be in the future (beyond the same small
+clock-skew tolerance); a future-dated ``applied`` event would outrank every
+later stage change. Left out, the service stamps it with the time of creation.
 """
 from __future__ import annotations
 
@@ -20,10 +25,14 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 from app.core.currency_code import CURRENCY_CODE_LENGTH, CurrencyCode
 from app.core.enums import ApplicationSource, RemoteType, SalaryPeriod
+from app.core.event_time_constants import (
+    APPLIED_AT_IN_FUTURE_MESSAGE,
+    OCCURRED_AT_CLOCK_SKEW_TOLERANCE,
+)
 from app.core.job_description_limits import JD_TEXT_MAX_LEN
 
 # Bounds mirror the ``Application`` model's String() lengths.
@@ -75,6 +84,17 @@ class ApplicationCreateRequest(BaseModel):
     def _serialize_url(self, value: AnyHttpUrl | None) -> str | None:
         """Coerce AnyHttpUrl to plain string for DB storage."""
         return str(value) if value is not None else None
+
+    @field_validator("applied_at")
+    @classmethod
+    def _applied_at_not_in_future(cls, value: _dt.datetime | None) -> _dt.datetime | None:
+        if value is None:
+            return None
+        # A naive timestamp is read as UTC, the same as the aware column does on write.
+        aware = value if value.tzinfo is not None else value.replace(tzinfo=_dt.timezone.utc)
+        if aware > _dt.datetime.now(_dt.timezone.utc) + OCCURRED_AT_CLOCK_SKEW_TOLERANCE:
+            raise ValueError(APPLIED_AT_IN_FUTURE_MESSAGE)
+        return value
 
     @model_validator(mode="after")
     def _validate_business_rules(self) -> "ApplicationCreateRequest":

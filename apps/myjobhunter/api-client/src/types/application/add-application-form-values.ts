@@ -6,4 +6,6 @@ export interface AddApplicationFormValues {
   location: string;
   remote_type: RemoteType;
   notes: string;
+  /** The local calendar day they applied, "YYYY-MM-DD"; today unless they change it. */
+  applied_on: string;
 }
