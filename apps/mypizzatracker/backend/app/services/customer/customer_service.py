@@ -113,9 +113,15 @@ async def update_notes(
 
 
 async def list_with_stats(
-    db: AsyncSession, *, search: Optional[str] = None, limit: int = 200,
-) -> list[dict]:
-    """Return list of customers with order_count + last_order_at."""
-    return await customer_repo.list_customers_with_stats(
-        db, search=search, limit=limit,
+    db: AsyncSession,
+    *,
+    search: Optional[str] = None,
+    limit: int,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    """Return one page of customers (order_count + last_order_at) and the total matching."""
+    rows = await customer_repo.list_customers_with_stats(
+        db, search=search, limit=limit, offset=offset,
     )
+    total = await customer_repo.count_customers(db, search=search)
+    return rows, total

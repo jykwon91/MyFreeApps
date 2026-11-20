@@ -1,9 +1,8 @@
 import { baseApi } from "@platform/ui";
-import type {
-  CustomerListItem,
-  CustomerNotesUpdate,
-  CustomerRead,
-} from "@/types/customer/customer";
+import { CUSTOMER_PAGE_SIZE } from "@/constants/customers";
+import type { CustomerNotesUpdate, CustomerRead } from "@/types/customer/customer";
+import type { CustomerListResponse } from "@/types/customer/customer-list-response";
+import type { CustomerPageArgs } from "@/types/customer/customer-page-args";
 
 const apiWithTags = baseApi.enhanceEndpoints({
   addTagTypes: ["Customer"],
@@ -11,19 +10,25 @@ const apiWithTags = baseApi.enhanceEndpoints({
 
 const customersApi = apiWithTags.injectEndpoints({
   endpoints: (build) => ({
-    listCustomers: build.query<CustomerListItem[], { search?: string } | void>({
-      query: (arg) => ({
+    listCustomerPages: build.infiniteQuery<CustomerListResponse, CustomerPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + CUSTOMER_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
         url: "/customers",
         method: "GET",
-        params: arg?.search ? { search: arg.search } : undefined,
+        params: {
+          ...(queryArg.search ? { search: queryArg.search } : {}),
+          limit: CUSTOMER_PAGE_SIZE,
+          offset: pageParam,
+        },
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map((c) => ({ type: "Customer" as const, id: c.id })),
-              { type: "Customer" as const, id: "LIST" },
-            ]
-          : [{ type: "Customer" as const, id: "LIST" }],
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((c) => ({ type: "Customer" as const, id: c.id })) ?? []),
+        { type: "Customer" as const, id: "LIST" },
+      ],
     }),
     updateCustomerNotes: build.mutation<
       CustomerRead,
@@ -43,6 +48,6 @@ const customersApi = apiWithTags.injectEndpoints({
 });
 
 export const {
-  useListCustomersQuery,
+  useListCustomerPagesInfiniteQuery,
   useUpdateCustomerNotesMutation,
 } = customersApi;

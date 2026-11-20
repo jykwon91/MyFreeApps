@@ -1,6 +1,6 @@
 """Operator customer-DB routes.
 
-  GET    /customers                            -- list customers with rollup stats
+  GET    /customers                            -- one page of customers with rollup stats
   PATCH  /customers/{customer_id}/notes        -- replace the operator notes field
 
 Auth is enforced at the router level (single-user app). Paths register
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
+from app.schemas.customer.customer_list_response import CustomerListResponse
 from app.schemas.customer.customer_schemas import (
     CustomerListItem,
     CustomerNotesUpdate,
@@ -40,16 +41,17 @@ def _service_error(exc: CustomerServiceError) -> HTTPException:
     return HTTPException(status_code=exc.http_status, detail=str(exc))
 
 
-@router.get("", response_model=list[CustomerListItem])
+@router.get("", response_model=CustomerListResponse)
 async def list_customers(
     search: str | None = Query(None, max_length=100),
-    limit: int = Query(200, ge=1, le=1000),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-) -> list[CustomerListItem]:
-    rows = await customer_service.list_with_stats(
-        db, search=search, limit=limit,
+) -> CustomerListResponse:
+    rows, total = await customer_service.list_with_stats(
+        db, search=search, limit=limit, offset=offset,
     )
-    return [
+    items = [
         CustomerListItem(
             id=row["customer"].id,
             name=row["customer"].name,
@@ -60,6 +62,9 @@ async def list_customers(
         )
         for row in rows
     ]
+    return CustomerListResponse(
+        items=items, total=total, has_more=offset + len(items) < total,
+    )
 
 
 @router.patch(

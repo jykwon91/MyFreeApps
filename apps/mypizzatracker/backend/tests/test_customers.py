@@ -216,7 +216,7 @@ async def test_list_customers_returns_rollup_stats(
 
     resp = await auth_client.get("/customers")
     assert resp.status_code == 200, resp.text
-    rows = resp.json()
+    rows = resp.json()["items"]
     by_phone = {r["phone"]: r for r in rows}
 
     jane = by_phone["5125551234"]
@@ -257,14 +257,14 @@ async def test_list_customers_search_by_name_and_phone(
     # Case-insensitive name search.
     resp = await auth_client.get("/customers", params={"search": "maria"})
     assert resp.status_code == 200
-    names = [r["name"] for r in resp.json()]
+    names = [r["name"] for r in resp.json()["items"]]
     assert "Maria Jaramillo" in names
     assert "Henny P" not in names
 
     # Phone-digit substring search ignores formatting.
     resp = await auth_client.get("/customers", params={"search": "(512) 555"})
     assert resp.status_code == 200
-    phones = [r["phone"] for r in resp.json()]
+    phones = [r["phone"] for r in resp.json()["items"]]
     assert "5125551234" in phones
     assert "9998887777" not in phones
 
@@ -294,7 +294,58 @@ async def test_list_customers_search_treats_wildcards_literally(
     resp = await auth_client.get("/customers", params={"search": search})
 
     assert resp.status_code == 200, resp.text
-    assert sorted(r["name"] for r in resp.json()) == expected_names
+    assert sorted(r["name"] for r in resp.json()["items"]) == expected_names
+
+
+@pytest.mark.asyncio
+async def test_list_customers_pages_reach_every_customer(
+    auth_client: AsyncClient, db: AsyncSession,
+):
+    """More customers than one page holds: paging by offset reaches all of them, once each."""
+    total = 230
+    for n in range(total):
+        db.add(Customer(name=f"Customer {n:03d}", phone=f"7{n:09d}"))
+    await db.flush()
+
+    seen: list[str] = []
+    offset = 0
+    while True:
+        resp = await auth_client.get(
+            "/customers", params={"limit": 100, "offset": offset},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["total"] == total
+        seen.extend(r["id"] for r in body["items"])
+        offset += len(body["items"])
+        if not body["has_more"]:
+            break
+
+    assert len(seen) == total
+    assert len(set(seen)) == total
+
+
+@pytest.mark.asyncio
+async def test_list_customers_search_total_counts_matches_across_pages(
+    auth_client: AsyncClient, db: AsyncSession,
+):
+    for n in range(7):
+        db.add(Customer(name=f"Pie Fan {n}", phone=f"61100000{n:02d}"))
+    db.add(Customer(name="Someone Else", phone="6120000000"))
+    await db.flush()
+
+    first = await auth_client.get(
+        "/customers", params={"search": "pie fan", "limit": 5},
+    )
+    second = await auth_client.get(
+        "/customers", params={"search": "pie fan", "limit": 5, "offset": 5},
+    )
+
+    assert first.json()["total"] == 7
+    assert first.json()["has_more"] is True
+    assert len(first.json()["items"]) == 5
+    assert second.json()["has_more"] is False
+    assert len(second.json()["items"]) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +393,7 @@ async def test_update_notes_persists_and_blank_becomes_null(
 
     listing = await auth_client.get("/customers")
     customer_id = next(
-        r["id"] for r in listing.json() if r["phone"] == "5121112222"
+        r["id"] for r in listing.json()["items"] if r["phone"] == "5121112222"
     )
 
     resp = await auth_client.patch(
