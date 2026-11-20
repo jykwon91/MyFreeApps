@@ -1,7 +1,7 @@
-import { ArrowRight } from "lucide-react";
 import { DIFF_CHANGE_DISPLAY } from "@myrecipes/api-client/constants/versions";
 import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 import { CHANGE_STYLES } from "@/features/recipes/diff-display";
+import DiffRowText from "@/features/recipes/DiffRowText";
 
 interface Props {
   change: DiffChangeKind;
@@ -33,17 +33,7 @@ export default function DiffRow({ change, label, before, after }: Props) {
       </span>
       <span className="sr-only">{display.label}:</span>
       {label ? <span className="font-medium">{label}:</span> : null}
-      {change === "changed" ? (
-        <span className="flex flex-1 flex-wrap items-center gap-2">
-          <span className="text-muted-foreground line-through">{before}</span>
-          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
-          <span className="font-medium">{after}</span>
-        </span>
-      ) : change === "removed" ? (
-        <span className="flex-1 text-muted-foreground line-through">{before}</span>
-      ) : (
-        <span className="flex-1 font-medium">{after}</span>
-      )}
+      <DiffRowText change={change} before={before} after={after} />
     </li>
   );
 }
