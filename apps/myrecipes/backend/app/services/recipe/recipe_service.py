@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.recipe.cook_log import CookLog
 from app.models.recipe.recipe import Recipe
 from app.models.recipe.recipe_ingredient import RecipeIngredient
@@ -140,37 +141,37 @@ async def _build_detail(
 
 
 async def create_recipe(
-    db: AsyncSession, user_id: uuid.UUID, req: RecipeCreateRequest,
+    user_id: uuid.UUID, req: RecipeCreateRequest,
 ) -> RecipeDetailResponse:
     """Create a recipe and its first version (v1) atomically."""
-    recipe = Recipe(
-        user_id=user_id,
-        title=req.title,
-        description=req.description,
-        source=req.source,
-    )
-    await recipe_repository.create(db, recipe)
+    async with unit_of_work() as db:
+        recipe = Recipe(
+            user_id=user_id,
+            title=req.title,
+            description=req.description,
+            source=req.source,
+        )
+        await recipe_repository.create(db, recipe)
 
-    version = RecipeVersion(
-        recipe_id=recipe.id,
-        user_id=user_id,
-        version_number=1,
-        parent_version_id=None,
-        change_note=None,
-        servings=req.servings,
-        prep_minutes=req.prep_minutes,
-        cook_minutes=req.cook_minutes,
-    )
-    await recipe_version_repository.create(db, version)
-    await recipe_version_repository.add_ingredients(
-        db, _make_ingredients(version.id, req.ingredients)
-    )
-    await recipe_version_repository.add_steps(db, _make_steps(version.id, req.steps))
+        version = RecipeVersion(
+            recipe_id=recipe.id,
+            user_id=user_id,
+            version_number=1,
+            parent_version_id=None,
+            change_note=None,
+            servings=req.servings,
+            prep_minutes=req.prep_minutes,
+            cook_minutes=req.cook_minutes,
+        )
+        await recipe_version_repository.create(db, version)
+        await recipe_version_repository.add_ingredients(
+            db, _make_ingredients(version.id, req.ingredients)
+        )
+        await recipe_version_repository.add_steps(db, _make_steps(version.id, req.steps))
 
-    versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
-    detail = await _build_detail(db, recipe, versions, user_id)
-    await db.commit()
-    return detail
+        versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
+        detail = await _build_detail(db, recipe, versions, user_id)
+        return detail
 
 
 async def get_public_recipe_detail(
@@ -187,29 +188,29 @@ async def get_public_recipe_detail(
 
 
 async def update_recipe(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, req: RecipeUpdateRequest,
+    user_id: uuid.UUID, recipe_id: uuid.UUID, req: RecipeUpdateRequest,
 ) -> RecipeDetailResponse | None:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
-    if recipe is None:
-        return None
-    updates = req.model_dump(exclude_unset=True)
-    if updates:
-        await recipe_repository.update(db, recipe, updates)
-    versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
-    detail = await _build_detail(db, recipe, versions, user_id)
-    await db.commit()
-    return detail
+    async with unit_of_work() as db:
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+        if recipe is None:
+            return None
+        updates = req.model_dump(exclude_unset=True)
+        if updates:
+            await recipe_repository.update(db, recipe, updates)
+        versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
+        detail = await _build_detail(db, recipe, versions, user_id)
+        return detail
 
 
 async def delete_recipe(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID,
+    user_id: uuid.UUID, recipe_id: uuid.UUID,
 ) -> bool:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
-    if recipe is None:
-        return False
-    await recipe_repository.soft_delete(db, recipe)
-    await db.commit()
-    return True
+    async with unit_of_work() as db:
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+        if recipe is None:
+            return False
+        await recipe_repository.soft_delete(db, recipe)
+        return True
 
 
 # ---------------------------------------------------------------------------
@@ -280,105 +281,105 @@ async def get_public_version(
 
 
 async def create_version(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, req: VersionCreateRequest,
+    user_id: uuid.UUID, recipe_id: uuid.UUID, req: VersionCreateRequest,
 ) -> VersionResponse | None:
     """Create a new version (a tweak). Returns None if the recipe is missing.
 
     Raises InvalidBaseVersionError if ``base_version_id`` is given but doesn't
     belong to this recipe.
     """
-    # Lock the recipe row so two concurrent saves can't read the same max version number.
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
-    if recipe is None:
-        return None
+    async with unit_of_work() as db:
+        # Lock the recipe row so two concurrent saves can't read the same max version number.
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
+        if recipe is None:
+            return None
 
-    base: RecipeVersion | None
-    if req.base_version_id is not None:
-        base = await recipe_version_repository.get_by_id(db, req.base_version_id, user_id)
-        if base is None or base.recipe_id != recipe_id:
-            raise InvalidBaseVersionError("base_version_id is not a version of this recipe")
-    else:
-        base = await recipe_version_repository.get_latest(db, recipe_id, user_id)
+        base: RecipeVersion | None
+        if req.base_version_id is not None:
+            base = await recipe_version_repository.get_by_id(db, req.base_version_id, user_id)
+            if base is None or base.recipe_id != recipe_id:
+                raise InvalidBaseVersionError("base_version_id is not a version of this recipe")
+        else:
+            base = await recipe_version_repository.get_latest(db, recipe_id, user_id)
 
-    next_number = await recipe_version_repository.max_version_number(db, recipe_id) + 1
-    version = RecipeVersion(
-        recipe_id=recipe_id,
-        user_id=user_id,
-        version_number=next_number,
-        parent_version_id=base.id if base else None,
-        change_note=req.change_note,
-        # Inherit only a field the tweak leaves out; an explicit null clears it.
-        servings=req.servings if "servings" in req.model_fields_set else (base.servings if base else None),
-        prep_minutes=req.prep_minutes if "prep_minutes" in req.model_fields_set else (base.prep_minutes if base else None),
-        cook_minutes=req.cook_minutes if "cook_minutes" in req.model_fields_set else (base.cook_minutes if base else None),
-    )
-    await recipe_version_repository.create(db, version)
+        next_number = await recipe_version_repository.max_version_number(db, recipe_id) + 1
+        version = RecipeVersion(
+            recipe_id=recipe_id,
+            user_id=user_id,
+            version_number=next_number,
+            parent_version_id=base.id if base else None,
+            change_note=req.change_note,
+            # Inherit only a field the tweak leaves out; an explicit null clears it.
+            servings=req.servings if "servings" in req.model_fields_set else (base.servings if base else None),
+            prep_minutes=req.prep_minutes if "prep_minutes" in req.model_fields_set else (base.prep_minutes if base else None),
+            cook_minutes=req.cook_minutes if "cook_minutes" in req.model_fields_set else (base.cook_minutes if base else None),
+        )
+        await recipe_version_repository.create(db, version)
 
-    ingredients = _make_ingredients(version.id, req.ingredients)
-    steps = _make_steps(version.id, req.steps)
-    await recipe_version_repository.add_ingredients(db, ingredients)
-    await recipe_version_repository.add_steps(db, steps)
-    # A tweak changes the recipe's content, so it moves to the top of the library list.
-    await recipe_repository.touch(db, recipe)
+        ingredients = _make_ingredients(version.id, req.ingredients)
+        steps = _make_steps(version.id, req.steps)
+        await recipe_version_repository.add_ingredients(db, ingredients)
+        await recipe_version_repository.add_steps(db, steps)
+        # A tweak changes the recipe's content, so it moves to the top of the library list.
+        await recipe_repository.touch(db, recipe)
 
-    dto = recipe_mappers.to_version_response(version, ingredients, steps)
-    await db.commit()
-    return dto
+        dto = recipe_mappers.to_version_response(version, ingredients, steps)
+        return dto
 
 
 async def restore_version(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, version_id: uuid.UUID,
+    user_id: uuid.UUID, recipe_id: uuid.UUID, version_id: uuid.UUID,
 ) -> VersionResponse | None:
     """Copy an old version forward as a new latest version (history-preserving)."""
-    # Lock the recipe row so two concurrent saves can't read the same max version number.
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
-    if recipe is None:
-        return None
-    source = await recipe_version_repository.get_by_id(db, version_id, user_id)
-    if source is None or source.recipe_id != recipe_id:
-        return None
+    async with unit_of_work() as db:
+        # Lock the recipe row so two concurrent saves can't read the same max version number.
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
+        if recipe is None:
+            return None
+        source = await recipe_version_repository.get_by_id(db, version_id, user_id)
+        if source is None or source.recipe_id != recipe_id:
+            return None
 
-    source_ingredients = await recipe_version_repository.get_ingredients(db, source.id)
-    source_steps = await recipe_version_repository.get_steps(db, source.id)
+        source_ingredients = await recipe_version_repository.get_ingredients(db, source.id)
+        source_steps = await recipe_version_repository.get_steps(db, source.id)
 
-    next_number = await recipe_version_repository.max_version_number(db, recipe_id) + 1
-    new_version = RecipeVersion(
-        recipe_id=recipe_id,
-        user_id=user_id,
-        version_number=next_number,
-        parent_version_id=source.id,
-        change_note=f"Restored from v{source.version_number}",
-        servings=source.servings,
-        prep_minutes=source.prep_minutes,
-        cook_minutes=source.cook_minutes,
-    )
-    await recipe_version_repository.create(db, new_version)
-
-    # Copy snapshots forward — NEW rows, SAME lineage_key so the diff against the
-    # restored version reads cleanly.
-    new_ingredients = [
-        RecipeIngredient(
-            version_id=new_version.id,
-            lineage_key=src.lineage_key,
-            position=src.position,
-            name=src.name,
-            quantity=src.quantity,
-            unit=src.unit,
-            note=src.note,
+        next_number = await recipe_version_repository.max_version_number(db, recipe_id) + 1
+        new_version = RecipeVersion(
+            recipe_id=recipe_id,
+            user_id=user_id,
+            version_number=next_number,
+            parent_version_id=source.id,
+            change_note=f"Restored from v{source.version_number}",
+            servings=source.servings,
+            prep_minutes=source.prep_minutes,
+            cook_minutes=source.cook_minutes,
         )
-        for src in source_ingredients
-    ]
-    new_steps = [
-        RecipeStep(version_id=new_version.id, position=src.position, instruction=src.instruction)
-        for src in source_steps
-    ]
-    await recipe_version_repository.add_ingredients(db, new_ingredients)
-    await recipe_version_repository.add_steps(db, new_steps)
-    await recipe_repository.touch(db, recipe)
+        await recipe_version_repository.create(db, new_version)
 
-    dto = recipe_mappers.to_version_response(new_version, new_ingredients, new_steps)
-    await db.commit()
-    return dto
+        # Copy snapshots forward — NEW rows, SAME lineage_key so the diff against the
+        # restored version reads cleanly.
+        new_ingredients = [
+            RecipeIngredient(
+                version_id=new_version.id,
+                lineage_key=src.lineage_key,
+                position=src.position,
+                name=src.name,
+                quantity=src.quantity,
+                unit=src.unit,
+                note=src.note,
+            )
+            for src in source_ingredients
+        ]
+        new_steps = [
+            RecipeStep(version_id=new_version.id, position=src.position, instruction=src.instruction)
+            for src in source_steps
+        ]
+        await recipe_version_repository.add_ingredients(db, new_ingredients)
+        await recipe_version_repository.add_steps(db, new_steps)
+        await recipe_repository.touch(db, recipe)
+
+        dto = recipe_mappers.to_version_response(new_version, new_ingredients, new_steps)
+        return dto
 
 
 async def diff_public_versions(
@@ -439,30 +440,29 @@ async def diff_public_versions(
 
 
 async def log_cook(
-    db: AsyncSession,
     user_id: uuid.UUID,
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
     req: CookLogCreateRequest,
 ) -> CookLogResponse | None:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
-    if recipe is None:
-        return None
-    version = await recipe_version_repository.get_by_id(db, version_id, user_id)
-    if version is None or version.recipe_id != recipe_id:
-        return None
+    async with unit_of_work() as db:
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+        if recipe is None:
+            return None
+        version = await recipe_version_repository.get_by_id(db, version_id, user_id)
+        if version is None or version.recipe_id != recipe_id:
+            return None
 
-    cook = CookLog(
-        version_id=version_id,
-        user_id=user_id,
-        cooked_at=req.cooked_at or datetime.now(timezone.utc),
-        rating=req.rating,
-        outcome_notes=req.outcome_notes,
-    )
-    await cook_log_repository.create(db, cook)
-    dto = recipe_mappers.to_cook_log_response(cook)
-    await db.commit()
-    return dto
+        cook = CookLog(
+            version_id=version_id,
+            user_id=user_id,
+            cooked_at=req.cooked_at or datetime.now(timezone.utc),
+            rating=req.rating,
+            outcome_notes=req.outcome_notes,
+        )
+        await cook_log_repository.create(db, cook)
+        dto = recipe_mappers.to_cook_log_response(cook)
+        return dto
 
 
 async def list_cooks(
@@ -482,14 +482,15 @@ async def list_cooks(
 
 
 async def delete_cook(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, cook_id: uuid.UUID,
+    user_id: uuid.UUID, recipe_id: uuid.UUID, cook_id: uuid.UUID,
 ) -> bool:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
-    if recipe is None:
-        return False
-    cook = await cook_log_repository.get_by_id(db, cook_id, recipe_id, user_id)
-    if cook is None:
-        return False
-    await cook_log_repository.delete(db, cook)
-    await db.commit()
-    return True
+    async with unit_of_work() as db:
+        recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+        if recipe is None:
+            return False
+        cook = await cook_log_repository.get_by_id(db, cook_id, recipe_id, user_id)
+        if cook is None:
+            return False
+        await cook_log_repository.delete(db, cook)
+        return True
+
