@@ -64,7 +64,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     if resp.status_code != 200:
-        pytest.skip(f"Auth failed: {resp.status_code} {resp.text}")
+        pytest.fail(f"Auth failed: {resp.status_code} {resp.text}")
     token = resp.json().get("access_token", "")
     client.headers["Authorization"] = f"Bearer {token}"
     return client
@@ -305,7 +305,7 @@ async def test_list_customers_pages_reach_every_customer(
     total = 230
     for n in range(total):
         db.add(Customer(name=f"Customer {n:03d}", phone=f"7{n:09d}"))
-    await db.flush()
+    await db.commit()
 
     seen: list[str] = []
     offset = 0
@@ -332,7 +332,7 @@ async def test_list_customers_search_total_counts_matches_across_pages(
     for n in range(7):
         db.add(Customer(name=f"Pie Fan {n}", phone=f"61100000{n:02d}"))
     db.add(Customer(name="Someone Else", phone="6120000000"))
-    await db.flush()
+    await db.commit()
 
     first = await auth_client.get(
         "/customers", params={"search": "pie fan", "limit": 5},
