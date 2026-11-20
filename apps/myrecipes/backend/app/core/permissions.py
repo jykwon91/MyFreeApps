@@ -13,7 +13,7 @@ from platform_shared.core.permissions import (
     make_strict_superuser_gate,
 )
 
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, get_user_manager
 from app.core.config import settings
 from app.db.session import get_db
 from app.services.user.totp_service import verify_totp_code
@@ -30,6 +30,7 @@ _decode_token_auth_time = make_decode_token_auth_time(secret_key=settings.secret
 current_strict_superuser = make_strict_superuser_gate(
     current_active_user=current_active_user,
     get_db=get_db,
+    get_user_manager=get_user_manager,
     verify_totp_step_up=verify_totp_code,
     decode_token_auth_time=_decode_token_auth_time,
     max_token_age_seconds=3600,
