@@ -76,15 +76,19 @@ def _profile_update_affects_embedding(updates: dict) -> bool:
     return bool(_PROFILE_EMBED_FIELDS & set(updates))
 
 
-async def _refresh_profile_embedding_best_effort(
+async def refresh_profile_embedding_best_effort(
     db: AsyncSession, user_id: uuid.UUID,
 ) -> None:
     """Refresh the embedding; log + swallow ``EmbeddingModelLoadError``
     so the caller's commit still succeeds.
 
+    Call it AFTER committing the profile change. Used by the profile
+    routes and by the resume parser worker once a parse has merged rows
+    into the profile.
+
     This is the ONE place where embedding failures are caught — and
     only because the alternative (failing the user-facing profile save
-    because fastembed couldn't load) is worse. The error is captured
+    or the resume parse because fastembed couldn't load) is worse. The error is captured
     by the logger which Sentry picks up; the boot guard ensures the
     model has already loaded successfully, so reaching this branch in
     production indicates a transient runtime problem worth a Sentry
@@ -171,7 +175,7 @@ async def update_profile(
         profile = await profile_repository.update(db, profile, updates)
         await db.commit()
         if _profile_update_affects_embedding(updates):
-            await _refresh_profile_embedding_best_effort(db, user_id)
+            await refresh_profile_embedding_best_effort(db, user_id)
     return profile
 
 
@@ -208,7 +212,7 @@ async def create_work_history(
     )
     entry = await work_history_repository.create(db, entry)
     await db.commit()
-    await _refresh_profile_embedding_best_effort(db, user_id)
+    await refresh_profile_embedding_best_effort(db, user_id)
     return entry
 
 
@@ -236,7 +240,7 @@ async def update_work_history(
             )
         entry = await work_history_repository.update(db, entry, updates)
         await db.commit()
-        await _refresh_profile_embedding_best_effort(db, user_id)
+        await refresh_profile_embedding_best_effort(db, user_id)
     return entry
 
 
@@ -250,7 +254,7 @@ async def delete_work_history(
         return False
     await work_history_repository.delete(db, entry)
     await db.commit()
-    await _refresh_profile_embedding_best_effort(db, user_id)
+    await refresh_profile_embedding_best_effort(db, user_id)
     return True
 
 
@@ -351,7 +355,7 @@ async def create_skill(
         raise DuplicateSkillError(
             f"A skill named {request.name!r} already exists (case-insensitive).",
         ) from exc
-    await _refresh_profile_embedding_best_effort(db, user_id)
+    await refresh_profile_embedding_best_effort(db, user_id)
     return skill
 
 
@@ -365,7 +369,7 @@ async def delete_skill(
         return False
     await skill_repository.delete(db, skill)
     await db.commit()
-    await _refresh_profile_embedding_best_effort(db, user_id)
+    await refresh_profile_embedding_best_effort(db, user_id)
     return True
 
 

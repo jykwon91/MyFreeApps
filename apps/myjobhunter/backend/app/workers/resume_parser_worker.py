@@ -14,6 +14,9 @@ For each queued job:
      user's existing rows (no duplicates on re-upload), skills via
      ON CONFLICT DO NOTHING.
   7. Mark the job ``complete`` with the raw Claude response + parser version.
+  8. When the merge changed what the profile embedding is built from (work
+     history rows added or filled, skills added), refresh the embedding so
+     Discover scores against the new profile.
 
 On any failure: mark the job ``failed`` with ``error_message=str(exc)[:1000]``.
 Idempotency: the atomic UPDATE in step 1 ensures only one worker instance
@@ -40,10 +43,12 @@ from app.mappers.resume_mapper import map_education, map_skills, map_work_histor
 from app.repositories.jobs import resume_upload_job_repo
 from app.services.extraction.claude_service import MAX_TEXT_CHARS, extract_resume
 from app.services.jobs.parse_provenance import build_parse_provenance
+from app.services.discovery import discovery_embedding_service
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
 )
+from app.services.profile import profile_service
 from app.services.profile.resume_profile_merge_service import merge_parsed_profile_rows
 
 logger = logging.getLogger(__name__)
@@ -87,7 +92,7 @@ async def process_one() -> bool:
     logger.info("Processing resume job %s for user %s (%s)", job_id, user_id, filename)
 
     try:
-        await _run_extraction(
+        embedding_inputs_changed = await _run_extraction(
             job_id=job_id,
             user_id=user_id,
             profile_id=profile_id,
@@ -113,6 +118,12 @@ async def process_one() -> bool:
                 job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
                 if job:
                     await resume_upload_job_repo.mark_failed(db, job, error_msg)
+    else:
+        # Outside the try: the job is already committed as complete, so an
+        # embedding error must not requeue it or mark it failed.
+        if embedding_inputs_changed:
+            async with AsyncSessionLocal() as db:
+                await profile_service.refresh_profile_embedding_best_effort(db, user_id)
 
     return True
 
@@ -123,8 +134,13 @@ async def _run_extraction(
     profile_id: uuid.UUID,
     file_path: str,
     content_type: str,
-) -> None:
-    """Download → extract text → call Claude → persist rows → mark complete."""
+) -> bool:
+    """Download → extract text → call Claude → persist rows → mark complete.
+
+    Returns True when the merge changed a profile field the discovery
+    embedding is built from (work history or skills), so the caller knows
+    to refresh it. Education is not part of the embedding.
+    """
     from app.core.storage import get_storage  # noqa: PLC0415 — deferred to avoid startup cost
 
     # 1. Download from MinIO.
@@ -179,7 +195,7 @@ async def _run_extraction(
         job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
         if job is None:
             logger.warning("Job %s disappeared before completion — skipping", job_id)
-            return
+            return False
 
         # Merge work_history and education: a re-upload carries rows the
         # profile already holds, so match before inserting.
@@ -188,8 +204,10 @@ async def _run_extraction(
         )
 
         # Skills use ON CONFLICT DO NOTHING for UNIQUE(user_id, lower(name)).
+        skills_added = 0
         for skill in skill_entries:
-            await _upsert_skill_ignore_conflict(db, skill)
+            if await _upsert_skill_ignore_conflict(db, skill):
+                skills_added += 1
 
         await db.flush()
 
@@ -203,18 +221,23 @@ async def _run_extraction(
 
     logger.info(
         "Job %s complete: work %d added / %d matched, edu %d added / %d matched, "
-        "%d skills",
+        "%d / %d skills added",
         job_id,
         merge_result.work_history_added,
         merge_result.work_history_matched,
         merge_result.education_added,
         merge_result.education_matched,
+        skills_added,
         len(skill_entries),
     )
+    return merge_result.work_history_changed or skills_added > 0
 
 
-async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> None:
-    """Add a skill row; silently ignore UNIQUE(user_id, lower(name)) violations."""
+async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> bool:
+    """Add a skill row; silently ignore UNIQUE(user_id, lower(name)) violations.
+
+    Returns True when a row was inserted, False when the skill already existed.
+    """
     from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: PLC0415
     from app.models.profile.skill import Skill  # noqa: PLC0415
 
@@ -229,7 +252,8 @@ async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> 
         created_at=now,
         updated_at=now,
     ).on_conflict_do_nothing()
-    await db.execute(stmt)
+    result = await db.execute(stmt)
+    return result.rowcount == 1
 
 
 def _build_parsed_fields(claude_response: dict, *, provenance: dict | None = None) -> dict:
@@ -251,6 +275,11 @@ async def main() -> None:
     from app.workers.refinement_prepare_worker import (  # noqa: PLC0415
         process_one_session,
     )
+
+    # Parses refresh the profile embedding, so load the model at boot: a
+    # missing or corrupt model crashes the worker here (same as the
+    # discovery scheduler) instead of on the first resume upload.
+    discovery_embedding_service.load_model_eager()
 
     logger.info(
         "Resume worker started (parse + refinement prepare) — polling every %ds",

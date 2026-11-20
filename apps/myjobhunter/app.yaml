@@ -23,6 +23,12 @@ csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86
 workers:
   - name: resume-parser
     command: ["python", "-m", "app.workers.resume_parser_worker"]
+    # Loads the fastembed MiniLM model + onnxruntime at boot to refresh the
+    # profile embedding after a parse — the same model the scheduler holds
+    # (measured ~320-390MB RSS after load there), on top of PDF/DOCX text
+    # extraction. Sized like the scheduler; the 512m default would be ~75% full
+    # before the first parse.
+    mem_limit: 768m
   # The ONLY process that runs the discovery APScheduler (the api's two uvicorn
   # workers must not — see app/workers/discovery_scheduler_worker.py). Exactly
   # one replica: never scale this service.

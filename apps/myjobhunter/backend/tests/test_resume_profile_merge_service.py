@@ -95,6 +95,9 @@ async def test_same_parse_twice_adds_no_duplicates(db, user_factory) -> None:
     assert (first.work_history_added, first.education_added) == (1, 1)
     assert (second.work_history_added, second.work_history_matched) == (0, 1)
     assert (second.education_added, second.education_matched) == (0, 1)
+    assert (second.work_history_filled, second.education_filled) == (0, 0)
+    assert first.work_history_changed is True
+    assert second.work_history_changed is False
     assert len(await _work_rows(db, user_id)) == 1
     assert len(await _edu_rows(db, user_id)) == 1
 
@@ -118,11 +121,13 @@ async def test_existing_empty_end_date_gets_filled(db, user_factory) -> None:
     await _merge(db, user_id, profile_id, [{**_WORK[0], "ends_on": None}], [])
     assert (await _work_rows(db, user_id))[0].end_date is None
 
-    await _merge(db, user_id, profile_id, _WORK, [])
+    result = await _merge(db, user_id, profile_id, _WORK, [])
 
     rows = await _work_rows(db, user_id)
     assert len(rows) == 1
     assert rows[0].end_date == date(2023, 6, 1)
+    assert (result.work_history_matched, result.work_history_filled) == (1, 1)
+    assert result.work_history_changed is True
 
 
 @pytest.mark.asyncio
