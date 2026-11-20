@@ -7,9 +7,10 @@ import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT, REMOTE_TYPE
 import type { ReviewStepProps } from "../../types/ReviewStepProps";
 import DateField from "../../components/forms/DateField";
 import CompanyField from "./CompanyField";
+import PostedSalaryFields from "./PostedSalaryFields";
 import ReviewSummary from "./ReviewSummary";
 
-/** The form to check and save: company, role, location, remote, the day applied and notes, as on the website. */
+/** The form to check and save: company, role, location, remote, posted salary, the day applied and notes, as on the website. */
 export default function ReviewStep({ review, values, errors, onEdit, onChangeCompany, onSave, isSaving, isLocked }: ReviewStepProps) {
   const [isRemoteOpen, setIsRemoteOpen] = useState(false);
   const locked = isSaving || isLocked;
@@ -41,6 +42,7 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         value={values.location}
       />
       <PickerField disabled={locked} label={MESSAGES.remoteLabel} onPress={() => setIsRemoteOpen(true)} valueLabel={remoteLabel} />
+      <PostedSalaryFields disabled={locked} errors={errors} onEdit={onEdit} values={values} />
       <DateField
         disabled={locked}
         error={errors.applied_on}

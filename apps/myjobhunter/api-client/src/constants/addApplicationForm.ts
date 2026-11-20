@@ -10,6 +10,10 @@ export const LOCATION_MAX_LENGTH = 200;
 export const JOB_URL_MAX_LENGTH = 2083;
 export const JD_TEXT_MAX_LENGTH = 50000;
 
+/** The applications table stores a posted salary as Numeric(12, 2): cents, and at most this much. */
+export const POSTED_SALARY_DECIMALS = 2;
+export const POSTED_SALARY_MAX_AMOUNT = 9999999999.99;
+
 /** A whole pasted value that is a job-posting link, so it can be read without a button press. */
 export const JOB_URL_PATTERN = /^https?:\/\/\S+$/i;
 
@@ -28,4 +32,7 @@ export const ADD_APPLICATION_FORM_PROBLEMS = {
   jdTextTooLong: `Keep the job description to ${JD_TEXT_MAX_LENGTH.toLocaleString("en-US")} characters.`,
   appliedOnRequired: "Choose the day you applied",
   appliedOnInFuture: "The day you applied can't be in the future.",
+  salaryNotAnAmount: "Enter the amount as a number, like 120000.",
+  salaryTooLarge: "That amount is more than can be saved.",
+  salaryMinAboveMax: "The top of the range can't be less than the bottom.",
 } as const;

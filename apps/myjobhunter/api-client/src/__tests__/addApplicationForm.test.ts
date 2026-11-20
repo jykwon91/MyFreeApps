@@ -202,7 +202,7 @@ describe("buildApplicationCreateRequest", () => {
   it("trims what's typed and sends blanks as null", () => {
     expect(
       buildApplicationCreateRequest(
-        { role_title: " Eng ", location: " ", remote_type: "remote", notes: " Note ", applied_on: "2026-01-02" },
+        { ...emptyAddApplicationFormValues(), role_title: " Eng ", location: " ", remote_type: "remote", notes: " Note ", applied_on: "2026-01-02" },
         { companyId: "c1", sourceUrl: "https://jobs.example.com/1", jdText: "  " },
       ),
     ).toEqual({
@@ -214,6 +214,10 @@ describe("buildApplicationCreateRequest", () => {
       remote_type: "remote",
       notes: "Note",
       jd_text: null,
+      posted_salary_min: null,
+      posted_salary_max: null,
+      posted_salary_period: null,
+      posted_salary_currency: "USD",
     });
   });
 });

@@ -6,7 +6,7 @@
  *   AI-extracted summary and source URL.
  * - Company confirmation: either the pill (read-only) or the combobox
  *   (when the operator clicked "not right? change").
- * - The role-title, location, remote-type, applied-on, and notes fields.
+ * - The role-title, location, remote-type, posted salary, applied-on, and notes fields.
  * - Cancel + "Add application" submit buttons.
  *
  * All async logic is owned by the parent hook; this component is
@@ -24,6 +24,7 @@ import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/app
 import CompanyCombobox from "../CompanyCombobox";
 import ReviewBanner from "./ReviewBanner";
 import ReviewCompanyDisplay from "./ReviewCompanyDisplay";
+import PostedSalaryFields from "./PostedSalaryFields";
 
 const REMOTE_OPTIONS: { value: AddApplicationFormValues["remote_type"]; label: string }[] = [
   { value: "unknown", label: "Unknown" },
@@ -64,7 +65,8 @@ export default function CompanyConfirmStep({
   onCompanyNameChange,
 }: CompanyConfirmStepProps) {
   const uid = useId();
-  const counters = addApplicationFormCounters(watch());
+  const values = watch();
+  const counters = addApplicationFormCounters(values);
   const feedback = (field: "role_title" | "location" | "notes" | "applied_on") => ({
     id: `${uid}-${field}`,
     error: errors[field]?.message,
@@ -148,6 +150,13 @@ export default function CompanyConfirmStep({
             </select>
           </div>
         </div>
+
+        <PostedSalaryFields
+          idPrefix={uid}
+          currency={values.posted_salary_currency}
+          register={register}
+          errors={errors}
+        />
 
         <div>
           <label htmlFor={`${uid}-applied_on`} className="block text-sm font-medium mb-1">
