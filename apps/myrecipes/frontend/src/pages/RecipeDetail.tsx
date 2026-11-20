@@ -19,12 +19,13 @@ import {
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
-import { VERSION_LOAD_FAILED_MESSAGES } from "@/constants/recipe-detail-messages";
+import RecipeLoadFailed from "@/features/recipes/RecipeLoadFailed";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
-import VersionBody from "@/features/recipes/VersionBody";
+import SelectedVersionPanel from "@/features/recipes/SelectedVersionPanel";
 import CookLogHistory from "@/features/recipes/CookLogHistory";
 import CookLogModal from "@/features/recipes/CookLogModal";
 import EditRecipeMetaModal from "@/features/recipes/EditRecipeMetaModal";
@@ -102,7 +103,11 @@ export default function RecipeDetail() {
     );
   }
 
-  // A failed refetch keeps the recipe on screen; the message is for when there is none to show.
+  // A failed refetch keeps the recipe on screen; the messages are for when there is none to show.
+  if (!recipeQuery.data && !isNotFoundError(recipeQuery.error)) {
+    return <RecipeLoadFailed onRetry={() => void recipeQuery.refetch()} isRetrying={recipeQuery.isFetching} />;
+  }
+
   if (!recipeQuery.data) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
@@ -188,34 +193,13 @@ export default function RecipeDetail() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {selectedVersion ? (
-            <>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  Viewing v{selectedVersion.version_number}
-                </span>
-                {selectedVersion.id === latestVersionId ? (
-                  <span className="text-primary">(latest)</span>
-                ) : null}
-                {selectedVersion.change_note ? (
-                  <span className="truncate">— {selectedVersion.change_note}</span>
-                ) : null}
-              </div>
-              <VersionBody version={selectedVersion} />
-            </>
-          ) : versionQuery.isError ? (
-            <EmptyState
-              icon={<ChefHat className="w-12 h-12 text-destructive" />}
-              heading={VERSION_LOAD_FAILED_MESSAGES.heading}
-              body={VERSION_LOAD_FAILED_MESSAGES.body}
-              action={{
-                label: VERSION_LOAD_FAILED_MESSAGES.tryAgain,
-                onClick: () => void versionQuery.refetch(),
-              }}
-            />
-          ) : (
-            <RecipeDetailSkeleton />
-          )}
+          <SelectedVersionPanel
+            version={selectedVersion}
+            latestVersionId={latestVersionId}
+            isError={versionQuery.isError}
+            isRetrying={versionQuery.isFetching}
+            onRetry={() => void versionQuery.refetch()}
+          />
 
           {isOwner && (
             <section className="bg-card border rounded-lg p-6">

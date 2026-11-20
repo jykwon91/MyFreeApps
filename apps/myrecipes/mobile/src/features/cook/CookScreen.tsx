@@ -9,7 +9,7 @@ import { COOK_COPY_MESSAGES } from "../../constants/cook";
 import type { OpenedCookRecipe } from "../../types/OpenedCookRecipe";
 import { hasCookSteps } from "../../utils/hasCookSteps";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
-import { isNotFoundError } from "../../utils/isNotFoundError";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import CookBarButton from "./CookBarButton";
 import CookSessionView from "./CookSessionView";
 import { deleteCookCopy, loadCookCopy, saveCookCopy } from "./cookCopies";

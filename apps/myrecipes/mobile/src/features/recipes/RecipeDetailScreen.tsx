@@ -9,7 +9,7 @@ import { COOK_COPY_MESSAGES } from "../../constants/cook";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
 import { cookHref } from "../../utils/cookHref";
 import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
-import { isNotFoundError } from "../../utils/isNotFoundError";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { recipeBackTitle } from "../../utils/recipeBackTitle";
 import { loadCookCopy } from "../cook/cookCopies";
 import RecipeContent from "./RecipeContent";

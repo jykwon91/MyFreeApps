@@ -11,7 +11,7 @@ import { FlatList, View } from "react-native";
 import { VERSION_HISTORY_MESSAGES as MESSAGES, VERSION_LIST_ENTRY_POINT } from "../../constants/versions";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
-import { isNotFoundError } from "../../utils/isNotFoundError";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import CompareBar from "./CompareBar";
 import VersionListSkeleton from "./VersionListSkeleton";
 import VersionRow from "./VersionRow";

@@ -3,6 +3,7 @@ import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
+import { isDiffRetryable } from "@myrecipes/api-client/utils/isDiffRetryable";
 import { diffErrorMessage } from "@myrecipes/api-client/utils/diffErrorMessage";
 import { diffSummary } from "@myrecipes/api-client/utils/diffSummary";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
@@ -24,7 +25,7 @@ export default function VersionDiff() {
   const against = searchParams.get("against") ?? undefined;
   const navigate = useNavigate();
 
-  const { data, error, isLoading, isError } = useGetDiffQuery(
+  const { data, error, isLoading, isError, isFetching, refetch } = useGetDiffQuery(
     { recipeId, versionId, against },
     { skip: !recipeId || !versionId },
   );
@@ -63,10 +64,11 @@ export default function VersionDiff() {
           icon={<GitCompare className="w-12 h-12 text-destructive" />}
           heading={VERSION_COPY.loadFailedHeading}
           body={diffErrorMessage(error)}
-          action={{
-            label: "Back to recipe",
-            onClick: () => navigate(`/recipes/${recipeId}`),
-          }}
+          action={
+            isDiffRetryable(error)
+              ? { label: "Try again", onClick: () => void refetch(), loading: isFetching }
+              : { label: "Back to recipe", onClick: () => navigate(`/recipes/${recipeId}`) }
+          }
         />
       </div>
     );

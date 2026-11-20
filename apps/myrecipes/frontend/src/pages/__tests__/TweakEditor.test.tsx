@@ -3,6 +3,7 @@
  * cached earlier (before someone tweaked it elsewhere) is never the base, and
  * the base stays put once loaded.
  */
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +30,19 @@ function recipeAt(versionNumber: number, isOwner = true): RecipeDetailResponse {
 /** What RTK Query hands back: the cache entry from before opening, or an answer fetched since. */
 function answer(data: RecipeDetailResponse | undefined, fulfilledTimeStamp: number | undefined) {
   useGetRecipeQuery.mockReturnValue({ currentData: data, data, fulfilledTimeStamp, isError: false, error: undefined, refetch: vi.fn() });
+}
+
+/** A request that failed after the page opened: the first answer has no error, then this one does. */
+function failWith(error: unknown, refetch = vi.fn(), isFetching = false) {
+  answer(undefined, undefined);
+  const view = renderEditor();
+  useGetRecipeQuery.mockReturnValue({ currentData: undefined, data: undefined, fulfilledTimeStamp: undefined, isError: true, error, isFetching, refetch });
+  view.rerender(
+    <MemoryRouter>
+      <TweakEditor recipeId="r1" onMissing={vi.fn()} />
+    </MemoryRouter>,
+  );
+  return refetch;
 }
 
 function renderEditor() {
@@ -93,5 +107,36 @@ describe("TweakEditor", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("You can only tweak your own recipes")).toBeInTheDocument();
+  });
+
+  it.each([404, 422])("says the recipe wasn't found when the server answers %i", (status) => {
+    failWith({ status });
+    expect(screen.getByText("Recipe not found")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it.each([[{ status: 500 }], [{ status: "FETCH_ERROR" }]])("says the recipe can't be loaded, not that it's gone, on %j, and tries again", async (error) => {
+    const refetch = failWith(error);
+    expect(screen.getByText("Can't load this recipe")).toBeInTheDocument();
+    expect(screen.queryByText("Recipe not found")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the retry while it is fetching again", () => {
+    failWith({ status: 500 }, vi.fn(), true);
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeDisabled();
+  });
+
+  it("says the recipe wasn't found when it has no version to tweak", () => {
+    answer(undefined, undefined);
+    const { rerender } = renderEditor();
+    answer({ ...recipeAt(1), latest_version: null } as unknown as RecipeDetailResponse, 200);
+    rerender(
+      <MemoryRouter>
+        <TweakEditor recipeId="r1" onMissing={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Recipe not found")).toBeInTheDocument();
   });
 });

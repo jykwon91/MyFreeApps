@@ -17,6 +17,8 @@ interface DiffQuery {
   error?: unknown;
   isLoading: boolean;
   isError: boolean;
+  isFetching?: boolean;
+  refetch?: () => void;
 }
 
 const { useGetDiffQuery, useGetRecipeQuery } = vi.hoisted(() => ({
@@ -95,10 +97,25 @@ describe("VersionDiff", () => {
     expect(screen.getByText(message)).toBeInTheDocument();
   });
 
-  it("says the server can't be reached when no answer came back, and goes back to the recipe", async () => {
-    answer({ isError: true, error: { status: "FETCH_ERROR" } });
+  it("says the server can't be reached when no answer came back, and tries again", async () => {
+    const refetch = vi.fn();
+    answer({ isError: true, error: { status: "FETCH_ERROR" }, refetch });
     renderDiff();
     expect(screen.getByText(CONNECTION_MESSAGES.diff)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers another try on a server error, and disables it while fetching", () => {
+    answer({ isError: true, error: { status: 500 }, refetch: vi.fn(), isFetching: true });
+    renderDiff();
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeDisabled();
+  });
+
+  it.each([400, 404, 422])("goes back to the recipe, with no retry, on a %i", async (status) => {
+    answer({ isError: true, error: { status, data: { detail: "no" } } });
+    renderDiff();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Back to recipe" }));
     expect(screen.getByText("Recipe page")).toBeInTheDocument();
   });

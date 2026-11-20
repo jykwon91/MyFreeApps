@@ -4,7 +4,7 @@ import { useNavigation, useRouter } from "expo-router";
 import { View } from "react-native";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../../constants/tweakRecipe";
 import type { TweakRecipeLoaderProps } from "../../types/TweakRecipeLoaderProps";
-import { isNotFoundError } from "../../utils/isNotFoundError";
+import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { leaveToRecipe } from "../../utils/leaveToRecipe";
 import TweakRecipeForm from "./TweakRecipeForm";
 import TweakRecipeSkeleton from "./TweakRecipeSkeleton";

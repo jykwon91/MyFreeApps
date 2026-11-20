@@ -165,10 +165,29 @@ describe("RecipeDetail when the recipe is refetched", () => {
     expect(screen.queryByText("Recipe not found")).not.toBeInTheDocument();
   });
 
-  it("says the recipe wasn't found when it never loaded", () => {
-    useGetRecipeQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+  it.each([404, 422])("says the recipe wasn't found when the server answers %i", (status) => {
+    useGetRecipeQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: { status } });
     renderPage();
 
     expect(screen.getByText("Recipe not found")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it.each([[{ status: 500 }], [{ status: "FETCH_ERROR" }]])("says the recipe can't be loaded, not that it's gone, on %j, and tries again", async (error) => {
+    const refetch = vi.fn();
+    useGetRecipeQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true, error, refetch, isFetching: false });
+    renderPage();
+
+    expect(screen.getByText("Can't load this recipe")).toBeInTheDocument();
+    expect(screen.queryByText("Recipe not found")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the retry while it is fetching again", () => {
+    useGetRecipeQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: { status: 500 }, refetch: vi.fn(), isFetching: true });
+    renderPage();
+
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeDisabled();
   });
 });
