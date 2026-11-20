@@ -341,7 +341,7 @@ async def test_export_includes_analysis_discovery_and_refinement_data(db: AsyncS
 
     analysis = JobAnalysis(
         user_id=user.id, jd_text="Build things", fingerprint="f" * 64,
-        extracted={"title": "Engineer"}, verdict="strong_match", verdict_summary="Good fit",
+        extracted={"title": "Engineer"}, verdict="strong_fit", verdict_summary="Good fit",
         dimensions=[], red_flags=["long hours"], green_flags=["remote"],
     )
     source = DiscoverySource(user_id=user.id, source="jsearch", name="Saved search", config={"q": "python"})
@@ -355,12 +355,12 @@ async def test_export_includes_analysis_discovery_and_refinement_data(db: AsyncS
     await db.flush()
     job = DiscoveredJob(
         user_id=user.id, source="jsearch", source_external_id="ext-1", title="Python Dev",
-        company_name="Acme", fetch_id=fetch.id, embedding=[0.1] * 1536, raw_payload={"secret": "x"},
+        company_name="Acme", fetch_id=fetch.id, embedding=[0.1] * 384, raw_payload={"secret": "x"},
     )
     session = ResumeRefinementSession(user_id=user.id, current_draft="My draft")
     db.add_all([job, session])
     await db.flush()
-    db.add(ResumeRefinementTurn(session_id=session.id, turn_index=0, role="assistant", proposed_text="Better"))
+    db.add(ResumeRefinementTurn(session_id=session.id, turn_index=0, role="ai_proposal", proposed_text="Better"))
     await db.flush()
 
     _override_deps(user, db)
@@ -371,7 +371,7 @@ async def test_export_includes_analysis_discovery_and_refinement_data(db: AsyncS
         app.dependency_overrides.clear()
 
     data = response.json()
-    assert [a["verdict"] for a in data["job_analyses"]] == ["strong_match"]
+    assert [a["verdict"] for a in data["job_analyses"]] == ["strong_fit"]
     assert [d["name"] for d in data["discovery_sources"]] == ["Saved search"]
     assert [f["discovery_source_id"] for f in data["discovery_fetches"]] == [str(source.id)]
     assert [j["title"] for j in data["discovered_jobs"]] == ["Python Dev"]
