@@ -20,8 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.context import RequestContext, worker_context
-from app.models.organization.organization_member import OrgRole
-from app.services.calendar.booking_ingestion_service import IngestionResult, ingest_booking_email
+from app.services.calendar.booking_ingestion_service import ingest_booking_email
 
 
 # ---------------------------------------------------------------------------
@@ -41,8 +40,6 @@ def _mock_db() -> AsyncMock:
     db = AsyncMock()
     db.__aenter__ = AsyncMock(return_value=db)
     db.__aexit__ = AsyncMock(return_value=False)
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
     return db
 
 
@@ -209,7 +206,6 @@ class TestBlocked:
         cl_mock.assert_not_awaited()
         rq_mock.assert_not_awaited()
         bo_mock.assert_not_awaited()
-        mock_db.commit.assert_not_awaited()
 
 
 class TestAutoMatched:
@@ -266,7 +262,8 @@ class TestAutoMatched:
         assert "Jane Smith" in blackout.host_notes
         assert "airbnb" in blackout.host_notes.lower()
 
-        mock_db.commit.assert_awaited_once()
+        # unit_of_work exited without an exception, so the transaction committed.
+        mock_db.__aexit__.assert_awaited_once_with(None, None, None)
 
     @pytest.mark.asyncio
     async def test_auto_matched_does_not_overwrite_existing_host_notes(self) -> None:
@@ -408,7 +405,8 @@ class TestQueuedForReview:
         assert insert_call["organization_id"] == _ORG_ID
         assert "guest_name" in insert_call["parsed_payload"]
 
-        mock_db.commit.assert_awaited_once()
+        # unit_of_work exited without an exception, so the transaction committed.
+        mock_db.__aexit__.assert_awaited_once_with(None, None, None)
 
 
 class TestQueuedForReviewIdempotent:

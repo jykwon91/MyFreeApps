@@ -156,6 +156,11 @@ async def soft_delete(
     await _soft_delete(db, item)
 
 
+async def refresh(db: AsyncSession, item: CalendarEmailReviewQueue) -> None:
+    """Reload a flushed queue item so server-set columns are populated."""
+    await db.refresh(item)
+
+
 async def hard_delete_by_id(
     db: AsyncSession,
     *,

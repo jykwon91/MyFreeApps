@@ -20,7 +20,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories.calendar import blocklist_repo, review_queue_repo
 from app.repositories.listings import listing_blackout_repo, listing_repo
 from app.schemas.calendar.resolve_queue_item_response import (
@@ -98,7 +98,7 @@ async def resolve_item(
     """
     now = datetime.now(timezone.utc)
 
-    async with AsyncSessionLocal() as db:
+    async with unit_of_work() as db:
         item = await review_queue_repo.get_by_id_scoped(
             db, item_id, organization_id,
         )
@@ -147,10 +147,9 @@ async def resolve_item(
         )
 
         await review_queue_repo.mark_resolved(db, item, resolved_at=now)
-        # Both writes committed atomically. If either flush fails above,
-        # the context-manager rolls back and neither change is persisted.
-        await db.commit()
-        await db.refresh(blackout)
+        await listing_blackout_repo.refresh(db, blackout)
+        # Both writes commit atomically when unit_of_work exits. If either
+        # flush fails above, it rolls back and neither change is persisted.
 
     return ResolveQueueItemResponse(
         queue_item_id=item_id,
@@ -174,7 +173,7 @@ async def ignore_item(
     """
     now = datetime.now(timezone.utc)
 
-    async with AsyncSessionLocal() as db:
+    async with unit_of_work() as db:
         item = await review_queue_repo.get_by_id_scoped(
             db, item_id, organization_id,
         )
@@ -197,8 +196,7 @@ async def ignore_item(
         )
 
         await review_queue_repo.mark_ignored(db, item, resolved_at=now)
-        await db.commit()
-        await db.refresh(item)
+        await review_queue_repo.refresh(db, item)
 
     return ReviewQueueItemResponse.model_validate(item)
 
@@ -212,7 +210,7 @@ async def dismiss_item(
     Raises:
         QueueItemNotFound: item doesn't exist / wrong org.
     """
-    async with AsyncSessionLocal() as db:
+    async with unit_of_work() as db:
         item = await review_queue_repo.get_by_id_scoped(
             db, item_id, organization_id,
         )
@@ -220,4 +218,3 @@ async def dismiss_item(
             raise QueueItemNotFound(f"Queue item {item_id} not found")
 
         await review_queue_repo.soft_delete(db, item)
-        await db.commit()

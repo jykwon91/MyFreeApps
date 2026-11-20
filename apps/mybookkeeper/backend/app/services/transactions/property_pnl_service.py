@@ -8,14 +8,13 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
 from app.core.tags import EXPENSE_TAGS, REVENUE_TAGS
 from app.db.session import AsyncSessionLocal
-from app.models.properties.property import Property
-from app.models.transactions.transaction import Transaction
+from app.repositories.properties import property_repo
+from app.repositories.transactions import summary_repo
 from app.schemas.transactions.attribution import (
     ExpenseBreakdown,
     PropertyPnLEntry,
@@ -51,32 +50,11 @@ async def _compute_pnl(
     since: date,
     until: date,
 ) -> PropertyPnLResponse:
-    # Fetch all matching properties
-    props_result = await db.execute(
-        select(Property)
-        .where(
-            Property.organization_id == organization_id,
-        )
-        .order_by(Property.name)
-    )
-    properties = list(props_result.scalars().all())
+    prop_id_map = await property_repo.get_name_map(db, organization_id)
 
     # Single aggregate query: (property_id, category, SUM(amount))
-    rows_result = await db.execute(
-        select(
-            Transaction.property_id,
-            Transaction.category,
-            func.sum(Transaction.amount).label("total"),
-        )
-        .where(
-            Transaction.organization_id == organization_id,
-            Transaction.deleted_at.is_(None),
-            Transaction.status == "approved",
-            Transaction.property_id.is_not(None),
-            Transaction.transaction_date >= since,
-            Transaction.transaction_date <= until,
-        )
-        .group_by(Transaction.property_id, Transaction.category)
+    rows = await summary_repo.txn_sum_by_attributed_property_and_category(
+        db, organization_id, start_date=since, end_date=until,
     )
 
     # Index by property_id
@@ -87,7 +65,7 @@ async def _compute_pnl(
     expense_by_prop: dict[uuid.UUID, Decimal] = defaultdict(Decimal)
     expense_cat_by_prop: dict[uuid.UUID, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
 
-    for row in rows_result:
+    for row in rows:
         prop_id = row.property_id
         if prop_id is None:
             continue
@@ -101,7 +79,6 @@ async def _compute_pnl(
             expense_cat_by_prop[prop_id][row.category] += total
 
     # Build response
-    prop_id_map = {p.id: p.name for p in properties}
     all_property_ids = set(revenue_by_prop.keys()) | set(expense_by_prop.keys())
 
     entries: list[PropertyPnLEntry] = []

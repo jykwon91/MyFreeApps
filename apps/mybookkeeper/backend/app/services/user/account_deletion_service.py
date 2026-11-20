@@ -46,7 +46,6 @@ async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], None]:
     for workspace in workspaces:
         await signed_lease_repo.hard_delete_for_organization(db, workspace.id)
         await organization_repo.delete(db, workspace)
-    await db.flush()
     if await user_repo.holds_shared_records(db, user.id):
         raise AccountDeletionBlockedError(HOLDS_SHARED_RECORDS_MESSAGE)
     return partial(remove_stored_files, storage_keys)
