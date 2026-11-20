@@ -35,10 +35,9 @@ async def get_profile(
 @router.put("", response_model=ProfileResponse)
 async def save_profile(
     payload: ProfileUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ProfileResponse:
     try:
-        return await profile_service.save_profile(db, user.id, payload)
+        return await profile_service.save_profile(user.id, payload)
     except InvalidProfileError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

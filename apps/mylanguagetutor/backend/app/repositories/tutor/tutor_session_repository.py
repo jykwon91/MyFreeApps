@@ -6,10 +6,12 @@ indistinguishable from a missing one (callers map ``None`` to 404).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.session_status import SessionStatus
 from app.models.tutor.tutor_session import TutorSession
 
 
@@ -93,3 +95,14 @@ async def delete(db: AsyncSession, session: TutorSession) -> None:
     """Delete a session; its turns go with it via FK ON DELETE CASCADE."""
     await db.delete(session)
     await db.flush()
+
+
+async def mark_ended(
+    db: AsyncSession, session: TutorSession, ended_at: datetime,
+) -> TutorSession:
+    """Set the session ended with ``ended_at`` and reload it."""
+    session.status = SessionStatus.ENDED.value
+    session.ended_at = ended_at
+    await db.flush()
+    await db.refresh(session)
+    return session
