@@ -90,6 +90,9 @@ function parsed(overrides: Partial<JdParseResponse> = {}): JdParseResponse {
   };
 }
 
+/** What a posting with no salary sends for it: nothing, and the backend's default currency. */
+const NO_SALARY = { posted_salary_min: null, posted_salary_max: null, posted_salary_period: null, posted_salary_currency: "USD" };
+
 const ok = (data: unknown) => (): FakeReply => ({ status: 200, data });
 const fail = (status: number, detail: unknown = "boom") => (): FakeReply => ({ status, data: { detail } });
 
@@ -177,6 +180,7 @@ describe("from a link", () => {
         jd_text: null,
         // Applied today, so it's the moment of saving; the "day applied" tests pin it.
         applied_at: expect.any(String),
+        ...NO_SALARY,
       },
     ]);
     // Back on the list, which reloads to show the new application.
@@ -394,6 +398,7 @@ describe("from pasted text", () => {
         notes: null,
         jd_text: "We're hiring a Senior Engineer at Airbnb.",
         applied_at: expect.any(String),
+        ...NO_SALARY,
       },
     ]);
   });
@@ -461,7 +466,7 @@ describe("typed in", () => {
     await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
     expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([
-      { company_id: "co-airbnb", role_title: "Data Engineer", url: null, location: null, remote_type: "hybrid", notes: "Referred by Sam", jd_text: null, applied_at: expect.any(String) },
+      { company_id: "co-airbnb", role_title: "Data Engineer", url: null, location: null, remote_type: "hybrid", notes: "Referred by Sam", jd_text: null, applied_at: expect.any(String), ...NO_SALARY },
     ]);
   });
 
@@ -741,6 +746,63 @@ describe("the day applied", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
 
     expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.appliedOnInFuture, SHOWN)).toBeTruthy();
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
+  });
+});
+
+describe("the posted salary", () => {
+  const SALARY_FROM = `${MESSAGES.salaryFromLabel} (EUR)`;
+  const SALARY_TO = `${MESSAGES.salaryToLabel} (EUR)`;
+
+  async function readPastedText(result: JdParseResponse): Promise<ReturnType<typeof serve>> {
+    const sent = serveAdd({ "POST /applications/parse-jd": ok(result) });
+    await openAddScreen();
+    await chooseSource("Paste text");
+    await fireEvent.changeText(field(MESSAGES.textLabel), "We're hiring a Senior Engineer at Airbnb.");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
+    await screen.findByText(MESSAGES.companyTracked);
+    return sent;
+  }
+
+  it("shows the salary the description gives, lets it be changed, and saves it", async () => {
+    const sent = await readPastedText(parsed({ salary_min: 120000, salary_max: 150000, salary_currency: "EUR", salary_period: "annual" }));
+
+    expect(field(SALARY_FROM).props.value).toBe("120000");
+    expect(field(SALARY_TO).props.value).toBe("150000");
+    expect(screen.getByRole("button", { name: `${MESSAGES.salaryPeriodLabel}, Per year` })).toBeTruthy();
+
+    await fireEvent.changeText(field(SALARY_TO), "160000.50");
+    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.salaryPeriodLabel}, Per year` }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Per month" }));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([
+      expect.objectContaining({
+        posted_salary_min: "120000",
+        posted_salary_max: "160000.50",
+        posted_salary_currency: "EUR",
+        posted_salary_period: "monthly",
+      }),
+    ]);
+  });
+
+  it("leaves the salary blank for a description without one, and sends none", async () => {
+    const sent = await readPastedText(parsed());
+
+    expect(field(`${MESSAGES.salaryFromLabel} (USD)`).props.value).toBe("");
+    expect(field(`${MESSAGES.salaryToLabel} (USD)`).props.value).toBe("");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([expect.objectContaining(NO_SALARY)]);
+  });
+
+  it("won't save a top below the bottom, saying so under the field", async () => {
+    const sent = await readPastedText(parsed({ salary_min: 150000, salary_max: 120000, salary_currency: "EUR" }));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.salaryMinAboveMax, SHOWN)).toBeTruthy();
     expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
   });
 });

@@ -8,6 +8,7 @@ import type { AddApplicationFormProblems } from "../types/application/add-applic
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
 import { textLength } from "@platform/core/utils/textLength";
 import { isLocalDateInFuture } from "./isLocalDateInFuture";
+import { postedSalaryProblems } from "./postedSalaryProblems";
 
 /** What stops the form saving, checked against what is sent (trimmed). Empty when it can be saved. */
 export function addApplicationFormProblems(values: AddApplicationFormValues): AddApplicationFormProblems {
@@ -19,5 +20,5 @@ export function addApplicationFormProblems(values: AddApplicationFormValues): Ad
   if (textLength(values.notes.trim()) > APPLICATION_NOTES_MAX_LENGTH) problems.notes = PROBLEMS.notesTooLong;
   if (!values.applied_on) problems.applied_on = PROBLEMS.appliedOnRequired;
   else if (isLocalDateInFuture(values.applied_on)) problems.applied_on = PROBLEMS.appliedOnInFuture;
-  return problems;
+  return { ...problems, ...postedSalaryProblems(values) };
 }

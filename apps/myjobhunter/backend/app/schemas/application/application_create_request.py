@@ -63,8 +63,8 @@ class ApplicationCreateRequest(BaseModel):
     source: str | None = None
     applied_at: _dt.datetime | None = None
 
-    posted_salary_min: Decimal | None = Field(default=None, ge=0)
-    posted_salary_max: Decimal | None = Field(default=None, ge=0)
+    posted_salary_min: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
+    posted_salary_max: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     posted_salary_currency: CurrencyCode = Field(default="USD", max_length=CURRENCY_CODE_LENGTH)
     posted_salary_period: str | None = None
 

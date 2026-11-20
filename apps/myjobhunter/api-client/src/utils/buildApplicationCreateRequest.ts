@@ -2,6 +2,7 @@ import type { ApplicationCreateRequest } from "../types/application-create-reque
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
 import type { ApplicationCreateContext } from "../types/application/application-create-context";
 import { appliedAtFromLocalDate } from "./appliedAtFromLocalDate";
+import { postedSalaryAmount } from "./postedSalaryAmount";
 
 /** The POST /applications body for a reviewed form. Blank optional fields go as null. */
 export function buildApplicationCreateRequest(
@@ -17,5 +18,9 @@ export function buildApplicationCreateRequest(
     notes: values.notes.trim() || null,
     jd_text: jdText.trim() || null,
     applied_at: appliedAtFromLocalDate(values.applied_on),
+    posted_salary_min: postedSalaryAmount(values.posted_salary_min) || null,
+    posted_salary_max: postedSalaryAmount(values.posted_salary_max) || null,
+    posted_salary_period: values.posted_salary_period || null,
+    posted_salary_currency: values.posted_salary_currency,
   };
 }
