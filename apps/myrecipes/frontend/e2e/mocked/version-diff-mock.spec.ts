@@ -1,7 +1,8 @@
 /**
  * No-backend E2E for the version timeline and /recipes/:id/versions/:vid/diff:
  * picking two versions opens the newer one against the older, the diff reads
- * with the copy shared with the phone, and a version that's gone says so.
+ * with the copy shared with the phone, a tweak that only changes servings or
+ * times shows those changes, and a version that's gone says so.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -26,6 +27,8 @@ const VERSION_COPY = {
   notInRecipe:
     "One of these versions isn't part of this recipe, or no longer exists. Go back and pick two versions to compare.",
   recipeOrVersionGone: "This recipe or one of its versions no longer exists.",
+  identicalHeading: "Identical",
+  details: "Details",
 } as const;
 
 // v1 and v2 share the default body; v3 doubles the salt and adds a step, so v1 -> v3 has two changes.
@@ -102,7 +105,23 @@ test("shows the first version as all added when it is opened without a base", as
 
   await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(1)}/diff`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${VERSION_COPY.nothing} to v1`);
-  await expect(page.getByText("3 changes — 2 ingredients, 1 step.")).toBeVisible();
+  // The first version's servings and times are new too: 4 servings, 10 min prep, 25 min cook.
+  await expect(page.getByText("6 changes — 3 details, 2 ingredients, 1 step.")).toBeVisible();
   await expect(page.getByText("Simmer.")).toBeVisible();
   expect(diffs[0]?.searchParams.has("against")).toBe(false);
+});
+
+test("shows a tweak that only changed servings and cook time instead of calling it identical", async ({ page }) => {
+  await stubSignedInShell(page);
+  await stubRecipeApi(page, RECIPE_ID, {
+    isOwner: false,
+    versions: [versionOf(RECIPE_ID, 1), versionOf(RECIPE_ID, 2, { change_note: "Double batch", servings: "8", cook_minutes: 45 })],
+  });
+
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(2)}/diff`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("v1 to v2");
+  await expect(page.getByText("2 changes — 2 details, 0 ingredients, 0 steps.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: VERSION_COPY.identicalHeading })).toHaveCount(0);
+  const details = page.locator("section").filter({ has: page.getByRole("heading", { name: VERSION_COPY.details }) });
+  await expect(details.getByRole("listitem")).toHaveText(["~Changed:Servings:48", "~Changed:Cook time:25 min45 min"]);
 });

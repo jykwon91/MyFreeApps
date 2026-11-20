@@ -198,6 +198,47 @@ class TestTweakAndDiff:
         assert any("longer" in (s["after"] or "") for s in added_steps)
 
     @pytest.mark.asyncio
+    async def test_diff_of_servings_and_times_only_tweak_is_not_identical(
+        self, user_factory, as_user,
+    ) -> None:
+        # A tweak that changes only servings and cook time, keeping every
+        # ingredient and step, must still show up in the diff.
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            created = (
+                await authed.post("/recipes", json=_recipe_payload(servings="4", cook_minutes=30))
+            ).json()
+            recipe_id = created["id"]
+            v1 = created["latest_version"]
+            tweak = {
+                "change_note": "Double batch",
+                "servings": "8",
+                "prep_minutes": v1["prep_minutes"],
+                "cook_minutes": 45,
+                "ingredients": [
+                    {key: ing[key] for key in ("name", "quantity", "unit", "note", "lineage_key")}
+                    for ing in v1["ingredients"]
+                ],
+                "steps": [{"instruction": step["instruction"]} for step in v1["steps"]],
+            }
+            v2 = (await authed.post(f"/recipes/{recipe_id}/versions", json=tweak)).json()
+            diff = (await authed.get(f"/recipes/{recipe_id}/versions/{v2['id']}/diff")).json()
+            first = (await authed.get(f"/recipes/{recipe_id}/versions/{v1['id']}/diff")).json()
+
+        assert diff["ingredient_changes"] == []
+        assert diff["step_changes"] == []
+        assert diff["field_changes"] == [
+            {"field": "servings", "before": "4", "after": "8"},
+            {"field": "cook_minutes", "before": 30, "after": 45},
+        ]
+        # The first version has nothing before it: every field it sets is new.
+        assert first["field_changes"] == [
+            {"field": "servings", "before": None, "after": "4"},
+            {"field": "prep_minutes", "before": None, "after": 15},
+            {"field": "cook_minutes", "before": None, "after": 30},
+        ]
+
+    @pytest.mark.asyncio
     async def test_tweak_null_clears_servings_and_times(self, user_factory, as_user) -> None:
         # The tweak form sends every field; a field the user emptied arrives as
         # null and must be saved as cleared, not silently kept from the base.

@@ -34,6 +34,7 @@ const DIFF: DiffResponse = {
   from_version_number: 1,
   to_version_id: "v3",
   to_version_number: 3,
+  field_changes: [],
   ingredient_changes: [{ lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } }],
   step_changes: [{ position: 1, change: "removed", before: "Stir.", after: null }],
 };
@@ -71,6 +72,43 @@ describe("VersionDiff", () => {
     expect(screen.getByText("Removed:")).toBeInTheDocument();
     expect(screen.getByText("1 tsp salt")).toBeInTheDocument();
     expect(screen.getByText("2 tsp salt")).toBeInTheDocument();
+  });
+
+  it("shows a tweak that only changed servings and cook time, rather than calling it identical", () => {
+    answer({
+      data: {
+        ...DIFF,
+        field_changes: [
+          { field: "servings", before: "4", after: "8" },
+          { field: "cook_minutes", before: 30, after: 45 },
+        ],
+        ingredient_changes: [],
+        step_changes: [],
+      },
+    });
+    renderDiff();
+
+    expect(screen.queryByRole("heading", { name: VERSION_COPY.identicalHeading })).not.toBeInTheDocument();
+    expect(screen.getByText("2 changes — 2 details, 0 ingredients, 0 steps.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: VERSION_COPY.details })).toBeInTheDocument();
+    const rows = screen.getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Changed:Servings:48");
+    expect(rows[1]).toHaveTextContent("Changed:Cook time:30 min45 min");
+    expect(screen.getByText(VERSION_COPY.noIngredientChanges)).toBeInTheDocument();
+  });
+
+  it("shows an emptied field as a dash", () => {
+    answer({ data: { ...DIFF, field_changes: [{ field: "prep_minutes", before: 10, after: null }] } });
+    renderDiff();
+    expect(screen.getByText("Prep time:")).toBeInTheDocument();
+    expect(screen.getByText("10 min")).toBeInTheDocument();
+    expect(screen.getByText(VERSION_COPY.emptyValue)).toBeInTheDocument();
+  });
+
+  it("leaves out the details section when no servings or time changed", () => {
+    answer({ data: DIFF });
+    renderDiff();
+    expect(screen.queryByRole("heading", { name: VERSION_COPY.details })).not.toBeInTheDocument();
   });
 
   it("compares the first version against nothing", () => {

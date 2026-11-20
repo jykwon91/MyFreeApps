@@ -4,6 +4,8 @@ import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 export interface DiffLine {
   key: string;
   change: DiffChangeKind;
+  /** What the line is about, shown before it ("Cook time"); omitted for ingredient and step lines. */
+  label?: string;
   before: string | null;
   after: string | null;
 }

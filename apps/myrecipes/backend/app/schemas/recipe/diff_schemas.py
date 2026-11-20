@@ -9,6 +9,8 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.version_diff_fields import VersionDiffField
+
 
 class IngredientSnapshot(BaseModel):
     """The state of one ingredient on one side of a diff."""
@@ -43,6 +45,20 @@ class StepChange(BaseModel):
     after: str | None = None
 
 
+class FieldChange(BaseModel):
+    """A change to one per-version field (servings, prep or cook minutes).
+
+    ``before`` is None for a field that was empty (or for the first version,
+    which has nothing before it); ``after`` is None for a field that was cleared.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    field: VersionDiffField
+    before: str | int | None = None
+    after: str | int | None = None
+
+
 class DiffResponse(BaseModel):
     """The full diff from one version to another (default: parent → this)."""
 
@@ -52,5 +68,6 @@ class DiffResponse(BaseModel):
     from_version_number: int | None = None
     to_version_id: uuid.UUID
     to_version_number: int
+    field_changes: list[FieldChange] = []
     ingredient_changes: list[IngredientChange] = []
     step_changes: list[StepChange] = []

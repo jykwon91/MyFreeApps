@@ -1,18 +1,36 @@
 """Pure diff engine — what changed between two version snapshots.
 
-No DB access: it takes already-loaded ingredient/step rows. Ingredients are
+No DB access: it takes already-loaded version/ingredient/step rows. Per-version
+fields (servings, prep/cook minutes) are compared one by one; ingredients are
 matched by ``lineage_key`` (stable across versions, so a quantity edit reads
 as a *change* not remove+add); steps are matched by ``position``.
 """
 from __future__ import annotations
 
+from app.core.version_diff_fields import VERSION_DIFF_FIELDS
 from app.models.recipe.recipe_ingredient import RecipeIngredient
 from app.models.recipe.recipe_step import RecipeStep
+from app.models.recipe.recipe_version import RecipeVersion
 from app.schemas.recipe.diff_schemas import (
+    FieldChange,
     IngredientChange,
     IngredientSnapshot,
     StepChange,
 )
+
+
+def diff_fields(
+    before: RecipeVersion | None, after: RecipeVersion,
+) -> list[FieldChange]:
+    """Each per-version field whose value differs. ``before`` is None for the
+    first version, so every field it sets reads as a change from empty."""
+    changes: list[FieldChange] = []
+    for field in VERSION_DIFF_FIELDS:
+        old_value = getattr(before, field) if before is not None else None
+        new_value = getattr(after, field)
+        if old_value != new_value:
+            changes.append(FieldChange(field=field, before=old_value, after=new_value))
+    return changes
 
 
 def _snapshot(ing: RecipeIngredient) -> IngredientSnapshot:

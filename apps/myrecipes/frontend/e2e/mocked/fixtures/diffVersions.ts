@@ -1,12 +1,27 @@
-/** What the server's diff of two versions says (backend services/recipe/version_diff.py): ingredients match by lineage_key, steps by position. */
+/**
+ * What the server's diff of two versions says (backend services/recipe/version_diff.py): servings and
+ * prep/cook minutes compare one by one, ingredients match by lineage_key, steps by position.
+ */
 import type {
   DiffResponse,
   IngredientChange,
   IngredientSnapshot,
   StepChange,
 } from "@myrecipes/api-client/types/recipe/diff";
+import type { FieldChange } from "@myrecipes/api-client/types/recipe/field-change";
 import type { IngredientResponse } from "@myrecipes/api-client/types/recipe/ingredient";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
+
+function fieldChanges(from: VersionResponse | null, to: VersionResponse): FieldChange[] {
+  const changes: FieldChange[] = [];
+  const servings = from?.servings ?? null;
+  if (servings !== to.servings) changes.push({ field: "servings", before: servings, after: to.servings });
+  for (const field of ["prep_minutes", "cook_minutes"] as const) {
+    const before = from?.[field] ?? null;
+    if (before !== to[field]) changes.push({ field, before, after: to[field] });
+  }
+  return changes;
+}
 
 function snapshotOf({ name, quantity, unit, note }: IngredientResponse): IngredientSnapshot {
   return { name, quantity, unit, note };
@@ -52,6 +67,7 @@ export function diffVersions(from: VersionResponse | null, to: VersionResponse):
     from_version_number: from?.version_number ?? null,
     to_version_id: to.id,
     to_version_number: to.version_number,
+    field_changes: fieldChanges(from, to),
     ingredient_changes: ingredientChanges(from?.ingredients ?? [], to.ingredients),
     step_changes: stepChanges(from?.steps ?? [], to.steps),
   };

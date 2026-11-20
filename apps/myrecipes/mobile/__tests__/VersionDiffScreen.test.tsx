@@ -38,6 +38,7 @@ const DIFF = {
   from_version_number: 1,
   to_version_id: "v3",
   to_version_number: 3,
+  field_changes: [],
   ingredient_changes: [
     { lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } },
     { lineage_key: "lk-basil", change: "added", before: null, after: { name: "basil", quantity: null, unit: null, note: "torn" } },
@@ -144,6 +145,46 @@ describe("VersionDiffScreen", () => {
 
     expect(await screen.findByText("No step changes.")).toBeTruthy();
     expect(screen.getByText("2 changes — 2 ingredients, 0 steps.")).toBeTruthy();
+  });
+
+  it("shows a tweak that only changed servings and cook time, rather than calling it identical", async () => {
+    diffReply = {
+      status: 200,
+      data: {
+        ...DIFF,
+        field_changes: [
+          { field: "servings", before: "4", after: "8" },
+          { field: "cook_minutes", before: 30, after: 45 },
+        ],
+        ingredient_changes: [],
+        step_changes: [],
+      },
+    };
+    await show();
+
+    expect(await screen.findByText("2 changes — 2 details, 0 ingredients, 0 steps.")).toBeTruthy();
+    expect(screen.queryByRole("header", { name: "Identical" })).toBeNull();
+    expect(screen.getByRole("header", { name: "Details" })).toBeTruthy();
+    expect(screen.getByLabelText("Changed: Servings: 4 to 8").props.accessible).toBe(true);
+    expect(screen.getByLabelText("Changed: Cook time: 30 min to 45 min")).toBeTruthy();
+    expect(screen.getByText("Cook time:")).toBeTruthy();
+    expect(screen.getByText("30 min").props.style.textDecorationLine).toBe("line-through");
+    expect(screen.getByText("No ingredient changes.")).toBeTruthy();
+  });
+
+  it("shows an emptied field as a dash", async () => {
+    diffReply = { status: 200, data: { ...DIFF, field_changes: [{ field: "prep_minutes", before: 10, after: null }] } };
+    await show();
+
+    expect(await screen.findByLabelText("Changed: Prep time: 10 min to —")).toBeTruthy();
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("leaves out Details when no servings or time changed", async () => {
+    await show();
+
+    await screen.findByRole("header", { name: "v1 to v3" });
+    expect(screen.queryByRole("header", { name: "Details" })).toBeNull();
   });
 
   it("calls two versions with no differences identical", async () => {

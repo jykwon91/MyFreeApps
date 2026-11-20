@@ -5,6 +5,8 @@ import { CHANGE_STYLES } from "@/features/recipes/diff-display";
 
 interface Props {
   change: DiffChangeKind;
+  /** What the line is about, shown before it ("Cook time"); omitted for ingredient and step lines. */
+  label?: string;
   /** Text on the "before" side (null for an addition). */
   before: string | null;
   /** Text on the "after" side (null for a removal). */
@@ -17,7 +19,7 @@ interface Props {
  * edit is obvious at a glance. Color comes from CHANGE_STYLES; the symbol and
  * label from DIFF_CHANGE_DISPLAY.
  */
-export default function DiffRow({ change, before, after }: Props) {
+export default function DiffRow({ change, label, before, after }: Props) {
   const style = CHANGE_STYLES[change];
   const display = DIFF_CHANGE_DISPLAY[change];
 
@@ -30,6 +32,7 @@ export default function DiffRow({ change, before, after }: Props) {
         {display.symbol}
       </span>
       <span className="sr-only">{display.label}:</span>
+      {label ? <span className="font-medium">{label}:</span> : null}
       {change === "changed" ? (
         <span className="flex flex-1 flex-wrap items-center gap-2">
           <span className="text-muted-foreground line-through">{before}</span>

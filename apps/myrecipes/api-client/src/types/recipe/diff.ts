@@ -1,3 +1,5 @@
+import type { FieldChange } from "./field-change";
+
 /** The kind of change a diff entry represents. */
 export type DiffChangeKind = "added" | "removed" | "changed";
 
@@ -31,6 +33,7 @@ export interface DiffResponse {
   from_version_number: number | null;
   to_version_id: string;
   to_version_number: number;
+  field_changes: FieldChange[];
   ingredient_changes: IngredientChange[];
   step_changes: StepChange[];
 }

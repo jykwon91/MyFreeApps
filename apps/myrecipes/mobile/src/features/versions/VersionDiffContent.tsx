@@ -26,6 +26,7 @@ export default function VersionDiffContent({ diff, recipeId, isOwner }: VersionD
         <EmptyState body={VERSION_COPY.identicalBody} heading={VERSION_COPY.identicalHeading} />
       ) : (
         <>
+          {lines.fields.length > 0 ? <DiffSection lines={lines.fields} title={VERSION_COPY.details} /> : null}
           <DiffSection emptyText={VERSION_COPY.noIngredientChanges} lines={lines.ingredients} title={VERSION_COPY.ingredients} />
           <DiffSection emptyText={VERSION_COPY.noStepChanges} lines={lines.steps} title={VERSION_COPY.steps} />
         </>
