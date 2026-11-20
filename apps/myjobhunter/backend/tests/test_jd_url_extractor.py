@@ -891,7 +891,6 @@ class TestSsrfGuard:
 
         with pytest.raises(JobAnalysisInvalidUrlError):
             await job_analysis_service.analyze(
-                None,  # db is never reached on the SSRF-refusal path
                 uuid.uuid4(),
                 url="http://127.0.0.1/",
                 jd_text=None,

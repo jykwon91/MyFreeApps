@@ -223,7 +223,6 @@ async def test_analyze_text_path_still_works_after_refactor(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await analyze(
-            db,
             user_id,
             url=None,
             jd_text="Senior Backend Engineer at Acme.",

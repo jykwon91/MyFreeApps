@@ -103,7 +103,6 @@ async def get_company(
 @router.post("/companies", response_model=CompanyResponse, status_code=201)
 async def create_company(
     payload: CompanyCreateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> CompanyResponse:
     """Create a new Company scoped to the caller.
@@ -113,7 +112,7 @@ async def create_company(
     failures surface as HTTP 422 via the Pydantic schema.
     """
     try:
-        company = await company_service.create_company(db, user.id, payload)
+        company = await company_service.create_company(user.id, payload)
     except DuplicatePrimaryDomainError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return CompanyResponse.model_validate(company)
@@ -123,7 +122,6 @@ async def create_company(
 async def update_company(
     company_id: uuid.UUID,
     payload: CompanyUpdateRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> CompanyResponse:
     """Apply a partial update to a Company.
@@ -134,7 +132,7 @@ async def update_company(
     companies (case-insensitive UNIQUE).
     """
     try:
-        company = await company_service.update_company(db, user.id, company_id, payload)
+        company = await company_service.update_company(user.id, company_id, payload)
     except DuplicatePrimaryDomainError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if company is None:
@@ -146,7 +144,6 @@ async def update_company(
 async def delete_company(
     company_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> Response:
     """Hard-delete a Company.
@@ -159,7 +156,7 @@ async def delete_company(
     with the company, and so are its research records.
     """
     try:
-        after_commit = await company_service.delete_company(db, user.id, company_id)
+        after_commit = await company_service.delete_company(user.id, company_id)
     except CompanyHasApplicationsError as exc:
         raise HTTPException(
             status_code=409,

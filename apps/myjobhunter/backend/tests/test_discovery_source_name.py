@@ -337,13 +337,13 @@ async def test_create_source_service_raises_conflict_error(
     user_id = uuid.UUID(user["id"])
 
     await create_source(
-        db, user_id=user_id, source="greenhouse", name="Stripe",
+        user_id=user_id, source="greenhouse", name="Stripe",
         config={"board_token": "stripe"},
     )
 
     with pytest.raises(DiscoverySourceNameConflictError):
         await create_source(
-            db, user_id=user_id, source="greenhouse", name="Stripe",
+            user_id=user_id, source="greenhouse", name="Stripe",
             config={"board_token": "stripe-copy"},
         )
 

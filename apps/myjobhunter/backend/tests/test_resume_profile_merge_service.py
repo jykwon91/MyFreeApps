@@ -46,7 +46,7 @@ _EDU: list[dict[str, Any]] = [
 async def _setup(db: AsyncSession, user_factory: Any) -> tuple[uuid.UUID, uuid.UUID]:
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
-    profile = await profile_service.get_or_create_profile(db, user_id)
+    profile = await profile_service.get_or_create_profile(user_id)
     return user_id, profile.id
 
 

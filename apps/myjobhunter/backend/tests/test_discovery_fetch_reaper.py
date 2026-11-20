@@ -69,10 +69,12 @@ async def test_stale_running_row_is_reaped(db: AsyncSession, user_factory):
     await db.flush()
     row_id = row.id
 
-    count = await reap_stale_running_fetches(db)
+    count = await reap_stale_running_fetches()
 
     result = await db.execute(
-        select(DiscoveryFetch).where(DiscoveryFetch.id == row_id)
+        select(DiscoveryFetch)
+        .where(DiscoveryFetch.id == row_id)
+        .execution_options(populate_existing=True)
     )
     updated = result.scalar_one()
 
@@ -93,10 +95,12 @@ async def test_fresh_running_row_is_untouched(db: AsyncSession, user_factory):
     await db.flush()
     row_id = row.id
 
-    count = await reap_stale_running_fetches(db)
+    count = await reap_stale_running_fetches()
 
     result = await db.execute(
-        select(DiscoveryFetch).where(DiscoveryFetch.id == row_id)
+        select(DiscoveryFetch)
+        .where(DiscoveryFetch.id == row_id)
+        .execution_options(populate_existing=True)
     )
     untouched = result.scalar_one()
 
@@ -116,7 +120,7 @@ async def test_non_running_rows_are_untouched(db: AsyncSession, user_factory):
         db.add(_fetch(uid, src.id, started_at=very_old, status=terminal_status))
     await db.flush()
 
-    count = await reap_stale_running_fetches(db)
+    count = await reap_stale_running_fetches()
     assert count == 0
 
 
@@ -136,7 +140,7 @@ async def test_returns_correct_count_for_multiple_stale_rows(
     db.add(_fetch(uid, src.id, started_at=fresh_started))
     await db.flush()
 
-    count = await reap_stale_running_fetches(db)
+    count = await reap_stale_running_fetches()
     assert count == 3
 
 
@@ -153,11 +157,13 @@ async def test_reaper_is_idempotent(db: AsyncSession, user_factory):
     await db.flush()
     row_id = row.id
 
-    first_count = await reap_stale_running_fetches(db)
-    second_count = await reap_stale_running_fetches(db)
+    first_count = await reap_stale_running_fetches()
+    second_count = await reap_stale_running_fetches()
 
     result = await db.execute(
-        select(DiscoveryFetch).where(DiscoveryFetch.id == row_id)
+        select(DiscoveryFetch)
+        .where(DiscoveryFetch.id == row_id)
+        .execution_options(populate_existing=True)
     )
     final_row = result.scalar_one()
 

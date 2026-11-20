@@ -13,7 +13,10 @@ back to applications.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import uuid
+from collections.abc import Iterable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,4 +81,65 @@ async def get_by_id(
             ApplicationEvent.user_id == user_id,
         ),
     )
+    return result.scalar_one_or_none()
+
+
+_USER_EDITABLE_COLUMNS = frozenset({"interview_details", "note"})
+
+
+async def update_user_fields(
+    db: AsyncSession, event: ApplicationEvent, updates: dict[str, Any],
+) -> ApplicationEvent:
+    """Apply updates to the user-input columns (``interview_details``, ``note``) only."""
+    for key, value in updates.items():
+        if key in _USER_EDITABLE_COLUMNS:
+            setattr(event, key, value)
+    await db.flush()
+    await db.refresh(event)
+    return event
+
+
+async def latest_event_type_among(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    event_types: Iterable[str],
+) -> str | None:
+    """The ``event_type`` of the newest event (by ``occurred_at``) whose type is in ``event_types``."""
+    stmt = (
+        select(ApplicationEvent.event_type)
+        .where(
+            ApplicationEvent.application_id == application_id,
+            ApplicationEvent.user_id == user_id,
+            ApplicationEvent.event_type.in_(tuple(event_types)),
+        )
+        .order_by(ApplicationEvent.occurred_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def find_recent_by_idempotency_key(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    idempotency_key: str,
+    created_since: _dt.datetime,
+) -> ApplicationEvent | None:
+    """The newest event created since ``created_since`` whose ``raw_payload`` carries this key."""
+    stmt = (
+        select(ApplicationEvent)
+        .where(
+            ApplicationEvent.application_id == application_id,
+            ApplicationEvent.user_id == user_id,
+            ApplicationEvent.created_at >= created_since,
+            ApplicationEvent.raw_payload["idempotency_key"].astext == idempotency_key,
+        )
+        .order_by(ApplicationEvent.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()

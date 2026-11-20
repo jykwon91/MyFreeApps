@@ -349,7 +349,7 @@ async def test_fetch_empty_cycle_does_not_expire_inbox(
         discovery_fetch_service._ADAPTERS, "jsearch", _empty_adapter,
     )
 
-    result = await discovery_fetch_service.fetch_source(db, uid, src.id)
+    result = await discovery_fetch_service.fetch_source(uid, src.id)
 
     await db.refresh(existing)
     assert result["fetched_count"] == 0
@@ -396,7 +396,7 @@ async def test_fetch_nonempty_cycle_expires_vanished(
         discovery_fetch_service._ADAPTERS, "jsearch", _adapter,
     )
 
-    result = await discovery_fetch_service.fetch_source(db, uid, src.id)
+    result = await discovery_fetch_service.fetch_source(uid, src.id)
 
     await db.refresh(vanished)
     assert result["fetched_count"] == 1

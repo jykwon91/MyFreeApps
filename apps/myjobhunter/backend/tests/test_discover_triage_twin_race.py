@@ -145,7 +145,7 @@ async def test_any_other_integrity_error_is_not_mistaken_for_a_twin(
     )
 
     with pytest.raises(IntegrityError):
-        await service(db, job.id, user_id)
+        await service(job.id, user_id)
 
 
 @pytest.mark.asyncio
@@ -167,5 +167,5 @@ async def test_any_other_integrity_error_is_not_retried_by_apply(
     monkeypatch.setattr(application_event_repository, "create", violate)
 
     with pytest.raises(IntegrityError):
-        await discovery_promote_service.promote_discovered_job(db, user_id, job.id)
+        await discovery_promote_service.promote_discovered_job(user_id, job.id)
     assert attempts == 1

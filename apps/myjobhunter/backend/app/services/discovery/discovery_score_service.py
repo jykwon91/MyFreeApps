@@ -82,12 +82,11 @@ import uuid
 from datetime import datetime, time, timezone
 
 import sentry_sdk
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.db.session import AsyncSessionLocal
-from app.models.system.extraction_log import ExtractionLog
+from app.db.session import AsyncSessionLocal, unit_of_work
+from app.repositories.system import extraction_log_repository
 from app.services.discovery import discovery_prefilter_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
@@ -135,6 +134,9 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
     daily_cap = _resolve_daily_budget()
     top_n = _resolve_top_n(batch)
 
+    # Candidates are read in a short session that closes before the loop, so
+    # nothing sits idle in a transaction across Claude calls. Each posting is
+    # then scored and committed in its own unit_of_work.
     async with AsyncSessionLocal() as db:
         spent_today = await _spent_today(db, user_id)
         if spent_today >= daily_cap:
@@ -173,24 +175,25 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             daily_cap - spent_today,
         )
 
-        # Track in-loop spend locally instead of re-querying
-        # extraction_logs each iteration. ``score_jd`` returns the
-        # JobAnalysis with ``total_cost_usd`` populated; sum into
-        # ``spent_today`` so the next-iteration cap check is current
-        # without an extra round-trip.
-        scored = 0
-        budget_hits = False
-        consecutive_failures = 0
-        last_failure_code: str | None = None
+    # Track in-loop spend locally instead of re-querying
+    # extraction_logs each iteration. ``score_jd`` returns the
+    # JobAnalysis with ``total_cost_usd`` populated; sum into
+    # ``spent_today`` so the next-iteration cap check is current
+    # without an extra round-trip.
+    scored = 0
+    budget_hits = False
+    consecutive_failures = 0
+    last_failure_code: str | None = None
 
-        for attempt_index, job in enumerate(candidates):
-            if spent_today >= daily_cap:
-                budget_hits = True
-                break
+    for attempt_index, job in enumerate(candidates):
+        if spent_today >= daily_cap:
+            budget_hits = True
+            break
 
-            try:
+        try:
+            async with unit_of_work() as score_db:
                 analysis = await score_jd(
-                    db,
+                    score_db,
                     user_id,
                     jd_text=job.description or job.title,
                     source_url=job.source_url,
@@ -202,57 +205,57 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                     discovered_job_id=job.id,
                     discovered_job=job,
                 )
-            except JobAnalysisError as exc:
-                _emit_sentry_failure(
-                    exc=exc,
+        except JobAnalysisError as exc:
+            _emit_sentry_failure(
+                exc=exc,
+                user_id=user_id,
+                job_id=job.id,
+                attempt_index=attempt_index,
+            )
+
+            # Permanent errors are config bugs — fail-loud so the operator
+            # sees a crash on the next Sentry alert instead of a silent
+            # zero-score inbox. The BackgroundTask runner will log the
+            # exception; the current iteration's remaining rows stay
+            # unscored for the next pass.
+            if exc.code in PERMANENT_ANTHROPIC_CODES:
+                logger.error(
+                    "discovery score: permanent error — aborting loop "
+                    "user=%s job=%s code=%s err=%s",
+                    user_id, job.id, exc.code, exc,
+                )
+                raise
+
+            # Transient failure — count toward the circuit-breaker.
+            consecutive_failures += 1
+            last_failure_code = exc.code
+            logger.warning(
+                "discovery score: transient failure user=%s job=%s "
+                "code=%s consecutive=%d err=%s",
+                user_id, job.id, exc.code, consecutive_failures, exc,
+            )
+
+            if consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+                _emit_circuit_break_warning(
                     user_id=user_id,
-                    job_id=job.id,
+                    consecutive=consecutive_failures,
+                    last_code=last_failure_code,
                     attempt_index=attempt_index,
                 )
+                break
 
-                # Permanent errors are config bugs — fail-loud so the operator
-                # sees a crash on the next Sentry alert instead of a silent
-                # zero-score inbox. The BackgroundTask runner will log the
-                # exception; the current iteration's remaining rows stay
-                # unscored for the next pass.
-                if exc.code in PERMANENT_ANTHROPIC_CODES:
-                    logger.error(
-                        "discovery score: permanent error — aborting loop "
-                        "user=%s job=%s code=%s err=%s",
-                        user_id, job.id, exc.code, exc,
-                    )
-                    raise
+            continue
 
-                # Transient failure — count toward the circuit-breaker.
-                consecutive_failures += 1
-                last_failure_code = exc.code
-                logger.warning(
-                    "discovery score: transient failure user=%s job=%s "
-                    "code=%s consecutive=%d err=%s",
-                    user_id, job.id, exc.code, consecutive_failures, exc,
-                )
+        # Successful score — reset the consecutive-failure counter.
+        consecutive_failures = 0
+        last_failure_code = None
+        spent_today += float(analysis.total_cost_usd or 0)
+        scored += 1
 
-                if consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
-                    _emit_circuit_break_warning(
-                        user_id=user_id,
-                        consecutive=consecutive_failures,
-                        last_code=last_failure_code,
-                        attempt_index=attempt_index,
-                    )
-                    break
-
-                continue
-
-            # Successful score — reset the consecutive-failure counter.
-            consecutive_failures = 0
-            last_failure_code = None
-            spent_today += float(analysis.total_cost_usd or 0)
-            scored += 1
-
-        logger.info(
-            "discovery score: complete user=%s scored=%d budget_hit=%s spent_session=%.4f",
-            user_id, scored, budget_hits, spent_today,
-        )
+    logger.info(
+        "discovery score: complete user=%s scored=%d budget_hit=%s spent_session=%.4f",
+        user_id, scored, budget_hits, spent_today,
+    )
 
 
 def _emit_sentry_failure(
@@ -356,9 +359,4 @@ async def _spent_today(db: AsyncSession, user_id: uuid.UUID) -> float:
     today_start = datetime.combine(
         datetime.now(timezone.utc).date(), time.min, tzinfo=timezone.utc,
     )
-    stmt = select(func.coalesce(func.sum(ExtractionLog.cost_usd), 0)).where(
-        ExtractionLog.user_id == user_id,
-        ExtractionLog.created_at >= today_start,
-    )
-    result = await db.execute(stmt)
-    return float(result.scalar_one() or 0)
+    return await extraction_log_repository.sum_cost_since(db, user_id, since=today_start)

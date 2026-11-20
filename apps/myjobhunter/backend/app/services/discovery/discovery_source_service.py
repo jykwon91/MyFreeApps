@@ -1,9 +1,9 @@
 """Service wrappers for saved-search (DiscoverySource) mutations.
 
-Owns the transaction boundary for create and deactivate operations so route
-handlers never call ``db.commit()`` directly.  Per the MJH layered-architecture
-convention: routes → services → repositories; services commit, repositories
-only ``add``/``flush``.
+Each write runs in its own ``unit_of_work`` (commit on clean exit, rollback
+on error), so route handlers never hold a write transaction.  Per the MJH
+layered-architecture convention: routes → services → repositories;
+repositories only ``add``/``flush``.
 
 The committed row IS the schedule: ``is_active`` and
 ``fetch_interval_minutes`` are what the scheduler process reconciles its
@@ -17,9 +17,9 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_source_repository
-
 
 
 class DiscoverySourceNameConflictError(Exception):
@@ -56,7 +56,6 @@ async def _ensure_no_active_name_conflict(
 
 
 async def create_source(
-    db: AsyncSession,
     *,
     user_id: uuid.UUID,
     source: str,
@@ -72,25 +71,21 @@ async def create_source(
 
     The scheduler process picks the new source up on its next reconcile.
     """
-    await _ensure_no_active_name_conflict(
-        db, user_id=user_id, source=source, name=name,
-    )
-
-    src = await discovery_source_repository.create_source(
-        db,
-        user_id=user_id,
-        source=source,
-        name=name,
-        config=config,
-        fetch_interval_minutes=fetch_interval_minutes,
-    )
-    await db.commit()
-    await db.refresh(src)
-    return src
+    async with unit_of_work() as db:
+        await _ensure_no_active_name_conflict(
+            db, user_id=user_id, source=source, name=name,
+        )
+        return await discovery_source_repository.create_source(
+            db,
+            user_id=user_id,
+            source=source,
+            name=name,
+            config=config,
+            fetch_interval_minutes=fetch_interval_minutes,
+        )
 
 
 async def update_source(
-    db: AsyncSession,
     source_id: uuid.UUID,
     user_id: uuid.UUID,
     *,
@@ -115,39 +110,33 @@ async def update_source(
     A changed interval or ``is_active`` flag reaches the scheduler process
     on its next reconcile.
     """
-    current = await discovery_source_repository.get_source(db, source_id, user_id)
-    if current is None:
-        return None
-    resulting_name = current.name if name is None else name
-    resulting_active = current.is_active if is_active is None else is_active
-    if resulting_active:
-        await _ensure_no_active_name_conflict(
+    async with unit_of_work() as db:
+        current = await discovery_source_repository.get_source(db, source_id, user_id)
+        if current is None:
+            return None
+        resulting_name = current.name if name is None else name
+        resulting_active = current.is_active if is_active is None else is_active
+        if resulting_active:
+            await _ensure_no_active_name_conflict(
+                db,
+                user_id=user_id,
+                source=current.source,
+                name=resulting_name,
+                exclude_id=current.id,
+            )
+
+        return await discovery_source_repository.update_source(
             db,
-            user_id=user_id,
-            source=current.source,
-            name=resulting_name,
-            exclude_id=current.id,
+            source_id,
+            user_id,
+            fetch_interval_minutes=fetch_interval_minutes,
+            name=name,
+            is_active=is_active,
+            config=config,
         )
-
-    src = await discovery_source_repository.update_source(
-        db,
-        source_id,
-        user_id,
-        fetch_interval_minutes=fetch_interval_minutes,
-        name=name,
-        is_active=is_active,
-        config=config,
-    )
-    if src is None:
-        return None
-
-    await db.commit()
-    await db.refresh(src)
-    return src
 
 
 async def deactivate_source(
-    db: AsyncSession,
     source_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> bool:
@@ -157,11 +146,8 @@ async def deactivate_source(
     runner also re-checks ``is_active`` before fetching, so a fire inside
     that window is a no-op.
     """
-    ok = await discovery_source_repository.deactivate_source(db, source_id, user_id)
-    if not ok:
-        return False
-    await db.commit()
-    return True
+    async with unit_of_work() as db:
+        return await discovery_source_repository.deactivate_source(db, source_id, user_id)
 
 
 async def list_sources(

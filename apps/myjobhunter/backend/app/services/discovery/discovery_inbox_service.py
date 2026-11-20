@@ -1,9 +1,9 @@
 """Service wrappers for discovered-job inbox mutations.
 
-Owns the transaction boundary for dismiss and save operations so route
-handlers never call ``db.commit()`` directly.  Per the MJH layered-architecture
-convention: routes → services → repositories; services commit, repositories
-only ``add``/``flush``.
+Each dismiss / save write runs in its own ``unit_of_work`` (commit on clean
+exit, rollback on error), so route handlers never hold a write transaction.
+Per the MJH layered-architecture convention: routes → services →
+repositories; repositories only ``add``/``flush``.
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.discovered_job_state import DiscoveredJobState
+from app.db.session import unit_of_work
 from app.db.violated_constraint import violated_constraint_name
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.repositories.discovery import (
@@ -67,13 +68,13 @@ async def _refuse_twin(db: AsyncSession, job: DiscoveredJob) -> None:
     raise DiscoveredJobDuplicateError(f"discovered_job {job.id} has active twin {twin.id}")
 
 
-async def _refuse_twin_arrived(db: AsyncSession, exc: IntegrityError, job_id: uuid.UUID) -> NoReturn:
-    """Roll back a write a twin beat to the content-hash slot, as ``DiscoveredJobDuplicateError``.
+def _refuse_twin_arrived(exc: IntegrityError, job_id: uuid.UUID) -> NoReturn:
+    """Report a write a twin beat to the content-hash slot as ``DiscoveredJobDuplicateError``.
 
     A fetch inserted the twin after ``_refuse_twin`` looked; the outcome is the
-    same as if it had been there first. Any other integrity error is re-raised.
+    same as if it had been there first. The ``unit_of_work`` has already rolled
+    the write back. Any other integrity error is re-raised.
     """
-    await db.rollback()
     if violated_constraint_name(exc) != discovery_duplicate_repository.TWIN_INDEX_NAME:
         raise exc
     raise DiscoveredJobDuplicateError(f"discovered_job {job_id}: a twin arrived meanwhile") from exc
@@ -94,7 +95,6 @@ async def _load_for_triage(
 
 
 async def dismiss_discovered(
-    db: AsyncSession,
     job_id: uuid.UUID,
     user_id: uuid.UUID,
     *,
@@ -104,16 +104,15 @@ async def dismiss_discovered(
 
     Raises ``DiscoveredJobAlreadyAppliedError`` for an applied posting.
     """
-    job = await _load_for_triage(db, job_id, user_id)
-    if job is None:
-        return False
-    await discovery_repository.dismiss_discovered(db, job, reason=reason)
-    await db.commit()
+    async with unit_of_work() as db:
+        job = await _load_for_triage(db, job_id, user_id)
+        if job is None:
+            return False
+        await discovery_repository.dismiss_discovered(db, job, reason=reason)
     return True
 
 
 async def undo_dismiss_for_user(
-    db: AsyncSession,
     job_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> bool:
@@ -124,20 +123,19 @@ async def undo_dismiss_for_user(
     expired/closed, or is an application. When its twin from another source
     holds the content-hash slot, raises what ``_refuse_twin`` says.
     """
-    job = await discovery_repository.get_restorable(db, job_id, user_id)
-    if job is None:
-        return False
-    await _refuse_twin(db, job)
     try:
-        await discovery_repository.undo_dismiss_discovered(db, job)
-        await db.commit()
+        async with unit_of_work() as db:
+            job = await discovery_repository.get_restorable(db, job_id, user_id)
+            if job is None:
+                return False
+            await _refuse_twin(db, job)
+            await discovery_repository.undo_dismiss_discovered(db, job)
     except IntegrityError as exc:
-        await _refuse_twin_arrived(db, exc, job_id)
+        _refuse_twin_arrived(exc, job_id)
     return True
 
 
 async def save_discovered(
-    db: AsyncSession,
     job_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> bool:
@@ -147,15 +145,15 @@ async def save_discovered(
     dismissed one whose twin from another source holds the content-hash slot,
     raises what ``_refuse_twin`` says.
     """
-    job = await _load_for_triage(db, job_id, user_id)
-    if job is None:
-        return False
-    await _refuse_twin(db, job)
     try:
-        await discovery_repository.save_discovered(db, job)
-        await db.commit()
+        async with unit_of_work() as db:
+            job = await _load_for_triage(db, job_id, user_id)
+            if job is None:
+                return False
+            await _refuse_twin(db, job)
+            await discovery_repository.save_discovered(db, job)
     except IntegrityError as exc:
-        await _refuse_twin_arrived(db, exc, job_id)
+        _refuse_twin_arrived(exc, job_id)
     return True
 
 

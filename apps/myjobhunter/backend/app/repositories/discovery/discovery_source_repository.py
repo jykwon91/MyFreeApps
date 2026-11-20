@@ -166,3 +166,17 @@ async def mark_source_fetched(
         source.last_error_at = now
         source.last_error_message = (error_message or "")[:500]
     await db.flush()
+
+
+async def cache_resolved_company_name(
+    db: AsyncSession, source: DiscoverySource, company_name: str,
+) -> None:
+    """Store the Greenhouse company display name in the source's config JSONB.
+
+    SQLAlchemy doesn't detect in-place mutation of a JSONB dict, so the column
+    gets a new dict.
+    """
+    updated_config = dict(source.config or {})
+    updated_config["resolved_company_name"] = company_name
+    source.config = updated_config
+    await db.flush()

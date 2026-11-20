@@ -10,19 +10,20 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency_code import normalize_currency_code
 from app.core.enums import PUBLISHER_TO_SOURCE
+from app.db.session import unit_of_work
 from app.db.violated_constraint import violated_constraint_name
 from app.models.application.application import Application
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.repositories.application import application_repository
 from app.repositories.discovery import (
     discovery_duplicate_repository,
+    discovery_promotion_repository,
     discovery_repository,
 )
 from app.services.application.applied_application_creator import create_applied_application
@@ -39,7 +40,6 @@ class DiscoveryPromoteError(RuntimeError):
 
 
 async def promote_discovered_job(
-    db: AsyncSession,
     user_id: uuid.UUID,
     discovered_job_id: uuid.UUID,
 ) -> Application:
@@ -57,29 +57,48 @@ async def promote_discovered_job(
     collide with the twin.
 
     A fetch can insert that twin after the check, so the write violates the
-    content-hash index: roll back and promote once more, which now finds the
-    committed twin and promotes it. That attempt clears no dismissal, so it
+    content-hash index: the attempt's ``unit_of_work`` rolls back and Promote
+    runs once more, which now finds the committed twin and promotes it. That attempt clears no dismissal, so it
     can't collide again. Any other integrity error is re-raised.
     """
     try:
-        return await _promote_once(db, user_id, discovered_job_id)
+        return await _promote_once(user_id, discovered_job_id)
     except IntegrityError as exc:
-        await db.rollback()
         if violated_constraint_name(exc) != discovery_duplicate_repository.TWIN_INDEX_NAME:
             raise
         logger.info(
             "promote: twin arrived mid-promote user=%s job=%s; promoting the twin",
             user_id, discovered_job_id,
         )
-    return await _promote_once(db, user_id, discovered_job_id)
+    return await _promote_once(user_id, discovered_job_id)
 
 
 async def _promote_once(
-    db: AsyncSession,
     user_id: uuid.UUID,
     discovered_job_id: uuid.UUID,
 ) -> Application:
-    """One attempt at ``promote_discovered_job``, committing on success."""
+    """One attempt at ``promote_discovered_job`` in its own ``unit_of_work``."""
+    async with unit_of_work() as db:
+        application, target = await _promote_in_transaction(db, user_id, discovered_job_id)
+    if target is None:
+        return application
+    logger.info(
+        "discovery promote: user=%s discovered_job=%s (row %s) -> application=%s",
+        user_id, discovered_job_id, target.id, application.id,
+    )
+    return application
+
+
+async def _promote_in_transaction(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    discovered_job_id: uuid.UUID,
+) -> tuple[Application, DiscoveredJob | None]:
+    """Promote within ``db``'s transaction.
+
+    Returns the application and the row promoted, or ``None`` for the row when
+    the posting was already linked to a live application.
+    """
     job = await discovery_repository.get_discovered(
         db, discovered_job_id, user_id, for_update=True,
     )
@@ -90,7 +109,7 @@ async def _promote_once(
 
     existing = await _linked_application(db, job, user_id)
     if existing is not None:
-        return existing
+        return existing, None
     # A dismissed posting whose twin holds the content-hash slot: the twin is
     # the same posting, and the one Discover lists. Promote it.
     twin = await discovery_duplicate_repository.get_active_twin(db, job)
@@ -99,27 +118,13 @@ async def _promote_once(
     application = await _linked_application(db, target, user_id) if twin is not None else None
     if application is None:
         application = await _create_application(db, user_id, target)
-        _link(target, application)
-        # A promoted row is an application, in no Discover view: clear Saved,
-        # and a dismissal made on another device (as Save does), so it is never
-        # left promoted AND dismissed.
-        target.saved_at = None
-        target.dismissed_at = None
-        target.dismissed_reason = None
+        await discovery_promotion_repository.mark_promoted(db, target, application.id)
     if twin is not None:
         # This row keeps its dismissal (clearing it would collide with the
         # twin), but it is applied too: it leaves the Dismissed view, and a
         # repeat Apply on it returns the same application.
-        _link(job, application)
-    await db.flush()
-
-    await db.commit()
-    await db.refresh(application)
-    logger.info(
-        "discovery promote: user=%s discovered_job=%s (row %s) -> application=%s",
-        user_id, discovered_job_id, target.id, application.id,
-    )
-    return application
+        await discovery_promotion_repository.link_to_application(db, job, application.id)
+    return application, target
 
 
 async def _linked_application(
@@ -134,11 +139,6 @@ async def _linked_application(
     if job.promoted_application_id is None:
         return None
     return await application_repository.get_by_id(db, job.promoted_application_id, user_id)
-
-
-def _link(job: DiscoveredJob, application: Application) -> None:
-    job.promoted_application_id = application.id
-    job.promoted_at = datetime.now(timezone.utc)
 
 
 async def _create_application(

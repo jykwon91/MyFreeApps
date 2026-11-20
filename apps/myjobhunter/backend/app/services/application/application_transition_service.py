@@ -29,10 +29,10 @@ import datetime as _dt
 import uuid
 from typing import Literal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ALLOWED_TRANSITIONS, EventSource, EventType, KanbanColumn
+from app.db.session import unit_of_work
 from app.models.application.application_event import ApplicationEvent
 from app.repositories.application import application_event_repository, application_repository
 
@@ -96,18 +96,12 @@ async def _resolve_current_column(
     Reads the most-recent stage-defining event_type for the application,
     or returns ``applied`` if none exist.
     """
-    stmt = (
-        select(ApplicationEvent.event_type)
-        .where(
-            ApplicationEvent.application_id == application_id,
-            ApplicationEvent.user_id == user_id,
-            ApplicationEvent.event_type.in_(tuple(_EVENT_TYPE_TO_COLUMN.keys())),
-        )
-        .order_by(ApplicationEvent.occurred_at.desc())
-        .limit(1)
+    latest = await application_event_repository.latest_event_type_among(
+        db,
+        user_id=user_id,
+        application_id=application_id,
+        event_types=_EVENT_TYPE_TO_COLUMN.keys(),
     )
-    result = await db.execute(stmt)
-    latest = result.scalar_one_or_none()
     return _column_for_event_type(latest)
 
 
@@ -125,23 +119,16 @@ async def _find_recent_idempotent_event(
     prior session can't suppress a legitimate drag months later.
     """
     cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(seconds=window_seconds)
-    stmt = (
-        select(ApplicationEvent)
-        .where(
-            ApplicationEvent.application_id == application_id,
-            ApplicationEvent.user_id == user_id,
-            ApplicationEvent.created_at >= cutoff,
-            ApplicationEvent.raw_payload["idempotency_key"].astext == idempotency_key,
-        )
-        .order_by(ApplicationEvent.created_at.desc())
-        .limit(1)
+    return await application_event_repository.find_recent_by_idempotency_key(
+        db,
+        user_id=user_id,
+        application_id=application_id,
+        idempotency_key=idempotency_key,
+        created_since=cutoff,
     )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
 
 
 async def transition_application(
-    db: AsyncSession,
     *,
     application_id: uuid.UUID,
     target_column: KanbanTargetColumn,
@@ -167,52 +154,52 @@ async def transition_application(
             f"target_column must be one of {KanbanColumn.ALL}, got {target_column!r}",
         )
 
-    # Lock the application until commit, so a retry sent while the first
-    # request is still running waits for it, then finds its event below
-    # instead of writing a second one. Two different moves queue the same way
-    # and each is checked against the column the other left.
-    application = await application_repository.get_by_id(db, application_id, user_id, for_update=True)
-    if application is None:
-        return None
+    async with unit_of_work() as db:
+        # Lock the application until commit, so a retry sent while the first
+        # request is still running waits for it, then finds its event below
+        # instead of writing a second one. Two different moves queue the same way
+        # and each is checked against the column the other left.
+        application = await application_repository.get_by_id(db, application_id, user_id, for_update=True)
+        if application is None:
+            return None
 
-    # Idempotency check before any state mutation. We pin the search to
-    # this application + this user so a recycled UUID across sessions
-    # can never hide a different application's prior write.
-    if idempotency_key is not None:
-        existing = await _find_recent_idempotent_event(
-            db,
+        # Idempotency check before any state mutation. We pin the search to
+        # this application + this user so a recycled UUID across sessions
+        # can never hide a different application's prior write.
+        if idempotency_key is not None:
+            existing = await _find_recent_idempotent_event(
+                db,
+                user_id=user_id,
+                application_id=application_id,
+                idempotency_key=idempotency_key,
+            )
+            if existing is not None:
+                return existing
+
+        current_column = await _resolve_current_column(
+            db, user_id=user_id, application_id=application_id,
+        )
+
+        allowed_targets = ALLOWED_TRANSITIONS.get(current_column, frozenset())
+        if target_column not in allowed_targets:
+            raise TransitionNotAllowedError(
+                f"Cannot transition from {current_column!r} to {target_column!r}",
+            )
+
+        event_type = _TARGET_COLUMN_TO_EVENT_TYPE[target_column]
+        raw_payload: dict[str, str] | None = (
+            {"idempotency_key": idempotency_key} if idempotency_key is not None else None
+        )
+
+        event = ApplicationEvent(
             user_id=user_id,
             application_id=application_id,
-            idempotency_key=idempotency_key,
+            event_type=event_type,
+            # Server-side now() — never trust the client clock for occurred_at
+            # on a transition.
+            occurred_at=_dt.datetime.now(_dt.timezone.utc),
+            source=EventSource.MANUAL,
+            raw_payload=raw_payload,
         )
-        if existing is not None:
-            return existing
-
-    current_column = await _resolve_current_column(
-        db, user_id=user_id, application_id=application_id,
-    )
-
-    allowed_targets = ALLOWED_TRANSITIONS.get(current_column, frozenset())
-    if target_column not in allowed_targets:
-        raise TransitionNotAllowedError(
-            f"Cannot transition from {current_column!r} to {target_column!r}",
-        )
-
-    event_type = _TARGET_COLUMN_TO_EVENT_TYPE[target_column]
-    raw_payload: dict[str, str] | None = (
-        {"idempotency_key": idempotency_key} if idempotency_key is not None else None
-    )
-
-    event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application_id,
-        event_type=event_type,
-        # Server-side now() — never trust the client clock for occurred_at
-        # on a transition.
-        occurred_at=_dt.datetime.now(_dt.timezone.utc),
-        source=EventSource.MANUAL,
-        raw_payload=raw_payload,
-    )
-    event = await application_event_repository.create(db, event)
-    await db.commit()
+        event = await application_event_repository.create(db, event)
     return event

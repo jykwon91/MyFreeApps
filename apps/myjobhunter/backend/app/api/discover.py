@@ -110,7 +110,6 @@ _REFRESH_LIMITER = RateLimiter(
 )
 async def create_source(
     payload: DiscoverySourceCreate,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoverySourceResponse:
     """Create a new active saved search for the caller.
@@ -122,7 +121,6 @@ async def create_source(
     """
     try:
         src = await discovery_source_service.create_source(
-            db,
             user_id=user.id,
             source=payload.source,
             name=payload.name,
@@ -156,7 +154,6 @@ async def list_sources(
 async def patch_source(
     source_id: uuid.UUID,
     payload: DiscoverySourcePatch,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoverySourceResponse:
     """Partially update a saved search (frequency, name, or active state).
@@ -169,7 +166,6 @@ async def patch_source(
     """
     try:
         src = await discovery_source_service.update_source(
-            db,
             source_id,
             user.id,
             fetch_interval_minutes=payload.fetch_interval_minutes,
@@ -190,10 +186,9 @@ async def patch_source(
 )
 async def deactivate_source(
     source_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
-    ok = await discovery_source_service.deactivate_source(db, source_id, user.id)
+    ok = await discovery_source_service.deactivate_source(source_id, user.id)
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
 
@@ -211,7 +206,6 @@ async def deactivate_source(
 async def refresh_source(
     source_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoveryFetchResultResponse:
     """Trigger one fetch cycle for the saved search.
@@ -230,7 +224,7 @@ async def refresh_source(
 
     try:
         result = await discovery_fetch_service.fetch_source(
-            db, user.id, source_id,
+            user.id, source_id,
         )
     except DiscoverySourceNotFoundError:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
@@ -342,7 +336,6 @@ def _triage_conflict(
 async def dismiss_job(
     job_id: uuid.UUID,
     payload: DiscoveredJobDismissRequest | None = None,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
     """Dismiss a discovered job. Optional ``reason`` is captured as a
@@ -356,7 +349,7 @@ async def dismiss_job(
     reason = payload.reason if payload else None
     try:
         ok = await discovery_inbox_service.dismiss_discovered(
-            db, job_id, user.id, reason=reason,
+            job_id, user.id, reason=reason,
         )
     except DiscoveredJobAlreadyAppliedError as exc:
         raise _triage_conflict(exc) from exc
@@ -370,7 +363,6 @@ async def dismiss_job(
 )
 async def undo_dismiss_job(
     job_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
     """Reverse a dismiss, returning the job to the inbox.
@@ -384,7 +376,7 @@ async def undo_dismiss_job(
     - 409 ``DISCOVERED_JOB_ALREADY_APPLIED`` — its twin is already an application
     """
     try:
-        ok = await discovery_inbox_service.undo_dismiss_for_user(db, job_id, user.id)
+        ok = await discovery_inbox_service.undo_dismiss_for_user(job_id, user.id)
     except _TRIAGE_CONFLICTS as exc:
         raise _triage_conflict(exc) from exc
     if not ok:
@@ -397,7 +389,6 @@ async def undo_dismiss_job(
 )
 async def save_job(
     job_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
     """Keep a discovered job for later.
@@ -411,7 +402,7 @@ async def save_job(
     - 409 ``DISCOVERED_JOB_NO_LONGER_LISTED`` — that twin has expired or closed
     """
     try:
-        ok = await discovery_inbox_service.save_discovered(db, job_id, user.id)
+        ok = await discovery_inbox_service.save_discovered(job_id, user.id)
     except _TRIAGE_CONFLICTS as exc:
         raise _triage_conflict(exc) from exc
     if not ok:
@@ -425,7 +416,6 @@ async def save_job(
 )
 async def promote_job(
     job_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationResponse:
     """Convert a discovered job into a tracked Application.
@@ -441,7 +431,7 @@ async def promote_job(
     """
     try:
         application = await discovery_promote_service.promote_discovered_job(
-            db, user.id, job_id,
+            user.id, job_id,
         )
     except DiscoveryPromoteError:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)

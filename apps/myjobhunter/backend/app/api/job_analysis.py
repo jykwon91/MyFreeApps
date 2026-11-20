@@ -59,7 +59,6 @@ _ANALYZE_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
 )
 async def analyze_job(
     payload: JobAnalysisRequest,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> JobAnalysisResponse:
     """Run a fit analysis for the caller against the supplied job.
@@ -84,7 +83,7 @@ async def analyze_job(
 
     try:
         analysis = await job_analysis_service.analyze(
-            db, user.id, url=url, jd_text=jd_text,
+            user.id, url=url, jd_text=jd_text,
         )
     except JobAnalysisInvalidUrlError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -130,7 +129,6 @@ async def get_job_analysis(
 )
 async def apply_from_analysis(
     analysis_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ApplicationResponse:
     """Create an Application from a stored analysis.
@@ -145,7 +143,7 @@ async def apply_from_analysis(
     user — same response either way (no existence leak).
     """
     application = await job_analysis_service.apply_to_application(
-        db, user.id, analysis_id,
+        user.id, analysis_id,
     )
     if application is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)

@@ -248,7 +248,7 @@ class TestOtherIntegrityErrorsAreNotDuplicates:
 
         # No such user: the users FK fails, which must not read as "already exists".
         with pytest.raises(IntegrityError):
-            await company_service.create_company(db, uuid.uuid4(), request)
+            await company_service.create_company(uuid.uuid4(), request)
 
     @pytest.mark.asyncio
     async def test_update_check_violation_propagates(
@@ -257,14 +257,14 @@ class TestOtherIntegrityErrorsAreNotDuplicates:
         user = await user_factory()
         user_id = uuid.UUID(user["id"])
         company = await company_service.create_company(
-            db, user_id, CompanyCreateRequest(name="Acme", primary_domain="acme.com"),
+            user_id, CompanyCreateRequest(name="Acme", primary_domain="acme.com"),
         )
         # Bypass schema validation to reach the DB CHECK constraint.
         request = CompanyUpdateRequest.model_construct(size_range="huge")
         request.__pydantic_fields_set__ = {"size_range"}
 
         with pytest.raises(IntegrityError):
-            await company_service.update_company(db, user_id, company.id, request)
+            await company_service.update_company(user_id, company.id, request)
 
     @pytest.mark.asyncio
     async def test_create_duplicate_still_maps_to_duplicate_error(
@@ -273,12 +273,12 @@ class TestOtherIntegrityErrorsAreNotDuplicates:
         user = await user_factory()
         user_id = uuid.UUID(user["id"])
         await company_service.create_company(
-            db, user_id, CompanyCreateRequest(name="Acme", primary_domain="acme.com"),
+            user_id, CompanyCreateRequest(name="Acme", primary_domain="acme.com"),
         )
 
         with pytest.raises(company_service.DuplicatePrimaryDomainError):
             await company_service.create_company(
-                db, user_id, CompanyCreateRequest(name="Acme 2", primary_domain="Acme.com"),
+                user_id, CompanyCreateRequest(name="Acme 2", primary_domain="Acme.com"),
             )
 
 

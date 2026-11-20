@@ -8,6 +8,7 @@ back in Discover, and Promote makes a fresh application.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,3 +30,28 @@ async def clear_promotion_links(
         .values(promoted_application_id=None, promoted_at=None)
         .execution_options(synchronize_session="fetch"),
     )
+
+
+async def link_to_application(
+    db: AsyncSession, job: DiscoveredJob, application_id: uuid.UUID,
+) -> None:
+    """Link ``job`` to the application it was applied as, leaving its triage state."""
+    job.promoted_application_id = application_id
+    job.promoted_at = datetime.now(timezone.utc)
+    await db.flush()
+
+
+async def mark_promoted(
+    db: AsyncSession, job: DiscoveredJob, application_id: uuid.UUID,
+) -> None:
+    """Link ``job`` to its new application and clear Saved and any dismissal.
+
+    A promoted row is an application, in no Discover view, so it is never left
+    promoted AND saved or dismissed (a dismissal may come from another device).
+    """
+    job.promoted_application_id = application_id
+    job.promoted_at = datetime.now(timezone.utc)
+    job.saved_at = None
+    job.dismissed_at = None
+    job.dismissed_reason = None
+    await db.flush()
