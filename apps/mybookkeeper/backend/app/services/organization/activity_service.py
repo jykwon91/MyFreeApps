@@ -7,6 +7,7 @@ from app.models.properties.property import Property
 from app.models.properties.property_classification import PropertyClassification
 from app.repositories import activity_repo
 from app.services.properties.property_service import CLASSIFICATION_TO_ACTIVITY
+from app.services.transactions.reference_ownership import assert_references_owned
 
 UPDATABLE_FIELDS = frozenset({"label", "is_active"})
 
@@ -19,6 +20,12 @@ async def create_activity(
     property_id: uuid.UUID | None = None,
 ) -> Activity:
     async with unit_of_work() as db:
+        await assert_references_owned(
+            db,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            fields={"property_id": property_id},
+        )
         return await activity_repo.create(
             db,
             organization_id=ctx.organization_id,

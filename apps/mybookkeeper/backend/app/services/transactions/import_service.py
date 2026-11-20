@@ -8,6 +8,7 @@ from app.models.transactions.transaction import Transaction
 from app.repositories.transactions import transaction_repo
 from app.schemas.transactions.imports import ImportResult, TransactionPreview
 from app.services.transactions.bank_csv_parser import detect_bank_format, parse_bank_csv
+from app.services.transactions.reference_ownership import assert_references_owned
 
 MAX_CSV_SIZE = 5 * 1024 * 1024  # 5 MB
 
@@ -24,6 +25,7 @@ async def import_bank_csv_file(
         ImportResult with counts and preview of parsed transactions.
 
     Raises:
+        ForeignReferenceError: If ``property_id`` is not one of the caller's properties.
         ValueError: If file is too large, not a CSV, unrecognized format, or empty.
     """
     if not filename.lower().endswith(".csv"):
@@ -46,6 +48,12 @@ async def import_bank_csv_file(
     skipped = 0
 
     async with unit_of_work() as db:
+        await assert_references_owned(
+            db,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            fields={"property_id": property_id},
+        )
         existing_ids = await transaction_repo.get_existing_external_ids(
             db, ctx.organization_id, "bank_csv", external_ids,
         )

@@ -194,7 +194,9 @@ async def _scan_missing_income(
     if not missing_property_ids:
         return []
 
-    prop_labels = await property_repo.get_labels_by_ids(db, list(missing_property_ids))
+    prop_labels = await property_repo.get_labels_by_ids(
+        db, organization_id, list(missing_property_ids),
+    )
 
     items: list[DiscrepancyItem] = []
     for prop_id in missing_property_ids:

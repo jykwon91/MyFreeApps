@@ -8,6 +8,7 @@ from app.core.context import RequestContext
 from app.core.permissions import require_write_access
 from app.schemas.transactions.imports import ImportResult
 from app.services.transactions import import_service
+from app.services.transactions.foreign_reference_error import ForeignReferenceError
 
 router = APIRouter(prefix="/imports", tags=["imports"])
 
@@ -23,6 +24,8 @@ async def import_bank_csv(
         return await import_service.import_bank_csv_file(
             ctx, content_bytes, file.filename or "", property_id,
         )
+    except ForeignReferenceError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except ValueError as e:
         status = 413 if "too large" in str(e) else 422 if "format" in str(e) or "No transactions" in str(e) else 400
         raise HTTPException(status_code=status, detail=str(e))

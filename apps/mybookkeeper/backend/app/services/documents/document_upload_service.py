@@ -21,6 +21,7 @@ from app.services.storage.attachment_content import (
     strip_photo_metadata,
 )
 from app.services.storage.stored_file_cleanup import delete_stored_files
+from app.services.transactions.reference_ownership import assert_references_owned
 
 
 async def clean_document_file(content: bytes, filename: str) -> bytes:
@@ -76,7 +77,8 @@ async def accept_upload(
 
     For zip files, extracts all supported files and creates one document per file.
     Returns dict with document_id (primary), batch_id (if zip), and batch_total.
-    Raises ValueError for limit exceeded or unsupported file type.
+    Raises ValueError for limit exceeded, unsupported file type, or a
+    ``property_id`` that is not one of the caller's properties.
 
     ``reference_only`` stores the file as source material rather than as
     something to bill against. It sets the same flag the Documents page exposes
@@ -120,6 +122,13 @@ async def _save_placeholder_documents(
 ) -> dict[str, str | int | None]:
     """Insert the placeholder rows; collects the stored files of replaced failed uploads."""
     async with unit_of_work() as db:
+        # Every transaction extracted from the file inherits this property.
+        await assert_references_owned(
+            db,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            fields={"property_id": property_id},
+        )
         today_count = await usage_log_repo.count_today(db, ctx.organization_id)
 
         # Demo orgs get a stricter daily upload limit

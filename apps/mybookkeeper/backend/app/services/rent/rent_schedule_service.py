@@ -18,6 +18,7 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_charge_repo, rent_schedule_repo
 from app.schemas.rent.rent_schedule_response import RentScheduleResponse
 from app.services.rent import rent_ledger_service
+from app.services.transactions.reference_ownership import assert_references_owned
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,12 @@ async def create_schedule(
         await _assert_applicant_is_ours(
             db, organization_id=organization_id,
             user_id=user_id, applicant_id=applicant_id,
+        )
+        await assert_references_owned(
+            db,
+            organization_id=organization_id,
+            user_id=user_id,
+            fields={"property_id": property_id},
         )
         await _assert_no_overlap(
             db,

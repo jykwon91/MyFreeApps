@@ -2115,6 +2115,7 @@
         "test_bank_csv_parser.py",
         "test_export_service.py",
         "test_import_service.py",
+        "test_property_reference_ownership.py",
         "test_merge_transactions.py",
         "test_duplicate_merge_carry_over.py",
         "test_reconciliation_repo.py",

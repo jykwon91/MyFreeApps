@@ -139,7 +139,9 @@ async def create_manual_transaction(
         data["transaction_date"],
     )
     async with unit_of_work() as db:
-        await assert_references_owned(db, ctx, data)
+        await assert_references_owned(
+            db, organization_id=ctx.organization_id, user_id=ctx.user_id, fields=data,
+        )
         created = await transaction_repo.create_transaction(
             db,
             organization_id=ctx.organization_id,
@@ -182,7 +184,9 @@ async def update_transaction(
         for field in updates:
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
-        await assert_references_owned(db, ctx, updates)
+        await assert_references_owned(
+            db, organization_id=ctx.organization_id, user_id=ctx.user_id, fields=updates,
+        )
         for field, value in updates.items():
             setattr(txn, field, value)
         txn.placed_in_service_date = placed_in_service_date_for(
