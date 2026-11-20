@@ -7,11 +7,14 @@ import type { PropertyType } from "@mybookkeeper/api-client/types/property/Prope
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { depreciationInputChanges, landValueProblem, placedInServiceProblem, showsDepreciationInputs } from "@mybookkeeper/api-client/utils/depreciationInputs";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { type ComponentRef, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
+import { useTodayIso } from "../../lib/useTodayIso";
 import OptionalDateField from "../shell/OptionalDateField";
+import DepreciationFields from "./DepreciationFields";
 import { useSaveProperty } from "./useSaveProperty";
 
 const CLASSIFICATION_OPTIONS = CLASSIFICATION_CHOICES.map(({ value, label }) => ({ value, label }));
@@ -24,6 +27,10 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [purchasePrice, setPurchasePrice] = useState(original?.purchase_price ?? "");
   const [rentedSince, setRentedSince] = useState<string | null>(original?.rented_since ?? null);
+  const [landValue, setLandValue] = useState(original?.land_value ?? "");
+  const [placedInService, setPlacedInService] = useState<string | null>(original?.date_placed_in_service ?? null);
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
+  const todayIso = useTodayIso();
   const { submit, isBusy, isLeaving, failure } = useSaveProperty(original);
   const streetInput = useRef<ComponentRef<typeof TextInput>>(null);
   const cityInput = useRef<ComponentRef<typeof TextInput>>(null);
@@ -36,10 +43,20 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const priceRemoved = priceBlank && original?.purchase_price != null;
   const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
   const rentedSinceRemoved = rentedSince === null && original?.rented_since != null;
+  // Edit only, like rented-since: a new property has no purchase price to measure land against yet.
+  const asksDepreciation = original !== null && showsDepreciationInputs(form.classification);
+  const landValueError = asksDepreciation
+    ? landValueProblem(landValue, cleanedPrice ?? original.purchase_price ?? null, original.land_value, decimalSeparator)
+    : undefined;
+  const placedInServiceError = asksDepreciation
+    ? placedInServiceProblem(placedInService, original.date_placed_in_service, todayIso)
+    : undefined;
   const isDirty = original
     ? Object.keys(propertyChanges(form, original)).length > 0
       || purchasePrice !== (original.purchase_price ?? "")
       || rentedSince !== (original.rented_since ?? null)
+      || landValue !== (original.land_value ?? "")
+      || placedInService !== (original.date_placed_in_service ?? null)
     : !isBlank(form);
   const choice = CLASSIFICATION_CHOICES.find((candidate) => candidate.value === form.classification);
   const locked = isBusy || isLeaving;
@@ -53,10 +70,11 @@ export default function PropertyFormScreen({ original }: { original: Property | 
 
   function save(): void {
     setHasTried(true);
-    if (Object.keys(problems).length > 0 || priceInvalid || rentedSinceRemoved) return;
+    if (Object.keys(problems).length > 0 || priceInvalid || rentedSinceRemoved || landValueError || placedInServiceError) return;
     const extra = {
       ...(cleanedPrice ? { purchase_price: cleanedPrice } : {}),
       ...(rentedSince && rentedSince !== original?.rented_since ? { rented_since: rentedSince } : {}),
+      ...(asksDepreciation ? depreciationInputChanges(landValue, placedInService, original, decimalSeparator) : {}),
     };
     void submit(form, extra);
   }
@@ -167,6 +185,17 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             {MESSAGES.purchasePriceHint}
           </Text>
         )}
+        {asksDepreciation ? (
+          <DepreciationFields
+            disabled={locked}
+            landValue={landValue}
+            landValueError={hasTried ? landValueError : undefined}
+            onLandValueChange={setLandValue}
+            onPlacedInServiceChange={setPlacedInService}
+            placedInService={placedInService}
+            placedInServiceError={hasTried ? placedInServiceError : undefined}
+          />
+        ) : null}
         {original ? (
           <>
             <OptionalDateField

@@ -2,6 +2,11 @@ import logging
 import uuid
 
 from app.core.context import RequestContext
+from app.core.depreciation_input_constants import (
+    DEPRECIATION_INPUT_FIELDS,
+    LAND_VALUE_NEEDS_PRICE,
+    LAND_VALUE_OVER_PRICE,
+)
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.properties.property import Property, PropertyType, reconcile_type
 from app.models.properties.property_classification import PropertyClassification
@@ -73,10 +78,12 @@ async def update_property(
         if not prop:
             return None
         old_classification = prop.classification
+        old_depreciation_inputs = _depreciation_inputs(prop)
         for field, value in updates.items():
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
             setattr(prop, field, value)
+        _check_land_value(prop)
 
         # A PATCH that only moves classification leaves the old rental type in
         # place, which the chk_prop_classification_type constraint rejects. The
@@ -91,8 +98,24 @@ async def update_property(
             await _cascade_classification_change(
                 db, ctx.organization_id, property_id, new_classification,
             )
+        elif _depreciation_inputs(prop) != old_depreciation_inputs:
+            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
 
         return prop
+
+
+def _depreciation_inputs(prop: Property) -> tuple[object, ...]:
+    return tuple(getattr(prop, field) for field in sorted(DEPRECIATION_INPUT_FIELDS))
+
+
+def _check_land_value(prop: Property) -> None:
+    """Land is part of what was paid, so it needs a purchase price and can't exceed it."""
+    if prop.land_value is None:
+        return
+    if prop.purchase_price is None:
+        raise ValueError(LAND_VALUE_NEEDS_PRICE)
+    if prop.land_value > prop.purchase_price:
+        raise ValueError(LAND_VALUE_OVER_PRICE)
 
 
 async def _cascade_classification_change(

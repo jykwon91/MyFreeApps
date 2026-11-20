@@ -38,9 +38,12 @@ async def update_property(
     updates: PropertyUpdate,
     ctx: RequestContext = Depends(require_write_access),
 ):
-    result = await property_service.update_property(
-        ctx, property_id, updates.model_dump(exclude_none=True),
-    )
+    try:
+        result = await property_service.update_property(
+            ctx, property_id, updates.model_dump(exclude_none=True),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     if not result:
         raise HTTPException(status_code=404, detail="Property not found")
     return result

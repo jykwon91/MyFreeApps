@@ -1,4 +1,5 @@
 import { useCreatePropertyMutation, useUpdatePropertyMutation } from "@mybookkeeper/api-client/store/propertiesApi";
+import type { DepreciationInputChanges } from "@mybookkeeper/api-client/types/property/DepreciationInputChanges";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import { propertyChanges, toPropertyWrite, trimmedForm } from "@mybookkeeper/api-client/utils/propertyForm";
@@ -8,7 +9,7 @@ import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 
 /** Extra fields that can be patched onto a property update beyond the core form. */
-interface PropertyExtraFields {
+interface PropertyExtraFields extends DepreciationInputChanges {
   purchase_price?: string;
   rented_since?: string;
 }

@@ -12,7 +12,16 @@ import TilePicker from "@/shared/components/ui/TilePicker";
 import { fromProperty, toAddress, addressComplete } from "@mybookkeeper/api-client/utils/propertyForm";
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
+import {
+  depreciationInputChanges,
+  landValueProblem,
+  placedInServiceProblem,
+  showsDepreciationInputs,
+} from "@mybookkeeper/api-client/utils/depreciationInputs";
+import { localToday } from "@platform/core/utils/localToday";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import AddressInputs from "./AddressInputs";
+import DepreciationFields from "./DepreciationFields";
 
 export interface PropertyEditCardProps {
   property: Property;
@@ -25,6 +34,8 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   const priceErrorId = useId();
   const [rentedSince, setRentedSince] = useState(property.rented_since ?? "");
   const rentedSinceHelpId = useId();
+  const [landValue, setLandValue] = useState(property.land_value ?? "");
+  const [placedInService, setPlacedInService] = useState(property.date_placed_in_service ?? "");
   const [updateProperty, { isLoading }] = useUpdatePropertyMutation();
   const { showSuccess, showError } = useToast();
 
@@ -45,7 +56,16 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   const priceRemoved = priceBlank && property.purchase_price != null;
   const priceInvalid = priceRemoved || (!priceBlank && cleanedPrice === null);
   const rentedSinceRemoved = rentedSince === "" && property.rented_since != null;
-  const canSave = !!(form.name && addressComplete(form)) && !priceInvalid && !rentedSinceRemoved;
+  const today = localToday();
+  const isRental = showsDepreciationInputs(form.classification);
+  const landValueError = isRental
+    ? landValueProblem(landValue, cleanedPrice ?? property.purchase_price ?? null, property.land_value, NUMBER_INPUT_DECIMAL_SEPARATOR)
+    : undefined;
+  const placedInServiceError = isRental
+    ? placedInServiceProblem(placedInService || null, property.date_placed_in_service, today)
+    : undefined;
+  const depreciationInvalid = landValueError !== undefined || placedInServiceError !== undefined;
+  const canSave = !!(form.name && addressComplete(form)) && !priceInvalid && !rentedSinceRemoved && !depreciationInvalid;
 
   function handleSave() {
     updateProperty({
@@ -57,6 +77,9 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
         ...(form.type ? { type: form.type } : {}),
         ...(cleanedPrice ? { purchase_price: cleanedPrice } : {}),
         ...(rentedSince ? { rented_since: rentedSince } : {}),
+        ...(isRental
+          ? depreciationInputChanges(landValue, placedInService || null, property, NUMBER_INPUT_DECIMAL_SEPARATOR)
+          : {}),
       },
     })
       .unwrap()
@@ -125,6 +148,17 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
           </>
         )}
       </FormField>
+      {isRental && (
+        <DepreciationFields
+          landValue={landValue}
+          onLandValueChange={setLandValue}
+          landValueError={landValueError}
+          placedInService={placedInService}
+          onPlacedInServiceChange={setPlacedInService}
+          placedInServiceError={placedInServiceError}
+          maxDate={today}
+        />
+      )}
       <FormField label={RENTED_SINCE_MESSAGES.label}>
         {(field) => (
           <>
