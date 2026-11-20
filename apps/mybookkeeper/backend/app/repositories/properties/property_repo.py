@@ -125,10 +125,15 @@ async def get_classifications_by_ids(
 async def list_depreciable(
     db: AsyncSession, organization_id: uuid.UUID,
 ) -> list[Property]:
-    """Return properties with a purchase price and a date_placed_in_service set."""
+    """Return rental (investment) properties with a purchase price and a date_placed_in_service set.
+
+    A primary residence or second home isn't depreciated, and an unclassified one isn't
+    on Schedule E, so neither gets a Form 4562.
+    """
     result = await db.execute(
         select(Property).where(
             Property.organization_id == organization_id,
+            Property.classification == PropertyClassification.INVESTMENT,
             Property.purchase_price.isnot(None),
             Property.date_placed_in_service.isnot(None),
         )

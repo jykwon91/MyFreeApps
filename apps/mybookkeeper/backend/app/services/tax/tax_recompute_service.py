@@ -22,11 +22,11 @@ from app.core.tax_constants import (
 )
 from app.repositories import (
     activity_repo,
-    property_repo,
     tax_return_repo,
     transaction_repo,
 )
 from app.services.tax import tax_validation_service
+from app.services.tax.form_4562_recompute import compute_form_4562
 from app.services.tax.schedule_e_recompute import compute_schedule_e
 
 logger = logging.getLogger(__name__)
@@ -69,11 +69,11 @@ async def recompute(
         if not tax_return:
             raise LookupError("Tax return not found")
 
-        forms_updated = 0
-        forms_updated += await compute_schedule_e(db, tax_return)
+        depreciation = await compute_form_4562(db, tax_return)
+        forms_updated = len(depreciation)
+        forms_updated += await compute_schedule_e(db, tax_return, depreciation)
         forms_updated += await _compute_schedule_c(db, tax_return)
         forms_updated += await _compute_schedule_se(db, tax_return)
-        forms_updated += await _compute_form_4562(db, tax_return)
         forms_updated += await _compute_1040_aggregation(db, tax_return)
 
         tax_return.needs_recompute = False
@@ -227,77 +227,6 @@ async def _compute_schedule_se(db: AsyncSession, tax_return: TaxReturn) -> int:
     )
 
     return 1
-
-
-async def _compute_form_4562(db: AsyncSession, tax_return: TaxReturn) -> int:
-    """Compute Form 4562 depreciation from property data."""
-    properties = await property_repo.list_depreciable(db, tax_return.organization_id)
-
-    forms_updated = 0
-    for prop in properties:
-        useful_life = Decimal("27.5")
-        if prop.property_class == "commercial_39":
-            useful_life = Decimal("39")
-
-        land = prop.land_value or Decimal("0")
-        depreciable_basis = prop.purchase_price - land
-        if depreciable_basis <= 0:
-            continue
-
-        annual_rate = depreciable_basis / useful_life
-        start_year = prop.date_placed_in_service.year
-        start_month = prop.date_placed_in_service.month
-
-        if tax_return.tax_year < start_year:
-            continue
-
-        total_months = int(useful_life * 12)
-        end_year = start_year + (total_months + start_month - 2) // 12
-
-        if tax_return.tax_year > end_year:
-            continue
-
-        if tax_return.tax_year == start_year:
-            months_in_service = Decimal(12 - start_month) + Decimal("0.5")
-            annual_depreciation = (annual_rate * months_in_service / 12).quantize(Decimal("0.01"))
-        elif tax_return.tax_year == end_year:
-            prior_total = Decimal("0")
-            for y in range(start_year, end_year):
-                if y == start_year:
-                    m = Decimal(12 - start_month) + Decimal("0.5")
-                    prior_total += (annual_rate * m / 12).quantize(Decimal("0.01"))
-                else:
-                    prior_total += annual_rate.quantize(Decimal("0.01"))
-            annual_depreciation = (depreciable_basis - prior_total).quantize(Decimal("0.01"))
-            if annual_depreciation < 0:
-                annual_depreciation = Decimal("0")
-        else:
-            annual_depreciation = annual_rate.quantize(Decimal("0.01"))
-
-        label = prop.address or prop.name
-        instance = await tax_return_repo.upsert_form_instance(
-            db, tax_return.id, "form_4562", "computed",
-            property_id=prop.id, instance_label=label,
-        )
-        forms_updated += 1
-
-        await tax_return_repo.upsert_field(
-            db, instance.id, "depreciation_amount",
-            "Annual depreciation",
-            value_numeric=annual_depreciation, is_calculated=True,
-        )
-        await tax_return_repo.upsert_field(
-            db, instance.id, "depreciable_basis",
-            "Depreciable basis (cost minus land)",
-            value_numeric=depreciable_basis, is_calculated=True,
-        )
-        await tax_return_repo.upsert_field(
-            db, instance.id, "useful_life_years",
-            "Recovery period (years)",
-            value_numeric=useful_life, is_calculated=True,
-        )
-
-    return forms_updated
 
 
 async def _compute_1040_aggregation(db: AsyncSession, tax_return: TaxReturn) -> int:

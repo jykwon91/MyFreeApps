@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { PROPERTY_CHANGE_TAGS, PROPERTY_DELETE_TAGS } from "../constants/propertyChangeTags";
+import type { DepreciationInputChanges } from "../types/property/DepreciationInputChanges";
 import type { Property } from "../types/property/property";
 import type { PropertyClassification } from "../types/property/PropertyClassification";
 import type { PropertyType } from "../types/property/PropertyType";
@@ -16,7 +17,7 @@ export const propertiesApi = baseApi.enhanceEndpoints({
       query: (data) => ({ url: "/properties", method: "POST", data }),
       invalidatesTags: ["Property"],
     }),
-    updateProperty: builder.mutation<Property, { id: string; data: { name?: string; address?: string; classification?: PropertyClassification; type?: PropertyType; is_active?: boolean; purchase_price?: string; rented_since?: string } }>({
+    updateProperty: builder.mutation<Property, { id: string; data: { name?: string; address?: string; classification?: PropertyClassification; type?: PropertyType; is_active?: boolean; purchase_price?: string; rented_since?: string } & DepreciationInputChanges }>({
       query: ({ id, data }) => ({ url: `/properties/${id}`, method: "PATCH", data }),
       invalidatesTags: [...PROPERTY_CHANGE_TAGS],
     }),

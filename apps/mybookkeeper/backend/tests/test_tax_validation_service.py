@@ -195,6 +195,7 @@ class TestMissingDepreciation:
             organization_id=test_org.id,
             user_id=test_user.id,
             name="Missing Depr Prop",
+            classification=PropertyClassification.INVESTMENT,
             type=PropertyType.SHORT_TERM,
             purchase_price=Decimal("200000.00"),
             is_active=True,
@@ -215,6 +216,32 @@ class TestMissingDepreciation:
         depr_warnings = [r for r in results if r.form_name == "form_4562" and r.severity == "warning"]
         assert len(depr_warnings) == 1
         assert "Missing Depr Prop" in depr_warnings[0].message
+
+    @pytest.mark.asyncio
+    async def test_a_home_that_is_not_a_rental_is_not_asked_for_depreciation(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        db.add(Property(
+            id=uuid.uuid4(),
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            name="Own Home",
+            classification=PropertyClassification.PRIMARY_RESIDENCE,
+            purchase_price=Decimal("200000.00"),
+            is_active=True,
+        ))
+        tr = _make_return(test_org)
+        db.add(tr)
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+            results = await tax_validation_service.validate(test_org.id, tr.id)
+
+        assert not [r for r in results if r.form_name == "form_4562"]
 
 
 class TestMortgagePrincipalWarning:

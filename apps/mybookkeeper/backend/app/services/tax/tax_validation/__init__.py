@@ -15,6 +15,7 @@ from app.repositories import tax_return_repo
 from ._types import FormFieldIndex, ValidationResult, index_fields
 from . import (
     deduction_rules,
+    depreciation_rules,
     general_rules,
     income_rules,
     investment_rules,
@@ -40,6 +41,7 @@ async def validate(
         results: list[ValidationResult] = []
         results.extend(await income_rules.run_rules(db, tax_return, form_fields, all_instances))
         results.extend(await rental_rules.run_rules(db, tax_return, form_fields, all_instances))
+        results.extend(await depreciation_rules.run_rules(db, tax_return, form_fields, all_instances))
         results.extend(await se_rules.run_rules(db, tax_return, form_fields, all_instances))
         results.extend(await deduction_rules.run_rules(db, tax_return, form_fields, all_instances))
         results.extend(await investment_rules.run_rules(db, tax_return, form_fields, all_instances))

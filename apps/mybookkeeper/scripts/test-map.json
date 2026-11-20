@@ -559,6 +559,9 @@
         "backend/app/services/properties/",
         "backend/app/schemas/properties/",
         "backend/app/api/properties.py",
+        "backend/app/core/depreciation_input_constants.py",
+        "api-client/src/utils/depreciationInputs.ts",
+        "api-client/src/constants/depreciationInputs.ts",
         "backend/alembic/versions/utillink260624_add_utility_account_links.py",
         "frontend/src/app/pages/Properties.tsx",
         "frontend/src/app/features/properties/"
@@ -569,11 +572,14 @@
         "test_property_service_reclassify.py",
         "test_utility_account_link_repo.py",
         "test_utility_account_service.py",
-        "test_property_matcher_account_link.py"
+        "test_property_matcher_account_link.py",
+        "test_property_depreciation_inputs.py",
+        "test_depreciation_schedule_e.py"
       ],
       "frontend_tests": [
         "Properties.test.tsx",
-        "PropertyEditCard.test.tsx"
+        "PropertyEditCard.test.tsx",
+        "PropertyEditCardDepreciation.test.tsx"
       ],
       "e2e_specs": [
         "properties.spec.ts"
@@ -1926,7 +1932,8 @@
         "test_core_parsers.py",
         "test_tax_return_staleness.py",
         "test_capital_improvements_not_deducted.py",
-        "test_tax_summary_by_tax_year.py"
+        "test_tax_summary_by_tax_year.py",
+        "test_depreciation_schedule_e.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
