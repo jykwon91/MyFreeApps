@@ -368,3 +368,29 @@ class TestApplicationEventResponseNoRawPayload:
             "email_message_id", "note", "created_at",
         }
         assert expected.issubset(fields)
+
+
+# ---------------------------------------------------------------------------
+# Posted salary fits applications.posted_salary_* Numeric(12, 2)
+# ---------------------------------------------------------------------------
+
+
+class TestPostedSalaryPrecision:
+    @pytest.mark.parametrize("field", ["posted_salary_min", "posted_salary_max"])
+    def test_create_rejects_amount_too_large_for_column(self, field: str) -> None:
+        with pytest.raises(ValidationError):
+            ApplicationCreateRequest(**_APP_BASE, **{field: "10000000000.00"})
+
+    @pytest.mark.parametrize("field", ["posted_salary_min", "posted_salary_max"])
+    def test_create_rejects_fraction_of_a_cent(self, field: str) -> None:
+        with pytest.raises(ValidationError):
+            ApplicationCreateRequest(**_APP_BASE, **{field: "100.001"})
+
+    def test_create_accepts_largest_amount_the_column_holds(self) -> None:
+        req = ApplicationCreateRequest(**_APP_BASE, posted_salary_max="9999999999.99")
+        assert str(req.posted_salary_max) == "9999999999.99"
+
+    @pytest.mark.parametrize("field", ["posted_salary_min", "posted_salary_max"])
+    def test_update_rejects_amount_too_large_for_column(self, field: str) -> None:
+        with pytest.raises(ValidationError):
+            ApplicationUpdateRequest(**{field: "10000000000.00"})
