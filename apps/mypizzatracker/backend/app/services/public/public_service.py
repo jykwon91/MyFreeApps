@@ -10,7 +10,6 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.customer.customer import Customer
@@ -19,6 +18,7 @@ from app.models.menu.pizza_type import PizzaType
 from app.models.menu.topping_type import ToppingType
 from app.models.order.order import Order
 from app.repositories.customer import customer_repo
+from app.repositories.drop import drop_repo
 from app.repositories.menu import menu_repo
 from app.schemas.public.public_schemas import (
     PublicCustomerLookup,
@@ -205,7 +205,6 @@ async def build_customer_lookup(
 # ---------------------------------------------------------------------------
 
 async def _load_drop(db: AsyncSession, drop_id: uuid.UUID) -> Drop:
-    from app.repositories.drop import drop_repo
     drop = await drop_repo.get_drop(db, drop_id)
     if drop is None:
         # An order's drop_id is FK RESTRICT, so this is unreachable in normal flow.
@@ -214,7 +213,6 @@ async def _load_drop(db: AsyncSession, drop_id: uuid.UUID) -> Drop:
 
 
 async def _load_slot_pickup_time(db: AsyncSession, slot_id: uuid.UUID):
-    from app.repositories.drop import drop_repo
     slot = await drop_repo.get_slot(db, slot_id)
     if slot is None:
         raise RuntimeError(f"Slot {slot_id} referenced by order has vanished.")
@@ -222,7 +220,6 @@ async def _load_slot_pickup_time(db: AsyncSession, slot_id: uuid.UUID):
 
 
 async def _load_customer(db: AsyncSession, customer_id: uuid.UUID) -> Customer:
-    from app.repositories.customer import customer_repo
     customer = await customer_repo.get_customer_by_id(db, customer_id)
     if customer is None:
         raise RuntimeError(f"Customer {customer_id} referenced by order has vanished.")
@@ -234,9 +231,7 @@ async def _load_pizza_types(
 ) -> dict[uuid.UUID, PizzaType]:
     if not ids:
         return {}
-    stmt = select(PizzaType).where(PizzaType.id.in_(ids))
-    result = await db.execute(stmt)
-    return {row.id: row for row in result.scalars().all()}
+    return {row.id: row for row in await menu_repo.list_pizzas_by_ids(db, ids)}
 
 
 async def _load_topping_types(
@@ -244,6 +239,4 @@ async def _load_topping_types(
 ) -> dict[uuid.UUID, ToppingType]:
     if not ids:
         return {}
-    stmt = select(ToppingType).where(ToppingType.id.in_(ids))
-    result = await db.execute(stmt)
-    return {row.id: row for row in result.scalars().all()}
+    return {row.id: row for row in await menu_repo.list_toppings_by_ids(db, ids)}
