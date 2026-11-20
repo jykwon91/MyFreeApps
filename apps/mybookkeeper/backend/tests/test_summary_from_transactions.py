@@ -833,9 +833,9 @@ class TestUnassignedRevenue:
         ]
 
     @pytest.mark.asyncio
-    async def test_inactive_property_txn_still_excluded(self, db: AsyncSession) -> None:
-        """Relaxing the active-property gate for NULL-property rows must NOT
-        leak transactions tied to a genuinely inactive property."""
+    async def test_inactive_property_txn_still_counted(self, db: AsyncSession) -> None:
+        """Deactivating a property hides it from pickers, not from history: its
+        approved transactions still count towards the totals."""
         user, org_id = await _setup_org_and_user(db)
         inactive = Property(
             id=uuid.uuid4(),
@@ -856,7 +856,7 @@ class TestUnassignedRevenue:
 
         from app.repositories import summary_repo
         rows = await summary_repo.txn_sum_by_category(db, org_id)
-        assert list(rows) == []
+        assert [(r.tag, float(r.total)) for r in rows] == [("rental_revenue", 500.0)]
 
 
 class TestDistinctTransactionYears:
@@ -950,9 +950,9 @@ class TestDistinctTransactionYears:
         assert years == [2026]
 
     @pytest.mark.asyncio
-    async def test_excludes_year_with_only_inactive_property(self, db: AsyncSession) -> None:
-        """A year whose only data is tied to an inactive property (outside any
-        activity period) is empty in the dashboard — it must not be offered."""
+    async def test_includes_year_with_only_inactive_property(self, db: AsyncSession) -> None:
+        """A year whose only data is tied to a since-deactivated property still
+        has real history in the dashboard, so it must be offered."""
         user, org_id = await _setup_org_and_user(db)
         inactive = Property(
             id=uuid.uuid4(), organization_id=org_id, user_id=user.id,
@@ -968,7 +968,7 @@ class TestDistinctTransactionYears:
 
         from app.repositories import summary_repo
         years = await summary_repo.distinct_transaction_years(db, org_id)
-        assert years == []
+        assert years == [2022]
 
     @pytest.mark.asyncio
     async def test_empty_when_no_transactions(self, db: AsyncSession) -> None:

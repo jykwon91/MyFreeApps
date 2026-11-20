@@ -2117,6 +2117,7 @@
         "test_booking_statement_routes.py",
         "test_summary_from_transactions.py",
         "test_tax_summary_by_tax_year.py",
+        "test_inactive_property_keeps_history.py",
         "test_rental_roi_service.py",
         "test_transaction_repo.py",
         "test_transaction_list_order.py",

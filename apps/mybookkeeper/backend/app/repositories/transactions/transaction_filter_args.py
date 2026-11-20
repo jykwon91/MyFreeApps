@@ -20,7 +20,6 @@ class TransactionFilterArgs(TypedDict, total=False):
     tax_year: int | None
     tax_relevant: bool | None
     summary_kind: Literal["revenue", "expenses"] | None
-    active_properties_only: bool
     statuses: list[str]
     transaction_types: list[str]
     categories: list[str]

@@ -1,11 +1,12 @@
 """A drill-down's total (GET /transactions/page's amount_total) equals the dashboard figure that was tapped.
 
 The drill-down asks the list for the rows behind a summary number with the filters the clients send
-(api-client ``drillDownListParams``): approved rows in the range, in active properties, revenue or
+(api-client ``drillDownListParams``): approved rows in the range, in every property, revenue or
 expenses told apart by category, narrowed to a category, a property or a set of either. Its total comes
 from the server across every page, so it must match ``summary_service.get_summary`` for the same inputs,
 whatever rows the two would treat differently if their filters drifted: other statuses, deleted rows,
-another organization, an inactive property, rows with no property, neutral categories, other dates.
+another organization, rows with no property, neutral categories, other dates. A deactivated property's
+rows count in both, and an old client still sending ``active_properties_only`` gets the same total.
 """
 import uuid
 from contextlib import asynccontextmanager
@@ -36,7 +37,7 @@ from tests.test_transaction_routes import (  # noqa: F401  (fixtures)
 START = date(2025, 3, 1)
 END = date(2025, 3, 31)
 # What every drill-down asks for, beside its own narrowing (api-client drillDownListParams).
-DRILL_DOWN_BASE = {"status": "approved", "active_properties_only": "true", "start_date": START.isoformat(), "end_date": END.isoformat()}
+DRILL_DOWN_BASE = {"status": "approved", "start_date": START.isoformat(), "end_date": END.isoformat()}
 
 
 @pytest.fixture(autouse=True)
@@ -105,9 +106,12 @@ async def seeded(db: AsyncSession, org: Organization, owner: User) -> dict[str, 
         _txn(org.id, owner, "60.20", "utilities", property_id=city.id),
         _txn(org.id, owner, "45.00", "utilities", property_id=beach.id),
         _txn(org.id, owner, "19.99", "supplies", property_id=None),
+        # A property sold and deactivated still has its history counted.
+        _txn(org.id, owner, "410.00", "rental_revenue", property_id=sold.id),
+        _txn(org.id, owner, "33.33", "maintenance", property_id=sold.id),
         # Neither revenue nor expenses.
         _txn(org.id, owner, "500.00", "security_deposit", property_id=beach.id),
-        # Left out by status, deletion, date, an inactive property or another organization.
+        # Left out by status, deletion, date or another organization.
         _txn(org.id, owner, "7000.00", "rental_revenue", property_id=beach.id, status="pending"),
         _txn(org.id, owner, "7100.00", "maintenance", property_id=beach.id, status="needs_review"),
         _txn(org.id, owner, "7200.00", "utilities", property_id=city.id, status="duplicate"),
@@ -115,12 +119,10 @@ async def seeded(db: AsyncSession, org: Organization, owner: User) -> dict[str, 
         _txn(org.id, owner, "7400.00", "maintenance", property_id=city.id, deleted=True),
         _txn(org.id, owner, "7500.00", "rental_revenue", property_id=beach.id, on=date(2025, 2, 28)),
         _txn(org.id, owner, "7600.00", "utilities", property_id=None, on=date(2025, 4, 1)),
-        _txn(org.id, owner, "7700.00", "rental_revenue", property_id=sold.id),
-        _txn(org.id, owner, "7800.00", "maintenance", property_id=sold.id),
         _txn(other_org.id, other_owner, "7900.00", "rental_revenue", property_id=None),
     ])
     await db.commit()
-    return {"beach": beach, "city": city}
+    return {"beach": beach, "city": city, "sold": sold}
 
 
 async def _drill_down_total(client: AsyncClient, params: dict[str, object]) -> tuple[Decimal, int]:
@@ -150,9 +152,29 @@ class TestDrillDownTotalMatchesTheDashboard:
         revenue, revenue_count = await _drill_down_total(client, {"summary_kind": "revenue"})
         expenses, expenses_count = await _drill_down_total(client, {"summary_kind": "expenses"})
 
-        assert revenue == _money(summary["revenue"]) == Decimal("2530.10")
-        assert expenses == _money(summary["expenses"]) == Decimal("250.54")
-        assert (revenue_count, expenses_count) == (4, 4)
+        assert revenue == _money(summary["revenue"]) == Decimal("2940.10")
+        assert expenses == _money(summary["expenses"]) == Decimal("283.87")
+        assert (revenue_count, expenses_count) == (5, 5)
+
+    @pytest.mark.asyncio
+    async def test_a_deactivated_property(self, client: AsyncClient, org: Organization, owner: User, seeded: dict[str, Property]) -> None:
+        sold = seeded["sold"]
+        summary = await _summary(org, owner)
+        sold_row = next(row for row in summary["by_property"] if row["property_id"] == str(sold.id))
+
+        revenue, _ = await _drill_down_total(client, {"property_id": str(sold.id), "summary_kind": "revenue"})
+
+        assert revenue == _money(sold_row["revenue"]) == Decimal("410.00")
+
+    @pytest.mark.asyncio
+    async def test_an_old_client_still_sending_the_active_only_flag_gets_the_same_total(
+        self, client: AsyncClient, org: Organization, owner: User, seeded: dict[str, Property],
+    ) -> None:
+        summary = await _summary(org, owner)
+
+        revenue, _ = await _drill_down_total(client, {"summary_kind": "revenue", "active_properties_only": "true"})
+
+        assert revenue == _money(summary["revenue"]) == Decimal("2940.10")
 
     @pytest.mark.asyncio
     async def test_each_category(self, client: AsyncClient, org: Organization, owner: User, seeded: dict[str, Property]) -> None:
@@ -202,12 +224,12 @@ class TestDrillDownTotalMatchesTheDashboard:
     ) -> None:
         pages = [
             (await client.get("/transactions/page", params={**DRILL_DOWN_BASE, "summary_kind": "revenue", "limit": 1, "offset": offset})).json()
-            for offset in range(4)
+            for offset in range(5)
         ]
 
-        assert [page["amount_total"] for page in pages] == ["2530.10"] * 4
-        assert sum(Decimal(row["amount"]) for page in pages for row in page["items"]) == Decimal("2530.10")
-        assert [page["has_more"] for page in pages] == [True, True, True, False]
+        assert [page["amount_total"] for page in pages] == ["2940.10"] * 5
+        assert sum(Decimal(row["amount"]) for page in pages for row in page["items"]) == Decimal("2940.10")
+        assert [page["has_more"] for page in pages] == [True, True, True, True, False]
 
     @pytest.mark.asyncio
     async def test_nothing_matching_totals_zero(self, client: AsyncClient, seeded: dict[str, Property]) -> None:

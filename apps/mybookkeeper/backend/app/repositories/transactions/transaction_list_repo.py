@@ -19,7 +19,6 @@ from app.models.extraction.extraction import Extraction
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
-from app.repositories.transactions.summary_repo import txn_active_property_filter
 from app.repositories.transactions.transaction_filter_args import TransactionFilterArgs
 from app.repositories.transactions.transaction_totals import TransactionTotals
 from app.schemas.transactions.transaction_sort_key import TransactionSortKey
@@ -28,9 +27,8 @@ from app.schemas.transactions.transaction_sort_key import TransactionSortKey
 # it drops company suffixes and is only filled by ORM events, not every write path.
 _VENDOR_SORT_KEY = func.lower(func.nullif(func.trim(Transaction.vendor), ""))
 
-# Joined only to order by the property's name; aliased so it can't clash with the
-# active_properties_only join. A row with no property sorts as an empty name, first
-# ascending, as the web table always sorted it.
+# Joined only to order by the property's name. A row with no property sorts as an
+# empty name, first ascending, as the web table always sorted it.
 _SORT_PROPERTY = aliased(Property)
 _PROPERTY_SORT_KEY = func.lower(func.coalesce(_SORT_PROPERTY.name, ""))
 
@@ -115,8 +113,6 @@ def _filtered(
         stmt = stmt.where(Transaction.category.in_(categories))
     if property_ids := filters.get("property_ids"):
         stmt = stmt.where(_any_property(property_ids))
-    if filters.get("active_properties_only"):
-        stmt = stmt.outerjoin(Property, Transaction.property_id == Property.id).where(*txn_active_property_filter())
     return stmt
 
 

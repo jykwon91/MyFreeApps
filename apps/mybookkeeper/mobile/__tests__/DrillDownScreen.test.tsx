@@ -47,12 +47,13 @@ describe("DrillDownScreen", () => {
     expect(asked).toMatchObject({ status: "approved", start_date: "2026-01-01", end_date: "2026-12-31", limit: DRILL_DOWN_PAGE_SIZE, offset: 0 });
   });
 
-  it("asks the server for the summary's own rules: the kind's categories, in active properties only", async () => {
+  it("asks the server for the summary's own rules: the kind's categories, in every property, deactivated ones included", async () => {
     const server = startTransactionServer([aTransaction({ id: "a", transaction_type: "income", category: "rental_revenue", vendor: "Guest" })]);
     await show();
     await screen.findByText("Guest");
     const asked = server.requests.find((request) => request.url === "/transactions/page")?.params as Record<string, unknown>;
-    expect(asked).toMatchObject({ summary_kind: "revenue", active_properties_only: true });
+    expect(asked).toMatchObject({ summary_kind: "revenue" });
+    expect(asked).not.toHaveProperty("active_properties_only");
   });
 
   it("counts deposits and uncategorised income as neither revenue nor expenses, as the summary does", async () => {

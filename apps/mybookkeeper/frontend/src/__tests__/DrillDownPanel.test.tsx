@@ -97,7 +97,7 @@ describe("DrillDownPanel", () => {
     const query = pageQueries[0];
     expect(query.get("summary_kind")).toBe("revenue");
     expect(query.get("status")).toBe("approved");
-    expect(query.get("active_properties_only")).toBe("true");
+    expect(query.has("active_properties_only")).toBe(false);
     expect(query.get("start_date")).toBe("2024-06-01");
     expect(query.get("end_date")).toBe("2024-06-30");
     expect(query.get("limit")).toBe(String(DRILL_DOWN_PAGE_SIZE));
