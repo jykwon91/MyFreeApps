@@ -16,6 +16,7 @@ from __future__ import annotations
 
 # Exceptions (from helpers — shared across all modules)
 from app.services.leases._lease_helpers import (
+    ApplicantNotFoundError,
     AttachmentBacksExtensionError,
     AttachmentNotFoundError,
     AttachmentTooLargeError,
@@ -25,6 +26,7 @@ from app.services.leases._lease_helpers import (
     InvalidAttachmentKindError,
     InvalidParentLeaseError,
     InvalidStatusTransitionError,
+    ListingNotFoundError,
     MissingRequiredValuesError,
     SignedLeaseNotFoundError,
     StorageNotConfiguredError,
@@ -54,8 +56,6 @@ from app.services.leases.lease_prefill_service import prefill_addendum_placehold
 
 # Import
 from app.services.leases.lease_import_service import (
-    ApplicantNotFoundError,
-    ListingNotFoundError,
     import_signed_lease,
     infer_kind_from_filename,
     infer_kinds_for_files,

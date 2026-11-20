@@ -42,18 +42,23 @@ async def get_by_id(
     organization_id: uuid.UUID,
     *,
     for_update: bool = False,
+    include_deleted: bool = False,
 ) -> Listing | None:
     """Return the listing iff it exists, is not soft-deleted, and belongs to the given org.
 
     ``for_update=True`` locks the listing row until the transaction ends, so
     writers that must not interleave (photo upload, reorder, delete) run one at
     a time per listing. SQLite ignores FOR UPDATE; Postgres honours it.
+
+    ``include_deleted=True`` also returns a soft-deleted listing — for callers
+    following a link a record already holds, where only the organization matters.
     """
     query = select(Listing).where(
         Listing.id == listing_id,
         Listing.organization_id == organization_id,
-        Listing.deleted_at.is_(None),
     )
+    if not include_deleted:
+        query = query.where(Listing.deleted_at.is_(None))
     if for_update:
         query = query.with_for_update()
     result = await db.execute(query)

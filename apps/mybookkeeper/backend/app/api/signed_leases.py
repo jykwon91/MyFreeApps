@@ -81,6 +81,10 @@ async def create_lease(
         )
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
+    except signed_lease_service.ApplicantNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except signed_lease_service.ListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Listing not found") from exc
     except signed_lease_service.MissingRequiredValuesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except signed_lease_service.InvalidParentLeaseError as exc:

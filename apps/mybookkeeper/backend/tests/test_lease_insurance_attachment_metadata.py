@@ -83,8 +83,7 @@ def _lease_import(stack: ExitStack, recorded: _Recorded) -> Upload:
     svc = lease_import_service
     stack.enter_context(patch.object(svc, "get_storage", return_value=recorded.storage))
     stack.enter_context(patch.object(svc, "unit_of_work", _fake_uow))
-    stack.enter_context(patch.object(svc.applicant_repo, "get", new=AsyncMock(return_value=MagicMock())))
-    stack.enter_context(patch.object(svc, "resolve_inquiry_listing_id", new=AsyncMock(return_value=None)))
+    stack.enter_context(patch.object(svc, "resolve_lease_listing_id", new=AsyncMock(return_value=None)))
     stack.enter_context(
         patch.object(svc.signed_lease_repo, "create", new=AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))),
     )

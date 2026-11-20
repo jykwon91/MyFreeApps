@@ -22,10 +22,7 @@ from app.models.listings.listing import Listing
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
-from app.services.leases.listing_resolution import (
-    default_listing_id,
-    resolve_listing_id_for_applicant,
-)
+from app.services.leases.listing_resolution import resolve_listing_id_for_applicant
 from app.services.transactions.attribution_helpers import (
     _get_property_id_for_applicant,
 )
@@ -146,39 +143,43 @@ async def test_attribution_resolves_the_property_through_the_inquiry_listing(
 
 
 @pytest.mark.asyncio
-async def test_default_listing_id_keeps_an_explicitly_chosen_listing(
+async def test_ignores_an_inquiry_listing_from_another_organization(
     db: AsyncSession, test_user: User, test_org: Organization,
 ) -> None:
+    # Inquiries used to accept any listing_id. An old row pointing at another
+    # tenant's listing must not hand that listing to this tenant's lease.
     applicant, _ = await _seed(
         db, org_id=test_org.id, user_id=test_user.id, lease_has_listing=False,
     )
-    chosen = uuid.uuid4()
-
-    resolved = await default_listing_id(
-        db,
-        listing_id=chosen,
-        applicant_id=applicant.id,
-        organization_id=test_org.id,
-        user_id=test_user.id,
+    other_org_id = uuid.uuid4()
+    other_prop = Property(
+        id=uuid.uuid4(), organization_id=other_org_id, user_id=uuid.uuid4(), name="Elsewhere",
     )
+    db.add(other_prop)
+    await db.flush()
+    foreign = _make_listing(org_id=other_org_id, user_id=other_prop.user_id, property_id=other_prop.id)
+    db.add(foreign)
+    await db.flush()
+    inquiry = await db.get(Inquiry, applicant.inquiry_id)
+    assert inquiry is not None
+    inquiry.listing_id = foreign.id
+    await db.flush()
 
-    assert resolved == chosen
+    resolved = await resolve_listing_id_for_applicant(db, applicant, test_org.id)
+
+    assert resolved is None
 
 
 @pytest.mark.asyncio
-async def test_default_listing_id_falls_back_to_the_inquiry_listing(
+async def test_keeps_a_soft_deleted_inquiry_listing_of_the_same_organization(
     db: AsyncSession, test_user: User, test_org: Organization,
 ) -> None:
     applicant, listing = await _seed(
         db, org_id=test_org.id, user_id=test_user.id, lease_has_listing=False,
     )
+    listing.deleted_at = _dt.datetime.now(_dt.timezone.utc)
+    await db.flush()
 
-    resolved = await default_listing_id(
-        db,
-        listing_id=None,
-        applicant_id=applicant.id,
-        organization_id=test_org.id,
-        user_id=test_user.id,
-    )
+    resolved = await resolve_listing_id_for_applicant(db, applicant, test_org.id)
 
     assert resolved == listing.id

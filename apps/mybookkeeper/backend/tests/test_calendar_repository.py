@@ -964,6 +964,67 @@ class TestCalendarRepoLeaseEvents:
         assert [r[3].legal_name for r in their_rows] == ["Theirs"]
 
     @pytest.mark.asyncio
+    async def test_a_lease_naming_another_orgs_listing_shows_it_as_unassigned(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Leases used to store any listing_id. A bad row must not reveal the
+        other organization's listing title or property name."""
+        other_org_id, other_user_id = uuid.uuid4(), uuid.uuid4()
+        their_prop = Property(
+            organization_id=other_org_id, user_id=other_user_id, name="Their House",
+        )
+        db.add(their_prop)
+        await db.flush()
+        their_listing = _make_listing(
+            organization_id=other_org_id, user_id=other_user_id,
+            property_id=their_prop.id, title="Their Room",
+        )
+        db.add(their_listing)
+        await db.flush()
+        mine = await _seed_applicant(db, test_org, test_user, legal_name="Mine")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=mine.id, listing_id=their_listing.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+
+        assert len(rows) == 1
+        _, listing, prop, tenant = rows[0]
+        assert listing is None
+        assert prop is None
+        assert tenant.legal_name == "Mine"
+
+    @pytest.mark.asyncio
+    async def test_a_lease_naming_another_orgs_applicant_never_appears(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The tenant's legal name is the other organization's data."""
+        other_org_id, other_user_id = uuid.uuid4(), uuid.uuid4()
+        theirs = Applicant(
+            id=uuid.uuid4(), organization_id=other_org_id, user_id=other_user_id,
+            legal_name="Their Tenant",
+        )
+        db.add(theirs)
+        await db.flush()
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=theirs.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+
+        assert rows == []
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("status", ["draft", "generated", "sent", "terminated"])
     async def test_non_occupying_statuses_are_excluded(
         self, db: AsyncSession, test_user: User, test_org: Organization, status: str,
