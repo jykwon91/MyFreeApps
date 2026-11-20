@@ -286,6 +286,34 @@ class TestFailurePaths:
         assert _names(events) == ["turn.started", "error", "done"]
         assert events[2][1]["status"] == "failed"
 
+    @pytest.mark.asyncio
+    async def test_whitespace_only_reply_is_failed_like_an_empty_reply(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        fake_claude.reply_chunks = [" ", "\n", "  "]
+        # Corrections never finish, so only the reply call's usage is known.
+        fake_claude.create_gate = asyncio.Event()
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            session_id = await _new_session(authed)
+            resp = await _turn(authed, session_id)
+
+        events = _parse_sse(resp.text)
+        assert [n for n in _names(events) if n != "reply.delta"] == ["turn.started", "error", "done"]
+        assert dict(events)["error"] == {"code": "tutor_busy", "retryable": True}
+        assert dict(events)["done"]["status"] == "failed"
+        rows = await _fetch(
+            "SELECT status, reply_text, cost_units FROM tutor_turn WHERE id = :id",
+            id=uuid.UUID(events[0][1]["turn_id"]),
+        )
+        assert rows[0] == ("failed", None, 200)
+        count = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=uuid.UUID(session_id))
+        assert count[0][0] == 0
+        # Only the reply call's reported usage (100 + 5*20) is charged; the
+        # rest of the reservation is released.
+        assert await _bucket(quota_service.user_bucket(uuid.UUID(user["id"]))) == 200
+        assert await _bucket(quota_service.GLOBAL_BUCKET) == 200
+
 
 class TestClientDisconnect:
     @pytest.mark.asyncio
