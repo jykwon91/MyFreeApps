@@ -45,7 +45,7 @@ async def _application(
     applied_at: dt.datetime | None,
     events: list[tuple[str, dt.datetime]],
 ) -> uuid.UUID:
-    application = Application(user_id=user_id, company_id=company_id, role_title="Engineer", applied_at=applied_at)
+    application = Application(user_id=user_id, company_id=company_id, role_title=f"Engineer {uuid.uuid4().hex[:8]}", applied_at=applied_at)
     db.add(application)
     await db.flush()
     for event_type, occurred_at in events:
