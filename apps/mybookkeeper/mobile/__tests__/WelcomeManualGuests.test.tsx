@@ -302,6 +302,17 @@ describe("emailing the guide", () => {
     expect(writesTo(server)[0].body).toMatchObject({ recipient_email: "guest@example.com", room_id: "r1" });
   });
 
+  it("says which room is missing, and the room field carries the same reason as its hint", async () => {
+    const server = startWelcomeManualsServer({ manuals: [aManual({ rooms: [aRoom()], sections: [aSection()] })] });
+    await open();
+    await fill("guest@example.com");
+    await fireEvent.press(button(EMAIL.send));
+    const reason = screen.getByText("Choose which room's guide to send.", SHOWN);
+    expect(reason).toBeTruthy();
+    expect(screen.getByRole("button", { name: new RegExp(EMAIL.roomLabel) }).props.accessibilityHint).toBe("Choose which room's guide to send.");
+    expect(writesTo(server)).toHaveLength(0);
+  });
+
   it("says plainly when the mail server refused it, and keeps what was typed", async () => {
     const server = startWelcomeManualsServer({ manuals: [aManual({ sections: [aSection()] })] });
     server.emailStatus = "failed";

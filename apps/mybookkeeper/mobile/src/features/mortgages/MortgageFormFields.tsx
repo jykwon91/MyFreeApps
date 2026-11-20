@@ -3,7 +3,7 @@ import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortga
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
-import { FormField, OptionRow, useTheme } from "@platform/mobile";
+import { FieldError, FormField, OptionRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
   MORTGAGE_FORM_MESSAGES as MESSAGES,
@@ -44,7 +44,7 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
         value={values.interestRate}
       />
 
-      <View accessibilityLabel={MESSAGES.rateType} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
+      <View accessibilityHint={problemText("rateType")} accessibilityLabel={MESSAGES.rateType} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{`${MESSAGES.rateType} *`}</Text>
         {MORTGAGE_RATE_TYPES.map((choice) => (
           <OptionRow
@@ -56,9 +56,11 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
             }}
           />
         ))}
-        <Text style={{ fontSize: fontSize.sm, color: problems.rateType ? colors.destructiveText : colors.mutedForeground }}>
-          {problemText("rateType") ?? MESSAGES.rateTypeHint}
-        </Text>
+        {problems.rateType ? (
+          <FieldError message={problemText("rateType")} name={MESSAGES.rateType} />
+        ) : (
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.rateTypeHint}</Text>
+        )}
       </View>
 
       {values.rateType === "arm" ? (
