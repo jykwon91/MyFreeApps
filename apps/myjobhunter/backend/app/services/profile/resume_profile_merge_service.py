@@ -42,8 +42,9 @@ def _split_new_and_matched(
     parsed: Sequence[_Row],
     key: Callable[[_Row], Hashable],
     fill_empty: Callable[[_Row, _Row], bool],
-) -> tuple[list[_Row], int]:
-    """Return (rows to insert, number of parsed rows that matched a known row).
+) -> tuple[list[_Row], int, int]:
+    """Return (rows to insert, parsed rows that matched a known row, matches
+    that filled at least one empty field on the known row).
 
     The index starts with the existing rows (first one wins when the
     profile already holds duplicates) and grows with each new row, so
@@ -55,6 +56,7 @@ def _split_new_and_matched(
 
     to_insert: list[_Row] = []
     matched = 0
+    filled = 0
     for row in parsed:
         row_key = key(row)
         known = index.get(row_key)
@@ -62,9 +64,10 @@ def _split_new_and_matched(
             index[row_key] = row
             to_insert.append(row)
         else:
-            fill_empty(known, row)
+            if fill_empty(known, row):
+                filled += 1
             matched += 1
-    return to_insert, matched
+    return to_insert, matched, filled
 
 
 async def merge_parsed_profile_rows(
@@ -74,13 +77,13 @@ async def merge_parsed_profile_rows(
     education_entries: Sequence[Education],
 ) -> ResumeMergeResult:
     """Insert parsed rows the profile lacks; fill empty fields on the ones it has."""
-    new_work, work_matched = _split_new_and_matched(
+    new_work, work_matched, work_filled = _split_new_and_matched(
         await work_history_repository.list_by_user(db, user_id),
         work_entries,
         work_history_key,
         fill_empty_work_history_fields,
     )
-    new_education, education_matched = _split_new_and_matched(
+    new_education, education_matched, education_filled = _split_new_and_matched(
         await education_repository.list_by_user(db, user_id),
         education_entries,
         education_key,
@@ -93,6 +96,8 @@ async def merge_parsed_profile_rows(
     return ResumeMergeResult(
         work_history_added=len(new_work),
         work_history_matched=work_matched,
+        work_history_filled=work_filled,
         education_added=len(new_education),
         education_matched=education_matched,
+        education_filled=education_filled,
     )

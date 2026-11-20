@@ -479,6 +479,123 @@ async def test_process_one_idempotency(user_factory, as_user):
 
 
 # ---------------------------------------------------------------------------
+# Profile embedding refresh after a parse
+# ---------------------------------------------------------------------------
+
+
+async def _upload_and_process(as_user: Any, user: dict, claude_response: dict) -> str:
+    """Upload a resume through the API, run the worker once, return the job id."""
+    from app.workers.resume_parser_worker import process_one
+
+    pdf_bytes = b"%PDF-1.4 placeholder"
+    resume_text = "Jane Doe\nEngineer\n"
+    fake_storage = _make_fake_storage(pdf_bytes)
+
+    async with (await as_user(user)) as authed:
+        with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
+            resp = await authed.post(
+                "/resumes",
+                files={"file": ("resume.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+            )
+    assert resp.status_code == 201
+
+    with (
+        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch(
+            "app.workers.resume_parser_worker.extract_text",
+            MagicMock(return_value=(resume_text, len(resume_text))),
+        ),
+        patch(
+            "app.workers.resume_parser_worker.extract_resume",
+            AsyncMock(return_value=claude_response),
+        ),
+    ):
+        assert await process_one() is True
+    return resp.json()["id"]
+
+
+@pytest.fixture
+def refresh_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    """Replace the profile-embedding computation (the same boundary the
+    conftest no-ops) with a mock the test can assert on."""
+    from app.services.discovery import discovery_embedding_service
+
+    mock = AsyncMock(return_value=True)
+    monkeypatch.setattr(discovery_embedding_service, "refresh_profile_embedding", mock)
+    return mock
+
+
+@pytest.mark.asyncio
+async def test_parse_that_adds_rows_refreshes_profile_embedding(
+    user_factory, as_user, refresh_mock: AsyncMock,
+):
+    user = await user_factory()
+
+    await _upload_and_process(as_user, user, _MINIMAL_CLAUDE_RESPONSE)
+
+    refresh_mock.assert_awaited_once()
+    assert refresh_mock.await_args.args[1] == uuid.UUID(user["id"])
+
+
+@pytest.mark.asyncio
+async def test_reupload_with_no_profile_change_skips_embedding_refresh(
+    user_factory, as_user, refresh_mock: AsyncMock,
+):
+    user = await user_factory()
+    await _upload_and_process(as_user, user, _MINIMAL_CLAUDE_RESPONSE)
+    refresh_mock.reset_mock()
+
+    await _upload_and_process(as_user, user, _MINIMAL_CLAUDE_RESPONSE)
+
+    refresh_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_reupload_adding_only_a_skill_refreshes_embedding(
+    user_factory, as_user, refresh_mock: AsyncMock,
+):
+    user = await user_factory()
+    await _upload_and_process(as_user, user, _MINIMAL_CLAUDE_RESPONSE)
+    refresh_mock.reset_mock()
+
+    with_new_skill = {
+        **_MINIMAL_CLAUDE_RESPONSE,
+        "skills": [
+            *_MINIMAL_CLAUDE_RESPONSE["skills"],
+            {"name": "Kubernetes", "category": "tool", "years_experience": 1},
+        ],
+    }
+    await _upload_and_process(as_user, user, with_new_skill)
+
+    refresh_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_embedding_model_failure_keeps_job_complete(
+    user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
+):
+    """A model-load failure is logged; the parse stays complete and its rows stay."""
+    from app.services.discovery import discovery_embedding_service
+    from app.services.discovery.discovery_embedding_service import EmbeddingModelLoadError
+
+    monkeypatch.setattr(
+        discovery_embedding_service,
+        "refresh_profile_embedding",
+        AsyncMock(side_effect=EmbeddingModelLoadError("model missing")),
+    )
+    user = await user_factory()
+
+    job_id = await _upload_and_process(as_user, user, _MINIMAL_CLAUDE_RESPONSE)
+
+    async with (await as_user(user)) as authed:
+        job_resp = await authed.get(f"/resume-upload-jobs/{job_id}")
+        work_resp = await authed.get("/work-history")
+    assert job_resp.json()["status"] == "complete"
+    assert work_resp.status_code == 200
+    assert work_resp.json()["total"] == 1
+
+
+# ---------------------------------------------------------------------------
 # _upsert_skill_ignore_conflict — typed parameter regression guard
 # ---------------------------------------------------------------------------
 

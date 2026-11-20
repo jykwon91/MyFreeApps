@@ -88,7 +88,7 @@ services:
     image: ghcr.io/jykwon91/myfreeapps-myjobhunter-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     command: ["python", "-m", "app.workers.resume_parser_worker"]
-    mem_limit: 512m
+    mem_limit: 768m
     cpus: 1.0
     pids_limit: 128
     # format: raw (compose >= 2.30) — values are literal, never interpolated.
