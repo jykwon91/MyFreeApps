@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
+from app.schemas.patch_base import PatchModel
 from app.schemas.text_fields.required_name import RequiredName
 
 DROP_STATUSES: tuple[str, ...] = ("planning", "active", "closed")
@@ -31,7 +32,9 @@ class SlotCreate(BaseModel):
     max_pizzas: int = Field(..., gt=0)
 
 
-class SlotUpdate(BaseModel):
+class SlotUpdate(PatchModel):
+    non_nullable_fields = frozenset({"pickup_time", "max_pizzas"})
+
     pickup_time: Optional[_time] = None
     max_pizzas: Optional[int] = Field(None, gt=0)
 
@@ -62,7 +65,11 @@ class DropCreate(BaseModel):
         return self
 
 
-class DropUpdate(BaseModel):
+class DropUpdate(PatchModel):
+    non_nullable_fields = frozenset(
+        {"name", "date", "slot_window_start", "slot_window_end", "status", "tip_total"},
+    )
+
     name: Optional[RequiredName] = None
     date: Optional[_date] = None
     slot_window_start: Optional[_time] = None

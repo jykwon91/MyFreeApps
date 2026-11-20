@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
+from app.schemas.patch_base import PatchModel
 from app.schemas.text_fields.expense_category import ExpenseCategory
 from app.schemas.text_fields.expense_description import ExpenseDescription
 from app.schemas.text_fields.expense_vendor import ExpenseVendor
@@ -30,8 +31,10 @@ class ExpenseCreate(BaseModel):
         return _validate_amount(v)
 
 
-class ExpenseUpdate(BaseModel):
-    """All fields optional; only supplied keys get patched."""
+class ExpenseUpdate(PatchModel):
+    """All fields optional; only supplied keys get patched. ``description`` may be null to clear it."""
+
+    non_nullable_fields = frozenset({"vendor", "category", "amount"})
 
     vendor: Optional[ExpenseVendor] = None
     category: Optional[ExpenseCategory] = None
