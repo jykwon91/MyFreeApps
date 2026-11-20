@@ -157,6 +157,20 @@ class EventType:
         "follow_up_sent",
     )
 
+    # Events that DEFINE a pipeline stage. ``email_received``, ``note_added``
+    # and ``follow_up_sent`` record activity without moving the application,
+    # so they never set its status. The board, the list status, the status
+    # filter and the status sort all read this one tuple.
+    STAGE_DEFINING = (
+        "applied",
+        "interview_scheduled",
+        "interview_completed",
+        "offer_received",
+        "rejected",
+        "withdrawn",
+        "ghosted",
+    )
+
 
 class KanbanColumn:
     """Coarse-grained pipeline stages used by the kanban dashboard.
