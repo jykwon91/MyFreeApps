@@ -32,8 +32,9 @@ Never hand-edit the JSON; re-run this.
 """
 from __future__ import annotations
 
+import json
 import shutil
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import replace
 
 from scripts.wow_food.build import (
@@ -272,6 +273,10 @@ ITEM_CLASS_ARMOR = 4
 ARMOR_SUBCLASS_SHIELD = 6
 INVENTORY_HELD_IN_OFF_HAND = 23
 DISENCHANT_COLUMNS = ["minLevel", "maxLevel", "chance", "mostlyFrom", "fromBlue"]
+ITEM_QUALITY = {"uncommon": 2, "rare": 3, "epic": 4}
+# Forever-added gear the addon gives a disenchant table: everything a Classic item of the same slot can be
+# disenchanted from. Thrown weapons can't be (no Classic one has a DisenchantID).
+NOT_DISENCHANTABLE_SLOTS = {"thrown"}
 
 
 def _roll_chances(rows: list[dict]) -> dict[int, float]:
@@ -380,6 +385,72 @@ def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[in
             items_map[item_id] = (table_id, skill)
 
     return items_map, result_tables
+
+
+def disenchant_bands(item_template: list[dict]) -> dict[tuple[int, str], list[tuple[int, int]]]:
+    """``(quality, kind) -> [(item level, table id)]`` from every Classic item with a DisenchantID, lowest level first.
+
+    Classic picks an item's disenchant table by its quality, item level and whether it's armour or a weapon
+    (``_disenchant_kind``): in cmangos that holds for every one of its disenchantable items, which the
+    generator test checks.
+    """
+    tables: dict[tuple[int, str, int], Counter[int]] = defaultdict(Counter)
+    for item in item_template:
+        table_id = int(item["DisenchantID"] or 0)
+        kind = _disenchant_kind(item)
+        if table_id and kind:
+            tables[(int(item["Quality"] or 0), kind, int(item["ItemLevel"] or 0))][table_id] += 1
+    bands: dict[tuple[int, str], list[tuple[int, int]]] = defaultdict(list)
+    for (quality, kind, level), counts in sorted(tables.items()):
+        bands[(quality, kind)].append((level, counts.most_common(1)[0][0]))
+    return dict(bands)
+
+
+def band_table(bands: dict[tuple[int, str], list[tuple[int, int]]], quality: int, kind: str, level: int) -> int | None:
+    """The table a Classic item of this quality, kind and item level disenchants from: the nearest Classic level
+    at or below it (above the highest, the highest's). None below the lowest — Classic disenchants nothing there."""
+    found = None
+    for band_level, table_id in bands.get((quality, kind), []):
+        if band_level > level:
+            break
+        found = table_id
+    return found
+
+
+def forever_disenchant_items(
+    bands: dict[tuple[int, str], list[tuple[int, int]]],
+    items: list[dict],
+    classic_ids: set[int],
+) -> dict[int, int]:
+    """``item id -> table id`` for gear Forever added (items.json rows not in Classic's item_template), by Classic's rule.
+
+    Forever's server doesn't publish disenchant tables, so this is Classic's rule applied to Forever's items:
+    an estimate, which the addon marks as one.
+    """
+    out: dict[int, int] = {}
+    for row in items:
+        quality = ITEM_QUALITY.get(row["quality"])
+        if row["id"] in classic_ids or quality is None or row["slot"] in NOT_DISENCHANTABLE_SLOTS:
+            continue
+        if row["weapon"] or row["slot"] == "held_in_off_hand" or row["itemType"] == "Shield":
+            kind = "weapon"
+        elif row["armor"] is not None or row["slot"] in {"finger", "neck", "back", "trinket"}:
+            kind = "armor"
+        else:
+            continue
+        table_id = band_table(bands, quality, kind, row["itemLevel"])
+        if table_id:
+            out[row["id"]] = table_id
+    return out
+
+
+def forever_disenchant_tables() -> dict[int, int]:
+    """``forever_disenchant_items`` over the committed items.json and the cmangos dump."""
+    item_template = read_dump(cmangos_dump(), {"item_template"})["item_template"]
+    data = json.loads((WOW_DATA_DIR / "items" / "items.json").read_text(encoding="utf-8"))
+    rows = [dict(zip(data["columns"], row)) for row in data["items"]]
+    classic_ids = {int(item["entry"] or 0) for item in item_template}
+    return forever_disenchant_items(disenchant_bands(item_template), rows, classic_ids)
 
 
 def _disenchant_kind(item: dict) -> str | None:
@@ -536,6 +607,8 @@ def main() -> None:
         "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
         "itemColumns": ["table", "skill"],
         "items": {str(item_id): list(entry) for item_id, entry in sorted(de_items.items())},
+        "foreverNote": "Gear Forever added: the table Classic's rule (quality, item level, armour or weapon) gives it. An estimate.",
+        "foreverItems": {str(item_id): table_id for item_id, table_id in sorted(forever_disenchant_tables().items())},
         "resultColumns": ["min", "max", "chance"],
         "tables": {
             str(table_id): {str(result_id): list(counts) for result_id, counts in sorted(results.items())}

@@ -181,7 +181,8 @@ local function addVerdict(tooltip, itemId, market, cut, count)
     -- Player CAN disenchant — three-way verdict.
     local deEV, deMissing = disenchantEV(itemId, house)
     if deEV then deEV = deEV * count end
-    local prefix = (deEV and deMissing) and "~" or ""
+    -- "~": some material has no price here, or the item is one Forever added (its table is Classic's rule, an estimate).
+    local prefix = (deEV and (deMissing or deEntry[3])) and "~" or ""
 
     if vendor == 0 then
       -- No vendor: compare DE vs AH only.
