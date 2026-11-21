@@ -223,6 +223,8 @@ describe("filtersFromParams / writeFiltersToParams", () => {
       classId: "priest",
       bis: null,
       bisLevel: null,
+      colSort: null,
+      colDir: "desc",
     });
   });
 

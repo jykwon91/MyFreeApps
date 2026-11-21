@@ -1,15 +1,23 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
+import type { AuctionColumnSort } from "@/games/wow-forever/types/auctionHouse/auctionColumnSort";
 import type { BisChoice } from "@/games/wow-forever/types/auctionHouse/bisChoice";
 import type { AuctionQualityFilter } from "@/games/wow-forever/types/auctionHouse/auctionQualityFilter";
 import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
+import type { SortDirection } from "@/games/wow-forever/types/professionTiers/sortDirection";
 
 /** Everything the Auction house page searches, filters and sorts by. Lives in the URL. */
 export interface AuctionFilters {
   /** `?q=` — a name fragment or an exact item id. */
   query: string;
   sort: AuctionSort;
+  /**
+   * `?csort=item|market|cheapest|onsale` — column-header sort; null = use `sort` dropdown order.
+   * `?cdir=asc|desc` — direction; omitted when it matches the column's natural first direction.
+   */
+  colSort: AuctionColumnSort | null;
+  colDir: SortDirection;
   /** Empty = any quality. */
   qualities: readonly AuctionQualityFilter[];
   /** Market value range, in gold. */

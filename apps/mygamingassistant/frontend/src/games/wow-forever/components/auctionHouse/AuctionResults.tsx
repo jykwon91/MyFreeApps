@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from "react";
 import AuctionHeaderRow from "@/games/wow-forever/components/auctionHouse/AuctionHeaderRow";
+import AuctionMobileSort from "@/games/wow-forever/components/auctionHouse/AuctionMobileSort";
 import AuctionRow from "@/games/wow-forever/components/auctionHouse/AuctionRow";
 import AuctionShowMore from "@/games/wow-forever/components/auctionHouse/AuctionShowMore";
 import { AUCTION_PAGE_SIZE } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
+import type { AuctionColumnSort } from "@/games/wow-forever/types/auctionHouse/auctionColumnSort";
 import type { BisPick } from "@/games/wow-forever/types/auctionHouse/bisPick";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
+import type { SortDirection } from "@/games/wow-forever/types/professionTiers/sortDirection";
 
 interface AuctionResultsProps {
   /** Every match, in order; this shows the first page and a button for more. */
@@ -15,10 +18,16 @@ interface AuctionResultsProps {
   bisPicks: ReadonlyMap<number, BisPick> | null;
   /** The count line above the list, given how many rows are listed. */
   note: (shown: number) => ReactNode;
+  /** Active column-header sort; null = using the Sort-by dropdown order. */
+  colSort: AuctionColumnSort | null;
+  /** Direction for the active column sort. */
+  colDir: SortDirection;
+  /** Called when the user clicks a column header or the mobile sort control. */
+  onColSort: (sort: AuctionColumnSort, dir: SortDirection) => void;
 }
 
 /** The list, 50 at a time. A new search, filter, house or profession starts again from the first page. */
-export default function AuctionResults({ items, resultsKey, bisPicks, note }: AuctionResultsProps) {
+export default function AuctionResults({ items, resultsKey, bisPicks, note, colSort, colDir, onColSort }: AuctionResultsProps) {
   const [paging, setPaging] = useState({ key: resultsKey, count: AUCTION_PAGE_SIZE });
   if (paging.key !== resultsKey) setPaging({ key: resultsKey, count: AUCTION_PAGE_SIZE });
   const shown = Math.min(paging.count, items.length);
@@ -26,7 +35,8 @@ export default function AuctionResults({ items, resultsKey, bisPicks, note }: Au
   return (
     <section className="space-y-3">
       {note(shown)}
-      <AuctionHeaderRow />
+      <AuctionMobileSort colSort={colSort} colDir={colDir} onColSort={onColSort} />
+      <AuctionHeaderRow colSort={colSort} colDir={colDir} onColSort={onColSort} />
       <ul className="space-y-3 sm:space-y-0" data-testid="auction-results">
         {items.slice(0, shown).map((item) => (
           <AuctionRow key={item.itemId} item={item} pick={bisPicks?.get(item.itemId) ?? null} />

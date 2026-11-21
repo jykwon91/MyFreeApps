@@ -545,6 +545,60 @@ test("the Auction house page downloads the MGA Prices addon with every house's p
   await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });
 
+async function stubSortPrices(page: Page) {
+  await page.route(PRICES, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...priceBody([], "alliance"),
+        items: [
+          [2589, 1000, 800, 20, 3, "Linen Cloth"],  // market 1000, cheapest 800
+          [3577, 5000, 4000, 5, 1, "Gold Bar"],      // market 5000, cheapest 4000, quantity=5
+          [720, 200, 150, 50, 10, "Leather Scraps"], // market 200, cheapest 150, quantity=50
+        ],
+      }),
+    }),
+  );
+}
+
+test("clicking Market value sorts by market high→low, clicking again reverses it", async ({ page }) => {
+  await stubSortPrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+
+  const itemNames = page.getByTestId("auction-item-name");
+  const names = () => itemNames.allTextContents();
+
+  // Default order is supply (most on sale first): Leather Scraps (50), Linen Cloth (20), Gold Bar (5)
+  await expect(itemNames.first()).toHaveText("Leather Scraps");
+  expect(await names()).toEqual(["Leather Scraps", "Linen Cloth", "Gold Bar"]);
+
+  // Click Market value → high→low: Gold Bar (5000), Linen Cloth (1000), Leather Scraps (200)
+  await page.getByRole("columnheader", { name: "Market value" }).getByRole("button").click();
+  await expect(page).toHaveURL(/csort=market/);
+  await expect(itemNames.first()).toHaveText("Gold Bar");
+  expect(await names()).toEqual(["Gold Bar", "Linen Cloth", "Leather Scraps"]);
+
+  // Click again → low→high: Leather Scraps (200), Linen Cloth (1000), Gold Bar (5000)
+  await page.getByRole("columnheader", { name: "Market value" }).getByRole("button").click();
+  await expect(page).toHaveURL(/csort=market.*cdir=asc|cdir=asc.*csort=market/);
+  await expect(itemNames.first()).toHaveText("Leather Scraps");
+  expect(await names()).toEqual(["Leather Scraps", "Linen Cloth", "Gold Bar"]);
+});
+
+test("the URL sort param restores the column sort on reload", async ({ page }) => {
+  await stubSortPrices(page);
+  await page.goto("/wow-forever/auction-house?csort=market");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  const names = () => page.getByTestId("auction-item-name").allTextContents();
+  // market desc (default for market column): Gold Bar, Linen Cloth, Leather Scraps
+  expect(await names()).toEqual(["Gold Bar", "Linen Cloth", "Leather Scraps"]);
+  // The active column header should show a down arrow (desc)
+  const marketHeader = page.getByRole("columnheader", { name: "Market value" });
+  await expect(marketHeader).toHaveAttribute("aria-sort", "descending");
+});
+
 test("priced pages never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await stubPrices(page, [...craftingRows(), ...FOOD_ROWS]);

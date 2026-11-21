@@ -99,7 +99,7 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
         </AuctionFilterSheet>
       )}
       <AuctionActiveFilters active={active} onRemove={(group) => onFilters(removalPatch(group))} onClear={onClear} />
-      <AuctionLookupList priceState={priceState} gear={gear} categories={categories} bis={bis} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} />
+      <AuctionLookupList priceState={priceState} gear={gear} categories={categories} bis={bis} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} onColSort={(colSort, colDir) => onFilters({ colSort, colDir })} />
     </div>
   );
 }

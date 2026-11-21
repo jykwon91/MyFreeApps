@@ -5,6 +5,8 @@ import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auct
 export const NO_AUCTION_FILTERS: AuctionFilters = {
   query: "",
   sort: DEFAULT_AUCTION_SORT,
+  colSort: null,
+  colDir: "desc",
   qualities: [],
   minGold: null,
   maxGold: null,
