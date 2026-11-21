@@ -21,8 +21,8 @@ vi.mock("../store/sessionsApi", () => ({
   useCreateSessionMutation: () => [createSession],
 }));
 
-const BUDGET_LEFT: UsageToday = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true };
-const USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+const BUDGET_LEFT: UsageToday = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true, session_limit_reached: false };
+const USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
 
 /** What GET /usage/today has answered, as the hook's usage query reports it. */
 let usage: UsageRequestState & { data?: UsageToday } = { isSuccess: false, isFetching: false };
@@ -278,6 +278,26 @@ describe("usePracticeSession", () => {
     rerender();
 
     expect(result.current.block).toBe("session_ended");
+  });
+
+  it("a turn refused for the conversation's turn limit keeps the learner's words, with no retry", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(409, "session_turn_limit"));
+    const { result } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("session_limit"));
+
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]).toMatchObject({ learnerText: "hola", status: "failed" });
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("blocks before the learner speaks once usage says the conversation is out of turns", () => {
+    usage = answered({ ...BUDGET_LEFT, session_limit_reached: true }, Date.now());
+    const { result } = setup();
+
+    expect(result.current.block).toBe("session_limit");
+    act(() => result.current.send("hola"));
+    expect(streamTurn).not.toHaveBeenCalled();
   });
 
   it("a stream cut off before done is a retryable failure; retry resends the same text", async () => {

@@ -394,13 +394,22 @@ describe("a typed conversation", () => {
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
   });
 
-  it("says when the conversation has reached its length limit, and offers another scenario", async () => {
+  it("says up front when the conversation has used all its turns", async () => {
+    serveConversation({ "GET /usage/today": () => ({ status: 200, data: { ...USAGE_LEFT, session_limit_reached: true } }) });
+    await openCafe();
+
+    expect(await screen.findByText(SESSION_BLOCK_COPY.session_limit)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
+  });
+
+  it("says when the conversation has reached its length limit, keeps the refused words, and offers another scenario", async () => {
     serveConversation();
     serveTurns(() => ({ status: 409, data: { detail: "session_turn_limit" } }));
     await openCafe();
 
     await write("Hola");
     expect(await screen.findByText(SESSION_BLOCK_COPY.session_limit)).toBeTruthy();
+    expect(screen.getByText("Hola")).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.pickScenario }));
     expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();

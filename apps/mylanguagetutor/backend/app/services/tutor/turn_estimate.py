@@ -141,10 +141,6 @@ def first_turn_units() -> int:
     return _prompt_units(TurnPromptContext(session=session_ctx, learner_text=_LONGEST_ANSWER))
 
 
-async def next_turn_units(db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> int:
-    """Reservation for the longest answer the learner could send next in this
-    session. Raises ``SessionNotFoundError`` for a missing or another user's session."""
-    session = await tutor_session_repository.get_by_id(db, session_id, user_id)
-    if session is None:
-        raise SessionNotFoundError("session not found")
+async def session_next_turn_units(db: AsyncSession, session: TutorSession) -> int:
+    """Reservation for the longest answer the learner could send next in this session."""
     return _prompt_units(await next_turn_prompt(db, session, _LONGEST_ANSWER))

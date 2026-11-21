@@ -90,3 +90,5 @@ class UsageTodayResponse(BaseModel):
     """True when today's remaining budget can't cover even a first turn."""
     tutor_available: bool
     """False when the tutor is switched off for everyone (no numbers leaked)."""
+    session_limit_reached: bool
+    """True when the given conversation has used all its turns; False without a session id."""

@@ -27,11 +27,14 @@ export function sessionOf(id: string, request: SessionCreate): TutorSession {
 }
 
 /** UsageTodayResponse: most of today's budget left, the tutor on. */
-export const PLENTY_LEFT: UsageToday = { remaining_fraction: 0.9, cap_reached: false, tutor_available: true };
+export const PLENTY_LEFT: UsageToday = { remaining_fraction: 0.9, cap_reached: false, tutor_available: true, session_limit_reached: false };
 /** Today's budget can't cover another turn. */
-export const CAP_REACHED: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+export const CAP_REACHED: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
 /** The kill switch or the global cap: the tutor is off for everyone, though this learner has budget left. */
-export const TUTOR_OFF: UsageToday = { remaining_fraction: 0.9, cap_reached: false, tutor_available: false };
+/** The open conversation has used all its turns (usage is asked about it by session id). */
+export const SESSION_FULL: UsageToday = { remaining_fraction: 0.9, cap_reached: false, tutor_available: true, session_limit_reached: true };
+
+export const TUTOR_OFF: UsageToday = { remaining_fraction: 0.9, cap_reached: false, tutor_available: false, session_limit_reached: false };
 
 /** One CorrectionItem (app/schemas/tutor/turn_schemas.py). */
 export function correctionOf(overrides: Partial<CorrectionItem> = {}): CorrectionItem {
