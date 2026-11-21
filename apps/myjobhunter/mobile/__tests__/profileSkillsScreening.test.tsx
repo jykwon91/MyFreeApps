@@ -1,4 +1,5 @@
 import { PROFILE_FORM_PROBLEMS as PROBLEMS } from "@myjobhunter/api-client/constants/profileFormProblems";
+import { unsureSavedMessage } from "@myjobhunter/api-client/utils/unsureSavedMessage";
 import { SCREENING_QUESTIONS } from "@myjobhunter/api-client/constants/screeningQuestions";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, within } from "@testing-library/react-native";
@@ -93,9 +94,20 @@ describe("skills", () => {
     await fireEvent.press(screen.getByRole("button", { name: SKILLS.create }));
 
     expect(await screen.findByText(SKILLS.creating)).toBeTruthy();
-    await held.answer(0, { status: 500 });
+    await held.answer(0, { status: 400 });
     expect(await screen.findByText(SKILLS.couldntCreate)).toBeTruthy();
     expect(screen.getByLabelText(`${SKILLS.nameLabel}, required`).props.value).toBe("Rust");
+  });
+
+  it("says to check the list, rather than inviting a second add, when the answer to an add is lost", async () => {
+    serve({ ...profileRoutes(), "POST /skills": () => { throw new Error("Network Error"); } });
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: SKILLS.add }));
+    await fireEvent.changeText(screen.getByLabelText(`${SKILLS.nameLabel}, required`), "Rust");
+    await fireEvent.press(screen.getByRole("button", { name: SKILLS.create }));
+
+    expect(await screen.findByText(unsureSavedMessage(SKILLS.checkWhere, true))).toBeTruthy();
+    expect(screen.queryByText(SKILLS.couldntCreate)).toBeNull();
   });
 
   it("says the skill is already there when the server finds it taken (a 409)", async () => {
@@ -181,6 +193,18 @@ describe("screening answers", () => {
 
     expect(await screen.findByText(SCREENING.alreadyAnswered)).toBeTruthy();
     expect(screen.getByLabelText(SCREENING.answerLabel).props.value).toBe("Two weeks");
+  });
+
+  it("says to check the list, rather than inviting a second add, when the answer to an add is lost", async () => {
+    serve({ ...profileRoutes(), "POST /screening-answers": () => { throw new Error("Network Error"); } });
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: SCREENING.add }));
+    await fireEvent.press(screen.getByRole("radio", { name: "Notice period" }));
+    await fireEvent.changeText(screen.getByLabelText(SCREENING.answerLabel), "Two weeks");
+    await fireEvent.press(screen.getByRole("button", { name: SCREENING.create }));
+
+    expect(await screen.findByText(unsureSavedMessage(SCREENING.checkWhere, true))).toBeTruthy();
+    expect(screen.queryByText(SCREENING.couldntCreate)).toBeNull();
   });
 
   it("edits an answer, keeping its question, and shows the change", async () => {

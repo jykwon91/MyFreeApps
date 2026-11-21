@@ -9,6 +9,7 @@ import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SKILL_MESSAGES as MESSAGES } from "../../constants/profileSkills";
 import { SKILL_YEAR_CHOICES } from "../../constants/skillYearChoices";
+import { createFailure } from "../../lib/writeFailure";
 import type { SkillSheetProps } from "../../types/SkillSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
@@ -36,7 +37,7 @@ export default function SkillSheet({ existingNames, onClose }: SkillSheetProps) 
       onClose();
     } catch (error) {
       if (isConflict(error)) setTakenNames((taken) => [...taken, name.trim()]);
-      else setFailure(MESSAGES.couldntCreate);
+      else setFailure(createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere }));
     }
   }
 

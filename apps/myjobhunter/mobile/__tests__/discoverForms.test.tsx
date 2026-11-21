@@ -334,7 +334,7 @@ describe("editing a saved search", () => {
   });
 
   it("keeps the sheet open when it can't save the changes", async () => {
-    serveForm({ "PATCH /discover/sources/src-1": () => ({ status: 500 }) }, [SOURCE]);
+    serveForm({ "PATCH /discover/sources/src-1": () => ({ status: 400 }) }, [SOURCE]);
     await openEdit();
     await fireEvent.changeText(screen.getByLabelText(`${SHEET.boardTokenLabel}, required`), "acme");
 
@@ -342,5 +342,27 @@ describe("editing a saved search", () => {
 
     expect(await screen.findByText(ACTIONS.updateFailed)).toBeTruthy();
     expect(screen.getByRole("header", { name: SHEET.editTitle })).toBeTruthy();
+  });
+
+  it("says it isn't sure the change was saved, rather than that it failed, when the answer is lost", async () => {
+    serveForm({ "PATCH /discover/sources/src-1": () => { throw new Error("Network Error"); } }, [SOURCE]);
+    await openEdit();
+    await fireEvent.changeText(screen.getByLabelText(`${SHEET.boardTokenLabel}, required`), "acme");
+
+    await act(async () => submit(SHEET.saveChanges));
+
+    expect(await screen.findByText("I didn't get an answer, so I'm not sure that went through. Trying again is safe.")).toBeTruthy();
+    expect(screen.queryByText(ACTIONS.updateFailed)).toBeNull();
+  });
+
+  it("says the saved search is gone, not the server's \"not found\" text, when it was removed elsewhere", async () => {
+    serveForm({ "PATCH /discover/sources/src-1": () => ({ status: 404, data: { detail: "Discovery resource not found" } }) }, [SOURCE]);
+    await openEdit();
+    await fireEvent.changeText(screen.getByLabelText(`${SHEET.boardTokenLabel}, required`), "acme");
+
+    await act(async () => submit(SHEET.saveChanges));
+
+    expect(await screen.findByText(ACTIONS.gone)).toBeTruthy();
+    expect(screen.queryByText("Discovery resource not found")).toBeNull();
   });
 });
