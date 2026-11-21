@@ -25,6 +25,7 @@ from fastapi import (
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import lease_placeholder_suggest_limiter
 from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
 from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.generate_defaults_response import (
@@ -283,13 +284,14 @@ async def delete_template(
 )
 async def suggest_placeholders(
     template_id: uuid.UUID,
-    ctx: RequestContext = Depends(current_org_member),
+    ctx: RequestContext = Depends(require_write_access),
 ) -> SuggestPlaceholdersResponse:
     """Run an AI pass over the template's source files and return proposed placeholders.
 
     Does NOT persist anything — the host reviews the suggestions and commits
     via the existing ``PATCH /{template_id}/placeholders/{placeholder_id}`` endpoint.
     """
+    lease_placeholder_suggest_limiter.check(f"lease-placeholder-suggest:{ctx.user_id}")
     try:
         return await lease_template_service.suggest_ai_placeholders(
             user_id=ctx.user_id,

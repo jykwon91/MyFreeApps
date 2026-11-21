@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from app.core.context import RequestContext
 from app.core.document_constants import DOCUMENT_BEING_READ_DETAIL
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import document_re_extract_limiter
 from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.core.upload_errors import upload_error_status
 from app.models.responses.upload_response import (
@@ -152,6 +153,7 @@ async def re_extract_document(
     document_id: uuid.UUID,
     ctx: RequestContext = Depends(require_write_access),
 ) -> ReExtractResponse:
+    document_re_extract_limiter.check(f"document-re-extract:{ctx.user_id}")
     try:
         found = await document_service.re_extract_document(ctx, document_id)
     except DocumentBeingReadError as e:
