@@ -58,6 +58,7 @@ describe("Login page", () => {
 
   it("shows app branding", () => {
     renderLogin();
+    expect(screen.getByRole("heading", { level: 1, name: "MyJobHunter" })).toBeInTheDocument();
     expect(screen.getByText("MyJobHunter")).toBeInTheDocument();
     expect(
       screen.getByText(new RegExp(`© ${new Date().getFullYear()} MyJobHunter`, "i")),
