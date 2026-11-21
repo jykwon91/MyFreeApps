@@ -1,5 +1,5 @@
+import { RowPrimaryAction } from "@platform/ui";
 import { useNavigate } from "react-router-dom";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import Badge from "@/shared/components/ui/Badge";
 import { formatSectionCount, formatUpdatedAt } from "@mybookkeeper/api-client/utils/welcomeManualFormat";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";

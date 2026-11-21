@@ -1,5 +1,5 @@
+import { RowPrimaryAction } from "@platform/ui";
 import { useNavigate } from "react-router-dom";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
 import {
   formatDesiredDates,

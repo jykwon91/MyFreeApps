@@ -14,7 +14,7 @@ export function sortTableBy(columnName: RegExp, direction: AriaSort): void {
 
 /**
  * The text of one column for every body row, top to bottom. Rows are read from
- * <tbody> because a clickable DataTable row takes role="button", not "row".
+ * <tbody> so the header row is left out.
  */
 export function columnValues(columnIndex: number): string[] {
   const bodyRows = Array.from(screen.getByRole("table").querySelectorAll<HTMLTableRowElement>("tbody tr"));

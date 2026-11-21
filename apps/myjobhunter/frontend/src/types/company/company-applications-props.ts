@@ -5,5 +5,4 @@ export interface CompanyApplicationsProps {
   companyName: string;
   list: ApplicationsPagesState;
   onSortingChange: (sorting: SortingState) => void;
-  onOpen: (applicationId: string) => void;
 }

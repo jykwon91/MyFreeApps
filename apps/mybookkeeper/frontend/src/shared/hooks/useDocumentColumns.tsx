@@ -1,3 +1,4 @@
+import { RowPrimaryAction } from "@platform/ui";
 import { documentSourceLabel } from "@mybookkeeper/api-client/utils/documentSourceLabel";
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -11,7 +12,6 @@ import type { Document } from "@mybookkeeper/api-client/types/document/document"
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import { SELECTING_ALL_DOCUMENTS_LABEL } from "@/shared/lib/document-list-messages";
 import type { SelectAllControl } from "@/shared/types/select-all-control";
 

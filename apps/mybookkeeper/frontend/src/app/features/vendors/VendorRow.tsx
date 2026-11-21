@@ -1,5 +1,5 @@
+import { RowPrimaryAction } from "@platform/ui";
 import { useNavigate } from "react-router-dom";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import { Star } from "lucide-react";
 import { formatVendorLastUsed } from "@mybookkeeper/api-client/utils/formatVendorLastUsed";
 import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";

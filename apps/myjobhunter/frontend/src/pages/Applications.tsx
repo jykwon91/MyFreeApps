@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { FilePlus } from "lucide-react";
 import { Badge, DataTable, EmptyState, LoadMoreFooter, type ColumnDef, type SortingState } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
@@ -8,6 +7,7 @@ import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
 import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messages";
 import { useApplicationsList } from "@/features/applications/useApplicationsList";
 import { getEventTypeColor } from "@/lib/event-color";
+import { applicationRowLabel } from "@/lib/applicationRowLabel";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
@@ -76,7 +76,6 @@ const COLUMNS: ColumnDef<Application>[] = [
 ];
 
 export default function Applications() {
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   // The table owns its sort; this follows it so the server sorts every page the same way.
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_APPLICATIONS_TABLE_SORTING);
@@ -149,7 +148,8 @@ export default function Applications() {
         data={items}
         columns={COLUMNS}
         getRowId={(row) => row.id}
-        onRowClick={(row) => navigate(`/applications/${row.id}`)}
+        getRowHref={(row) => `/applications/${row.id}`}
+        getRowActionLabel={applicationRowLabel}
         defaultSorting={DEFAULT_APPLICATIONS_TABLE_SORTING}
         enableSortingRemoval={false}
         onSortingChange={setSorting}

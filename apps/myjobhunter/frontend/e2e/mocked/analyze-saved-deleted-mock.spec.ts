@@ -74,7 +74,7 @@ test("after its application is deleted, the analysis offers Add to applications 
   await page.getByRole("button", { name: "Add to applications" }).click();
   await expect(page).toHaveURL(/\/applications$/);
 
-  await page.getByRole("cell", { name: "Staff Engineer" }).click();
+  await page.getByRole("cell", { name: "Staff Engineer", exact: true }).click();
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

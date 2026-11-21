@@ -279,7 +279,8 @@ describe("Applications page", () => {
       renderApplications();
 
       expect(screen.getByRole("columnheader", { name: /company/i })).toBeInTheDocument();
-      expect(screen.getByRole("cell", { name: "Stripe" })).toBeInTheDocument();
+      // The company cell is the row's link, named by role and company.
+      expect(screen.getByRole("link", { name: /at Stripe$/ })).toHaveTextContent("Stripe");
     });
 
     it("renders an em-dash in the Company cell when company_name is null", () => {

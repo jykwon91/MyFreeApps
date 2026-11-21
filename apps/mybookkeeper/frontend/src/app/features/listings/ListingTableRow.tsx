@@ -1,5 +1,5 @@
+import { RowPrimaryAction } from "@platform/ui";
 import { useNavigate } from "react-router-dom";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import ListingStatusBadge from "./ListingStatusBadge";
 import { LISTING_ROOM_TYPE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";

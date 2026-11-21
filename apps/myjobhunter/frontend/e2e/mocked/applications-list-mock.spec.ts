@@ -33,8 +33,9 @@ test("shows the skeleton, then the stubbed applications as rows", async ({ page 
   release();
   await expect(page.getByLabel("Loading applications")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "Staff Engineer" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "Globex" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Staff Engineer", exact: true })).toBeVisible();
+  // The company cell is the row's link, named by role and company.
+  await expect(page.getByRole("link", { name: "Open Data Scientist at Globex" })).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(2);
 });
 

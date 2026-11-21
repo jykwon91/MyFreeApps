@@ -106,6 +106,38 @@ describe("DashboardFilterBar", () => {
     expect(screen.queryByTestId("filter-categories-panel")).not.toBeInTheDocument();
   });
 
+  it("expands on a click on the bar's empty space, but not on a click on one of its controls", async () => {
+    const user = userEvent.setup();
+    const onSetPreset = vi.fn();
+    render(<DashboardFilterBar {...defaultProps({ onSetPreset })} />);
+
+    await user.click(screen.getByRole("radio", { name: "Income" }));
+    expect(onSetPreset).toHaveBeenCalledWith("income");
+    expect(screen.queryByTestId("filter-categories-panel")).not.toBeInTheDocument();
+
+    await user.click(screen.getByText("Filters"));
+    expect(screen.getByTestId("filter-categories-panel")).toBeInTheDocument();
+  });
+
+  it("does not expand when the year select is clicked", async () => {
+    const user = userEvent.setup();
+    render(<DashboardFilterBar {...defaultProps()} />);
+
+    await user.click(screen.getByRole("combobox", { name: "Filter by year" }));
+    expect(screen.queryByTestId("filter-categories-panel")).not.toBeInTheDocument();
+  });
+
+  it("does not expand when the property dropdown is opened or one of its items is picked", async () => {
+    const user = userEvent.setup();
+    const onPropertyIdsChange = vi.fn();
+    render(<DashboardFilterBar {...defaultProps({ properties: mockProperties, onPropertyIdsChange })} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter by property" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: "Property A" }));
+    expect(onPropertyIdsChange).toHaveBeenCalledWith(["p1"]);
+    expect(screen.queryByTestId("filter-categories-panel")).not.toBeInTheDocument();
+  });
+
   it("calls onSelectOnlyCategory when a chip is clicked with all categories selected", async () => {
     const user = userEvent.setup();
     const onSelectOnlyCategory = vi.fn();
