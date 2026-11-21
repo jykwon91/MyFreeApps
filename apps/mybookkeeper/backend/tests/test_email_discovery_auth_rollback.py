@@ -27,8 +27,8 @@ from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories import email_filter_log_repo, integration_repo
 from app.services.email import email_discovery_service, gmail_credentials
-from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
-from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR, GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR
+from app.services.email.exceptions import GmailAuthExpiredError, GmailTemporarilyUnavailableError
 
 
 @pytest.fixture(autouse=True)
@@ -220,7 +220,7 @@ async def test_failed_discovery_does_not_save_a_refreshed_token(
 
 
 @pytest.mark.asyncio
-async def test_non_auth_error_while_listing_writes_no_flag_and_no_log(
+async def test_google_outage_while_listing_writes_no_flag_and_no_log(
     db: AsyncSession, test_user: User, test_org: Organization,
     creds: MagicMock, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -234,7 +234,78 @@ async def test_non_auth_error_while_listing_writes_no_flag_and_no_log(
 
     monkeypatch.setattr(email_discovery_service, "list_new_email_ids", _fail)
 
-    with pytest.raises(HttpError):
+    with pytest.raises(GmailTemporarilyUnavailableError):
+        await email_discovery_service.discover_gmail_emails(_ctx(test_org, test_user))
+
+    await db.refresh(integration)
+    assert integration.needs_reauth is False
+    assert await _sync_logs(db, test_org) == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error",
+    [
+        RefreshError("server_error", {"error": "server_error"}, retryable=True),
+        HttpError(MagicMock(status=429), b"{}"),
+    ],
+    ids=["token-endpoint-outage", "429"],
+)
+async def test_outage_while_listing_never_asks_the_user_to_reconnect(
+    db: AsyncSession, test_user: User, test_org: Organization,
+    creds: MagicMock, monkeypatch: pytest.MonkeyPatch, error: Exception,
+) -> None:
+    integration = await _seed(db, test_org, test_user)
+
+    def _fail(*_args, **_kwargs):
+        raise error
+
+    monkeypatch.setattr(email_discovery_service, "list_new_email_ids", _fail)
+
+    with pytest.raises(GmailTemporarilyUnavailableError):
+        await email_discovery_service.discover_gmail_emails(_ctx(test_org, test_user))
+
+    await db.refresh(integration)
+    assert integration.needs_reauth is False
+    assert await _sync_logs(db, test_org) == []
+
+
+@pytest.mark.asyncio
+async def test_missing_read_scope_flags_reconnect_and_says_so_in_the_sync_log(
+    db: AsyncSession, test_user: User, test_org: Organization,
+    creds: MagicMock, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    integration = await _seed(db, test_org, test_user)
+    body = b'{"error": {"code": 403, "errors": [{"reason": "insufficientPermissions"}]}}'
+
+    def _forbidden(*_args, **_kwargs):
+        raise HttpError(MagicMock(status=403), body)
+
+    monkeypatch.setattr(email_discovery_service, "list_new_email_ids", _forbidden)
+
+    with pytest.raises(GmailAuthExpiredError):
+        await email_discovery_service.discover_gmail_emails(_ctx(test_org, test_user))
+
+    await db.refresh(integration)
+    assert integration.needs_reauth is True
+    logs = await _sync_logs(db, test_org)
+    assert [(log.status, log.error) for log in logs] == [("failed", GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR)]
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_mid_sync_stops_the_sync_for_a_retry_next_cycle(
+    db: AsyncSession, test_user: User, test_org: Organization,
+    creds: MagicMock, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    integration = await _seed(db, test_org, test_user)
+    monkeypatch.setattr(email_discovery_service, "list_new_email_ids", lambda *_a, **_k: (["m1"], 1))
+
+    def _limited(*_args, **_kwargs):
+        raise HttpError(MagicMock(status=429), b"{}")
+
+    monkeypatch.setattr(email_discovery_service, "list_email_document_sources", _limited)
+
+    with pytest.raises(GmailTemporarilyUnavailableError):
         await email_discovery_service.discover_gmail_emails(_ctx(test_org, test_user))
 
     await db.refresh(integration)

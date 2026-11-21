@@ -6,3 +6,4 @@ from app.services.email.exceptions.gmail_send_outcome_unknown_error import Gmail
 from app.services.email.exceptions.gmail_discovery_auth_rejected_error import GmailDiscoveryAuthRejectedError  # noqa: F401
 from app.services.email.exceptions.gmail_account_unknown_error import GmailAccountUnknownError  # noqa: F401
 from app.services.email.exceptions.gmail_label_not_found_error import GmailLabelNotFoundError  # noqa: F401
+from app.services.email.exceptions.gmail_temporarily_unavailable_error import GmailTemporarilyUnavailableError  # noqa: F401

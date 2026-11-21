@@ -1,13 +1,16 @@
 """Run one Gmail read for a stored connection, with the shared auth handling.
 
-A refresh token Google refuses, or a 401, marks the connection needs-reauth
-(only if it hasn't been reconnected since) and raises
-``GmailReauthRequiredError``. An access token refreshed along the way is saved
-afterwards. Any other failure propagates unchanged.
+A revoked refresh token (``invalid_grant``), a 401, or a 403 for a missing scope
+marks the connection needs-reauth (only if it hasn't been reconnected since) and
+raises ``GmailReauthRequiredError``. An access token refreshed along the way is
+saved afterwards. Any other failure (an outage, a rate limit, a deleted message)
+is logged with Google's error codes and propagates unchanged: the connection is
+fine, so it is never marked.
 """
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 
 from google.auth.exceptions import RefreshError
@@ -19,7 +22,16 @@ from app.models.integrations.integration import Integration
 from app.services.email.exceptions import GmailReauthRequiredError
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_request_executor import mark_integration_needs_reauth
+from app.services.email.gmail_failure_classifier import (
+    classify_http_error,
+    classify_refresh_error,
+    describe_http_error,
+    refresh_error_code,
+)
+from app.services.email.gmail_failure_kind import GmailFailureKind
 from app.services.email.gmail_service import get_gmail_service
+
+logger = logging.getLogger(__name__)
 
 
 async def execute_gmail_read(
@@ -35,16 +47,27 @@ async def execute_gmail_read(
     try:
         response = await asyncio.to_thread(request.execute)
     except RefreshError as exc:
+        code = refresh_error_code(exc)
+        if classify_refresh_error(exc) is not GmailFailureKind.REAUTH:
+            logger.warning("Gmail read failed refreshing the token, connection left as is: oauth_error=%s", code)
+            raise
+        logger.warning("Gmail read rejected — refresh token revoked: oauth_error=%s", code)
         await mark_integration_needs_reauth(integration, repr(exc))
         raise GmailReauthRequiredError(
             f"Gmail token expired. Reconnect Gmail to {purpose}."
         ) from exc
     except HttpError as exc:
-        status = getattr(getattr(exc, "resp", None), "status", None)
-        if status == 401:
+        kind = classify_http_error(exc)
+        logger.warning("Gmail read failed: %s kind=%s", describe_http_error(exc), kind.value)
+        if kind is GmailFailureKind.REAUTH:
             await mark_integration_needs_reauth(integration, f"HttpError 401: {exc!r}")
             raise GmailReauthRequiredError(
                 f"Gmail token rejected (401). Reconnect Gmail to {purpose}."
+            ) from exc
+        if kind is GmailFailureKind.SCOPE_MISSING:
+            await mark_integration_needs_reauth(integration, f"HttpError 403: {exc!r}")
+            raise GmailReauthRequiredError(
+                f"Gmail read permission missing. Reconnect Gmail to {purpose}."
             ) from exc
         raise
     await persist_refreshed_token(integration, creds, prior_token)

@@ -21,11 +21,23 @@ from app.services.email.bounce_detector import BounceDetector
 from app.services.email.constants import (
     EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN,
     EMAIL_FILTER_LOG_SUBJECT_MAX_LEN,
-    GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
     GMAIL_LABEL_NOT_FOUND_MESSAGE,
+    GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
 )
-from app.services.email.exceptions import GmailAuthExpiredError, GmailDiscoveryAuthRejectedError, GmailLabelNotFoundError
+from app.services.email.exceptions import (
+    GmailAuthExpiredError,
+    GmailDiscoveryAuthRejectedError,
+    GmailLabelNotFoundError,
+    GmailTemporarilyUnavailableError,
+)
 from app.services.email.gmail_credentials import persist_refreshed_token
+from app.services.email.gmail_failure_classifier import (
+    classify_http_error,
+    classify_refresh_error,
+    describe_http_error,
+    refresh_error_code,
+)
+from app.services.email.gmail_failure_kind import GmailFailureKind
 from app.services.email.gmail_service import (
     get_gmail_service,
     list_email_document_sources,
@@ -44,6 +56,8 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
             caller is responsible for surfacing this to the user; this service
             sets the integration's reauth flag and records a failed sync_log
             row so the failure appears in the UI.
+        GmailTemporarilyUnavailableError: Google is down or rate-limiting. The
+            connection is NOT flagged; the next sync cycle retries.
         GmailLabelNotFoundError: the connection is limited to a label the
             mailbox doesn't have. Nothing is synced; a failed sync_log row
             records why.
@@ -57,7 +71,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 db, rejected.connection, rejected.reason[:200], datetime.now(timezone.utc)
             )
             if marked:
-                await _record_failed_sync_log(db, ctx, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
+                await _record_failed_sync_log(db, ctx, rejected.sync_log_error)
         if not marked:
             logger.info("Gmail was reconnected during discovery; not recording the old connection's failure")
         raise GmailAuthExpiredError(str(rejected)) from rejected.__cause__
@@ -109,23 +123,10 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
                 list_new_email_ids, service, processed_ids, label=label
             )
         except RefreshError as exc:
-            logger.warning(
-                "Gmail refresh token rejected for org=%s user=%s during discovery: %s",
-                org_id, ctx.user_id, exc,
-            )
-            raise GmailDiscoveryAuthRejectedError(
-                connection, repr(exc), str(exc),
-            ) from exc
+            _raise_for_refresh_failure(exc, connection, ctx, "listing new email")
+            raise
         except HttpError as exc:
-            status = getattr(getattr(exc, "resp", None), "status", None)
-            if status == 401:
-                logger.warning(
-                    "Gmail token rejected (401) for org=%s user=%s during discovery: status=%s",
-                    org_id, ctx.user_id, status,
-                )
-                raise GmailDiscoveryAuthRejectedError(
-                    connection, f"HttpError 401: {exc!r}", str(exc),
-                ) from exc
+            _raise_for_http_failure(exc, connection, ctx, "listing new email")
             raise
         logger.info(
             "Gmail discovery: matched=%d new=%d (skipped %d already-processed)",
@@ -159,24 +160,11 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
                     await asyncio.to_thread(list_email_document_sources, service, message_id),
                 )
             except RefreshError as exc:
-                logger.warning(
-                    "Gmail refresh token rejected for org=%s user=%s while fetching sources for message %s: %s",
-                    org_id, ctx.user_id, message_id, exc,
-                )
-                raise GmailDiscoveryAuthRejectedError(
-                    connection, repr(exc), str(exc),
-                ) from exc
+                _raise_for_refresh_failure(exc, connection, ctx, f"fetching sources for message {message_id}")
+                raise
             except HttpError as exc:
-                status = getattr(getattr(exc, "resp", None), "status", None)
-                if status == 401:
-                    logger.warning(
-                        "Gmail token rejected (401) for org=%s user=%s while fetching sources for message %s: status=%s",
-                        org_id, ctx.user_id, message_id, status,
-                    )
-                    raise GmailDiscoveryAuthRejectedError(
-                        connection, f"HttpError 401: {exc!r}", str(exc),
-                    ) from exc
-                # Non-401 HttpError — skip this message, don't abort the entire sync.
+                _raise_for_http_failure(exc, connection, ctx, f"fetching sources for message {message_id}")
+                # Deleted (404) or unclassified — skip this message, don't abort the entire sync.
                 logger.warning(
                     "gmail_discovery: skipped message_id=%s org=%s user=%s exc=%s msg=%s",
                     message_id, org_id, ctx.user_id, type(exc).__name__, exc,
@@ -259,6 +247,49 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
             DiscoverResult("queued", count=total_sources, sync_log_id=log.id),
             RefreshedGmailToken(connection, creds, prior_token),
         )
+
+
+def _raise_for_refresh_failure(
+    exc: RefreshError, connection: GmailConnectionSnapshot, ctx: RequestContext, doing: str,
+) -> None:
+    """Raise for a failure that ends discovery; return for one the caller must re-raise as is."""
+    kind = classify_refresh_error(exc)
+    code = refresh_error_code(exc)
+    if kind is GmailFailureKind.REAUTH:
+        logger.warning(
+            "Gmail refresh token revoked for org=%s user=%s while %s: oauth_error=%s",
+            ctx.organization_id, ctx.user_id, doing, code,
+        )
+        raise GmailDiscoveryAuthRejectedError(connection, repr(exc), str(exc)) from exc
+    if kind is GmailFailureKind.TRANSIENT:
+        logger.warning(
+            "Google token endpoint unavailable for org=%s user=%s while %s: oauth_error=%s; will retry next cycle",
+            ctx.organization_id, ctx.user_id, doing, code,
+        )
+        raise GmailTemporarilyUnavailableError(str(exc)) from exc
+    logger.error(
+        "Gmail token refresh failed for org=%s user=%s while %s: oauth_error=%s",
+        ctx.organization_id, ctx.user_id, doing, code,
+    )
+
+
+def _raise_for_http_failure(
+    exc: HttpError, connection: GmailConnectionSnapshot, ctx: RequestContext, doing: str,
+) -> None:
+    """Raise for a Gmail failure that ends discovery; return for a deleted (404) or unclassified one."""
+    kind = classify_http_error(exc)
+    logger.warning(
+        "Gmail API failure for org=%s user=%s while %s: %s kind=%s",
+        ctx.organization_id, ctx.user_id, doing, describe_http_error(exc), kind.value,
+    )
+    if kind is GmailFailureKind.REAUTH:
+        raise GmailDiscoveryAuthRejectedError(connection, f"HttpError 401: {exc!r}", str(exc)) from exc
+    if kind is GmailFailureKind.SCOPE_MISSING:
+        raise GmailDiscoveryAuthRejectedError(
+            connection, f"HttpError 403: {exc!r}", str(exc), GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+        ) from exc
+    if kind is GmailFailureKind.TRANSIENT:
+        raise GmailTemporarilyUnavailableError(str(exc)) from exc
 
 
 def _detect_bounce(

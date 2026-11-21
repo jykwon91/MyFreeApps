@@ -87,3 +87,30 @@ async def test_finalizes_the_sync_log_when_discovery_opened_one() -> None:
     call_args = mock_finalize.call_args
     assert call_args[0][0] == sync_log_id
     assert call_args[0][1].organization_id == target.organization_id
+
+
+@pytest.mark.asyncio
+async def test_a_google_outage_ends_this_cycle_quietly_and_skips_fetching() -> None:
+    from app.services.email.exceptions import GmailTemporarilyUnavailableError
+
+    target = _target()
+    drain = AsyncMock()
+
+    with (
+        patch("app.workers.email_sync_worker.AsyncSessionLocal") as mock_session_cls,
+        patch("app.workers.email_sync_worker.organization_repo") as mock_org_repo,
+        patch(
+            "app.workers.email_sync_worker.discover_gmail_emails",
+            side_effect=GmailTemporarilyUnavailableError("503"),
+        ),
+        patch("app.workers.email_sync_worker.drain_gmail_fetch", drain),
+    ):
+        mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
+        mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_org_repo.get_member = AsyncMock(
+            return_value=FakeMembership(organization_id=target.organization_id, user_id=target.user_id),
+        )
+
+        await sync_gmail_connection(target)
+
+    drain.assert_not_awaited()

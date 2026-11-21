@@ -225,7 +225,7 @@ class TestFetchPathHttpError401:
 
     @pytest.mark.asyncio
     async def test_fetch_non_401_http_error_does_not_set_needs_reauth(self) -> None:
-        """HttpError with status != 401 must NOT set needs_reauth — it is a transient error."""
+        """An unclassified 4xx must fail the item without setting needs_reauth."""
         ctx = _make_ctx()
         org_id = ctx.organization_id
         integration = _make_integration(org_id)
@@ -290,7 +290,7 @@ class TestFetchPathHttpError401:
             ),
             patch(
                 "app.services.email.email_fetch_service.fetch_attachment_bytes",
-                side_effect=_make_fake_http_error(500),
+                side_effect=_make_fake_http_error(400),
             ),
         ):
             from app.services.email.email_fetch_service import _fetch_next_pending

@@ -2,7 +2,7 @@
 
 Shared by every Gmail send so they all split failures the same way:
 
-- ``GmailReauthRequiredError`` — refresh token invalid or 401. ``needs_reauth``
+- ``GmailReauthRequiredError`` — refresh token revoked (``invalid_grant``) or 401. ``needs_reauth``
   is set on the integration before this raises.
 - ``GmailSendScopeError`` — 403, the integration lacks the needed scope.
 - ``GmailSendError`` — Gmail definitely rejected the request (other 4xx,
@@ -45,6 +45,12 @@ from app.services.email.gmail_credentials import (
     build_gmail_credentials,
     persist_refreshed_token,
 )
+from app.services.email.gmail_failure_classifier import (
+    classify_refresh_error,
+    reasons_from_error_body,
+    refresh_error_code,
+)
+from app.services.email.gmail_failure_kind import GmailFailureKind
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +81,8 @@ def post_message_send(creds: Credentials, raw: str) -> requests.Response:
 def _error_reasons(response: requests.Response) -> set[str]:
     """Reasons from both Google error shapes: ``errors[]`` and ``details[]``."""
     try:
-        error = response.json().get("error", {})
-        entries = [*error.get("errors", []), *error.get("details", [])]
-        return {e.get("reason") for e in entries if isinstance(e, dict)}
-    except (ValueError, AttributeError, TypeError):
+        return reasons_from_error_body(response.json())
+    except ValueError:
         return set()
 
 
@@ -106,11 +110,20 @@ async def send_raw_gmail_message(
     try:
         response = await asyncio.to_thread(post_message_send, creds, raw)
     except RefreshError as exc:
-        logger.warning("Gmail send rejected — refresh token invalid: %s", exc)
-        await mark_integration_needs_reauth(integration, repr(exc))
-        raise GmailReauthRequiredError(
-            f"Gmail token expired. Reconnect Gmail to {purpose}."
-        ) from exc
+        # The token refresh runs before anything is posted, so nothing was sent.
+        kind = classify_refresh_error(exc)
+        code = refresh_error_code(exc)
+        if kind is GmailFailureKind.REAUTH:
+            logger.warning("Gmail send rejected — refresh token revoked: oauth_error=%s", code)
+            await mark_integration_needs_reauth(integration, repr(exc))
+            raise GmailReauthRequiredError(
+                f"Gmail token expired. Reconnect Gmail to {purpose}."
+            ) from exc
+        if kind is GmailFailureKind.TRANSIENT:
+            logger.warning("Gmail send not attempted — Google token endpoint unavailable: oauth_error=%s", code)
+            raise GmailSendError("Google is temporarily unavailable. Try again shortly.") from exc
+        logger.error("Gmail send not attempted — token refresh failed: oauth_error=%s", code, exc_info=True)
+        raise GmailSendError("Gmail couldn't refresh the connection. Try again later.") from exc
     except Exception as exc:  # timeouts, connection resets, SSL errors
         logger.error("Gmail send outcome unknown: unexpected error", exc_info=True)
         raise GmailSendOutcomeUnknownError(
