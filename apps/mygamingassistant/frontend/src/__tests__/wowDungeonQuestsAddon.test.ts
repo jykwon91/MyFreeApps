@@ -549,6 +549,22 @@ describe("MGA Dungeon Quests dungeon focus", () => {
     );
   });
 
+  it("Forever's watch list by quest id, and Questie's tracker, show only the dungeon's quests inside and come back after", () => {
+    const setup = 'useModernWatch(); useQuestie({ [99] = true, [3] = true, [98] = true }); questLog = { { id = 99 }, { id = 3 }, { id = 98 } }; watched = { 99 }';
+    expect(run(`${enter}; clear(); shownQuestie(); shownWatched()`, setup)).toEqual(["questie: 3", "watched: 3"]);
+    expect(run(`${enter}; ${leave}; clear(); shownQuestie()`, setup)).toContain("questie: 99,3,98");
+  });
+
+  it("a quest with no level yet (a dungeon Forever added) shows without one", () => {
+    const data = FIXTURE.replace('{id = 3, title = "The Defias Brotherhood", level = 22, minLevel = 14,', '{id = 3, title = "The Defias Brotherhood",');
+    expect(data).not.toBe(FIXTURE);
+    const lines = runAddonLua(
+      [["Data.lua", data], ["MGADungeonQuests.lua", addonLua], ["clear", "clear()"], ["test", 'slash("deadmines")']],
+      WOW_DUNGEON_QUEST_STUBS,
+    );
+    expect(window(lines).some((l) => l.includes("The Defias Brotherhood") && !l.includes("(22)"))).toBe(true);
+  });
+
   it("a reload inside keeps what the tracker showed before the dungeon", () => {
     const setup = 'questLog = { { id = 99 }, { id = 3 } }; watched = { 99 }';
     const reload = 'fire("PLAYER_ENTERING_WORLD", false, true)';

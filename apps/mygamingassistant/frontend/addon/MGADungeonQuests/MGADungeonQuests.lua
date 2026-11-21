@@ -185,8 +185,10 @@ local function stepLines(step, state, level, isNext)
   local note = ""
   if state == "complete" then note = GREEN .. "  ready to turn in|r"
   elseif state then note = GOLD .. "  in your quest log|r"
-  elseif step.minLevel > level then note = RED .. "  needs level " .. step.minLevel .. "|r" end
-  out[1] = icon .. " " .. colour .. step.title .. "|r " .. GREY .. "(" .. step.level .. ")|r" .. tag .. note
+  elseif (step.minLevel or 0) > level then note = RED .. "  needs level " .. step.minLevel .. "|r" end
+  -- A quest of a dungeon Forever added has no level until the game has shown it to us.
+  local lvl = step.level and (" " .. GREY .. "(" .. step.level .. ")|r") or ""
+  out[1] = icon .. " " .. colour .. step.title .. "|r" .. lvl .. tag .. note
   local from = not state and giverText(step)
   if from then out[2] = "      " .. GREY .. from .. "|r" end
   return out
@@ -203,7 +205,7 @@ function M.NextText(step, state, level)
     local inside = step.dungeon and " in the dungeon" or ""
     return "Finish " .. title .. inside .. todo .. ". Then turn it in" .. turnIn .. "."
   end
-  local when = step.minLevel > level and ("At level " .. step.minLevel .. ", get ") or "Get "
+  local when = (step.minLevel or 0) > level and ("At level " .. step.minLevel .. ", get ") or "Get "
   if not step.giver then return when .. title .. ". Who gives it isn't in our data." end
   return when .. title .. " " .. giverText(step) .. "."
 end
@@ -1579,19 +1581,54 @@ function M.DrawFocus()
   focusFrame:Show()
 end
 
--- The game's quest tracker (the classic watch list, by quest log index), kept as quest ids.
+-- The quest tracker. Forever's watch list is by quest id (C_QuestLog); the classic one by quest log index.
+-- Questie draws its own tracker and follows only the C_QuestLog calls, and it can show quests the game
+-- doesn't watch (its "auto track"), so what it shows is asked of Questie itself.
+local modernWatch = C_QuestLog and C_QuestLog.AddQuestWatch and C_QuestLog.RemoveQuestWatch
+  and C_QuestLog.GetNumQuestWatches and C_QuestLog.GetQuestIDForQuestWatchIndex
+
+local function canWatch()
+  return modernWatch or (GetNumQuestWatches and GetQuestIndexForWatch and GetQuestLogTitle and AddQuestWatch and RemoveQuestWatch)
+end
+
+local function questieTracker()
+  if not (QuestieLoader and QuestieLoader.ImportModule) then return nil end
+  local ok, tracker = pcall(QuestieLoader.ImportModule, QuestieLoader, "QuestieTracker")
+  return ok and tracker and tracker.IsTrackedByQuestie and tracker or nil
+end
+
+-- The quest ids the tracker shows now.
 local function watchedIds()
-  if not (GetNumQuestWatches and GetQuestIndexForWatch and GetQuestLogTitle) then return nil end
-  local ids = {}
-  for i = 1, GetNumQuestWatches() or 0 do
-    local index = GetQuestIndexForWatch(i)
-    local id = index and select(8, GetQuestLogTitle(index))
-    if id and id > 0 then ids[#ids + 1] = id end
+  local ids, seen = {}, {}
+  local function add(id)
+    if id and id > 0 and not seen[id] then
+      seen[id] = true
+      ids[#ids + 1] = id
+    end
+  end
+  if modernWatch then
+    for i = 1, C_QuestLog.GetNumQuestWatches() or 0 do add(C_QuestLog.GetQuestIDForQuestWatchIndex(i)) end
+  else
+    for i = 1, GetNumQuestWatches() or 0 do
+      local index = GetQuestIndexForWatch(i)
+      add(index and select(8, GetQuestLogTitle(index)))
+    end
+  end
+  local questie = questieTracker()
+  if questie then
+    for _, q in ipairs(scanLog()) do
+      local ok, tracked = pcall(questie.IsTrackedByQuestie, q.id)
+      if ok and tracked then add(q.id) end
+    end
   end
   return ids
 end
 
 local function setWatch(id, on)
+  if modernWatch then
+    if on then C_QuestLog.AddQuestWatch(id) else C_QuestLog.RemoveQuestWatch(id) end
+    return
+  end
   local index = logIndex(id)
   if not index then return end
   if on then AddQuestWatch(index) else RemoveQuestWatch(index) end
@@ -1604,8 +1641,8 @@ end
 -- Shows only this dungeon's quests in the quest tracker, keeping what it showed per character, so a
 -- disconnect inside still puts it back the next time you're out.
 local function focusTracker(dungeon)
+  if not canWatch() then return end
   local before = watchedIds()
-  if not before or not AddQuestWatch or not RemoveQuestWatch then return end
   MGADungeonQuestsCharacter = MGADungeonQuestsCharacter or {}
   if not MGADungeonQuestsCharacter.watchedBefore then MGADungeonQuestsCharacter.watchedBefore = before end
   local mine = {}
@@ -1624,11 +1661,11 @@ end
 -- Puts the quest tracker back as it was before the dungeon.
 local function restoreTracker()
   local before = MGADungeonQuestsCharacter and MGADungeonQuestsCharacter.watchedBefore
-  if not before or not AddQuestWatch or not RemoveQuestWatch then return end
+  if not before or not canWatch() then return end
   MGADungeonQuestsCharacter.watchedBefore = nil
   local keep = {}
   for _, id in ipairs(before) do keep[id] = true end
-  for _, id in ipairs(watchedIds() or {}) do
+  for _, id in ipairs(watchedIds()) do
     if not keep[id] then setWatch(id, false) end
   end
   for _, id in ipairs(before) do setWatch(id, true) end

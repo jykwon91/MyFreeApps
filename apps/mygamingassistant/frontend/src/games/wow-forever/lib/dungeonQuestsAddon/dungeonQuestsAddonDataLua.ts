@@ -7,10 +7,12 @@ import { placeText } from "@/games/wow-forever/lib/dungeonQuestsAddon/placeText"
 import { objectiveText } from "@/games/wow-forever/lib/dungeonQuestsAddon/objectiveText";
 import { travelDataLua } from "@/games/wow-forever/lib/dungeonQuestsAddon/travelDataLua";
 import { placedGiversByName, turnInGiver } from "@/games/wow-forever/lib/dungeonQuestsAddon/turnInGiver";
+import { questsForFaction } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { questLines } from "@/games/wow-forever/lib/dungeons/questLines";
 import type { BossLootItem } from "@/games/wow-forever/types/dungeons/bossLootItem";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
 import type { DungeonBoss } from "@/games/wow-forever/types/dungeons/dungeonBoss";
+import type { ForeverDungeonQuest } from "@/games/wow-forever/types/dungeons/foreverDungeonQuest";
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
 import type { QuestLine } from "@/games/wow-forever/types/dungeons/questLine";
 import type { QuestPickup } from "@/games/wow-forever/types/dungeons/questPickup";
@@ -20,7 +22,7 @@ import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap"
 
 type AddonDungeon = Pick<
   Dungeon,
-  "slug" | "instanceId" | "name" | "aliases" | "levelMin" | "levelMax" | "quests" | "bosses" | "maxPlayers" | "newInForever" | "entrances"
+  "slug" | "instanceId" | "name" | "aliases" | "levelMin" | "levelMax" | "quests" | "bosses" | "maxPlayers" | "newInForever" | "entrances" | "foreverQuests"
 >;
 
 const DUNGEON_ART: Readonly<Record<string, { button: number; lore: number }>> = journalArt.dungeons;
@@ -80,6 +82,25 @@ function stepLua(s: QuestPickup, details: ReadonlyMap<number, QuestTurnIn>, give
   );
 }
 
+/**
+ * A quest of a dungeon Forever added, as its own one-step line done in the dungeon. Blizzard's API gives no
+ * level or giver, so the level is only there once the game has shown it to us; objectives and who takes it
+ * back come from the quest's detail when we have one.
+ */
+function foreverLineLua(
+  q: ForeverDungeonQuest,
+  details: ReadonlyMap<number, QuestTurnIn>,
+  givers: ReadonlyMap<string, QuestGiver | null>,
+): string[] {
+  const classes = q.classes.length > 0 ? `, classes = {${q.classes.map(luaString).join(", ")}}` : "";
+  const level = q.seen ? `, level = ${q.seen.level}, minLevel = ${q.seen.minLevel}` : "";
+  return [
+    `      {titles = {${luaString(q.title)}}${classes}, steps = {`,
+    `        {id = ${q.id}, title = ${luaString(q.title)}${level}, dungeon = true${turnInLua(details.get(q.id), givers)}},`,
+    "      }},",
+  ];
+}
+
 // A name the game won't give would hide the line from everyone with the profession: refuse it.
 function skillName(skillLine: number): string {
   if (guideProfession(skillLine) === null) throw new Error(`Data.lua: no profession name for SkillLine ${skillLine}`);
@@ -104,11 +125,17 @@ function factionLua(
   givers: ReadonlyMap<string, QuestGiver | null>,
 ): string[] {
   const lines = questLines(dungeon.quests, faction);
-  if (lines.length === 0) return [];
+  const forever = questsForFaction(dungeon.foreverQuests, faction).filter((q) => !q.repeatable);
+  if (lines.length === 0 && forever.length === 0) return [];
   // A dungeon quest's own page data (seen in game when it has been) beats the quest shard's.
   const all = new Map([...details, ...dungeon.quests.map((q) => [q.id, q] as const)]);
   const key = faction === FACTION.alliance ? "alliance" : "horde"; // what UnitFactionGroup gives, lowercased
-  return [`    ${key} = {`, ...lines.flatMap((line) => lineLua(line, all, givers)), "    },"];
+  return [
+    `    ${key} = {`,
+    ...lines.flatMap((line) => lineLua(line, all, givers)),
+    ...forever.flatMap((q) => foreverLineLua(q, details, givers)),
+    "    },",
+  ];
 }
 
 function lootLua(item: BossLootItem): string {

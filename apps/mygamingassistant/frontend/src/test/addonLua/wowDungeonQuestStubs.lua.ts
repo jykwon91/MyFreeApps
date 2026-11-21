@@ -276,6 +276,32 @@ C_QuestLog.GetQuestObjectives = function(id)
   end
   return {}
 end
+-- Forever's watch list by quest id, and Questie's tracker (questie = { [questId] = true } shown), which
+-- follows the C_QuestLog calls as Questie's hooks do. Call from a test's setup, before the addon loads.
+function useModernWatch()
+  C_QuestLog.GetNumQuestWatches = function() return #watched end
+  C_QuestLog.GetQuestIDForQuestWatchIndex = function(i) return watched[i] end
+  C_QuestLog.AddQuestWatch = function(id)
+    for _, w in ipairs(watched) do if w == id then return end end
+    watched[#watched + 1] = id
+    if questie then questie[id] = true end
+  end
+  C_QuestLog.RemoveQuestWatch = function(id)
+    for i, w in ipairs(watched) do if w == id then table.remove(watched, i) break end end
+    if questie then questie[id] = nil end
+  end
+end
+function useQuestie(shown)
+  questie = shown
+  QuestieLoader = { ImportModule = function(_, name)
+    if name == "QuestieTracker" then return { IsTrackedByQuestie = function(id) return questie[id] == true end } end
+  end }
+end
+function shownQuestie()
+  local ids = {}
+  for _, q in ipairs(questLog) do if questie[q.id] then ids[#ids + 1] = tostring(q.id) end end
+  out[#out + 1] = "questie: " .. table.concat(ids, ",")
+end
 RaidWarningFrame = {}
 ChatTypeInfo = { RAID_WARNING = {} }
 function RaidNotice_AddMessage(_, text) out[#out + 1] = "warning: " .. text end
