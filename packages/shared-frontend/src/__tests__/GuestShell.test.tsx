@@ -160,3 +160,16 @@ describe("GuestShell", () => {
     expect(screen.getAllByTestId("nav-section-divider")).toHaveLength(2);
   });
 });
+
+describe("GuestShell — skip link", () => {
+  it("renders a skip link to the one main landmark", () => {
+    renderWithRouter(
+      <GuestShell logo={<div>logo</div>} nav={SAMPLE_NAV}>
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.getByRole("link", { name: "Skip to main content" })).toHaveAttribute("href", "#main-content");
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+  });
+});

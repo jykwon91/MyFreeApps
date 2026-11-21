@@ -100,6 +100,8 @@ export { default as GuestShell } from "./components/layout/GuestShell";
 export type { GuestShellProps } from "./components/layout/GuestShell";
 export { default as AuthPageFooter } from "./components/layout/AuthPageFooter";
 export { default as StandaloneLayout } from "./components/layout/StandaloneLayout";
+export { default as SkipLink } from "./components/layout/SkipLink";
+export { MAIN_CONTENT_ID } from "./constants/main-content";
 export { default as StandaloneMain } from "./components/layout/StandaloneMain";
 export type { StandaloneMainProps } from "./types/standalone-main-props";
 export { default as CenteredCard } from "./components/layout/CenteredCard";
