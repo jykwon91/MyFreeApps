@@ -20,7 +20,19 @@
 Filled by the scheduled refresh (``app/services/wow/prices/``) or a click on
 "Refresh now". Cached for ``PRICE_CACHE_SECONDS`` and sent with an ETag that changes
 only when a new set lands, so a revisit is a 304.
+
+Performance notes
+-----------------
+* The 304 short-circuit reads only the ``wow_price_feed`` row (< 1 ms) and
+  returns before touching the ~6 850 ``wow_item_price`` rows.
+* After the first full 200, the serialized JSON is kept in
+  ``price_response_cache`` keyed by ETag so subsequent 200s skip the
+  item-row query AND the serialization step.
+* ``_etags_weakly_match`` implements RFC 7232 weak comparison so the round
+  trip stays a 304 when Caddy's ``encode`` module weakens the strong ETag to
+  ``W/"…"`` before forwarding it to the browser.
 """
+import json
 from typing import Final
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -46,6 +58,7 @@ from app.schemas.wow.price_list import WowPriceList
 from app.schemas.wow.price_refresh_response import WowPriceRefreshResponse
 from app.schemas.wow.price_refresh_state import WowPriceRefreshState
 from app.services.wow.prices import price_read_service, price_refresh_now_service
+from app.services.wow.prices import price_response_cache
 from app.services.wow.prices.price_refresh_unavailable_error import PriceRefreshUnavailableError
 
 router = APIRouter(tags=["wow"])
@@ -64,6 +77,23 @@ PRICE_REFRESH_UNAVAILABLE: Final = "price_refresh_unavailable"
 # Prices refresh every few hours; ten minutes of browser cache costs nothing.
 PRICE_CACHE_SECONDS: Final = 600
 _CACHE_CONTROL: Final = f"public, max-age={PRICE_CACHE_SECONDS}"
+_JSON_CONTENT_TYPE: Final = "application/json"
+
+
+def _etags_weakly_match(client_etag: str, server_etag: str) -> bool:
+    """RFC 7232 s3.2 weak comparison: strip the ``W/`` prefix before comparing.
+
+    Caddy's ``encode`` module weakens a strong ETag from ``"hash"`` to
+    ``W/"hash"`` when it compresses the response. The browser stores the
+    weakened form and sends it back as ``If-None-Match: W/"hash"``. Without
+    this function the backend would compare ``W/"hash"`` against ``"hash"``
+    and always miss, causing every conditional request to load the full
+    item-row set again.
+    """
+    def _core(tag: str) -> str:
+        return tag.removeprefix("W/")
+
+    return _core(client_etag) == _core(server_etag)
 
 
 @router.get("/wow/prices", response_model=WowPriceList)
@@ -73,12 +103,41 @@ async def list_prices(
     faction: PriceFaction = Query(DEFAULT_PRICE_FACTION),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    """One server's US auction-house prices for one faction. Public."""
-    prices = await price_read_service.served_prices(db, server, faction)
-    headers = {"Cache-Control": _CACHE_CONTROL, "ETag": prices.etag}
-    if request.headers.get("If-None-Match") == prices.etag:
+    """One server's US auction-house prices for one faction. Public.
+
+    Fast path (304): loads only the feed row to compute the ETag, then returns
+    304 without touching the item-price rows.
+
+    Fast path (200, cache hit): the feed-row ETag matches a serialized response
+    in the in-process cache; returns cached bytes without loading item rows or
+    re-serializing.
+
+    Slow path (200, cache miss): loads item rows and serializes the full body,
+    then stores the bytes in the cache for the next request.
+    """
+    # Step 1: ETag from feed row only — cheap, no item rows loaded yet.
+    etag = await price_read_service.quick_etag(db, server, faction)
+    headers = {"Cache-Control": _CACHE_CONTROL, "ETag": etag}
+
+    # Step 2: 304 short-circuit — saves the full item-row query on cache hits.
+    # Weak comparison (RFC 7232) so Caddy's encode-weakened ``W/"…"`` also matches.
+    if_none_match = request.headers.get("If-None-Match", "")
+    if if_none_match and _etags_weakly_match(if_none_match, etag):
         return Response(status_code=304, headers=headers)
-    return JSONResponse(content=prices.body.model_dump(mode="json"), headers=headers)
+
+    # Step 3: in-process body cache — avoids item rows + serialization on 200s.
+    cached_bytes = price_response_cache.get(etag)
+    if cached_bytes is not None:
+        return Response(content=cached_bytes, media_type=_JSON_CONTENT_TYPE, headers=headers)
+
+    # Step 4: full load — 6 850 item rows + serialization (happens once per new ETag).
+    prices = await price_read_service.served_prices(db, server, faction)
+    body_bytes = json.dumps(prices.body.model_dump(mode="json")).encode()
+    price_response_cache.put(prices.etag, body_bytes)
+    # Use the etag from served_prices (may differ from quick_etag on a mid-request
+    # refresh; the response is consistent with what was loaded).
+    headers["ETag"] = prices.etag
+    return Response(content=body_bytes, media_type=_JSON_CONTENT_TYPE, headers=headers)
 
 
 @router.get("/wow/prices/refresh", response_model=WowPriceRefreshState)

@@ -38,6 +38,13 @@
     request_body {
         max_size 30MB
     }
+    # Compress text responses (JSON, HTML, JS, CSS) with zstd or gzip. Caddy
+    # skips already-encoded responses and responses smaller than its minimum
+    # (512 B by default), so this is safe to apply globally. ETag note:
+    # encoding changes the byte representation, so Caddy weakens strong ETags
+    # from ``"hash"`` to ``W/"hash"`` on compressed responses per RFC 7232.
+    # The API's ``_etags_weakly_match`` helper handles this correctly.
+    encode zstd gzip
 {%- if has_minio_subdomain %}
     # Storage subdomain — fronts MinIO for browser GETs of presigned URLs.
     # The storage matcher comes first so the per-handler security header

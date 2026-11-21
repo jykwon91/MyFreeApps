@@ -18,6 +18,20 @@ def _etag(house_id: int, version: str) -> str:
     return '"' + hashlib.sha256(f"blizzard:{PRICE_REGION}:{house_id}:{version}".encode()).hexdigest()[:32] + '"'
 
 
+async def quick_etag(db: AsyncSession, server: PriceServer, faction: PriceFaction) -> str:
+    """The ETag for one house's current price set, without loading item rows.
+
+    Reads only the feed row (one SELECT), so it is cheap enough to call on
+    every request before deciding whether to skip the full item-row load.
+    """
+    house_id = house_id_for(server, faction)
+    game = await get_game_by_slug(db, WOW_FOREVER_GAME_SLUG)
+    feed = await price_feed_repo.get(db, game.id, PRICE_REGION, house_id) if game else None
+    if feed is None or feed.fetched_at is None:
+        return _etag(house_id, "none")
+    return _etag(house_id, f"{feed.fetched_at.isoformat()}:{client_item_names().version}")
+
+
 async def served_prices(db: AsyncSession, server: PriceServer, faction: PriceFaction) -> ServedPrices:
     """Every stored US price of the server's house for the faction; an empty list when there are none yet."""
     house_id = house_id_for(server, faction)

@@ -718,6 +718,15 @@ class TestEdgeHardeningDirectives:
             f"unboundedly into OOM."
         )
 
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_compresses_responses(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert "encode zstd gzip" in caddy, (
+            f"{app} docker Caddyfile is missing 'encode zstd gzip' — large JSON "
+            f"responses (e.g. AH prices at ~300 KB) are served uncompressed. "
+            f"Restore it in infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+
 
 def _caddy_block(caddyfile: str, opener: str) -> str:
     """Return the body of the brace-delimited block that starts at ``opener``
