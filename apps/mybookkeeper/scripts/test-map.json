@@ -685,6 +685,7 @@
         "test_channel_listing_repo.py",
         "test_channel_listing_routes.py",
         "test_channel_sync_service.py",
+        "test_url_redaction.py",
         "test_calendar_route.py",
         "test_ical_serializer.py",
         "test_ical_parser.py",
