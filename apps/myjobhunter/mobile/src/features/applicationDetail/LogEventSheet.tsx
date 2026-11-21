@@ -16,11 +16,12 @@ import InterviewDetailsFields from "./InterviewDetailsFields";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { useEventForm } from "./useEventForm";
 
-/** Any event the website can log, with interview details for an interview. Opens on now. */
+/** Any event the website can log, with interview details for an interview. Opens on now, sent as the moment of submitting if left as is. */
 export default function LogEventSheet({ applicationId, onClose }: LogEventSheetProps) {
   const { showToast } = useToast();
   const [logEvent, { isLoading }] = useLogApplicationEventMutation();
-  const form = useEventForm(emptyFormValues());
+  const [opened] = useState(emptyFormValues);
+  const form = useEventForm(opened);
   const [failure, setFailure] = useState<string | null>(null);
   const { values, change, errors } = form;
 
@@ -28,7 +29,7 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
     if (!form.validate()) return;
     setFailure(null);
     try {
-      await logEvent({ applicationId, body: logEventRequest(values) }).unwrap();
+      await logEvent({ applicationId, body: logEventRequest(values, opened.occurred_at) }).unwrap();
       onClose();
       showToast(MESSAGES.logged);
     } catch (error) {

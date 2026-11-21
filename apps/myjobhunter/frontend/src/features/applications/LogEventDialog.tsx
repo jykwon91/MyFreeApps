@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { FieldFeedback, fieldFeedbackAria, LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
@@ -28,6 +28,8 @@ export default function LogEventDialog({
 }: LogEventDialogProps) {
   const [logEvent, { isLoading }] = useLogApplicationEventMutation();
 
+  // The "now" the form opened on: left as is, it is sent as the moment of submitting.
+  const openedValues = useRef(emptyFormValues());
   const {
     register,
     handleSubmit,
@@ -35,7 +37,7 @@ export default function LogEventDialog({
     reset,
     watch,
   } = useForm<LogEventFormValues>({
-    defaultValues: emptyFormValues(),
+    defaultValues: openedValues.current,
   });
 
   const eventType = watch("event_type");
@@ -43,12 +45,13 @@ export default function LogEventDialog({
 
   useEffect(() => {
     if (!open) return;
-    reset(emptyFormValues());
+    openedValues.current = emptyFormValues();
+    reset(openedValues.current);
   }, [open, reset]);
 
   const onSubmit: SubmitHandler<LogEventFormValues> = async (values) => {
     try {
-      await logEvent({ applicationId, body: logEventRequest(values) }).unwrap();
+      await logEvent({ applicationId, body: logEventRequest(values, openedValues.current.occurred_at) }).unwrap();
       showSuccess("Event logged");
       onOpenChange(false);
     } catch (err) {

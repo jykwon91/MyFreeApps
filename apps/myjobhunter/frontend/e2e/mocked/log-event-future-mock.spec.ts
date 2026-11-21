@@ -2,6 +2,8 @@
  * No-backend E2E for logging an event: a "When" in the future is refused with
  * a field error and nothing is sent; a "When" of now goes through. The
  * interview's own time has its own field, so it stays free to be in the future.
+ * A "When" left at now goes as the moment of logging, to the millisecond, so it
+ * outranks a stage move made earlier in the same minute.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -60,4 +62,18 @@ test("a 'When' of now is logged", async ({ page }) => {
 
   await expect(page.getByText("Event logged", { exact: true })).toBeVisible();
   expect(posted).toHaveLength(1);
+});
+
+test("a 'When' left at now is sent as the moment of logging, not the start of the minute", async ({ page }) => {
+  const posted = await stubApplication(page);
+  await page.goto(`/applications/${APPLICATION.id}`);
+
+  await page.getByRole("button", { name: "Log event" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Log event" });
+  const clickedAt = await page.evaluate(() => Date.now());
+  await dialog.getByRole("button", { name: "Log event" }).click();
+
+  await expect(page.getByText("Event logged", { exact: true })).toBeVisible();
+  const [body] = posted as { occurred_at: string }[];
+  expect(new Date(body?.occurred_at ?? "").getTime()).toBeGreaterThanOrEqual(clickedAt);
 });

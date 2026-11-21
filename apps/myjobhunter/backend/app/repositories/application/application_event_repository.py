@@ -3,7 +3,7 @@
 Per the data model: events are append-only EXCEPT for the two
 user-input columns ``interview_details`` and ``note`` on interview-typed
 events (PR for interview-details edit, 2026-05-21). Status is still
-computed by lateral join on (application_id, occurred_at DESC) —
+computed by lateral join ordered by ``LATEST_EVENT_ORDER`` —
 NEVER stored as a column on applications.
 
 Tenant scoping is mandatory — every public function takes ``user_id`` and
@@ -22,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application_event import ApplicationEvent
+from app.repositories.application.latest_event_order import LATEST_EVENT_ORDER
 
 
 async def list_by_application(
@@ -29,7 +30,7 @@ async def list_by_application(
     user_id: uuid.UUID,
     application_id: uuid.UUID,
 ) -> list[ApplicationEvent]:
-    """Return events for an application, newest first.
+    """Return events for an application, newest first (``LATEST_EVENT_ORDER``).
 
     Filters by both ``user_id`` and ``application_id`` so a malicious
     caller passing another user's application_id sees an empty list (the
@@ -42,7 +43,7 @@ async def list_by_application(
             ApplicationEvent.user_id == user_id,
             ApplicationEvent.application_id == application_id,
         )
-        .order_by(ApplicationEvent.occurred_at.desc()),
+        .order_by(*LATEST_EVENT_ORDER),
     )
     return list(result.scalars().all())
 
@@ -106,7 +107,7 @@ async def latest_event_type_among(
     application_id: uuid.UUID,
     event_types: Iterable[str],
 ) -> str | None:
-    """The ``event_type`` of the newest event (by ``occurred_at``) whose type is in ``event_types``."""
+    """The ``event_type`` of the newest event (by ``LATEST_EVENT_ORDER``) whose type is in ``event_types``."""
     stmt = (
         select(ApplicationEvent.event_type)
         .where(
@@ -114,7 +115,7 @@ async def latest_event_type_among(
             ApplicationEvent.user_id == user_id,
             ApplicationEvent.event_type.in_(tuple(event_types)),
         )
-        .order_by(ApplicationEvent.occurred_at.desc())
+        .order_by(*LATEST_EVENT_ORDER)
         .limit(1)
     )
     result = await db.execute(stmt)
