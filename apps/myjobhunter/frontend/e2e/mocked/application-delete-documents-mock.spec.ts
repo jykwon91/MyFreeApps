@@ -36,7 +36,8 @@ test("after deleting an application, Documents keeps its letter but drops the de
   await page.getByRole("link", { name: "Application", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "Staff Engineer" })).toBeVisible();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  // The Documents section below has a per-row Delete button too, so scope to the page header.
+  await page.locator("header").getByRole("button", { name: "Delete", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 
