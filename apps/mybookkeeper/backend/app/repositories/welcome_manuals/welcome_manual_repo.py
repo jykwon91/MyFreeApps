@@ -25,18 +25,23 @@ async def get_by_id(
     organization_id: uuid.UUID,
     *,
     for_update: bool = False,
+    include_deleted: bool = False,
 ) -> WelcomeManual | None:
     """Return the manual iff it exists, is not soft-deleted, and belongs to the org.
 
     ``for_update=True`` locks the manual row until the transaction ends, so
     writers that must not interleave (section add, reorder, delete) run one at a
     time per manual. SQLite ignores FOR UPDATE; Postgres honours it.
+
+    ``include_deleted=True`` also returns a soft-deleted manual. Only for checks
+    that must see rows still stored under it (a commit-outcome check).
     """
     query = select(WelcomeManual).where(
         WelcomeManual.id == manual_id,
         WelcomeManual.organization_id == organization_id,
-        WelcomeManual.deleted_at.is_(None),
     )
+    if not include_deleted:
+        query = query.where(WelcomeManual.deleted_at.is_(None))
     if for_update:
         query = query.with_for_update()
     result = await db.execute(query)

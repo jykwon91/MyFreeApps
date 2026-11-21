@@ -31,20 +31,20 @@ def _make_response(storage_key: str = "org/uuid/photo.jpg") -> ListingPhotoRespo
 
 
 class TestAttachPresignedUrls:
-    def test_empty_list_returns_immediately(self) -> None:
-        result = attach_presigned_urls([])
+    async def test_empty_list_returns_immediately(self) -> None:
+        result = await attach_presigned_urls([])
         assert result == []
 
-    def test_propagates_storage_misconfig(self) -> None:
+    async def test_propagates_storage_misconfig(self) -> None:
         photos = [_make_response()]
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             side_effect=StorageNotConfiguredError("MINIO_ENDPOINT unset"),
         ):
             with pytest.raises(StorageNotConfiguredError):
-                attach_presigned_urls(photos)
+                await attach_presigned_urls(photos)
 
-    def test_signs_each_photo_when_storage_configured(self) -> None:
+    async def test_signs_each_photo_when_storage_configured(self) -> None:
         photos = [_make_response("a"), _make_response("b")]
         storage = MagicMock()
         storage.object_exists.return_value = True
@@ -55,13 +55,13 @@ class TestAttachPresignedUrls:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            result = attach_presigned_urls(photos)
+            result = await attach_presigned_urls(photos)
 
         assert result[0].presigned_url == "https://signed/a"
         assert result[1].presigned_url == "https://signed/b"
         assert storage.generate_presigned_url.call_count == 2
 
-    def test_per_row_signing_error_propagates(self) -> None:
+    async def test_per_row_signing_error_propagates(self) -> None:
         """A signing exception is never swallowed. The request returns 500
         with the real stack trace; silent ``presigned_url=None`` is gone."""
         photos = [_make_response("a"), _make_response("b")]
@@ -73,9 +73,9 @@ class TestAttachPresignedUrls:
             return_value=storage,
         ):
             with pytest.raises(RuntimeError, match="signing exploded"):
-                attach_presigned_urls(photos)
+                await attach_presigned_urls(photos)
 
-    def test_does_not_mutate_input(self) -> None:
+    async def test_does_not_mutate_input(self) -> None:
         photo = _make_response("k")
         original_id = photo.id
         storage = MagicMock()
@@ -85,7 +85,7 @@ class TestAttachPresignedUrls:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_urls([photo])
+            await attach_presigned_urls([photo])
         # Original object unchanged (model_copy returns a new instance).
         assert photo.id == original_id
         assert photo.presigned_url is None

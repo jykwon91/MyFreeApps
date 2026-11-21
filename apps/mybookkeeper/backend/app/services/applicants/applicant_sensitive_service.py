@@ -65,5 +65,5 @@ async def reveal(
         )
     # Outside the transaction: this makes a storage call per report.
     return details.model_copy(update={
-        "screening_reports": attach_presigned_urls(details.screening_reports),
+        "screening_reports": await attach_presigned_urls(details.screening_reports),
     })

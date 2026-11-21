@@ -31,7 +31,7 @@ from app.services.extraction.extractor_service import (
     extract_text_from_pdf,
     extract_text_from_spreadsheet,
 )
-from app.services.storage.stored_file import StoredFileMissingError, read_stored_file
+from app.services.storage.stored_file import StoredFileMissingError, load_stored_file
 
 CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
 
@@ -145,13 +145,8 @@ async def load_document(
         mime_type = doc.file_mime_type or ""
 
     if storage_key:
-        storage = get_storage()
-        if storage is None:
-            raise UnreadableDocumentError(
-                "This document is in object storage, which is not configured.",
-            )
         try:
-            content = read_stored_file(storage, storage_key)
+            content = await load_stored_file(get_storage(), storage_key)
         except StoredFileMissingError as exc:
             raise UnreadableDocumentError(MISSING_DOCUMENT_FILE_DETAIL) from exc
 

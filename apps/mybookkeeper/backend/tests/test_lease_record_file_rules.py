@@ -168,7 +168,7 @@ async def test_a_lease_locked_while_the_file_is_read_refuses_it_and_removes_the_
     with p[0], p[1], p[2], pytest.raises(LeaseAttachmentLockedError):
         await upload_attachment(**args)
 
-    storage.delete_file.assert_called_once()
+    storage.delete_files.assert_called_once()
     db.expire_all()
     assert len(await signed_lease_attachment_repo.list_by_lease(db, lease_id)) == 1
 

@@ -19,10 +19,10 @@ from app.services.storage.presigned_url_attacher import (
 )
 
 
-def attach_presigned_urls(
+async def attach_presigned_urls(
     reports: list[ScreeningReportResponse],
 ) -> list[ScreeningReportResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         reports,
         storage_key_attr="report_storage_key",
         sentry_event_name="screening_report_storage_object_missing",

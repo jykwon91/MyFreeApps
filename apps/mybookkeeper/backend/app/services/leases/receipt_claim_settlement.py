@@ -12,6 +12,8 @@ import datetime as _dt
 import logging
 import uuid
 
+from platform_shared.core import async_storage
+
 from app.core import storage as _storage_module
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories.leases import pending_rent_receipt_repo, signed_lease_attachment_repo
@@ -63,12 +65,12 @@ async def discard_attempt(
                     db, attachment.id, attachment.lease_id,
                 )
     if storage_key is not None:
-        delete_stored_pdf(storage_key)
+        await delete_stored_pdf(storage_key)
 
 
-def delete_stored_pdf(storage_key: str) -> None:
+async def delete_stored_pdf(storage_key: str) -> None:
     try:
-        _storage_module.get_storage().delete_file(storage_key)
+        await async_storage.delete_file(_storage_module.get_storage(), storage_key)
     except Exception:
         logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
 

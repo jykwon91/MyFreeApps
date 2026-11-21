@@ -2,8 +2,8 @@
 
 Shared by ``generate_lease`` and ``add_templates_and_generate``. Everything
 here happens BEFORE the database is touched: files are read, rendered and
-uploaded in worker threads (they block), and on any failure — including
-cancellation — every object uploaded so far is removed.
+rendering runs in a worker thread (it blocks), and on any failure —
+including cancellation — every object uploaded so far is removed.
 """
 from __future__ import annotations
 
@@ -18,12 +18,8 @@ from typing import Any
 from minio.error import S3Error
 from urllib3.exceptions import HTTPError
 
-from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.lease_template_constants import STORAGE_UNAVAILABLE_MESSAGE
 from app.core.storage import StorageClient
-from app.db.session import unit_of_work
-from app.repositories import lock_timeout_repo
-from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
 from app.schemas.leases.rendered_lease_file import RenderedLeaseFile
 from app.services.leases.exceptions.template_storage_unavailable_error import (
     TemplateStorageUnavailableError,
@@ -35,9 +31,9 @@ from app.services.leases.renderer import (
     render_md,
     render_pdf_from_text,
 )
-from app.services.storage.committed_write_guard import RowsPresent
-from app.services.storage.stored_file import read_stored_file
-from app.services.storage.stored_file_cleanup import discard_after_in_flight
+from app.services.storage.stored_file import load_stored_file
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.object_upload import upload_objects
 
 logger = logging.getLogger(__name__)
 
@@ -77,24 +73,15 @@ def _storage_outage_as_unavailable() -> Iterator[None]:
         raise TemplateStorageUnavailableError(STORAGE_UNAVAILABLE_MESSAGE) from exc
 
 
-def _render_and_upload_one(
-    storage: StorageClient, file: Any, key: str, substitutions: dict[str, str],
-) -> RenderedLeaseFile:
-    """Blocking: read the template object, render it and upload the result."""
-    with _storage_outage_as_unavailable():
-        raw = read_stored_file(storage, file.storage_key)
+def _render_one(file: Any, raw: bytes, substitutions: dict[str, str]) -> tuple[bytes, str, str]:
+    """Blocking: render one template file. Returns its bytes, filename and MIME type."""
     if file.content_type == DOCX_MIME:
         rendered, _ = render_docx_bytes_to_pdf(raw, substitutions)
-        filename, content_type = swap_extension(file.filename, ".pdf"), "application/pdf"
-    elif file.content_type in ("text/markdown", "text/plain"):
+        return rendered, swap_extension(file.filename, ".pdf"), "application/pdf"
+    if file.content_type in ("text/markdown", "text/plain"):
         text = render_md(raw.decode("utf-8", errors="replace"), substitutions)
-        rendered = render_md_text_to_pdf_or_keep(text)
-        filename, content_type = swap_extension(file.filename, ".pdf"), "application/pdf"
-    else:
-        rendered, filename, content_type = raw, file.filename, file.content_type
-    with _storage_outage_as_unavailable():
-        storage.upload_file(key, rendered, content_type)
-    return RenderedLeaseFile(key, filename, content_type, len(rendered))
+        return render_md_text_to_pdf_or_keep(text), swap_extension(file.filename, ".pdf"), "application/pdf"
+    return raw, file.filename, file.content_type
 
 
 async def render_and_upload(
@@ -103,55 +90,30 @@ async def render_and_upload(
     files: list[Any],
     substitutions: dict[str, str],
 ) -> list[RenderedLeaseFile]:
-    """Render and upload every file, all-or-nothing.
+    """Render every file, then upload them all-or-nothing.
 
-    Each key is recorded before its thread starts. On failure or cancellation the
-    objects are removed once any thread still running has finished, and the error
-    is re-raised (``StoredFileMissingError`` if a template object has vanished; a
-    storage outage becomes ``TemplateStorageUnavailableError``).
+    Rendering runs in a worker thread (it is CPU-bound) and stores nothing, so
+    a failure there needs no cleanup. The uploads go through ``upload_objects``,
+    which removes every object attempted if any one fails or the request is
+    cancelled. Errors are re-raised (``StoredFileMissingError`` if a template
+    object has vanished; a storage outage becomes
+    ``TemplateStorageUnavailableError``).
     """
     rendered: list[RenderedLeaseFile] = []
-    keys: list[str] = []
-    in_flight: asyncio.Future[Any] | None = None
+    objects: list[NewStoredObject] = []
     try:
         for file in files:
-            key = f"signed-leases/{lease_id}/{uuid.uuid4()}"
-            keys.append(key)
-            in_flight = asyncio.ensure_future(
-                asyncio.to_thread(_render_and_upload_one, storage, file, key, substitutions),
+            with _storage_outage_as_unavailable():
+                raw = await load_stored_file(storage, file.storage_key)
+            content, filename, content_type = await asyncio.to_thread(
+                _render_one, file, raw, substitutions,
             )
-            rendered.append(await asyncio.shield(in_flight))
-            in_flight = None
-    except BaseException as exc:
-        if isinstance(exc, Exception):
-            logger.error("Failed to render/upload a file for lease %s", lease_id, exc_info=True)
-        await asyncio.shield(discard_after_in_flight(keys, in_flight))
+            key = f"signed-leases/{lease_id}/{uuid.uuid4()}"
+            objects.append(NewStoredObject(key, content, content_type))
+            rendered.append(RenderedLeaseFile(key, filename, content_type, len(content)))
+        with _storage_outage_as_unavailable():
+            await upload_objects(storage, objects)
+    except Exception:
+        logger.error("Failed to render/upload a file for lease %s", lease_id, exc_info=True)
         raise
     return rendered
-
-
-def attachments_present_check(
-    lease_id: uuid.UUID, user_id: uuid.UUID, organization_id: uuid.UUID, keys: list[str],
-) -> RowsPresent:
-    """A check that some of ``keys`` are recorded on the lease.
-
-    Takes the lease row lock first (bounded by a lock timeout), which waits for
-    the original transaction to finish; a timeout or any error leaves the
-    outcome unknown.
-    """
-
-    async def rows_present() -> bool:
-        async with unit_of_work() as db:
-            await lock_timeout_repo.set_local_lock_timeout(db, OUTCOME_CHECK_LOCK_TIMEOUT_MS)
-            await signed_lease_repo.get(
-                db,
-                lease_id=lease_id,
-                user_id=user_id,
-                organization_id=organization_id,
-                include_deleted=True,
-                for_update=True,
-            )
-            rows = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
-        return bool({r.storage_key for r in rows} & set(keys))
-
-    return rows_present

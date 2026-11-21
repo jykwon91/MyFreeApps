@@ -3,6 +3,8 @@ import email as email_lib
 import uuid
 from urllib.parse import quote
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.db.session import AsyncSessionLocal
@@ -23,7 +25,7 @@ from app.services.documents.document_mime_type import (
 )
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import fetch_email_by_id, get_gmail_service
-from app.services.storage.stored_file import read_stored_file
+from app.services.storage.stored_file import load_stored_file
 
 _RENDERABLE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 
@@ -132,47 +134,51 @@ async def get_document_download(
         doc = await document_repo.get_by_id_with_content(db, document_id, ctx.organization_id)
         if not doc:
             return None
+        if not doc.file_storage_key:
+            return await _download_from_row_or_email(db, ctx, doc)
+        storage_key, mime_type, file_name = doc.file_storage_key, doc.file_mime_type, doc.file_name
 
-        if doc.file_storage_key:
-            storage = get_storage()
-            if storage is None:
-                raise ValueError("File stored in object storage but MinIO is not configured")
-            file_bytes = read_stored_file(storage, doc.file_storage_key)
-            media_type = servable_document_mime_type(doc.file_mime_type)
-            return _download_result(file_bytes, media_type, doc.file_name or "file")
+    # Read with the session closed, so no pooled connection waits on storage.
+    file_bytes = await load_stored_file(get_storage(), storage_key)
+    return _download_result(file_bytes, servable_document_mime_type(mime_type), file_name or "file")
 
-        if doc.file_content:
-            media_type = servable_document_mime_type(doc.file_mime_type)
-            return _download_result(doc.file_content, media_type, doc.file_name or "file")
 
-        if not doc.email_message_id:
-            raise ValueError("No source file available for this document")
+async def _download_from_row_or_email(
+    db: AsyncSession, ctx: RequestContext, doc: Document,
+) -> DownloadResult:
+    """A document kept in its row, or one still in the user's Gmail."""
+    if doc.file_content:
+        media_type = servable_document_mime_type(doc.file_mime_type)
+        return _download_result(doc.file_content, media_type, doc.file_name or "file")
 
-        integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
-        if not integration:
-            raise ValueError("Gmail integration not connected")
+    if not doc.email_message_id:
+        raise ValueError("No source file available for this document")
 
-        service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
-        prior_token = creds.token
-        email_data = await asyncio.to_thread(fetch_email_by_id, service, doc.email_message_id)
-        if not email_data:
-            raise ValueError("Email no longer available in Gmail")
-        await persist_refreshed_token(integration, creds, prior_token)
+    integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
+    if not integration:
+        raise ValueError("Gmail integration not connected")
 
-        attachments = email_data.get("attachments", [])
-        if attachments:
-            att = (
-                next((a for a in attachments if a["filename"] == doc.file_name), None)
-                or next((a for a in attachments if a["content_type"] in _RENDERABLE_MIME_TYPES), None)
-                or attachments[0]
-            )
-            if att["filename"].lower().endswith(".eml"):
-                inner = _extract_renderable_from_eml(att["data"])
-                if inner:
-                    att = inner
-            # The attachment's header is the sender's claim; serve what the bytes are.
-            media_type = stored_document_mime_type(att["data"], EMAIL_FILE_TYPE)
-            return _download_result(att["data"], media_type, att["filename"])
+    service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+    prior_token = creds.token
+    email_data = await asyncio.to_thread(fetch_email_by_id, service, doc.email_message_id)
+    if not email_data:
+        raise ValueError("Email no longer available in Gmail")
+    await persist_refreshed_token(integration, creds, prior_token)
 
-        body = email_data.get("body", "")
-        return DownloadResult(content=body.encode(), media_type="text/plain", disposition="inline")
+    attachments = email_data.get("attachments", [])
+    if attachments:
+        att = (
+            next((a for a in attachments if a["filename"] == doc.file_name), None)
+            or next((a for a in attachments if a["content_type"] in _RENDERABLE_MIME_TYPES), None)
+            or attachments[0]
+        )
+        if att["filename"].lower().endswith(".eml"):
+            inner = _extract_renderable_from_eml(att["data"])
+            if inner:
+                att = inner
+        # The attachment's header is the sender's claim; serve what the bytes are.
+        media_type = stored_document_mime_type(att["data"], EMAIL_FILE_TYPE)
+        return _download_result(att["data"], media_type, att["filename"])
+
+    body = email_data.get("body", "")
+    return DownloadResult(content=body.encode(), media_type="text/plain", disposition="inline")

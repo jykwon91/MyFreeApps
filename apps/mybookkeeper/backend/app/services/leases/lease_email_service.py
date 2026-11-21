@@ -34,6 +34,8 @@ import uuid
 from collections.abc import Callable
 from typing import NamedTuple
 
+from platform_shared.core import async_storage
+
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
@@ -342,7 +344,7 @@ async def _send_to_tenant(
     email_attachments: list[EmailAttachment] = []
     for a in eligible:
         try:
-            content = storage.download_file(a.storage_key)
+            content = await async_storage.download_file(storage, a.storage_key)
         except Exception:  # noqa: BLE001 — defensive; surface as a skip
             logger.warning(
                 "lease_email.fetch_failed lease_id=%s storage_key=%s",

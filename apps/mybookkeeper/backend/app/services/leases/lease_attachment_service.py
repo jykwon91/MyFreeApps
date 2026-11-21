@@ -7,10 +7,14 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
 from app.core.config import settings as _settings
 from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
@@ -34,13 +38,13 @@ from app.services.leases._lease_helpers import (
     AttachmentTypeRejectedError,
     InvalidAttachmentKindError,
     SignedLeaseNotFoundError,
-    StorageNotConfiguredError,
     _attachment_response,
     _attachment_responses,
 )
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
 )
+from app.services.leases.lease_attachments_present import attachments_present_check
 from app.services.leases.lease_documents_lock import (
     ensure_attachment_change_allowed,
     ensure_original_upload_allowed,
@@ -52,8 +56,6 @@ from app.services.storage.attachment_content import (
     clean_attachment,
 )
 
-logger = logging.getLogger(__name__)
-
 
 async def upload_attachment(
     *,
@@ -64,10 +66,6 @@ async def upload_attachment(
     filename: str,
     kind: str,
 ) -> SignedLeaseAttachmentResponse:
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-
     if kind not in LEASE_ATTACHMENT_KINDS:
         raise AttachmentTypeRejectedError(f"Invalid kind: {kind}")
 
@@ -95,11 +93,15 @@ async def upload_attachment(
     except UnreadableImage as exc:
         raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
+    storage = get_storage()
     attachment_id = uuid.uuid4()
     storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
+    await upload_objects(storage, [NewStoredObject(storage_key, cleaned.content, cleaned.content_type)])
 
-    try:
+    async with CommittedWriteGuard(
+        storage, [storage_key],
+        attachments_present_check(lease_id, user_id, organization_id, [storage_key]),
+    ) as guard:
         async with unit_of_work() as db:
             locked_lease = await signed_lease_repo.get(
                 db,
@@ -123,14 +125,9 @@ async def upload_attachment(
                 uploaded_at=_dt.datetime.now(_dt.timezone.utc),
             )
             response = await _response_for(db, locked_lease, row)
-    except Exception:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to clean up orphan lease attachment %s", storage_key)
-        raise
+            guard.rows_written()
 
-    return attach_presigned_urls_to_attachments([response])[0]
+    return (await attach_presigned_urls_to_attachments([response]))[0]
 
 
 async def list_attachments(
@@ -149,7 +146,7 @@ async def list_attachments(
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
         rows = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
-    return _attachment_responses(rows, lease)
+    return await _attachment_responses(rows, lease)
 
 
 async def update_attachment_signing_state(
@@ -195,7 +192,7 @@ async def update_attachment_signing_state(
 
         response = await _response_for(db, lease, row)
 
-    return attach_presigned_urls_to_attachments([response])[0]
+    return (await attach_presigned_urls_to_attachments([response]))[0]
 
 
 async def _refuse_if_backing_extension(
@@ -281,7 +278,7 @@ async def update_attachment_kind(
 
         response = await _response_for(db, lease, row)
 
-    return attach_presigned_urls_to_attachments([response])[0]
+    return (await attach_presigned_urls_to_attachments([response]))[0]
 
 
 async def delete_attachment(
@@ -310,12 +307,4 @@ async def delete_attachment(
             raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
         storage_key = deleted.storage_key
 
-    storage = get_storage()
-    if storage is not None:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete lease attachment object %s",
-                storage_key, exc_info=True,
-            )
+    await delete_stored_files(get_storage(), [storage_key])

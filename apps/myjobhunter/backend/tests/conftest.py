@@ -185,6 +185,7 @@ UNIT_OF_WORK_SERVICE_MODULES: tuple[str, ...] = (
     "app.services.documents.document_service",
     "app.services.job_analysis.job_analysis_promote_service",
     "app.services.job_analysis.job_analysis_service",
+    "app.services.jobs.resume_upload_service",
     "app.services.profile.profile_service",
 )
 

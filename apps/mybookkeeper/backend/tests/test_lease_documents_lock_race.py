@@ -79,7 +79,7 @@ async def test_generate_refuses_when_the_lease_is_locked_mid_render(
 
     with patch(f"{PDF}.render_and_upload", _LockDuringRender(real_uow, user_id, org_id, lease_id, fields)):
         p = patches(storage)
-        with p[0], p[1], p[2], p[3], pytest.raises(LeaseDocumentsLockedError):
+        with p[0], p[1], p[2], pytest.raises(LeaseDocumentsLockedError):
             await generate_lease(
                 user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
             )

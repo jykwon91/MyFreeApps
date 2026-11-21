@@ -154,7 +154,7 @@ async def create_lease(
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
         applicant_legal_name = await _applicant_legal_name(db, lease)
-    return _to_detail(
+    return await _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
         applicant_legal_name,
     )
@@ -260,7 +260,7 @@ async def get_lease(
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
         applicant_legal_name = await _applicant_legal_name(db, lease)
-    return _to_detail(
+    return await _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
         applicant_legal_name,
     )
@@ -341,7 +341,7 @@ async def update_lease(
         latest_extension = await _resolve_latest_extension(db, lease_id=lease_id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease_id)
         applicant_legal_name = await _applicant_legal_name(db, lease)
-    return _to_detail(
+    return await _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
         applicant_legal_name,
     )

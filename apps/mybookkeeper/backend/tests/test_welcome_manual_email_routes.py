@@ -8,6 +8,7 @@ the right status, the recipient is recorded, and the host's email is passed as
 """
 from __future__ import annotations
 
+import threading
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
@@ -245,6 +246,34 @@ class TestSendOutcomes:
         assert rows[0].status == "sent"
         assert rows[0].recipient_email == "guest@example.com"
         assert rows[0].recipient_name == "Jane"
+
+    @pytest.mark.asyncio
+    async def test_the_pdf_is_built_off_the_event_loop_thread(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        manual = await _seed_manual(db, org=test_org, user=test_user)
+        _wire_db(monkeypatch, db)
+        monkeypatch.setattr(welcome_manual_email_service.email_service, "is_configured", lambda: True)
+        monkeypatch.setattr(
+            welcome_manual_email_service.email_service, "send_email", AsyncMock(return_value=True),
+        )
+        loop_thread = threading.get_ident()
+        built_on: list[int] = []
+        real_generate = welcome_manual_email_service.generate_welcome_manual_pdf
+
+        def _generate(data: object) -> bytes:
+            built_on.append(threading.get_ident())
+            return real_generate(data)
+
+        monkeypatch.setattr(welcome_manual_email_service, "generate_welcome_manual_pdf", _generate)
+
+        await welcome_manual_email_service.send_manual_to_guest(
+            user_id=test_user.id, organization_id=test_org.id, manual_id=manual.id,
+            recipient_email="guest@example.com", recipient_name=None,
+        )
+
+        assert len(built_on) == 1 and built_on[0] != loop_thread
 
     @pytest.mark.asyncio
     async def test_smtp_not_configured_records_skipped(

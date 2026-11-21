@@ -83,7 +83,7 @@ async def test_generate_racing_an_add_loses_nothing_and_asks_to_retry(
 
     with patch(f"{PDF}.render_and_upload", _Interference(add_extra_meanwhile)):
         p = patches(storage)
-        with p[0], p[1], p[2], p[3], pytest.raises(LeaseChangedDuringRenderError):
+        with p[0], p[1], p[2], pytest.raises(LeaseChangedDuringRenderError):
             await generate_lease(
                 user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
             )
@@ -213,7 +213,7 @@ async def test_render_failure_with_an_os_error_is_not_reported_as_a_storage_outa
     storage = storage_double()
     p = patches(storage)
 
-    with p[0], p[1], p[3], patch(
+    with p[0], p[2], patch(
         f"{RENDER}.render_md", side_effect=FileNotFoundError("soffice wrote no PDF"),
     ):
         with pytest.raises(FileNotFoundError):

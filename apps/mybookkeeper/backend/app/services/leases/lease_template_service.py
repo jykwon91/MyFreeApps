@@ -148,12 +148,12 @@ def _build_summary_from_orm(template, *, file_count: int, placeholder_count: int
     )
 
 
-def _build_detail_from_orm(template, files, placeholders) -> LeaseTemplateResponse:
+async def _build_detail_from_orm(template, files, placeholders) -> LeaseTemplateResponse:
     file_responses = [LeaseTemplateFileResponse.model_validate(f) for f in files]
     placeholder_responses = [
         LeaseTemplatePlaceholderResponse.model_validate(p) for p in placeholders
     ]
-    file_responses = attach_presigned_urls_to_files(file_responses)
+    file_responses = await attach_presigned_urls_to_files(file_responses)
     return LeaseTemplateResponse(
         id=template.id,
         user_id=template.user_id,
@@ -239,7 +239,7 @@ async def get_template(
         placeholders = await lease_template_placeholder_repo.list_for_template(
             db, template_id=template.id,
         )
-    return _build_detail_from_orm(template, files, placeholders)
+    return await _build_detail_from_orm(template, files, placeholders)
 
 
 # ---------------------------------------------------------------------------

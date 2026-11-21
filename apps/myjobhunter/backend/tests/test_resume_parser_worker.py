@@ -19,6 +19,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from platform_shared.extraction.files import LEGACY_DOC_MESSAGE
+
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
@@ -31,7 +33,7 @@ from app.services.jobs.resume_text_extractor import (
 # ---------------------------------------------------------------------------
 
 
-def test_extract_text_pdf_happy_path():
+async def test_extract_text_pdf_happy_path():
     """PDF with real text content returns (text, char_count)."""
     # Minimal valid PDF that pypdf can parse — just use a simple PDF structure
     # with embedded text. For unit tests we patch at the caller level.
@@ -46,24 +48,24 @@ def test_extract_text_pdf_happy_path():
 
     # Blank page has no text — confirms the extractor raises on empty PDF.
     with pytest.raises(ResumeTextExtractionFailed, match="image-only or scanned"):
-        extract_text(pdf_bytes, "application/pdf")
+        await extract_text(pdf_bytes, "application/pdf")
 
 
-def test_extract_text_txt_happy_path():
+async def test_extract_text_txt_happy_path():
     """Plain text file returns the text and its length."""
     content = b"Jane Doe\nSoftware Engineer\n5 years Python\n"
-    text, char_count = extract_text(content, "text/plain")
+    text, char_count = await extract_text(content, "text/plain")
     assert "Jane Doe" in text
     assert char_count == len(text)
 
 
-def test_extract_text_txt_empty_raises():
+async def test_extract_text_txt_empty_raises():
     """Empty plain text file raises ResumeTextExtractionFailed."""
     with pytest.raises(ResumeTextExtractionFailed, match="empty"):
-        extract_text(b"   \n  \t  ", "text/plain")
+        await extract_text(b"   \n  \t  ", "text/plain")
 
 
-def test_extract_text_docx_minimal():
+async def test_extract_text_docx_minimal():
     """DOCX bytes with no readable text raise ResumeTextExtractionFailed."""
     # Minimal DOCX magic bytes — mammoth will parse it but find no text.
     import zipfile
@@ -86,7 +88,17 @@ def test_extract_text_docx_minimal():
 
     docx_bytes = buf.getvalue()
     with pytest.raises(ResumeTextExtractionFailed):
-        extract_text(docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        await extract_text(docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+
+@pytest.mark.asyncio
+async def test_extract_text_legacy_doc_says_to_save_as_docx():
+    ole2_doc = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 512
+
+    with pytest.raises(ResumeTextExtractionFailed) as exc_info:
+        await extract_text(ole2_doc, "application/msword")
+
+    assert str(exc_info.value) == LEGACY_DOC_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +339,7 @@ async def test_process_one_happy_path(user_factory, as_user):
 
     fake_storage = _make_fake_storage(pdf_bytes)
     fake_claude = AsyncMock(return_value=_MINIMAL_CLAUDE_RESPONSE)
-    fake_extractor = MagicMock(return_value=(resume_text, len(resume_text)))
+    fake_extractor = AsyncMock(return_value=(resume_text, len(resume_text)))
 
     async with (await as_user(user)) as authed:
         # Upload a resume to get a queued job row.
@@ -341,7 +353,7 @@ async def test_process_one_happy_path(user_factory, as_user):
 
     # Run the worker against the queued job.
     with (
-        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", fake_extractor),
         patch("app.workers.resume_parser_worker.extract_resume", fake_claude),
     ):
@@ -375,7 +387,7 @@ async def test_process_one_text_extraction_failure(user_factory, as_user):
     pdf_bytes = b"%PDF-1.4 placeholder"
     fake_storage = _make_fake_storage(pdf_bytes)
     # Simulate the text extractor raising ResumeTextExtractionFailed (image-only)
-    failing_extractor = MagicMock(
+    failing_extractor = AsyncMock(
         side_effect=ResumeTextExtractionFailed("no extractable text — the PDF may be image-only or scanned")
     )
 
@@ -389,7 +401,7 @@ async def test_process_one_text_extraction_failure(user_factory, as_user):
     job_id = resp.json()["id"]
 
     with (
-        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", failing_extractor),
     ):
         found = await process_one()
@@ -416,7 +428,7 @@ async def test_process_one_claude_failure(user_factory, as_user):
     resume_text = "Jane Doe Engineer\n"
 
     fake_storage = _make_fake_storage(pdf_bytes)
-    fake_extractor = MagicMock(return_value=(resume_text, len(resume_text)))
+    fake_extractor = AsyncMock(return_value=(resume_text, len(resume_text)))
     failing_claude = AsyncMock(side_effect=anthropic.APIConnectionError(request=MagicMock()))
 
     with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
@@ -429,7 +441,7 @@ async def test_process_one_claude_failure(user_factory, as_user):
     job_id = resp.json()["id"]
 
     with (
-        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", fake_extractor),
         patch("app.workers.resume_parser_worker.extract_resume", failing_claude),
     ):
@@ -455,7 +467,7 @@ async def test_process_one_idempotency(user_factory, as_user):
     resume_text = "Jane Doe\n"
 
     fake_storage = _make_fake_storage(pdf_bytes)
-    fake_extractor = MagicMock(return_value=(resume_text, len(resume_text)))
+    fake_extractor = AsyncMock(return_value=(resume_text, len(resume_text)))
     fake_claude = AsyncMock(return_value=_MINIMAL_CLAUDE_RESPONSE)
 
     with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
@@ -467,7 +479,7 @@ async def test_process_one_idempotency(user_factory, as_user):
     assert resp.status_code == 201
 
     with (
-        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", fake_extractor),
         patch("app.workers.resume_parser_worker.extract_resume", fake_claude),
     ):
@@ -500,10 +512,10 @@ async def _upload_and_process(as_user: Any, user: dict, claude_response: dict) -
     assert resp.status_code == 201
 
     with (
-        patch("app.core.storage.get_storage", return_value=fake_storage),
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch(
             "app.workers.resume_parser_worker.extract_text",
-            MagicMock(return_value=(resume_text, len(resume_text))),
+            AsyncMock(return_value=(resume_text, len(resume_text))),
         ),
         patch(
             "app.workers.resume_parser_worker.extract_resume",

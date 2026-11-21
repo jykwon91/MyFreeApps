@@ -24,9 +24,9 @@ from app.services.leases._lease_helpers import (
     SignedLeaseNotFoundError,
     _load_resolution_context,
 )
+from app.services.leases.lease_attachments_present import attachments_present_check
 from app.services.leases.lease_lifecycle_service import get_lease
 from app.services.leases.lease_render_service import (
-    attachments_present_check,
     build_substitutions,
     render_and_upload,
     render_md_text_to_pdf_or_keep,  # noqa: F401 — re-exported via signed_lease_service
@@ -39,7 +39,7 @@ from app.services.leases.lease_template_snapshot import (
 from app.services.leases.lease_addendum_values import merge_addendum_values
 from app.services.leases.lease_documents_lock import ensure_documents_rerenderable, lease_documents_locked
 from app.services.leases.lease_write_precheck import lock_lease_and_verify
-from app.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
 
 # Exceptions specific to PDF generation
 
@@ -149,7 +149,7 @@ async def generate_lease(
     keys = [r.storage_key for r in rendered]
     now = _dt.datetime.now(_dt.timezone.utc)
     check = attachments_present_check(lease_id, user_id, organization_id, keys)
-    async with CommittedWriteGuard(keys, check) as guard:
+    async with CommittedWriteGuard(storage, keys, check) as guard:
         async with unit_of_work() as db:
             await lock_lease_and_verify(
                 db,
@@ -339,7 +339,7 @@ async def add_templates_and_generate(
     keys = [r.storage_key for r in rendered]
     now = _dt.datetime.now(_dt.timezone.utc)
     check = attachments_present_check(lease_id, user_id, organization_id, keys)
-    async with CommittedWriteGuard(keys, check) as guard:
+    async with CommittedWriteGuard(storage, keys, check) as guard:
         async with unit_of_work() as db:
             # Lock order is always lease, then template. Nothing locks a template
             # and then a lease.

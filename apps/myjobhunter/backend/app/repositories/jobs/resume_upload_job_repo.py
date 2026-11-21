@@ -28,7 +28,7 @@ async def create(
     file_size_bytes: int,
     status: str = "queued",
 ) -> ResumeUploadJob:
-    """Insert a new resume upload job and return the persisted row."""
+    """Insert a new resume upload job; the caller's transaction commits it."""
     job = ResumeUploadJob(
         user_id=user_id,
         profile_id=profile_id,
@@ -40,9 +40,19 @@ async def create(
     )
     db.add(job)
     await db.flush()
-    await db.commit()
     await db.refresh(job)
     return job
+
+
+async def exists_for_file_path(db: AsyncSession, user_id: uuid.UUID, file_path: str) -> bool:
+    """Whether the user has a job for the stored object at ``file_path``."""
+    result = await db.execute(
+        select(ResumeUploadJob.id).where(
+            ResumeUploadJob.user_id == user_id,
+            ResumeUploadJob.file_path == file_path,
+        )
+    )
+    return result.first() is not None
 
 
 async def get_by_id_for_user(

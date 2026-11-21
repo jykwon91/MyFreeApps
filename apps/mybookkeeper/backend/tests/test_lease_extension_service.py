@@ -269,9 +269,8 @@ async def test_storage_failure_cleans_up_no_partial_version(
         async def create(self, *args, **kwargs):  # noqa: ANN001
             raise RuntimeError("boom — simulated DB failure")
 
-    storage = AsyncMock()
-    storage.upload_file = lambda *a, **kw: None
-    storage.delete_file = lambda key: deleted_keys.append(key)
+    storage = MagicMock()
+    storage.delete_files.side_effect = lambda keys: deleted_keys.extend(keys) or []
 
     fake_uow = _fake_uow_for(db)
     with patch(
@@ -279,7 +278,7 @@ async def test_storage_failure_cleans_up_no_partial_version(
     ), patch(
         "app.services.leases.lease_extension_service.get_storage", lambda: storage,
     ), patch(
-        "app.services.leases.lease_extension_service.signed_lease_attachment_repo",
+        "app.services.leases.lease_extension_record.signed_lease_attachment_repo",
         _FailingAttachmentRepo(),
     ), pytest.raises(RuntimeError, match="boom"):
         await extend_lease(
@@ -563,7 +562,38 @@ async def test_extend_locks_the_lease_while_checking_the_end_date(db: AsyncSessi
             new_ends_on=_dt.date(2027, 6, 30), notes=None,
         )
 
-    assert spy.call_args_list[0].kwargs["for_update"] is True
+    # Read without the lock while the addendum is built and stored; the write locks.
+    assert [c.kwargs.get("for_update", False) for c in spy.call_args_list][:2] == [False, True]
+
+
+async def test_a_term_changed_while_the_addendum_was_stored_is_refused_and_its_file_removed(
+    db: AsyncSession,
+) -> None:
+    """A second request for the same extension landed first: this one's addendum
+    no longer describes the lease, so nothing is written and its file goes."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    storage = MagicMock()
+    storage.delete_files.return_value = []
+
+    def other_request_extends_first(key: str, _content: bytes, _content_type: str) -> str:
+        lease.ends_on = _dt.date(2027, 6, 30)
+        return key
+
+    storage.upload_file.side_effect = other_request_extends_first
+
+    with _patch_service(db, storage_mock=storage), pytest.raises(NewEndDateNotAfterCurrentError):
+        await extend_lease(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 6, 30), notes=None,
+        )
+
+    [key] = [c.args[0] for c in storage.upload_file.call_args_list]
+    storage.delete_files.assert_called_once_with([key])
+    versions = (
+        await db.execute(select(LeaseTermVersion).where(LeaseTermVersion.lease_id == lease.id))
+    ).scalars().all()
+    assert versions == []
 
 
 ENDED_AT = _dt.datetime(2026, 10, 1, 12, tzinfo=_dt.timezone.utc)

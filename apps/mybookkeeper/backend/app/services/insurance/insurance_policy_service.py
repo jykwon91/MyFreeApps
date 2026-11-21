@@ -9,10 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import logging
 import uuid
 from decimal import Decimal
 from typing import Any
+
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
 from app.core.config import settings as _settings
 from app.core.insurance_enums import INSURANCE_ATTACHMENT_KINDS
@@ -35,14 +39,13 @@ from app.schemas.insurance.insurance_policy_validation import validate_policy_fi
 from app.services.documents.document_ownership import owns_document
 from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
+from app.services.insurance.insurance_attachment_present import attachment_present_check
 from app.services.properties.property_ownership import owns_property
 from app.services.storage.attachment_content import (
     UnreadableImage,
     UnsupportedAttachmentType,
     clean_attachment,
 )
-
-logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -88,10 +91,10 @@ ALLOWED_ATTACHMENT_MIME_TYPES: frozenset[str] = frozenset({
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _attachment_responses(
+async def _attachment_responses(
     rows: list,
 ) -> list[InsurancePolicyAttachmentResponse]:
-    return attach_presigned_urls(
+    return await attach_presigned_urls(
         [InsurancePolicyAttachmentResponse.model_validate(r) for r in rows],
     )
 
@@ -130,7 +133,7 @@ async def _assert_property_is_ours(
         raise InvalidInsurancePolicyError("property_id does not name a property")
 
 
-def _to_detail(
+async def _to_detail(
     policy, attachments: list, property_name: str | None = None,
 ) -> InsurancePolicyResponse:
     return InsurancePolicyResponse(
@@ -154,7 +157,7 @@ def _to_detail(
         notes=policy.notes,
         created_at=policy.created_at,
         updated_at=policy.updated_at,
-        attachments=_attachment_responses(attachments),
+        attachments=await _attachment_responses(attachments),
     )
 
 
@@ -208,7 +211,7 @@ async def create_policy(
             notes=notes,
         )
         names = await property_repo.get_name_map(db, organization_id)
-        detail = _to_detail(policy, [], names.get(policy.property_id))
+        detail = await _to_detail(policy, [], names.get(policy.property_id))
     return detail
 
 
@@ -273,7 +276,7 @@ async def get_policy(
             db, policy.id,
         )
         names = await property_repo.get_name_map(db, organization_id)
-    return _to_detail(policy, attachments, names.get(policy.property_id))
+    return await _to_detail(policy, attachments, names.get(policy.property_id))
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +335,7 @@ async def update_policy(
             organization_id=organization_id,
         )
         names = await property_repo.get_name_map(db, organization_id)
-    return _to_detail(policy, attachments, names.get(policy.property_id))
+    return await _to_detail(policy, attachments, names.get(policy.property_id))
 
 
 # ---------------------------------------------------------------------------
@@ -375,8 +378,6 @@ async def upload_attachment(
     filename: str,
     kind: str,
 ) -> InsurancePolicyAttachmentResponse:
-    storage = get_storage()
-
     if kind not in INSURANCE_ATTACHMENT_KINDS:
         raise InvalidAttachmentKindError(f"Invalid kind: {kind}")
 
@@ -404,12 +405,26 @@ async def upload_attachment(
         if policy is None:
             raise InsurancePolicyNotFoundError(f"Policy {policy_id} not found")
 
+    storage = get_storage()
     attachment_id = uuid.uuid4()
     storage_key = f"insurance-policies/{policy_id}/{attachment_id}"
-    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
+    await upload_objects(storage, [NewStoredObject(storage_key, cleaned.content, cleaned.content_type)])
 
-    try:
+    async with CommittedWriteGuard(
+        storage, [storage_key],
+        attachment_present_check(policy_id, user_id, organization_id, storage_key),
+    ) as guard:
         async with unit_of_work() as db:
+            # Locked and checked again: the policy may have been deleted during the upload.
+            policy = await insurance_policy_repo.get(
+                db,
+                policy_id=policy_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                for_update=True,
+            )
+            if policy is None:
+                raise InsurancePolicyNotFoundError(f"Policy {policy_id} not found")
             row = await insurance_policy_attachment_repo.create(
                 db,
                 policy_id=policy_id,
@@ -422,16 +437,10 @@ async def upload_attachment(
                 uploaded_at=_dt.datetime.now(_dt.timezone.utc),
             )
             response = InsurancePolicyAttachmentResponse.model_validate(row)
-    except Exception:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to clean up orphan insurance attachment %s", storage_key,
-            )
-        raise
+            guard.rows_written()
 
-    return attach_presigned_urls([response])[0]
+    return (await attach_presigned_urls([response]))[0]
+
 
 
 async def delete_attachment(
@@ -458,11 +467,4 @@ async def delete_attachment(
             raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
         storage_key = deleted.storage_key
 
-    storage = get_storage()
-    try:
-        storage.delete_file(storage_key)
-    except Exception:  # noqa: BLE001
-        logger.warning(
-            "Failed to delete insurance attachment object %s",
-            storage_key, exc_info=True,
-        )
+    await delete_stored_files(get_storage(), [storage_key])

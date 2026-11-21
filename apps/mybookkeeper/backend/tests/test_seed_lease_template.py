@@ -17,7 +17,7 @@ from app.core.context import RequestContext
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import User
 from app.repositories.leases import lease_template_file_repo, lease_template_repo
-from app.test_helpers.seed import (
+from app.test_helpers.lease_template_seed import (
     _SeedLeaseTemplateRequest,
     hard_delete_lease_template,
     seed_lease_template,
@@ -50,8 +50,8 @@ def _wire(db: AsyncSession, storage: MagicMock):
     settings.allow_test_admin_promotion = True
     try:
         with (
-            patch("app.test_helpers.seed.unit_of_work", _fake_uow),
-            patch("app.test_helpers.seed.get_storage", return_value=storage),
+            patch("app.test_helpers.lease_template_seed.unit_of_work", _fake_uow),
+            patch("app.test_helpers.lease_template_seed.get_storage", return_value=storage),
         ):
             yield
     finally:
@@ -110,7 +110,7 @@ async def test_a_failed_database_write_removes_the_uploaded_file(
 ) -> None:
     with (
         patch(
-            "app.test_helpers.seed.lease_template_file_repo.create",
+            "app.test_helpers.lease_template_seed.lease_template_file_repo.create",
             side_effect=RuntimeError("db write failed"),
         ),
         pytest.raises(RuntimeError, match="db write failed"),

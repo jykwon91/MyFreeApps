@@ -238,6 +238,45 @@ class TestPublicGate:
 
 class TestUnlockPublic:
     @pytest.mark.asyncio
+    async def test_images_are_checked_in_storage_after_the_unlock_commits(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The unlock holds the manual's row lock; storage checks must not run under it."""
+        manual = await _make_manual(db, test_org, test_user)
+        await db.commit()
+        with _patch(db):
+            enabled = await welcome_manual_share_service.enable_share(
+                test_org.id, test_user.id, manual.id,
+            )
+            await db.commit()
+
+        open_sessions = 0
+        open_while_signing: list[int] = []
+
+        @asynccontextmanager
+        async def tracked():
+            nonlocal open_sessions
+            open_sessions += 1
+            try:
+                yield db
+            finally:
+                open_sessions -= 1
+
+        async def sign(rows):
+            open_while_signing.append(open_sessions)
+            return rows
+
+        with patch.multiple(
+            "app.services.welcome_manuals.welcome_manual_share_service",
+            AsyncSessionLocal=tracked,
+            unit_of_work=tracked,
+            attach_presigned_urls=sign,
+        ):
+            await welcome_manual_share_service.unlock_public(enabled.share_token, enabled.share_pin)
+
+        assert open_while_signing == [0]
+
+    @pytest.mark.asyncio
     async def test_correct_pin_returns_sections_and_places(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:

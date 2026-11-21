@@ -13,15 +13,21 @@ broader content-type allowlist (images + PDF + plain text).
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from datetime import datetime, timezone
 
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
+from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.config import settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.repositories import lock_timeout_repo
 from app.repositories.listings import (
     listing_blackout_attachment_repo,
     listing_blackout_repo,
@@ -36,8 +42,6 @@ from app.services.storage.attachment_content import (
     UnsupportedAttachmentType,
     clean_attachment,
 )
-
-logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Content-type allowlist
@@ -124,10 +128,6 @@ async def upload_attachment(
       7. DB insert.
       8. Return response with presigned URL.
     """
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-
     # 1. Tenant scope
     async with unit_of_work() as db:
         blackout = await listing_blackout_repo.get_by_id_scoped_to_organization(
@@ -154,13 +154,25 @@ async def upload_attachment(
     except UnreadableImage as exc:
         raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
-    # 6. MinIO upload
+    # 6. MinIO upload, before the transaction. A failure from here on removes it.
+    storage = get_storage()
     storage_key = f"blackout-attachments/{blackout_id}/{uuid.uuid4()}"
-    storage.upload_file(storage_key, cleaned.content, cleaned.storage_content_type)
+    await upload_objects(
+        storage, [NewStoredObject(storage_key, cleaned.content, cleaned.storage_content_type)],
+    )
 
-    # 7. DB insert
-    try:
+    # 7. DB insert, under the blackout's row lock: a blackout deleted during the
+    # upload is refused here (and the object removed), and one deleted after
+    # this commits can only go once the outcome check below can see the row.
+    async with CommittedWriteGuard(
+        storage, [storage_key], _attachment_present_check(blackout_id, storage_key),
+    ) as guard:
         async with unit_of_work() as db:
+            blackout = await listing_blackout_repo.get_by_id_scoped_to_organization(
+                db, blackout_id=blackout_id, organization_id=organization_id, for_update=True,
+            )
+            if blackout is None:
+                raise BlackoutNotFoundError(f"Blackout {blackout_id} not found")
             row = await listing_blackout_attachment_repo.create(
                 db,
                 listing_blackout_id=blackout_id,
@@ -172,19 +184,28 @@ async def upload_attachment(
                 uploaded_at=datetime.now(timezone.utc),
             )
             response = ListingBlackoutAttachmentResponse.model_validate(row)
-    except Exception:
-        # Best-effort cleanup of the just-uploaded object
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete orphan attachment %s after DB error",
-                storage_key,
-                exc_info=True,
-            )
-        raise
+            guard.rows_written()
 
-    return attach_presigned_urls([response])[0]
+    return (await attach_presigned_urls([response]))[0]
+
+
+def _attachment_present_check(blackout_id: uuid.UUID, storage_key: str) -> RowsPresent:
+    """Whether the attachment row exists.
+
+    Takes the blackout lock first (bounded by a lock timeout), which waits for
+    the original transaction to finish; a timeout or any error leaves the
+    outcome unknown. A blackout deleted meanwhile took its attachments with it.
+    """
+
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            await lock_timeout_repo.set_local_lock_timeout(db, OUTCOME_CHECK_LOCK_TIMEOUT_MS)
+            if await listing_blackout_repo.lock_by_id(db, blackout_id) is None:
+                return False
+            rows = await listing_blackout_attachment_repo.list_by_blackout(db, blackout_id)
+        return any(r.storage_key == storage_key for r in rows)
+
+    return rows_present
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +229,7 @@ async def list_attachments(
         rows = await listing_blackout_attachment_repo.list_by_blackout(db, blackout_id)
 
     responses = [ListingBlackoutAttachmentResponse.model_validate(r) for r in rows]
-    return attach_presigned_urls(responses)
+    return await attach_presigned_urls(responses)
 
 
 # ---------------------------------------------------------------------------
@@ -239,13 +260,4 @@ async def delete_attachment(
         storage_key = deleted.storage_key
 
     # Storage cleanup outside the unit_of_work — same pattern as listing photos.
-    storage = get_storage()
-    if storage is not None:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete attachment object %s from storage",
-                storage_key,
-                exc_info=True,
-            )
+    await delete_stored_files(get_storage(), [storage_key])

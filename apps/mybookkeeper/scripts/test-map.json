@@ -14,6 +14,7 @@
       ],
       "backend_tests": [
         "test_admin_routes.py",
+        "test_admin_storage_health.py",
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
         "test_tax_advisor_seed_routes.py",
@@ -214,7 +215,6 @@
         "api-client/src/types/document/",
         "backend/app/core/document_constants.py",
         "backend/app/mappers/document_delete_mapper.py",
-        "backend/app/services/storage/stored_file_cleanup.py",
         "api-client/src/constants/documentListView.ts",
         "api-client/src/constants/documentReferenceOnly.ts",
         "api-client/src/utils/documentListView.ts",
@@ -279,6 +279,7 @@
         "test_document_dedup.py",
         "test_document_type.py",
         "test_document_upload_service.py",
+        "test_document_upload_storage_order.py",
         "test_document_photo_metadata.py",
         "test_document_stored_mime_type.py",
         "test_stored_file_missing.py",
@@ -675,6 +676,7 @@
         "test_public_inquiries_api.py",
         "test_listing_routes.py",
         "test_listing_photo_service.py",
+        "test_listing_photo_storage_order.py",
         "test_listing_external_id_repo.py",
         "test_listing_external_id_service.py",
         "test_listing_external_id_routes.py",
@@ -767,6 +769,7 @@
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
+        "test_blackout_attachment_commit_outcome.py",
         "test_blackout_attachment_metadata.py",
         "test_input_validation_hardening.py",
         "test_review_queue_routes.py",
@@ -1172,7 +1175,8 @@
         "test_document_draft_reader.py",
         "test_attachment_content.py",
         "test_image_cleaning_off_event_loop.py",
-        "test_lease_insurance_attachment_metadata.py"
+        "test_lease_insurance_attachment_metadata.py",
+        "test_attachment_upload_commit_outcome.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -1476,6 +1480,7 @@
         "test_welcome_manual_reorder_routes.py",
         "test_welcome_manual_routes.py",
         "test_welcome_manual_section_image_service.py",
+        "test_section_image_storage_order.py",
         "test_welcome_manual_row_locks.py",
         "test_welcome_manual_reorder_access.py"
       ],
@@ -1589,7 +1594,6 @@
         "frontend/src/shared/types/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode-args.ts",
         "backend/app/api/signed_lease_attachments.py",
-        "backend/app/services/storage/committed_write_guard.py",
         "backend/app/core/commit_outcome_constants.py",
         "backend/app/core/lease_render_constants.py",
         "backend/app/repositories/lock_timeout_repo.py",
@@ -1626,9 +1630,9 @@
         "test_lease_template_snapshot.py",
         "test_lease_template_snapshot_migration.py",
         "test_lease_template_upload_routes.py",
-        "test_committed_write_guard.py",
         "test_lease_write_races.py",
-        "test_signed_lease_render_error_routes.py"
+        "test_signed_lease_render_error_routes.py",
+        "test_attachment_upload_commit_outcome.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
@@ -1780,7 +1784,8 @@
         "test_screening_report_image.py",
         "test_screening_result_repo.py",
         "test_input_validation_hardening.py",
-        "test_cleanup_seed_routes.py"
+        "test_cleanup_seed_routes.py",
+        "test_attachment_upload_commit_outcome.py"
       ],
       "frontend_tests": [
         "ScreeningSection.test.tsx",

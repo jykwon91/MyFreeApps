@@ -4,6 +4,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core import async_storage
+
 from app.core.context import RequestContext, worker_context
 from app.core.storage import get_storage
 from app.core.tags import schedule_e_line_after_category_change, transaction_type_for_category
@@ -66,10 +68,7 @@ async def _load_document_for_extraction(
 
         content: bytes | None = None
         if doc.file_storage_key:
-            storage = get_storage()
-            if storage is None:
-                raise ValueError("File stored in object storage but MinIO is not configured")
-            content = storage.download_file(doc.file_storage_key)
+            content = await async_storage.download_file(get_storage(), doc.file_storage_key)
         else:
             content = doc.file_content
 

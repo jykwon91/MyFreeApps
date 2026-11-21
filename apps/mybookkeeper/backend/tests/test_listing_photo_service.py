@@ -65,6 +65,11 @@ class _FakeStorage:
         self.deleted.append(key)
         self.objects.pop(key, None)
 
+    def delete_files(self, keys: list[str]) -> list[str]:
+        for key in keys:
+            self.delete_file(key)
+        return []
+
     def generate_key(self, org_id: str, filename: str) -> str:
         return f"{org_id}/{uuid.uuid4().hex[:6]}/{filename}"
 
@@ -294,7 +299,7 @@ class TestUploadPhotos:
 
         with patch(
             "app.services.listings.listing_photo_service.get_storage",
-            return_value=None,
+            side_effect=listing_photo_service.StorageNotConfiguredError("not configured"),
         ), patch(
             "app.services.listings.listing_photo_service.unit_of_work",
             lambda: _wrap_uow(db),

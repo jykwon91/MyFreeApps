@@ -186,11 +186,11 @@ def _attachment_response(
     return SignedLeaseAttachmentResponse(**stored, is_locked=is_record_file_locked(lease, attachments, row))
 
 
-def _attachment_responses(rows: Sequence[SignedLeaseAttachment], lease: SignedLease) -> list[SignedLeaseAttachmentResponse]:
-    return attach_presigned_urls_to_attachments([_attachment_response(r, lease, rows) for r in rows])
+async def _attachment_responses(rows: Sequence[SignedLeaseAttachment], lease: SignedLease) -> list[SignedLeaseAttachmentResponse]:
+    return await attach_presigned_urls_to_attachments([_attachment_response(r, lease, rows) for r in rows])
 
 
-def _to_detail(
+async def _to_detail(
     lease,
     attachments,
     template_links: list[SignedLeaseTemplateLink],
@@ -220,7 +220,7 @@ def _to_detail(
         last_emailed_to_tenant_at=lease.last_emailed_to_tenant_at,
         created_at=lease.created_at,
         updated_at=lease.updated_at,
-        attachments=_attachment_responses(attachments, lease),
+        attachments=await _attachment_responses(attachments, lease),
         documents_locked=is_lease_documents_locked(lease, attachments),
         latest_extension=latest_extension,
         parent_lease_id=lease.parent_lease_id,

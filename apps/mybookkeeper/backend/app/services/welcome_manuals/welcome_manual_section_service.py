@@ -6,6 +6,7 @@ the manual is the scope gate).
 import uuid
 from typing import Any
 
+from app.core.storage import get_storage
 from app.core.welcome_manual_constants import TOO_MANY_SECTIONS_MESSAGE, WELCOME_MANUAL_MAX_SECTIONS
 from app.db.session import unit_of_work
 from app.repositories import (
@@ -18,7 +19,6 @@ from app.repositories import (
 from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
-from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.welcome_manuals.reorder_check import is_exact_permutation
 from app.services.welcome_manuals.welcome_manual_scope import (
     ManualNotFoundError,
@@ -26,6 +26,8 @@ from app.services.welcome_manuals.welcome_manual_scope import (
     SectionNotFoundError,
     load_section_for_update,
 )
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
+
 
 class TooManySectionsError(Exception):
     """The manual already has the maximum number of sections (-> HTTP 409)."""
@@ -121,7 +123,7 @@ async def delete_section(
 
     # Best-effort MinIO cleanup outside the transaction — the section (and its
     # image rows) are already gone; orphaned objects can be swept later.
-    await delete_stored_files(storage_keys)
+    await delete_stored_files(get_storage(), storage_keys)
 
 
 async def reorder_sections(

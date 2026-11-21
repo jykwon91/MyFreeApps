@@ -5,7 +5,8 @@ receipts, insurance attachments, listing-blackout attachments, listing
 photos, screening result PDFs, lease-template files) needs the same
 shape on read paths:
 
-1. ``HEAD`` the underlying object via ``StorageClient.object_exists``.
+1. ``HEAD`` the underlying objects via ``async_storage.objects_exist``: off
+   the event loop, a bounded number at a time.
 2. If present, mint a short-lived presigned URL.
 3. If missing (NoSuchKey), set ``is_available=False`` and skip the URL
    so the UI can render a "File missing — re-upload" affordance.
@@ -26,6 +27,7 @@ from typing import Callable, TypeVar
 from urllib.parse import quote
 
 import sentry_sdk
+from platform_shared.core import async_storage
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -51,7 +53,7 @@ def build_attachment_disposition(filename: str) -> str:
     return f'attachment; filename="{safe_ascii}"; filename*=UTF-8\'\'{encoded}'
 
 
-def attach_presigned_url_with_head_check(
+async def attach_presigned_url_with_head_check(
     items: list[_T],
     *,
     storage_key_attr: str = "storage_key",
@@ -101,13 +103,15 @@ def attach_presigned_url_with_head_check(
         return items
 
     storage = get_storage()
+    keys: list[str] = [k for k in (getattr(i, storage_key_attr, None) for i in items) if k]
+    present = dict(zip(keys, await async_storage.objects_exist(storage, keys), strict=True))
     out: list[_T] = []
     for item in items:
         key = getattr(item, storage_key_attr, None)
         if not key:
             out.append(item)
             continue
-        if not storage.object_exists(key):
+        if not present[key]:
             logger.warning(
                 "Stored object missing for %s: id=%s key=%s",
                 sentry_event_name,

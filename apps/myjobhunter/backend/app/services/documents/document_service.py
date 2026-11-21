@@ -18,6 +18,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
+
 from app.core.config import settings
 from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
 from app.core.storage import StorageNotConfiguredError, get_storage
@@ -141,19 +146,24 @@ async def create_file_document(
 
     storage = get_storage()
     key = storage.generate_key(_DOCUMENT_KEY_PREFIX, filename)
-    storage.upload_file(key, file_bytes, sniffed_type)
+    await upload_objects(storage, [NewStoredObject(key, file_bytes, sniffed_type)])
 
-    try:
-        doc = Document(
-            user_id=user_id,
-            application_id=application_id,
-            title=title,
-            kind=kind,
-            file_path=key,
-            filename=filename,
-            content_type=sniffed_type,
-            size_bytes=len(file_bytes),
-        )
+    doc = Document(
+        user_id=user_id,
+        application_id=application_id,
+        title=title,
+        kind=kind,
+        file_path=key,
+        filename=filename,
+        content_type=sniffed_type,
+        size_bytes=len(file_bytes),
+    )
+    # A failure while writing removes the object. A COMMIT that raised keeps it
+    # unless the row is surely absent: a new row has nothing to wait on, so
+    # "not there" isn't conclusive.
+    async with CommittedWriteGuard(
+        storage, [key], _document_present_check(user_id, key), absence_conclusive=False,
+    ) as guard:
         async with unit_of_work() as db:
             # Check again: the application may have been deleted during the
             # upload, which ran outside any transaction. The lock holds it until
@@ -163,15 +173,17 @@ async def create_file_document(
                     db, user_id, application_id, for_update=True,
                 )
             doc = await document_repo.create(db, doc)
-    except Exception:
-        # Best-effort cleanup: delete the uploaded object to avoid orphans.
-        try:
-            storage.delete_file(key)
-        except Exception:
-            pass
-        raise
+            guard.rows_written()
 
     return _to_response(doc)
+
+
+def _document_present_check(user_id: uuid.UUID, key: str) -> RowsPresent:
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            return await document_repo.exists_for_file_path(db, user_id, key)
+
+    return rows_present
 
 
 async def get_for_user(

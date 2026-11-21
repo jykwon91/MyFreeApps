@@ -98,7 +98,7 @@ async def test_refuses_while_the_extension_is_live_and_changes_nothing(db: Async
 
     assert await db.get(SignedLeaseAttachment, addendum.id) is not None
     assert version.source_attachment_id == addendum.id
-    storage.delete_file.assert_not_called()
+    storage.delete_files.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -113,7 +113,7 @@ async def test_allows_it_once_the_extension_is_undone(db: AsyncSession) -> None:
         select(SignedLeaseAttachment).where(SignedLeaseAttachment.id == addendum.id),
     )
     assert remaining.scalar_one_or_none() is None
-    storage.delete_file.assert_called_once_with(addendum.storage_key)
+    storage.delete_files.assert_called_once_with([addendum.storage_key])
 
 
 @pytest.mark.asyncio
@@ -135,7 +135,7 @@ async def test_other_files_on_the_lease_still_delete(db: AsyncSession) -> None:
     with _patches(db, storage):
         await _delete(db, lease, notice)
 
-    storage.delete_file.assert_called_once_with(notice.storage_key)
+    storage.delete_files.assert_called_once_with([notice.storage_key])
 
 
 @pytest.mark.asyncio

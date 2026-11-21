@@ -5,21 +5,25 @@ Per RENTALS_PLAN.md §8.6, every photo flows through:
     size check → content-type sniff → allowlist → image_processor (EXIF strip)
         → storage put → repo insert
 
-The route handler is a thin shell over this orchestration. Storage
-interactions go through `core/storage.py:get_storage()` so test environments
-without MinIO configured can still exercise the full pipeline (see
-`StorageClient` for the in-memory fallback).
+The photos are stored before the transaction that records them, so the
+listing lock is never held while they upload; ``CommittedWriteGuard``
+removes them if the rows don't land.
 """
 import asyncio
-import logging
 import uuid
 from typing import Any
 
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
+from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories import listing_photo_repo, listing_repo
+from app.repositories import listing_photo_repo, listing_repo, lock_timeout_repo
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.services.listings.photo_response_builder import attach_presigned_urls
 from app.services.storage.image_processor import (
@@ -27,8 +31,6 @@ from app.services.storage.image_processor import (
     filename_for_content_type,
     process_image,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class ListingNotFoundError(LookupError):
@@ -57,15 +59,12 @@ async def upload_photos(
     Raises:
         ListingNotFoundError: listing missing, soft-deleted, or out of org.
         StorageNotConfiguredError: object storage unavailable.
-        ImageRejected: any file fails size / format / decode validation. The
-            transaction is aborted — partial uploads are NOT committed.
+        ImageRejected: any file fails size / format / decode validation.
+
+    Any failure leaves no photo stored and no row written.
     """
     if not files:
         return []
-
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
 
     # Pre-validate every file before touching storage so a single bad file
     # doesn't leave half a batch persisted.
@@ -79,45 +78,64 @@ async def upload_photos(
         )
         processed.append((result.content, result.content_type, safe_name))
 
+    # Refuse early, before anything is stored; checked again under the lock.
     async with unit_of_work() as db:
-        listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
-        if listing is None:
+        if await listing_repo.get_by_id(db, listing_id, organization_id) is None:
             raise ListingNotFoundError(f"Listing {listing_id} not found")
 
-        next_order = await listing_photo_repo.next_display_order(db, listing.id)
-        created_rows: list[Any] = []
-
-        for index, (clean_bytes, content_type, safe_name) in enumerate(processed):
-            storage_key = storage.generate_key(str(organization_id), safe_name)
-            # Upload to object storage BEFORE the DB insert so a storage
-            # failure rolls back the transaction cleanly. If the DB insert
-            # fails after a successful upload, the orphan object is logged
-            # for the next sweep cycle (out of scope for v1).
-            storage.upload_file(storage_key, clean_bytes, content_type)
-            try:
-                photo = await listing_photo_repo.create(
+    # The photos go to storage before the transaction, so the listing lock is
+    # never held while they upload. A failure later removes them again.
+    storage = get_storage()
+    objects = [
+        NewStoredObject(storage.generate_key(str(organization_id), safe_name), clean_bytes, content_type)
+        for clean_bytes, content_type, safe_name in processed
+    ]
+    keys = [obj.key for obj in objects]
+    await upload_objects(storage, objects)
+    async with CommittedWriteGuard(
+        storage, keys, _photos_present_check(organization_id, listing_id, keys),
+    ) as guard:
+        async with unit_of_work() as db:
+            listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
+            if listing is None:
+                raise ListingNotFoundError(f"Listing {listing_id} not found")
+            next_order = await listing_photo_repo.next_display_order(db, listing.id)
+            responses = [
+                ListingPhotoResponse.model_validate(await listing_photo_repo.create(
                     db,
                     listing_id=listing.id,
-                    storage_key=storage_key,
+                    storage_key=key,
                     caption=None,
                     display_order=next_order + index,
-                )
-            except Exception:
-                # Best-effort cleanup of the just-uploaded object so we don't
-                # leak storage on partial failures.
-                try:
-                    storage.delete_file(storage_key)
-                except Exception:  # noqa: BLE001
-                    logger.warning(
-                        "Failed to delete orphan photo %s after DB error",
-                        storage_key,
-                        exc_info=True,
-                    )
-                raise
-            created_rows.append(photo)
+                ))
+                for index, key in enumerate(keys)
+            ]
+            guard.rows_written()
+    return await attach_presigned_urls(responses)
 
-        responses = [ListingPhotoResponse.model_validate(p) for p in created_rows]
-        return attach_presigned_urls(responses)
+
+def _photos_present_check(
+    organization_id: uuid.UUID, listing_id: uuid.UUID, keys: list[str],
+) -> RowsPresent:
+    """Whether the listing has photos stored under ``keys``.
+
+    Takes the listing lock first (bounded by a lock timeout), which waits for
+    the original transaction to finish; a timeout or any error leaves the
+    outcome unknown.
+    """
+
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            await lock_timeout_repo.set_local_lock_timeout(db, OUTCOME_CHECK_LOCK_TIMEOUT_MS)
+            listing = await listing_repo.get_by_id(
+                db, listing_id, organization_id, include_deleted=True, for_update=True,
+            )
+            if listing is None:
+                return False
+            photos = await listing_photo_repo.list_by_listing(db, listing.id)
+        return bool({p.storage_key for p in photos} & set(keys))
+
+    return rows_present
 
 
 async def update_photo(
@@ -139,7 +157,9 @@ async def update_photo(
         if photo is None:
             raise ListingNotFoundError(f"Photo {photo_id} not found")
         response = ListingPhotoResponse.model_validate(photo)
-        return attach_presigned_urls([response])[0]
+    # URLs are minted after the commit, so the listing lock isn't held through
+    # the storage checks.
+    return (await attach_presigned_urls([response]))[0]
 
 
 async def reorder_photos(
@@ -164,7 +184,8 @@ async def reorder_photos(
         ordered = await listing_photo_repo.apply_order(db, listing.id, photo_ids)
         if ordered is None:
             raise StalePhotoOrderError("photo_ids must be a permutation of the listing's current photos")
-        return attach_presigned_urls([ListingPhotoResponse.model_validate(p) for p in ordered])
+        responses = [ListingPhotoResponse.model_validate(p) for p in ordered]
+    return await attach_presigned_urls(responses)
 
 
 async def delete_photo(
@@ -189,12 +210,4 @@ async def delete_photo(
     # Storage cleanup outside the unit_of_work — if it fails the DB row is
     # already gone (intentional: the user expects the photo to be removed
     # from the listing immediately, and orphaned objects can be swept later).
-    storage = get_storage()
-    if storage is not None:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete photo object %s from storage", storage_key,
-                exc_info=True,
-            )
+    await delete_stored_files(get_storage(), [storage_key])

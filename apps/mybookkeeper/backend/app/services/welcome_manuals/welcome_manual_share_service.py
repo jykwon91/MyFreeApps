@@ -189,21 +189,40 @@ async def get_public_gate(token: str) -> bool:
     return manual is not None and manual.share_pin is not None
 
 
-async def _assemble_public_response(db, manual: WelcomeManual) -> PublicWelcomeManualResponse:
-    # SHARED SECTIONS ONLY. There is one share link per manual, so a
-    # by-the-room manual would otherwise hand every visitor every room's
-    # content — which room is whose, its door code, its parking space. Passing
-    # ``room_id=None`` selects the sections with no room scope; on a
-    # whole-property manual that is all of them, so nothing changes there.
-    # Room-specific content reaches a guest through their own emailed PDF.
-    sections = await welcome_manual_section_repo.list_for_room(db, manual.id, None)
-    section_ids = [s.id for s in sections]
-    images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
-    fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
-    places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+async def _public_response(token: str) -> PublicWelcomeManualResponse:
+    """The guest-safe projection, read in its own session after the unlock commits.
 
-    authed_images = [WelcomeManualSectionImageResponse.model_validate(img) for img in images]
-    signed = attach_presigned_urls(authed_images)
+    The image URLs are signed (which checks each object in storage) once the
+    session is closed, so no lock or pooled connection is held meanwhile.
+    """
+    async with AsyncSessionLocal() as db:
+        manual = await welcome_manual_repo.get_by_share_token(db, token)
+        if manual is None or manual.share_pin is None:
+            # Revoked between the unlock and this read.
+            raise ManualNotFoundError("Share token not found")
+        title = manual.title
+        # SHARED SECTIONS ONLY. There is one share link per manual, so a
+        # by-the-room manual would otherwise hand every visitor every room's
+        # content — which room is whose, its door code, its parking space. Passing
+        # ``room_id=None`` selects the sections with no room scope; on a
+        # whole-property manual that is all of them, so nothing changes there.
+        # Room-specific content reaches a guest through their own emailed PDF.
+        sections = await welcome_manual_section_repo.list_for_room(db, manual.id, None)
+        section_ids = [s.id for s in sections]
+        images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
+        fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
+        places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+
+        section_rows = [(s.id, s.title, s.body) for s in sections]
+        authed_images = [WelcomeManualSectionImageResponse.model_validate(img) for img in images]
+        fields_by_section: dict[uuid.UUID, list[PublicWelcomeManualSectionFieldResponse]] = {}
+        for field in fields:
+            fields_by_section.setdefault(field.section_id, []).append(
+                PublicWelcomeManualSectionFieldResponse(label=field.label, value=field.value),
+            )
+        place_responses = [PublicWelcomeManualPlaceResponse.model_validate(p) for p in places]
+
+    signed = await attach_presigned_urls(authed_images)
     images_by_section: dict[uuid.UUID, list[PublicWelcomeManualSectionImageResponse]] = {}
     for image in signed:
         images_by_section.setdefault(image.section_id, []).append(
@@ -215,25 +234,17 @@ async def _assemble_public_response(db, manual: WelcomeManual) -> PublicWelcomeM
             ),
         )
 
-    fields_by_section: dict[uuid.UUID, list[PublicWelcomeManualSectionFieldResponse]] = {}
-    for field in fields:
-        fields_by_section.setdefault(field.section_id, []).append(
-            PublicWelcomeManualSectionFieldResponse(label=field.label, value=field.value),
-        )
-
     section_responses = [
         PublicWelcomeManualSectionResponse(
-            title=s.title,
-            body=s.body,
-            fields=fields_by_section.get(s.id, []),
-            images=images_by_section.get(s.id, []),
+            title=section_title,
+            body=body,
+            fields=fields_by_section.get(section_id, []),
+            images=images_by_section.get(section_id, []),
         )
-        for s in sections
+        for section_id, section_title, body in section_rows
     ]
-    place_responses = [PublicWelcomeManualPlaceResponse.model_validate(p) for p in places]
-
     return PublicWelcomeManualResponse(
-        title=manual.title,
+        title=title,
         sections=section_responses,
         places=place_responses,
     )
@@ -275,23 +286,26 @@ async def unlock_public(
             # lockout window is indistinguishable from a wrong one.
             raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
 
-        if hmac.compare_digest(pin, manual.share_pin):
+        unlocked = hmac.compare_digest(pin, manual.share_pin)
+        if unlocked:
             # Correct PIN — clear any accumulated failures so repeat visits
-            # with the right code can never trip the lockout, then return the
-            # projection (clean ``return`` commits the reset).
+            # with the right code can never trip the lockout.
             await welcome_manual_repo.reset_unlock_state(db, manual)
-            return await _assemble_public_response(db, manual)
+        else:
+            # Wrong PIN — record the failure and let the transaction COMMIT
+            # the increment. Raising here would let ``unit_of_work`` roll back
+            # on the exception, discarding the increment and defeating the
+            # lockout. The raise happens below, after the write is committed.
+            await welcome_manual_repo.record_failed_unlock(
+                db,
+                manual,
+                max_attempts=SHARE_UNLOCK_MAX_ATTEMPTS,
+                lockout_window_seconds=SHARE_UNLOCK_LOCKOUT_WINDOW_SECONDS,
+                now=now,
+            )
 
-        # Wrong PIN — record the failure and fall through so the transaction
-        # COMMITS the increment. Raising here would let ``unit_of_work`` roll
-        # back on the exception, discarding the increment and defeating the
-        # lockout. The raise happens below, after the write is committed.
-        await welcome_manual_repo.record_failed_unlock(
-            db,
-            manual,
-            max_attempts=SHARE_UNLOCK_MAX_ATTEMPTS,
-            lockout_window_seconds=SHARE_UNLOCK_LOCKOUT_WINDOW_SECONDS,
-            now=now,
-        )
-
-    raise IncorrectPinError("Incorrect PIN")
+    if not unlocked:
+        raise IncorrectPinError("Incorrect PIN")
+    # Built after the commit, so the manual's row lock isn't held while the
+    # images are checked in storage.
+    return await _public_response(token)

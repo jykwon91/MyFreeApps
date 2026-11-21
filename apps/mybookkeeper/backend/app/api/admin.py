@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from platform_shared.api.admin_auth_events_router import (
     build_admin_auth_events_router,
 )
+from platform_shared.core import async_storage
 
 from app.core.config import settings
 from app.core.permissions import current_admin
@@ -63,9 +64,7 @@ async def storage_health(user: User = Depends(current_admin)) -> dict:
                 except Exception as exc:  # noqa: BLE001
                     sign_error = repr(exc)
                 try:
-                    bucket_reachable = client._client.bucket_exists(
-                        settings.minio_bucket,
-                    )
+                    bucket_reachable = await async_storage.bucket_exists(client)
                 except Exception as exc:  # noqa: BLE001
                     bucket_reachable = False
                     bucket_error = repr(exc)

@@ -37,6 +37,8 @@ import uuid
 from decimal import Decimal
 from email.utils import make_msgid
 
+from platform_shared.core import async_storage
+
 from app.core import storage as _storage_module
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.leases.pending_rent_receipt import PendingRentReceipt
@@ -277,7 +279,7 @@ async def send_receipt(
             amount=txn_amount,
             payment_method=txn_payment_method,
         ))
-        _storage_module.get_storage().upload_file(storage_key, pdf_bytes, "application/pdf")
+        await async_storage.upload_file(_storage_module.get_storage(), storage_key, pdf_bytes, "application/pdf")
         uploaded = True
         async with unit_of_work() as db:
             attachment = await signed_lease_attachment_repo.create(
@@ -310,7 +312,7 @@ async def send_receipt(
             )
         finally:
             if uploaded:
-                delete_stored_pdf(storage_key)
+                await delete_stored_pdf(storage_key)
         raise
 
     # ── Send ─────────────────────────────────────────────────────────────────

@@ -166,6 +166,14 @@ async def latest_job_description_body(
     return result.scalar_one_or_none()
 
 
+async def exists_for_file_path(db: AsyncSession, user_id: uuid.UUID, file_path: str) -> bool:
+    """Whether the user has a document row for the stored object at ``file_path``."""
+    result = await db.execute(
+        select(Document.id).where(Document.user_id == user_id, Document.file_path == file_path)
+    )
+    return result.first() is not None
+
+
 async def create(db: AsyncSession, document: Document) -> Document:
     """Persist a new Document row."""
     db.add(document)

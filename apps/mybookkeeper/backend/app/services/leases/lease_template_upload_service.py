@@ -41,6 +41,7 @@ from app.schemas.leases.new_template_file import NewTemplateFile
 from app.schemas.leases.placeholder_spec import PlaceholderSpec
 from app.schemas.leases.template_upload_file import TemplateUploadFile
 from app.schemas.leases.validated_template_file import ValidatedTemplateFile
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
 from app.services.leases.default_source_map import get_default, guess_display_label
 from app.services.leases.lease_template_placeholder_service import TemplateNotFoundError
 from app.services.leases.exceptions.template_no_files_error import TemplateNoFilesError
@@ -61,8 +62,9 @@ from app.services.leases.lease_template_text_reader import read_template_text
 from app.services.leases.placeholder_extractor import (
     extract_placeholders_across_files,
 )
-from app.services.storage.committed_write_guard import CommittedWriteGuard, RowsPresent
-from app.services.storage.stored_file_cleanup import discard_after_in_flight
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.rows_present import RowsPresent
+from platform_shared.services.storage.object_upload import upload_objects
 
 logger = logging.getLogger(__name__)
 
@@ -145,34 +147,20 @@ def _derive_placeholders(
     return specs
 
 
-async def _upload_one(
-    storage: StorageClient, key: str, file: ValidatedTemplateFile,
-) -> None:
-    await asyncio.to_thread(storage.upload_file, key, file.content, file.content_type)
-
-
 async def _upload_objects(
     storage: StorageClient, template_id: uuid.UUID, files: list[ValidatedTemplateFile],
 ) -> list[str]:
-    """Upload every file. On any failure, including cancellation, remove what was
-    uploaded plus the key being uploaded (recorded first, since a cancelled
-    request leaves its worker thread running)."""
-    keys: list[str] = []
-    in_flight: asyncio.Future[None] | None = None
+    """Upload every file, all-or-nothing (see ``upload_objects``)."""
+    objects = [
+        NewStoredObject(f"lease-templates/{template_id}/{uuid.uuid4()}", f.content, f.content_type)
+        for f in files
+    ]
     try:
-        for file in files:
-            key = f"lease-templates/{template_id}/{uuid.uuid4()}"
-            keys.append(key)
-            in_flight = asyncio.ensure_future(_upload_one(storage, key, file))
-            await asyncio.shield(in_flight)
-            in_flight = None
-    except BaseException as exc:
-        await asyncio.shield(discard_after_in_flight(keys, in_flight))
-        if isinstance(exc, Exception):
-            logger.error("Storage failed while uploading template files", exc_info=True)
-            raise TemplateStorageUnavailableError(STORAGE_UNAVAILABLE_MESSAGE) from exc
-        raise
-    return keys
+        await upload_objects(storage, objects)
+    except Exception as exc:
+        logger.error("Storage failed while uploading template files", exc_info=True)
+        raise TemplateStorageUnavailableError(STORAGE_UNAVAILABLE_MESSAGE) from exc
+    return [o.key for o in objects]
 
 
 def _template_rows_present_check(
@@ -242,7 +230,7 @@ async def upload_template(
     template_id = uuid.uuid4()
     keys = await _upload_objects(storage, template_id, validated)
     async with CommittedWriteGuard(
-        keys, _new_template_rows_present_check(template_id, keys), absence_conclusive=False,
+        storage, keys, _new_template_rows_present_check(template_id, keys), absence_conclusive=False,
     ) as guard:
         async with unit_of_work() as db:
             await lease_template_bundle_repo.insert_bundle(
@@ -287,6 +275,7 @@ async def replace_template_files(
 
     new_keys = await _upload_objects(storage, template_id, validated)
     async with CommittedWriteGuard(
+        storage,
         new_keys,
         _template_rows_present_check(template_id, user_id, organization_id, new_keys),
     ) as guard:

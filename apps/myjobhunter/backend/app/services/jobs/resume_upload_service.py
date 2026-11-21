@@ -10,8 +10,14 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
+
 from app.core.config import settings
 from app.core.storage import get_storage
+from app.db.session import unit_of_work
 from app.models.jobs.resume_upload_job import ResumeUploadJob
 from app.repositories.jobs import resume_upload_job_repo
 from app.services.jobs.resume_validator import ResumeRejected, validate_resume
@@ -30,9 +36,12 @@ async def create_upload(
     content_type: str,
     user_id: uuid.UUID,
     profile_id: uuid.UUID,
-    db: AsyncSession,
 ) -> ResumeUploadJob:
     """Validate, upload to MinIO, and queue a resume parse job.
+
+    The file is stored before the job row is written, in a transaction this
+    function owns, so it can tell a failed write (the object is removed) from a
+    COMMIT that raised (the object is kept unless the row is surely absent).
 
     Args:
         file_bytes: Raw bytes read from the multipart upload.
@@ -40,7 +49,6 @@ async def create_upload(
         content_type: Content-Type header from the multipart part.
         user_id: ID of the authenticated user.
         profile_id: ID of the user's profile (FK on resume_upload_jobs).
-        db: Async SQLAlchemy session.
 
     Returns:
         The newly created ``ResumeUploadJob`` row with ``status='queued'``.
@@ -58,29 +66,35 @@ async def create_upload(
     # Upload to MinIO. Key pattern: resumes/{uuid}/{filename}
     storage = get_storage()
     key = storage.generate_key(_RESUME_KEY_PREFIX, filename)
-    storage.upload_file(key, file_bytes, sniffed_type)
+    await upload_objects(storage, [NewStoredObject(key, file_bytes, sniffed_type)])
 
-    try:
-        job = await resume_upload_job_repo.create(
-            db,
-            user_id=user_id,
-            profile_id=profile_id,
-            file_path=key,
-            file_filename=filename,
-            file_content_type=sniffed_type,
-            file_size_bytes=len(file_bytes),
-            status="queued",
-        )
-    except Exception:
-        # Best-effort cleanup: delete the object we just uploaded so
-        # no orphaned objects accumulate on DB-insert failure.
-        try:
-            storage.delete_file(key)
-        except Exception:
-            pass
-        raise
+    # A new row has nothing to wait on, so "not there" after a failed COMMIT
+    # isn't conclusive and the object is then kept.
+    async with CommittedWriteGuard(
+        storage, [key], _job_present_check(user_id, key), absence_conclusive=False,
+    ) as guard:
+        async with unit_of_work() as db:
+            job = await resume_upload_job_repo.create(
+                db,
+                user_id=user_id,
+                profile_id=profile_id,
+                file_path=key,
+                file_filename=filename,
+                file_content_type=sniffed_type,
+                file_size_bytes=len(file_bytes),
+                status="queued",
+            )
+            guard.rows_written()
 
     return job
+
+
+def _job_present_check(user_id: uuid.UUID, key: str) -> RowsPresent:
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            return await resume_upload_job_repo.exists_for_file_path(db, user_id, key)
+
+    return rows_present
 
 
 async def get_status(
