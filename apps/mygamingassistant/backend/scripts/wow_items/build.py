@@ -36,6 +36,7 @@ from typing import Any
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
 from scripts.wow_items.client_ids import (
     BONUS_ARMOR_STAT_ID,
+    CASTER_WEAPON_FLAG,
     CLASS_ID_BY_BIT,
     DAMAGE_TABLES,
     INVENTORY_TYPE_BACK,
@@ -43,6 +44,7 @@ from scripts.wow_items.client_ids import (
     ITEM_CLASS_WEAPON,
     QUALITY_BY_ID,
     SLOT_BY_INVENTORY_TYPE,
+    SPELL_STAT_IDS,
     STAT_KEY_BY_CLIENT_ID,
     UNNAMED_SUBCLASSES,
 )
@@ -52,6 +54,7 @@ from scripts.wow_items.formula import (
     Row,
     armor_value,
     damage_table,
+    is_wand,
     stat_lines,
     stat_values,
     weapon_damage,
@@ -77,6 +80,7 @@ ALL_CLASSES_MASK = sum(CLASS_ID_BY_BIT)
 COLUMNS = [
     "id", "name", "quality", "slot", "itemType", "itemLevel", "requiredLevel",
     "armor", "weapon", "stats", "classes", "damageUnknown", "otherEffects",
+    "spellPowerUnknown",
 ]
 
 CLASSIC_README = """# Item Compare — random-suffix items (Classic)
@@ -183,6 +187,13 @@ def build_record(
     damage = weapon_damage(sparse, item, tables)
     damage_unknown = damage_table(sparse, item) is not None and damage is None
     weapon = None if damage is None else [damage.min_damage, damage.max_damage, damage.speed]
+    # spellPowerUnknown: a caster weapon (Flags_4 & CASTER_WEAPON_FLAG) with no spell stat in the
+    # game files gets hidden spell power added by the client at runtime — a number we can't read.
+    spell_power_unknown = (
+        bool(_int(sparse.get("Flags_4")) & CASTER_WEAPON_FLAG)
+        and not any(s in SPELL_STAT_IDS for s, _ in stat_lines(sparse))
+        and not is_wand(item)
+    )
     return [
         item_id,
         name,
@@ -197,6 +208,7 @@ def build_record(
         class_list(sparse),
         1 if damage_unknown else 0,
         other,
+        1 if spell_power_unknown else 0,
     ]
 
 
@@ -252,7 +264,8 @@ def main() -> None:
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
     no_damage = sum(1 for r in records if r[COLUMNS.index("damageUnknown")])
-    print(f"{len(records):,} items ({len(suffix)} random-suffix, {no_damage} caster weapons without damage) -> {OUT_PATH}")
+    no_spell = sum(1 for r in records if r[COLUMNS.index("spellPowerUnknown")])
+    print(f"{len(records):,} items ({len(suffix)} random-suffix, {no_damage} without damage, {no_spell} caster weapons without spell power) -> {OUT_PATH}")
 
 
 if __name__ == "__main__":

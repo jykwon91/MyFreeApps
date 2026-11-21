@@ -23,6 +23,8 @@ export interface ClientItem {
   damageUnknown: boolean;
   /** Stats the item has that the compare page has no key for (counted, not shown). */
   otherEffects: number;
+  /** A caster weapon whose spell power the client adds at runtime — not in the game files. */
+  spellPowerUnknown: boolean;
   /** Stats come from a random "of the …" suffix, so they aren't in the item list. */
   randomSuffix: boolean;
 }

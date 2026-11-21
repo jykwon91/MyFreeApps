@@ -11,4 +11,6 @@ export interface ItemDelta {
   otherEffects: boolean;
   /** Either item is a weapon whose damage the game files don't give, so damage isn't compared. */
   damageNotCompared: boolean;
+  /** Either item is a caster weapon whose spell power the client adds at runtime — not in the game files. */
+  spellPowerUnknown: boolean;
 }

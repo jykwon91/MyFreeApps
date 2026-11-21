@@ -6,6 +6,7 @@ export const ITEM_COMPARE_COPY = {
   replacesTwoHander: "Replaces your two-hander",
   damageNotCompared: "Damage not compared",
   otherEffectsNotCompared: "Other effects (procs, on-use, Equip:) aren't compared",
+  spellPowerNotCompared: "Spell power isn't in the game files for one of these items, so it isn't counted",
   enchantsNotCounted: "Enchants on your gear aren't counted",
   noCharacter: "Compare with your gear: look up your character and press Use for MGA's pages.",
   noCharacterLink: "Look up your character",

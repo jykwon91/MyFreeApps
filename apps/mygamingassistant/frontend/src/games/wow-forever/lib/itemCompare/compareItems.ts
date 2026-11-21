@@ -30,5 +30,6 @@ export function compareItems(candidate: ClientItem, equipped: ClientItem): ItemD
     dps,
     otherEffects: candidate.otherEffects > 0 || equipped.otherEffects > 0,
     damageNotCompared: candidate.damageUnknown || equipped.damageUnknown,
+    spellPowerUnknown: candidate.spellPowerUnknown || equipped.spellPowerUnknown,
   };
 }

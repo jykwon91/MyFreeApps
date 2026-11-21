@@ -235,6 +235,7 @@ const MOCK_SASH_MAGE: ClientItem = {
   stats: { intellect: 3, spell_power: 4, stamina: 3 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };
@@ -253,6 +254,7 @@ const MOCK_WORN_WAIST: ClientItem = {
   stats: { stamina: 1 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };
@@ -762,6 +764,7 @@ const MOCK_COPPER_CLAYMORE: ClientItem = {
   stats: { strength: 5, stamina: 3 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };
@@ -780,6 +783,7 @@ const MOCK_COPPER_SHORTSWORD: ClientItem = {
   stats: { agility: 4, stamina: 2 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };
@@ -788,12 +792,12 @@ const MOCK_COPPER_SHORTSWORD: ClientItem = {
 const MOCK_WORN_2H: ClientItem = {
   id: 9900, name: "Rusty Claymore", quality: "poor", slot: "two_hand",
   itemType: "Sword", itemLevel: 1, requiredLevel: 1, armor: null, weapon: null,
-  stats: {}, classes: null, damageUnknown: false, otherEffects: 0, randomSuffix: false,
+  stats: {}, classes: null, damageUnknown: false, spellPowerUnknown: false, otherEffects: 0, randomSuffix: false,
 };
 const MOCK_WORN_1H: ClientItem = {
   id: 9901, name: "Bent Sword", quality: "poor", slot: "one_hand",
   itemType: "Sword", itemLevel: 1, requiredLevel: 1, armor: null, weapon: null,
-  stats: {}, classes: null, damageUnknown: false, otherEffects: 0, randomSuffix: false,
+  stats: {}, classes: null, damageUnknown: false, spellPowerUnknown: false, otherEffects: 0, randomSuffix: false,
 };
 
 const BS_SKILL_ID = PROFESSION_SKILL_LINES.blacksmithing;
