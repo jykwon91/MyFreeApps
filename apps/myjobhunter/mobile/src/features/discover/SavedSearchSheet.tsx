@@ -13,6 +13,7 @@ import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
 import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
 import { characterCounter } from "@platform/core/utils/characterCounter";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { discoveryDefaultsFrom } from "@myjobhunter/api-client/utils/discoveryDefaultsFrom";
 import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";
@@ -33,7 +34,6 @@ import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { REFRESH_FREQUENCY_OPTIONS } from "../../constants/refreshFrequency";
 import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSearchSheet";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
 import { withChipDrafts } from "../../lib/withChipDrafts";
 import type { ChipDraftField } from "../../types/ChipDraftField";
 import type { ChipDrafts } from "../../types/ChipDrafts";
