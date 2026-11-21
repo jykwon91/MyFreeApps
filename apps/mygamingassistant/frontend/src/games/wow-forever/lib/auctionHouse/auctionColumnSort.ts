@@ -12,9 +12,10 @@ export const DEFAULT_COL_DIR: Record<AuctionColumnSort, SortDirection> = {
   market: "desc",
   cheapest: "desc",
   onsale: "desc",
+  upgrade: "desc",
 };
 
-const COLUMN_SORT_VALUES: readonly AuctionColumnSort[] = ["item", "market", "cheapest", "onsale"];
+const COLUMN_SORT_VALUES: readonly AuctionColumnSort[] = ["item", "market", "cheapest", "onsale", "upgrade"];
 
 export function parseAuctionColumnSort(raw: unknown): AuctionColumnSort | null {
   return COLUMN_SORT_VALUES.find((v) => v === raw) ?? null;
@@ -51,6 +52,9 @@ function compareByColumn(a: AuctionPrice, b: AuctionPrice, colSort: AuctionColum
       const diff = asc ? a.quantity - b.quantity : b.quantity - a.quantity;
       return diff || byName(a, b);
     }
+    // "upgrade" sort is handled in AuctionLookup.tsx (needs character data); fall back to name.
+    case "upgrade":
+      return byName(a, b);
   }
 }
 

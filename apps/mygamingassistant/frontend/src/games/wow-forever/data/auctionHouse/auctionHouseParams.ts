@@ -17,7 +17,7 @@ export const AUCTION_RECIPE_PARAM = "recipe";
 /** `?sort=supply|listings|high|low|gap|quality|name` — left out = most on sale. */
 export const AUCTION_SORT_PARAM = "sort";
 
-/** `?csort=item|market|cheapest|onsale` — column-header sort; left out = use sort dropdown order. */
+/** `?csort=item|market|cheapest|onsale|upgrade` — column-header sort; left out = use sort dropdown order. */
 export const AUCTION_COL_SORT_PARAM = "csort";
 
 /** `?cdir=asc|desc` — direction for the column-header sort; left out = the column's natural first direction. */

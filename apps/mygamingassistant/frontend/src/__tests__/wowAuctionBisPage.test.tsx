@@ -20,6 +20,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
 const loadClientItems = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/clientItemsLoader", () => ({ loadClientItems }));
 
+// No character is set in these tests; skip the RTK Query store requirement.
+vi.mock("@/games/wow-forever/api/wowCharacterApi", () => ({
+  useGetCharacterQuery: () => ({ data: undefined, isError: false }),
+}));
+
 const loadGearData = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/gear/gearDataLoader", () => ({ loadGearData }));
 

@@ -17,6 +17,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
 const loadItemCategories = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/itemCategoriesLoader", () => ({ loadItemCategories }));
 
+// No character is set in these tests; skip the RTK Query store requirement.
+vi.mock("@/games/wow-forever/api/wowCharacterApi", () => ({
+  useGetCharacterQuery: () => ({ data: undefined, isError: false }),
+}));
+
 // [item_id, market_value, min_buyout, quantity, listings, name]
 const ITEMS: PriceListResponse["items"] = [
   [POTION, 500, 450, 40, 8, "Major Healing Potion"],

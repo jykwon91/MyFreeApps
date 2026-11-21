@@ -7,6 +7,12 @@
   },
   {
     "date": "2026-11-20",
+    "title": "Auction House: upgrade overview for your character",
+    "summary": "Look up your character and each result row now shows whether the item is an upgrade, downgrade or the same as what you have equipped — plus the item it would replace. Click the Upgrade column header to sort by biggest upgrade first. Rings and trinkets compare against whichever slot gives the better result.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-20",
     "title": "Auction House: sort results by column",
     "summary": "Click any column header — Item, Market value, Cheapest, or On sale — to sort the results by that column. Click again to reverse direction. The sort is saved in the link so sharing it keeps the order.",
     "to": "/wow-forever/auction-house"

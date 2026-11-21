@@ -19,6 +19,7 @@ import type { ActiveAuctionFilter } from "@/games/wow-forever/types/auctionHouse
 import type { AuctionColumnSort } from "@/games/wow-forever/types/auctionHouse/auctionColumnSort";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 import type { AuctionLookupResult } from "@/games/wow-forever/types/auctionHouse/auctionLookupResult";
+import type { AuctionUpgrade } from "@/games/wow-forever/types/auctionHouse/auctionUpgrade";
 import type { SortDirection } from "@/games/wow-forever/types/professionTiers/sortDirection";
 
 interface AuctionLookupListProps {
@@ -37,13 +38,18 @@ interface AuctionLookupListProps {
   onClear: () => void;
   /** Called when the user clicks a column header or the mobile sort control. */
   onColSort: (sort: AuctionColumnSort, dir: SortDirection) => void;
+  /**
+   * Per-row upgrade comparisons against the saved character's gear.
+   * Null when no character is set or data is still loading.
+   */
+  upgradeMap: ReadonlyMap<number, AuctionUpgrade> | null;
 }
 
 /**
  * What sits under the filters: the prices' error or skeleton, the list (50 at a
  * time) or why it is empty. Changing a filter only swaps the rows; it never shows a spinner.
  */
-export default function AuctionLookupList({ priceState, gear, categories, bis, filters, active, lookup, resultsKey, professionLabel, onClear, onColSort }: AuctionLookupListProps) {
+export default function AuctionLookupList({ priceState, gear, categories, bis, filters, active, lookup, resultsKey, professionLabel, onClear, onColSort, upgradeMap }: AuctionLookupListProps) {
   const { status, prices, retry, retrying } = priceState;
   if (status === LOAD_STATUS.error) return <LoadErrorRetry message={AUCTION_LOAD_COPY.pricesError} onRetry={retry} retrying={retrying} />;
   if (!prices) return <AuctionResultsSkeleton />;
@@ -77,6 +83,7 @@ export default function AuctionLookupList({ priceState, gear, categories, bis, f
         colSort={filters.colSort}
         colDir={filters.colDir}
         onColSort={onColSort}
+        upgradeMap={upgradeMap}
       />
     );
   }

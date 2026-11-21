@@ -36,7 +36,8 @@ export function lookupAuctionItems(
 ): AuctionLookupResult {
   const { pool, notOnSale } = materials ? materialsOnSale(materials, byId, filters.query) : { pool: byId.values(), notOnSale: 0 };
   const filtered = filterAuctionItems(pool, filters, context);
-  const items = filters.colSort
+  // "upgrade" sort needs character data unavailable here — applied in AuctionLookup after this.
+  const items = filters.colSort && filters.colSort !== "upgrade"
     ? sortByColumn(filtered, filters.colSort, filters.colDir)
     : sortAuctionItems(filtered, filters.sort, context.qualityOf);
   return { items, notOnSale };
