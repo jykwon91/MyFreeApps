@@ -9,9 +9,7 @@ const SOURCE_ROOTS = ["apps/mybookkeeper/mobile/src", "apps/myjobhunter/mobile/s
  * Files that still use a live region, and why. A live region is read only by TalkBack; VoiceOver
  * ignores it. Each entry should be on its way to `useAnnouncement` or the shared component that calls it.
  */
-const LIVE_REGION_EXCEPTIONS: Record<string, string> = {
-  "apps/mybookkeeper/mobile/src/features/welcomeManuals/WelcomeManualEmailForm.tsx": "The room error is a hand-built field error; it is being moved to the shared FieldError, which reads it through useFieldErrorAnnouncement.",
-};
+const LIVE_REGION_EXCEPTIONS: Record<string, string> = {};
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
