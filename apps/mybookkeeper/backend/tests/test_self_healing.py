@@ -8,10 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import anthropic
 import httpx2
 import pytest
-from platform_shared.extraction import is_transient_failure
+from platform_shared.extraction import ExtractionParseError, ExtractionTruncatedError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.upload_processor_constants import TRANSIENT_ERROR_TYPES
 
 from app.models.documents.document import Document
 from app.models.organization.organization import Organization
@@ -19,11 +17,12 @@ from app.models.system.system_event import SystemEvent
 from app.models.system.usage_log import UsageLog
 from app.models.user.user import User
 from app.repositories import system_event_repo
+from app.services.extraction.claude_retry_policy import is_retryable_extraction_error
 
 
 def _is_transient(exc: Exception) -> bool:
-    """The upload worker's retry decision."""
-    return is_transient_failure(exc, extra_transient=TRANSIENT_ERROR_TYPES)
+    """The upload worker's (and email queue's) retry decision."""
+    return is_retryable_extraction_error(exc)
 
 
 class TestSystemEventRepo:
@@ -180,6 +179,8 @@ async def _error_from_extraction(sdk_error: Exception) -> Exception:
 
     client = MagicMock()
     client.messages.create = AsyncMock(side_effect=sdk_error)
+    # Queue reads use a per-call copy with SDK retries off; it is the same fake.
+    client.with_options.return_value = client
     with patch.object(claude_service._extraction, "_client", client), \
             patch("asyncio.sleep", new=AsyncMock()):
         try:
@@ -239,79 +240,85 @@ class TestRetryLogic:
 
         assert _is_transient(ValueError("bad")) is False
 
-    def test_compute_next_retry_exponential(self) -> None:
-        from app.workers.upload_processor_worker import _compute_next_retry
+    def test_unreadable_replies_are_retried(self) -> None:
+        # The shared classification calls this final; MyBookkeeper retries
+        # it (bounded) instead of saving a placeholder or losing the item.
+        assert _is_transient(ExtractionParseError("not json")) is True
 
-        before = datetime.now(timezone.utc)
-        retry_1 = _compute_next_retry(1)
-        retry_2 = _compute_next_retry(2)
+    def test_a_cut_off_reply_is_final(self) -> None:
+        # The same input is cut off the same way, so a retry only spends tokens.
+        assert _is_transient(ExtractionTruncatedError("cut off")) is False
 
-        assert retry_1 > before
-        assert retry_2 > retry_1
-        delta_1 = (retry_1 - before).total_seconds()
-        delta_2 = (retry_2 - before).total_seconds()
-        assert 110 < delta_1 < 130
-        assert 230 < delta_2 < 260
+    def test_retry_delay_doubles_from_one_minute(self) -> None:
+        # One delay rule for both Claude queues (claude_retry_policy).
+        from app.services.extraction.claude_retry_policy import next_attempt_at
+
+        now = datetime.now(timezone.utc)
+        exc = asyncio.TimeoutError()
+        assert (next_attempt_at(1, exc, now) - now).total_seconds() == 60
+        assert (next_attempt_at(2, exc, now) - now).total_seconds() == 120
+
+
+def _classify(exc: Exception) -> tuple[str, str]:
+    from app.services.extraction.claude_retry_policy import classify_extraction_failure
+    from app.workers.upload_processor_worker import _classify_extraction_error
+
+    return _classify_extraction_error(exc, classify_extraction_failure(exc))
 
 
 class TestErrorClassification:
     def test_generic_error_keeps_friendly_message_and_real_type(self) -> None:
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
-        user_msg, diagnostic = _classify_extraction_error(RuntimeError("boom from claude"))
+        user_msg, diagnostic = _classify(RuntimeError("boom from claude"))
         assert user_msg == "An unexpected error occurred during extraction. Try re-extracting this document."
         # The diagnostic preserves the real exception type + message for admins.
         assert diagnostic.startswith("RuntimeError: ")
         assert "boom from claude" in diagnostic
 
     def test_timeout_error_message(self) -> None:
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
-        user_msg, diagnostic = _classify_extraction_error(asyncio.TimeoutError())
+        user_msg, diagnostic = _classify(asyncio.TimeoutError())
         assert "timed out" in user_msg
         assert diagnostic.startswith("TimeoutError")
 
     def test_db_save_error_message(self) -> None:
         import sqlalchemy.exc
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
         exc = sqlalchemy.exc.IntegrityError("INSERT ...", {}, Exception("unique violation"))
-        user_msg, diagnostic = _classify_extraction_error(exc)
+        user_msg, diagnostic = _classify(exc)
         assert "saving the extraction results" in user_msg
         assert diagnostic.startswith("IntegrityError")
 
     @pytest.mark.asyncio
     async def test_auth_error_message(self) -> None:
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
         exc = await _error_from_extraction(
             _anthropic_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
         )
-        user_msg, diagnostic = _classify_extraction_error(exc)
+        user_msg, diagnostic = _classify(exc)
         assert "contact support" in user_msg
         assert diagnostic.startswith("ExtractionError")
         assert "authentication_error" in diagnostic
 
     @pytest.mark.asyncio
     async def test_busy_claude_says_try_again_later(self) -> None:
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
         exc = await _error_from_extraction(anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST))
-        user_msg, _ = _classify_extraction_error(exc)
+        user_msg, _ = _classify(exc)
         assert user_msg == (
             "The AI service is busy right now. Try re-extracting this document in a few minutes."
         )
 
     @pytest.mark.asyncio
     async def test_rejected_document_message_hides_provider_text(self) -> None:
-        from app.workers.upload_processor_worker import _classify_extraction_error
-
         exc = await _error_from_extraction(
             _anthropic_status_error(anthropic.BadRequestError, 400, "invalid_request_error"),
         )
-        user_msg, _ = _classify_extraction_error(exc)
+        user_msg, _ = _classify(exc)
         assert "couldn't read this document" in user_msg
         assert "provider detail" not in user_msg
+
+    def test_unreadable_and_cut_off_replies_have_their_own_message(self) -> None:
+        from app.core.upload_processor_constants import UPLOAD_FAILURE_MESSAGES
+        from app.models.extraction.extraction_failure_kind import ExtractionFailureKind
+
+        assert _classify(ExtractionTruncatedError("cut off"))[0] == UPLOAD_FAILURE_MESSAGES[ExtractionFailureKind.CUT_OFF]
+        assert _classify(ExtractionParseError("not json"))[0] == UPLOAD_FAILURE_MESSAGES[ExtractionFailureKind.UNREADABLE]
 
 
 class TestThrottleState:
@@ -431,7 +438,7 @@ class TestRetryFailedDocuments:
         db.add(doc)
         await db.commit()
 
-        from sqlalchemy import select, func
+        from sqlalchemy import func, select
         count_before = await db.execute(
             select(func.count()).select_from(Document).where(
                 Document.organization_id == test_org.id,
@@ -488,3 +495,18 @@ class TestRetryFailedDocuments:
 
         await db.refresh(doc)
         assert doc.status == "failed"
+
+
+class TestRateLimitPause:
+    async def test_the_upload_worker_claims_nothing_while_rate_limited(self) -> None:
+        # A read now would be rate limited too and charged one of its retries.
+        from app.workers import upload_processor_worker as worker
+
+        claim = AsyncMock()
+        with (
+            patch.object(worker, "rate_limit_pause_seconds", return_value=30.0),
+            patch.object(worker.document_repo, "claim_next_processing", claim),
+        ):
+            assert await worker.process_one_for_user(uuid.uuid4()) is False
+
+        claim.assert_not_awaited()

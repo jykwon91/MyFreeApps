@@ -7,10 +7,17 @@ This module keeps only the MyBookkeeper-domain pieces:
 - ``get_extraction_prompt`` — DEFAULT_PROMPT + document-type addendum +
   property context + DB-stored per-user rules. Unchanged.
 - The MBK response interpretation (year_end_statement special-case,
-  ``documents``/``invoices`` unwrap, low-confidence fallback dict on any
-  parse/shape failure) — the exact pre-extraction return contract, so
-  every caller (document_extraction_service, email_extraction_service,
-  persistence) sees byte-identical dicts.
+  ``documents``/``invoices`` unwrap) — the pre-extraction return
+  contract, so every caller (document_extraction_service,
+  email_extraction_service, persistence) sees the same dicts. A reply
+  that is cut off, unparseable, or not an extraction object raises
+  ExtractionParseError (ExtractionTruncatedError when cut off): both
+  callers are queues that retry an unreadable reply and fail a cut-off
+  one, so nothing is saved from a failed read. (This used to return a low-confidence "uncategorized" placeholder,
+  which the email path skipped and marked done, dropping the invoice.)
+  Those queue reads make one request with no SDK retries and no sleeping
+  on a rate limit, each under CLAUDE_READ_TIMEOUT_SECONDS; the queues
+  schedule the retries.
 - ``_create_with_backoff`` — kept as a thin passthrough because
   ``app.services.tax.tax_advisor_service`` imports it for non-extraction
   Claude calls; it must keep using the same shared throttle.
@@ -22,6 +29,7 @@ Model is pinned to ``claude-sonnet-4-6``: changing it would alter
 extraction output AND cold-start the production prompt cache (caching is
 a prefix match keyed on model + system bytes).
 """
+import asyncio
 import logging
 import uuid
 
@@ -30,6 +38,11 @@ from anthropic import Timeout
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
+from app.core.document_constants import (
+    CLAUDE_EXTRACTION_MAX_SDK_RETRIES,
+    CLAUDE_EXTRACTION_MAX_WAIT_SECONDS,
+    CLAUDE_READ_TIMEOUT_SECONDS,
+)
 from app.db.session import AsyncSessionLocal
 from app.repositories import extraction_prompt_repo
 from app.services.extraction.prompts.base_prompt import DEFAULT_PROMPT
@@ -152,18 +165,24 @@ async def get_extraction_prompt(
 
 
 async def _record_rate_limited(evt: RateLimitEvent) -> None:
-    """Record the MBK system event on each 429 — the exact pre-extraction payload.
+    """Record the MBK system event on each 429, saying whether this call retries it.
+
+    Queue reads have no wait budget, so their 429 is not retried here (the
+    queue schedules its own retry); the event must not claim "attempt 1/5".
 
     create_with_backoff already wraps this in a try/except-and-log, so a
     failing event write never breaks the backoff (prior behaviour).
     """
+    if evt.will_retry:
+        detail = f"attempt {evt.attempt}/{evt.max_attempts}, retrying in {evt.wait_seconds:.0f}s"
+    else:
+        detail = f"not retried here; Anthropic asks to wait {evt.wait_seconds:.0f}s"
     await record_event(
         None,
         "rate_limited",
         "warning",
-        f"Anthropic API rate limited (attempt {evt.attempt}/{evt.max_attempts}, "
-        f"consecutive: {evt.consecutive_429s})",
-        {"wait_seconds": evt.wait_seconds, "consecutive_429s": evt.consecutive_429s},
+        f"Anthropic API rate limited ({detail}, consecutive: {evt.consecutive_429s})",
+        {"wait_seconds": evt.wait_seconds, "consecutive_429s": evt.consecutive_429s, "will_retry": evt.will_retry},
     )
 
 
@@ -176,22 +195,12 @@ async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
     return await create_with_backoff(client, on_rate_limit=_record_rate_limited, **kwargs)
 
 
-def _legacy_fallback() -> dict:
-    return {
-        "data": [{"tags": ["uncategorized"], "confidence": "low", "tax_relevant": False}],
-        "tokens": 0,
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "model_name": None,
-    }
-
-
 def _legacy_from_response(resp: ExtractionResponse) -> dict:
     """Reproduce the pre-extraction _parse_response success mapping exactly.
 
     Raises AttributeError if ``resp.data`` is not a dict (e.g. the model
-    returned a bare JSON list) — the caller catches that and returns the
-    low-confidence fallback, exactly as the pre-extraction code did.
+    returned a bare JSON list); ``_to_legacy`` turns that into
+    ExtractionParseError.
     """
     parsed = resp.data
     token_fields = {
@@ -221,22 +230,30 @@ def _legacy_from_response(resp: ExtractionResponse) -> dict:
 def _to_legacy(resp: ExtractionResponse) -> dict:
     try:
         return _legacy_from_response(resp)
-    except (AttributeError, KeyError, TypeError):
-        return _legacy_fallback()
+    except (AttributeError, KeyError, TypeError) as e:
+        logger.error(
+            "Extraction reply was JSON but not an extraction object: type=%s model=%s output_tokens=%d",
+            type(resp.data).__name__, resp.model, resp.output_tokens,
+        )
+        raise ExtractionParseError(
+            f"Model response was a {type(resp.data).__name__}, not an extraction object",
+        ) from e
 
 
 async def extract_from_text(text: str, user_id: uuid.UUID | None = None, filename: str | None = None, property_classification: str | None = None) -> dict:
     prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
     if err:
         logger.warning("extract_from_text: proceeding without user rules (error=%s user_id=%s)", err, user_id)
-    try:
-        resp = await _extraction.extract_text(
+    resp = await asyncio.wait_for(
+        _extraction.extract_text(
             prompt,
             text[:settings.max_text_chars],
             on_rate_limit=_record_rate_limited,
-        )
-    except ExtractionParseError:
-        return _legacy_fallback()
+            max_wait_seconds=CLAUDE_EXTRACTION_MAX_WAIT_SECONDS,
+            max_retries=CLAUDE_EXTRACTION_MAX_SDK_RETRIES,
+        ),
+        timeout=CLAUDE_READ_TIMEOUT_SECONDS,
+    )
     return _to_legacy(resp)
 
 
@@ -244,15 +261,17 @@ async def extract_from_image(image_bytes: bytes, media_type: str, user_id: uuid.
     prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
     if err:
         logger.warning("extract_from_image: proceeding without user rules (error=%s user_id=%s)", err, user_id)
-    try:
-        resp = await _extraction.extract_document(
+    resp = await asyncio.wait_for(
+        _extraction.extract_document(
             prompt,
             image_bytes,
             media_type,
             on_rate_limit=_record_rate_limited,
-        )
-    except ExtractionParseError:
-        return _legacy_fallback()
+            max_wait_seconds=CLAUDE_EXTRACTION_MAX_WAIT_SECONDS,
+            max_retries=CLAUDE_EXTRACTION_MAX_SDK_RETRIES,
+        ),
+        timeout=CLAUDE_READ_TIMEOUT_SECONDS,
+    )
     return _to_legacy(resp)
 
 
@@ -272,31 +291,35 @@ async def _run_record_extraction(
     categorizing transactions, and a rule like "always categorize Constellation
     as utilities" applied to a plan reading is noise at best.
 
-    Returns the model's parsed JSON object, or ``{}`` when the response was not
-    parseable. The caller builds a draft from whatever fields survive, so an
-    empty dict degrades to an empty form rather than an error.
+    Returns the model's parsed JSON object. A reply that was cut off,
+    unparseable, or not an object raises ExtractionParseError
+    (ExtractionTruncatedError when cut off): it used to come back as ``{}``,
+    an empty form that looked like a document with nothing on it.
+    ``document_draft_reader`` turns it into a plain "couldn't read" answer.
     """
     if not _extraction.is_configured():
         logger.warning("%s extraction requested without an API key", label)
         return {}
-    try:
-        if image_bytes is not None:
-            resp = await _extraction.extract_document(
-                prompt,
-                image_bytes,
-                media_type or "application/pdf",
-                on_rate_limit=_record_rate_limited,
-            )
-        else:
-            resp = await _extraction.extract_text(
-                prompt,
-                (text or "")[:settings.max_text_chars],
-                on_rate_limit=_record_rate_limited,
-            )
-    except ExtractionParseError:
-        logger.warning("%s extraction: model response was not JSON", label)
-        return {}
-    return resp.data if isinstance(resp.data, dict) else {}
+    if image_bytes is not None:
+        resp = await _extraction.extract_document(
+            prompt,
+            image_bytes,
+            media_type or "application/pdf",
+            on_rate_limit=_record_rate_limited,
+        )
+    else:
+        resp = await _extraction.extract_text(
+            prompt,
+            (text or "")[:settings.max_text_chars],
+            on_rate_limit=_record_rate_limited,
+        )
+    if not isinstance(resp.data, dict):
+        logger.error(
+            "%s extraction: reply was JSON but not an object: type=%s model=%s output_tokens=%d",
+            label, type(resp.data).__name__, resp.model, resp.output_tokens,
+        )
+        raise ExtractionParseError(f"Model response was a {type(resp.data).__name__}, not an object")
+    return resp.data
 
 
 async def run_utility_plan_extraction(

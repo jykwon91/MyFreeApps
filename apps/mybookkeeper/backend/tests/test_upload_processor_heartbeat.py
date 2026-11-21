@@ -140,7 +140,7 @@ async def test_stop_ends_polling_after_the_current_drain(heartbeat: Path) -> Non
 class TestExtractionFitsTheHeartbeat:
     def test_the_configured_extraction_timeout_fits(self) -> None:
         """Read from the real settings: the shipped CLAUDE_TIMEOUT_SECONDS must boot."""
-        assert EXTRACTION_TIMEOUT_SECONDS == settings.claude_timeout_seconds + 30
+        assert EXTRACTION_TIMEOUT_SECONDS == 2 * (settings.claude_timeout_seconds + 30) + 60
         check_heartbeat_outlasts_extraction(EXTRACTION_TIMEOUT_SECONDS)
 
     def test_exactly_at_the_budget_is_allowed(self) -> None:

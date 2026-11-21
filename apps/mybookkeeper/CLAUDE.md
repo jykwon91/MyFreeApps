@@ -197,7 +197,7 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 **Categories:**
 - `Category` enum defined in `backend/app/models/invoice.py`
 - Frontend repeats these as string literals in `lib/types.ts` — keep both in sync when adding categories
-- `uncategorized` is the fallback when extraction fails
+- `uncategorized` is for a document Claude read but couldn't categorize. A failed or unparseable read is never saved as a placeholder: emails and uploads retry it (`claude_retry_policy.py`, at most 4 email attempts), then show it as failed with a plain reason and Retry
 
 **File extraction:**
 - PDFs: try pypdf text first; fall back to Claude vision if empty

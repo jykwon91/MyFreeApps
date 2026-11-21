@@ -1,6 +1,6 @@
 """Every part of a scheduler tick contains its own failure.
 
-One org's Gmail, the channel-iCal poll, the utility-plan check, lease
+One org's Gmail (in its own task, see test_scheduler_worker_gmail_task), the channel-iCal poll, the utility-plan check, lease
 hand-over and the rent reminders each log what went wrong and never skip the
 parts after them — a single bad mailbox or DB blip must not cost every other
 org its sync or a tenant their reminder.
@@ -60,17 +60,23 @@ async def test_one_orgs_gmail_failure_does_not_skip_other_orgs_or_steps(
 ) -> None:
     first, second = _target(), _target()
     gmail = AsyncMock(side_effect=[RuntimeError("mailbox broke"), None])
-    with _cycle(targets=AsyncMock(return_value=[first, second]), gmail=gmail) as mocks:
-        await scheduler_worker.run_sync_cycle()
+    with _cycle(targets=AsyncMock(return_value=[first, second]), gmail=gmail):
+        await scheduler_worker.sync_all_gmail()
     assert [c.args[0] for c in gmail.await_args_list] == [first, second]
-    _assert_later_steps_ran(mocks)
     assert f"Gmail sync failed for org {first.organization_id}" in caplog.text
 
 
-async def test_listing_gmail_targets_failing_still_runs_the_other_steps() -> None:
+async def test_listing_gmail_targets_failing_is_logged_not_raised(caplog: pytest.LogCaptureFixture) -> None:
     with _cycle(targets=AsyncMock(side_effect=ConnectionError("db down"))) as mocks:
-        await scheduler_worker.run_sync_cycle()
+        await scheduler_worker.sync_all_gmail()
     mocks["gmail"].assert_not_awaited()
+    assert "Listing Gmail sync targets failed" in caplog.text
+
+
+async def test_the_in_tick_cycle_leaves_gmail_to_its_own_task() -> None:
+    with _cycle() as mocks:
+        await scheduler_worker.run_sync_cycle()
+    mocks["targets"].assert_not_awaited()
     _assert_later_steps_ran(mocks)
 
 

@@ -22,6 +22,12 @@ from collections.abc import Awaitable, Callable
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from platform_shared.extraction import ExtractionParseError, ExtractionTruncatedError
+
+from app.core.document_draft_constants import (
+    DRAFT_READ_CUT_OFF_DETAIL,
+    DRAFT_READ_UNREADABLE_DETAIL,
+)
 from app.core.storage import get_storage
 from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.db.session import unit_of_work
@@ -50,7 +56,7 @@ class DocumentNotFoundError(LookupError):
 
 
 class UnreadableDocumentError(ValueError):
-    """The document exists but its content cannot be sent to the model."""
+    """The document exists but could not be read: an unsupported type, or a reply that failed."""
 
 
 def as_text(value: Any, *, max_length: int) -> str | None:
@@ -164,7 +170,27 @@ async def extract_raw(
     user_id: uuid.UUID,
     unsupported_message: str,
 ) -> dict[str, Any]:
-    """Send the document to ``run`` as text where possible, vision otherwise."""
+    """Send the document to ``run`` as text where possible, vision otherwise.
+
+    A reply that was cut off or could not be read raises
+    UnreadableDocumentError with a plain reason, so the operator is told to
+    try again instead of being handed an empty form.
+    """
+    try:
+        raw = await _send(content, file_type, mime_type, run=run, user_id=user_id)
+    except ExtractionTruncatedError as exc:
+        raise UnreadableDocumentError(DRAFT_READ_CUT_OFF_DETAIL) from exc
+    except ExtractionParseError as exc:
+        raise UnreadableDocumentError(DRAFT_READ_UNREADABLE_DETAIL) from exc
+    if raw is None:
+        raise UnreadableDocumentError(unsupported_message)
+    return raw
+
+
+async def _send(
+    content: bytes, file_type: str, mime_type: str, *, run: RunExtraction, user_id: uuid.UUID,
+) -> dict[str, Any] | None:
+    """The model's reply for a file type it can read; None for any other."""
     if file_type == "image":
         return await run(
             image_bytes=content,
@@ -185,4 +211,4 @@ async def extract_raw(
         return await run(
             text=await extract_text_from_spreadsheet(content, ""), user_id=user_id,
         )
-    raise UnreadableDocumentError(unsupported_message)
+    return None

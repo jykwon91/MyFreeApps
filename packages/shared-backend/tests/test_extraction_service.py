@@ -11,6 +11,7 @@ ExtractionError (with a retry-or-final ``kind``) on every provider failure.
 from __future__ import annotations
 
 import base64
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anthropic
@@ -24,6 +25,8 @@ from platform_shared.extraction import (
     ExtractionParseError,
     ExtractionResponse,
     ExtractionService,
+    ExtractionTruncatedError,
+    RateLimitPausedError,
 )
 from platform_shared.extraction.backoff import throttle
 
@@ -37,11 +40,24 @@ def _reset_throttle() -> None:
     throttle.resume_at = 0.0
 
 
-def _message(text: str, *, model: str = "claude-sonnet-4-6", in_tok: int = 10, out_tok: int = 5) -> MagicMock:
-    msg = MagicMock()
+def _text_block(text: str) -> MagicMock:
     block = MagicMock()
+    block.type = "text"
     block.text = text
-    msg.content = [block]
+    return block
+
+
+def _message(
+    text: str,
+    *,
+    model: str = "claude-sonnet-4-6",
+    in_tok: int = 10,
+    out_tok: int = 5,
+    stop_reason: str = "end_turn",
+) -> MagicMock:
+    msg = MagicMock()
+    msg.content = [_text_block(text)]
+    msg.stop_reason = stop_reason
     msg.usage.input_tokens = in_tok
     msg.usage.output_tokens = out_tok
     msg.model = model
@@ -117,6 +133,70 @@ class TestExtractText:
         with ctx:
             with pytest.raises(ExtractionParseError):
                 await _service().extract_text("s", "t")
+
+    async def test_reply_cut_off_at_max_tokens_raises_truncated(self) -> None:
+        # The first invoice of a cut-off list decodes on its own; returning
+        # it would silently drop the rest.
+        msg = _message(
+            '{"documents": [{"vendor": "A", "amount": 1}, {"vendor": "B", "amo',
+            stop_reason="max_tokens",
+        )
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            with pytest.raises(ExtractionTruncatedError):
+                await _service().extract_text("s", "t")
+
+    async def test_reads_text_after_a_non_text_first_block(self) -> None:
+        msg = _message('{"ok": true}')
+        other = MagicMock()
+        other.type = "thinking"
+        msg.content = [other, *msg.content]
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"ok": True}
+
+    async def test_empty_content_raises_parse_error(self) -> None:
+        msg = _message("")
+        msg.content = []
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            with pytest.raises(ExtractionParseError):
+                await _service().extract_text("s", "t")
+
+    async def test_wait_budget_reaches_the_backoff(self) -> None:
+        msg = _message("{}")
+        ctx, _ = _patched_client(msg)
+        with ctx, patch(
+            "platform_shared.extraction.service.create_with_backoff", AsyncMock(return_value=msg),
+        ) as backoff_call:
+            await _service().extract_text("s", "t", max_wait_seconds=0)
+            await _service().extract_document("s", b"%PDF", "application/pdf", max_wait_seconds=5)
+        assert [c.kwargs["max_wait_seconds"] for c in backoff_call.await_args_list] == [0, 5]
+
+    async def test_throttle_over_the_budget_raises_rate_limited_without_a_request(self) -> None:
+        throttle.resume_at = time.monotonic() + 120
+        ctx, client = _patched_client(_message("{}"))
+        with ctx, pytest.raises(RateLimitPausedError) as raised:
+            await _service().extract_text("s", "t", max_wait_seconds=0)
+        client.messages.create.assert_not_awaited()
+        assert raised.value.kind is AnthropicFailureKind.RATE_LIMITED
+
+    async def test_max_retries_is_per_call_and_off_by_default(self) -> None:
+        msg = _message("{}")
+        ctx, client = _patched_client(msg)
+        no_retries = MagicMock()
+        no_retries.messages.create = AsyncMock(return_value=msg)
+        client.with_options.return_value = no_retries
+        with ctx:
+            service = _service()
+            await service.extract_text("s", "t")
+            client.with_options.assert_not_called()
+            await service.extract_text("s", "t", max_retries=0)
+            await service.extract_document("s", b"%PDF", "application/pdf", max_retries=0)
+        assert client.with_options.call_args_list == [((), {"max_retries": 0})] * 2
+        assert client.messages.create.await_count == 1
+        assert no_retries.messages.create.await_count == 2
 
     async def test_custom_max_tokens(self) -> None:
         msg = _message("{}")
@@ -260,6 +340,8 @@ class TestInheritance:
     def test_parse_error_is_runtime_error(self) -> None:
         assert issubclass(ExtractionParseError, RuntimeError)
 
+    def test_truncated_is_a_parse_error(self) -> None:
+        assert issubclass(ExtractionTruncatedError, ExtractionParseError)
 
 _REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 

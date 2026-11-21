@@ -53,9 +53,13 @@ async def _drive(
     full_interval_seconds: int = 86_400,
 ) -> None:
     """Run ``tick_until_stopped`` for ``ticks`` ticks (each tick takes ~no time)."""
-    with patch(f"{_WORKER}.wait_or_stop", wait or _stop_after_waits(stop, ticks)):
+    with (
+        patch(f"{_WORKER}.wait_or_stop", wait or _stop_after_waits(stop, ticks)),
+        patch(f"{_WORKER}.sync_all_gmail", AsyncMock()),
+    ):
         await scheduler_worker.tick_until_stopped(
             stop, full_interval_seconds=full_interval_seconds, tick_seconds=3_600,
+            gmail_sync_cap_seconds=2 * full_interval_seconds,
         )
 
 

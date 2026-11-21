@@ -28,6 +28,9 @@ class SyncLog(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Touched as the sync works through its emails; a running sync that has made
+    # no progress for SYNC_STALE_AFTER_SECONDS is marked "Timed out".
+    last_progress_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("ix_sync_logs_org_provider_started", "organization_id", "provider", "started_at"),

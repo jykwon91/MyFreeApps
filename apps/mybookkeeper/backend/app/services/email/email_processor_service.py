@@ -14,6 +14,7 @@ from app.services.email.email_fetch_service import (  # noqa: F401
     drain_gmail_fetch,
 )
 from app.services.email.email_extraction_service import (  # noqa: F401
+    close_interrupted_sync_log,
     drain_claude_extraction,
     finalize_sync_log,
 )

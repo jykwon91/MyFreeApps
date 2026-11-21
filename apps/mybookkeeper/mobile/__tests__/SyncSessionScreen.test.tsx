@@ -219,7 +219,7 @@ describe("SyncSessionScreen: the emails", () => {
       asked.push([String(call?.[0]), String(call?.[1])]);
       await act(async () => call?.[2]?.[0].onPress?.());
     }
-    expect(asked[0]).toEqual([MESSAGES.dismissConfirmTitle("reading.pdf"), expect.stringMatching(/mark it as failed and leave it in the queue/)]);
+    expect(asked[0]).toEqual([MESSAGES.dismissConfirmTitle("reading.pdf"), expect.stringMatching(/stop, drop what I read, and remove it from the queue/)]);
     expect(asked[1]).toEqual([MESSAGES.dismissConfirmTitle("broken.pdf"), expect.stringMatching(/already tried to read it.*remove it from the queue/)]);
     expect(asked[2]).toEqual([MESSAGES.dismissConfirmTitle("waiting.pdf"), expect.stringMatching(/remove it from the queue without reading it/)]);
   });

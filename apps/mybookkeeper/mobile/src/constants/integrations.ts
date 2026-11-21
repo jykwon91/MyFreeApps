@@ -107,7 +107,7 @@ export const INTEGRATIONS_MESSAGES = {
   dismissConfirmBody: (status: EmailQueueStatus) => {
     switch (status) {
       case "extracting":
-        return "I'm reading it right now. I'll mark it as failed and leave it in the queue, and you can retry it later.";
+        return "I'm reading it right now. I'll stop, drop what I read, and remove it from the queue.";
       case "failed":
         return "I already tried to read it and couldn't. I'll remove it from the queue.";
       default:

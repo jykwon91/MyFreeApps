@@ -14,7 +14,12 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from platform_shared.extraction import ExtractionParseError, ExtractionTruncatedError
 
+from app.core.document_draft_constants import (
+    DRAFT_READ_CUT_OFF_DETAIL,
+    DRAFT_READ_UNREADABLE_DETAIL,
+)
 from app.services.extraction import document_draft_reader as reader
 
 RATE_PLACES = "0.0001"
@@ -138,3 +143,25 @@ class TestExtractRaw:
         )
 
         assert run.await_args.kwargs.get("media_type") == "image/png"
+
+    @pytest.mark.parametrize(
+        ("error", "detail"),
+        [
+            (ExtractionParseError("bad json"), DRAFT_READ_UNREADABLE_DETAIL),
+            (ExtractionTruncatedError("cut off"), DRAFT_READ_CUT_OFF_DETAIL),
+        ],
+    )
+    async def test_an_unreadable_reply_is_reported_not_an_empty_form(
+        self, error: ExtractionParseError, detail: str,
+    ) -> None:
+        with pytest.raises(reader.UnreadableDocumentError) as raised:
+            await reader.extract_raw(
+                b"png",
+                "image",
+                "image/png",
+                run=AsyncMock(side_effect=error),
+                user_id=uuid.uuid4(),
+                unsupported_message="nope",
+            )
+
+        assert str(raised.value) == detail

@@ -13,7 +13,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
 from app.models.responses.upload_result import UploadResult
-from app.repositories import document_repo, extraction_repo, property_repo, transaction_repo, booking_statement_repo, usage_log_repo
+from app.repositories import document_repo, extraction_repo, property_repo, booking_statement_repo, usage_log_repo
 from app.repositories.tax import tax_return_repo
 from app.services.extraction.claude_service import extract_from_text, extract_from_image
 from app.services.extraction.dedup_service import evaluate_dedup
@@ -27,6 +27,7 @@ from app.services.extraction.extractor_service import (
     extract_text_from_spreadsheet,
 )
 from app.core.tax_return_enums import TAX_RETURN_STATUS_FILED
+from platform_shared.extraction import ExtractionParseError, ExtractionTruncatedError
 from app.mappers.booking_statement_mapper import build_booking_statements_from_line_items
 from app.mappers.tax_form_mapper import normalize_tax_doc_type, build_tax_form_data
 from app.mappers.transaction_mapper import build_transaction_from_mapped_item
@@ -99,7 +100,19 @@ async def _run_claude_extraction(
     if file_type == "pdf":
         text = await extract_text_from_pdf(content)
         if text and len(text) >= 50:
-            extraction = await extract_from_text(text, **kw)
+            try:
+                extraction = await extract_from_text(text, **kw)
+            except ExtractionTruncatedError:
+                # Cut off at the output limit: the document has more line items
+                # than one reply holds, and a vision read would produce the
+                # same reply. The worker fails it at once and says why.
+                raise
+            except ExtractionParseError:
+                logger.info(
+                    "Text extraction reply was unreadable for %s, retrying with vision",
+                    document_id,
+                )
+                return await extract_from_image(content, "application/pdf", **kw)
             if not _has_useful_extraction(extraction):
                 logger.info(
                     "Text extraction produced poor results for %s, retrying with vision",

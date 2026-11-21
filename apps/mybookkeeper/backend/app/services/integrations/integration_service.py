@@ -328,10 +328,12 @@ async def dismiss_queue_item(
         item = await email_queue_repo.get_by_id(db, item_id)
         if not item or item.organization_id != ctx.organization_id:
             return False
-        if item.status == "extracting":
-            await email_queue_repo.mark_status(db, item, "failed", error="Dismissed by user")
-        else:
-            await email_queue_repo.delete_item(db, item)
+        # A row being read is marked dismissed rather than deleted, so the drain
+        # sees the dismissal (it writes only while its claim holds) and the
+        # email is not fetched again.
+        if await email_queue_repo.dismiss_if_extracting(db, item.id):
+            return True
+        await email_queue_repo.delete_item(db, item)
         return True
 
 
@@ -367,7 +369,9 @@ async def get_sync_logs(
         for log in logs:
             queue_counts = all_counts.get(log.id, {})
             emails_total: int = log.total_items if log.total_items > 0 else sum(queue_counts.values())
-            emails_done: int = queue_counts.get("done", 0) + queue_counts.get("failed", 0)
+            emails_done: int = (
+                queue_counts.get("done", 0) + queue_counts.get("failed", 0) + queue_counts.get("dismissed", 0)
+            )
             emails_fetched: int = (
                 queue_counts.get("fetched", 0)
                 + queue_counts.get("extracting", 0)

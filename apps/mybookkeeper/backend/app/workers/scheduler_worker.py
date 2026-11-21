@@ -25,6 +25,19 @@ tick after each daily 00:15 UTC slot — i.e. within one tick of the slot. A
 failed run is logged (to Sentry, via ``init_sentry``) and retried on the next
 tick until one succeeds; it never stops the loop or delays the rent reminders.
 
+Gmail sync runs as its own background task, started on each full cycle
+and owned by the tick loop, not inside the tick. A sync can take hours: it
+waits out Anthropic rate limits and the retries of emails whose read failed
+(``email_extraction_service.drain_claude_extraction``), and none of that may
+delay a rent reminder or a lease hand-over. A full cycle that finds the
+previous Gmail sync still running starts no second one; Gmail is then tried
+again on each tick (channels and utility plans keep their own cadence) until
+a sync starts. A slow sync is only logged at info; one that has run past a
+whole full interval looks stuck and is logged as an error, once per sync. A sync still running
+``GMAIL_SYNC_HARD_CAP_FULL_INTERVALS`` full intervals after it started is
+taken as hung: it is cancelled and a new one started, so a hung sync can't
+block every later one. A sync task that dies is logged by its done callback.
+
 Every part of a tick is isolated: each org's Gmail sync, the channel-iCal
 poll, lease auto-end, the utility-plan check, the rent reminders and the cost
 sync each log their own failure and never stop the parts after them — and a
@@ -47,11 +60,13 @@ deploy's healthcheck wait fails if the worker crash-loops at boot.
 
 SIGTERM / SIGINT end the loop once the current tick (if any) finishes. The
 compose ``stop_grace_period`` (app.yaml) gives a reminders-only or cost-sync
-tick time to finish; a full Gmail sync that outlasts it is killed, and its
-next full cycle picks its queue back up (discovery resets email items
-left mid-extraction).
+tick time to finish. A Gmail sync still running is then cancelled: it hands
+the email it was reading back to the queue, due at once and uncounted, and
+closes its sync log as interrupted (``email_sync_worker``), so the next full
+cycle starts a fresh sync that reads it.
 """
 import asyncio
+import dataclasses
 import datetime as _dt
 import logging
 import time
@@ -69,8 +84,14 @@ from platform_shared.workers.wait_or_stop import wait_or_stop
 from app.core.config import settings
 from app.core.observability import init_sentry
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
-from app.core.scheduler_worker_constants import HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_PATH
+from app.core.scheduler_worker_constants import (
+    GMAIL_SYNC_CANCEL_GRACE_SECONDS,
+    GMAIL_SYNC_HARD_CAP_FULL_INTERVALS,
+    HEARTBEAT_INTERVAL_SECONDS,
+    HEARTBEAT_PATH,
+)
 from app.db.session import AsyncSessionLocal, engine
+from app.models.integrations.gmail_sync_run import GmailSyncRun
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import integration_repo
 from app.services.leases import lease_handover_service
@@ -168,14 +189,74 @@ async def sync_all_gmail() -> None:
             logger.exception("Gmail sync failed for org %s", target.organization_id)
 
 
-async def run_sync_cycle() -> None:
-    """Run one full sync cycle for all integration types.
+async def start_gmail_sync(
+    running: GmailSyncRun | None, *, now: float, overrun_seconds: float, cap_seconds: float,
+) -> tuple[GmailSyncRun, bool]:
+    """Start a Gmail sync in the background. Returns the sync now running and whether this call started it.
 
-    Never raises: each step logs and contains its own failure (the two
-    after Gmail do so inside their own ``try``), so one failing step never
-    skips the steps after it.
+    A previous sync still running is left be until it is ``cap_seconds`` old
+    (``now`` is ``time.monotonic()``); then it is taken as hung, cancelled,
+    and a new one started. While it is left be it is logged at info, since a
+    sync can rightly take hours, and as an error once, when it first passes
+    ``overrun_seconds`` (a whole full interval).
     """
-    await sync_all_gmail()
+    if running is not None and not running.task.done():
+        age = now - running.started_at
+        if age < cap_seconds:
+            if age < overrun_seconds or running.overrun_reported:
+                logger.info(
+                    "The Gmail sync started %.1f hours ago is still running; not starting another, "
+                    "trying again next tick",
+                    age / 3600,
+                )
+                return running, False
+            logger.error(
+                "The Gmail sync started %.1f hours ago is still running, past a whole %.1f-hour cycle; "
+                "it is cancelled and replaced at %.1f hours",
+                age / 3600, overrun_seconds / 3600, cap_seconds / 3600,
+            )
+            return dataclasses.replace(running, overrun_reported=True), False
+        logger.error(
+            "The Gmail sync started %.1f hours ago is past the %.1f-hour cap; cancelling it and starting a new one",
+            age / 3600, cap_seconds / 3600,
+        )
+        await _cancel_gmail_sync(running)
+    task = asyncio.create_task(sync_all_gmail(), name="gmail-sync")
+    task.add_done_callback(_log_gmail_sync_crash)
+    return GmailSyncRun(task=task, started_at=now), True
+
+
+def _log_gmail_sync_crash(task: asyncio.Task[None]) -> None:
+    """Done callback: a sync task that died (not cancelled) is logged, never lost silently."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("The Gmail sync task died", exc_info=exc)
+
+
+async def _cancel_gmail_sync(running: GmailSyncRun) -> None:
+    """Cancel a sync and give it GMAIL_SYNC_CANCEL_GRACE_SECONDS to hand its email back and close its log."""
+    running.task.cancel()
+    done, _ = await asyncio.wait({running.task}, timeout=GMAIL_SYNC_CANCEL_GRACE_SECONDS)
+    if not done:
+        logger.error("The cancelled Gmail sync didn't stop within %ds", GMAIL_SYNC_CANCEL_GRACE_SECONDS)
+
+
+async def stop_gmail_sync(running: GmailSyncRun | None) -> None:
+    """Cancel a Gmail sync still running at shutdown and wait for it to unwind."""
+    if running is None or running.task.done():
+        return
+    await _cancel_gmail_sync(running)
+    logger.info("Cancelled the running Gmail sync at shutdown")
+
+
+async def run_sync_cycle() -> None:
+    """Run the in-tick part of a full sync cycle (Gmail runs as its own task).
+
+    Never raises: each step logs and contains its own failure, so one
+    failing step never skips the steps after it.
+    """
     await sync_all_channel_calendars()
     await flag_expiring_utility_plans()
 
@@ -190,7 +271,8 @@ async def send_due_rent_reminders() -> None:
 
 async def run_tick(*, full_cycle: bool, transparency_sync: bool) -> bool:
     """One wake-up: lease hand-overs and rent reminders always, the full sync
-    and the transparency cost sync when each is due. Returns whether the cost
+    (apart from Gmail, see ``start_gmail_sync``) and the transparency cost
+    sync when each is due. Returns whether the cost
     sync ran and succeeded.
 
     The cost sync goes last so a slow Anthropic call never delays the
@@ -206,34 +288,49 @@ async def run_tick(*, full_cycle: bool, transparency_sync: bool) -> bool:
 
 
 async def tick_until_stopped(
-    stop: asyncio.Event, *, full_interval_seconds: int, tick_seconds: int,
+    stop: asyncio.Event, *, full_interval_seconds: int, tick_seconds: int, gmail_sync_cap_seconds: float,
 ) -> None:
     """Tick now and then every ``tick_seconds`` (start to start) until ``stop`` is set.
 
     A tick that raises is logged and the loop carries on — the worker is
-    never exited over a job failure (see the module docstring).
+    never exited over a job failure (see the module docstring). Each full
+    cycle starts the Gmail sync as a task beside the ticks, retried on each
+    tick until one starts (see ``start_gmail_sync``); one still running when
+    ``stop`` is set is cancelled.
     """
     last_full: float | None = None
     last_transparency_sync: _dt.datetime | None = None
-    while not stop.is_set():
-        started = time.monotonic()
-        full_cycle = last_full is None or started - last_full >= full_interval_seconds
-        if full_cycle:
-            last_full = started
-        now = _now()
-        transparency_sync = settings.transparency_primary and is_daily_sync_due(
-            last_run=last_transparency_sync, now=now,
-        )
-        try:
-            synced = await run_tick(full_cycle=full_cycle, transparency_sync=transparency_sync)
-        except Exception:  # noqa: BLE001 — the scheduler must outlive any one tick
-            logger.exception("Scheduler tick failed")
-        else:
-            # Only a successful sync counts: a failed one is retried next tick.
-            if synced:
-                last_transparency_sync = now
-        elapsed = time.monotonic() - started
-        await wait_or_stop(stop, max(0.0, tick_seconds - elapsed))
+    gmail_sync: GmailSyncRun | None = None
+    gmail_due = False
+    try:
+        while not stop.is_set():
+            started = time.monotonic()
+            full_cycle = last_full is None or started - last_full >= full_interval_seconds
+            if full_cycle:
+                last_full = started
+                gmail_due = True
+            if gmail_due:
+                gmail_sync, gmail_started = await start_gmail_sync(
+                    gmail_sync, now=started, overrun_seconds=full_interval_seconds,
+                    cap_seconds=gmail_sync_cap_seconds,
+                )
+                gmail_due = not gmail_started
+            now = _now()
+            transparency_sync = settings.transparency_primary and is_daily_sync_due(
+                last_run=last_transparency_sync, now=now,
+            )
+            try:
+                synced = await run_tick(full_cycle=full_cycle, transparency_sync=transparency_sync)
+            except Exception:  # noqa: BLE001 — the scheduler must outlive any one tick
+                logger.exception("Scheduler tick failed")
+            else:
+                # Only a successful sync counts: a failed one is retried next tick.
+                if synced:
+                    last_transparency_sync = now
+            elapsed = time.monotonic() - started
+            await wait_or_stop(stop, max(0.0, tick_seconds - elapsed))
+    finally:
+        await stop_gmail_sync(gmail_sync)
 
 
 async def run_scheduler(stop: asyncio.Event) -> None:
@@ -256,7 +353,12 @@ async def run_scheduler(stop: asyncio.Event) -> None:
     )
     try:
         async with keep_heartbeat_fresh(HEARTBEAT_PATH, interval_seconds=HEARTBEAT_INTERVAL_SECONDS):
-            await tick_until_stopped(stop, full_interval_seconds=full_interval, tick_seconds=tick)
+            await tick_until_stopped(
+                stop,
+                full_interval_seconds=full_interval,
+                tick_seconds=tick,
+                gmail_sync_cap_seconds=GMAIL_SYNC_HARD_CAP_FULL_INTERVALS * full_interval,
+            )
     finally:
         await engine.dispose()
         logger.info("Scheduler stopped")

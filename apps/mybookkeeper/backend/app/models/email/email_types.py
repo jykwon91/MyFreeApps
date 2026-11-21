@@ -42,7 +42,7 @@ class ParsedEml(TypedDict):
 
 type DiscoverStatus = Literal["skipped", "nothing_new", "queued"]
 type FetchStatus = Literal["fetched", "nothing_to_fetch", "failed"]
-type ExtractStatus = Literal["done", "nothing_to_extract", "failed"]
+type ExtractStatus = Literal["done", "nothing_to_extract", "failed", "retry_scheduled", "discarded"]
 
 
 class DiscoverResultDict(TypedDict, total=False):

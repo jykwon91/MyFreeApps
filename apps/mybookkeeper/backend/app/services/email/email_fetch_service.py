@@ -56,6 +56,10 @@ async def drain_gmail_fetch(ctx: RequestContext, sync_log_id: int | None = None)
     """
     items_processed = 0
     while True:
+        if sync_log_id is not None:
+            async with unit_of_work() as db:
+                # Keeps a long fetch from being timed out as a stuck sync.
+                await sync_log_repo.touch_progress(db, sync_log_id)
         if sync_log_id is not None and items_processed % CANCELLATION_CHECK_INTERVAL == 0:
             async with AsyncSessionLocal() as db:
                 if await sync_log_repo.is_cancelled(db, sync_log_id):

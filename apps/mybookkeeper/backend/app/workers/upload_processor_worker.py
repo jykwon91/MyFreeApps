@@ -23,7 +23,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy.exc
-from platform_shared.extraction import AnthropicFailureKind, ExtractionError, is_transient_failure
+from platform_shared.extraction import RateLimitPausedError, rate_limit_pause_seconds
 from platform_shared.workers.entrypoint import run_until_signalled, run_worker
 from platform_shared.workers.heartbeat import clear_heartbeat, touch_heartbeat
 from platform_shared.workers.wait_or_stop import wait_or_stop
@@ -35,23 +35,24 @@ from app.core.upload_processor_constants import (
     MAX_CONCURRENT_USERS,
     MAX_RETRIES,
     POLL_INTERVAL_SECONDS,
-    TRANSIENT_ERROR_TYPES,
+    UPLOAD_FAILURE_MESSAGES,
+    UPLOAD_SAVE_FAILED_MESSAGE,
 )
 from app.core.upload_processor_guard import check_heartbeat_outlasts_extraction
 from app.db.session import AsyncSessionLocal, engine
+from app.models.extraction.extraction_failure import ExtractionFailure
 from app.repositories import document_repo, system_event_repo
+from app.services.extraction.claude_retry_policy import (
+    classify_extraction_failure,
+    next_attempt_at,
+)
 from app.services.extraction.document_extraction_service import process_document
 from app.services.system.cost_service import check_cost_alerts
 from app.services.system.event_service import record_event
 
 logger = logging.getLogger(__name__)
 
-def _compute_next_retry(retry_count: int) -> datetime:
-    delay_seconds = (2 ** retry_count) * 60
-    return datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
-
-
-def _classify_extraction_error(exc: Exception) -> tuple[str, str]:
+def _classify_extraction_error(exc: Exception, failure: ExtractionFailure) -> tuple[str, str]:
     """Map an extraction failure to (user_message, diagnostic_detail).
 
     The user message is the friendly, conversational string shown on the
@@ -60,23 +61,20 @@ def _classify_extraction_error(exc: Exception) -> tuple[str, str]:
     (System Health -> Recent Activity) without digging through Sentry.
     """
     diagnostic = f"{type(exc).__name__}: {str(exc)[:300]}"
-    if isinstance(exc, asyncio.TimeoutError):
-        user_message = "Extraction timed out. The document may be too large or complex."
-    elif isinstance(exc, (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.DBAPIError)):
-        user_message = "Something went wrong while saving the extraction results. Try re-extracting this document."
-    elif isinstance(exc, ExtractionError) and exc.is_transient:
-        user_message = "The AI service is busy right now. Try re-extracting this document in a few minutes."
-    elif isinstance(exc, ExtractionError) and exc.kind is AnthropicFailureKind.MISCONFIGURED:
-        user_message = "There's a problem connecting to the AI service. Please contact support."
-    elif isinstance(exc, ExtractionError) and exc.kind is AnthropicFailureKind.INPUT_REJECTED:
-        user_message = "The AI service couldn't read this document. Check that the file opens, then re-upload it."
-    else:
-        user_message = "An unexpected error occurred during extraction. Try re-extracting this document."
-    return user_message, diagnostic
+    if isinstance(exc, (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.DBAPIError)):
+        return UPLOAD_SAVE_FAILED_MESSAGE, diagnostic
+    return UPLOAD_FAILURE_MESSAGES[failure.kind], diagnostic
 
 
 async def process_one_for_user(user_id: uuid.UUID) -> bool:
-    """Claim and process one document for a specific user."""
+    """Claim and process one document for a specific user.
+
+    Claims nothing while Anthropic is rate limiting us: the read would only
+    be rate limited too and charged a retry. The poll loop comes back once
+    POLL_INTERVAL_SECONDS has passed.
+    """
+    if rate_limit_pause_seconds() > 0:
+        return False
     async with AsyncSessionLocal() as db:
         doc = await document_repo.claim_next_processing(db, user_id)
         if not doc:
@@ -119,10 +117,13 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
             await check_cost_alerts(org_id)
         except Exception:
             logger.exception("Cost alert check failed for org %s", org_id)
+    except RateLimitPausedError as exc:
+        await _requeue_until_rate_limit_lifts(doc_id, exc)
     except Exception as exc:
         logger.exception("Failed to process document %s", doc_id)
-        transient = is_transient_failure(exc, extra_transient=TRANSIENT_ERROR_TYPES)
-        error_msg, diagnostic = _classify_extraction_error(exc)
+        failure = classify_extraction_failure(exc)
+        transient = failure.retryable
+        error_msg, diagnostic = _classify_extraction_error(exc, failure)
 
         async with AsyncSessionLocal() as db:
             failed_doc = await document_repo.get_by_id_internal(db, doc_id)
@@ -130,7 +131,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
                 new_retry_count = failed_doc.retry_count + 1
                 if transient and new_retry_count < MAX_RETRIES:
                     failed_doc.retry_count = new_retry_count
-                    failed_doc.next_retry_at = _compute_next_retry(new_retry_count)
+                    failed_doc.next_retry_at = next_attempt_at(new_retry_count, exc, datetime.now(timezone.utc))
                     failed_doc.status = "processing"
                     failed_doc.error_message = error_msg
                     logger.info(
@@ -159,6 +160,18 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
         except Exception:
             logger.exception("Failed to record extraction failure event for document %s", doc_id)
     return True
+
+
+async def _requeue_until_rate_limit_lifts(doc_id: uuid.UUID, exc: RateLimitPausedError) -> None:
+    """The read never reached Claude: put the document back for when the limit lifts, without a retry charged."""
+    retry_at = datetime.now(timezone.utc) + timedelta(seconds=exc.retry_after_seconds)
+    logger.info("Document %s not read: Anthropic rate limit in force; requeued for %s", doc_id, retry_at.isoformat())
+    async with AsyncSessionLocal() as db:
+        doc = await document_repo.get_by_id_internal(db, doc_id)
+        if doc and doc.status == "extracting":
+            doc.status = "processing"
+            doc.next_retry_at = retry_at
+            await db.commit()
 
 
 async def drain_user(user_id: uuid.UUID) -> int:

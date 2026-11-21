@@ -1,4 +1,8 @@
 """Boot guard: the upload processor's heartbeat must outlast one extraction."""
+from app.core.document_constants import (
+    CLAUDE_READS_PER_ITEM,
+    EXTRACTION_SAVE_MARGIN_SECONDS,
+)
 from app.core.upload_heartbeat_too_short_error import UploadHeartbeatTooShortError
 from app.core.upload_processor_constants import (
     HEARTBEAT_EXTRACTION_HEADROOM_SECONDS,
@@ -17,12 +21,15 @@ def check_heartbeat_outlasts_extraction(extraction_timeout_seconds: float) -> No
     """
     needed = extraction_timeout_seconds + HEARTBEAT_EXTRACTION_HEADROOM_SECONDS
     if needed > HEARTBEAT_MAX_AGE_SECONDS:
+        largest_claude_timeout = (
+            HEARTBEAT_MAX_AGE_SECONDS - HEARTBEAT_EXTRACTION_HEADROOM_SECONDS - EXTRACTION_SAVE_MARGIN_SECONDS
+        ) // CLAUDE_READS_PER_ITEM - 30
         raise UploadHeartbeatTooShortError(
             f"One extraction can take {extraction_timeout_seconds:.0f}s "
-            f"(CLAUDE_TIMEOUT_SECONDS + 30) plus {HEARTBEAT_EXTRACTION_HEADROOM_SECONDS}s "
+            f"({CLAUDE_READS_PER_ITEM} reads of CLAUDE_TIMEOUT_SECONDS + 30, plus "
+            f"{EXTRACTION_SAVE_MARGIN_SECONDS}s to save) plus {HEARTBEAT_EXTRACTION_HEADROOM_SECONDS}s "
             f"of DB headroom = {needed:.0f}s, longer than the upload processor's "
             f"{HEARTBEAT_MAX_AGE_SECONDS}s heartbeat max age. Lower CLAUDE_TIMEOUT_SECONDS "
-            f"in apps/mybookkeeper/backend/.env.docker to at most "
-            f"{HEARTBEAT_MAX_AGE_SECONDS - HEARTBEAT_EXTRACTION_HEADROOM_SECONDS - 30}, "
+            f"in apps/mybookkeeper/backend/.env.docker to at most {largest_claude_timeout}, "
             f"or raise HEARTBEAT_MAX_AGE_SECONDS in app/core/upload_processor_constants.py.",
         )

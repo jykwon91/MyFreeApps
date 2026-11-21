@@ -3,7 +3,7 @@
 - ``ExtractionService`` / ``ExtractionResponse`` — the consumer-facing
   text/document extraction API.
 - ``create_with_backoff`` / ``ThrottleState`` / ``throttle`` /
-  ``RateLimitEvent`` — the lower-level Anthropic-call primitive, reused
+  ``RateLimitEvent`` / ``rate_limit_pause_seconds`` — the lower-level Anthropic-call primitive, reused
   directly by callers that make non-extraction Claude calls (e.g.
   MyBookkeeper's tax advisor) and that need the same shared throttle.
 - ``ResearchService`` / ``ResearchResponse`` / ``WebSource`` — the
@@ -11,7 +11,8 @@
   returning a JSON payload plus the sources behind it.
 - ``find_json`` — pull the JSON payload out of a text response.
 - ``ExtractionNotConfiguredError`` / ``ExtractionError`` /
-  ``ExtractionParseError`` — typed errors.
+  ``ExtractionParseError`` / ``ExtractionTruncatedError`` /
+  ``RateLimitPausedError`` — typed errors.
 - ``map_anthropic_error`` / ``map_anthropic_status_error`` /
   ``map_anthropic_connection_error`` / ``AnthropicFailure`` /
   ``AnthropicFailureKind`` — classify a raw SDK failure (and log its
@@ -32,12 +33,15 @@ from platform_shared.extraction.backoff import (
     RateLimitEvent,
     ThrottleState,
     create_with_backoff,
+    rate_limit_pause_seconds,
     throttle,
 )
 from platform_shared.extraction.errors import (
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    ExtractionTruncatedError,
+    RateLimitPausedError,
     extraction_error_from_anthropic,
     is_transient_failure,
 )
@@ -60,9 +64,12 @@ __all__ = [
     "ThrottleState",
     "throttle",
     "RateLimitEvent",
+    "rate_limit_pause_seconds",
     "ExtractionError",
     "ExtractionNotConfiguredError",
     "ExtractionParseError",
+    "ExtractionTruncatedError",
+    "RateLimitPausedError",
     "AnthropicFailure",
     "AnthropicFailureKind",
     "map_anthropic_error",
