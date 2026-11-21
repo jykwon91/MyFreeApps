@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { StandaloneMain } from "@platform/ui";
+import { LoadingRegion, StandaloneMain } from "@platform/ui";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import type { Role } from "@/shared/types/user/role";
 
@@ -15,10 +15,10 @@ export default function RequireRole({ roles, children }: RequireRoleProps) {
   if (isLoading) {
     return (
       <StandaloneMain>
-        <div className="p-6 space-y-4 animate-pulse">
+        <LoadingRegion label="Loading page…" className="p-6 space-y-4 animate-pulse">
           <div className="h-6 w-48 bg-muted rounded" />
           <div className="h-64 bg-muted rounded" />
-        </div>
+        </LoadingRegion>
       </StandaloneMain>
     );
   }

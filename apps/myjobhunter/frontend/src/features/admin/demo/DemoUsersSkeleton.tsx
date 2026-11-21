@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Loading skeleton for the demo-users admin page.
@@ -11,7 +11,7 @@ const SKELETON_ROWS = 3;
 
 export default function DemoUsersSkeleton() {
   return (
-    <div className="space-y-6">
+    <LoadingRegion label="Loading demo users…" className="space-y-6">
       <div className="space-y-2">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-80" />
@@ -36,6 +36,6 @@ export default function DemoUsersSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

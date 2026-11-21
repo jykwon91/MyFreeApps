@@ -1,5 +1,4 @@
-import { AlertBox } from "@platform/ui";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { AlertBox, LoadingRegion, Skeleton } from "@platform/ui";
 import { useGetRentReminderSendsQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate } from "@mybookkeeper/api-client/utils/rentReminderFormat";
@@ -17,14 +16,14 @@ export default function RentReminderHistory({ applicantId }: RentReminderHistory
 
   if (isLoading) {
     return (
-      <div className="space-y-2" aria-busy="true">
+      <LoadingRegion label="Loading rent reminder history…" className="space-y-2">
         {[0, 1].map((row) => (
           <div key={row} className="flex items-center justify-between gap-2 py-2">
             <Skeleton className="h-4 w-40" />
             <Skeleton className="h-5 w-20" />
           </div>
         ))}
-      </div>
+      </LoadingRegion>
     );
   }
 

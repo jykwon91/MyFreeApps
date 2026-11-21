@@ -1,3 +1,5 @@
+import { LoadingRegion } from "@platform/ui";
+
 /**
  * Loading placeholder for the dashboard rate-comparison card.
  *
@@ -9,9 +11,9 @@
  */
 export default function UtilityPlanComparisonCardSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading utility plan comparison…"
       className="bg-card border rounded-lg p-0 overflow-hidden animate-pulse"
-      aria-busy="true"
       data-testid="utility-plan-comparison-card-loading"
     >
       <div className="flex items-center justify-between gap-3 px-6 py-4 border-b">
@@ -31,6 +33,6 @@ export default function UtilityPlanComparisonCardSkeleton() {
           ))}
         </ul>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirror of the loaded ListingDetail layout: header, rates section, room
@@ -7,7 +7,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function ListingDetailSkeleton() {
   return (
-    <div data-testid="listing-detail-skeleton" className="space-y-6">
+    <LoadingRegion label="Loading listing detail…" data-testid="listing-detail-skeleton" className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
@@ -56,6 +56,6 @@ export default function ListingDetailSkeleton() {
         <Skeleton className="h-4 w-16" />
         <Skeleton className="h-40 w-full rounded-md" />
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

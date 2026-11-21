@@ -45,11 +45,11 @@ describe("OnboardingLanguage page", () => {
   it("shows a placeholder while the languages load, then lists them", () => {
     const { rerender } = renderPage();
     expect(screen.getByText(ONBOARDING_COPY.languageStep)).toBeInTheDocument();
-    expect(screen.getByLabelText("Loading")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading page…");
 
     languages = { data: [SPANISH], isError: false };
     rerender(page());
-    expect(screen.queryByLabelText("Loading")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Spanish/ })).toBeInTheDocument();
   });
 

@@ -74,7 +74,7 @@ describe("Companies page", () => {
       renderCompanies();
 
       // The skeleton table should be visible with an aria-busy label.
-      expect(screen.getByLabelText("Loading companies")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading companies…");
     });
   });
 

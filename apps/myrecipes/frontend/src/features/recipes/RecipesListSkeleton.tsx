@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirrors the loaded recipes grid: a responsive set of recipe cards, each with
@@ -7,10 +7,9 @@ import { Skeleton } from "@platform/ui";
  */
 export default function RecipesListSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading recipes list…"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      aria-label="Loading recipes"
-      aria-busy="true"
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="bg-card border rounded-lg p-5 space-y-3">
@@ -23,6 +22,6 @@ export default function RecipesListSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

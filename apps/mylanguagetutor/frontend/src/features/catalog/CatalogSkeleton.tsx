@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import {
   CATALOG_HEADER,
   CATALOG_HEADER_LINE,
@@ -21,7 +21,7 @@ import TwoLinePlaceholder from "@/features/catalog/TwoLinePlaceholder";
  */
 export default function CatalogSkeleton() {
   return (
-    <div className={CATALOG_PAGE} aria-busy="true" aria-label="Loading scenarios">
+    <LoadingRegion label="Loading scenarios…" className={CATALOG_PAGE}>
       <div className={CATALOG_HEADER}>
         <Skeleton className="h-8 w-2/3 max-w-sm" />
         {/* A div, not the page's <p>: Skeleton renders a div, which a <p> can't hold. Same boxes. */}
@@ -40,6 +40,6 @@ export default function CatalogSkeleton() {
           </li>
         ))}
       </ul>
-    </div>
+    </LoadingRegion>
   );
 }

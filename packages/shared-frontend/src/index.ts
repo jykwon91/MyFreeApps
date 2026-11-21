@@ -58,6 +58,8 @@ export { default as LoadingButton } from "./components/ui/LoadingButton";
 export { default as LoadMoreFooter } from "./components/ui/LoadMoreFooter";
 export type { LoadMoreFooterProps } from "./types/load-more-footer-props";
 export { default as Skeleton } from "./components/ui/Skeleton";
+export { default as LoadingRegion } from "./components/ui/LoadingRegion";
+export { default as LoadingStatus } from "./components/ui/LoadingStatus";
 export { default as Select } from "./components/ui/Select";
 export { default as Badge } from "./components/ui/Badge";
 export { default as StatusBadge } from "./components/ui/StatusBadge";

@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function IntegrationsSkeleton() {
   return (
-    <div className="space-y-6">
+    <LoadingRegion label="Loading integrations…" className="space-y-6">
       {/* Gmail section */}
       <section className="border rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -21,6 +21,6 @@ export default function IntegrationsSkeleton() {
           </div>
         </div>
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

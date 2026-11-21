@@ -1,9 +1,9 @@
 import { Lightbulb } from "lucide-react";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function TaxAdvisorPanelSkeleton() {
   return (
-    <div className="space-y-4">
+    <LoadingRegion label="Loading tax advisor panel…" className="space-y-4">
       <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <Lightbulb className="h-5 w-5 animate-pulse" />
         <span>Hmm, let me review your tax data...</span>
@@ -17,6 +17,6 @@ export default function TaxAdvisorPanelSkeleton() {
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-8 w-full rounded" />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

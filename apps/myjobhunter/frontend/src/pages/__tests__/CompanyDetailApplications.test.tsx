@@ -112,6 +112,8 @@ describe("CompanyDetail applications before they load", () => {
   it("shows a skeleton with the table's columns while loading, never the empty message, and Delete waits", () => {
     renderWith(applicationsListResult({ isLoading: true }));
 
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Loading applications at this company");
     const skeleton = screen.getByLabelText("Loading applications at this company");
     expect(within(skeleton).getAllByRole("columnheader")).toHaveLength(4);
     expect(skeleton.querySelectorAll("tbody tr").length).toBeGreaterThan(0);

@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function DemoPageSkeleton() {
   return (
-    <div className="p-6 space-y-6">
+    <LoadingRegion label="Loading demo page…" className="p-6 space-y-6">
       <div className="space-y-1">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-72" />
@@ -29,6 +29,6 @@ export default function DemoPageSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function AttributionReviewSkeleton() {
   return (
-    <div className="space-y-3">
+    <LoadingRegion label="Loading attribution review…" className="space-y-3">
       <div className="space-y-1">
         <Skeleton className="h-6 w-64" />
         <Skeleton className="h-4 w-80" />
@@ -28,6 +28,6 @@ export default function AttributionReviewSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import {
   CALENDAR_MONTH_DAY_HEADER_PX,
   CALENDAR_MONTH_LANE_GAP_PX,
@@ -31,7 +31,6 @@ export default function CalendarMonthSkeleton() {
     <div
       className="overflow-hidden rounded-lg border bg-card"
       data-testid="calendar-month-skeleton"
-      aria-label="Loading calendar"
     >
       <div className="grid grid-cols-7 bg-muted/30">
         {CALENDAR_WEEKDAY_LABELS.map((label) => (

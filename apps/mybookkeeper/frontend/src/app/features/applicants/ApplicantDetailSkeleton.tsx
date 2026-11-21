@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Skeleton for the ApplicantDetail page. Mirrors the loaded layout exactly:
@@ -7,7 +7,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function ApplicantDetailSkeleton() {
   return (
-    <div className="space-y-6" data-testid="applicant-detail-skeleton">
+    <LoadingRegion label="Loading applicant detail…" className="space-y-6" data-testid="applicant-detail-skeleton">
       {/* Header */}
       <div className="space-y-2">
         <Skeleton className="h-7 w-48" />
@@ -56,6 +56,6 @@ export default function ApplicantDetailSkeleton() {
 
       {/* Timeline */}
       <Skeleton className="h-12 w-full rounded-lg" />
-    </div>
+    </LoadingRegion>
   );
 }

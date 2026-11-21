@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Skeleton for the InquiryDetail page. Mirrors the loaded layout: header,
@@ -7,7 +7,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function InquiryDetailSkeleton() {
   return (
-    <div className="space-y-6" data-testid="inquiry-detail-skeleton">
+    <LoadingRegion label="Loading inquiry detail…" className="space-y-6" data-testid="inquiry-detail-skeleton">
       {/* Header */}
       <div className="space-y-2">
         <Skeleton className="h-7 w-48" />
@@ -61,6 +61,6 @@ export default function InquiryDetailSkeleton() {
       </section>
       {/* Event timeline */}
       <Skeleton className="h-12 w-full rounded-lg" />
-    </div>
+    </LoadingRegion>
   );
 }

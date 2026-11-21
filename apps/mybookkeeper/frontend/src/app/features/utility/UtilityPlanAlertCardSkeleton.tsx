@@ -1,3 +1,5 @@
+import { LoadingRegion } from "@platform/ui";
+
 /**
  * Loading placeholder for the dashboard renewal card.
  *
@@ -7,9 +9,9 @@
  */
 export default function UtilityPlanAlertCardSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading utility plan alerts…"
       className="bg-card border rounded-lg p-6 animate-pulse"
-      aria-busy="true"
       data-testid="utility-plan-alert-card-loading"
     >
       <div className="h-5 bg-muted rounded w-48 mb-4" />
@@ -24,6 +26,6 @@ export default function UtilityPlanAlertCardSkeleton() {
           </li>
         ))}
       </ul>
-    </div>
+    </LoadingRegion>
   );
 }

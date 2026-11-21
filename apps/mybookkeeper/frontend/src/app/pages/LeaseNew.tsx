@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Skeleton from "@/shared/components/ui/Skeleton";
 import { useLeaseTemplateNames } from "@mybookkeeper/api-client/hooks/useLeaseTemplateNames";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
@@ -12,7 +11,7 @@ import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
-import { useLiveSearchParams } from "@platform/ui";
+import { Skeleton, useLiveSearchParams } from "@platform/ui";
 
 /**
  * /leases/new — wires the full generate-lease flow:

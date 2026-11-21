@@ -1,11 +1,10 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function CompanyDetailSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading company detail…"
       className="p-6 space-y-6"
-      aria-label="Loading company detail"
-      aria-busy="true"
     >
       {/* Company header card */}
       <div className="border rounded-lg p-6 flex gap-5">
@@ -41,6 +40,6 @@ export default function CompanyDetailSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

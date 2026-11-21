@@ -1,5 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, Skeleton } from "@platform/ui";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";

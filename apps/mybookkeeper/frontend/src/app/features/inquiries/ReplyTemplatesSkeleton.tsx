@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import { REPLY_TEMPLATE_SKELETON_ROWS } from "@/shared/lib/reply-template-constants";
 import type { ReplyTemplatesSkeletonVariant } from "@/shared/types/inquiry/reply-templates-skeleton-variant";
 

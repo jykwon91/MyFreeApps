@@ -120,8 +120,8 @@ export default function LeaseAttachmentDropzone({
         data-testid="lease-attachment-dropzone"
       >
         {isUploading ? (
-          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
+          <span role="status" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 aria-hidden="true" size={14} className="animate-spin" />
             Uploading...
           </span>
         ) : (

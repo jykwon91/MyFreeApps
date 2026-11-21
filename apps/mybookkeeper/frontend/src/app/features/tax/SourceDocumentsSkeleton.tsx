@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function SourceDocumentsSkeleton() {
   return (
-    <div className="space-y-4">
+    <LoadingRegion label="Loading source documents…" className="space-y-4">
       <div className="border rounded-lg overflow-hidden">
         <div className="px-4 py-3 bg-muted border-b">
           <Skeleton className="h-5 w-40" />
@@ -27,6 +27,6 @@ export default function SourceDocumentsSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

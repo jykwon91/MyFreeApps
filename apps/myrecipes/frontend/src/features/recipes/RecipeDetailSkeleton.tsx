@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirrors the loaded recipe detail: a header block, a two-column body where the
@@ -7,7 +7,7 @@ import { Skeleton } from "@platform/ui";
  */
 export default function RecipeDetailSkeleton() {
   return (
-    <div aria-label="Loading recipe" aria-busy="true" className="space-y-6">
+    <LoadingRegion label="Loading recipe detail…" className="space-y-6">
       <div className="space-y-3">
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-4 w-3/4" />
@@ -44,6 +44,6 @@ export default function RecipeDetailSkeleton() {
           ))}
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

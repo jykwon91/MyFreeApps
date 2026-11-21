@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { DataTable, LoadMoreFooter, LoadingButton, type ColumnDef } from "@platform/ui";
+import { DataTable, LoadingButton, LoadingRegion, LoadMoreFooter, type ColumnDef } from "@platform/ui";
 import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
 import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messages";
 import { COMPANY_APPLICATIONS_MESSAGES as MESSAGES } from "@/constants/company-applications-messages";
@@ -52,9 +52,9 @@ export default function CompanyApplications({ companyName, list, onSortingChange
   if (list.isLoading) {
     // The table's own skeleton: same columns as the loaded table, so nothing shifts.
     body = (
-      <div aria-busy="true" aria-label={MESSAGES.loading}>
+      <LoadingRegion label={MESSAGES.loading}>
         <DataTable<Application> data={[]} columns={APPLICATION_COLUMNS} loading loadingRowCount={3} />
-      </div>
+      </LoadingRegion>
     );
   } else if (list.loadError !== undefined) {
     body = (

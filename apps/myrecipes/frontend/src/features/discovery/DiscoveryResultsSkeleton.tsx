@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirrors the loaded discovery grid — same card count, same 16:10 image band,
@@ -8,10 +8,9 @@ import { Skeleton } from "@platform/ui";
  */
 export default function DiscoveryResultsSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading discovery results…"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      aria-label="Searching the web for recipes"
-      aria-busy="true"
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-lg border bg-card">
@@ -24,6 +23,6 @@ export default function DiscoveryResultsSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

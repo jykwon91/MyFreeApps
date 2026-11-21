@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 /**
  * Loading placeholder for the better-plans search.
  *
@@ -8,9 +9,9 @@
  */
 export default function BetterPlansSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading better plans…"
       className="space-y-4 animate-pulse"
-      aria-busy="true"
       data-testid="better-plans-loading"
     >
       {[1, 2].map((group) => (
@@ -57,6 +58,6 @@ export default function BetterPlansSkeleton() {
           </div>
         </section>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

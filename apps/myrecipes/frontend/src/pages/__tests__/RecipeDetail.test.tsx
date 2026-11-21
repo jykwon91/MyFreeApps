@@ -119,7 +119,7 @@ describe("RecipeDetail version panel", () => {
 
     expect(screen.queryByText("Viewing v2")).not.toBeInTheDocument();
     expect(screen.queryByText("ingredient of v2")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Loading recipe")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading recipe detail…");
     expect(screen.getByRole("button", { name: "I made it" })).toBeDisabled();
   });
 

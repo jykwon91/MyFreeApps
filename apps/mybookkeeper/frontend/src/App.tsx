@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import { StandaloneLayout, StepUpModal, Support, useIsAuthenticated } from "@platform/ui";
 import Layout from "@/app/components/Layout";
+import RouteLoadingFallback from "@/shared/components/RouteLoadingFallback";
 import RequireRole from "@/shared/components/RequireRole";
 import RequireOrg from "@/shared/components/RequireOrg";
 import RequireOrgRole from "@/shared/components/RequireOrgRole";
@@ -102,7 +103,7 @@ export default function App() {
                 path="/onboarding"
                 element={
                   <RequireAuth>
-                    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
+                    <Suspense fallback={<RouteLoadingFallback />}>
                       <Onboarding />
                     </Suspense>
                   </RequireAuth>
@@ -157,7 +158,7 @@ export default function App() {
               <Route
                 path="tax-review"
                 element={
-                  <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
+                  <Suspense fallback={<RouteLoadingFallback />}>
                     <TaxReview />
                   </Suspense>
                 }
