@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import { ChevronDown } from "lucide-react";
 import { getSourceLabel } from "@mybookkeeper/api-client/constants/calendarSources";
 import { CALENDAR_FILTER_SOURCES } from "@mybookkeeper/api-client/constants/calendarFilterSources";
@@ -55,7 +56,7 @@ export default function CalendarSourceFilter({ selectedSources, onChange }: Cale
         >
           <div className="flex gap-1 px-2 py-1">
             <DropdownMenu.Item
-              className="text-xs text-primary hover:underline cursor-pointer outline-none"
+              className={`text-xs text-primary hover:underline cursor-pointer rounded px-1 ${MENU_ITEM_FOCUS_CLASS}`}
               onSelect={(e) => {
                 e.preventDefault();
                 handleSelectAll();
@@ -73,7 +74,7 @@ export default function CalendarSourceFilter({ selectedSources, onChange }: Cale
                 checked={checked}
                 onCheckedChange={(c) => handleCheck(source, c)}
                 onSelect={(e) => e.preventDefault()}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none hover:bg-muted"
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer ${MENU_ITEM_FOCUS_CLASS}`}
               >
                 <DropdownMenu.ItemIndicator>
                   <span

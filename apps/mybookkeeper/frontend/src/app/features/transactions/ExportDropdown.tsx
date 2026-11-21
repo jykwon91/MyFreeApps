@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Download, ChevronDown } from "lucide-react";
-import { Button } from "@platform/ui";
+import { Button, MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import Spinner from "@/shared/components/icons/Spinner";
 
 interface ExportDropdownProps {
@@ -38,14 +38,14 @@ export default function ExportDropdown({ onExportCSV, onExportPDF }: ExportDropd
           align="end"
         >
           <DropdownMenu.Item
-            className="w-full text-left px-4 py-2 text-sm cursor-pointer outline-none hover:bg-muted"
+            className={`w-full text-left px-4 py-2 text-sm cursor-pointer ${MENU_ITEM_FOCUS_CLASS}`}
             onSelect={() => handleExport("csv")}
             disabled={!!exporting}
           >
             {exporting === "csv" ? "Exporting CSV..." : "Export CSV"}
           </DropdownMenu.Item>
           <DropdownMenu.Item
-            className="w-full text-left px-4 py-2 text-sm cursor-pointer outline-none hover:bg-muted"
+            className={`w-full text-left px-4 py-2 text-sm cursor-pointer ${MENU_ITEM_FOCUS_CLASS}`}
             onSelect={() => handleExport("pdf")}
             disabled={!!exporting}
           >

@@ -61,3 +61,20 @@ describe("ExportDropdown", () => {
     expect(onExportCSV).not.toHaveBeenCalled();
   });
 });
+
+describe("ExportDropdown keyboard focus", () => {
+  it("highlights the item the arrow keys land on and exports on Enter", async () => {
+    const user = userEvent.setup();
+    const { onExportCSV } = renderDropdown();
+    screen.getByText("Export").closest("button")!.focus();
+    await user.keyboard("{Enter}");
+    const csv = screen.getByRole("menuitem", { name: "Export CSV" });
+    expect(csv).toHaveAttribute("data-highlighted");
+    expect(csv.className).toContain("data-[highlighted]:ring-primary");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute("data-highlighted");
+    expect(csv).not.toHaveAttribute("data-highlighted");
+    await user.keyboard("{ArrowUp}{Enter}");
+    expect(onExportCSV).toHaveBeenCalled();
+  });
+});
