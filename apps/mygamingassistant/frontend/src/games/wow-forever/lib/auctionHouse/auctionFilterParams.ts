@@ -21,6 +21,8 @@ import {
   AUCTION_BIS_PARAM,
   AUCTION_CATEGORY_PARAM,
   AUCTION_CLASS_PARAM,
+  AUCTION_COL_DIR_PARAM,
+  AUCTION_COL_SORT_PARAM,
   AUCTION_LEVEL_PARAM,
   AUCTION_LISTINGS_PARAM,
   AUCTION_MAX_GOLD_PARAM,
@@ -37,11 +39,14 @@ import {
 import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
 import { NO_AUCTION_FILTERS } from "@/games/wow-forever/data/auctionHouse/noAuctionFilters";
 import { DEFAULT_AUCTION_SORT, parseAuctionSort } from "@/games/wow-forever/data/auctionSortOptions";
+import { DEFAULT_COL_DIR, parseAuctionColumnSort } from "@/games/wow-forever/lib/auctionHouse/auctionColumnSort";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
+import type { AuctionColumnSort } from "@/games/wow-forever/types/auctionHouse/auctionColumnSort";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 import type { BisChoice } from "@/games/wow-forever/types/auctionHouse/bisChoice";
 import type { AuctionQualityFilter } from "@/games/wow-forever/types/auctionHouse/auctionQualityFilter";
+import type { SortDirection } from "@/games/wow-forever/types/professionTiers/sortDirection";
 
 /** Whole gold, or gold with up to GOLD_FILTER_DECIMALS places (whole copper). */
 const GOLD_PATTERN = new RegExp(`^\\d+(\\.\\d{1,${GOLD_FILTER_DECIMALS}})?$`);
@@ -98,13 +103,28 @@ function parseBisLevel(raw: string | null): number | null {
   return raw !== null && /^\d{1,2}$/.test(raw) ? parseLevel(raw) : null;
 }
 
+function parseColDir(raw: string | null): SortDirection | null {
+  if (raw === "asc" || raw === "desc") return raw;
+  return null;
+}
+
+function parseColSortAndDir(params: URLSearchParams): { colSort: AuctionColumnSort | null; colDir: SortDirection } {
+  const colSort = parseAuctionColumnSort(params.get(AUCTION_COL_SORT_PARAM));
+  if (colSort === null) return { colSort: null, colDir: NO_AUCTION_FILTERS.colDir };
+  const colDir = parseColDir(params.get(AUCTION_COL_DIR_PARAM)) ?? DEFAULT_COL_DIR[colSort];
+  return { colSort, colDir };
+}
+
 export function filtersFromParams(params: URLSearchParams): AuctionFilters {
   const [minLevel, maxLevel] = parseLevels(params.get(AUCTION_LEVEL_PARAM));
   const category = parseCategory(params.get(AUCTION_CATEGORY_PARAM));
   const bis = parseBis(params.get(AUCTION_BIS_PARAM));
+  const { colSort, colDir } = parseColSortAndDir(params);
   return {
     query: params.get(AUCTION_QUERY_PARAM) ?? NO_AUCTION_FILTERS.query,
     sort: parseAuctionSort(params.get(AUCTION_SORT_PARAM)) ?? NO_AUCTION_FILTERS.sort,
+    colSort,
+    colDir,
     qualities: parseQualities(params.get(AUCTION_QUALITY_PARAM)),
     minGold: parseGold(params.get(AUCTION_MIN_GOLD_PARAM)),
     maxGold: parseGold(params.get(AUCTION_MAX_GOLD_PARAM)),
@@ -141,6 +161,10 @@ function levelText(min: number | null, max: number | null): string | null {
 export function writeFiltersToParams(params: URLSearchParams, filters: AuctionFilters): URLSearchParams {
   setOrDelete(params, AUCTION_QUERY_PARAM, filters.query);
   setOrDelete(params, AUCTION_SORT_PARAM, filters.sort === DEFAULT_AUCTION_SORT ? null : filters.sort);
+  setOrDelete(params, AUCTION_COL_SORT_PARAM, filters.colSort);
+  // Omit cdir= when it's the natural first direction for the active column, to keep links short.
+  const isDefaultDir = filters.colSort !== null && filters.colDir === DEFAULT_COL_DIR[filters.colSort];
+  setOrDelete(params, AUCTION_COL_DIR_PARAM, filters.colSort !== null && !isDefaultDir ? filters.colDir : null);
   setOrDelete(params, AUCTION_QUALITY_PARAM, filters.qualities.join(","));
   setOrDelete(params, AUCTION_MIN_GOLD_PARAM, numberText(filters.minGold));
   setOrDelete(params, AUCTION_MAX_GOLD_PARAM, numberText(filters.maxGold));

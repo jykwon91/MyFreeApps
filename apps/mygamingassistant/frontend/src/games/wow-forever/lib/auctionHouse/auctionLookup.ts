@@ -1,5 +1,6 @@
 /** The Auction house list: which items to show, filtered and sorted. Pure. */
 import { filterAuctionItems, sortAuctionItems } from "@/games/wow-forever/prices/auctionSearch";
+import { sortByColumn } from "@/games/wow-forever/lib/auctionHouse/auctionColumnSort";
 import type { AuctionFilterContext } from "@/games/wow-forever/types/auctionHouse/auctionFilterContext";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 import type { AuctionLookupResult } from "@/games/wow-forever/types/auctionHouse/auctionLookupResult";
@@ -34,6 +35,9 @@ export function lookupAuctionItems(
   context: AuctionFilterContext,
 ): AuctionLookupResult {
   const { pool, notOnSale } = materials ? materialsOnSale(materials, byId, filters.query) : { pool: byId.values(), notOnSale: 0 };
-  const items = sortAuctionItems(filterAuctionItems(pool, filters, context), filters.sort, context.qualityOf);
+  const filtered = filterAuctionItems(pool, filters, context);
+  const items = filters.colSort
+    ? sortByColumn(filtered, filters.colSort, filters.colDir)
+    : sortAuctionItems(filtered, filters.sort, context.qualityOf);
   return { items, notOnSale };
 }

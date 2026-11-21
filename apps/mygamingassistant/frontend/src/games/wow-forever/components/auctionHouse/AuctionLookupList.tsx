@@ -16,8 +16,10 @@ import type { AuctionBisState } from "@/games/wow-forever/types/auctionHouse/auc
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
 import type { ItemCategoriesState } from "@/games/wow-forever/hooks/useItemCategories";
 import type { ActiveAuctionFilter } from "@/games/wow-forever/types/auctionHouse/activeAuctionFilter";
+import type { AuctionColumnSort } from "@/games/wow-forever/types/auctionHouse/auctionColumnSort";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 import type { AuctionLookupResult } from "@/games/wow-forever/types/auctionHouse/auctionLookupResult";
+import type { SortDirection } from "@/games/wow-forever/types/professionTiers/sortDirection";
 
 interface AuctionLookupListProps {
   priceState: AuctionPricesState;
@@ -33,13 +35,15 @@ interface AuctionLookupListProps {
   resultsKey: string;
   professionLabel: string | null;
   onClear: () => void;
+  /** Called when the user clicks a column header or the mobile sort control. */
+  onColSort: (sort: AuctionColumnSort, dir: SortDirection) => void;
 }
 
 /**
  * What sits under the filters: the prices' error or skeleton, the list (50 at a
  * time) or why it is empty. Changing a filter only swaps the rows; it never shows a spinner.
  */
-export default function AuctionLookupList({ priceState, gear, categories, bis, filters, active, lookup, resultsKey, professionLabel, onClear }: AuctionLookupListProps) {
+export default function AuctionLookupList({ priceState, gear, categories, bis, filters, active, lookup, resultsKey, professionLabel, onClear, onColSort }: AuctionLookupListProps) {
   const { status, prices, retry, retrying } = priceState;
   if (status === LOAD_STATUS.error) return <LoadErrorRetry message={AUCTION_LOAD_COPY.pricesError} onRetry={retry} retrying={retrying} />;
   if (!prices) return <AuctionResultsSkeleton />;
@@ -70,6 +74,9 @@ export default function AuctionLookupList({ priceState, gear, categories, bis, f
         note={(shown) => (
           <AuctionResultsNote total={lookup.items.length} shown={shown} narrowed={narrowed} professionLabel={professionLabel} notOnSale={lookup.notOnSale} />
         )}
+        colSort={filters.colSort}
+        colDir={filters.colDir}
+        onColSort={onColSort}
       />
     );
   }
