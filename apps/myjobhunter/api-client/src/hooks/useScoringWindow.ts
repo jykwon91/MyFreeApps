@@ -5,7 +5,9 @@ import type { ScoringWindow } from "../types/discovery/scoring-window";
 /**
  * Scores arrive in the background for about 30 seconds after a refresh. A refresh that adds
  * postings calls `open`, which polls the inbox so the scores fill in without a reload, unless the
- * inbox is filtered to another saved search, whose postings the refresh didn't touch. The window closes
+ * inbox is filtered to another saved search, whose postings the refresh didn't touch. The window
+ * remembers which saved search was refreshed and is judged against the filter as it is now, not as
+ * it was when the refresh was tapped: a refresh can take minutes, and the filter can change meanwhile. The window closes
  * after SCORING_WINDOW_MS, or once nothing is left unscored. Only a refresh opens it: the unscored
  * count also rises when the filter widens or a dismiss is undone, and neither brings new scores.
  * The scorer rates only each day's top postings, so a steady unscored tail is expected and the
@@ -17,7 +19,7 @@ import type { ScoringWindow } from "../types/discovery/scoring-window";
  * `useScoringActive`, which calls `observe`.
  */
 export function useScoringWindow(inboxSourceId: string | null): ScoringWindow {
-  const [isOpen, setIsOpen] = useState(false);
+  const [openedSourceId, setOpenedSourceId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -27,17 +29,16 @@ export function useScoringWindow(inboxSourceId: string | null): ScoringWindow {
 
   const close = useCallback(() => {
     clearTimer();
-    setIsOpen(false);
+    setOpenedSourceId(null);
   }, [clearTimer]);
 
   const open = useCallback(
     (refreshedSourceId: string) => {
-      if (inboxSourceId !== null && inboxSourceId !== refreshedSourceId) return;
       clearTimer();
       timerRef.current = setTimeout(close, SCORING_WINDOW_MS);
-      setIsOpen(true);
+      setOpenedSourceId(refreshedSourceId);
     },
-    [inboxSourceId, clearTimer, close],
+    [clearTimer, close],
   );
 
   const observe = useCallback(
@@ -48,6 +49,9 @@ export function useScoringWindow(inboxSourceId: string | null): ScoringWindow {
   );
 
   useEffect(() => clearTimer, [clearTimer]);
+
+  // Open only while the inbox shows the refreshed saved search, or All.
+  const isOpen = openedSourceId !== null && (inboxSourceId === null || inboxSourceId === openedSourceId);
 
   return { isOpen, pollingInterval: isOpen ? INBOX_POLL_INTERVAL_MS : 0, open, observe };
 }

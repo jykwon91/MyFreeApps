@@ -245,6 +245,27 @@ describe("a discovered posting's actions", () => {
     expect(screen.getByTestId("discovered-job-j1")).toBeTruthy();
   });
 
+  it("shows that Undo is working while it waits for the server, then that it's done", async () => {
+    let finishUndo: () => void = () => undefined;
+    const undoHeld = new Promise<void>((resolve) => (finishUndo = resolve));
+    serveJobs([POSTING], {
+      "POST /discover/j1/undo-dismiss": async () => {
+        await undoHeld;
+        return { status: 204 };
+      },
+    });
+    await showPosting();
+    await dismissFor("Wrong tech stack");
+    await fireEvent.press(await screen.findByRole("button", { name: ACTIONS.undo }));
+
+    expect(await screen.findByText(ACTIONS.undoing)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: ACTIONS.undo })).toBeNull();
+
+    finishUndo();
+    expect(await screen.findByText(ACTIONS.undone)).toBeTruthy();
+    expect(screen.queryByText(ACTIONS.undoing)).toBeNull();
+  });
+
   it("says when it couldn't dismiss it, or undo the dismiss", async () => {
     let dismissReply: FakeReply = { status: 400 };
     serveJobs([POSTING], {
