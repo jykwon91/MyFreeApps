@@ -17,4 +17,12 @@ over_1000_loc:
       pipeline stabilises.
 
 # Files allowed to grow even when already over 500 LOC (rare — use sparingly).
-allow_growth_over_500: []
+allow_growth_over_500:
+  - path: apps/mygamingassistant/backend/scripts/wow_professions/build.py
+    reason: >
+      Monolithic build orchestrator for WoW profession data — shares core
+      utilities (_roll_chances, read_dump, cmangos_dump, _result_counts) across
+      all disenchant extraction functions. The new build_addon_disenchant_tables
+      is tightly coupled to those shared utilities and keeps extraction logic
+      co-located with its data models. Each extractor function is a coherent
+      unit; splitting would require a shared-utils shim or circular imports.
