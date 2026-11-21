@@ -1,9 +1,11 @@
+import { LoadingRegion } from "@platform/ui";
+
 export default function DrillDownLoadingState() {
   return (
-    <div className="p-5 space-y-3">
+    <LoadingRegion label="Loading details…" className="p-5 space-y-3">
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="h-14 bg-muted/40 rounded animate-pulse" />
+        <div key={i} aria-hidden="true" className="h-14 bg-muted/40 rounded animate-pulse" />
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

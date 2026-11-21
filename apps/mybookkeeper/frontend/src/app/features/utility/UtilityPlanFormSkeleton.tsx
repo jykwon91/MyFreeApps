@@ -1,4 +1,5 @@
 import UtilityPlanFieldSkeleton from "./UtilityPlanFieldSkeleton";
+import { LoadingRegion } from "@platform/ui";
 
 /**
  * Placeholder shown while the edit dialog loads the plan.
@@ -10,9 +11,9 @@ import UtilityPlanFieldSkeleton from "./UtilityPlanFieldSkeleton";
  */
 export default function UtilityPlanFormSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading utility plan form…"
       className="p-5 space-y-4 animate-pulse"
-      aria-busy="true"
       data-testid="utility-plan-form-loading"
     >
       <div className="h-5 bg-muted rounded w-1/3" />
@@ -51,6 +52,6 @@ export default function UtilityPlanFormSkeleton() {
         <div className="h-11 w-24 bg-muted rounded" />
         <div className="h-11 w-32 bg-muted rounded" />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

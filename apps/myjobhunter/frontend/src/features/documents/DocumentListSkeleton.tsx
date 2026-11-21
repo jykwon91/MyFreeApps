@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import { DOCUMENTS_LIST_MESSAGES as MESSAGES } from "@/constants/documents-list-messages";
 import DocumentRowSkeleton from "@/features/documents/DocumentRowSkeleton";
 
@@ -12,8 +12,7 @@ export interface DocumentListSkeletonProps {
 /** Placeholder shaped like the document list: filter bar above rows of the same structure. */
 export default function DocumentListSkeleton({ withFilterBar = false }: DocumentListSkeletonProps) {
   return (
-    <div className="space-y-3" role="status">
-      <span className="sr-only">{MESSAGES.loadingDocuments}</span>
+    <LoadingRegion label={MESSAGES.loadingDocuments} className="space-y-3">
       {withFilterBar ? (
         <div data-testid="document-filter-skeleton">
           <Skeleton className="h-11 w-full sm:w-40 rounded-md" />
@@ -24,6 +23,6 @@ export default function DocumentListSkeleton({ withFilterBar = false }: Document
           <DocumentRowSkeleton key={row} />
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function RequireOrgSkeleton() {
   return (
-    <div className="min-h-screen flex">
+    <LoadingRegion label="Loading your workspace…" className="min-h-screen flex">
       {/* Sidebar skeleton */}
       <aside className="hidden md:flex w-56 bg-card border-r flex-col shrink-0">
         <div className="px-4 py-5 border-b">
@@ -40,6 +40,6 @@ export default function RequireOrgSkeleton() {
           <Skeleton className="h-[300px] w-full rounded" />
         </div>
       </main>
-    </div>
+    </LoadingRegion>
   );
 }

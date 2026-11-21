@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirrors the loaded card: settings summary line with its Edit button, the
@@ -7,7 +7,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function RentReminderSkeleton() {
   return (
-    <div className="space-y-4" data-testid="rent-reminder-skeleton" aria-busy="true">
+    <LoadingRegion label="Loading rent reminder…" className="space-y-4" data-testid="rent-reminder-skeleton">
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-5 w-64" />
         <Skeleton className="h-8 w-16" />
@@ -28,6 +28,6 @@ export default function RentReminderSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

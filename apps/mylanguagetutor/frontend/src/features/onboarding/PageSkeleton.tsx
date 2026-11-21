@@ -1,11 +1,11 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 const PLACEHOLDER_ROWS = 3;
 
 /** Heading + a few card rows: the shape of the onboarding / scenario pages. */
 export default function PageSkeleton() {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading">
+    <LoadingRegion label="Loading page…" className="space-y-4">
       <Skeleton className="h-7 w-2/3 max-w-sm" />
       <Skeleton className="h-4 w-1/2 max-w-xs" />
       <div className="space-y-3">
@@ -16,6 +16,6 @@ export default function PageSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

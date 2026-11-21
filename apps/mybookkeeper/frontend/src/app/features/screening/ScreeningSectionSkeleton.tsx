@@ -1,8 +1,9 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function ScreeningSectionSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading screening section…"
       data-testid="screening-section-skeleton"
       className="space-y-3"
       aria-hidden="true"
@@ -16,6 +17,6 @@ export default function ScreeningSectionSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

@@ -33,8 +33,8 @@ export default function DiscoveryStatus({ stages, stepSeconds = DISCOVERY_STAGE_
 
   return (
     <p
+      role="status"
       className="flex items-center gap-2 text-sm text-muted-foreground"
-      aria-live="polite"
     >
       <Spinner className="h-4 w-4 text-primary" />
       {stages[index]}

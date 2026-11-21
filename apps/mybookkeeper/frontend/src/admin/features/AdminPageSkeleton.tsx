@@ -1,9 +1,9 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 export default function AdminPageSkeleton() {
   return (
-    <div className="p-6 space-y-6">
+    <LoadingRegion label="Loading admin page…" className="p-6 space-y-6">
       {/* SectionHeader */}
       <div>
         <Skeleton className="h-8 w-24" />
@@ -53,6 +53,6 @@ export default function AdminPageSkeleton() {
           ))}
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

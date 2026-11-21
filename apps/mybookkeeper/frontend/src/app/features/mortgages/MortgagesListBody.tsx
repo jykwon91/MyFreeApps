@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import {
   formatLoanDate,
   formatMoneyCents,
@@ -31,9 +32,9 @@ export default function MortgagesListBody({
       return null;
     case "loading":
       return (
-        <div
+        <LoadingRegion
+          label="Loading mortgages…"
           className="space-y-2 animate-pulse"
-          aria-busy="true"
           data-testid="mortgages-loading"
         >
           {[1, 2, 3].map((i) => (
@@ -42,7 +43,7 @@ export default function MortgagesListBody({
               <div className="h-4 bg-muted rounded w-1/3" />
             </div>
           ))}
-        </div>
+        </LoadingRegion>
       );
 
     case "empty":

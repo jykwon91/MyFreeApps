@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { STATUS_BADGE } from "@/shared/lib/constants";
 import Badge from "@/shared/components/ui/Badge";
-import Spinner from "@/shared/components/icons/Spinner";
+import Spinner from "@platform/ui/components/icons/Spinner";
 import RetryIcon from "@/shared/components/icons/RetryIcon";
 import { X } from "lucide-react";
 

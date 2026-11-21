@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import {
   TRANSACTION_SKELETON_COLUMN_WIDTHS,
   TRANSACTION_SKELETON_ROW_COUNT,

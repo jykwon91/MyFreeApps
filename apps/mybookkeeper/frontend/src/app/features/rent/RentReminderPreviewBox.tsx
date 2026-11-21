@@ -1,5 +1,4 @@
-import { AlertBox, LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { AlertBox, extractErrorMessage, LoadingButton, LoadingRegion, showError, showSuccess, Skeleton } from "@platform/ui";
 import {
   useGetRentReminderPreviewQuery,
   useSendRentReminderNowMutation,
@@ -69,11 +68,11 @@ export default function RentReminderPreviewBox({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border p-4 space-y-3 bg-card" aria-busy="true">
+      <LoadingRegion label="Loading rent reminder preview…" className="rounded-lg border p-4 space-y-3 bg-card">
         <Skeleton className="h-3 w-48" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-9 w-32" />
-      </div>
+      </LoadingRegion>
     );
   }
 

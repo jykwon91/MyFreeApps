@@ -95,8 +95,8 @@ export default function CalendarEventAttachmentsSection({ blackoutId }: Calendar
         data-testid="attachment-dropzone"
       >
         {isUploading ? (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
+          <div role="status" className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 aria-hidden="true" size={14} className="animate-spin" />
             Uploading…
           </div>
         ) : (

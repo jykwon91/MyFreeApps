@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import { REPLY_TEMPLATE_MESSAGES } from "@/shared/lib/reply-template-messages";
 import { REPLY_TEMPLATE_PICKER_SKELETON_ROWS } from "@/shared/lib/reply-template-constants";
 

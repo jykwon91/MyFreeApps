@@ -39,7 +39,7 @@ export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRo
   }, [receipts, leaseId]);
 
   if (isLoading) {
-    return <li className="text-xs text-muted-foreground">Loading receipts…</li>;
+    return <li role="status" className="text-xs text-muted-foreground">Loading receipts…</li>;
   }
   if (!receipts.length) return null;
 

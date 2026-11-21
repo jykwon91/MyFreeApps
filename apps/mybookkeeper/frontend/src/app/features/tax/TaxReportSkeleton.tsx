@@ -1,9 +1,9 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 export default function TaxReportSkeleton() {
   return (
-    <div className="space-y-6" data-testid="tax-report-skeleton">
+    <LoadingRegion label="Loading tax report…" className="space-y-6" data-testid="tax-report-skeleton">
       {/* Summary cards — the report's 4-col grid on sm+, with the three
           cards every report has (W-2 Income only shows when there is some) */}
       <section className="grid grid-cols-1 sm:grid-cols-4 gap-4" data-testid="tax-report-skeleton-summary-cards">
@@ -62,6 +62,6 @@ export default function TaxReportSkeleton() {
           </table>
         </div>
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

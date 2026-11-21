@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import CalendarAgendaSkeleton from "@/app/features/calendar/CalendarAgendaSkeleton";
 import {
   CALENDAR_DAY_CELL_PX,
@@ -20,7 +20,7 @@ export interface CalendarSkeletonProps {
  */
 export default function CalendarSkeleton({ rows = 4, days = 30 }: CalendarSkeletonProps) {
   return (
-    <div data-testid="calendar-skeleton">
+    <LoadingRegion label="Loading calendar…" data-testid="calendar-skeleton">
       {/* Mobile: agenda list skeleton */}
       <div className="md:hidden">
         <CalendarAgendaSkeleton rows={rows} />
@@ -97,6 +97,6 @@ export default function CalendarSkeleton({ rows = 4, days = 30 }: CalendarSkelet
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import type { Role } from "@/shared/types/user/role";
 

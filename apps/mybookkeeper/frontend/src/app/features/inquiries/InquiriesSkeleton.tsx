@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export interface InquiriesSkeletonProps {
   count?: number;
@@ -16,7 +16,7 @@ export default function InquiriesSkeleton({ count = 4 }: InquiriesSkeletonProps)
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <div data-testid="inquiries-skeleton">
+    <LoadingRegion label="Loading inquiries…" data-testid="inquiries-skeleton">
       {/* Mobile: card list */}
       <ul className="md:hidden space-y-3">
         {rows.map((i) => (
@@ -69,6 +69,6 @@ export default function InquiriesSkeleton({ count = 4 }: InquiriesSkeletonProps)
           </tbody>
         </table>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

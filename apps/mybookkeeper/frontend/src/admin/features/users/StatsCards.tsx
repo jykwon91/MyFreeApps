@@ -1,5 +1,5 @@
 import Card from "@/shared/components/ui/Card";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 
 interface PlatformStats {
   total_users: number;

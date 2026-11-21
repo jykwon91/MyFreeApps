@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 /**
  * Loading placeholder for the rate-watch check.
  *
@@ -12,9 +13,9 @@
  */
 export default function RateWatchSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading rate watch…"
       className="space-y-4 animate-pulse"
-      aria-busy="true"
       data-testid="rate-watch-loading"
     >
       {/* The verdict lands first and is the tallest single element; without a
@@ -68,6 +69,6 @@ export default function RateWatchSkeleton() {
           ))}
         </div>
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

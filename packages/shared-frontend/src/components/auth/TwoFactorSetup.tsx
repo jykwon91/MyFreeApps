@@ -5,6 +5,7 @@ import type { TotpSetup } from "@platform/core/types/security/totp-setup";
 import { useForgetMutationArgs } from "../../hooks/useForgetMutationArgs";
 import Button from "../ui/Button";
 import LoadingButton from "../ui/LoadingButton";
+import LoadingRegion from "../ui/LoadingRegion";
 import TotpPasswordStep from "./TotpPasswordStep";
 import { showSuccess } from "../../lib/toast-store";
 import { TOTP_STEP } from "../../constants/totp-step";
@@ -95,9 +96,9 @@ export default function TwoFactorSetup() {
   // enabled is boolean | null; !enabled would misfire when enabled === false (2FA already off)
   if (isStatusLoading || enabled === null) {
     return (
-      <div className="p-6">
+      <LoadingRegion label="Loading two-factor settings…" className="p-6">
         <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-      </div>
+      </LoadingRegion>
     );
   }
 

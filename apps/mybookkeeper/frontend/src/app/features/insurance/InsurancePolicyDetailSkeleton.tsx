@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 /**
  * Skeleton loader for the InsurancePolicyDetail page.
  * Mirrors the loaded page layout to prevent layout shift.
@@ -23,7 +24,7 @@ function fieldPlaceholders(count: number) {
 
 export default function InsurancePolicyDetailSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse" data-testid="insurance-policy-detail-skeleton">
+    <LoadingRegion label="Loading insurance policy detail…" className="space-y-6 animate-pulse" data-testid="insurance-policy-detail-skeleton">
       {/* Header */}
       <div className="space-y-2">
         <div className="h-6 bg-muted rounded w-1/2" />
@@ -53,6 +54,6 @@ export default function InsurancePolicyDetailSkeleton() {
         <div className="h-4 bg-muted rounded w-3/4" />
         <div className="h-4 bg-muted rounded w-1/2" />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

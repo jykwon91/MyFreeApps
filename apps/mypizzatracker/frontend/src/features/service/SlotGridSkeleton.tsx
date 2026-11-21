@@ -1,4 +1,4 @@
-import { Card, Skeleton } from "@platform/ui";
+import { Card, LoadingStatus, Skeleton } from "@platform/ui";
 import SlotGrid from "@/features/service/SlotGrid";
 
 const PLACEHOLDER_COLUMNS = [0, 1, 2, 3];
@@ -13,6 +13,7 @@ export default function SlotGridSkeleton() {
           <Skeleton className="h-20 w-full" />
         </Card>
       ))}
+      <LoadingStatus label="Loading slots…" />
     </SlotGrid>
   );
 }

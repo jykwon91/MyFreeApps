@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import { useEffect, useRef, useState } from "react";
 import * as mammoth from "mammoth";
 
@@ -55,11 +56,10 @@ export default function AttachmentViewerDocxBody({
 
   if (state.status === "loading") {
     return (
-      <div
+      <LoadingRegion
+        label="Loading document…"
         className="p-6 space-y-3 max-w-3xl mx-auto w-full"
         data-testid="attachment-viewer-docx-loading"
-        aria-busy="true"
-        aria-label="Loading document"
       >
         {/* Title line */}
         <div className="h-5 bg-muted rounded animate-pulse w-3/5" />
@@ -81,7 +81,7 @@ export default function AttachmentViewerDocxBody({
           <div className="h-3.5 bg-muted rounded animate-pulse w-full" />
           <div className="h-3.5 bg-muted rounded animate-pulse w-7/12" />
         </div>
-      </div>
+      </LoadingRegion>
     );
   }
 

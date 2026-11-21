@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export interface VendorsListSkeletonProps {
   count?: number;
@@ -17,7 +17,7 @@ export default function VendorsListSkeleton({ count = 4 }: VendorsListSkeletonPr
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <div data-testid="vendors-skeleton">
+    <LoadingRegion label="Loading vendors list…" data-testid="vendors-skeleton">
       {/* Mobile: card list */}
       <ul className="md:hidden space-y-3">
         {rows.map((i) => (
@@ -57,6 +57,6 @@ export default function VendorsListSkeleton({ count = 4 }: VendorsListSkeletonPr
           </tbody>
         </table>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

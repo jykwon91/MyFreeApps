@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import InsuranceBenchmarkForm from "./InsuranceBenchmarkForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { useGetInsuranceBenchmarkQuery } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
@@ -34,9 +35,9 @@ export default function InsuranceBenchmarkDialog({
         </p>
 
         {isLoading ? (
-          <div
+          <LoadingRegion
+            label="Loading premium benchmark…"
             className="space-y-4 animate-pulse"
-            aria-busy="true"
             data-testid="insurance-benchmark-dialog-loading"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -46,7 +47,7 @@ export default function InsuranceBenchmarkDialog({
             <div className="h-16 bg-muted rounded" />
             <div className="h-16 bg-muted rounded" />
             <div className="h-16 bg-muted rounded" />
-          </div>
+          </LoadingRegion>
         ) : (
           <InsuranceBenchmarkForm
             existing={benchmark}

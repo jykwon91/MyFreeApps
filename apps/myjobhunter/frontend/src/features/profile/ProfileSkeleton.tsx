@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * ProfileSkeleton — mirrors the loaded Profile layout exactly.
@@ -14,10 +14,9 @@ import { Skeleton } from "@platform/ui";
  */
 export default function ProfileSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading profile…"
       className="p-6 space-y-6 max-w-3xl"
-      aria-label="Loading profile"
-      aria-busy="true"
     >
       {/* 1. Header */}
       <div className="border rounded-lg p-6">
@@ -108,6 +107,6 @@ export default function ProfileSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

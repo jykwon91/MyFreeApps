@@ -21,7 +21,7 @@ export default function ProcessingStep({ longRunning, sourcePath }: ProcessingSt
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-4">
       <Loader2 size={28} className="animate-spin text-muted-foreground" aria-hidden="true" />
-      <p className="text-sm font-medium text-center">
+      <p role="status" className="text-sm font-medium text-center">
         {longRunning ? longRunningCopy : primaryCopy}
       </p>
     </div>

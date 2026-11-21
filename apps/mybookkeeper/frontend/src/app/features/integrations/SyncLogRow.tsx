@@ -5,7 +5,7 @@ import { timeSince } from "@platform/core/utils/timeSince";
 import { formatDate } from "@/shared/utils/date";
 import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
 import { getStatusColor } from "@/shared/utils/sync-status";
-import Spinner from "@/shared/components/icons/Spinner";
+import Spinner from "@platform/ui/components/icons/Spinner";
 import ChevronDown from "@/shared/components/icons/ChevronDown";
 import ProgressBar from "./ProgressBar";
 import QueueItem from "./QueueItem";

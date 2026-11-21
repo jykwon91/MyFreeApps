@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ConfirmDialog, showError, showSuccess, InlineBoldText, Skeleton } from "@platform/ui";
+import { ConfirmDialog, InlineBoldText, LoadingRegion, showError, showSuccess, Skeleton } from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import { useDiscoveryDefaultsPrefill } from "@myjobhunter/api-client/hooks/useDiscoveryDefaultsPrefill";
@@ -186,13 +186,13 @@ export default function NewSavedSearchDialog({ open, onClose }: NewSavedSearchDi
 
         {values.source === "jsearch" &&
           (isPrefillLoading ? (
-            <div className="space-y-3" aria-busy="true">
+            <LoadingRegion label="Loading search settings…" className="space-y-3">
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-3/4" />
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-1/2" />
-            </div>
+            </LoadingRegion>
           ) : (
             <>
               {didPrefill && (

@@ -42,7 +42,7 @@ export default function VerifyEmail() {
             <div className="flex justify-center mb-4">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-            <p className="text-muted-foreground text-sm">Verifying your email...</p>
+            <p role="status" className="text-muted-foreground text-sm">Verifying your email...</p>
           </>
         )}
 
