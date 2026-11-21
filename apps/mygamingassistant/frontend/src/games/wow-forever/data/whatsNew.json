@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-21",
+    "title": "MGA Loot: school spell damage now counts",
+    "summary": "The MGA Loot addon left Shadow, Fire, Frost, Nature, Arcane and Holy damage out of its score, so gear like the Twisted Shadow Staff read as a big downgrade. It now scores them with your class's weights. Download the addon from Item compare to get the fix.",
+    "to": "/wow-forever/compare"
+  },
+  {
     "date": "2026-11-20",
     "title": "Auction House: sort results by column",
     "summary": "Click any column header — Item, Market value, Cheapest, or On sale — to sort the results by that column. Click again to reverse direction. The sort is saved in the link so sharing it keeps the order.",

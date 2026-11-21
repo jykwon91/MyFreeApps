@@ -65,6 +65,19 @@ describe("MGA Loot verdicts", () => {
     expect(line).toContain("as Arms · binds on pickup");
   });
 
+  it("scores Forever's school spell damage (Twisted Shadow Staff vs Zum'rah's Vexing Cane)", () => {
+    const STAFF = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 10`;
+    const [line] = run(
+      roll(
+        `${STAFF}, stats = { ITEM_MOD_STAMINA_SHORT = 21, ITEM_MOD_SHADOW_DAMAGE_DONE_SHORT = 52 }`,
+        `me.class = "WARLOCK"; me.level = 48; items[5] = { ${STAFF}, stats = { ITEM_MOD_STAMINA_SHORT = 10, ITEM_MOD_INTELLECT_SHORT = 10, ITEM_MOD_SPELL_POWER_SHORT = 54 } }; equipped[16] = 5`,
+      ),
+    );
+    // Warlock leveling: staff 21 + 52 x 0.8 = 62.6 vs cane 10 + 7 + 54 x 0.9 = 65.6, -4.6%.
+    expect(line).toContain("Downgrade -5% vs");
+    expect(line).not.toContain("not scored");
+  });
+
   it("calls a downgrade and a sidegrade", () => {
     expect(run(roll(`${CHEST}, ${strength(5)}`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`))[0]).toContain(
       "Downgrade -50% vs",
