@@ -159,7 +159,7 @@ describe("Listings page", () => {
     renderListings();
     await user.click(screen.getByTestId("listing-filter-active"));
     // setSearchParams should reflect the active status — the chip is now selected
-    expect(screen.getByTestId("listing-filter-active")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("listing-filter-active")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders the skeleton when loading", () => {

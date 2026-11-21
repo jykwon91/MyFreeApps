@@ -1,3 +1,5 @@
+import type { TabOption } from "@platform/ui";
+
 /** Default title applied to a freshly-added section before the host renames it. */
 export const NEW_SECTION_DEFAULT_TITLE = "New section";
 
@@ -18,6 +20,11 @@ export const WELCOME_MANUAL_VIEW_MODE = {
 
 export type WelcomeManualViewMode =
   (typeof WELCOME_MANUAL_VIEW_MODE)[keyof typeof WELCOME_MANUAL_VIEW_MODE];
+
+export const WELCOME_MANUAL_VIEW_OPTIONS: ReadonlyArray<TabOption<WelcomeManualViewMode>> = [
+  { value: WELCOME_MANUAL_VIEW_MODE.EDIT, label: "Edit", testId: "welcome-manual-view-toggle-edit" },
+  { value: WELCOME_MANUAL_VIEW_MODE.PREVIEW, label: "Preview", testId: "welcome-manual-view-toggle-preview" },
+];
 
 /** Default name applied to a freshly-added place before the host renames it. */
 export const NEW_PLACE_DEFAULT_NAME = "New place";

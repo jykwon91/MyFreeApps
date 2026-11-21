@@ -10,7 +10,7 @@ import {
 } from "@/shared/store/adminApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useToast } from "@/shared/hooks/useToast";
-import { ConfirmDialog } from "@platform/ui";
+import { ConfirmDialog, Tabs, TabPanel } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import type { Role } from "@/shared/types/user/role";
 import type { AdminConfirmAction } from "@/shared/types/admin/admin-confirm-action";
@@ -105,40 +105,38 @@ export default function Admin() {
       <StatsCards stats={stats} isLoading={statsLoading} />
 
       <div className="border-b">
-        <nav className="flex gap-4" role="tablist">
-          {TAB_OPTIONS.map((tab) => (
-            <button
-              key={tab.value}
-              role="tab"
-              aria-selected={activeTab === tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-1 pb-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.value
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        <Tabs
+          tabs={TAB_OPTIONS}
+          value={activeTab}
+          onChange={setActiveTab}
+          idPrefix="admin"
+          className="flex gap-4"
+          tabClassName={(selected) =>
+            `px-1 pb-2 text-sm font-medium border-b-2 transition-colors ${
+              selected
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+        />
       </div>
 
-      {activeTab === "users" ? (
-        <UsersTable
-          users={filteredUsers}
-          isLoading={usersLoading}
-          currentUserId={currentUser?.id ?? ""}
-          isSuperuser={currentUser?.is_superuser ?? false}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onRoleChange={handleRoleChange}
-          onConfirmAction={setConfirmAction}
-          isUpdatingRole={isUpdatingRole}
-        />
-      ) : (
-        <OrgsTable orgs={orgs ?? []} isLoading={orgsLoading} />
-      )}
+      <TabPanel idPrefix="admin" value={activeTab}>
+        {activeTab === "users" ? (
+          <UsersTable
+            users={filteredUsers}
+            isLoading={usersLoading}
+            currentUserId={currentUser?.id ?? ""}
+            isSuperuser={currentUser?.is_superuser ?? false}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onRoleChange={handleRoleChange}
+            onConfirmAction={setConfirmAction}
+            isUpdatingRole={isUpdatingRole}
+          />
+        ) : (
+          <OrgsTable orgs={orgs ?? []} isLoading={orgsLoading} />
+        )}
+      </TabPanel>
 
       <ConfirmDialog
         open={!!confirmAction}

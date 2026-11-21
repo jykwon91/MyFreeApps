@@ -106,7 +106,7 @@ test.describe("Listings frontend (PR 1.1b)", () => {
       await page.goBack();
       await waitForListingsPage(page);
       expect(page.url()).toContain("status=active");
-      await expect(page.getByTestId("listing-filter-active")).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByTestId("listing-filter-active")).toHaveAttribute("aria-pressed", "true");
     } finally {
       for (const id of listingIds) {
         await deleteListing(api, id);
@@ -166,7 +166,7 @@ test.describe("Listings frontend (PR 1.1b)", () => {
     await expect(page.getByRole("heading", { name: "Listings" })).toBeVisible();
 
     // The filter chip for draft is selected.
-    await expect(page.getByTestId("listing-filter-draft")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("listing-filter-draft")).toHaveAttribute("aria-pressed", "true");
 
     // Confirm the empty-state copy renders if the page has no rows. The
     // "New listing" primary CTA is now the recovery path (PR 1.2).

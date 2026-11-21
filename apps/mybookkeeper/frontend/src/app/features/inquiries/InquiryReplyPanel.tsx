@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Panel, PanelCloseButton, PanelTitle, Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Panel, PanelCloseButton, PanelTitle, Button, LoadingButton, showError, showSuccess, Tabs, tabDomId, tabPanelDomId } from "@platform/ui";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import {
   useGetReplyTemplatesQuery,
@@ -14,7 +14,7 @@ import type { ReplySendResult } from "@mybookkeeper/api-client/types/inquiry/rep
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 import { REPLY_SEND_OPTIONS } from "@/shared/lib/reply-send-options";
-import { REPLY_TAB } from "@/shared/lib/reply-tab";
+import { REPLY_TAB, REPLY_TAB_OPTIONS } from "@/shared/lib/reply-tab";
 import type { ReplyTab } from "@/shared/types/inquiry/reply-tab";
 import { deriveReplyReconnectReason } from "./derive-reply-reconnect-reason";
 import InquiryReplyPanelBody from "./InquiryReplyPanelBody";
@@ -208,41 +208,27 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
         </div>
 
         {/* Tabs */}
-        <div className="px-5 pt-3 flex gap-2 border-b" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === REPLY_TAB.TEMPLATE}
-            onClick={() => handleSwitchTab(REPLY_TAB.TEMPLATE)}
-            disabled={isSending}
-            data-testid="reply-tab-template"
-            className={`px-3 py-2 text-sm border-b-2 -mb-[2px] min-h-[44px] ${
-              tab === REPLY_TAB.TEMPLATE
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground"
+        <Tabs
+          tabs={REPLY_TAB_OPTIONS.map((option) => ({ ...option, disabled: isSending }))}
+          value={tab}
+          onChange={handleSwitchTab}
+          idPrefix="reply"
+          className="px-5 pt-3 flex gap-2 border-b"
+          tabClassName={(selected) =>
+            `px-3 py-2 text-sm border-b-2 -mb-[2px] min-h-[44px] ${
+              selected ? "border-primary text-foreground" : "border-transparent text-muted-foreground"
             }`}
-          >
-            Use template
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === REPLY_TAB.CUSTOM}
-            onClick={() => handleSwitchTab(REPLY_TAB.CUSTOM)}
-            disabled={isSending}
-            data-testid="reply-tab-custom"
-            className={`px-3 py-2 text-sm border-b-2 -mb-[2px] min-h-[44px] ${
-              tab === REPLY_TAB.CUSTOM
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground"
-            }`}
-          >
-            Write custom
-          </button>
-        </div>
+        />
 
         {/* Body */}
-        <div ref={bodyRef} tabIndex={-1} className="flex-1 overflow-y-auto p-5 space-y-4 focus:outline-none">
+        <div
+          ref={bodyRef}
+          tabIndex={-1}
+          role="tabpanel"
+          id={tabPanelDomId("reply", tab, false)}
+          aria-labelledby={tabDomId("reply", tab)}
+          className="flex-1 overflow-y-auto p-5 space-y-4 focus:outline-none"
+        >
           <InquiryReplyPanelBody
             mode={mode}
             reconnectReason={reconnectReason}

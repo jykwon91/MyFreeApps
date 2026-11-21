@@ -91,6 +91,12 @@ export { default as ToggleChipGroup } from "./components/ui/ToggleChipGroup";
 export type { ToggleOption, ToggleChipGroupProps } from "./components/ui/ToggleChipGroup";
 export { default as TilePicker } from "./components/ui/TilePicker";
 export type { TileOption } from "./components/ui/TilePicker";
+export { default as Tabs } from "./components/ui/Tabs";
+export type { TabsProps } from "./components/ui/Tabs";
+export { default as TabPanel } from "./components/ui/TabPanel";
+export type { TabPanelProps } from "./components/ui/TabPanel";
+export type { TabOption } from "./types/tab-option";
+export { tabDomId, tabPanelDomId } from "./utils/tab-dom-ids";
 export { default as ThemeToggle } from "./components/ui/ThemeToggle";
 
 // Layout components

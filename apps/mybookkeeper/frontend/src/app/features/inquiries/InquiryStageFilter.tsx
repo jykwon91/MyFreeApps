@@ -1,4 +1,4 @@
-import { cn } from "@/shared/utils/cn";
+import FilterChipRow, { type FilterChipOption } from "@/shared/components/ui/FilterChipRow";
 import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 
@@ -7,50 +7,23 @@ export interface InquiryStageFilterProps {
   onChange: (stage: InquiryStage | null) => void;
 }
 
-interface Chip {
-  value: InquiryStage | null;
-  label: string;
-}
-
-const CHIPS: Chip[] = [
+const OPTIONS: ReadonlyArray<FilterChipOption<InquiryStage>> = [
   { value: null, label: "All" },
-  ...INQUIRY_STAGES.map((s) => ({ value: s, label: INQUIRY_STAGE_LABELS[s] })),
+  ...INQUIRY_STAGES.map((v) => ({ value: v, label: INQUIRY_STAGE_LABELS[v] })),
 ];
 
 /**
- * Horizontal chip row for filtering inquiries by stage. Mirrors the
- * ``ListingStatusFilter`` pattern: 44px touch targets, horizontal scroll on
- * mobile (``overflow-x-auto`` + ``flex-nowrap``), URL-state sync handled by
- * the parent page via ``useSearchParams``.
+ * Chip row for filtering by stage. URL-state sync is handled by the parent
+ * page via ``useSearchParams``.
  */
 export default function InquiryStageFilter({ value, onChange }: InquiryStageFilterProps) {
   return (
-    <div
-      role="tablist"
-      aria-label="Filter inquiries by stage"
-      className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1"
-    >
-      {CHIPS.map((chip) => {
-        const active = chip.value === value;
-        const key = chip.value ?? "all";
-        return (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(chip.value)}
-            className={cn(
-              "shrink-0 min-h-[44px] px-4 rounded-full text-sm font-medium transition-colors",
-              active
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/70",
-            )}
-            data-testid={`inquiry-filter-${key}`}
-          >
-            {chip.label}
-          </button>
-        );
-      })}
-    </div>
+    <FilterChipRow
+      options={OPTIONS}
+      value={value}
+      onChange={onChange}
+      ariaLabel="Filter inquiries by stage"
+      testIdPrefix="inquiry-filter"
+    />
   );
 }

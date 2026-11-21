@@ -186,7 +186,7 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "Applicants" })).toBeVisible();
     await expect(page.getByTestId("applicant-filter-lease_signed")).toHaveAttribute(
-      "aria-selected",
+      "aria-pressed",
       "true",
     );
 

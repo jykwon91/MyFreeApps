@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
-import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
+import { Button, ConfirmDialog, TabPanel, showError, showSuccess } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchiveReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
@@ -9,10 +9,9 @@ import ActiveReplyTemplatesPanel from "./ActiveReplyTemplatesPanel";
 import ArchivedReplyTemplatesPanel from "./ArchivedReplyTemplatesPanel";
 import ReplyTemplateForm from "./ReplyTemplateForm";
 import ReplyTemplateView from "./ReplyTemplateView";
-import ReplyTemplatesViewTabs from "./ReplyTemplatesViewTabs";
+import ReplyTemplatesViewTabs, { REPLY_TEMPLATES_TABS_ID_PREFIX } from "./ReplyTemplatesViewTabs";
 import { useReplyTemplatesView } from "./useReplyTemplatesView";
 
-const PANEL_ID = "reply-templates-panel";
 
 export default function ReplyTemplatesManager() {
   const [view, setView] = useReplyTemplatesView();
@@ -87,15 +86,15 @@ export default function ReplyTemplatesManager() {
         ) : null}
       </div>
 
-      <ReplyTemplatesViewTabs view={view} onChange={setView} panelId={PANEL_ID} />
+      <ReplyTemplatesViewTabs view={view} onChange={setView} />
 
-      <div id={PANEL_ID} role="tabpanel" aria-labelledby={`reply-templates-tab-${view}`}>
+      <TabPanel idPrefix={REPLY_TEMPLATES_TABS_ID_PREFIX} value={view}>
         {view === "archived" ? (
           <ArchivedReplyTemplatesPanel onShowActive={() => setView("active")} />
         ) : (
           <ActiveReplyTemplatesPanel onEdit={handleEdit} onArchive={setArchiveCandidate} onView={setViewing} />
         )}
-      </div>
+      </TabPanel>
 
       {viewing ? <ReplyTemplateView template={viewing} onClose={() => setViewing(null)} /> : null}
 

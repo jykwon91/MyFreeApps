@@ -115,4 +115,25 @@ describe("LeaseDetail — moving between leases", () => {
     await user.click(screen.getByText("View successor lease"));
     expect(screen.queryByTestId("lease-notes-section")).not.toBeInTheDocument();
   });
+
+  it("lets the lease tabs be driven by keyboard, with the open tab labelling its panel", async () => {
+    const user = userEvent.setup();
+    renderAt("/leases/lease-a");
+
+    const files = screen.getByTestId("lease-tab-files");
+    const details = screen.getByTestId("lease-tab-details");
+    expect(files).toHaveAttribute("tabindex", "0");
+    expect(details).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", files.id);
+
+    files.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(details).toHaveFocus();
+    expect(screen.getByTestId("lease-details-section")).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", details.id);
+
+    await user.keyboard("{End}");
+    expect(screen.getByTestId("lease-tab-notes")).toHaveFocus();
+    expect(screen.getByTestId("lease-notes-section")).toBeInTheDocument();
+  });
 });

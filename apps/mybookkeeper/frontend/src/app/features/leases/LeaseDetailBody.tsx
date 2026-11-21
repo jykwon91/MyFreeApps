@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Badge from "@/shared/components/ui/Badge";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, showError, showSuccess, Tabs, TabPanel } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
@@ -39,6 +39,12 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 type Tab = "files" | "details" | "notes";
+
+const LEASE_TABS: ReadonlyArray<{ value: Tab; label: string }> = [
+  { value: "files", label: "Files" },
+  { value: "details", label: "Details" },
+  { value: "notes", label: "Notes" },
+];
 
 interface Props {
   leaseId: string | undefined;
@@ -350,86 +356,84 @@ export default function LeaseDetailBody({ leaseId }: Props) {
           ) : null}
 
           {/* Tabs */}
-          <div role="tablist" className="flex gap-1 border-b" data-testid="lease-tabs">
-            {(["files", "details", "notes"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                role="tab"
-                aria-selected={tab === t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                  tab === t
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`lease-tab-${t}`}
-              >
-                {t === "files"
-                  ? `Files (${lease.attachments.length})`
-                  : t === "details"
-                    ? "Details"
-                    : "Notes"}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            tabs={LEASE_TABS.map(({ value, label }) => ({
+              value,
+              label: value === "files" ? `Files (${lease.attachments.length})` : label,
+              testId: `lease-tab-${value}`,
+            }))}
+            value={tab}
+            onChange={setTab}
+            idPrefix="lease"
+            className="flex gap-1 border-b"
+            testId="lease-tabs"
+            tabClassName={(selected) =>
+              `px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+                selected
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+          />
 
-          {tab === "files" ? (
-            <div className="space-y-3">
-              {canWrite ? (
-                <div className="flex justify-end">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowAddTemplateModal(true)}
-                    data-testid="lease-add-template-button"
-                  >
-                    <Plus size={14} className="mr-1" />
-                    Add document
-                  </Button>
-                </div>
-              ) : null}
-              <LeaseTemplateSources templates={lease.templates} />
-              <LeaseAttachmentsSection
-                leaseId={lease.id}
-                attachments={lease.attachments}
-                canWrite={canWrite}
-                isDocumentsLocked={lease.documents_locked}
-                onLockedRefusal={() => void refetch()}
-              />
-            </div>
-          ) : null}
-
-          {tab === "details" ? (
-            <section className="space-y-3" data-testid="lease-details-section">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {Object.entries(lease.values).map(([key, value]) => (
-                  <div key={key} className="border-b pb-2">
-                    <p className="text-xs uppercase text-muted-foreground font-mono">
-                      [{key}]
-                    </p>
-                    <p className="mt-1">{leaseValueText(value)}</p>
+          <TabPanel idPrefix="lease" value={tab}>
+            {tab === "files" ? (
+              <div className="space-y-3">
+                {canWrite ? (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowAddTemplateModal(true)}
+                      data-testid="lease-add-template-button"
+                    >
+                      <Plus size={14} className="mr-1" />
+                      Add document
+                    </Button>
                   </div>
-                ))}
+                ) : null}
+                <LeaseTemplateSources templates={lease.templates} />
+                <LeaseAttachmentsSection
+                  leaseId={lease.id}
+                  attachments={lease.attachments}
+                  canWrite={canWrite}
+                  isDocumentsLocked={lease.documents_locked}
+                  onLockedRefusal={() => void refetch()}
+                />
               </div>
-            </section>
-          ) : null}
+            ) : null}
 
-          {tab === "notes" ? (
-            <section className="space-y-2" data-testid="lease-notes-section">
-              <label htmlFor="lease-notes" className="block text-sm font-medium">
-                Internal notes
-              </label>
-              <textarea
-                id="lease-notes"
-                defaultValue={lease.notes ?? ""}
-                onBlur={(e) => void handleNotesBlur(e.target.value)}
-                disabled={!canWrite}
-                placeholder="Anything to remember about this lease — points to follow up, signing logistics, etc."
-                rows={6}
-                className="w-full px-3 py-2 text-sm border rounded-md"
-              />
-            </section>
-          ) : null}
+            {tab === "details" ? (
+              <section className="space-y-3" data-testid="lease-details-section">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {Object.entries(lease.values).map(([key, value]) => (
+                    <div key={key} className="border-b pb-2">
+                      <p className="text-xs uppercase text-muted-foreground font-mono">
+                        [{key}]
+                      </p>
+                      <p className="mt-1">{leaseValueText(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {tab === "notes" ? (
+              <section className="space-y-2" data-testid="lease-notes-section">
+                <label htmlFor="lease-notes" className="block text-sm font-medium">
+                  Internal notes
+                </label>
+                <textarea
+                  id="lease-notes"
+                  defaultValue={lease.notes ?? ""}
+                  onBlur={(e) => void handleNotesBlur(e.target.value)}
+                  disabled={!canWrite}
+                  placeholder="Anything to remember about this lease — points to follow up, signing logistics, etc."
+                  rows={6}
+                  className="w-full px-3 py-2 text-sm border rounded-md"
+                />
+              </section>
+            ) : null}
+          </TabPanel>
         </>
       ) : null}
     </div>
