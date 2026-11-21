@@ -4,11 +4,11 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PinnedBar, ScrollWithPinnedBar, useAnnouncement, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 import { GMAIL_CONNECT_MESSAGES } from "../../constants/gmailConnect";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
@@ -170,8 +170,30 @@ export default function InquiryReplyBody({ id }: { id: string }) {
   }
 
   return (
-    <HeaderKeyboardAvoidingView>
-      <ScrollView
+    <>
+      <ScrollWithPinnedBar
+        bar={
+          <PinnedBar
+            bottomSpacing={spacing.md}
+            style={{
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+              backgroundColor: colors.background,
+            }}
+          >
+            <LoadingButton
+              disabled={!canSend}
+              isLoading={isBusy}
+              loadingText={isWaiting ? REPLY_SEND_WORDS.stillSending : REPLY_SEND_WORDS.sending}
+              onPress={() => void send()}
+              variant={sendAction === REPLY_SEND_ACTION.SEND_ANYWAY ? "secondary" : "primary"}
+            >
+              {REPLY_SEND_LABELS[sendAction]}
+            </LoadingButton>
+          </PinnedBar>
+        }
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardDismissMode="interactive"
@@ -235,27 +257,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
           onChangeText={(body) => change({ ...draft, body })}
           value={draft.body}
         />
-      </ScrollView>
-      <PinnedBar
-        bottomSpacing={spacing.md}
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.background,
-        }}
-      >
-        <LoadingButton
-          disabled={!canSend}
-          isLoading={isBusy}
-          loadingText={isWaiting ? REPLY_SEND_WORDS.stillSending : REPLY_SEND_WORDS.sending}
-          onPress={() => void send()}
-          variant={sendAction === REPLY_SEND_ACTION.SEND_ANYWAY ? "secondary" : "primary"}
-        >
-          {REPLY_SEND_LABELS[sendAction]}
-        </LoadingButton>
-      </PinnedBar>
+      </ScrollWithPinnedBar>
       <OptionSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
@@ -268,6 +270,6 @@ export default function InquiryReplyBody({ id }: { id: string }) {
         title="Choose a template"
         value={draft.templateId ?? WRITE_MY_OWN_OPTION}
       />
-    </HeaderKeyboardAvoidingView>
+    </>
   );
 }

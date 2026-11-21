@@ -46,7 +46,7 @@ const SCROLL_ONLY = [
   "welcomeManuals/WelcomeManualSectionFormScreen",
 ];
 
-// A bar pinned below the scroll view has to be lifted, so these keep a keyboard-avoiding view, given the header's height.
+// A bar pinned below the scroll view has to be lifted and the focused field scrolled in above it: ScrollWithPinnedBar does both.
 const PINNED_BAR = [
   "applicants/PromoteForm",
   "inquiries/InquiryReplyBody",
@@ -100,12 +100,13 @@ describe("keyboard insets", () => {
     expect(source).not.toMatch(/<ScrollView[\s>]/);
   });
 
-  it.each(PINNED_BAR)("%s lifts its pinned bar by the header's height", (feature) => {
+  it.each(PINNED_BAR)("%s lifts its pinned bar and scrolls the focused field above it", (feature) => {
     const source = sourceOf(feature);
-    expect(source).toMatch(/<HeaderKeyboardAvoidingView[\s>]/);
-    expect(source).not.toMatch(/<KeyboardAvoidingView/);
-    // The avoiding view already lifts everything above the keyboard; a keyboard-aware scroll inside would pad again.
+    expect(source).toMatch(/<ScrollWithPinnedBar[\s>]/);
+    // ScrollWithPinnedBar owns the avoiding view and the keyboard-aware scroll view; a second of either would pad again.
+    expect(source).not.toMatch(/<HeaderKeyboardAvoidingView/);
     expect(source).not.toMatch(KEYBOARD_AWARE_SCROLL);
+    expect(source).not.toMatch(/<ScrollView[\s>]/);
   });
 
   // The keyboard covers the home indicator, so a bar padded for it while the keyboard is up floats that far above it.

@@ -8,10 +8,10 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, PinnedBar, ScrollWithPinnedBar, SegmentedControl, useConfirmLeave, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 import { DOB_PICKER_STARTS_YEARS_AGO, PROMOTE_MESSAGES, SMOKER_SEGMENTS } from "../../constants/promote";
 import type { PromoteValues } from "../../types/PromoteValues";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -29,7 +29,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const [isNotPromotable, setIsNotPromotable] = useState(false);
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const isSubmitting = useRef(false);
-  const scroller = useRef<ScrollViewInstance>(null);
+  const scroller = useRef<KeyboardAwareScrollRef>(null);
 
   const today = new Date();
   const isTooYoung = values.dob !== null && !isOldEnough(values.dob, today);
@@ -85,55 +85,55 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   }
 
   return (
-    <HeaderKeyboardAvoidingView>
-      <ScrollView
-        contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        ref={scroller}
-      >
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>I filled in what I could from the inquiry. Everything's optional, but if you clear something the inquiry has, I'll use the inquiry's.</Text>
-        {failure ? <Banner message={failure} /> : null}
-        <FormField autoCapitalize="words" label="Legal name" maxLength={APPLICANT_LEGAL_NAME_MAX} onChangeText={(legalName) => update({ legalName })} value={values.legalName} />
-        <OptionalDateField
-          error={isTooYoung ? PROMOTE_MESSAGES.tooYoung : undefined}
-          label="Date of birth"
-          maximumDate={today}
-          onChange={(dob) => update({ dob })}
-          startsAt={new Date(today.getFullYear() - DOB_PICKER_STARTS_YEARS_AGO, 0, 1)}
-          value={values.dob}
-        />
-        <FormField label="Employer or hospital" maxLength={APPLICANT_EMPLOYER_MAX} onChangeText={(employer) => update({ employer })} value={values.employer} />
-        <OptionalDateField label="Contract start" onChange={(contractStart) => update({ contractStart })} startsAt={today} value={values.contractStart} />
-        <FormField label="Vehicle" maxLength={APPLICANT_VEHICLE_MAX} onChangeText={(vehicle) => update({ vehicle })} value={values.vehicle} />
-        <View style={{ gap: spacing.xs }}>
-          <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>Smoker</Text>
-          <SegmentedControl accessibilityLabel="Smoker" onChange={(smoker) => update({ smoker })} segments={SMOKER_SEGMENTS} value={values.smoker} />
-        </View>
-        <FormField
-          inputStyle={{ minHeight: 72 }}
-          label="Pets"
-          maxLength={APPLICANT_PETS_MAX}
-          multiline
-          onChangeText={(pets) => update({ pets })}
-          value={values.pets}
-        />
-        <FormField label="Referred by" maxLength={APPLICANT_REFERRED_BY_MAX} onChangeText={(referredBy) => update({ referredBy })} value={values.referredBy} />
-      </ScrollView>
-      <PinnedBar
-        bottomSpacing={spacing.md}
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.background,
-        }}
-      >
-        <LoadingButton disabled={isNotPromotable} isLoading={isLoading} loadingText="Promoting…" onPress={() => void submit()}>
-          Promote
-        </LoadingButton>
-      </PinnedBar>
-    </HeaderKeyboardAvoidingView>
+    <ScrollWithPinnedBar
+      bar={
+        <PinnedBar
+          bottomSpacing={spacing.md}
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+          }}
+        >
+          <LoadingButton disabled={isNotPromotable} isLoading={isLoading} loadingText="Promoting…" onPress={() => void submit()}>
+            Promote
+          </LoadingButton>
+        </PinnedBar>
+      }
+      contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      ref={scroller}
+    >
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>I filled in what I could from the inquiry. Everything's optional, but if you clear something the inquiry has, I'll use the inquiry's.</Text>
+      {failure ? <Banner message={failure} /> : null}
+      <FormField autoCapitalize="words" label="Legal name" maxLength={APPLICANT_LEGAL_NAME_MAX} onChangeText={(legalName) => update({ legalName })} value={values.legalName} />
+      <OptionalDateField
+        error={isTooYoung ? PROMOTE_MESSAGES.tooYoung : undefined}
+        label="Date of birth"
+        maximumDate={today}
+        onChange={(dob) => update({ dob })}
+        startsAt={new Date(today.getFullYear() - DOB_PICKER_STARTS_YEARS_AGO, 0, 1)}
+        value={values.dob}
+      />
+      <FormField label="Employer or hospital" maxLength={APPLICANT_EMPLOYER_MAX} onChangeText={(employer) => update({ employer })} value={values.employer} />
+      <OptionalDateField label="Contract start" onChange={(contractStart) => update({ contractStart })} startsAt={today} value={values.contractStart} />
+      <FormField label="Vehicle" maxLength={APPLICANT_VEHICLE_MAX} onChangeText={(vehicle) => update({ vehicle })} value={values.vehicle} />
+      <View style={{ gap: spacing.xs }}>
+        <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>Smoker</Text>
+        <SegmentedControl accessibilityLabel="Smoker" onChange={(smoker) => update({ smoker })} segments={SMOKER_SEGMENTS} value={values.smoker} />
+      </View>
+      <FormField
+        inputStyle={{ minHeight: 72 }}
+        label="Pets"
+        maxLength={APPLICANT_PETS_MAX}
+        multiline
+        onChangeText={(pets) => update({ pets })}
+        value={values.pets}
+      />
+      <FormField label="Referred by" maxLength={APPLICANT_REFERRED_BY_MAX} onChangeText={(referredBy) => update({ referredBy })} value={values.referredBy} />
+    </ScrollWithPinnedBar>
   );
 }

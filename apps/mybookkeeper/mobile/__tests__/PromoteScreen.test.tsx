@@ -3,7 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { Alert } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { Provider } from "react-redux";
 import PromoteScreen from "../src/features/applicants/PromoteScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -186,6 +186,16 @@ describe("PromoteScreen", () => {
     server.setReply(created);
     await pressPromote();
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/applicants/a9"));
+  });
+
+  it("scrolls back to the top to show why it failed", async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    startServer("offline");
+    await renderScreen();
+    await pressPromote();
+    expect(await screen.findByText("I wasn't able to promote that. Want to try again?")).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0 });
+    scrollTo.mockRestore();
   });
 
   it("asks before throwing away what was typed", async () => {

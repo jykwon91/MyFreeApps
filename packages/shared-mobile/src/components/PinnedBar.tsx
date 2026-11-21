@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PinnedBarProps } from "../types/PinnedBarProps";
 
 /**
- * A bar pinned below a scroll view inside HeaderKeyboardAvoidingView, such as a form's submit row. With the keyboard
- * closed it pads for the home indicator; with it open the keyboard covers that strip, so the padding shrinks as the
+ * A bar pinned below a scroll view, such as a form's submit row, in ScrollWithPinnedBar or a HeaderKeyboardAvoidingView.
+ * With the keyboard closed it pads for the home indicator; with it open the keyboard covers that strip, so the padding shrinks as the
  * keyboard opens rather than floating the bar a strip above it.
  *
  * The provider's own progress value only moves frame by frame on Android (on iOS it jumps to where the keyboard is
