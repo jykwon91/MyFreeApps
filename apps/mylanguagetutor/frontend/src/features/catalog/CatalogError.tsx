@@ -9,7 +9,7 @@ export default function CatalogError({ onRetry }: CatalogErrorProps) {
   return (
     <AlertBox variant="error">
       <div className="flex items-center justify-between gap-3">
-        <span>{CATALOG_COPY.loadFailed}</span>
+        <span role="alert">{CATALOG_COPY.loadFailed}</span>
         <button
           type="button"
           onClick={onRetry}

@@ -29,7 +29,7 @@ export default function RentReminderHistory({ applicantId }: RentReminderHistory
   }
 
   if (isError || !sends) {
-    return <AlertBox variant="error">Couldn&apos;t load reminder history.</AlertBox>;
+    return <AlertBox variant="error" role="alert">Couldn&apos;t load reminder history.</AlertBox>;
   }
 
   if (sends.length === 0) {

@@ -60,7 +60,7 @@ export default function OnboardingLevel() {
           </label>
         ))}
       </fieldset>
-      {saveFailure && <AlertBox variant="error">{LEVEL_SAVE_FAILURE_COPY[saveFailure]}</AlertBox>}
+      {saveFailure && <AlertBox variant="error" role="alert">{LEVEL_SAVE_FAILURE_COPY[saveFailure]}</AlertBox>}
       <LoadingButton type="submit" isLoading={isSaving} loadingText={ONBOARDING_COPY.saving} disabled={!selected}>
         {ONBOARDING_COPY.continue}
       </LoadingButton>

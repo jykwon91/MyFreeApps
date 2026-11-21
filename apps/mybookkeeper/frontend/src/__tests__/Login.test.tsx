@@ -547,7 +547,7 @@ describe("Login — unverified user", () => {
     await screen.findByRole("button", { name: /resend verification email/i });
     await user.click(screen.getByRole("button", { name: /resend verification email/i }));
 
-    await screen.findByText(/verification email sent/i);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/verification email sent/i));
   });
 
   it("shows error message when resend fails", async () => {
@@ -563,6 +563,6 @@ describe("Login — unverified user", () => {
     await screen.findByRole("button", { name: /resend verification email/i });
     await user.click(screen.getByRole("button", { name: /resend verification email/i }));
 
-    await screen.findByText(/failed to resend/i);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Couldn't resend right now. Try again shortly."));
   });
 });

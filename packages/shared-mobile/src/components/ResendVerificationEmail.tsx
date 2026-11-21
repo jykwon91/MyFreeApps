@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
+import { RESEND_VERIFICATION_COPY } from "@platform/core/constants/resendVerification";
 import { resendVerificationEmail } from "../auth/mobileAuthApi";
-import { RESEND_VERIFICATION_COPY } from "../constants/resendVerification";
 import { useTheme } from "../theme/useTheme";
 import type { ResendVerificationEmailProps } from "../types/ResendVerificationEmailProps";
 import type { ResendVerificationOutcome } from "../types/ResendVerificationOutcome";

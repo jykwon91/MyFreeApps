@@ -9,7 +9,7 @@ export interface LoadErrorAlertProps {
 export default function LoadErrorAlert({ message, isRetrying, onRetry }: LoadErrorAlertProps) {
   return (
     <AlertBox variant="error" className="flex items-center justify-between gap-3">
-      <span>{message}</span>
+      <span role="alert">{message}</span>
       <LoadingButton type="button" variant="secondary" size="sm" isLoading={isRetrying} loadingText="Retrying..." onClick={onRetry}>
         Retry
       </LoadingButton>

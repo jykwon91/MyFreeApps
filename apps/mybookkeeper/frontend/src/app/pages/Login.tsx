@@ -8,7 +8,9 @@ import {
   isRateLimitedError,
   isUnverifiedLoginError,
   LoadingButton,
+  ResendStatusAlert,
 } from "@platform/ui";
+import type { ResendStatus } from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
 
 const LOCKOUT_COOLDOWN_SECONDS = 30;
@@ -28,7 +30,7 @@ export default function Login() {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [needsVerification, setNeedsVerification] = useState(false);
-  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
 
   useEffect(() => {
     return () => {
@@ -161,21 +163,7 @@ export default function Login() {
               <p className="text-sm text-amber-700 dark:text-amber-400">
                 Please verify your email before signing in. Check your inbox for the verification link.
               </p>
-              {resendStatus === "sent" ? (
-                <p className="text-sm text-green-700 dark:text-green-400">Verification email sent. Check your inbox.</p>
-              ) : resendStatus === "error" ? (
-                <p className="text-sm text-destructive">Failed to resend. Try again shortly.</p>
-              ) : (
-                <LoadingButton
-                  type="button"
-                  isLoading={resendStatus === "sending"}
-                  loadingText="Sending..."
-                  className="w-full"
-                  onClick={handleResendVerification}
-                >
-                  Resend verification email
-                </LoadingButton>
-              )}
+              <ResendStatusAlert status={resendStatus} onResend={handleResendVerification} />
             </div>
           ) : null}
           <LoadingButton
