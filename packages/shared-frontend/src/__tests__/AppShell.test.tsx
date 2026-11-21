@@ -188,3 +188,15 @@ describe("AppShell — user menu keyboard focus", () => {
     expect(item.className).toContain("data-[highlighted]:ring-2");
   });
 });
+
+describe("AppShell — skip link", () => {
+  it("puts a skip link before the sidebar and targets the one main landmark", () => {
+    renderShell();
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" });
+    const firstNavLink = screen.getAllByRole("link").find((l) => l !== skipLink);
+    expect(skipLink.compareDocumentPosition(firstNavLink as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+    expect(screen.getByRole("main")).toHaveAttribute("tabindex", "-1");
+  });
+});

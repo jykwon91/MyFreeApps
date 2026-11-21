@@ -12,6 +12,8 @@ import UserAvatar, { type UserAvatarUser } from "./UserAvatar";
 import SearchBar from "./SearchBar";
 import NavItemContent from "./NavItemContent";
 import { navItemAccessibleLabel } from "../../utils/navItemAccessibleLabel";
+import SkipLink from "./SkipLink";
+import { MAIN_CONTENT_ID } from "../../constants/main-content";
 
 export type NavItem = {
   path: string;
@@ -115,6 +117,7 @@ export default function AppShell({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <SkipLink />
       {/* Sidebar — desktop only */}
       {!isMobile && (
         <aside
@@ -295,7 +298,12 @@ export default function AppShell({
         </header>
 
         {/* Content */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto">{children}</main>
+        <main
+          id={MAIN_CONTENT_ID}
+          tabIndex={-1}
+          ref={mainRef}
+          className="flex-1 overflow-y-auto focus:outline-none"
+        >{children}</main>
 
         {/* Mobile bottom nav */}
         {isMobile && (

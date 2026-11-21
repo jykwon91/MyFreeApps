@@ -74,6 +74,8 @@ describe("AdminLayout on a narrow screen", () => {
     expect(screen.queryByRole("button", { name: /ada/i })).not.toBeInTheDocument();
 
     await user.tab();
+    expect(screen.getByRole("link", { name: "Skip to main content" })).toHaveFocus();
+    await user.tab();
     expect(screen.getByRole("button", { name: "Open menu" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "Page action" })).toHaveFocus();
