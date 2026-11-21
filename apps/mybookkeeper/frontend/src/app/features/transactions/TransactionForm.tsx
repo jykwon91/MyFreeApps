@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
 import { X, FileText, Loader2 } from "lucide-react";
 import { fetchDocumentBlob } from "@/shared/services/documentService";
-import { showError, FormField } from "@platform/ui";
+import { FormField, LoadingRegion, showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
@@ -204,7 +204,8 @@ export default function TransactionForm({
       <FormField label="Assign vendor" dirty={!!dirtyFields.vendor_id}>
         {(field) =>
           vendorsMode === "loading" ? (
-            <div
+            <LoadingRegion
+              label="Loading vendors…"
               className="h-10 w-full bg-muted/40 rounded-md animate-pulse"
               data-testid="vendor-id-select-skeleton"
             />

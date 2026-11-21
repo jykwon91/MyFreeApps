@@ -86,7 +86,7 @@ describe("OnboardingLevel page", () => {
   it("waits for the profile before deciding there's no language", () => {
     profile = { data: undefined, isError: false };
     renderPage("/onboarding/level");
-    expect(screen.getByLabelText("Loading")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading page…");
   });
 
   it.each(["/onboarding/level", "/onboarding/level?language="])("sends %s back to the language step", (url) => {

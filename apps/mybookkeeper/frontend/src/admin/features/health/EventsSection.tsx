@@ -8,6 +8,7 @@ import { SEVERITY_BADGE_COLOR } from "@/admin/features/health/severity";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import { HEALTH_EVENTS_LOAD_FAILED } from "@/shared/lib/health-event-messages";
+import { LoadingRegion } from "@platform/ui";
 
 type SeverityFilter = "all" | "info" | "warning" | "error" | "critical";
 type TypeFilter = string;
@@ -86,11 +87,11 @@ export default function EventsSection({
       ) : null}
 
       {mode === "error" ? null : mode === "loading" ? (
-        <div className="space-y-2" data-testid="health-events-skeleton">
+        <LoadingRegion label="Loading events…" className="space-y-2" data-testid="health-events-skeleton">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="h-12 animate-pulse rounded bg-muted" />
           ))}
-        </div>
+        </LoadingRegion>
       ) : mode === "empty" ? (
         <EmptyState message="No events match your filters" />
       ) : (

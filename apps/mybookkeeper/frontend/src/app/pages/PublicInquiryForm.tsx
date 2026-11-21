@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@platform/ui";
+import { extractErrorMessage, LoadingRegion } from "@platform/ui";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import { usePublicInquiryFlow } from "@/app/features/public-inquiry/usePublicInquiryFlow";
 import PublicInquiryListingPanel from "@/app/features/public-inquiry/PublicInquiryListingPanel";
@@ -44,11 +44,11 @@ export default function PublicInquiryForm() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted">
         <div className="bg-card border rounded-lg p-8 w-full max-w-md shadow-sm">
-          <div className="space-y-3 animate-pulse" data-testid="public-form-skeleton">
+          <LoadingRegion label="Loading form…" className="space-y-3 animate-pulse" data-testid="public-form-skeleton">
             <div className="h-6 w-2/3 bg-muted-foreground/20 rounded" />
             <div className="h-4 w-full bg-muted-foreground/10 rounded" />
             <div className="h-4 w-1/2 bg-muted-foreground/10 rounded" />
-          </div>
+          </LoadingRegion>
         </div>
       </div>
     );

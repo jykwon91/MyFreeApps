@@ -1,8 +1,8 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function ResumeUploadSectionSkeleton() {
   return (
-    <div className="border rounded-lg p-6 space-y-4">
+    <LoadingRegion label="Loading resume upload section…" className="border rounded-lg p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Skeleton className="w-4 h-4 rounded" />
@@ -23,6 +23,6 @@ export default function ResumeUploadSectionSkeleton() {
           <Skeleton className="w-16 h-5 rounded" />
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

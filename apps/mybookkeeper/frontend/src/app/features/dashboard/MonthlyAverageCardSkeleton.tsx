@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingStatus, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 /** Matches MonthlyAverageCard: title row, then revenue / expenses / profit. */
@@ -19,6 +19,7 @@ export default function MonthlyAverageCardSkeleton() {
           </div>
         ))}
       </div>
+      <LoadingStatus label="Loading monthly average…" />
     </Card>
   );
 }

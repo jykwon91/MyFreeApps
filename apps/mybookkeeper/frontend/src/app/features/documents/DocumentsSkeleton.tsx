@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import DocumentCardSkeleton from "@/app/features/documents/DocumentCardSkeleton";
 
 // Mirrors DocumentTable: phone cards below md, the 7-column table from md up,
@@ -22,7 +22,7 @@ interface DocumentsSkeletonProps {
 
 export default function DocumentsSkeleton({ canWrite }: DocumentsSkeletonProps) {
   return (
-    <div className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
+    <LoadingRegion label="Loading documents…" className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
       <div className="md:hidden divide-y">
         {Array.from({ length: ROW_COUNT }, (_, i) => (
           <DocumentCardSkeleton key={i} canWrite={canWrite} />
@@ -59,6 +59,6 @@ export default function DocumentsSkeleton({ canWrite }: DocumentsSkeletonProps) 
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-5 w-40" />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

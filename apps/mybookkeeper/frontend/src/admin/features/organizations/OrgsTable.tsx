@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import { formatDate } from "@/shared/utils/date";
 
 interface OrgRow {

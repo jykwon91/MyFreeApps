@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 const SKELETON_COUNT = 3;
 
@@ -8,11 +8,10 @@ const SKELETON_COUNT = 3;
  */
 export default function ReviewQueueSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading review queue…"
       className="space-y-4"
       data-testid="review-queue-skeleton"
-      aria-busy="true"
-      aria-label="Loading review queue"
     >
       {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
         <div
@@ -36,6 +35,6 @@ export default function ReviewQueueSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

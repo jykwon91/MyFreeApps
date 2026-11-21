@@ -106,7 +106,7 @@ export default function CalendarEventNotesSection({ blackoutId, initialNotes }: 
           Booking notes
         </label>
         {isSaving ? (
-          <Loader2 size={12} className="animate-spin text-muted-foreground" aria-label="Saving" />
+          <Loader2 size={12} className="animate-spin text-muted-foreground" role="status" aria-label="Saving" />
         ) : null}
       </div>
       <textarea

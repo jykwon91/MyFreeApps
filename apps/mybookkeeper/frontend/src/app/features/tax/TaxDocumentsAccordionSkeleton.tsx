@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function TaxDocumentsAccordionSkeleton() {
   return (
-    <div className="space-y-2">
+    <LoadingRegion label="Loading tax documents accordion…" className="space-y-2">
       {Array.from({ length: 2 }, (_, yearIdx) => (
         <div key={yearIdx} className="border rounded-lg overflow-hidden">
           {/* Year header */}
@@ -58,6 +58,6 @@ export default function TaxDocumentsAccordionSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

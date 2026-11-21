@@ -4,7 +4,7 @@ import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationDiscrepanciesMode } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-discrepancies-mode";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import { comparedAmounts } from "./comparedAmounts";
 
 export interface ReconciliationDiscrepanciesBodyProps {

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Skeleton for the VendorDetail page. Mirrors the loaded layout exactly:
@@ -6,7 +6,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function VendorDetailSkeleton() {
   return (
-    <div className="space-y-6" data-testid="vendor-detail-skeleton">
+    <LoadingRegion label="Loading vendor detail…" className="space-y-6" data-testid="vendor-detail-skeleton">
       {/* Header */}
       <div className="space-y-2">
         <Skeleton className="h-7 w-48" />
@@ -47,6 +47,6 @@ export default function VendorDetailSkeleton() {
         <Skeleton className="h-4 w-16" />
         <Skeleton className="h-12 w-full" />
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

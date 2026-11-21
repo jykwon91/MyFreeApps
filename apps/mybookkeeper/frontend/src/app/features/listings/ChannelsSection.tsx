@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
-import { Button, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingRegion, showError, showSuccess } from "@platform/ui";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import {
   useDeleteChannelListingMutation,
@@ -83,14 +83,14 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
 
   if (mode === "loading") {
     return (
-      <div
+      <LoadingRegion
+        label="Loading channels…"
         data-testid="channels-section-loading"
         className="space-y-2"
-        aria-live="polite"
       >
         <div className="h-16 rounded-md bg-muted animate-pulse" />
         <div className="h-16 rounded-md bg-muted animate-pulse" />
-      </div>
+      </LoadingRegion>
     );
   }
 

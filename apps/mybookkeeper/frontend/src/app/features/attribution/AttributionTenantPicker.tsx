@@ -48,7 +48,7 @@ export default function AttributionTenantPicker({ value, onChange, disabled, isL
       <div className="flex items-center gap-2 flex-wrap pt-1">
         <div
           className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px] flex items-center text-muted-foreground"
-          aria-hidden="true"
+          role="status"
         >
           Loading tenants…
         </div>

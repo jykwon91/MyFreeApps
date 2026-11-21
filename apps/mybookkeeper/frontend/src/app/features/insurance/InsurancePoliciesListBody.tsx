@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
@@ -22,9 +23,9 @@ export default function InsurancePoliciesListBody({
       return null;
     case "loading":
       return (
-        <div
+        <LoadingRegion
+          label="Loading insurance policies…"
           className="space-y-2 animate-pulse"
-          aria-busy="true"
           data-testid="insurance-policies-loading"
         >
           {[1, 2, 3].map((i) => (
@@ -33,7 +34,7 @@ export default function InsurancePoliciesListBody({
               <div className="h-4 bg-muted rounded w-1/3" />
             </div>
           ))}
-        </div>
+        </LoadingRegion>
       );
     case "empty":
       return (

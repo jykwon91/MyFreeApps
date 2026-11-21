@@ -18,7 +18,7 @@ export default function AnalyzeProcessingView({ sourcePath, longRunning }: Analy
       : "Analyzing this role…";
   const longCopy = "This is taking longer than usual…";
   return (
-    <div className="max-w-2xl">
+    <div role="status" className="max-w-2xl">
       <EmptyState
         icon={
           <Loader2

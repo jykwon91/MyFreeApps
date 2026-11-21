@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 /**
  * Loading placeholder for the refinance check.
  *
@@ -11,9 +12,9 @@
  */
 export default function MortgageRateWatchSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading mortgage rate watch…"
       className="space-y-4 animate-pulse"
-      aria-busy="true"
       data-testid="mortgage-rate-watch-loading"
     >
       <div className="rounded-lg border border-border p-4">
@@ -45,6 +46,6 @@ export default function MortgageRateWatchSkeleton() {
 
       <div className="h-3 bg-muted rounded w-full" />
       <div className="h-3 bg-muted rounded w-4/5" />
-    </div>
+    </LoadingRegion>
   );
 }

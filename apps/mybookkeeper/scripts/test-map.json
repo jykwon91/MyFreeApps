@@ -2459,7 +2459,6 @@
     "frontend/src/App.tsx",
     "frontend/src/main.tsx",
     "frontend/src/app/components/Layout.tsx",
-    "frontend/src/shared/components/ui/Skeleton.tsx",
     "frontend/src/shared/components/ui/LoadErrorAlert.tsx",
     "frontend/src/admin/components/AdminLayout.tsx",
     "frontend/src/shared/components/ResponsiveSidebar.tsx",

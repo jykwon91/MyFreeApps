@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 // Column widths mirror the loaded DataTable column widths exactly.
 // Order: Company | Role | Status | Location | Remote | Applied | Fit
@@ -7,10 +7,9 @@ const COLUMN_HEADERS = ["Company", "Role", "Status", "Location", "Remote", "Appl
 
 export default function ApplicationsSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading applications…"
       className="w-full overflow-x-auto"
-      aria-label="Loading applications"
-      aria-busy="true"
     >
       <table role="table" className="w-full text-sm border-collapse">
         <thead>
@@ -38,6 +37,6 @@ export default function ApplicationsSkeleton() {
           ))}
         </tbody>
       </table>
-    </div>
+    </LoadingRegion>
   );
 }

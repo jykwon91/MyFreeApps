@@ -22,12 +22,6 @@ vi.mock("@/app/features/organizations/CreateOrgPrompt", () => ({
   default: () => <div data-testid="create-org-prompt">Create your organization</div>,
 }));
 
-vi.mock("@/shared/components/ui/Skeleton", () => ({
-  default: ({ className }: { className: string }) => (
-    <div data-testid="skeleton" className={className} />
-  ),
-}));
-
 import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 
 const seenRoles: (OrgRole | null)[] = [];
@@ -92,7 +86,7 @@ describe("RequireOrg", () => {
       refetch: vi.fn(),
     });
 
-    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your workspace…");
     expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
   });
 

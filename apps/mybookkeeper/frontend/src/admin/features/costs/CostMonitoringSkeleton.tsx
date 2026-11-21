@@ -1,6 +1,7 @@
+import { LoadingRegion } from "@platform/ui";
 export default function CostMonitoringSkeleton() {
   return (
-    <div className="p-4 sm:p-6 space-y-3">
+    <LoadingRegion label="Loading cost monitoring…" className="p-4 sm:p-6 space-y-3">
       {/* SectionHeader */}
       <div className="flex items-center justify-between">
         <div className="space-y-1.5">
@@ -31,6 +32,6 @@ export default function CostMonitoringSkeleton() {
           <div className="h-64 animate-pulse rounded-lg bg-muted" />
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

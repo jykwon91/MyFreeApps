@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingStatus, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 /** The three summary cards (revenue, expenses, net profit), in the same grid. */
@@ -12,6 +12,7 @@ export default function DashboardSummaryCardsSkeleton() {
           <Skeleton className="h-8 w-32 mt-1" />
         </Card>
       ))}
+      <LoadingStatus label="Loading summary…" />
     </section>
   );
 }

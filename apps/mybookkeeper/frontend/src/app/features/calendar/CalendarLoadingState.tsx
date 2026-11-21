@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import { CALENDAR_VIEW_MODE } from "@mybookkeeper/api-client/constants/calendarViewMode";
 import CalendarAgendaSkeleton from "@/app/features/calendar/CalendarAgendaSkeleton";
 import CalendarMonthSkeleton from "@/app/features/calendar/CalendarMonthSkeleton";
@@ -20,13 +21,13 @@ export default function CalendarLoadingState({ view }: CalendarLoadingStateProps
   if (view === CALENDAR_VIEW_MODE.TIMELINE) return <CalendarSkeleton />;
 
   return (
-    <div data-testid="calendar-skeleton">
+    <LoadingRegion label="Loading calendar…" data-testid="calendar-skeleton">
       <div className="md:hidden">
         <CalendarAgendaSkeleton />
       </div>
       <div className="hidden md:block">
         <CalendarMonthSkeleton />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

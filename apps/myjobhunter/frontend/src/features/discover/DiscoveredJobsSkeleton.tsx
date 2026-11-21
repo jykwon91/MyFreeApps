@@ -1,4 +1,4 @@
-import { Card, Skeleton } from "@platform/ui";
+import { Card, LoadingRegion, Skeleton } from "@platform/ui";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 
 interface DiscoveredJobsSkeletonProps {
@@ -21,7 +21,7 @@ interface DiscoveredJobsSkeletonProps {
  */
 export default function DiscoveredJobsSkeleton({ count = 3, view = "inbox" }: DiscoveredJobsSkeletonProps) {
   return (
-    <div className="space-y-3" aria-busy="true" data-testid="discovered-jobs-skeleton">
+    <LoadingRegion label="Loading discovered jobs…" className="space-y-3" data-testid="discovered-jobs-skeleton">
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className="p-4 sm:p-5 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -58,6 +58,6 @@ export default function DiscoveredJobsSkeleton({ count = 3, view = "inbox" }: Di
           )}
         </Card>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

@@ -9,10 +9,10 @@ interface NotesSaveStatusProps {
 export default function NotesSaveStatus({ state, onRetry }: NotesSaveStatusProps) {
   if (state.status === "idle") return null;
   if (state.status === "saving") {
-    return <span className="text-xs text-muted-foreground">Saving…</span>;
+    return <span role="status" className="text-xs text-muted-foreground">Saving…</span>;
   }
   if (state.status === "saved") {
-    return <span className="text-xs text-muted-foreground">Saved</span>;
+    return <span role="status" className="text-xs text-muted-foreground">Saved</span>;
   }
   // error
   return (

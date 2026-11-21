@@ -159,7 +159,7 @@ describe("Applications page", () => {
 
       renderApplications();
 
-      expect(screen.getByLabelText("Loading applications")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading applications…");
     });
   });
 

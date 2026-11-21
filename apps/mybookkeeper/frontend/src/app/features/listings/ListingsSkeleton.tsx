@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export interface ListingsSkeletonProps {
   count?: number;
@@ -13,7 +13,7 @@ export default function ListingsSkeleton({ count = 4 }: ListingsSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <div data-testid="listings-skeleton">
+    <LoadingRegion label="Loading listings…" data-testid="listings-skeleton">
       {/* Mobile: card list */}
       <ul className="md:hidden space-y-3">
         {rows.map((i) => (
@@ -56,6 +56,6 @@ export default function ListingsSkeleton({ count = 4 }: ListingsSkeletonProps) {
           </tbody>
         </table>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

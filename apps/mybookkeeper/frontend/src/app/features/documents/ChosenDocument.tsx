@@ -39,10 +39,11 @@ export default function ChosenDocument({
       </span>
       {isReading ? (
         <span
+          role="status"
           className="shrink-0 flex items-center gap-2 text-muted-foreground"
           data-testid={`${testIdPrefix}-reading-indicator`}
         >
-          <Loader2 size={16} className="animate-spin" />
+          <Loader2 aria-hidden="true" size={16} className="animate-spin" />
           Reading...
         </span>
       ) : (

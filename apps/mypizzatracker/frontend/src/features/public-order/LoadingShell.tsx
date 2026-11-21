@@ -1,4 +1,4 @@
-import { Card, Skeleton } from "@platform/ui";
+import { Card, LoadingStatus, Skeleton } from "@platform/ui";
 import OrderStack from "@/features/public-order/OrderStack";
 import PickupSlotGrid from "@/features/public-order/PickupSlotGrid";
 
@@ -42,6 +42,7 @@ export default function LoadingShell() {
           <Skeleton className="h-10 w-full" />
         </Card>
       </OrderStack>
+      <LoadingStatus label="Loading the order page…" />
     </>
   );
 }

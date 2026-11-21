@@ -27,7 +27,7 @@ export default function ScreeningPendingPanel({ pendingResult, onUploadClick, ca
           className="h-5 w-5 flex-shrink-0 animate-spin text-blue-600 dark:text-blue-400 mt-0.5"
           aria-hidden="true"
         />
-        <div className="text-sm">
+        <div role="status" className="text-sm">
           <p className="font-medium text-blue-800 dark:text-blue-200">
             Running background check — waiting for results
           </p>

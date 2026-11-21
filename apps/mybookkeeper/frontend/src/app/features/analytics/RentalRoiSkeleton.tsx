@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 const ROWS = [0, 1, 2];
@@ -7,7 +7,7 @@ const COLUMNS = [0, 1, 2, 3, 4];
 /** Mirrors the loaded tab: headline, target input, help line, then cards (phone) or the table. */
 export default function RentalRoiSkeleton() {
   return (
-    <div className="space-y-6" data-testid="rental-roi-skeleton">
+    <LoadingRegion label="Loading rental ROI…" className="space-y-6" data-testid="rental-roi-skeleton">
       <div
         className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
         data-testid="rental-roi-skeleton-headline"
@@ -73,6 +73,6 @@ export default function RentalRoiSkeleton() {
           </tfoot>
         </table>
       </Card>
-    </div>
+    </LoadingRegion>
   );
 }

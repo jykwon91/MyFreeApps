@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import { formatPlanDate } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
 import { describeBenchmarkFigure } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
@@ -21,9 +22,9 @@ export default function MarketRateBenchmarkSummary({
 
   if (isLoading) {
     return (
-      <div
+      <LoadingRegion
+        label="Loading market rate benchmark…"
         className="h-9 bg-muted rounded animate-pulse"
-        aria-busy="true"
         data-testid="market-rate-benchmark-summary-loading"
       />
     );

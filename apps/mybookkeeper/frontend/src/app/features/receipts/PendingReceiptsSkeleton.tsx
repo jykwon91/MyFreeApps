@@ -1,10 +1,11 @@
+import { LoadingRegion } from "@platform/ui";
 /**
  * Skeleton loader for the PendingReceipts page.
  * Mirrors the loaded page structure: a section header + a card with rows.
  */
 export default function PendingReceiptsSkeleton() {
   return (
-    <div className="p-4 sm:p-8 space-y-6" aria-busy="true">
+    <LoadingRegion label="Loading pending receipts…" className="p-4 sm:p-8 space-y-6">
       {/* Section header skeleton */}
       <div className="space-y-2">
         <div className="h-6 w-40 bg-muted animate-pulse rounded" />
@@ -31,6 +32,6 @@ export default function PendingReceiptsSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }
