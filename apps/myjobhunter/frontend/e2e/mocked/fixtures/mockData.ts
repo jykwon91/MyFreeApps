@@ -1,6 +1,7 @@
 import type { Application } from "@myjobhunter/api-client/types/application";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { Company } from "@myjobhunter/api-client/types/company";
+import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
 import type { Profile } from "@myjobhunter/api-client/types/profile/profile";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
@@ -133,6 +134,32 @@ export function mockResumeJob(overrides: Partial<ResumeUploadJob> = {}): ResumeU
     completed_at: null,
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP,
+    ...overrides,
+  };
+}
+
+export function mockCompanyResearch(overrides: Partial<CompanyResearch> = {}): CompanyResearch {
+  const company = mockCompany();
+  return {
+    id: "00000000-0000-0000-0000-0000000000a1",
+    company_id: company.id,
+    user_id: company.user_id,
+    overall_sentiment: "positive",
+    senior_engineer_sentiment: "Collaborative engineering culture.",
+    interview_process: "Well regarded by its engineers.",
+    description: null,
+    products_for_you: null,
+    red_flags: [],
+    green_flags: [],
+    reported_comp_range_min: null,
+    reported_comp_range_max: null,
+    comp_currency: "USD",
+    comp_confidence: "unknown",
+    raw_synthesis: null,
+    last_researched_at: TIMESTAMP,
+    created_at: TIMESTAMP,
+    updated_at: TIMESTAMP,
+    sources: [],
     ...overrides,
   };
 }

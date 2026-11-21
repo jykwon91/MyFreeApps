@@ -1,8 +1,14 @@
 """Company research service — orchestrates Tavily → Claude → persistence.
 
-Flow for POST /companies/{company_id}/research:
+Flow for POST /companies/{company_id}/research, in two calls so the route can
+apply the per-user rate limit between them (a refused request spends no quota):
 
-  1. Verify the company exists and belongs to the requesting user.
+  ``claim_run``
+  1. Verify the company exists and belongs to the requesting user, and claim
+     its run: a second request while one is in flight is refused, so the
+     search and the AI call are never paid for twice.
+
+  ``run_claimed_research``
   2. Call Tavily to fetch recent web search results about the company.
   3. Build a context string from the Tavily results.
   4. Call Claude (via claude_service.call_claude) to synthesise the results
@@ -16,6 +22,7 @@ Fail-loud:
   - TavilyNotConfiguredError → propagated to the route → HTTP 503.
   - anthropic.APIError / ValueError from Claude → propagated → HTTP 502.
   - Company not found or wrong tenant → returns None → route emits HTTP 404.
+  - A run already in flight → ResearchAlreadyRunningError → HTTP 409.
 """
 from __future__ import annotations
 
@@ -28,6 +35,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
+from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_repository, company_research_repository
 from app.repositories.profile import (
@@ -36,6 +44,7 @@ from app.repositories.profile import (
     work_history_repository,
 )
 from app.services.extraction import claude_service
+from app.services.company.research_already_running_error import ResearchAlreadyRunningError
 from app.services.extraction.prompts.company_research_prompt import COMPANY_RESEARCH_PROMPT
 from app.services.integrations.tavily_service import (
     search_company,
@@ -157,26 +166,47 @@ async def _build_user_context(db: AsyncSession, user_id: uuid.UUID) -> str | Non
     return "\n".join(parts)
 
 
-async def run_research(
+async def claim_run(
     db: AsyncSession,
     *,
     company_id: uuid.UUID,
     user_id: uuid.UUID,
-) -> CompanyResearch | None:
-    """Run Tavily + Claude research for a company and persist the result.
+) -> Company | None:
+    """Claim a company's research run for the rest of the transaction.
+
+    Returns the company, or None if it is not found / belongs to another user.
+    The claim is held until ``run_claimed_research`` commits (or the request's
+    session rolls back), so pass the same session to both.
+
+    Raises:
+        ResearchAlreadyRunningError: if another request is running this
+            company's research (from another tab, device or worker).
+    """
+    company = await company_repository.get_by_id(db, company_id, user_id)
+    if company is None:
+        return None
+    if not await company_research_repository.try_lock_run(db, company_id):
+        raise ResearchAlreadyRunningError
+    return company
+
+
+async def run_claimed_research(
+    db: AsyncSession,
+    *,
+    company: Company,
+    user_id: uuid.UUID,
+) -> CompanyResearch:
+    """Run Tavily + Claude research for a company claimed by ``claim_run`` and persist the result.
 
     Returns:
-        The updated CompanyResearch ORM instance with sources loaded, or None
-        if the company is not found / belongs to another user.
+        The updated CompanyResearch ORM instance with sources loaded.
 
     Raises:
         TavilyNotConfiguredError: if Tavily API key is missing in non-dev.
         anthropic.APIError: on non-retryable Claude API failures.
         ValueError: if Claude returns malformed JSON.
     """
-    company = await company_repository.get_by_id(db, company_id, user_id)
-    if company is None:
-        return None
+    company_id = company.id
 
     # 1. Fetch Tavily search results — review-site search + overview
     #    search run in parallel. The overview call is what powers the

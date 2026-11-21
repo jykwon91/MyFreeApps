@@ -6,9 +6,10 @@
  * rendering to CompanyResearchPanelBody via companyResearchMode.
  */
 import { extractErrorMessage, showError } from "@platform/ui";
-import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@myjobhunter/api-client/store/companiesApi";
+import { useCompanyResearchRun } from "@myjobhunter/api-client/hooks/useCompanyResearchRun";
+import { useGetCompanyResearchQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
-import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
+import { researchFailureFixedMessage } from "@myjobhunter/api-client/utils/researchFailureFixedMessage";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import CompanyResearchPanelBody from "@/features/companies/CompanyResearchPanelBody";
 
@@ -23,8 +24,9 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
     error: queryError,
   } = useGetCompanyResearchQuery(companyId);
 
+  // The run's state lives in the store, so leaving and reopening the company mid-run still shows it running.
   const [triggerResearch, { isLoading: isMutationLoading, isError: isMutationError, error: mutationError }] =
-    useTriggerCompanyResearchMutation();
+    useCompanyResearchRun(companyId);
 
   const queryErrorStatus =
     queryError && typeof queryError === "object" && "status" in queryError
@@ -40,12 +42,9 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
   });
 
   const failureReason = mutationError ? researchRunFailure(mutationError).reason : null;
-  const errorMessage =
-    failureReason === "rate-limited"
-      ? RATE_LIMITED_MESSAGES.companyResearch
-      : mutationError
-        ? extractErrorMessage(mutationError)
-        : null;
+  const errorMessage = failureReason
+    ? (researchFailureFixedMessage(failureReason) ?? extractErrorMessage(mutationError))
+    : null;
   // A 503 means research isn't set up on the server; retrying can't help.
   const canRetry = failureReason !== "not-configured";
 
@@ -53,11 +52,7 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
     try {
       await triggerResearch(companyId).unwrap();
     } catch (err) {
-      showError(
-        researchRunFailure(err).reason === "rate-limited"
-          ? RATE_LIMITED_MESSAGES.companyResearch
-          : `Research failed: ${extractErrorMessage(err)}`,
-      );
+      showError(researchFailureFixedMessage(researchRunFailure(err).reason) ?? `Research failed: ${extractErrorMessage(err)}`);
     }
   }
 

@@ -44,12 +44,12 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => {
       })),
     ]),
     useCreateCompanyMutation: vi.fn(),
-    useTriggerCompanyResearchMutation: vi.fn(() => [
-      vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
-      { isLoading: false },
-    ]),
   };
 });
+
+vi.mock("@myjobhunter/api-client/hooks/useStartCompanyResearch", () => ({
+  useStartCompanyResearch: vi.fn(() => vi.fn(() => Promise.resolve(undefined))),
+}));
 
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useCreateApplicationMutation: vi.fn(),
@@ -107,8 +107,8 @@ import {
   useListCompaniesQuery,
   useLazyListCompaniesQuery,
   useCreateCompanyMutation,
-  useTriggerCompanyResearchMutation,
 } from "@myjobhunter/api-client/store/companiesApi";
+import { useStartCompanyResearch } from "@myjobhunter/api-client/hooks/useStartCompanyResearch";
 import { ADD_APPLICATION_MESSAGES } from "@/constants/add-application-messages";
 import {
   useCreateApplicationMutation,
@@ -1113,7 +1113,7 @@ const REVIEW_HEADING = /review and adjust before saving/i;
 
 describe("AddApplicationDialog — races", () => {
   const mockUseLazyListCompaniesQuery = vi.mocked(useLazyListCompaniesQuery);
-  const research = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
+  const research = vi.fn(() => Promise.resolve(undefined));
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1129,8 +1129,8 @@ describe("AddApplicationDialog — races", () => {
     mockUseExtractJdFromUrlMutation.mockReturnValue(
       defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
     );
-    vi.mocked(useTriggerCompanyResearchMutation).mockReturnValue(
-      [research, { isLoading: false }] as unknown as ReturnType<typeof useTriggerCompanyResearchMutation>,
+    vi.mocked(useStartCompanyResearch).mockReturnValue(
+      research as unknown as ReturnType<typeof useStartCompanyResearch>,
     );
   });
 

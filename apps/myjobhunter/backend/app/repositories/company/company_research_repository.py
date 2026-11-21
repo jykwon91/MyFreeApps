@@ -9,17 +9,21 @@ Functions:
   create_sources          — bulk-insert ResearchSource rows for a research record
   list_sources_for_research — list all sources for a research record, user-scoped
   list_by_user            — all research records for a user
+  try_lock_run            — claim a company's research run for the rest of the transaction
 """
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company_research import CompanyResearch
 from app.models.company.research_source import ResearchSource
+
+# Prefix of a research run's advisory-lock key; hashed with the company id to one bigint.
+_RUN_LOCK_PREFIX = "mjh.company_research_run:"
 
 
 async def get_by_id(
@@ -199,3 +203,17 @@ async def list_by_user(
         select(CompanyResearch).where(CompanyResearch.user_id == user_id)
     )
     return list(result.scalars().all())
+
+
+async def try_lock_run(db: AsyncSession, company_id: uuid.UUID) -> bool:
+    """Claim this company's research run until the transaction ends.
+
+    False when another request holds it: that one is already running the same
+    company's research. Postgres releases the lock on commit or rollback, and when
+    a worker dies, so a crashed run never leaves the company stuck.
+    """
+    result = await db.execute(
+        text("SELECT pg_try_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"{_RUN_LOCK_PREFIX}{company_id}"},
+    )
+    return bool(result.scalar_one())

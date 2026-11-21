@@ -51,7 +51,10 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: () => ({ data: { items: [ACME], total: 1 }, isLoading: false, isError: false }),
   useLazyListCompaniesQuery: () => [vi.fn(() => ({ unwrap: () => Promise.resolve({ items: [ACME], total: 1 }) }))],
   useCreateCompanyMutation: () => [vi.fn(), { isLoading: false }],
-  useTriggerCompanyResearchMutation: () => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }],
+}));
+
+vi.mock("@myjobhunter/api-client/hooks/useStartCompanyResearch", () => ({
+  useStartCompanyResearch: () => vi.fn(() => Promise.resolve(undefined)),
 }));
 
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({

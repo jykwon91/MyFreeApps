@@ -6,7 +6,10 @@ import { companyDeleteState } from "../utils/companyDeleteState";
 import { companyDomainUrl } from "../utils/companyDomainUrl";
 import { companyResearchMode } from "../utils/companyResearchMode";
 import { researchCompensationSignals } from "../utils/researchCompensationSignals";
+import { researchFailureFixedMessage } from "../utils/researchFailureFixedMessage";
 import { researchRunFailure } from "../utils/researchRunFailure";
+import { COMPANY_RESEARCH_ALREADY_RUNNING_MESSAGE } from "../constants/companyResearchMessages";
+import { RATE_LIMITED_MESSAGES } from "../constants/rateLimitedMessages";
 import { researchSourceUrl } from "../utils/researchSourceUrl";
 import type { ResearchSource } from "../types/research-source";
 import { companyFieldText } from "../utils/companyFieldText";
@@ -173,6 +176,12 @@ describe("researchRunFailure", () => {
     expect(researchRunFailure({ status: 429, data: { detail: "Too many attempts" } }).reason).toBe("rate-limited");
   });
 
+  it("says a 409 means this company's research is already running", () => {
+    expect(researchRunFailure({ status: 409, data: { detail: "Research for this company is already running" } }).reason).toBe(
+      "already-running",
+    );
+  });
+
   it("offers a retry for the AI or search failing, or anything else, with the server's reason when there is one", () => {
     expect(researchRunFailure({ status: 502, data: { detail: "AI synthesis failed: overloaded" } })).toEqual({
       reason: "retryable",
@@ -182,6 +191,16 @@ describe("researchRunFailure", () => {
     expect(researchRunFailure({ status: 500, data: { detail: [{ msg: "x" }] } })).toEqual({ reason: "retryable", detail: null });
     expect(researchRunFailure(new Error("Network Error"))).toEqual({ reason: "retryable", detail: null });
     expect(researchRunFailure(null)).toEqual({ reason: "retryable", detail: null });
+  });
+});
+
+describe("researchFailureFixedMessage", () => {
+  it("has a set line for a rate limit and for a run already going, and none where the server's reason should show", () => {
+    expect(researchFailureFixedMessage("rate-limited")).toBe(RATE_LIMITED_MESSAGES.companyResearch);
+    expect(researchFailureFixedMessage("already-running")).toBe(COMPANY_RESEARCH_ALREADY_RUNNING_MESSAGE);
+    expect(researchFailureFixedMessage("retryable")).toBeNull();
+    expect(researchFailureFixedMessage("not-configured")).toBeNull();
+    expect(researchFailureFixedMessage("company-gone")).toBeNull();
   });
 });
 

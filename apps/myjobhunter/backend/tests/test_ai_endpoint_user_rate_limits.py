@@ -55,6 +55,8 @@ class Endpoint:
     json: dict[str, Any] | None = None
     files: bool = False
     hourly_attr: str | None = None
+    # Free calls the route makes before the limit, stubbed so the request reaches it: target -> return value.
+    before_limit: tuple[tuple[str, Any], ...] = ()
 
 
 def _turn(name: str, route: str, body: dict[str, Any] | None) -> Endpoint:
@@ -103,8 +105,10 @@ ENDPOINTS: list[Endpoint] = [
         limiter_attr="_RESEARCH_LIMITER_PER_5_MIN",
         hourly_attr="_RESEARCH_LIMITER_PER_HOUR",
         path=f"/companies/{uuid.uuid4()}/research",
-        paid_call="app.services.company.company_research_service.run_research",
+        paid_call="app.services.company.company_research_service.run_claimed_research",
         paid_error=ValueError("boom"),
+        # The company lookup and in-flight claim come first (404 / 409 spend no quota).
+        before_limit=(("app.services.company.company_research_service.claim_run", object()),),
     ),
     Endpoint(
         id="resume-upload",
@@ -181,8 +185,15 @@ def _small_budgets(monkeypatch: pytest.MonkeyPatch) -> None:
 @contextmanager
 def _paid_call_mocked(endpoint: Endpoint) -> Iterator[AsyncMock]:
     mock = AsyncMock(side_effect=endpoint.paid_error)
-    with patch(endpoint.paid_call, new=mock):
+    with ExitStack() as stack:
+        _stub_before_limit(stack, endpoint)
+        stack.enter_context(patch(endpoint.paid_call, new=mock))
         yield mock
+
+
+def _stub_before_limit(stack: ExitStack, endpoint: Endpoint) -> None:
+    for target, value in endpoint.before_limit:
+        stack.enter_context(patch(target, new=AsyncMock(return_value=value)))
 
 
 async def _post(client: AsyncClient, endpoint: Endpoint) -> int:
@@ -274,6 +285,7 @@ async def _alternate_until_429(
     statuses: list[int] = []
     with ExitStack() as stack:
         for endpoint in endpoints:
+            _stub_before_limit(stack, endpoint)
             stack.enter_context(
                 patch(endpoint.paid_call, new=AsyncMock(side_effect=endpoint.paid_error)),
             )
