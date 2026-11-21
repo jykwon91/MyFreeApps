@@ -1,7 +1,7 @@
 /**
  * WoW Forever Waylaid crates page — E2E, network-stubbed.
  *
- *   - rows are ordered by cost per reward (crate + its cheapest bundle, over the rewards the crate pays), cheapest first, crates with no total last
+ *   - rows are ordered by cost per reward (crate + its cheapest bundle - the tier's hand-in refund, over the rewards the crate pays), cheapest first, crates with no total last
  *   - the cheapest bundle and what it costs show in the row; a crate whose materials have no price says so
  *   - "All N bundles" folds out every bundle with its prices and a Cheapest mark
  *   - the tier filter lives in the link and narrows the grid ("Showing N of M"), with Clear filters
@@ -182,6 +182,9 @@ test.describe("desktop", () => {
     await expect(cheapest).not.toContainText(CHEAP.bundles[0].item.name);
     await expect(cheap.getByTestId("crate-bundle-cost")).toContainText("~");
     await expect(cheap.getByTestId("crate-total")).toContainText("~");
+    // The total is after the crate's hand-in refund: 5s for an Apprentice crate, 10s for a Journeyman one.
+    await expect(cheap.getByTestId("crate-refund")).toHaveText("after 5s refund");
+    await expect(rowOf(page, DEAR).getByTestId("crate-refund")).toHaveText("after 10s refund");
 
     const unpriced = rowOf(page, UNPRICED_BUNDLES);
     await expect(unpriced.getByTestId("crate-cheapest")).toContainText("no auction price");
@@ -418,7 +421,7 @@ test.describe("phone", () => {
     await expect(cheap).toHaveCSS("border-top-width", "1px");
     await expect(cheap.getByTestId("crate-tier").first()).toBeVisible();
     await expect(cheap.getByTestId("crate-cheapest")).toContainText("Cheapest bundle");
-    await expect(cheap.getByText(/^Crate ~.* \+ Bundle ~/)).toBeVisible();
+    await expect(cheap.getByText(/^Crate ~.* \+ Bundle ~.* − Refund 5s$/)).toBeVisible();
     await expect(cheap.getByTestId("crate-total")).toBeVisible();
     await expect(cheap.getByTestId("crate-per-reward")).toContainText("per reward");
     await expect(cheap.getByTestId("crate-per-reward")).toContainText("~");

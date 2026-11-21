@@ -4,10 +4,12 @@ import { cheapestBundleIndex } from "@/games/wow-forever/lib/crates/cheapestBund
 import { crateDisplayName } from "@/games/wow-forever/lib/crates/crateDisplayName";
 import { crateTierCounts } from "@/games/wow-forever/lib/crates/crateFacets";
 import { costPerReward, crateReward } from "@/games/wow-forever/lib/crates/crateReward";
+import { formatCrateCost } from "@/games/wow-forever/lib/crates/formatCrateCost";
 import { crateViewFromParams, crateViewToParams } from "@/games/wow-forever/lib/crates/crateViewParams";
 import { filterCrateRows } from "@/games/wow-forever/lib/crates/filterCrateRows";
 import { sortCrateRows } from "@/games/wow-forever/lib/crates/sortCrateRows";
 import { CRATES_FILE } from "@/games/wow-forever/data/professions/crates/cratesData";
+import { CRATE_REFUNDS } from "@/games/wow-forever/data/professions/crates/crateRefunds";
 import { CRATE_REWARDS } from "@/games/wow-forever/data/professions/crates/crateRewards";
 import type { CrateFilters } from "@/games/wow-forever/types/crates/crateFilters";
 import type { CrateRecord } from "@/games/wow-forever/types/crates/crateRecord";
@@ -29,28 +31,28 @@ const FILE: CratesFile = {
   build: "1",
   attribution: "",
   crates: [
-    crate(1, "Alpha", "apprentice", [[10, 101], [5, 102]]), // 10x5=50, 5x20=100 -> 101 wins; crate 30 -> 80
-    crate(2, "Bravo", "journeyman", [[10, 103], [10, 104], [2, 105]]), // 103 unpriced; 104=100; 105=60 -> 105 wins; crate 20 -> 80
-    crate(3, "Charlie", "expert", [[4, 106], [4, 107]], "uncommon"), // tie 40 / 40 -> first (106); crate 10 -> 50
+    crate(1, "Alpha", "apprentice", [[10, 101], [5, 102]]), // 10x5=50, 5x20=100 -> 101 wins; crate 530 - 5s refund -> 80
+    crate(2, "Bravo", "journeyman", [[10, 103], [10, 104], [2, 105]]), // 103 unpriced; 104=100; 105=60 -> 105 wins; crate 1020 - 10s -> 80
+    crate(3, "Charlie", "expert", [[4, 106], [4, 107]], "uncommon"), // tie 40 / 40 -> first (106); crate 1510 - 15s -> 50
     crate(4, "Delta", "expert", [[1, 108], [1, 109]]), // nothing priced -> no total
     crate(5, "Echo", "artisan", [[1, 110]]), // crate unpriced -> no total, bundle priced
-    crate(6, "Foxtrot", "artisan", [[1, 111]]), // 500; crate 5 -> 505
+    crate(6, "Foxtrot", "artisan", [[1, 111]]), // 500; crate 2005 - 20s -> 505
   ],
 };
 
 const PRICES = new Map<number, number>([
-  [1, 30],
+  [1, 530],
   [101, 5],
   [102, 20],
-  [2, 20],
+  [2, 1020],
   [104, 10],
   [105, 30],
-  [3, 10],
+  [3, 1510],
   [106, 10],
   [107, 10],
   [4, 99],
   [110, 7],
-  [6, 5],
+  [6, 2005],
   [111, 500],
 ]);
 
@@ -127,6 +129,37 @@ describe("buildCrateRows", () => {
     const real = buildCrateRows(CRATES_FILE, () => 1);
     expect(real).toHaveLength(CRATES_FILE.crates.length);
     expect(real.every((r) => r.bundles.length > 0 && r.total !== null)).toBe(true);
+  });
+});
+
+describe("crate refunds", () => {
+  it("pays back 5s, 10s, 15s and 20s by tier, for either quality", () => {
+    expect(CRATE_REFUNDS).toEqual({ apprentice: 500, journeyman: 1000, expert: 1500, artisan: 2000 });
+    expect(rows.map((r) => [crateDisplayName(r.crate.name), r.refund])).toEqual([
+      ["Alpha", 500],
+      ["Bravo", 1000],
+      ["Charlie", 1500],
+      ["Delta", 1500],
+      ["Echo", 2000],
+      ["Foxtrot", 2000],
+    ]);
+  });
+
+  it("takes the refund off the total and so off the cost per reward", () => {
+    const alpha = byName("Alpha");
+    expect(alpha?.cratePrice).toBe(530);
+    expect(alpha?.bundleCost).toBe(50);
+    expect(alpha?.total).toBe(530 + 50 - 500);
+    expect(alpha?.costPerReward).toBe(16);
+  });
+
+  it("goes below zero when the refund is worth more than the crate and its bundle, and reads as a profit", () => {
+    const [cheap] = buildCrateRows({ ...FILE, crates: [crate(9, "Cheap", "artisan", [[2, 201]])] }, (id) => (id === 9 ? 1000 : 100));
+    expect(cheap.total).toBe(1000 + 200 - 2000);
+    expect(cheap.costPerReward).toBe(-40);
+    expect(formatCrateCost(cheap.total ?? 0)).toBe("~8s profit");
+    expect(formatCrateCost(cheap.costPerReward ?? 0)).toBe("~40c profit");
+    expect(formatCrateCost(250)).toBe("~2s 50c");
   });
 });
 

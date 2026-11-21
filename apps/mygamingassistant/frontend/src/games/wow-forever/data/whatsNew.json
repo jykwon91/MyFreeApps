@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "Waylaid crates count the hand-in refund",
+    "summary": "Handing a crate in pays back 5s (Apprentice), 10s (Journeyman), 15s (Expert) or 20s (Artisan). That now comes off each crate's total and its cost per reward, and a crate whose refund beats its cost shows as a profit.",
+    "to": "/wow-forever/crates"
+  },
+  {
+    "date": "2026-11-21",
     "title": "No more fake upgrades from caster weapons",
     "summary": "Some caster staves and daggers, like Zum'rah's Vexing Cane, get spell power the game files don't list, so comparing against one called a worse item an upgrade. Those comparisons now show the stat changes with a note instead of Upgrade or Downgrade.",
     "to": "/wow-forever/auction-house"

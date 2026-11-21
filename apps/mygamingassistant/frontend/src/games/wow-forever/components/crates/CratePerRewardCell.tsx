@@ -1,5 +1,5 @@
 import { Skeleton } from "@platform/ui";
-import { formatCost } from "@/games/wow-forever/crafting/matPrices";
+import { formatCrateCost } from "@/games/wow-forever/lib/crates/formatCrateCost";
 import type { CrateRow } from "@/games/wow-forever/types/crates/crateRow";
 
 interface CratePerRewardCellProps {
@@ -7,7 +7,7 @@ interface CratePerRewardCellProps {
   loading: boolean;
 }
 
-/** What one reward costs (the total over the crate's rewards), the figure the grid is ordered by. A phone card adds the reward count. */
+/** What one reward costs (the total after the refund over the crate's rewards), the figure the grid is ordered by. A phone card adds the reward count. */
 export default function CratePerRewardCell({ row, loading }: CratePerRewardCellProps) {
   if (loading) return <Skeleton className="h-6 w-20" />;
   return (
@@ -16,7 +16,7 @@ export default function CratePerRewardCell({ row, loading }: CratePerRewardCellP
         <span className="text-sm italic text-muted-foreground">No per-reward price</span>
       ) : (
         <span className="text-xl font-bold tabular-nums text-primary lg:text-base" data-testid="crate-per-reward">
-          {formatCost(row.costPerReward)}
+          {formatCrateCost(row.costPerReward)}
           <span className="text-sm font-medium lg:hidden"> per reward</span>
         </span>
       )}
