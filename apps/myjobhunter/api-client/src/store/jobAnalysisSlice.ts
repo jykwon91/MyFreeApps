@@ -28,12 +28,16 @@
  *                                   — added to applications, so coming back
  *                                     shows it as saved
  *
+ * Deleting that application takes the saved mark off again (the server drops
+ * its link too), so the result offers "Add to applications" once more.
+ *
  * The API cache's reset (`baseApi.util.resetApiState`), which every sign-in and
  * explicit sign-out dispatches, empties this slice too: both belong to one
  * account.
  */
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { baseApi } from "@platform/core/store/baseApi";
+import { applicationsApi } from "./applicationsApi";
 import type { AppliedAnalysis } from "../types/job-analysis/applied-analysis";
 import type { FailedAnalysis } from "../types/job-analysis/failed-analysis";
 import type { FinishedAnalysis } from "../types/job-analysis/finished-analysis";
@@ -91,6 +95,11 @@ const jobAnalysisSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addMatcher(baseApi.util.resetApiState.match, () => initialState);
+    builder.addMatcher(applicationsApi.endpoints.deleteApplication.matchFulfilled, (state, action) => {
+      if (state.lastResult?.applied_application_id === action.meta.arg.originalArgs) {
+        state.lastResult.applied_application_id = null;
+      }
+    });
   },
 });
 
