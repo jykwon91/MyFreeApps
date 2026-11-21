@@ -16,6 +16,7 @@ import {
 } from "../constants/turnFailureCodes";
 import { useCreateSessionMutation } from "../store/sessionsApi";
 import { useGetUsageTodayQuery, usageApiUtil } from "../store/usageApi";
+import { useAtDailyReset } from "./useAtDailyReset";
 import type { ScenarioState } from "../types/tutor/scenario-state";
 import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
 import type { TranscriptEntry } from "../types/session/transcript-entry";
@@ -92,6 +93,10 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   }, [limitLifted]);
   const limitBlock: SessionBlock | null = limitResetsAt !== null && !limitLifted ? "daily_limit" : null;
   const block = turnBlock ?? limitBlock ?? usageBlock(usage.data);
+  // Nothing else asks again at the reset: refresh usage then, so a daily-limit block lifts in place.
+  useAtDailyReset(block === "daily_limit", () => {
+    dispatch(usageApiUtil.invalidateTags(["Usage"]));
+  });
 
   const patchEntry = useCallback(
     (key: string, patch: (entry: TranscriptEntry) => TranscriptEntry) => {

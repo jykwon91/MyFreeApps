@@ -1,5 +1,6 @@
 import { useListLanguagesQuery, useListScenariosQuery } from "../store/catalogApi";
 import { useGetUsageTodayQuery } from "../store/usageApi";
+import { useAtDailyReset } from "./useAtDailyReset";
 import type { ScenarioPath } from "../types/catalog/scenario-path";
 import type { Profile } from "../types/tutor/profile";
 
@@ -8,6 +9,8 @@ export function useScenarioPath(profile: Profile): ScenarioPath {
   const languages = useListLanguagesQuery();
   const scenarios = useListScenariosQuery(profile.language_code);
   const usage = useGetUsageTodayQuery();
+  const isCapReached = usage.data?.cap_reached ?? false;
+  useAtDailyReset(isCapReached, usage.refetch);
   const language = languages.data?.find((candidate) => candidate.code === profile.language_code);
 
   return {
@@ -15,7 +18,7 @@ export function useScenarioPath(profile: Profile): ScenarioPath {
     scenarios: languages.data && scenarios.data ? scenarios.data : undefined,
     isError: languages.isError || scenarios.isError,
     error: languages.error ?? scenarios.error,
-    isCapReached: usage.data?.cap_reached ?? false,
+    isCapReached,
     refetch: () => Promise.all([languages.refetch(), scenarios.refetch(), usage.refetch()]),
   };
 }

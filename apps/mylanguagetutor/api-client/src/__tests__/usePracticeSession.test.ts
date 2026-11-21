@@ -4,7 +4,7 @@ import { createElement, type ReactNode } from "react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { usePracticeSession } from "../hooks/usePracticeSession";
 import { nextUtcMidnight } from "../utils/nextUtcMidnight";
@@ -240,6 +240,32 @@ describe("usePracticeSession", () => {
     rerender();
 
     expect(result.current.block).toBe("daily_limit");
+  });
+
+  describe("at the daily reset", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("asks usage again while a daily-limit block is up, so the block can lift in place", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], now: new Date("2026-11-20T15:00:00Z") });
+      const dispatch = vi.spyOn(store, "dispatch");
+      usage = answered(USED_UP, Date.now());
+      const { result } = setup();
+      expect(result.current.block).toBe("daily_limit");
+
+      act(() => vi.advanceTimersByTime(8 * 3_600_000));
+      expect(dispatch).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(3_600_000 + 1000));
+      expect(dispatch).toHaveBeenCalledWith({ type: "usage/invalidated" });
+    });
+
+    it("does not ask while nothing is blocked", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], now: new Date("2026-11-20T15:00:00Z") });
+      const dispatch = vi.spyOn(store, "dispatch");
+      setup();
+
+      act(() => vi.advanceTimersByTime(24 * 3_600_000));
+      expect(dispatch).not.toHaveBeenCalled();
+    });
   });
 
   it("a block for the whole conversation stays, whatever usage says later", async () => {
