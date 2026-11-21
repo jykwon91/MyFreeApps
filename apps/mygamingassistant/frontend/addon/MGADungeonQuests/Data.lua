@@ -47,6 +47,31 @@ MGADungeonQuestsData = {
       {name = "Plunder"},
       {name = "Durgen Dirgehammer"},
     },
+    alliance = {
+      {titles = {"Old Ironforge Incursion"}, steps = {
+        {id = 96393, title = "Old Ironforge Incursion", level = 16, minLevel = 9, dungeon = true},
+      }},
+      {titles = {"An Ancient Grudge"}, steps = {
+        {id = 96395, title = "An Ancient Grudge", dungeon = true},
+      }},
+      {titles = {"Important Heirlooms"}, steps = {
+        {id = 96403, title = "Important Heirlooms", dungeon = true},
+      }},
+      {titles = {"The Restless Dead"}, steps = {
+        {id = 96394, title = "The Restless Dead", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"Old Ironforge Incursion"}, steps = {
+        {id = 96393, title = "Old Ironforge Incursion", level = 16, minLevel = 9, dungeon = true},
+      }},
+      {titles = {"An Ancient Grudge"}, steps = {
+        {id = 96395, title = "An Ancient Grudge", dungeon = true},
+      }},
+      {titles = {"Important Heirlooms"}, steps = {
+        {id = 96403, title = "Important Heirlooms", dungeon = true},
+      }},
+    },
   },
   {
     key = "ruins-of-lordaeron", instanceId = 2999, name = "Ruins of Lordaeron", levelMin = 15, levelMax = 15,
@@ -59,6 +84,46 @@ MGADungeonQuestsData = {
       {name = "Viktor the Vile"},
       {name = "Bjork"},
       {name = "Rath'mael"},
+    },
+    alliance = {
+      {titles = {"Crest of Lordaeron"}, steps = {
+        {id = 95189, title = "Crest of Lordaeron", level = 22, minLevel = 15, dungeon = true},
+      }},
+      {titles = {"Abominable Creatures"}, steps = {
+        {id = 95250, title = "Abominable Creatures", dungeon = true},
+      }},
+      {titles = {"Bloodied Insignia"}, steps = {
+        {id = 95195, title = "Bloodied Insignia", dungeon = true},
+      }},
+      {titles = {"Crest of Lordaeron"}, steps = {
+        {id = 95204, title = "Crest of Lordaeron", dungeon = true},
+      }},
+      {titles = {"Remember That I Love You"}, steps = {
+        {id = 92415, title = "Remember That I Love You", dungeon = true},
+      }},
+      {titles = {"The Wrath of Rath'mael"}, steps = {
+        {id = 92422, title = "The Wrath of Rath'mael", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"A Frightened Request"}, steps = {
+        {id = 92401, title = "A Frightened Request", dungeon = true},
+      }},
+      {titles = {"Crest of Lordaeron"}, steps = {
+        {id = 95204, title = "Crest of Lordaeron", dungeon = true},
+      }},
+      {titles = {"Light's Justice"}, steps = {
+        {id = 92421, title = "Light's Justice", dungeon = true},
+      }},
+      {titles = {"The New Plague"}, steps = {
+        {id = 95216, title = "The New Plague", dungeon = true},
+      }},
+      {titles = {"The Wrath of Rath'mael"}, steps = {
+        {id = 92422, title = "The Wrath of Rath'mael", dungeon = true},
+      }},
+      {titles = {"Unending Torment"}, steps = {
+        {id = 97288, title = "Unending Torment", dungeon = true},
+      }},
     },
   },
   {
@@ -557,6 +622,70 @@ MGADungeonQuestsData = {
       {name = "Highland Horror"},
       {name = "Relic Guardian"},
     },
+    alliance = {
+      {titles = {"Highland Hides"}, steps = {
+        {id = 98815, title = "Highland Hides", level = 28, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Fallen in the Fen"}, steps = {
+        {id = 95795, title = "Fallen in the Fen", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Horrors in the Highland"}, steps = {
+        {id = 95646, title = "Horrors in the Highland", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Lost in the Thicket Things"}, steps = {
+        {id = 95647, title = "Lost in the Thicket Things", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Prehistoric Prism"}, steps = {
+        {id = 98824, title = "Prehistoric Prism", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Seeking Caitlin"}, steps = {
+        {id = 95737, title = "Seeking Caitlin", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Songblade Search"}, steps = {
+        {id = 95772, title = "Songblade Search", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Dragonmaw Rumors"}, steps = {
+        {id = 95663, title = "Dragonmaw Rumors", dungeon = true},
+      }},
+      {titles = {"Heartwoven"}, steps = {
+        {id = 95809, title = "Heartwoven", dungeon = true},
+      }},
+      {titles = {"Lost Relic Carry"}, steps = {
+        {id = 95810, title = "Lost Relic Carry", dungeon = true},
+      }},
+      {titles = {"Open the Maw"}, steps = {
+        {id = 95682, title = "Open the Maw", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"Highland Hides"}, steps = {
+        {id = 98815, title = "Highland Hides", level = 28, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Fallen in the Fen"}, steps = {
+        {id = 95795, title = "Fallen in the Fen", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Seeking Caitlin"}, steps = {
+        {id = 95737, title = "Seeking Caitlin", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Songblade Search"}, steps = {
+        {id = 95772, title = "Songblade Search", level = 31, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Changing Tastes"}, steps = {
+        {id = 95697, title = "Changing Tastes", dungeon = true},
+      }},
+      {titles = {"Dragonmaw Rumors"}, steps = {
+        {id = 95663, title = "Dragonmaw Rumors", dungeon = true},
+      }},
+      {titles = {"Earthen Echo"}, steps = {
+        {id = 98823, title = "Earthen Echo", dungeon = true},
+      }},
+      {titles = {"Elder Knowledge"}, steps = {
+        {id = 95664, title = "Elder Knowledge", dungeon = true},
+      }},
+      {titles = {"Open the Maw"}, steps = {
+        {id = 95682, title = "Open the Maw", dungeon = true},
+      }},
+    },
   },
   {
     key = "city-of-dalaran", instanceId = 2959, name = "City of Dalaran", levelMin = 28, levelMax = 28,
@@ -571,6 +700,34 @@ MGADungeonQuestsData = {
       {name = "Atrexis the Grave Knight"},
       {name = "Mana Wraith"},
       {name = "Shade of the Archmage"},
+    },
+    alliance = {
+      {titles = {"Heart of Disruption"}, steps = {
+        {id = 92458, title = "Heart of Disruption", level = 33, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Power Overwhelming"}, steps = {
+        {id = 92489, title = "Power Overwhelming", level = 33, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"Starving Arcane"}, steps = {
+        {id = 92457, title = "Starving Arcane", level = 33, minLevel = 24, dungeon = true},
+      }},
+      {titles = {"A Green Sample"}, steps = {
+        {id = 92456, title = "A Green Sample", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"Heart of Disruption"}, steps = {
+        {id = 96984, title = "Heart of Disruption", dungeon = true},
+      }},
+      {titles = {"Opportunistic Education"}, steps = {
+        {id = 96987, title = "Opportunistic Education", dungeon = true},
+      }},
+      {titles = {"Source of Power"}, steps = {
+        {id = 96988, title = "Source of Power", dungeon = true},
+      }},
+      {titles = {"The Grave Knight"}, steps = {
+        {id = 96986, title = "The Grave Knight", dungeon = true},
+      }},
     },
   },
   {
@@ -734,6 +891,40 @@ MGADungeonQuestsData = {
       {name = "Primeval Elemental"},
       {name = "Min'loth the Serpent"},
     },
+    alliance = {
+      {titles = {"Ancient Gurubashi Secrets"}, steps = {
+        {id = 97130, title = "Ancient Gurubashi Secrets", level = 40, minLevel = 34, dungeon = true},
+      }},
+      {titles = {"Magics of the Drowned City"}, steps = {
+        {id = 95788, title = "Magics of the Drowned City", level = 40, minLevel = 30, dungeon = true},
+      }},
+      {titles = {"Shady Saltseers"}, steps = {
+        {id = 95789, title = "Shady Saltseers", level = 40, minLevel = 34, dungeon = true},
+      }},
+      {titles = {"Take Two With Water"}, steps = {
+        {id = 95787, title = "Take Two With Water", level = 40, minLevel = 30, dungeon = true},
+      }},
+      {titles = {"The Saltseer Captain"}, steps = {
+        {id = 95791, title = "The Saltseer Captain", level = 40, minLevel = 34, dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"Shady Saltseers"}, steps = {
+        {id = 95789, title = "Shady Saltseers", level = 40, minLevel = 34, dungeon = true},
+      }},
+      {titles = {"The Saltseer Captain"}, steps = {
+        {id = 95791, title = "The Saltseer Captain", level = 40, minLevel = 34, dungeon = true},
+      }},
+      {titles = {"Ancient Gurubashi Idol"}, steps = {
+        {id = 96774, title = "Ancient Gurubashi Idol", dungeon = true},
+      }},
+      {titles = {"The Drowned City"}, steps = {
+        {id = 95775, title = "The Drowned City", dungeon = true},
+      }},
+      {titles = {"The Only Good Brinescale..."}, steps = {
+        {id = 95776, title = "The Only Good Brinescale...", dungeon = true},
+      }},
+    },
   },
   {
     key = "uldaman", instanceId = 70, name = "Uldaman", levelMin = 35, levelMax = 35, aliases = {"Ulda"},
@@ -883,6 +1074,37 @@ MGADungeonQuestsData = {
       {name = "Handler Ashka"},
       {name = "Nar'gurk"},
       {name = "Overseer Mugg"},
+    },
+    alliance = {
+      {titles = {"Twilight Mementos"}, steps = {
+        {id = 94983, title = "Twilight Mementos", level = 42, minLevel = 38, dungeon = true},
+      }},
+      {titles = {"Tome of Twilight"}, steps = {
+        {id = 94984, title = "Tome of Twilight", level = 44, minLevel = 39, dungeon = true},
+      }},
+      {titles = {"Eye of Mugg"}, steps = {
+        {id = 94982, title = "Eye of Mugg", level = 45, minLevel = 40, dungeon = true},
+      }},
+      {titles = {"Vengeance of the Highborne"}, steps = {
+        {id = 96771, title = "Vengeance of the Highborne", level = 45, minLevel = 37, dungeon = true},
+      }},
+      {titles = {"Krol'dok No More!"}, steps = {
+        {id = 94969, title = "Krol'dok No More!", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"A Token of Vengeance"}, steps = {
+        {id = 94975, title = "A Token of Vengeance", dungeon = true},
+      }},
+      {titles = {"Eye of Mugg"}, steps = {
+        {id = 94968, title = "Eye of Mugg", dungeon = true},
+      }},
+      {titles = {"Krol'dok No More!"}, steps = {
+        {id = 95056, title = "Krol'dok No More!", dungeon = true},
+      }},
+      {titles = {"Tome of Twilight"}, steps = {
+        {id = 94972, title = "Tome of Twilight", dungeon = true},
+      }},
     },
   },
   {
@@ -1202,6 +1424,52 @@ MGADungeonQuestsData = {
       {name = "Katerina the Cleaner"},
       {name = "The Questioner"},
       {name = "Blazeroar"},
+    },
+    alliance = {
+      {titles = {"A Bit of Wet Work"}, steps = {
+        {id = 96381, title = "A Bit of Wet Work", dungeon = true},
+      }},
+      {titles = {"More Valuable Than Gold"}, steps = {
+        {id = 96337, title = "More Valuable Than Gold", dungeon = true},
+      }},
+      {titles = {"Somber News"}, steps = {
+        {id = 95263, title = "Somber News", dungeon = true},
+      }},
+      {titles = {"The Dragon's Journal"}, steps = {
+        {id = 96772, title = "The Dragon's Journal", dungeon = true},
+      }},
+      {titles = {"The Man in the Iron Chains"}, steps = {
+        {id = 96335, title = "The Man in the Iron Chains", dungeon = true},
+      }},
+      {titles = {"The Secret Prison"}, steps = {
+        {id = 95262, title = "The Secret Prison", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"A Little Payback"}, steps = {
+        {id = 96332, title = "A Little Payback", dungeon = true},
+      }},
+      {titles = {"Bad News for Folkar"}, steps = {
+        {id = 96369, title = "Bad News for Folkar", dungeon = true},
+      }},
+      {titles = {"Blood Red Bandanas"}, steps = {
+        {id = 96334, title = "Blood Red Bandanas", dungeon = true},
+      }},
+      {titles = {"More Valuable Than Gold"}, steps = {
+        {id = 96337, title = "More Valuable Than Gold", dungeon = true},
+      }},
+      {titles = {"No Orc Left Behind"}, steps = {
+        {id = 95309, title = "No Orc Left Behind", dungeon = true},
+      }},
+      {titles = {"The Honor of the Kor'kron"}, steps = {
+        {id = 95454, title = "The Honor of the Kor'kron", dungeon = true},
+      }},
+      {titles = {"The Man in the Iron Chains"}, steps = {
+        {id = 96335, title = "The Man in the Iron Chains", dungeon = true},
+      }},
+      {titles = {"Thrall Needs to Know"}, steps = {
+        {id = 95483, title = "Thrall Needs to Know", dungeon = true},
+      }},
     },
   },
   {
@@ -2544,6 +2812,52 @@ MGADungeonQuestsData = {
       {name = "Blackmaw Behemoth"},
       {name = "Unbound Spirit"},
     },
+    alliance = {
+      {titles = {"A Lost Memento"}, steps = {
+        {id = 92070, title = "A Lost Memento", dungeon = true},
+      }},
+      {titles = {"Blackmaw Magic"}, steps = {
+        {id = 97173, title = "Blackmaw Magic", dungeon = true},
+      }},
+      {titles = {"Blackmaw Pouches"}, steps = {
+        {id = 97327, title = "Blackmaw Pouches", dungeon = true},
+      }},
+      {titles = {"Blackmaw Reclamation"}, steps = {
+        {id = 92065, title = "Blackmaw Reclamation", dungeon = true},
+      }},
+      {titles = {"Claws That Rend, Tusks that Gore"}, steps = {
+        {id = 92069, title = "Claws That Rend, Tusks that Gore", dungeon = true},
+      }},
+      {titles = {"Get to the Roots of It"}, steps = {
+        {id = 92344, title = "Get to the Roots of It", dungeon = true},
+      }},
+      {titles = {"The Twin Bears"}, steps = {
+        {id = 92066, title = "The Twin Bears", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"A Lost Memento"}, steps = {
+        {id = 92070, title = "A Lost Memento", dungeon = true},
+      }},
+      {titles = {"Blackmaw Magic"}, steps = {
+        {id = 97198, title = "Blackmaw Magic", dungeon = true},
+      }},
+      {titles = {"Blackmaw Pouches"}, steps = {
+        {id = 97327, title = "Blackmaw Pouches", dungeon = true},
+      }},
+      {titles = {"Blackmaw Reclamation"}, steps = {
+        {id = 92065, title = "Blackmaw Reclamation", dungeon = true},
+      }},
+      {titles = {"Claws That Rend, Tusks that Gore"}, steps = {
+        {id = 92069, title = "Claws That Rend, Tusks that Gore", dungeon = true},
+      }},
+      {titles = {"Get to the Roots of It"}, steps = {
+        {id = 92343, title = "Get to the Roots of It", dungeon = true},
+      }},
+      {titles = {"The Twin Bears"}, steps = {
+        {id = 92066, title = "The Twin Bears", dungeon = true},
+      }},
+    },
   },
   {
     key = "stratholme", instanceId = 329, name = "Stratholme", levelMin = 55, levelMax = 55, aliases = {"Strat"},
@@ -3359,6 +3673,28 @@ MGADungeonQuestsData = {
       {name = "Bolt"},
       {name = "Vitrix"},
       {name = "Nanaya"},
+    },
+    alliance = {
+      {titles = {"Digestible Research"}, steps = {
+        {id = 95790, title = "Digestible Research", dungeon = true},
+      }},
+      {titles = {"Mapping the Way Forward"}, steps = {
+        {id = 95925, title = "Mapping the Way Forward", dungeon = true},
+      }},
+      {titles = {"Panic at the Digsite"}, steps = {
+        {id = 95924, title = "Panic at the Digsite", dungeon = true},
+      }},
+    },
+    horde = {
+      {titles = {"Crystalline Elements"}, steps = {
+        {id = 95928, title = "Crystalline Elements", dungeon = true},
+      }},
+      {titles = {"Essence of Seeping Slimes"}, steps = {
+        {id = 97049, title = "Essence of Seeping Slimes", dungeon = true},
+      }},
+      {titles = {"The Dark Crystal"}, steps = {
+        {id = 95926, title = "The Dark Crystal", dungeon = true},
+      }},
     },
   },
 }

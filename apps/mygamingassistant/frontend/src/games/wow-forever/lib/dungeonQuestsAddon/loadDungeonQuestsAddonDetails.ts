@@ -10,11 +10,13 @@ import { FACTION } from "@/games/wow-forever/types/worldMap";
  * source has is left out.
  */
 export async function loadDungeonQuestsAddonDetails(
-  dungeons: readonly Pick<Dungeon, "quests">[],
+  dungeons: readonly Pick<Dungeon, "quests" | "foreverQuests">[],
 ): Promise<ReadonlyMap<number, QuestTurnIn>> {
   const ids = new Set(
     dungeons.flatMap((d) =>
-      [FACTION.alliance, FACTION.horde].flatMap((f) => questLines(d.quests, f).flatMap((l) => l.steps.map((s) => s.id))),
+      [FACTION.alliance, FACTION.horde].flatMap((f) => questLines(d.quests, f).flatMap((l) => l.steps.map((s) => s.id))).concat(
+        d.foreverQuests.map((q) => q.id),
+      ),
     ),
   );
   const loaded = await Promise.all([...ids].map(async (id) => [id, (await loadQuestDetail(id)).quest] as const));
