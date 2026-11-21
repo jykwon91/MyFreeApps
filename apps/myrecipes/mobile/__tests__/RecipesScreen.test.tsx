@@ -43,9 +43,9 @@ const SOUP = {
 
 const MINE = { ...SOUP, id: "r2", title: "Pancakes", is_owner: true };
 
-/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default). */
-function pageOf<T>(items: T[], total = items.length, offset = 0) {
-  return { items, total, has_more: offset + items.length < total };
+/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default); `nextCursor` null on the last page. */
+function pageOf<T>(items: T[], total = items.length, nextCursor: string | null = null) {
+  return { items, total, has_more: nextCursor !== null, next_cursor: nextCursor };
 }
 
 /** Recipe n of a library numbered from 1. */
@@ -198,7 +198,7 @@ describe("RecipesScreen", () => {
     expect(requests).toHaveLength(0);
 
     await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0]?.params).toEqual({ search: "soup", limit: RECIPES_PAGE_SIZE, offset: 0 });
+    expect(requests[0]?.params).toEqual({ search: "soup", limit: RECIPES_PAGE_SIZE });
     await waitFor(() => expect(announce).toHaveBeenCalledWith("1 recipe"));
   });
 
@@ -232,7 +232,7 @@ describe("RecipesScreen", () => {
 
     await fireEvent.press(toggle);
     await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0]?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 });
+    expect(requests[0]?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE });
     expect(await screen.findByText("Pancakes")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
       checked: true,
@@ -252,11 +252,11 @@ describe("RecipesScreen", () => {
     await show(SIGNED_IN);
     await screen.findByText("Tomato soup");
     await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
-    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 }));
+    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE }));
 
     await typeSearch("soup");
     await waitFor(() =>
-      expect(requests.at(-1)?.params).toEqual({ search: "soup", owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 }),
+      expect(requests.at(-1)?.params).toEqual({ search: "soup", owner: "me", limit: RECIPES_PAGE_SIZE }),
     );
 
     await typeSearch("");
@@ -445,9 +445,13 @@ describe("RecipesScreen", () => {
 
     beforeEach(() => {
       respond = (config) => {
-        const offset = Number(config.params?.offset ?? 0);
+        // This fake server's cursor is the id of the last recipe a page held, like the real one's sort key.
+        const cursor: string | undefined = config.params?.cursor;
         const matching = config.params?.search ? library.filter((r) => r.title === "Recipe 3") : library;
-        return { status: 200, data: pageOf(matching.slice(offset, offset + RECIPES_PAGE_SIZE), matching.length, offset) };
+        const start = cursor === undefined ? 0 : matching.findIndex((r) => r.id === cursor) + 1;
+        const items = matching.slice(start, start + RECIPES_PAGE_SIZE);
+        const more = start + items.length < matching.length;
+        return { status: 200, data: pageOf(items, matching.length, more ? items[items.length - 1]!.id : null) };
       };
     });
 
@@ -455,7 +459,7 @@ describe("RecipesScreen", () => {
     const listedTitles = (): string[] =>
       (screen.getByTestId("recipe-list").props.data as { title: string }[]).map(({ title }) => title);
 
-    it("shows the next page, recipe 51 on, under Show more", async () => {
+    it("shows the page after the last recipe shown, recipe 51 on, under Show more", async () => {
       await show();
       await screen.findByText("Recipe 1");
       expect(await screen.findByText(`Showing ${RECIPES_PAGE_SIZE} of ${TOTAL} recipes`)).toBeTruthy();
@@ -463,7 +467,9 @@ describe("RecipesScreen", () => {
 
       await fireEvent.press(screen.getByRole("button", { name: "Show more" }));
 
-      await waitFor(() => expect(requests.map((r) => r.params?.offset)).toEqual([0, RECIPES_PAGE_SIZE]));
+      await waitFor(() =>
+        expect(requests.map((r) => r.params?.cursor)).toEqual([undefined, `n${RECIPES_PAGE_SIZE}`]),
+      );
       await waitFor(() => expect(listedTitles()).toHaveLength(TOTAL));
       expect(listedTitles().slice(RECIPES_PAGE_SIZE)).toEqual(library.slice(RECIPES_PAGE_SIZE).map(({ title }) => title));
       expect(listedTitles()[RECIPES_PAGE_SIZE]).toBe(`Recipe ${RECIPES_PAGE_SIZE + 1}`);
@@ -480,7 +486,7 @@ describe("RecipesScreen", () => {
       await typeSearch("Recipe 3");
 
       await waitFor(() => expect(requests).toHaveLength(1));
-      expect(requests[0]?.params).toEqual({ search: "Recipe 3", limit: RECIPES_PAGE_SIZE, offset: 0 });
+      expect(requests[0]?.params).toEqual({ search: "Recipe 3", limit: RECIPES_PAGE_SIZE });
       await waitFor(() => expect(listedTitles()).toEqual(["Recipe 3"]));
       expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
     });

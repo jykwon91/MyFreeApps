@@ -5,7 +5,7 @@
  * with the filter dropped, an empty library and an empty search each say so, a
  * failed load says so instead of showing an empty library, the loading
  * skeleton has the same grid as the loaded list, and Load more brings in the
- * next page (recipe 51 on) until every recipe is showing.
+ * page after the first page's cursor (recipe 51 on) until every recipe is showing.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -30,7 +30,7 @@ async function stubList(page: Page, answer: (call: ListCall) => ListAnswer | Pro
   await page.route(RECIPES_COLLECTION_ROUTE, async (route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const params = new URL(route.request().url()).searchParams;
-    const call = { search: params.get("search"), owner: params.get("owner"), offset: Number(params.get("offset")) };
+    const call = { search: params.get("search"), owner: params.get("owner"), cursor: params.get("cursor") };
     calls.push(call);
     const { body, status } = await answer(call);
     return route.fulfill(json(body, status));
@@ -49,7 +49,7 @@ test("searching by title asks the server and keeps the search in the URL", async
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
-  expect(calls[0]).toEqual({ search: null, owner: null, offset: 0 });
+  expect(calls[0]).toEqual({ search: null, owner: null, cursor: null });
 
   await page.getByLabel("Search recipes by title").pressSequentially("tomato");
 
@@ -57,9 +57,9 @@ test("searching by title asks the server and keeps the search in the URL", async
   await expect(page.getByRole("heading", { name: "Pancakes" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Tomato soup" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
-  expect(calls[calls.length - 1]).toEqual({ search: "tomato", owner: null, offset: 0 });
+  expect(calls[calls.length - 1]).toEqual({ search: "tomato", owner: null, cursor: null });
   // Six keystrokes, one request: the debounce sent only the finished word.
-  expect(calls.filter((c) => c.search !== null)).toEqual([{ search: "tomato", owner: null, offset: 0 }]);
+  expect(calls.filter((c) => c.search !== null)).toEqual([{ search: "tomato", owner: null, cursor: null }]);
 
   await page.getByLabel("Search recipes by title").fill("");
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
@@ -97,7 +97,7 @@ test("My recipes narrows the list to the user's own and toggles back", async ({ 
   await expect(page).toHaveURL(/[?&]owner=me/);
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
-  expect(calls[calls.length - 1]).toEqual({ search: null, owner: "me", offset: 0 });
+  expect(calls[calls.length - 1]).toEqual({ search: null, owner: "me", cursor: null });
 
   await mine.click();
   await expect(mine).toHaveAttribute("aria-pressed", "false");
@@ -202,13 +202,17 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
   }
 });
 
-test("Load more brings in the next page, recipe 51 on, and a search starts again from the first", async ({ page }) => {
+test("Load more asks for the page after the last recipe shown, so a recipe deleted meanwhile skips none", async ({ page }) => {
   await stubSignedInShell(page);
   const total = RECIPES_PAGE_SIZE + 5;
-  const library = Array.from({ length: total }, (_, i) => summaryOf(recipeIdAt(100 + i), `Library recipe ${i + 1}`));
-  const calls = await stubList(page, ({ search, offset }) => {
+  let library = Array.from({ length: total }, (_, i) => summaryOf(recipeIdAt(100 + i), `Library recipe ${i + 1}`));
+  // This fake server's cursor is the id of the last recipe a page held, like the real one's sort key.
+  const calls = await stubList(page, ({ search, cursor }) => {
     const matching = library.filter((r) => !search || r.title.includes(search));
-    return { body: listPageOf(matching.slice(offset, offset + RECIPES_PAGE_SIZE), matching.length, offset) };
+    const start = cursor === null ? 0 : matching.findIndex((r) => r.id === cursor) + 1;
+    const items = matching.slice(start, start + RECIPES_PAGE_SIZE);
+    const more = start + items.length < matching.length;
+    return { body: listPageOf(items, matching.length, more ? items[items.length - 1]!.id : null) };
   });
 
   await page.goto("/");
@@ -216,14 +220,16 @@ test("Load more brings in the next page, recipe 51 on, and a search starts again
   await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toHaveCount(0);
   await expect(page.getByText(`Showing ${RECIPES_PAGE_SIZE} of ${total} recipes`)).toBeVisible();
 
+  // Deleted on another device after the first page loaded: an offset of 50 would now skip recipe 51.
+  library = library.slice(1);
   await page.getByRole("button", { name: "Load more" }).click();
   await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: `Library recipe ${total}`, exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
-  expect(calls.map((c) => c.offset)).toEqual([0, RECIPES_PAGE_SIZE]);
+  expect(calls.map((c) => c.cursor)).toEqual([null, recipeIdAt(100 + RECIPES_PAGE_SIZE - 1)]);
 
   await page.getByLabel("Search recipes by title").fill(`recipe ${total}`);
   await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: `Library recipe ${total}`, exact: true })).toBeVisible();
-  expect(calls[calls.length - 1]).toEqual({ search: `recipe ${total}`, owner: null, offset: 0 });
+  expect(calls[calls.length - 1]).toEqual({ search: `recipe ${total}`, owner: null, cursor: null });
 });

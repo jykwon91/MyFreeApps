@@ -1,6 +1,6 @@
-/** The filters and page one GET /recipes call carried; null when a filter's query parameter was absent. */
+/** The filters and page one GET /recipes call carried; null when a query parameter was absent (no cursor: the first page). */
 export interface ListCall {
   search: string | null;
   owner: string | null;
-  offset: number;
+  cursor: string | null;
 }

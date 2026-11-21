@@ -1,6 +1,6 @@
 /**
  * The recipes list pages through GET /recipes: a "Load more" footer fetches
- * the next page (recipe 51 on), and a new search starts again from the first.
+ * the page after the first page's cursor (recipe 51 on), and a new search starts again from the first.
  */
 import { configureStore } from "@reduxjs/toolkit";
 import { act, render, screen, waitFor } from "@testing-library/react";
@@ -43,10 +43,15 @@ function summary(n: number, prefix = "Recipe"): RecipeSummary {
   };
 }
 
-function pageAt(offset: number, total: number, prefix?: string): RecipeListPage {
-  const count = Math.max(0, Math.min(RECIPES_PAGE_SIZE, total - offset));
-  const items = Array.from({ length: count }, (_, i) => summary(offset + i + 1, prefix));
-  return { items, total, has_more: offset + count < total };
+/** This fake server's cursor names how many recipes came before the next page. */
+const cursorAfter = (n: number) => `after-${n}`;
+
+function pageAfter(cursor: string | undefined, total: number, prefix?: string): RecipeListPage {
+  const start = cursor === undefined ? 0 : Number(cursor.replace("after-", ""));
+  const count = Math.max(0, Math.min(RECIPES_PAGE_SIZE, total - start));
+  const items = Array.from({ length: count }, (_, i) => summary(start + i + 1, prefix));
+  const hasMore = start + count < total;
+  return { items, total, has_more: hasMore, next_cursor: hasMore ? cursorAfter(start + count) : null };
 }
 
 type Respond = (config: InternalAxiosRequestConfig) => { status: number; data: unknown };
@@ -92,10 +97,10 @@ beforeEach(() => {
   listCalls.length = 0;
   api.defaults.adapter = adapter;
   respond = (config) => {
-    const offset = Number(config.params?.offset ?? 0);
+    const cursor: string | undefined = config.params?.cursor;
     return config.params?.search
-      ? { status: 200, data: pageAt(offset, 2, "Soup") }
-      : { status: 200, data: pageAt(offset, TOTAL) };
+      ? { status: 200, data: pageAfter(cursor, 2, "Soup") }
+      : { status: 200, data: pageAfter(cursor, TOTAL) };
   };
 });
 
@@ -120,7 +125,7 @@ describe("Recipes", () => {
 
     expect(await screen.findByRole("heading", { name: "Recipe 51" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recipe 60" })).toBeInTheDocument();
-    expect(listCalls.map((config) => config.params?.offset)).toEqual([0, RECIPES_PAGE_SIZE]);
+    expect(listCalls.map((config) => config.params?.cursor)).toEqual([undefined, cursorAfter(RECIPES_PAGE_SIZE)]);
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
   });
 
@@ -141,7 +146,7 @@ describe("Recipes", () => {
     expect(await screen.findByRole("heading", { name: "Soup 1" })).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Recipe 51" })).not.toBeInTheDocument());
     expect(listCalls.map((config) => config.params)).toEqual([
-      { search: "soup", owner: undefined, limit: RECIPES_PAGE_SIZE, offset: 0 },
+      { search: "soup", owner: undefined, limit: RECIPES_PAGE_SIZE, cursor: undefined },
     ]);
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
   });

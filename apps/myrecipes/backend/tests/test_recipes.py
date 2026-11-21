@@ -132,7 +132,7 @@ class TestReadRecipes:
         async with await as_user(attacker) as authed:
             resp = await authed.get("/recipes", params={"owner": "me"})
         # owner=me is scoped to the caller — the attacker owns nothing.
-        assert resp.json() == {"items": [], "total": 0, "has_more": False}
+        assert resp.json() == {"items": [], "total": 0, "has_more": False, "next_cursor": None}
 
     @pytest.mark.asyncio
     async def test_other_user_can_read_but_not_own(self, user_factory, as_user) -> None:

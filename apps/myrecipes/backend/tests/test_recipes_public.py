@@ -19,6 +19,7 @@ scope by a unique title (``search=``) or by ``owner=me``.
 """
 from __future__ import annotations
 
+import base64
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -36,6 +37,10 @@ _TWEAK_BODY = {
     "ingredients": [{"name": "flour"}],
     "steps": [{"instruction": "Mix."}],
 }
+
+
+# More pages than any test here creates; past it the list isn't ending.
+_MAX_PAGES = 20
 
 
 def _payload(title: str, **overrides: Any) -> dict:
@@ -64,6 +69,23 @@ async def _create_recipe(as_user, owner: dict, title: str) -> dict:
         resp = await authed.post("/recipes", json=_payload(title))
         assert resp.status_code == 201, resp.text
         return resp.json()
+
+
+async def _page_through(
+    authed: AsyncClient, params: dict[str, Any], cursor: str | None = None,
+) -> list[str]:
+    """Every recipe id from ``cursor`` (None for the top) to the last page, following ``next_cursor``."""
+    seen: list[str] = []
+    for _ in range(_MAX_PAGES):
+        query = params if cursor is None else {**params, "cursor": cursor}
+        resp = await authed.get("/recipes", params=query)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        seen.extend(row["id"] for row in body["items"])
+        cursor = body["next_cursor"]
+        if cursor is None:
+            return seen
+    raise AssertionError(f"still paging after {_MAX_PAGES} pages")
 
 
 def _assert_no_user_id(obj: Any) -> None:
@@ -363,16 +385,21 @@ class TestPagination:
             assert len(body1["items"]) == 2
             assert body1["total"] == 3
             assert body1["has_more"] is True
+            assert body1["next_cursor"]
 
             body2 = (
                 await authed.get(
                     "/recipes",
-                    params={"owner": "me", "search": f"Page {tag}", "limit": 2, "offset": 2},
+                    params={
+                        "owner": "me", "search": f"Page {tag}", "limit": 2,
+                        "cursor": body1["next_cursor"],
+                    },
                 )
             ).json()
             assert len(body2["items"]) == 1
             assert body2["total"] == 3
             assert body2["has_more"] is False
+            assert body2["next_cursor"] is None
 
             # Over the cap (le=200) and under the floor (ge=1) → 422.
             assert (await authed.get("/recipes", params={"limit": 999})).status_code == 422
@@ -405,15 +432,50 @@ class TestPagination:
         )
         await db.flush()
 
-        seen: list[str] = []
         async with await as_user(owner) as authed:
-            for offset in (0, 2, 4):
-                body = (
-                    await authed.get(
-                        "/recipes",
-                        params={"owner": "me", "search": f"Tie {tag}", "limit": 2, "offset": offset},
-                    )
-                ).json()
-                seen.extend(row["id"] for row in body["items"])
+            seen = await _page_through(authed, {"owner": "me", "search": f"Tie {tag}", "limit": 2})
 
         assert seen == sorted(ids, reverse=True)
+
+    @pytest.mark.asyncio
+    async def test_a_recipe_tweaked_or_deleted_between_pages_never_makes_the_next_page_skip_one(
+        self, user_factory, as_user,
+    ) -> None:
+        owner = await user_factory()
+        tag = uuid.uuid4().hex[:8]
+        params = {"owner": "me", "search": f"Moving {tag}", "limit": 2}
+        # Created oldest first, so the list reads newest first: r4, r3, r2, r1, r0.
+        r0, r1, r2, r3, r4 = [
+            (await _create_recipe(as_user, owner, f"Moving {tag} {i}"))["id"] for i in range(5)
+        ]
+        async with await as_user(owner) as authed:
+            page1 = (await authed.get("/recipes", params=params)).json()
+            assert [row["id"] for row in page1["items"]] == [r4, r3]
+
+            # Between page loads: tweak r4 (it moves to the top) and delete r3, the
+            # row the cursor was taken from. An offset of 2 would now skip r2.
+            assert (await authed.post(f"/recipes/{r4}/versions", json=_TWEAK_BODY)).status_code == 201
+            assert (await authed.delete(f"/recipes/{r3}")).status_code == 204
+
+            rest = await _page_through(authed, params, cursor=page1["next_cursor"])
+
+        assert rest == [r2, r1, r0]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "cursor",
+        [
+            "not a cursor",
+            base64.urlsafe_b64encode(b"not json").decode(),
+            base64.urlsafe_b64encode(b'{"u": "2026-01-01T00:00:00+00:00"}').decode(),
+            base64.urlsafe_b64encode(b'{"u": "2026-01-01T00:00:00", "i": "%s"}' % str(uuid.uuid4()).encode()).decode(),
+            base64.urlsafe_b64encode(b'{"u": "yesterday", "i": "not-a-uuid"}').decode(),
+            "A" * 500,
+        ],
+    )
+    async def test_a_cursor_the_list_did_not_hand_out_is_a_400(
+        self, client: AsyncClient, cursor: str,
+    ) -> None:
+        resp = await client.get("/recipes", params={"cursor": cursor})
+        assert resp.status_code == 400
+        assert resp.json() == {"detail": "Invalid cursor"}
