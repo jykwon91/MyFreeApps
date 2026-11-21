@@ -1,6 +1,6 @@
 import { useCancelBatchMutation, useGetBatchStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
-import { LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { LoadingButton, useAnnouncement, useTheme, useToast } from "@platform/mobile";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch } from "react-redux";
@@ -31,6 +31,9 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: BATCH_STATUS_POLL_MS, skipPollingIfUnfocused: true });
   const [cancelBatch, { isLoading: isCancelling }] = useCancelBatchMutation();
 
+  const progress = batch ? batchReadProgressLabel(batch.completed, batch.total) : "";
+  useAnnouncement(progress, "polite");
+
   useEffect(() => {
     if (batch?.status === BATCH_STATUSES.DONE) dispatch(uploadBatchRead(uri));
   }, [batch?.status, dispatch, uri]);
@@ -49,9 +52,7 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-      <Text accessibilityLiveRegion="polite" style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
-        {batch ? batchReadProgressLabel(batch.completed, batch.total) : ""}
-      </Text>
+      <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>{progress}</Text>
       <LoadingButton
         accessibilityLabel={cancelBatchAccessibilityLabel(name)}
         isLoading={isCancelling}

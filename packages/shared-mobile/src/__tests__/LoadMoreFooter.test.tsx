@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 import LoadMoreFooter from "../components/LoadMoreFooter";
 import type { LoadMoreFooterProps } from "../types/LoadMoreFooterProps";
 
@@ -15,6 +16,8 @@ function footer(overrides: Partial<LoadMoreFooterProps> = {}) {
 }
 
 describe("LoadMoreFooter", () => {
+  beforeEach(() => jest.clearAllMocks());
+
   it("says how many are showing and loads the next page on press", async () => {
     const onLoadMore = jest.fn();
     await render(footer({ onLoadMore }));
@@ -38,5 +41,24 @@ describe("LoadMoreFooter", () => {
   it("drops the alert while the retry is in flight", async () => {
     await render(footer({ isError: true, isLoading: true }));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("reads the count politely and the failure as an alert, on iOS as well as Android", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    const announcePolitely = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    await render(footer());
+    expect(announcePolitely).toHaveBeenCalledWith("Showing 50 of 120", { queue: true });
+    expect(announce).not.toHaveBeenCalled();
+
+    await screen.rerender(footer({ isError: true }));
+    expect(announce).toHaveBeenCalledWith("I couldn't load the rest of them.");
+  });
+
+  it("reads the failure again when a retry fails again", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    await render(footer({ isError: true }));
+    await screen.rerender(footer({ isError: true, isLoading: true }));
+    await screen.rerender(footer({ isError: true }));
+    expect(announce).toHaveBeenCalledTimes(2);
   });
 });

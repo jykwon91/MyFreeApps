@@ -12,6 +12,7 @@ export const DOCUMENTS_NEEDING_A_LOOK_LINK = "/money?segment=documents&filter=ne
 export const MONEY_ANALYSIS_LINK = "/analytics/money";
 export const RECEIPTS_LINK = "/receipts";
 export const INTEGRATIONS_LINK = "/integrations";
+export const HOME_SECTION_RETRY = "Try again";
 export const GMAIL_REAUTH_WAITING = "Gmail needs you to sign in again";
 /** Home only needs the count, which comes with any page. */
 export const HOME_RECEIPTS_ARGS = { limit: 1 };

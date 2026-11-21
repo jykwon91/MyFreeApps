@@ -69,7 +69,8 @@ describe("MoreScreen search", () => {
     expect(screen.getByText("Leases")).toBeTruthy();
     expect(screen.getAllByText("Leasing").length).toBeGreaterThan(0);
     expect(screen.queryByText("Calendar")).toBeNull();
-    expect(screen.getByText(/^\d+ results?$/).props.accessibilityLiveRegion).toBe("polite");
+    const count = screen.getByText(/^\d+ results?$/);
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(count.props.children, { queue: true });
   });
 
   it("hides the account section and version while searching, and brings them back", async () => {

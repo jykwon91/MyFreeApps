@@ -2,7 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { DISCARD_MESSAGES, FORM_SHEET_TEST_ID, OPTION_SHEET_ROW_HEIGHT, SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
-import { Alert, StyleSheet } from "react-native";
+import { AccessibilityInfo, Alert, StyleSheet } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../src/constants/profile";
 import { EDUCATION_MESSAGES } from "../src/constants/profileEducation";
 import { SCREENING_MESSAGES } from "../src/constants/profileScreening";
@@ -286,6 +286,7 @@ describe("the remote preference", () => {
 
     expect(isChecked("Remote only")).toBe(true);
     expect(screen.getByText(MESSAGES.remoteSaving)).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(MESSAGES.remoteSaving, { queue: true });
     expect(patches(sent)).toEqual([{ remote_preference: "remote_only" }]);
     // While it saves, another tap does nothing.
     await fireEvent.press(screen.getByRole("radio", { name: "On-site" }));

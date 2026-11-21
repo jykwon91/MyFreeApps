@@ -2,11 +2,11 @@ import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/stor
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { useGetDuplicatesQuery, useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingRegion, SectionError, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { DUPLICATES_LINK } from "../../constants/duplicates";
-import { DOCUMENTS_NEEDING_A_LOOK_LINK, GMAIL_REAUTH_WAITING, HOME_PAYMENT_REVIEW_ARGS, HOME_RECEIPTS_ARGS, INTEGRATIONS_LINK, PAYMENT_REVIEW_LINK, RECEIPTS_LINK } from "../../constants/home";
+import { DOCUMENTS_NEEDING_A_LOOK_LINK, GMAIL_REAUTH_WAITING, HOME_PAYMENT_REVIEW_ARGS, HOME_RECEIPTS_ARGS, HOME_SECTION_RETRY, INTEGRATIONS_LINK, PAYMENT_REVIEW_LINK, RECEIPTS_LINK } from "../../constants/home";
 import { NO_FILTERS } from "../../constants/transactionFilters";
 import { duplicateCountLine } from "../duplicates/duplicateDisplay";
 import { gmailConnection, gmailIntegration } from "../integrations/gmailConnection";
@@ -16,7 +16,6 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import HomeCard from "./HomeCard";
 import { documentsWaiting, paymentsWaiting, receiptsWaiting, transactionsWaiting, waitingFailedMessage } from "./homeDisplay";
 import HomeLinkRow from "./HomeLinkRow";
-import HomeSectionError from "./HomeSectionError";
 import { useRegisterHomeRefetch } from "./useRegisterHomeRefetch";
 
 export default function WaitingCard() {
@@ -86,7 +85,7 @@ export default function WaitingCard() {
           {paymentCount ? <HomeLinkRow label={paymentsWaiting(paymentCount)} onPress={() => router.navigate(PAYMENT_REVIEW_LINK)} /> : null}
           {duplicateCount ? <HomeLinkRow label={duplicateCountLine(duplicateCount)} onPress={() => router.navigate(DUPLICATES_LINK)} /> : null}
           {needsReauth ? <HomeLinkRow label={GMAIL_REAUTH_WAITING} onPress={() => router.navigate(INTEGRATIONS_LINK)} /> : null}
-          {failedMessage ? <HomeSectionError message={failedMessage} onRetry={retry} /> : null}
+          {failedMessage ? <SectionError message={failedMessage} onRetry={retry} retryLabel={HOME_SECTION_RETRY} /> : null}
         </View>
       )}
     </HomeCard>

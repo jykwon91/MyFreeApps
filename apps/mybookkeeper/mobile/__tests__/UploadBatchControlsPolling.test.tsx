@@ -3,6 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, render, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
+import { AccessibilityInfo } from "react-native";
 import { Provider } from "react-redux";
 import UploadBatchControls from "../src/features/capture/UploadBatchControls";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -46,6 +47,7 @@ describe("UploadBatchControls polling", () => {
       </Provider>,
     );
     await waitFor(() => expect(statusRequests).toBeGreaterThanOrEqual(2));
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("1 of 4 read", { queue: true });
 
     await act(async () => {
       store.dispatch(baseApi.internalActions.onFocusLost());

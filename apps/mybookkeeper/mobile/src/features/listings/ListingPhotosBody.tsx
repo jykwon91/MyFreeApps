@@ -1,7 +1,7 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import { moveId, sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
-import { Banner, EmptyState, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, useAnnouncement, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { preparingProgress } from "../../constants/uploads";
@@ -70,6 +70,13 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
     if (stillThere?.length === 0) setViewingId(null);
   }
 
+  const preparingLine = picker.preparing ? preparingProgress(picker.preparing.done, picker.preparing.total) : undefined;
+  const uploadLine = uploads.isSending ? uploadProgress(uploads.batch.done, uploads.batch.total) : undefined;
+  const selectionLine = isSelecting ? (selected.size === 0 ? MESSAGES.noneSelected : selectedCount(selected.size)) : undefined;
+  useAnnouncement(preparingLine, "polite");
+  useAnnouncement(uploadLine, "polite");
+  useAnnouncement(selectionLine, "polite");
+
   const isEmpty = photos.length === 0 && uploads.items.length === 0 && !picker.preparing;
   const busy = actions.isRemoving || actions.isReordering || actions.isRefreshing;
   const problem = picker.problem ?? (isViewing ? null : actions.failure);
@@ -111,13 +118,13 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
         </View>
       ) : null}
       {picker.preparing ? (
-        <Text accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
-          {preparingProgress(picker.preparing.done, picker.preparing.total)}
+        <Text accessibilityRole="progressbar" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
+          {preparingLine}
         </Text>
       ) : null}
       {uploads.isSending ? (
-        <Text accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
-          {uploadProgress(uploads.batch.done, uploads.batch.total)}
+        <Text accessibilityRole="progressbar" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
+          {uploadLine}
         </Text>
       ) : null}
       {uploads.items.map((upload, i) => (
@@ -125,9 +132,7 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
       ))}
       {isSelecting ? (
         <View style={{ gap: spacing.sm }}>
-          <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
-            {selected.size === 0 ? MESSAGES.noneSelected : selectedCount(selected.size)}
-          </Text>
+          <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{selectionLine}</Text>
           <LoadingButton
             disabled={selected.size === 0 || busy}
             isLoading={actions.isRemoving}

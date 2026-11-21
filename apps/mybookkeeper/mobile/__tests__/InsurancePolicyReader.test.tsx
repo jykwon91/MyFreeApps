@@ -3,6 +3,7 @@ import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/
 import api from "@platform/core/lib/api";
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { AccessibilityInfo } from "react-native";
 import NewPolicyScreen from "../src/features/insurance/NewPolicyScreen";
 import { formParts } from "../test-support/applicantsServer";
 import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
@@ -51,6 +52,7 @@ describe("reading a policy from a document", () => {
     await pickPolicyFile();
 
     expect(await screen.findByText(MESSAGES.readDone("policy.pdf"))).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(MESSAGES.reading, { queue: true });
     expect(screen.getByLabelText("Policy name, required").props.value).toBe("Read policy");
     expect(screen.getByLabelText("Carrier").props.value).toBe("Read Mutual");
     expect(screen.getByLabelText("Premium (USD)").props.value).toBe("100");

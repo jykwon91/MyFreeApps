@@ -1,7 +1,7 @@
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import type { RemotePreference } from "@myjobhunter/api-client/types/profile/remote-preference";
 import { isRemotePreference } from "@myjobhunter/api-client/utils/isRemotePreference";
-import { useTheme, useToast } from "@platform/mobile";
+import { useAnnouncement, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
@@ -22,6 +22,7 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
   // A second tap can land before the disabled state renders; this stops it sending a second save.
   const isSaving = useRef(false);
   const saved = isRemotePreference(preference) ? preference : "";
+  useAnnouncement(isLoading ? MESSAGES.remoteSaving : undefined, "polite");
 
   // Once the saved profile has caught up with the tap, there's nothing pending any more.
   if (pending !== null && pending === saved) setPending(null);
@@ -54,7 +55,7 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
         value={pending ?? saved}
       />
       {isLoading ? (
-        <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {MESSAGES.remoteSaving}
         </Text>
       ) : null}

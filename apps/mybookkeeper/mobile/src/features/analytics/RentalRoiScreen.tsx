@@ -2,7 +2,7 @@ import { RENTAL_ROI_DEFAULT_TARGET_PCT } from "@mybookkeeper/api-client/constant
 import { useGetRentalRoiQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { rentalRoiHeadline } from "@mybookkeeper/api-client/utils/rentalRoi";
 import { formatMoneyCents } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -20,6 +20,9 @@ export default function RentalRoiScreen() {
   // rather than the skeleton.
   const { currentData: data, error, isFetching, refetch } = useGetRentalRoiQuery({ targetReturnPct });
   const { refresh, refreshControl } = useRefresh(async () => { await refetch(); }, error);
+  // The headline follows the target typed below, so a new one is read out once it arrives.
+  const shownHeadline = data && data.properties.length > 0 && data.has_transactions ? rentalRoiHeadline(data.summary) : null;
+  useAnnouncement(shownHeadline ? [shownHeadline.title, shownHeadline.coverage].filter(Boolean).join(", ") : undefined, "polite");
 
   if (error && !data) {
     return (
@@ -67,7 +70,6 @@ export default function RentalRoiScreen() {
 
         <View
           accessible
-          accessibilityLiveRegion="polite"
           testID="rental-roi-headline"
         >
           <Text

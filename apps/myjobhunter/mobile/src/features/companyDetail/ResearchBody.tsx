@@ -1,5 +1,5 @@
 import { researchSentimentLabel, researchSentimentTone } from "@myjobhunter/api-client/utils/researchSentiment";
-import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
@@ -15,6 +15,7 @@ import ResearchSkeleton from "./ResearchSkeleton";
 export default function ResearchBody({ mode, research, companyName, isRunning, failure, onRun }: ResearchBodyProps) {
   const { colors, spacing, fontSize } = useTheme();
   const bodyText = { fontSize: fontSize.md, color: colors.mutedForeground };
+  useAnnouncement(mode === "loading" ? MESSAGES.runningNote(companyName) : undefined, "polite");
 
   if (mode === "ready" && research) {
     return (
@@ -36,7 +37,7 @@ export default function ResearchBody({ mode, research, companyName, isRunning, f
   if (mode === "loading") {
     return (
       <View style={{ gap: spacing.md }}>
-        <Text accessibilityLiveRegion="polite" style={bodyText}>
+        <Text style={bodyText}>
           {MESSAGES.runningNote(companyName)}
         </Text>
         <LoadingButton isLoading loadingText={MESSAGES.running} onPress={onRun}>

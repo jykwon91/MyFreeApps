@@ -28,7 +28,7 @@ const ANNOUNCED_ELSEWHERE: Record<string, string> = {
   "apps/myjobhunter/mobile/src/features/discover/DiscoveredJobSkeletonCard.tsx": "Card; rendered only inside DiscoverJobsSkeleton's LoadingRegion.",
   "apps/myjobhunter/mobile/src/features/discover/SavedSearchSkeletonRow.tsx": "Row; rendered only inside SavedSearchesSection's loading LoadingRegion.",
   "apps/myjobhunter/mobile/src/features/companyDetail/CompanyApplicationSkeletonRows.tsx": "Rows; rendered only inside LoadingRegions: CompanyApplicationsSection's first load and load-more, and CompanyDetailSkeleton.",
-  "apps/myjobhunter/mobile/src/features/companyDetail/ResearchSkeleton.tsx": "Rendered inside CompanyResearchSection's and CompanyDetailSkeleton's LoadingRegions, and under ResearchBody's running note, a polite live region beside a busy Run button.",
+  "apps/myjobhunter/mobile/src/features/companyDetail/ResearchSkeleton.tsx": "Rendered inside CompanyResearchSection's and CompanyDetailSkeleton's LoadingRegions, and under ResearchBody's running note, which is announced, beside a busy Run button.",
   "apps/myjobhunter/mobile/src/features/dashboard/BoardCardSkeleton.tsx": "Card; rendered only inside DashboardSkeleton's LoadingRegion.",
   "apps/myjobhunter/mobile/src/features/applications/ApplicationSkeletonRow.tsx": "Row; rendered only inside ApplicationsSkeleton's and ApplicationsListFooter's LoadingRegions.",
   "apps/myjobhunter/mobile/src/features/analyze/AnalysisSkeletonFlags.tsx": "Part of AnalysisSkeleton; rendered only there.",

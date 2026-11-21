@@ -1,3 +1,4 @@
+import { useAnnouncement } from "@platform/mobile";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { FlatList, Modal, Text, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
@@ -21,6 +22,8 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
   const list = useRef<FlatList>(null);
   const [index, setIndex] = useState(startIndex);
   const total = images.length;
+  const counter = photoViewerCounter(index, total);
+  useAnnouncement(counter, "polite");
 
   function goTo(next: number): void {
     if (next < 0 || next >= total) return;
@@ -58,8 +61,8 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
           {index < total - 1 ? <WelcomeManualViewerButton glyph={GLYPHS.next} label={MESSAGES.next} onPress={() => goTo(index + 1)} /> : <View />}
         </View>
         <View pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 12, left: 0, right: 0, alignItems: "center" }}>
-          <Text accessibilityLiveRegion="polite" style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, overflow: "hidden", backgroundColor: STYLE.overlay, color: STYLE.onBackdrop }}>
-            {photoViewerCounter(index, total)}
+          <Text style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, overflow: "hidden", backgroundColor: STYLE.overlay, color: STYLE.onBackdrop }}>
+            {counter}
           </Text>
         </View>
       </View>

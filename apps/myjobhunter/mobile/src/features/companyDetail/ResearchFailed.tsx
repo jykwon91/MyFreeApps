@@ -1,4 +1,4 @@
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import { researchFailureMessage } from "../../lib/researchFailureMessage";
@@ -12,6 +12,7 @@ export default function ResearchFailed({ failure, isRunning, onRun }: ResearchFa
   const { colors, spacing, fontSize } = useTheme();
   const reason = failure?.reason ?? "retryable";
   const message = researchFailureMessage(reason, MESSAGES.failedBody);
+  useAnnouncement(message);
   return (
     <View style={{ gap: spacing.md }}>
       <Text accessibilityRole="alert" style={{ fontSize: fontSize.md, color: colors.destructiveText }}>

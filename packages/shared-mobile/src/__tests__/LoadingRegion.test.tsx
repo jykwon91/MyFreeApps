@@ -40,15 +40,14 @@ describe("LoadingRegion", () => {
     expect(screen.getByTestId("bar", { includeHiddenElements: true })).toBeTruthy();
   });
 
-  it("passes on its style and live region", async () => {
+  it("passes on its style", async () => {
     await render(
-      <LoadingRegion accessibilityLiveRegion="polite" style={{ gap: 8 }} testID="region">
+      <LoadingRegion style={{ gap: 8 }} testID="region">
         <Skeleton />
       </LoadingRegion>,
     );
 
     const region = screen.getByTestId("region");
     expect(StyleSheet.flatten(region.props.style)).toEqual({ gap: 8 });
-    expect(region.props.accessibilityLiveRegion).toBe("polite");
   });
 });

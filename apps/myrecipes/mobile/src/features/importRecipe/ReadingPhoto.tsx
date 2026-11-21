@@ -19,7 +19,7 @@ export default function ReadingPhoto({ photo, startedAt }: ReadingPhotoProps) {
   useAnnouncement(showsHint ? COPY.timeHint : COPY.reading);
 
   return (
-    <View accessibilityLiveRegion="polite" style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md }}>
       <Thumbnail
         source={{ uri: photo.uri }}
         style={{ width: RECIPE_PHOTO_THUMBNAIL_SIZE, height: RECIPE_PHOTO_THUMBNAIL_SIZE, borderRadius: radius.md, opacity: 0.6 }}

@@ -4,6 +4,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { AccessibilityInfo } from "react-native";
 import { Provider } from "react-redux";
 import { RENTAL_ROI_MESSAGES as MESSAGES } from "../src/constants/rentalRoi";
 import RentalRoiScreen from "../src/features/analytics/RentalRoiScreen";
@@ -114,7 +115,7 @@ describe("RentalRoiScreen", () => {
     serve();
     await render(tree());
     expect(await screen.findByTestId("rental-roi-headline")).toBeTruthy();
-    expect(screen.getByTestId("rental-roi-headline-title")).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(expect.stringContaining(screen.getByTestId("rental-roi-headline-title").props.children), { queue: true });
     expect(screen.getByTestId("rental-roi-target-input")).toBeTruthy();
     expect(screen.getAllByTestId("rental-roi-property-card")).toHaveLength(1);
     expect(screen.getByTestId("rental-roi-total-card")).toBeTruthy();

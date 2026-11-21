@@ -17,7 +17,7 @@ export default function DiscoveryStatus({ stages, startedAt }: { stages: readonl
   useAnnouncement(stage);
 
   return (
-    <View accessibilityLiveRegion="polite" style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
       <ActivityIndicator color={colors.primary} />
       <Text style={{ flex: 1, color: colors.mutedForeground, fontSize: fontSize.sm }}>{stage}</Text>
     </View>

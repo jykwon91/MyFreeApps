@@ -7,11 +7,11 @@ import { useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/stor
 import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { activePropertyIds } from "@mybookkeeper/api-client/utils/activePropertyIds";
 import { ALL_SUMMARY_CATEGORIES, filterSummaryByCategories, isCategoryFilterActive } from "@mybookkeeper/api-client/utils/categoryFilter";
-import { EmptyState, LoadingRegion, SegmentedControl, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingRegion, SectionError, SegmentedControl, Skeleton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { HOME_PERIODS, HOME_RECEIPTS_ARGS, MONEY_ANALYSIS_LINK, type HomePeriod } from "../../constants/home";
+import { HOME_PERIODS, HOME_RECEIPTS_ARGS, HOME_SECTION_RETRY, MONEY_ANALYSIS_LINK, type HomePeriod } from "../../constants/home";
 import { MONEY_ANALYSIS_MESSAGES } from "../../constants/moneyAnalysis";
 import { useToday } from "../../lib/useToday";
 import type { AnalysisScope } from "../../types/AnalysisScope";
@@ -25,7 +25,6 @@ import HomeAlerts from "./HomeAlerts";
 import HomeCard from "./HomeCard";
 import HomeLinkRow from "./HomeLinkRow";
 import { numbersFailedMessage, periodHasMonths } from "./homeDisplay";
-import HomeSectionError from "./HomeSectionError";
 import MonthlyChart from "./MonthlyChart";
 import MonthlyChartSkeleton from "./MonthlyChartSkeleton";
 import NumbersCard from "./NumbersCard";
@@ -149,11 +148,12 @@ export default function HomeScreen() {
             </>
           ) : (
             <HomeCard title="Your numbers">
-              <HomeSectionError
+              <SectionError
                 message={numbersFailedMessage(period)}
                 onRetry={async () => {
                   await summary.refetch();
                 }}
+                retryLabel={HOME_SECTION_RETRY}
               />
             </HomeCard>
           )}

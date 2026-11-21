@@ -6,6 +6,7 @@ import type { AxiosAdapter } from "axios";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
+import { AccessibilityInfo } from "react-native";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, removeManyTitle } from "../src/constants/listingPhotos";
 import { LISTING_MESSAGES } from "../src/constants/listings";
 import ListingPhotosScreen from "../src/features/listings/ListingPhotosScreen";
@@ -438,6 +439,7 @@ describe("working with a photo", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Photo 1 of 3, Cover" }));
     await fireEvent.press(screen.getByRole("button", { name: "Photo 3 of 3" }));
     await screen.findByText("2 selected");
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("2 selected", { queue: true });
     await fireEvent.press(button(MESSAGES.removeSelected));
     expect(alertSpy.mock.calls.at(-1)?.[0]).toBe(removeManyTitle(2));
     await pressAlertButton(alertSpy, MESSAGES.remove, act);
