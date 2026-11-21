@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import { addonPriceLua } from "@/games/wow-forever/lib/auctionHouse/addonPriceLua";
+import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadDisenchantTables";
 import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { refreshPricesAddon } from "../refreshPricesAddon";
@@ -39,7 +40,7 @@ describe("the MGA Prices updater", () => {
 
     const houses = await Promise.all((["alliance", "horde", "neutral"] as const).map((faction) => fakeHouse({ server: "pvp", faction })));
     expect(written).toBe(path.join(addons, "MGAPrices", "Data.lua"));
-    expect(await readFile(written, "utf8")).toBe(addonPriceLua(houses, await loadAllCraftingData()));
+    expect(await readFile(written, "utf8")).toBe(addonPriceLua(houses, await loadAllCraftingData(), loadDisenchantTables()));
     expect(await readFile(path.join(addons, "MGAPrices", "MGAPrices.lua"), "utf8")).toBe("-- addon code");
     expect((await readdir(path.join(addons, "MGAPrices"))).sort()).toEqual(["Data.lua", "MGAPrices.lua"]);
   });

@@ -7,7 +7,7 @@ export interface DisenchantTables {
   items: Record<string, [number, number]>;
   /**
    * `tableId → { resultItemId → [minCount, maxCount, chancePercent] }`.
-   * `chancePercent` is an integer 0-100.
+   * `chancePercent` is 0.1-100, to one decimal (Nexus Crystal drops 0.5% of the time).
    */
   tables: Record<string, Record<string, [number, number, number]>>;
 }
