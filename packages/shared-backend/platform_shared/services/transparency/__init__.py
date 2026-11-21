@@ -2,16 +2,19 @@
 
 A single PUBLIC ``/support`` page on every MyFreeApps app shows this
 month's platform server costs vs donations received, with a break-even
-bar. The backing data is ONE JSON object in a shared MinIO bucket:
+bar. The backing data lives in a shared MinIO bucket: one JSON object for
+costs (``report.json``) plus one small object per Ko-fi donation.
 
-- ONE app (``transparency_primary``) WRITES it — it receives the Ko-fi
+- ONE app (``transparency_primary``) WRITES them — it receives the Ko-fi
   donation webhook and runs the daily Anthropic cost poll.
-- EVERY app READS it via the public ``GET /transparency`` endpoint.
+- EVERY app READS them via the public ``GET /transparency`` endpoint.
 
 This package holds the shared, app-agnostic pieces:
 
 - ``transparency_store`` — read/write the shared object; project the
   current month into the public response shape.
+- ``donation_store`` — one object per donation, keyed by month and
+  ``message_id``; month totals, pruning, and the move out of ``report.json``.
 - ``kofi_service`` — verify + parse Ko-fi donation webhooks (static
   ``verification_token``, dedup on ``message_id``).
 - ``anthropic_cost_service`` — pull the org's month-to-date spend from

@@ -12,7 +12,9 @@ regardless.
 Payload fields we use (others ignored): ``verification_token`` (auth),
 ``message_id`` (idempotency key — Ko-fi may re-deliver), ``amount`` (decimal
 string in the creator's currency), ``currency``, ``type`` (Donation /
-Subscription / Commission / Shop Order), ``timestamp``.
+Subscription / Commission / Shop Order), ``timestamp`` (when the supporter
+paid; decides the month a donation counts toward, so a re-delivery lands on
+the same record whenever it arrives).
 
 We count ALL monetary event types toward the break-even total — the
 operator's goal is "did supporters cover hosting", so a subscription
@@ -30,12 +32,14 @@ from __future__ import annotations
 import hmac
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from urllib.parse import parse_qs
 
-from platform_shared.schemas.transparency import MonthBucket, TransparencyDocument
-from platform_shared.services.transparency import transparency_store
+from platform_shared.schemas.transparency_donation_record import DonationRecord
+from platform_shared.services.transparency import donation_store, transparency_store
+from platform_shared.services.transparency.donation_outcome import DonationOutcome
+from platform_shared.services.transparency.transparency_store import SharedStorageSettings
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +58,21 @@ class KofiPayload:
         self.amount_str: str = str(raw.get("amount") or "")
         self.currency: str = str(raw.get("currency") or "")
         self.type: str = str(raw.get("type") or "")
+        self.timestamp: str = str(raw.get("timestamp") or "")
+
+    @property
+    def donation_month(self) -> str | None:
+        """``"YYYY-MM"`` (UTC) of Ko-fi's ``timestamp``, or ``None`` if absent/unparseable.
+
+        A timestamp without a zone is read as UTC, the zone Ko-fi sends.
+        """
+        try:
+            paid_at = datetime.fromisoformat(self.timestamp)
+        except ValueError:
+            return None
+        if paid_at.tzinfo is None:
+            paid_at = paid_at.replace(tzinfo=timezone.utc)
+        return transparency_store.month_key(paid_at.astimezone(timezone.utc))
 
     @property
     def amount_cents(self) -> int:
@@ -120,58 +139,78 @@ def verify_kofi_token(payload: KofiPayload, *, expected_token: str) -> bool:
     return hmac.compare_digest(payload.verification_token, expected_token)
 
 
-def record_donation(
-    document: TransparencyDocument,
-    payload: KofiPayload,
-    now: datetime,
-) -> bool:
-    """Add a verified donation to the current month, deduped by message_id.
+def _already_counted(settings: SharedStorageSettings, month: str, message_id: str) -> bool:
+    """Whether this donation was already counted, old-style or as a record.
 
-    Returns ``True`` when newly recorded, ``False`` when ignored — either a
-    duplicate (already-seen ``message_id``, so a Ko-fi re-delivery is a 200
-    no-op) or an event with no ``message_id`` at all (refused, because it can't
-    be deduped and a re-delivery would double-count). Mutates ``document`` in
-    place. Only a POSITIVE amount bumps ``donations_cents`` + ``updated_at``; a
-    zero/blank-amount event is still recorded for dedup but moves no money and
-    leaves ``updated_at`` reflecting the last real change.
+    ``report.json`` is checked BEFORE the records. The migration writes the
+    records first and empties ``report.json`` after, so in this order a
+    migration running between the two checks is always seen by one of them.
+    The next month is checked too: migrated records are filed by arrival
+    month, which can be one month after Ko-fi's timestamp.
     """
-    if not payload.message_id:
-        # Ko-fi always sends message_id; without it we cannot dedup, so a
-        # re-delivery would double-count. Refuse rather than risk that.
-        logger.warning(
-            "Ko-fi donation missing message_id; refusing to count (cannot dedup): "
-            "type=%s amount=%r",
+    if transparency_store.legacy_report_has_donation(
+        transparency_store.load_document(settings), message_id,
+    ):
+        return True
+    return donation_store.donation_exists(settings, month, message_id) or (
+        donation_store.donation_exists(settings, donation_store.next_month(month), message_id)
+    )
+
+
+def record_donation(settings: SharedStorageSettings, payload: KofiPayload) -> DonationOutcome:
+    """Store a verified donation as its own object, unless already counted.
+
+    - ``RECORDED``: stored.
+    - ``DUPLICATE``: already counted (see ``_already_counted``), so a Ko-fi
+      re-delivery is a no-op in any month.
+    - ``REFUSED``: no ``message_id`` matching ``KOFI_MESSAGE_ID_PATTERN``, or
+      no usable ``timestamp``. The record's key needs both; without them a
+      re-delivery could not be recognised and would count twice. Logged at
+      ERROR, because a real payment is going uncounted.
+
+    A zero/blank-amount event is still stored (it moves no money) so a
+    re-delivery of it dedups too. Storage errors propagate, so the webhook
+    answers non-2xx and Ko-fi delivers again.
+    """
+    if not donation_store.is_valid_message_id(payload.message_id):
+        logger.error(
+            "Ko-fi payment refused, not counted: message_id missing or malformed "
+            "(cannot dedup): message_id=%r type=%s amount=%r",
+            payload.message_id,
             payload.type,
             payload.amount_str,
         )
-        return False
+        return DonationOutcome.REFUSED
 
-    bucket: MonthBucket = transparency_store.get_or_create_bucket(document, now)
+    month = payload.donation_month
+    if month is None:
+        logger.error(
+            "Ko-fi payment refused, not counted: no usable timestamp (cannot dedup): "
+            "message_id=%s timestamp=%r amount=%r",
+            payload.message_id,
+            payload.timestamp,
+            payload.amount_str,
+        )
+        return DonationOutcome.REFUSED
 
-    if payload.message_id in bucket.donation_message_ids:
+    if _already_counted(settings, month, payload.message_id):
         logger.info(
-            "Ko-fi donation already recorded (dedup): message_id=%s type=%s",
+            "Ko-fi donation already recorded (dedup): message_id=%s type=%s month=%s",
             payload.message_id,
             payload.type,
+            month,
         )
-        return False
-
-    # Record the id up front so any re-delivery (even of a zero/odd event) dedups.
-    bucket.donation_message_ids.append(payload.message_id)
+        return DonationOutcome.DUPLICATE
 
     cents = payload.amount_cents
     if cents <= 0:
-        # Verified but no usable amount — deduped above, but move no money and
-        # don't bump updated_at. Log so a malformed amount is visible.
         logger.warning(
             "Ko-fi donation had no positive amount: message_id=%s amount=%r currency=%s",
             payload.message_id,
             payload.amount_str,
             payload.currency,
         )
-        return True
-
-    if payload.currency and payload.currency.upper() != "USD":
+    elif payload.currency and payload.currency.upper() != "USD":
         # Costs are tracked in USD cents. A non-USD donation is summed at face
         # value (no FX conversion available) — log it so the operator can spot
         # currency drift rather than silently mixing units.
@@ -183,18 +222,24 @@ def record_donation(
             payload.currency,
         )
 
-    bucket.donations_cents += cents
-    document.updated_at = now.isoformat()
-
+    donation_store.write_donation(
+        settings,
+        DonationRecord(
+            message_id=payload.message_id,
+            month=month,
+            amount_cents=cents,
+            currency=payload.currency,
+            type=payload.type,
+        ),
+    )
     logger.info(
-        "Ko-fi donation recorded: message_id=%s type=%s amount_cents=%d month=%s total_cents=%d",
+        "Ko-fi donation recorded: message_id=%s type=%s amount_cents=%d month=%s",
         payload.message_id,
         payload.type,
         cents,
-        transparency_store.month_key(now),
-        bucket.donations_cents,
+        month,
     )
-    return True
+    return DonationOutcome.RECORDED
 
 
 __all__ = [

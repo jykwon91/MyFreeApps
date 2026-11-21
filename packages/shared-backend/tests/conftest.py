@@ -1,4 +1,5 @@
 """Shared-backend test config — registers asyncio mode and a fresh in-memory DB."""
+import threading
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from platform_shared.db.base import Base
+from platform_shared.schemas.transparency import TRANSPARENCY_OBJECT_KEY, TransparencyDocument
+from platform_shared.services.transparency import donation_store, transparency_store
 from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 
 
@@ -25,24 +28,70 @@ def make_s3_error(code: str, key: str = "obj") -> S3Error:
 class FakeStorageClient:
     """In-memory stand-in for ``platform_shared.core.storage.StorageClient``.
 
-    Backs the transparency store tests without a real MinIO. ``download_file``
+    Backs the transparency tests without a real MinIO. ``download_file``
     raises a ``NoSuchKey`` ``S3Error`` for absent keys, matching the real
     client's behaviour that ``transparency_store.load_document`` depends on.
+
+    ``read_barrier`` (optional) makes the first ``parties`` reads wait for
+    each other, so concurrent writers all read before any of them writes:
+    the interleaving that loses an update when they share one object.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, read_barrier: threading.Barrier | None = None) -> None:
         self.objects: dict[str, bytes] = {}
         self.uploads: list[tuple[str, bytes, str]] = []
+        self._lock = threading.Lock()
+        self._read_barrier = read_barrier
+        self._reads = 0
 
     def upload_file(self, key: str, content: bytes, content_type: str = "application/octet-stream") -> str:
-        self.objects[key] = bytes(content)
-        self.uploads.append((key, bytes(content), content_type))
+        with self._lock:
+            self.objects[key] = bytes(content)
+            self.uploads.append((key, bytes(content), content_type))
         return key
 
     def download_file(self, key: str) -> bytes:
-        if key not in self.objects:
+        with self._lock:
+            found = self.objects.get(key)
+            self._reads += 1
+            waits = self._read_barrier is not None and self._reads <= self._read_barrier.parties
+        if waits:
+            assert self._read_barrier is not None
+            self._read_barrier.wait()
+        if found is None:
             raise make_s3_error("NoSuchKey", key)
-        return self.objects[key]
+        return found
+
+    def object_exists(self, key: str) -> bool:
+        with self._lock:
+            return key in self.objects
+
+    def list_keys(self, prefix: str) -> list[str]:
+        with self._lock:
+            return sorted(k for k in self.objects if k.startswith(prefix))
+
+    def delete_files(self, keys: list[str]) -> list[str]:
+        with self._lock:
+            for key in keys:
+                self.objects.pop(key, None)
+        return []
+
+
+def seed_transparency_document(fake: FakeStorageClient, document: TransparencyDocument) -> None:
+    """Store ``document`` as the shared ``report.json``, as an earlier poll would."""
+    fake.upload_file(
+        TRANSPARENCY_OBJECT_KEY, document.model_dump_json().encode("utf-8"), "application/json",
+    )
+
+
+@pytest.fixture
+def fake_storage(monkeypatch: pytest.MonkeyPatch) -> FakeStorageClient:
+    """Point the transparency modules at a fresh in-memory store, caches cleared."""
+    fake = FakeStorageClient()
+    monkeypatch.setattr(transparency_store, "get_shared_storage", lambda settings: fake)
+    transparency_store.reset_shared_storage_cache()
+    donation_store.reset_donation_cache()
+    return fake
 
 
 @pytest.fixture
