@@ -90,7 +90,7 @@ describe("useScenarioPath", () => {
 
     it("refreshes usage while the cap banner is up, so it lifts without leaving the screen", () => {
       vi.useFakeTimers({ now: new Date("2026-11-20T15:00:00Z") });
-      api.usage.data = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+      api.usage.data = { remaining_fraction: 0, cap_reached: true, session_limit_reached: false, tutor_available: true };
       renderHook(() => useScenarioPath(PROFILE));
 
       vi.advanceTimersByTime(8 * 3_600_000);
@@ -101,7 +101,7 @@ describe("useScenarioPath", () => {
 
     it("does not refresh when the cap is not reached", () => {
       vi.useFakeTimers({ now: new Date("2026-11-20T15:00:00Z") });
-      api.usage.data = { remaining_fraction: 0.5, cap_reached: false, tutor_available: true };
+      api.usage.data = { remaining_fraction: 0.5, cap_reached: false, session_limit_reached: false, tutor_available: true };
       renderHook(() => useScenarioPath(PROFILE));
 
       vi.advanceTimersByTime(24 * 3_600_000);
