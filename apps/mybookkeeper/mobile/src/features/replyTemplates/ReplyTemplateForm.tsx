@@ -1,7 +1,7 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { Banner, confirmDiscard, FormField, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, confirmDiscard, FormField, LoadingButton, ScrollWithPinnedBar, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import {
   messageCounter,
   REPLY_TEMPLATE_BODY_COUNTER_FROM,
@@ -61,54 +61,56 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
   }
 
   return (
-    <HeaderKeyboardAvoidingView>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        {banner ? <Banner message={banner} /> : null}
-        <FormField
-          editable={!isBusy}
-          error={nameError}
-          hint={MESSAGES.nameHint}
-          label={MESSAGES.nameLabel}
-          maxLength={REPLY_TEMPLATE_NAME_MAX_LENGTH}
-          onChangeText={(name) => edit("name", name)}
-          onSubmitEditing={() => insertion.focus("subject")}
-          required
-          returnKeyType="next"
-          value={values.name}
-        />
-        <FormField
-          {...fieldProps("subject")}
-          error={hasTried ? problems.subject : undefined}
-          label={MESSAGES.subject}
-          maxLength={REPLY_TEMPLATE_SUBJECT_MAX_LENGTH}
-          onChangeText={(subject) => edit("subject", subject)}
-          required
-          value={values.subject}
-        />
-        <FormField
-          {...fieldProps("body")}
-          error={hasTried ? problems.body : undefined}
-          hint={messageHint}
-          inputStyle={{ minHeight: REPLY_TEMPLATE_BODY_MIN_HEIGHT }}
-          label={MESSAGES.message}
-          maxLength={REPLY_TEMPLATE_BODY_MAX_LENGTH}
-          multiline
-          onChangeText={(body) => edit("body", body)}
-          required
-          value={values.body}
-        />
-        <CollapsibleSection title={MESSAGES.variablesHelp}>
-          <View style={{ gap: spacing.sm }}>
-            {REPLY_TEMPLATE_VARIABLES.map(({ token, fillsIn }) => (
-              <TransactionFact key={token} label={token} value={fillsIn} />
-            ))}
-          </View>
-        </CollapsibleSection>
-        <LoadingButton disabled={isBusy || isLeaving} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={save}>
-          {original ? MESSAGES.saveChanges : MESSAGES.saveTemplate}
-        </LoadingButton>
-      </ScrollView>
-      <ReplyTemplateVariableBar disabled={isBusy || isLeaving} field={insertion.activeField} onInsert={insertion.insert} />
-    </HeaderKeyboardAvoidingView>
+    <ScrollWithPinnedBar
+      bar={<ReplyTemplateVariableBar disabled={isBusy || isLeaving} field={insertion.activeField} onInsert={insertion.insert} />}
+      contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+    >
+      {banner ? <Banner message={banner} /> : null}
+      <FormField
+        editable={!isBusy}
+        error={nameError}
+        hint={MESSAGES.nameHint}
+        label={MESSAGES.nameLabel}
+        maxLength={REPLY_TEMPLATE_NAME_MAX_LENGTH}
+        onChangeText={(name) => edit("name", name)}
+        onSubmitEditing={() => insertion.focus("subject")}
+        required
+        returnKeyType="next"
+        value={values.name}
+      />
+      <FormField
+        {...fieldProps("subject")}
+        error={hasTried ? problems.subject : undefined}
+        label={MESSAGES.subject}
+        maxLength={REPLY_TEMPLATE_SUBJECT_MAX_LENGTH}
+        onChangeText={(subject) => edit("subject", subject)}
+        required
+        value={values.subject}
+      />
+      <FormField
+        {...fieldProps("body")}
+        error={hasTried ? problems.body : undefined}
+        hint={messageHint}
+        inputStyle={{ minHeight: REPLY_TEMPLATE_BODY_MIN_HEIGHT }}
+        label={MESSAGES.message}
+        maxLength={REPLY_TEMPLATE_BODY_MAX_LENGTH}
+        multiline
+        onChangeText={(body) => edit("body", body)}
+        required
+        value={values.body}
+      />
+      <CollapsibleSection title={MESSAGES.variablesHelp}>
+        <View style={{ gap: spacing.sm }}>
+          {REPLY_TEMPLATE_VARIABLES.map(({ token, fillsIn }) => (
+            <TransactionFact key={token} label={token} value={fillsIn} />
+          ))}
+        </View>
+      </CollapsibleSection>
+      <LoadingButton disabled={isBusy || isLeaving} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={save}>
+        {original ? MESSAGES.saveChanges : MESSAGES.saveTemplate}
+      </LoadingButton>
+    </ScrollWithPinnedBar>
   );
 }

@@ -4,9 +4,9 @@ import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE, LEASE_VALUE
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
-import { Banner, deviceDecimalSeparator, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } from "../../constants/leaseDocuments";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { useWrite } from "../../lib/useWrite";
@@ -66,57 +66,62 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
   }
 
   return (
-    <HeaderKeyboardAvoidingView>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" testID="add-document-form">
-        <View style={{ gap: spacing.xs }}>
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
-            {MESSAGES.fillTitle}
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{asked.length === 0 ? MESSAGES.nothingToFill : MESSAGES.fillBody}</Text>
-        </View>
-        {write.failure ? (
-          isLeaseDocumentsLockedFailure(write.error) ? (
-            // The picker behind this screen has caught up with the lock, so going back shows what can still be picked.
-            <Banner actions={[{ label: MESSAGES.backToPicking, onPress: () => goBackOr(`/leases/${leaseId}/add-document`) }]} message={LEASE_DOCUMENTS_LOCKED_MESSAGE} />
-          ) : isLeaseValueLockedFailure(write.error) ? (
-            <Banner message={LEASE_VALUE_LOCKED_MESSAGE} />
-          ) : (
-            <Banner message={ADD_DOCUMENT_COPY[write.failure]} />
-          )
-        ) : null}
-        {asked.map((item) => {
-          const provenance = prefillProvenanceLabel(item);
-          const isEdited = documentValue(item, edits) !== item.value;
-          const problem = problems[item.key];
-          return (
-            <PlaceholderField
-              caption={item.is_read_only ? LEASE_VALUE_READ_ONLY_NOTE : isEdited || !provenance ? null : prefillCaption(provenance)}
-              error={hasTried && problem ? (problem === "required" ? PLACEHOLDER_PROBLEM_MESSAGES.required : PLACEHOLDER_PROBLEM_MESSAGES.not_a_number(decimalSeparator)) : undefined}
-              inputType={item.input_type}
-              isDisabled={locked || item.is_read_only}
-              key={item.key}
-              label={item.display_label}
-              onChange={(value) => setEdits((current) => ({ ...current, [item.key]: value }))}
-              required={item.required}
-              value={documentValue(item, edits)}
-            />
-          );
-        })}
-      </ScrollView>
-      <PinnedBar
-        bottomSpacing={spacing.md}
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.background,
-        }}
-      >
-        <LoadingButton disabled={locked} isLoading={write.isBusy} loadingText={MESSAGES.making} onPress={() => void make()}>
-          {MESSAGES.make}
-        </LoadingButton>
-      </PinnedBar>
-    </HeaderKeyboardAvoidingView>
+    <ScrollWithPinnedBar
+      bar={
+        <PinnedBar
+          bottomSpacing={spacing.md}
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+          }}
+        >
+          <LoadingButton disabled={locked} isLoading={write.isBusy} loadingText={MESSAGES.making} onPress={() => void make()}>
+            {MESSAGES.make}
+          </LoadingButton>
+        </PinnedBar>
+      }
+      contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      testID="add-document-form"
+    >
+      <View style={{ gap: spacing.xs }}>
+        <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
+          {MESSAGES.fillTitle}
+        </Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{asked.length === 0 ? MESSAGES.nothingToFill : MESSAGES.fillBody}</Text>
+      </View>
+      {write.failure ? (
+        isLeaseDocumentsLockedFailure(write.error) ? (
+          // The picker behind this screen has caught up with the lock, so going back shows what can still be picked.
+          <Banner actions={[{ label: MESSAGES.backToPicking, onPress: () => goBackOr(`/leases/${leaseId}/add-document`) }]} message={LEASE_DOCUMENTS_LOCKED_MESSAGE} />
+        ) : isLeaseValueLockedFailure(write.error) ? (
+          <Banner message={LEASE_VALUE_LOCKED_MESSAGE} />
+        ) : (
+          <Banner message={ADD_DOCUMENT_COPY[write.failure]} />
+        )
+      ) : null}
+      {asked.map((item) => {
+        const provenance = prefillProvenanceLabel(item);
+        const isEdited = documentValue(item, edits) !== item.value;
+        const problem = problems[item.key];
+        return (
+          <PlaceholderField
+            caption={item.is_read_only ? LEASE_VALUE_READ_ONLY_NOTE : isEdited || !provenance ? null : prefillCaption(provenance)}
+            error={hasTried && problem ? (problem === "required" ? PLACEHOLDER_PROBLEM_MESSAGES.required : PLACEHOLDER_PROBLEM_MESSAGES.not_a_number(decimalSeparator)) : undefined}
+            inputType={item.input_type}
+            isDisabled={locked || item.is_read_only}
+            key={item.key}
+            label={item.display_label}
+            onChange={(value) => setEdits((current) => ({ ...current, [item.key]: value }))}
+            required={item.required}
+            value={documentValue(item, edits)}
+          />
+        );
+      })}
+    </ScrollWithPinnedBar>
   );
 }

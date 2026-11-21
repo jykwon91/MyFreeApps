@@ -11,6 +11,8 @@ const HEADER_KEYBOARD_AVOIDING_VIEW = /<HeaderKeyboardAvoidingView[\s/>]/;
 const SHARED_AVOIDING_VIEW = resolve(__dirname, "..", "src", "components", "HeaderKeyboardAvoidingView.tsx");
 // The one bar that pads for the home indicator under the avoiding view, because it lets go of it as the keyboard opens.
 const SHARED_PINNED_BAR = resolve(__dirname, "..", "src", "components", "PinnedBar.tsx");
+// The shared scroll view pads Android's content for the navigation bar, and says so with padForNavigationBar so a bar below it can take that over.
+const SHARED_KEYBOARD_AWARE_SCROLL = resolve(__dirname, "..", "src", "components", "KeyboardAwareScroll.tsx");
 // A raw scroll view that holds a field must keep a tap on a button working while the keyboard is up; KeyboardAwareScroll sets it.
 const RAW_SCROLL_VIEWS = new Set(["ScrollView", "FlatList", "SectionList"]);
 const TAP_PERSIST_PROP = "keyboardShouldPersistTaps";
@@ -151,7 +153,7 @@ function usesBottomSafeAreaView(code: string): boolean {
 
 /** Why this file's padding for the home indicator would float above the keyboard, under the avoiding view. */
 function homeIndicatorProblems(path: string, code: string): string[] {
-  if (resolve(path) === SHARED_PINNED_BAR) return [];
+  if ([SHARED_PINNED_BAR, SHARED_KEYBOARD_AWARE_SCROLL].includes(resolve(path))) return [];
   return [...(usesBottomInset(code) ? [INSET_PROBLEM] : []), ...(usesBottomSafeAreaView(code) ? [SAFE_AREA_VIEW_PROBLEM] : [])];
 }
 

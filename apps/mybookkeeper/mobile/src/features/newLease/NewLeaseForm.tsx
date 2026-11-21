@@ -1,9 +1,9 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, confirmDiscard, deviceDecimalSeparator, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useConfirmLeave, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
+import { Alert, Keyboard, Text, View } from "react-native";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
@@ -40,7 +40,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   const [isFindingNewer, setIsFindingNewer] = useState(false);
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const isSubmitting = useRef(false);
-  const scroller = useRef<ScrollViewInstance>(null);
+  const scroller = useRef<KeyboardAwareScrollRef>(null);
   const fieldTops = useRef<Record<string, number>>({});
   const isDirty = hasChanges(fields, edits);
   const missing = missingRequired(fields, edits);
@@ -131,70 +131,70 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   }
 
   return (
-    <HeaderKeyboardAvoidingView>
-      <ScrollView
-        contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        ref={scroller}
-        testID="new-lease-form"
-      >
-        <View style={{ gap: spacing.xs }}>
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
-            {MESSAGES.whatGoesIn}
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{leaseFor(applicantName, flow.templateIds.map((id) => templateNames[id]).filter((name): name is string => Boolean(name)))}</Text>
-        </View>
-        {flow.parentLeaseId ? (
-          <Banner actions={[{ label: MESSAGES.seeEarlier, onPress: () => router.push(`/leases/${flow.parentLeaseId}`) }]} message={MESSAGES.followsEarlier} tone="success" />
-        ) : null}
-        {failure ? <Banner message={failure} /> : null}
-        {fields.length === 0 ? <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{MESSAGES.nothingToFill}</Text> : null}
-        {fields.map((field) => {
-          const { key } = field.placeholder;
-          return (
-            <View
-              key={key}
-              onLayout={(event) => {
-                fieldTops.current[key] = event.nativeEvent.layout.y;
-              }}
-            >
-              <PlaceholderField
-                caption={captionFor(field)}
-                error={showMissing ? fieldProblem(field) : undefined}
-                isDisabled={isBusy}
-                onChange={(value) => setEdits((current) => ({ ...current, [key]: value }))}
-                inputType={field.placeholder.input_type}
-                label={field.placeholder.display_label}
-                required={field.placeholder.required}
-                value={placeholderValue(field, edits)}
-              />
-            </View>
-          );
-        })}
-        {computed.length > 0 ? (
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.workedOut} ${computed.map((field) => field.placeholder.display_label).join(", ")}`}</Text>
-        ) : null}
-        {isDirty ? (
-          <LoadingButton disabled={isBusy} onPress={confirmReset} variant="ghost">
-            {MESSAGES.reset}
+    <ScrollWithPinnedBar
+      bar={
+        <PinnedBar
+          bottomSpacing={spacing.md}
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+          }}
+        >
+          <LoadingButton isLoading={isBusy} loadingText={MESSAGES.creatingDraft} onPress={() => void submit()}>
+            {MESSAGES.createDraft}
           </LoadingButton>
-        ) : null}
-      </ScrollView>
-      <PinnedBar
-        bottomSpacing={spacing.md}
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.background,
-        }}
-      >
-        <LoadingButton isLoading={isBusy} loadingText={MESSAGES.creatingDraft} onPress={() => void submit()}>
-          {MESSAGES.createDraft}
+        </PinnedBar>
+      }
+      contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      ref={scroller}
+      testID="new-lease-form"
+    >
+      <View style={{ gap: spacing.xs }}>
+        <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
+          {MESSAGES.whatGoesIn}
+        </Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{leaseFor(applicantName, flow.templateIds.map((id) => templateNames[id]).filter((name): name is string => Boolean(name)))}</Text>
+      </View>
+      {flow.parentLeaseId ? (
+        <Banner actions={[{ label: MESSAGES.seeEarlier, onPress: () => router.push(`/leases/${flow.parentLeaseId}`) }]} message={MESSAGES.followsEarlier} tone="success" />
+      ) : null}
+      {failure ? <Banner message={failure} /> : null}
+      {fields.length === 0 ? <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{MESSAGES.nothingToFill}</Text> : null}
+      {fields.map((field) => {
+        const { key } = field.placeholder;
+        return (
+          <View
+            key={key}
+            onLayout={(event) => {
+              fieldTops.current[key] = event.nativeEvent.layout.y;
+            }}
+          >
+            <PlaceholderField
+              caption={captionFor(field)}
+              error={showMissing ? fieldProblem(field) : undefined}
+              isDisabled={isBusy}
+              onChange={(value) => setEdits((current) => ({ ...current, [key]: value }))}
+              inputType={field.placeholder.input_type}
+              label={field.placeholder.display_label}
+              required={field.placeholder.required}
+              value={placeholderValue(field, edits)}
+            />
+          </View>
+        );
+      })}
+      {computed.length > 0 ? (
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.workedOut} ${computed.map((field) => field.placeholder.display_label).join(", ")}`}</Text>
+      ) : null}
+      {isDirty ? (
+        <LoadingButton disabled={isBusy} onPress={confirmReset} variant="ghost">
+          {MESSAGES.reset}
         </LoadingButton>
-      </PinnedBar>
-    </HeaderKeyboardAvoidingView>
+      ) : null}
+    </ScrollWithPinnedBar>
   );
 }

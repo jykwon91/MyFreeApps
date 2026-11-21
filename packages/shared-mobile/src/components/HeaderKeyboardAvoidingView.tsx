@@ -8,7 +8,8 @@ import type { HeaderKeyboardAvoidingViewProps } from "../types/HeaderKeyboardAvo
  *
  * The view pads by how far its bottom edge sits below the keyboard's top. automaticOffset measures where the view
  * really is in the window, so the header above it, whatever its height, and a status bar drawn over are counted
- * without an offset. A screen that only scrolls should use KeyboardAwareScroll instead.
+ * without an offset. A screen that only scrolls should use KeyboardAwareScroll instead, and a scrolling form with a
+ * bar pinned below it ScrollWithPinnedBar, which does not use this view.
  */
 export default function HeaderKeyboardAvoidingView({ children }: HeaderKeyboardAvoidingViewProps) {
   return (
