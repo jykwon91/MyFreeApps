@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
@@ -56,6 +56,9 @@ export default function LogEventDialog({
     }
   };
 
+  const occurredAtFeedback = { id: "log-event-when", error: errors.occurred_at?.message };
+  const occurredAtAria = fieldFeedbackAria(occurredAtFeedback);
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -95,6 +98,8 @@ export default function LogEventDialog({
               </label>
               <input
                 id="log-event-when"
+                {...occurredAtAria}
+                aria-describedby={occurredAtAria["aria-describedby"] ?? "log-event-when-hint"}
                 type="datetime-local"
                 max={defaultOccurredAt()}
                 {...register("occurred_at", {
@@ -104,9 +109,9 @@ export default function LogEventDialog({
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               />
               {errors.occurred_at ? (
-                <p className="text-xs text-destructive mt-1">{errors.occurred_at.message}</p>
+                <FieldFeedback {...occurredAtFeedback} />
               ) : (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p id="log-event-when-hint" className="text-xs text-muted-foreground mt-1">
                   When it happened. Put an upcoming interview's time in the interview's date field.
                 </p>
               )}

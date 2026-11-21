@@ -35,3 +35,9 @@ export const SCREENING_STATUS_LABELS: Record<ScreeningStatus, string> = {
 
 /** Without one, a dead connection leaves the upload spinning forever. */
 export const SCREENING_UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+
+export const SCREENING_UPLOAD_ERRORS = {
+  file: "A PDF is required.",
+  status: "Please choose an outcome.",
+  snippet: "Required for declined / inconclusive outcomes.",
+} as const;

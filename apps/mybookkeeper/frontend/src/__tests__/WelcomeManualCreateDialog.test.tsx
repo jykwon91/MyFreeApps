@@ -70,6 +70,17 @@ describe("WelcomeManualCreateDialog", () => {
     expect(seed).toBeChecked();
   });
 
+  it("links the title error to the title field", async () => {
+    render(
+      <WelcomeManualCreateDialog properties={[PROPERTY]} onClose={vi.fn()} onCreated={vi.fn()} />,
+    );
+    await userEvent.click(screen.getByTestId("welcome-manual-create-submit"));
+    const title = screen.getByTestId("welcome-manual-create-title");
+    expect(title).toBeInvalid();
+    expect(title).toHaveAccessibleDescription(/\S/);
+    expect(createMutationMock).not.toHaveBeenCalled();
+  });
+
   it("creates with seed_default_sections=true by default and calls onCreated", async () => {
     createMutationMock.mockReturnValue({ unwrap: () => Promise.resolve(CREATED) });
     const onCreated = vi.fn();

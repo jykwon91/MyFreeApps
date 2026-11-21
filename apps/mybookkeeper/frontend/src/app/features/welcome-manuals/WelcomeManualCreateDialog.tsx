@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import { useCreateWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { WelcomeManualCreateFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-create-form-values";
@@ -80,10 +80,9 @@ export default function WelcomeManualCreateDialog({
                   placeholder="e.g. Welcome to the Lakeview Suite"
                   data-testid="welcome-manual-create-title"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.title?.message })}
                 />
-                {errors.title ? (
-                  <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
-                ) : null}
+                <FieldFeedback id={field.id} error={errors.title?.message} />
               </>
             )}
           </FormField>

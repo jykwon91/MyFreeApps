@@ -18,6 +18,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: (m: string) => showSuccessMock(m),
 }));
 
+import { SCREENING_UPLOAD_ERRORS } from "@mybookkeeper/api-client/constants/screeningStatus";
 import UploadScreeningResultModal from "@/app/features/screening/UploadScreeningResultModal";
 
 function renderModal(onClose: () => void = vi.fn()) {
@@ -76,6 +77,9 @@ describe("UploadScreeningResultModal", () => {
     await userEvent.click(screen.getByTestId("upload-screening-submit"));
     expect(uploadMock).not.toHaveBeenCalled();
     expect(showErrorMock).toHaveBeenCalled();
+    const file = screen.getByTestId("upload-screening-file");
+    expect(file).toBeInvalid();
+    expect(file).toHaveAccessibleDescription(SCREENING_UPLOAD_ERRORS.file);
   });
 
   it("blocks submit on adverse outcome with no snippet", async () => {
@@ -86,6 +90,9 @@ describe("UploadScreeningResultModal", () => {
     await userEvent.click(screen.getByTestId("upload-screening-submit"));
     expect(uploadMock).not.toHaveBeenCalled();
     expect(showErrorMock).toHaveBeenCalled();
+    const snippet = screen.getByTestId("upload-screening-snippet");
+    expect(snippet).toBeInvalid();
+    expect(snippet).toHaveAccessibleDescription(SCREENING_UPLOAD_ERRORS.snippet);
   });
 
   it("submits the correct payload for a 'pass' outcome", async () => {

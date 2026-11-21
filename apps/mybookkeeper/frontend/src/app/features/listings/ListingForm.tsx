@@ -1,10 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
 import { listingFormResolver } from "@/shared/lib/listing-form-resolver";
-import ListingFormError from "./ListingFormError";
 import { LISTING_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/listingForm";
 import { LISTING_ROOM_TYPES, LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import {
@@ -132,8 +131,9 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="listing-form-title"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.title?.message })}
                 />
-                <ListingFormError message={errors.title?.message} />
+                <FieldFeedback id={field.id} error={errors.title?.message} />
               </>
             )}
           </FormField>
@@ -146,6 +146,7 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="listing-form-property"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.property_id?.message })}
                 >
                   <option value="">Select a property…</option>
                   {properties.map((p) => (
@@ -154,7 +155,7 @@ export default function ListingForm({
                     </option>
                   ))}
                 </select>
-                <ListingFormError message={errors.property_id?.message} />
+                <FieldFeedback id={field.id} error={errors.property_id?.message} />
               </>
             )}
           </FormField>
@@ -195,8 +196,9 @@ export default function ListingForm({
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     data-testid="listing-form-monthly-rate"
                     {...field}
+                    {...fieldFeedbackAria({ id: field.id, error: errors.monthly_rate?.message })}
                   />
-                  <ListingFormError message={errors.monthly_rate?.message} />
+                  <FieldFeedback id={field.id} error={errors.monthly_rate?.message} />
                 </>
               )}
             </FormField>
@@ -209,8 +211,9 @@ export default function ListingForm({
                   {...register("weekly_rate")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.weekly_rate?.message })}
                 />
-                <ListingFormError message={errors.weekly_rate?.message} />
+                <FieldFeedback id={field.id} error={errors.weekly_rate?.message} />
                 </>
               )}
             </FormField>
@@ -223,8 +226,9 @@ export default function ListingForm({
                   {...register("nightly_rate")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.nightly_rate?.message })}
                 />
-                <ListingFormError message={errors.nightly_rate?.message} />
+                <FieldFeedback id={field.id} error={errors.nightly_rate?.message} />
                 </>
               )}
             </FormField>
@@ -240,8 +244,9 @@ export default function ListingForm({
                   {...register("min_stay_days")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.min_stay_days?.message })}
                 />
-                <ListingFormError message={errors.min_stay_days?.message} />
+                <FieldFeedback id={field.id} error={errors.min_stay_days?.message} />
                 </>
               )}
             </FormField>
@@ -254,8 +259,9 @@ export default function ListingForm({
                   {...register("max_stay_days")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.max_stay_days?.message })}
                 />
-                <ListingFormError message={errors.max_stay_days?.message} />
+                <FieldFeedback id={field.id} error={errors.max_stay_days?.message} />
                 </>
               )}
             </FormField>
@@ -320,8 +326,9 @@ export default function ListingForm({
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 data-testid="listing-form-amenities"
                 {...field}
+                {...fieldFeedbackAria({ id: field.id, error: errors.amenities?.message })}
               />
-              <ListingFormError message={errors.amenities?.message} />
+              <FieldFeedback id={field.id} error={errors.amenities?.message} />
               </>
             )}
           </FormField>

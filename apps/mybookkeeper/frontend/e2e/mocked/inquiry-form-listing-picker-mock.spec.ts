@@ -3,6 +3,8 @@
  *
  * Fully mocks the API via page.route(), so it runs under playwright.layout.config.ts.
  *
+ * Also verifies a field's error is tied to its input (aria-invalid + described by the message).
+ *
  * Verifies a host with more listings than one page holds loads the next page with Load more, picks a
  * listing from it, and the inquiry is created linked to that listing.
  */
@@ -72,5 +74,20 @@ test.describe("New Inquiry listing picker", () => {
 
     await expect.poll(() => createdBodies.length).toBe(1);
     expect(createdBodies[0]).toMatchObject({ listing_id: listing(3).id, inquirer_name: "Pat Guest" });
+  });
+
+  test("a missing name is announced on the name field", async ({ page }) => {
+    await plantAuth(page);
+    await stubApi(page);
+
+    await page.goto("/inquiries");
+    await page.getByTestId("new-inquiry-button").locator("visible=true").first().click();
+    await page.getByTestId("inquiry-form-submit").click();
+
+    const name = page.getByTestId("inquiry-form-name");
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    const errorId = await name.getAttribute("aria-describedby");
+    expect(errorId).toBeTruthy();
+    await expect(page.locator(`[id="${errorId}"]`)).toHaveText(/\S/);
   });
 });

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Pencil, FileText } from "lucide-react";
+import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
@@ -124,6 +125,9 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                   {isEditing ? (
                     <div className="space-y-2">
                       <input
+                        id={`tax-field-${field.id}-value`}
+                        aria-label={`Override value for ${field.label}`}
+                        {...fieldFeedbackAria({ id: `tax-field-${field.id}-value`, error: problems.number })}
                         type="text"
                         inputMode={field.type === "numeric" ? "decimal" : undefined}
                         value={editValue}
@@ -131,9 +135,10 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                         className="border rounded px-2 py-1 text-sm w-full text-right"
                         autoFocus
                       />
-                      {problems.number ? <p className="text-xs text-red-600 text-right">{problems.number}</p> : null}
+                      <FieldFeedback id={`tax-field-${field.id}-value`} error={problems.number} />
                       <input
                         type="text"
+                        aria-label={`Reason for overriding ${field.label}`}
                         value={editReason}
                         onChange={(e) => setEditReason(e.target.value)}
                         placeholder="Reason for override..."

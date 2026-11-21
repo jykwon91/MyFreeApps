@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
 import {
   useCreateWorkHistoryMutation,
@@ -69,6 +69,9 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
     }
   };
 
+  const bulletsFeedback = { id: "wh-bullets", error: errors.bullets?.message };
+  const bulletsAria = fieldFeedbackAria(bulletsFeedback);
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -94,14 +97,13 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-company"
                   type="text"
+                  {...fieldFeedbackAria({ id: "wh-company", error: errors.company_name?.message })}
                   {...register("company_name")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Acme Corp"
                   autoFocus
                 />
-                {errors.company_name ? (
-                  <p className="text-xs text-destructive mt-1">{errors.company_name.message}</p>
-                ) : null}
+                <FieldFeedback id="wh-company" error={errors.company_name?.message} />
               </div>
               <div>
                 <label htmlFor="wh-title" className="block text-sm font-medium mb-1">
@@ -110,13 +112,12 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-title"
                   type="text"
+                  {...fieldFeedbackAria({ id: "wh-title", error: errors.title?.message })}
                   {...register("title")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Senior Engineer"
                 />
-                {errors.title ? (
-                  <p className="text-xs text-destructive mt-1">{errors.title.message}</p>
-                ) : null}
+                <FieldFeedback id="wh-title" error={errors.title?.message} />
               </div>
             </div>
 
@@ -128,12 +129,11 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-start-date"
                   type="date"
+                  {...fieldFeedbackAria({ id: "wh-start-date", error: errors.start_date?.message })}
                   {...register("start_date")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 />
-                {errors.start_date ? (
-                  <p className="text-xs text-destructive mt-1">{errors.start_date.message}</p>
-                ) : null}
+                <FieldFeedback id="wh-start-date" error={errors.start_date?.message} />
               </div>
               <div>
                 <label htmlFor="wh-end-date" className="block text-sm font-medium mb-1">End date</label>
@@ -141,12 +141,11 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                   id="wh-end-date"
                   type="date"
                   disabled={isCurrent}
+                  {...fieldFeedbackAria({ id: "wh-end-date", error: errors.end_date?.message })}
                   {...register("end_date")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {errors.end_date ? (
-                  <p className="text-xs text-destructive mt-1">{errors.end_date.message}</p>
-                ) : null}
+                <FieldFeedback id="wh-end-date" error={errors.end_date?.message} />
               </div>
             </div>
 
@@ -172,15 +171,17 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
               <label htmlFor="wh-bullets" className="block text-sm font-medium mb-1">Bullets</label>
               <textarea
                 id="wh-bullets"
+                {...bulletsAria}
+                aria-describedby={bulletsAria["aria-describedby"] ?? "wh-bullets-hint"}
                 {...register("bullets")}
                 rows={5}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"
                 placeholder={"One bullet per line, e.g.:\nLed microservices migration\nReduced p99 latency by 40%"}
               />
               {errors.bullets ? (
-                <p className="text-xs text-destructive mt-1">{errors.bullets.message}</p>
+                <FieldFeedback {...bulletsFeedback} />
               ) : (
-                <p className="text-xs text-muted-foreground mt-1">One achievement per line</p>
+                <p id="wh-bullets-hint" className="text-xs text-muted-foreground mt-1">One achievement per line</p>
               )}
             </div>
 

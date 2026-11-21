@@ -33,6 +33,9 @@ describe("CreateOrgPrompt", () => {
     await user.type(screen.getByPlaceholderText("e.g. My Properties LLC"), "   ");
     await user.click(screen.getByRole("button", { name: "Create organization" }));
     expect(screen.getByText("Enter a name.")).toBeInTheDocument();
+    const name = screen.getByRole("textbox", { name: "Organization name" });
+    expect(name).toBeInvalid();
+    expect(name).toHaveAccessibleDescription("Enter a name.");
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

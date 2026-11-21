@@ -1,8 +1,8 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useId, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
-import { ConfirmDialog, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { ConfirmDialog, FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
 import { SHARED_ROOM_OPTION, WELCOME_MANUAL_SECTION_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
@@ -35,6 +35,7 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
     });
     const [deleteSection] = useDeleteSectionMutation();
     const [updateSection, { isLoading: isRescoping }] = useUpdateSectionMutation();
+    const titleId = useId();
     const [confirmDelete, setConfirmDelete] = useState(false);
     const editor = useSectionEditor({ manualId, section });
 
@@ -129,15 +130,15 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
 
           <div className="flex-1 min-w-0">
             <input
+              id={titleId}
+              {...fieldFeedbackAria({ id: titleId, error: editor.titleError })}
               {...editor.register("title", { required: "Title is required" })}
               maxLength={WELCOME_MANUAL_SECTION_TITLE_MAX_LENGTH}
               className="w-full border rounded-md px-3 py-2 text-base font-medium min-h-[44px]"
               data-testid="welcome-manual-section-title"
               aria-label="Section title"
             />
-            {editor.titleError ? (
-              <p className="text-xs text-red-600 mt-1">{editor.titleError}</p>
-            ) : null}
+            <FieldFeedback id={titleId} error={editor.titleError} />
           </div>
 
           <button
