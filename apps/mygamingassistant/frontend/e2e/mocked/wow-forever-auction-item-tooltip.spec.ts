@@ -242,6 +242,7 @@ test("hovering a caster weapon over a worn caster weapon without spell stats not
   await expect(tooltip).toBeVisible();
   const block = tooltip.getByTestId("item-compare-block").filter({ hasText: "Zum'rah's Vexing Cane" });
   await expect(block).toContainText("Spell power isn't in the game files for one of these items, so it isn't counted");
+  await expect(block.getByTestId("item-compare-verdict")).toHaveCount(0);
 });
 
 test("a character that fails to load is a short note, and the item's stats still show", async ({ page }) => {

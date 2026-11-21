@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "No more fake upgrades from caster weapons",
+    "summary": "Some caster staves and daggers, like Zum'rah's Vexing Cane, get spell power the game files don't list, so comparing against one called a worse item an upgrade. Those comparisons now show the stat changes with a note instead of Upgrade or Downgrade.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot: school spell damage now counts",
     "summary": "The MGA Loot addon left Shadow, Fire, Frost, Nature, Arcane and Holy damage out of its score, so gear like the Twisted Shadow Staff read as a big downgrade. It now scores them with your class's weights. Download the addon from Item compare to get the fix.",
     "to": "/wow-forever/compare"
