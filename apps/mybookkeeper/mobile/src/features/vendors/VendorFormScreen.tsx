@@ -4,7 +4,7 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
@@ -21,6 +21,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
   const [hasTried, setHasTried] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const { submit, isBusy, isLeaving, failure } = useSaveVendor(original, decimalSeparator);
+  const fields = useFieldChain(["name", "phone", "email", "address", "hourlyRate", "flatRates"]);
 
   const problems = vendorFormProblems(values, decimalSeparator);
   const isDirty = Object.keys(vendorDirtyFields(values, saved, decimalSeparator)).length > 0;
@@ -44,17 +45,18 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
+          {...fields.field("name")}
           editable={!locked}
           error={errorFor("name")}
           label={MESSAGES.name}
           maxLength={VENDOR_NAME_MAX_LENGTH}
           onChangeText={(text) => edit("name", text)}
           required
-          returnKeyType="done"
           value={values.name}
         />
         <PickerField disabled={locked} label={MESSAGES.category} onPress={() => setIsPickerOpen(true)} valueLabel={VENDOR_CATEGORY_LABELS[values.category]} />
         <FormField
+          {...fields.field("phone")}
           editable={!locked}
           keyboardType="phone-pad"
           label={MESSAGES.phone}
@@ -63,6 +65,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           value={values.phone}
         />
         <FormField
+          {...fields.field("email")}
           autoCapitalize="none"
           autoComplete="email"
           editable={!locked}
@@ -74,6 +77,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           value={values.email}
         />
         <FormField
+          {...fields.field("address")}
           editable={!locked}
           label={MESSAGES.address}
           maxLength={VENDOR_ADDRESS_MAX_LENGTH}
@@ -81,6 +85,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           value={values.address}
         />
         <FormField
+          {...fields.field("hourlyRate")}
           editable={!locked}
           error={errorFor("hourly_rate")}
           keyboardType="decimal-pad"
@@ -90,6 +95,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           value={values.hourly_rate}
         />
         <FormField
+          {...fields.target("flatRates")}
           editable={!locked}
           label={MESSAGES.flatRates}
           multiline

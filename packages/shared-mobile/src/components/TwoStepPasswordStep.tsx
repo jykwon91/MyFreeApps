@@ -1,7 +1,9 @@
-import { type ComponentRef, useRef, useState } from "react";
-import { Text, type TextInput } from "react-native";
+import { useState } from "react";
+import { Text } from "react-native";
 import { requestTwoStepSetup } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
+import { useFieldChain } from "../hooks/useFieldChain";
+import { usePendingPress } from "../hooks/usePendingPress";
 import { useTheme } from "../theme/useTheme";
 import type { TwoStepPasswordStepProps } from "../types/TwoStepPasswordStepProps";
 import Banner from "./Banner";
@@ -13,7 +15,9 @@ export default function TwoStepPasswordStep({ appName, notice, onStarted, onAlre
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [failure, setFailure] = useState<string | null>(notice);
-  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
+  // One guard for Return and Continue, so neither can start a second setup while one is asked for.
+  const send = usePendingPress(submit, password.length === 0);
+  const fields = useFieldChain(["password"], { onLast: send.press, isLastBlocked: send.isPending || password.length === 0 });
 
   async function submit(): Promise<void> {
     setPasswordError(undefined);
@@ -29,7 +33,7 @@ export default function TwoStepPasswordStep({ appName, notice, onStarted, onAlre
         return;
       case "wrong_password":
         setPasswordError(MESSAGES.wrongPassword);
-        passwordInput.current?.focus();
+        fields.focus("password");
         return;
       case "rate_limited":
         setFailure(MESSAGES.tooManyTries);
@@ -48,6 +52,7 @@ export default function TwoStepPasswordStep({ appName, notice, onStarted, onAlre
       <Text style={{ color: colors.foreground, fontSize: fontSize.sm }}>{MESSAGES.passwordBody}</Text>
       {failure ? <Banner message={failure} /> : null}
       <FormField
+        {...fields.field("password")}
         autoCapitalize="none"
         autoComplete="current-password"
         autoCorrect={false}
@@ -55,12 +60,11 @@ export default function TwoStepPasswordStep({ appName, notice, onStarted, onAlre
         error={passwordError}
         label={MESSAGES.password}
         onChangeText={setPassword}
-        ref={passwordInput}
         secureTextEntry
         textContentType="password"
         value={password}
       />
-      <LoadingButton disabled={password.length === 0} loadingText={MESSAGES.gettingReady} onPress={submit}>
+      <LoadingButton disabled={password.length === 0} isLoading={send.isPending} loadingText={MESSAGES.gettingReady} onPress={send.press}>
         {MESSAGES.continue}
       </LoadingButton>
     </>

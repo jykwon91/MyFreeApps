@@ -14,7 +14,7 @@ import {
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
 import { sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
-import { deviceDecimalSeparator, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
@@ -44,6 +44,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const initial = reminderFormValues(plan, sms.available);
   const [values, setValues] = useState<RentReminderFormValues>(initial);
+  const fields = useFieldChain(["daysBefore", "howToPay", "fixedAmount"]);
 
   const change = <K extends keyof RentReminderFormValues>(key: K, value: RentReminderFormValues[K]) => setValues((current) => ({ ...current, [key]: value }));
   const hasChannel = values.emailEnabled || values.smsEnabled;
@@ -92,6 +93,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       ) : null}
 
       <FormField
+        {...fields.field("daysBefore")}
         editable={!isBusy}
         error={isDaysValid ? undefined : daysHintBad(MAX_SEND_DAYS_BEFORE[values.frequency])}
         hint={REMINDER_SETUP_MESSAGES.daysHintOk}
@@ -127,6 +129,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       <FieldError message={hasChannel ? undefined : REMINDER_SETUP_MESSAGES.needChannel} name={REMINDER_SETUP_MESSAGES.sendBy} />
 
       <FormField
+        {...fields.target("howToPay")}
         editable={!isBusy}
         hint={REMINDER_SETUP_MESSAGES.howToPayHint}
         inputStyle={{ minHeight: 72 }}
@@ -139,6 +142,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       />
 
       <FormField
+        {...fields.field("fixedAmount")}
         editable={!isBusy}
         error={amountOverrideProblem(values.amountOverride, decimalSeparator)}
         hint={REMINDER_SETUP_MESSAGES.fixedAmountHint}

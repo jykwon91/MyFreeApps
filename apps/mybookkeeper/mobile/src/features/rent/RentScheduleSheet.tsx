@@ -10,7 +10,7 @@ import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
 import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { RENT_MANAGE_MESSAGES, scheduleFixedTerms } from "../../constants/rentManage";
@@ -52,6 +52,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
   const [endDate, setEndDate] = useState<string | null>(existing?.end_date ?? null);
   const [graceDays, setGraceDays] = useState(graceDaysToText(existing?.grace_days));
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const fields = useFieldChain([!existing && "amount", "grace", "notes"]);
 
   const isEnding = startDate !== null && endDate !== null && endDate < startDate;
   const isGraceValid = isValidGraceDays(graceDays);
@@ -102,6 +103,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
       ) : (
         <>
           <FormField
+            {...fields.field("amount")}
             editable={!busy}
             error={amountProblem}
             hint={RENT_MANAGE_MESSAGES.amountHint}
@@ -128,6 +130,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{RENT_MANAGE_MESSAGES.endHint}</Text>
 
       <FormField
+        {...fields.field("grace")}
         editable={!busy}
         error={isGraceValid ? undefined : RENT_MANAGE_MESSAGES.graceInvalid}
         hint={RENT_MANAGE_MESSAGES.graceHint}
@@ -138,6 +141,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
       />
 
       <FormField
+        {...fields.target("notes")}
         editable={!busy}
         inputStyle={{ minHeight: 72 }}
         label={RENT_MANAGE_MESSAGES.notes}

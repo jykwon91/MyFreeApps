@@ -5,7 +5,7 @@ import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { isFlatService, marketRateFormProblems, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { localToday } from "@platform/core/utils/localToday";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
@@ -31,6 +31,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   const isBusy = isSaving || isRemoving;
   const locked = isBusy || isLeaving;
   const flat = isFlatService(serviceType);
+  const fields = useFieldChain(["figure", "source", "notes"]);
   const allProblems = marketRateFormProblems(serviceType, values, localToday(), decimalSeparator);
   const problems = hasTried ? allProblems : {};
   const set = (field: keyof MarketRateFormValues, value: string) => setValues((current) => ({ ...current, [field]: value }));
@@ -47,6 +48,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
     <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <FormField
+        {...fields.field("figure")}
         editable={!locked}
         error={problems.figure}
         hint={flat ? MESSAGES.figureFlatHint : MESSAGES.figureMeteredHint}
@@ -57,6 +59,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
         value={values.figure}
       />
       <FormField
+        {...fields.field("source")}
         editable={!locked}
         hint={MESSAGES.sourceHint}
         label={MESSAGES.source}
@@ -66,7 +69,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
         value={values.source}
       />
       <OptionalDateField disabled={locked} error={problems.observedOn} label={MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => set("observedOn", iso ?? "")} required startsAt={new Date()} value={values.observedOn || null} />
-      <FormField editable={!locked} error={problems.notes} label={MESSAGES.notes} maxLength={BENCHMARK_NOTES_MAX_LENGTH} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
+      <FormField {...fields.target("notes")} editable={!locked} error={problems.notes} label={MESSAGES.notes} maxLength={BENCHMARK_NOTES_MAX_LENGTH} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
       <LoadingButton disabled={locked} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={submit}>
         {MESSAGES.save}
       </LoadingButton>

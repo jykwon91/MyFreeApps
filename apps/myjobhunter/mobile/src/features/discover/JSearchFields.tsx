@@ -8,11 +8,12 @@ import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSe
 import type { JSearchFieldsProps } from "../../types/JSearchFieldsProps";
 
 /** A JSearch saved search's filters, as the website's dialogs have them. Remote-only sits by the location it turns off. */
-export default function JSearchFields({ values, onChange, drafts, onDraftChange, roleSuggestions, skillSuggestions, disabled }: JSearchFieldsProps) {
+export default function JSearchFields({ values, onChange, drafts, onDraftChange, roleSuggestions, skillSuggestions, disabled, fields }: JSearchFieldsProps) {
   return (
     <>
       <ChipListField
         disabled={disabled}
+        inputRef={fields.target("roles").ref}
         label={MESSAGES.rolesLabel}
         draft={drafts.roles ?? ""}
         onChange={(roles) => onChange({ roles })}
@@ -33,6 +34,7 @@ export default function JSearchFields({ values, onChange, drafts, onDraftChange,
         values={values.skills}
       />
       <FormField
+        {...fields.field("location")}
         editable={!disabled && !values.remoteOnly}
         hint={values.remoteOnly ? MESSAGES.locationDisabled : undefined}
         label={MESSAGES.locationLabel}
@@ -52,6 +54,7 @@ export default function JSearchFields({ values, onChange, drafts, onDraftChange,
       />
       <ChoiceGroup disabled={disabled} label={MESSAGES.experienceLabel} onChange={(experience) => onChange({ experience })} options={EXPERIENCE_OPTIONS} value={values.experience} />
       <FormField
+        {...fields.field("minSalary")}
         editable={!disabled}
         hint={MESSAGES.minSalaryHint}
         keyboardType="number-pad"

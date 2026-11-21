@@ -4,10 +4,11 @@ import ChipListField from "../../components/forms/ChipListField";
 import type { BoardFieldsProps } from "../../types/BoardFieldsProps";
 
 /** A Greenhouse or Lever saved search's fields: the board's token or slug, checked as it's typed, and keywords to leave out. */
-export default function BoardFields({ label, placeholder, value, onChangeValue, hint, isInvalid, keywords, onChangeKeywords, keywordsDraft, onKeywordsDraftChange, keywordsHint, disabled }: BoardFieldsProps) {
+export default function BoardFields({ label, placeholder, value, onChangeValue, hint, isInvalid, keywords, onChangeKeywords, keywordsDraft, onKeywordsDraftChange, keywordsHint, disabled, chain }: BoardFieldsProps) {
   return (
     <>
       <FormField
+        {...chain}
         autoCapitalize="none"
         autoComplete="off"
         autoCorrect={false}

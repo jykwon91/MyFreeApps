@@ -4,7 +4,7 @@ import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/l
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import { externalIdChanged, externalIdProblem } from "@mybookkeeper/api-client/utils/externalIdForm";
-import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
@@ -30,6 +30,7 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
   const problem = externalIdProblem(externalId, externalUrl);
   const isDirty = original ? externalIdChanged(original, externalId, externalUrl) : externalId.trim() !== "" || externalUrl.trim() !== "";
   const locked = isBusy || isLeaving;
+  const fields = useFieldChain(["externalId", "externalUrl"]);
   useDiscardPrompt(isDirty && !isLeaving, isBusy);
 
   if (!source) return <EmptyState body="" heading={MESSAGES.allLinked} />;
@@ -46,6 +47,7 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} hint={EXTERNAL_ID_SOURCE_HINTS[source]} label={MESSAGES.source} onPress={() => setIsPicking(true)} valueLabel={LISTING_SOURCE_LABELS[source]} />
         <FormField
+          {...fields.field("externalId")}
           editable={!locked}
           error={hasTried ? (problem ?? undefined) : undefined}
           hint={EXTERNAL_ID_SOURCE_HINTS[source]}
@@ -55,6 +57,7 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
           value={externalId}
         />
         <FormField
+          {...fields.field("externalUrl")}
           autoCapitalize="none"
           editable={!locked}
           hint={MESSAGES.urlHint}

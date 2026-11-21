@@ -3,7 +3,7 @@ import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortga
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
-import { FieldError, FormField, OptionRow, useTheme } from "@platform/mobile";
+import { FieldError, FormField, OptionRow, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
   MORTGAGE_FORM_MESSAGES as MESSAGES,
@@ -29,12 +29,25 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
   const { colors, spacing, fontSize } = useTheme();
   const messages = mortgageProblemMessages(decimalSeparator);
   const problemText = (field: keyof MortgageFormValues) => (problems[field] ? messages[problems[field]] : undefined);
+  const fields = useFieldChain<keyof MortgageFormValues>([
+    "lender",
+    "interestRate",
+    "balanceDollars",
+    "monthlyPrincipalDollars",
+    "monthlyInterestDollars",
+    "monthlyEscrowDollars",
+    "originalPrincipalDollars",
+    "termMonths",
+    "accountNumber",
+    "notes",
+  ]);
   const today = new Date();
 
   return (
     <>
-      <FormField editable={!isBusy} hint={MESSAGES.lenderHint} label={MESSAGES.lender} maxLength={MORTGAGE_TEXT_MAX_LENGTH} onChangeText={(text) => onChange("lender", text)} value={values.lender} />
+      <FormField {...fields.field("lender")} editable={!isBusy} hint={MESSAGES.lenderHint} label={MESSAGES.lender} maxLength={MORTGAGE_TEXT_MAX_LENGTH} onChangeText={(text) => onChange("lender", text)} value={values.lender} />
       <FormField
+        {...fields.field("interestRate")}
         editable={!isBusy}
         error={problemText("interestRate")}
         hint={MESSAGES.rateHint}
@@ -70,7 +83,7 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
         </View>
       ) : null}
 
-      <MortgageMoneyField error={problemText("balanceDollars")} isBusy={isBusy} label={MESSAGES.balance} onChange={onChange} field="balanceDollars" value={values.balanceDollars} />
+      <MortgageMoneyField fields={fields} error={problemText("balanceDollars")} isBusy={isBusy} label={MESSAGES.balance} onChange={onChange} field="balanceDollars" value={values.balanceDollars} />
       <OptionalDateField
         error={problemText("statementDate")}
         label={MESSAGES.statementDate}
@@ -82,12 +95,13 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
 
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.payoffIntro}</Text>
       <OptionalDateField label={MESSAGES.maturityDate} onChange={(iso) => onChange("maturityDate", iso ?? "")} startsAt={today} value={values.maturityDate || null} />
-      <MortgageMoneyField error={problemText("monthlyPrincipalDollars")} isBusy={isBusy} label={MESSAGES.monthlyPrincipal} onChange={onChange} field="monthlyPrincipalDollars" value={values.monthlyPrincipalDollars} />
-      <MortgageMoneyField error={problemText("monthlyInterestDollars")} isBusy={isBusy} label={MESSAGES.monthlyInterest} onChange={onChange} field="monthlyInterestDollars" value={values.monthlyInterestDollars} />
-      <MortgageMoneyField error={problemText("monthlyEscrowDollars")} hint={MESSAGES.escrowHint} isBusy={isBusy} label={MESSAGES.monthlyEscrow} onChange={onChange} field="monthlyEscrowDollars" value={values.monthlyEscrowDollars} />
+      <MortgageMoneyField fields={fields} error={problemText("monthlyPrincipalDollars")} isBusy={isBusy} label={MESSAGES.monthlyPrincipal} onChange={onChange} field="monthlyPrincipalDollars" value={values.monthlyPrincipalDollars} />
+      <MortgageMoneyField fields={fields} error={problemText("monthlyInterestDollars")} isBusy={isBusy} label={MESSAGES.monthlyInterest} onChange={onChange} field="monthlyInterestDollars" value={values.monthlyInterestDollars} />
+      <MortgageMoneyField fields={fields} error={problemText("monthlyEscrowDollars")} hint={MESSAGES.escrowHint} isBusy={isBusy} label={MESSAGES.monthlyEscrow} onChange={onChange} field="monthlyEscrowDollars" value={values.monthlyEscrowDollars} />
 
-      <MortgageMoneyField error={problemText("originalPrincipalDollars")} isBusy={isBusy} label={MESSAGES.originalLoan} onChange={onChange} field="originalPrincipalDollars" value={values.originalPrincipalDollars} />
+      <MortgageMoneyField fields={fields} error={problemText("originalPrincipalDollars")} isBusy={isBusy} label={MESSAGES.originalLoan} onChange={onChange} field="originalPrincipalDollars" value={values.originalPrincipalDollars} />
       <FormField
+        {...fields.field("termMonths")}
         editable={!isBusy}
         error={problemText("termMonths")}
         keyboardType="number-pad"
@@ -96,6 +110,7 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
         value={values.termMonths}
       />
       <FormField
+        {...fields.field("accountNumber")}
         editable={!isBusy}
         hint={MESSAGES.accountHint}
         label={MESSAGES.accountNumber}
@@ -104,6 +119,7 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
         value={values.accountNumber}
       />
       <FormField
+        {...fields.target("notes")}
         editable={!isBusy}
         label={MESSAGES.notes}
         maxLength={MORTGAGE_NOTES_MAX_LENGTH}

@@ -8,7 +8,7 @@ import { contactFormErrors } from "@myjobhunter/api-client/utils/contactFormErro
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
 import { hasContactFormErrors } from "@myjobhunter/api-client/utils/hasContactFormErrors";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
-import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
@@ -35,6 +35,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
   // What the server's 422 said about each field, until that field is changed.
   const [serverErrors, setServerErrors] = useState<ContactServerErrors>({});
   const counters = contactFormCounters(values);
+  const fields = useFieldChain(["name", "email", "linkedIn", "notes"]);
   const errors = hasTried ? contactFormErrors(values) : {};
 
   function change<Field extends keyof ContactFormValues>(field: Field) {
@@ -63,6 +64,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_CONTACT_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.addIntro}</Text>
       <FormField
+        {...fields.field("name")}
         autoCapitalize="words"
         editable={!isLoading}
         counter={counters.name}
@@ -73,6 +75,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
         value={values.name}
       />
       <FormField
+        {...fields.field("email")}
         autoCapitalize="none"
         autoComplete="off"
         autoCorrect={false}
@@ -87,6 +90,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
       />
       <ChoiceGroup disabled={isLoading} label={MESSAGES.roleLabel} onChange={change("role")} options={CONTACT_ROLE_CHOICES} value={values.role} />
       <FormField
+        {...fields.field("linkedIn")}
         autoCapitalize="none"
         autoCorrect={false}
         editable={!isLoading}
@@ -99,6 +103,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
         value={values.linkedin_url}
       />
       <FormField
+        {...fields.target("notes")}
         editable={!isLoading}
         counter={counters.notes}
         error={contactFieldMessage(errors, serverErrors, "notes")}

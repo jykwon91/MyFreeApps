@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -37,6 +37,7 @@ export default function NewTransactionForm() {
   const [openSheet, setOpenSheet] = useState<SheetName | null>(null);
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const fields = useFieldChain(["amount", "vendor", "description"]);
 
   const locked = isSaving || isLeaving;
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
@@ -126,6 +127,7 @@ export default function NewTransactionForm() {
             value={values.type}
           />
           <FormField
+            {...fields.field("amount")}
             error={amountProblem}
             keyboardType="decimal-pad"
             label="Amount (USD)"
@@ -134,8 +136,8 @@ export default function NewTransactionForm() {
             required
             value={values.amount}
           />
-          <FormField label="Vendor" onChangeText={(vendor) => update({ vendor })} placeholder="e.g. Home Depot" value={values.vendor} />
-          <FormField label="Description" multiline onChangeText={(description) => update({ description })} placeholder="Optional details" value={values.description} />
+          <FormField {...fields.field("vendor")} label="Vendor" onChangeText={(vendor) => update({ vendor })} placeholder="e.g. Home Depot" value={values.vendor} />
+          <FormField {...fields.target("description")} label="Description" multiline onChangeText={(description) => update({ description })} placeholder="Optional details" value={values.description} />
           <PickerField label="Category" onPress={() => setOpenSheet("category")} value={categoryLabel(values.category)} />
           <PickerField label="Property" onPress={() => setOpenSheet("property")} value={propertyLabel(values.propertyId, properties)} />
           <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
