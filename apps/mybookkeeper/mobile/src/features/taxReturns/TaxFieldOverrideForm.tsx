@@ -3,7 +3,7 @@ import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/F
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
 import { TAX_FIELD_LIMITS } from "@mybookkeeper/api-client/constants/taxFieldLimits";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { TAX_FIELD_NUMERIC_KEYBOARD, TAX_FIELD_OVERRIDE_ACTION, TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES, TAX_FIELD_OVERRIDE_YES_NO } from "../../constants/taxFieldOverride";
@@ -23,6 +23,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
   const locked = isBusy || isLeaving;
   const isBoolean = field.type === "boolean";
   const canClear = !isBoolean && field.value !== null;
+  const fields = useFieldChain([!isBoolean && "value", "reason"]);
 
   useDiscardPrompt((text !== initial || reason !== "") && !isLeaving, isBusy);
 
@@ -48,6 +49,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
         <SegmentedControl accessibilityLabel={MESSAGES.booleanLabel} onChange={(value) => !locked && setText(value)} segments={TAX_FIELD_OVERRIDE_YES_NO} value={text === "true" ? "true" : "false"} />
       ) : (
         <FormField
+          {...fields.field("value")}
           editable={!locked}
           error={problems.number}
           keyboardType={field.type === "numeric" ? TAX_FIELD_NUMERIC_KEYBOARD : "default"}
@@ -62,6 +64,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
         />
       )}
       <FormField
+        {...fields.target("reason")}
         editable={!locked}
         error={problems.reason}
         hint={MESSAGES.reasonHint}

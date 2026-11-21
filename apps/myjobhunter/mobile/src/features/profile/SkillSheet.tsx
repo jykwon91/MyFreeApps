@@ -4,7 +4,7 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { skillCreateRequest } from "@myjobhunter/api-client/utils/skillCreateRequest";
 import { skillNameProblem } from "@myjobhunter/api-client/utils/skillNameProblem";
-import { FormField, FormSheet, useToast } from "@platform/mobile";
+import { FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SKILL_MESSAGES as MESSAGES } from "../../constants/profileSkills";
@@ -24,6 +24,7 @@ export default function SkillSheet({ existingNames, onClose }: SkillSheetProps) 
   // Names the server said are taken (a 409: added on another device, not yet in the list here).
   const [takenNames, setTakenNames] = useState<readonly string[]>([]);
   const knownNames = [...existingNames, ...takenNames];
+  const fields = useFieldChain(["name"], { onLast: save, isLastBlocked: isLoading, lastReturnKey: "done" });
   const problem = hasTried ? skillNameProblem(name, knownNames) : undefined;
 
   async function save(): Promise<void> {
@@ -43,6 +44,7 @@ export default function SkillSheet({ existingNames, onClose }: SkillSheetProps) 
   return (
     <FormSheet failure={failure} hasUnsavedChanges={name.trim() !== "" || years !== ""} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <FormField
+        {...fields.field("name")}
         autoCorrect={false}
         counter={characterCounter(name.trim(), SKILL_NAME_MAX_LENGTH)}
         editable={!isLoading}

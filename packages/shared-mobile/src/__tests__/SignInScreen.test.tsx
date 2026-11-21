@@ -7,6 +7,7 @@ import type { MobileSession } from "../types/MobileSession";
 import type { RegistrationMode } from "../types/RegistrationMode";
 import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
+import { forgetFocusedFields, lastFocusedField } from "../../test-support/focusedField";
 import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi", () => ({
@@ -86,6 +87,44 @@ describe("SignInScreen", () => {
     await fillAndSubmit(" spaced ");
     expect(signIn).toHaveBeenCalledWith({ email: "me@example.com", password: " spaced ", totpCode: undefined });
     expect(onSignedIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves from the email to the password, then signs in, from the keyboard", async () => {
+    forgetFocusedFields();
+    const signIn = jest.fn().mockResolvedValue({ outcome: "signedIn" });
+    await renderScreen(signIn);
+    await fireEvent(screen.getByLabelText("Email"), "submitEditing");
+    expect(lastFocusedField()).toBe("Password");
+
+    await fireEvent.changeText(screen.getByLabelText("Password"), "secret");
+    await fireEvent(screen.getByLabelText("Password"), "submitEditing");
+    expect(signIn).toHaveBeenCalledWith({ email: "kept@example.com", password: "secret", totpCode: undefined });
+  });
+
+  it("signs in once when Return is followed by a tap on Sign in, and shows it signing in", async () => {
+    let answer = (_result: SignInResult): void => undefined;
+    const signIn = jest.fn(() => new Promise<SignInResult>((resolve) => (answer = resolve)));
+    await renderScreen(signIn);
+    await fireEvent.changeText(screen.getByLabelText("Email"), "me@example.com");
+    await fireEvent.changeText(screen.getByLabelText("Password"), "secret");
+    await fireEvent(screen.getByLabelText("Password"), "submitEditing");
+
+    expect(screen.getByTestId("loading-button-spinner")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Signing in..." }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+    await act(async () => answer({ outcome: "signedIn" }));
+  });
+
+  it("signs in once when Sign in is tapped and then Return pressed", async () => {
+    let answer = (_result: SignInResult): void => undefined;
+    const signIn = jest.fn(() => new Promise<SignInResult>((resolve) => (answer = resolve)));
+    await renderScreen(signIn);
+    await fireEvent.changeText(screen.getByLabelText("Email"), "me@example.com");
+    await fireEvent.changeText(screen.getByLabelText("Password"), "secret");
+    await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    await fireEvent(screen.getByLabelText("Password"), "submitEditing");
+    expect(signIn).toHaveBeenCalledTimes(1);
+    await act(async () => answer({ outcome: "signedIn" }));
   });
 
   it("closes straight away when reached already signed in", async () => {

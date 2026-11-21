@@ -1,6 +1,6 @@
 import { INTERVIEW_LOCATION_MAX_LENGTH } from "@myjobhunter/api-client/constants/interviewDetailLimits";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, useTheme } from "@platform/mobile";
+import { FormField, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
 import { INTERVIEW_TYPE_OPTIONS } from "../../constants/eventOptions";
@@ -11,6 +11,7 @@ import DateTimeField from "./DateTimeField";
 /** The website's interview details: only the type is required, the rest is what's known so far. */
 export default function InterviewDetailsFields({ values, onChange, errors, disabled }: InterviewDetailsFieldsProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
+  const fields = useFieldChain(["duration", "location", "interviewers"]);
   return (
     <View style={{ gap: spacing.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}>
       <Text accessibilityRole="header" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.mutedForeground }}>
@@ -27,6 +28,7 @@ export default function InterviewDetailsFields({ values, onChange, errors, disab
       />
       <DateTimeField disabled={disabled} label={MESSAGES.scheduledLabel} onChange={(next) => onChange("interview_scheduled_at", next)} value={values.interview_scheduled_at} />
       <FormField
+        {...fields.field("duration")}
         editable={!disabled}
         error={errors.interview_duration_minutes}
         keyboardType="number-pad"
@@ -36,6 +38,7 @@ export default function InterviewDetailsFields({ values, onChange, errors, disab
         value={values.interview_duration_minutes}
       />
       <FormField
+        {...fields.field("location")}
         autoCapitalize="none"
         editable={!disabled}
         counter={characterCounter(values.interview_location_or_link.trim(), INTERVIEW_LOCATION_MAX_LENGTH)}
@@ -46,6 +49,7 @@ export default function InterviewDetailsFields({ values, onChange, errors, disab
         value={values.interview_location_or_link}
       />
       <FormField
+        {...fields.target("interviewers")}
         editable={!disabled}
         error={errors.interview_interviewer_names}
         hint={MESSAGES.interviewersHint}

@@ -4,7 +4,7 @@ import { TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChang
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { otherTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -46,6 +46,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const [categoryWasReset, setCategoryWasReset] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
+  const fields = useFieldChain(["taxYear", "vendor", "amount", "description"]);
 
   const changes = changedFields(values, original, decimalSeparator);
   const isDirty = Object.keys(changes).length > 0;
@@ -172,6 +173,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         {original.status === "approved" ? <Banner message="This one is approved, so changes show up in your totals right away." /> : null}
         <PeriodDateRow isOpen={isDateOpen} label="Date" onChange={(date) => update({ date })} onToggle={() => setIsDateOpen((open) => !open)} value={values.date} />
         <FormField
+          {...fields.field("taxYear")}
           error={taxYearProblem}
           keyboardType="number-pad"
           label={LABELS.taxYear}
@@ -179,7 +181,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
           onChangeText={(taxYear) => update({ taxYear })}
           value={values.taxYear}
         />
-        <FormField label="Vendor" onChangeText={(vendorText) => update({ vendor: vendorText })} value={values.vendor} />
+        <FormField {...fields.field("vendor")} label="Vendor" onChangeText={(vendorText) => update({ vendor: vendorText })} value={values.vendor} />
         <PickerField
           disabled={vendorsLoading}
           label={LABELS.savedVendor}
@@ -187,6 +189,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
           value={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
         />
         <FormField
+          {...fields.field("amount")}
           error={amountProblem}
           keyboardType="decimal-pad"
           label="Amount (USD)"
@@ -197,6 +200,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.category)} value={categoryLabel(values.category)} />
         <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} value={propertyLabel(values.propertyId, properties)} />
         <FormField
+          {...fields.target("description")}
           label="Description"
           multiline
           onChangeText={(description) => update({ description })}

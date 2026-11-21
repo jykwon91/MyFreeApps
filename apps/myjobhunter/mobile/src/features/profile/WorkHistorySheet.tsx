@@ -6,7 +6,7 @@ import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { workHistoryFormProblems } from "@myjobhunter/api-client/utils/workHistoryFormProblems";
 import { workHistoryFormValues } from "@myjobhunter/api-client/utils/workHistoryFormValues";
 import { workHistoryRequest } from "@myjobhunter/api-client/utils/workHistoryRequest";
-import { FormField, FormSheet, SwitchRow, useToast } from "@platform/mobile";
+import { FormField, FormSheet, SwitchRow, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { WORK_HISTORY_MESSAGES as MESSAGES } from "../../constants/profileWorkHistory";
@@ -26,6 +26,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const problems = hasTried ? workHistoryFormProblems(values) : {};
+  const fields = useFieldChain(["company", "title", "bullets"]);
 
   function change<Field extends keyof WorkHistoryFormValues>(field: Field) {
     return (value: WorkHistoryFormValues[Field]) => setValues((current) => ({ ...current, [field]: value }));
@@ -49,6 +50,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
   return (
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, initial)} isBusy={isSaving} isOpen onRequestClose={onClose} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
       <FormField
+        {...fields.field("company")}
         autoCapitalize="words"
         counter={characterCounter(values.company_name.trim(), WORK_HISTORY_COMPANY_MAX_LENGTH)}
         editable={!isSaving}
@@ -60,6 +62,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
         value={values.company_name}
       />
       <FormField
+        {...fields.field("title")}
         autoCapitalize="words"
         counter={characterCounter(values.title.trim(), WORK_HISTORY_TITLE_MAX_LENGTH)}
         editable={!isSaving}
@@ -89,6 +92,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
         />
       )}
       <FormField
+        {...fields.target("bullets")}
         editable={!isSaving}
         error={problems.bullets}
         hint={MESSAGES.bulletsHint}

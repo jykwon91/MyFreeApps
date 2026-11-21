@@ -4,6 +4,7 @@ import { SessionContext } from "../auth/SessionContext";
 import DeleteAccountScreen from "../components/DeleteAccountScreen";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
+import { lastFocusedField } from "../../test-support/focusedField";
 import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi");
@@ -60,6 +61,28 @@ it("says what goes, and waits for the email, password and code", async () => {
 
   await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123 456");
   expect(isDisabled()).toBe(false);
+});
+
+it("moves through the fields from the keyboard, but never deletes from it", async () => {
+  await open({ twoFactor: true });
+  await fireEvent(screen.getByLabelText("Type your email to confirm"), "submitEditing");
+  expect(lastFocusedField()).toBe("Password");
+  await fireEvent(screen.getByLabelText("Password"), "submitEditing");
+  expect(lastFocusedField()).toBe("Authentication code");
+
+  await fillIn();
+  await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123456");
+  await fireEvent(screen.getByLabelText("Authentication code"), "submitEditing");
+  expect(deleteAccount).not.toHaveBeenCalled();
+});
+
+it("closes the keyboard from the password when there's no code to type", async () => {
+  await open();
+  await fillIn();
+  const password = screen.getByLabelText("Password");
+  expect(password.props.returnKeyType).toBe("done");
+  await fireEvent(password, "submitEditing");
+  expect(deleteAccount).not.toHaveBeenCalled();
 });
 
 it("doesn't ask for a code when two-factor is off, and sends none", async () => {

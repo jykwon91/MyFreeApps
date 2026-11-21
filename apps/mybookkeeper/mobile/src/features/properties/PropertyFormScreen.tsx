@@ -8,9 +8,9 @@ import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
 import { depreciationInputChanges, landValueProblem, placedInServiceProblem, showsDepreciationInputs } from "@mybookkeeper/api-client/utils/depreciationInputs";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { type ComponentRef, useRef, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { useState } from "react";
+import { Text, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
 import { useTodayIso } from "../../lib/useTodayIso";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -32,10 +32,6 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const todayIso = useTodayIso();
   const { submit, isBusy, isLeaving, failure } = useSaveProperty(original);
-  const streetInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const cityInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const stateInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const zipInput = useRef<ComponentRef<typeof TextInput>>(null);
 
   const problems = propertyFormProblems(form, original);
   const cleanedPrice = cleanPurchasePrice(purchasePrice);
@@ -45,6 +41,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   const rentedSinceRemoved = rentedSince === null && original?.rented_since != null;
   // Edit only, like rented-since: a new property has no purchase price to measure land against yet.
   const asksDepreciation = original !== null && showsDepreciationInputs(form.classification);
+  const fields = useFieldChain(["name", "street", "city", "state", "zip", "purchasePrice", asksDepreciation && "landValue"]);
   const landValueError = asksDepreciation
     ? landValueProblem(landValue, cleanedPrice ?? original.purchase_price ?? null, original.land_value, decimalSeparator)
     : undefined;
@@ -84,70 +81,58 @@ export default function PropertyFormScreen({ original }: { original: Property | 
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
+          {...fields.field("name")}
           editable={!locked}
           error={errorFor("name")}
           label={MESSAGES.name}
           onChangeText={(text) => edit("name", text)}
-          onSubmitEditing={() => streetInput.current?.focus()}
           placeholder={MESSAGES.namePlaceholder}
           required
-          returnKeyType="next"
-          submitBehavior="submit"
           value={form.name}
         />
         <FormField
+          {...fields.field("street")}
           autoComplete="street-address"
           editable={!locked}
           error={errorFor("street")}
           label={MESSAGES.street}
           onChangeText={(text) => edit("street", text)}
-          onSubmitEditing={() => cityInput.current?.focus()}
           placeholder={MESSAGES.streetPlaceholder}
-          ref={streetInput}
           required
-          returnKeyType="next"
-          submitBehavior="submit"
           value={form.street}
         />
         <FormField
+          {...fields.field("city")}
           editable={!locked}
           error={errorFor("city")}
           label={MESSAGES.city}
           onChangeText={(text) => edit("city", text)}
-          onSubmitEditing={() => stateInput.current?.focus()}
-          ref={cityInput}
           required
-          returnKeyType="next"
-          submitBehavior="submit"
           value={form.city}
         />
         <View style={{ flexDirection: "row", gap: spacing.md }}>
           <FormField
+            {...fields.field("state")}
             autoCapitalize="characters"
             editable={!locked}
             error={errorFor("state")}
             label={MESSAGES.state}
             maxLength={PROPERTY_STATE_LENGTH}
             onChangeText={(text) => edit("state", text)}
-            onSubmitEditing={() => zipInput.current?.focus()}
             placeholder={MESSAGES.statePlaceholder}
-            ref={stateInput}
             required
-            returnKeyType="next"
-            submitBehavior="submit"
             style={{ flex: 1 }}
             value={form.state}
           />
           <FormField
+            {...fields.field("zip")}
             autoComplete="postal-code"
             editable={!locked}
             error={errorFor("zip")}
             keyboardType="numbers-and-punctuation"
             label={MESSAGES.zip}
             onChangeText={(text) => edit("zip", text)}
-            ref={zipInput}
             required
-            returnKeyType="done"
             style={{ flex: 2 }}
             value={form.zip}
           />
@@ -168,6 +153,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           />
         ) : null}
         <FormField
+          {...fields.field("purchasePrice")}
           editable={!locked}
           error={hasTried && priceInvalid
             ? (priceRemoved ? MESSAGES.purchasePriceRemoved : MESSAGES.purchasePriceInvalid)
@@ -177,7 +163,6 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           label={MESSAGES.purchasePrice}
           onChangeText={setPurchasePrice}
           placeholder={MESSAGES.purchasePricePlaceholder}
-          returnKeyType="done"
           value={purchasePrice}
         />
         {original?.purchase_price && (
@@ -187,6 +172,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
         )}
         {asksDepreciation ? (
           <DepreciationFields
+            chain={fields.field("landValue")}
             disabled={locked}
             landValue={landValue}
             landValueError={hasTried ? landValueError : undefined}

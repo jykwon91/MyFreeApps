@@ -4,7 +4,7 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PinnedBar, ScrollWithPinnedBar, useAnnouncement, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PinnedBar, ScrollWithPinnedBar, useAnnouncement, useFieldChain, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
@@ -47,6 +47,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
   const [hasSent, setHasSent] = useState(false);
   const chosenTemplate = useRef<string | null>(null);
   const isSubmitting = useRef(false);
+  const fields = useFieldChain(["subject", "body"]);
 
   useAnnouncement(replySendingAnnouncement(hasSent, isWaiting, isBusy));
   // Sending can't be walked away from: the result would have nowhere to go.
@@ -241,6 +242,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
           />
         ) : null}
         <FormField
+          {...fields.field("subject")}
           editable={!isBusy && !isRendering}
           label="Subject"
           maxLength={REPLY_SUBJECT_MAX_LENGTH}
@@ -248,6 +250,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
           value={draft.subject}
         />
         <FormField
+          {...fields.target("body")}
           editable={!isBusy && !isRendering}
           hint={addsDisclosure ? "If this listing has a pet disclosure, I'll add it to the top of your first reply." : undefined}
           inputStyle={{ minHeight: REPLY_BODY_MIN_HEIGHT }}

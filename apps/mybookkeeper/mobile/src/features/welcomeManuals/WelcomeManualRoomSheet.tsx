@@ -3,7 +3,7 @@ import { useCreateRoomMutation, useDeleteRoomMutation, useUpdateRoomMutation } f
 import type { WelcomeManualRoomFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-form-values";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 import { roomProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { FormField } from "@platform/mobile";
+import { FormField, useFieldChain } from "@platform/mobile";
 import { WELCOME_MANUAL_ROOM_MESSAGES as MESSAGES, deleteRoomTitle } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEditSheet from "./WelcomeManualEditSheet";
@@ -32,6 +32,10 @@ export default function WelcomeManualRoomSheet({ manualId, room, onClose }: Welc
     remove: () => deleteRoom({ manualId, roomId: room?.id ?? "" }).unwrap(),
     onDone: onClose,
   });
+  const save = () => {
+    if (form.validate()) void writes.save();
+  };
+  const fields = useFieldChain(["name"], { onLast: save, isLastBlocked: writes.isBusy, lastReturnKey: "done" });
 
   return (
     <WelcomeManualEditSheet
@@ -45,10 +49,10 @@ export default function WelcomeManualRoomSheet({ manualId, room, onClose }: Welc
       labels={ROOM_SHEET_LABELS}
       onClose={onClose}
       onDelete={() => void writes.destroy()}
-      onSave={() => { if (form.validate()) void writes.save(); }}
+      onSave={save}
       title={room ? MESSAGES.edit : MESSAGES.add}
     >
-      <FormField editable={!writes.isBusy} error={form.errorFor("name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_ROOM_NAME_MAX_LENGTH} onChangeText={(text) => form.edit("name", text)} required value={form.values.name} />
+      <FormField {...fields.field("name")} editable={!writes.isBusy} error={form.errorFor("name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_ROOM_NAME_MAX_LENGTH} onChangeText={(text) => form.edit("name", text)} required value={form.values.name} />
     </WelcomeManualEditSheet>
   );
 }

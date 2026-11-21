@@ -13,7 +13,7 @@ import type { Company } from "@myjobhunter/api-client/types/company";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
-import { FormField, FormSheet, useToast } from "@platform/mobile";
+import { FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
 import type { AddCompanySheetProps } from "../../types/AddCompanySheetProps";
@@ -37,6 +37,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   // The server's 409, until the domain is changed.
   const [isDuplicateDomain, setIsDuplicateDomain] = useState(false);
   const counters = companyFormCounters(values);
+  const fields = useFieldChain(["name", "domain", "industry", "hq"]);
   const problems = hasTried ? companyFormProblems(values) : {};
 
   function change(field: keyof CompanyFormValues) {
@@ -86,6 +87,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   return (
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_COMPANY_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <FormField
+        {...fields.field("name")}
         autoCapitalize="words"
         autoFocus
         editable={!isLoading}
@@ -98,6 +100,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         value={values.name}
       />
       <FormField
+        {...fields.field("domain")}
         autoCapitalize="none"
         autoCorrect={false}
         editable={!isLoading}
@@ -111,6 +114,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         value={values.primary_domain}
       />
       <FormField
+        {...fields.field("industry")}
         editable={!isLoading}
         counter={counters.industry}
         error={problems.industry}
@@ -120,6 +124,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         value={values.industry}
       />
       <FormField
+        {...fields.field("hq")}
         editable={!isLoading}
         counter={counters.hq_location}
         error={problems.hq_location}

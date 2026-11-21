@@ -4,7 +4,7 @@ import {
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
-import { Banner, confirmDiscard, deviceDecimalSeparator, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Text } from "react-native";
@@ -28,6 +28,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [isChoosingType, setIsChoosingType] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const fields = useFieldChain(["issuer", "amount"]);
 
   const isDirty = sourceType !== RECONCILIATION_DEFAULT_SOURCE_TYPE || issuer !== "" || amount !== "";
   const amountProblem = reportedAmountError(amount, decimalSeparator);
@@ -72,8 +73,9 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
       >
         {failure ? <Banner message={failure} /> : null}
         <PickerField label={MESSAGES.type} onPress={() => setIsChoosingType(true)} value={sourceTypeLabel(sourceType)} />
-        <FormField hint={MESSAGES.issuerHint} label={MESSAGES.issuer} maxLength={ISSUER_MAX_LENGTH} onChangeText={setIssuer} value={issuer} />
+        <FormField {...fields.field("issuer")} hint={MESSAGES.issuerHint} label={MESSAGES.issuer} maxLength={ISSUER_MAX_LENGTH} onChangeText={setIssuer} value={issuer} />
         <FormField
+          {...fields.field("amount")}
           error={hasTried ? amountProblem : undefined}
           keyboardType="decimal-pad"
           label={MESSAGES.amount}

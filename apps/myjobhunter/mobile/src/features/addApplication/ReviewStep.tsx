@@ -1,6 +1,7 @@
 import { addApplicationFormCounters } from "@myjobhunter/api-client/utils/addApplicationFormCounters";
 import type { RemoteType } from "@myjobhunter/api-client/types/application/remote-type";
-import { FormField, LoadingButton, OptionSheet, PickerField } from "@platform/mobile";
+import { FormField, LoadingButton, OptionSheet, PickerField, useFieldChain } from "@platform/mobile";
+import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import { localToday } from "@platform/core/utils/localToday";
 import { useState } from "react";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT, REMOTE_TYPE_OPTIONS } from "../../constants/addApplication";
@@ -17,12 +18,14 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
   const remoteLabel = REMOTE_TYPE_OPTIONS.find((option) => option.value === values.remote_type)?.label ?? "";
   const counters = addApplicationFormCounters(values);
   const showSummary = review.sourceUrl !== null || review.summary !== null;
+  const fields = useFieldChain<keyof AddApplicationFormValues>(["role_title", "location", "posted_salary_min", "posted_salary_max", "notes"]);
 
   return (
     <>
       {showSummary ? <ReviewSummary sourceUrl={review.sourceUrl} summary={review.summary} /> : null}
       <CompanyField company={review.company} disabled={locked} onPress={onChangeCompany} />
       <FormField
+        {...fields.field("role_title")}
         editable={!locked}
         counter={counters.role_title}
         error={errors.role_title}
@@ -33,6 +36,7 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         value={values.role_title}
       />
       <FormField
+        {...fields.field("location")}
         editable={!locked}
         counter={counters.location}
         error={errors.location}
@@ -42,7 +46,7 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         value={values.location}
       />
       <PickerField disabled={locked} label={MESSAGES.remoteLabel} onPress={() => setIsRemoteOpen(true)} valueLabel={remoteLabel} />
-      <PostedSalaryFields disabled={locked} errors={errors} onEdit={onEdit} values={values} />
+      <PostedSalaryFields disabled={locked} errors={errors} fields={fields} onEdit={onEdit} values={values} />
       <DateField
         disabled={locked}
         error={errors.applied_on}
@@ -53,6 +57,7 @@ export default function ReviewStep({ review, values, errors, onEdit, onChangeCom
         value={values.applied_on}
       />
       <FormField
+        {...fields.target("notes")}
         editable={!locked}
         counter={counters.notes}
         error={errors.notes}

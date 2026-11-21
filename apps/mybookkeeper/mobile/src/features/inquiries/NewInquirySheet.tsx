@@ -11,7 +11,7 @@ import {
   inquiryFormToCreateRequest,
   needsExternalInquiryId,
 } from "@mybookkeeper/api-client/utils/inquiryForm";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
@@ -35,6 +35,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
   const [initial] = useState(() => blankInquiryForm(new Date()));
   const [values, setValues] = useState<InquiryFormValues>(initial);
   const [showProblems, setShowProblems] = useState(false);
+  const fields = useFieldChain([needsExternalInquiryId(values.source) && "externalId", "name", "email", "phone", "employer", "notes"]);
 
   const problems = showProblems ? inquiryFormProblems(values) : {};
   const hasProblems = Object.keys(problems).length > 0;
@@ -67,6 +68,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
         <InquiryChoiceGroup<InquirySource> choices={SOURCE_CHOICES} disabled={isBusy} label={LABELS.source} onSelect={(source) => update({ source })} value={values.source} />
         {needsExternalInquiryId(values.source) ? (
           <FormField
+            {...fields.field("externalId")}
             autoCapitalize="characters"
             autoCorrect={false}
             editable={!isBusy}
@@ -80,6 +82,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           />
         ) : null}
         <FormField
+          {...fields.field("name")}
           autoComplete="name"
           editable={!isBusy}
           error={problems.inquirer_name}
@@ -90,6 +93,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           value={values.inquirer_name}
         />
         <FormField
+          {...fields.field("email")}
           autoCapitalize="none"
           autoComplete="email"
           autoCorrect={false}
@@ -101,6 +105,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           value={values.inquirer_email}
         />
         <FormField
+          {...fields.field("phone")}
           autoComplete="tel"
           editable={!isBusy}
           keyboardType="phone-pad"
@@ -110,6 +115,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           value={values.inquirer_phone}
         />
         <FormField
+          {...fields.field("employer")}
           editable={!isBusy}
           label={LABELS.employer}
           maxLength={MAX_LENGTH.employer}
@@ -135,6 +141,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
         <InquiryListingField disabled={isBusy} onChange={(listing_id) => update({ listing_id })} value={values.listing_id} />
         <InquiryReceivedAtField error={problems.received_at} onChange={(received_at) => update({ received_at })} value={values.received_at} />
         <FormField
+          {...fields.target("notes")}
           editable={!isBusy}
           label={LABELS.notes}
           maxLength={MAX_LENGTH.notes}

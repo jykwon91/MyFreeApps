@@ -3,7 +3,7 @@ import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import type { ChannelListingFormValues } from "@mybookkeeper/api-client/types/listing/channel-listing-form-values";
 import { channelListingFormProblems, channelListingToFormValues, emptyChannelListingForm, sameChannelListingForm } from "@mybookkeeper/api-client/utils/channelListingForm";
-import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { copyOutboundLabel, LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
@@ -32,6 +32,7 @@ export default function ChannelListingFormScreen({ listingId, available, origina
   const problems = channelListingFormProblems(values);
   const isDirty = !sameChannelListingForm(values, saved);
   const locked = isBusy || isLeaving;
+  const fields = useFieldChain(["externalUrl", "externalId", (channel?.supports_ical_import ?? true) && "icalImportUrl"]);
   const errorFor = (field: keyof ChannelListingFormValues) => (hasTried ? problems[field] : undefined);
   useDiscardPrompt(isDirty && !isLeaving, isBusy);
 
@@ -57,6 +58,7 @@ export default function ChannelListingFormScreen({ listingId, available, origina
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} label={MESSAGES.channel} onPress={() => setIsPicking(true)} valueLabel={channelName} />
         <FormField
+          {...fields.field("externalUrl")}
           autoCapitalize="none"
           editable={!locked}
           error={errorFor("external_url")}
@@ -68,9 +70,10 @@ export default function ChannelListingFormScreen({ listingId, available, origina
           required
           value={values.external_url}
         />
-        <FormField editable={!locked} label={MESSAGES.externalId} maxLength={CHANNEL_EXTERNAL_ID_MAX_LENGTH} onChangeText={(text) => edit("external_id", text)} value={values.external_id} />
+        <FormField {...fields.field("externalId")} editable={!locked} label={MESSAGES.externalId} maxLength={CHANNEL_EXTERNAL_ID_MAX_LENGTH} onChangeText={(text) => edit("external_id", text)} value={values.external_id} />
         {supportsImport ? (
           <FormField
+            {...fields.field("icalImportUrl")}
             autoCapitalize="none"
             editable={!locked}
             error={errorFor("ical_import_url")}
