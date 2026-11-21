@@ -235,8 +235,7 @@ describe("AddInsurancePolicyDialog — typing the policy in by hand", () => {
     // otherwise empty viewport.
     renderDialog();
 
-    const panel = screen.getByTestId("add-insurance-policy-dialog")
-      .firstElementChild;
+    const panel = screen.getByTestId("add-insurance-policy-dialog");
     expect(panel).toHaveClass(FORM_DIALOG_WIDTH_CLASS.wide);
   });
 });
