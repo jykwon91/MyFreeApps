@@ -12,6 +12,7 @@ import { store } from "../src/lib/store";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { heldReplies } from "../test-support/heldReplies";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
+import { profileRoutes } from "../test-support/profileRoutes";
 import { refinementSessionRecord, resumeJobRecord } from "../test-support/refinementSessionRecord";
 import { renderApp } from "../test-support/renderApp";
 import { resumeRoutes } from "../test-support/resumeRoutes";
@@ -160,7 +161,7 @@ describe("uploading a resume on Resume", () => {
     expect(form.getAll("file")).toEqual([{ uri: `file:///cache/${asset.name}`, name: asset.name, type }]);
   });
 
-  it("stops polling the uploads while another screen is on top, and picks up again on the way back", async () => {
+  it("keeps watching a read while another screen is on top, and the finished resume is there on the way back", async () => {
     const { jobs, sent } = serveUploads([QUEUED]);
     await openResume();
     expect(await screen.findByText(MESSAGES.readingHeading)).toBeTruthy();
@@ -169,16 +170,35 @@ describe("uploading a resume on Resume", () => {
     await act(async () => router.push("/documents"));
     const away = listed();
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(RESUME_JOBS_POLL_INTERVAL_MS * 3);
+      await jest.advanceTimersByTimeAsync(RESUME_JOBS_POLL_INTERVAL_MS);
     });
-    expect(listed()).toBe(away);
+    expect(listed()).toBeGreaterThan(away);
 
     jobs.current = [resumeJobRecord({ id: "job-new", file_filename: "ada-2026.pdf" })];
-    await act(async () => router.back());
     await act(async () => {
       await jest.advanceTimersByTimeAsync(RESUME_JOBS_POLL_INTERVAL_MS);
     });
+    await act(async () => router.back());
     expect(await screen.findByRole("radio", { name: /ada-2026\.pdf/ })).toBeTruthy();
+  });
+
+  it("refreshes the profile lists when a read finishes while the person is on the Profile tab", async () => {
+    const { jobs, sent } = serveUploads([QUEUED], profileRoutes());
+    const fetched = (route: string) => sent.filter((request) => request.route === route).length;
+    await openResume();
+    expect(await screen.findByText(MESSAGES.readingHeading)).toBeTruthy();
+
+    await act(async () => router.navigate("/profile"));
+    await waitFor(() => expect(fetched("GET /skills")).toBeGreaterThan(0));
+    const before = { skills: fetched("GET /skills"), workHistory: fetched("GET /work-history"), education: fetched("GET /education") };
+
+    jobs.current = [resumeJobRecord({ id: "job-new", file_filename: "ada-2026.pdf" })];
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(RESUME_JOBS_POLL_INTERVAL_MS);
+    });
+    await waitFor(() => expect(fetched("GET /skills")).toBeGreaterThan(before.skills));
+    expect(fetched("GET /work-history")).toBeGreaterThan(before.workHistory);
+    expect(fetched("GET /education")).toBeGreaterThan(before.education);
   });
 
   it("uploads another next to the parsed ones, and says when it couldn't be read", async () => {
