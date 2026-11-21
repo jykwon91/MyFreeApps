@@ -35,49 +35,36 @@ from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 import httpx
 
+from platform_shared.core.capped_fetch import fetch_capped
+from platform_shared.core.capped_fetch_error import CappedFetchError
 from platform_shared.core.signed_url import (
     SignatureError,
     sign_payload,
     verify_payload,
 )
-from platform_shared.core.url_safety import UnsafeURLError, assert_url_safe
+from platform_shared.core.url_safety import UnsafeURLError
 
 from app.core.config import settings
+from app.core.discovery_image_constants import (
+    DISCOVERY_FETCH_MAX_REDIRECTS,
+    IMAGE_MAX_BYTES,
+    IMAGE_PHASE_TIMEOUT_SECONDS,
+    IMAGE_TOTAL_TIMEOUT_SECONDS,
+    OG_MAX_BYTES,
+    OG_PHASE_TIMEOUT_SECONDS,
+    OG_TOTAL_TIMEOUT_SECONDS,
+)
+from app.services.recipe.discovery_content_types import (
+    is_allowed_image_type,
+    is_html_type,
+    media_type,
+)
 
 logger = logging.getLogger(__name__)
 
 # Long enough that a user can browse results and open one without the grid
 # going blank behind them; short enough that a leaked link dies quickly.
 _SIGNATURE_TTL_SECONDS = 60 * 60  # 1 hour
-
-_FETCH_TIMEOUT_SECONDS = 10.0
-# Thumbnails are small. 8 MB is generous for a hero image and bounds memory —
-# the response is buffered, not streamed, so this is a real ceiling.
-_MAX_IMAGE_BYTES = 8 * 1024 * 1024
-
-# Follow redirects by hand so the SSRF guard sees every hop: a public URL can
-# 302 into an internal one. Image CDNs chain 2-3 hops at most.
-_MAX_REDIRECTS = 4
-_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
-
-# Raster formats only. Anything else (HTML, JSON, octet-stream) is refused:
-# the proxy must not become a general fetcher returning arbitrary bodies from
-# arbitrary hosts.
-#
-# ``image/svg+xml`` is deliberately EXCLUDED. An SVG is a document that can
-# carry script, and this endpoint serves from the app's own origin — a user
-# who opens the proxy URL directly would execute a third party's markup as
-# us. Scripts do not run in an ``<img>``, but the direct-navigation path is
-# enough to make SVG a same-origin XSS vector. No recipe photo is an SVG.
-_ALLOWED_IMAGE_TYPES = frozenset(
-    {
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/gif",
-        "image/avif",
-    }
-)
 
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -191,11 +178,6 @@ async def resolve_thumbnail(remote_url: str | None, *, page_url: str) -> str | N
 # Reading a page's declared preview image
 # ---------------------------------------------------------------------------
 
-_OG_TIMEOUT_SECONDS = 6.0
-# Enough to cover <head> on a heavyweight recipe page without pulling the whole
-# document. The read stops at this cap whether or not a tag was found.
-_OG_MAX_BYTES = 192 * 1024
-
 # Deliberately two simple passes rather than one clever pattern: find bounded
 # <meta …> tags, then read the content attribute out of each. Nothing here
 # nests quantifiers, so a hostile page cannot make the scan superlinear.
@@ -232,36 +214,28 @@ async def fetch_og_image(page_url: str) -> str | None:
     the whole search.
     """
     try:
-        # Redirects are walked by hand, as in ``fetch_signed_image``: a public
-        # URL can 302 into an internal one, so every hop is checked, not just
-        # the one we were handed.
         async with httpx.AsyncClient(
             follow_redirects=False,
-            timeout=httpx.Timeout(_OG_TIMEOUT_SECONDS),
+            timeout=httpx.Timeout(OG_PHASE_TIMEOUT_SECONDS),
             headers={"User-Agent": _USER_AGENT, "Accept": "text/html,*/*;q=0.5"},
         ) as client:
-            current_url = page_url
-            for _ in range(_MAX_REDIRECTS + 1):
-                await assert_url_safe(current_url)
-                async with client.stream("GET", current_url) as response:
-                    if response.status_code in _REDIRECT_STATUSES:
-                        location = response.headers.get("location")
-                        if not location:
-                            return None
-                        current_url = urljoin(current_url, location)
-                        continue
-                    if response.status_code >= 400:
-                        return None
-                    if "html" not in response.headers.get("content-type", "").lower():
-                        return None
-                    head = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        head.extend(chunk)
-                        if len(head) >= _OG_MAX_BYTES:
-                            break
-                    return _og_image_from_html(bytes(head), current_url)
+            # Only the head matters, so the read is cut at the cap rather than
+            # refused.
+            page = await fetch_capped(
+                client,
+                page_url,
+                max_bytes=OG_MAX_BYTES,
+                total_timeout_seconds=OG_TOTAL_TIMEOUT_SECONDS,
+                max_redirects=DISCOVERY_FETCH_MAX_REDIRECTS,
+                truncate_at_cap=True,
+                accept_content_type=is_html_type,
+            )
+    except (UnsafeURLError, CappedFetchError) as exc:
+        logger.info("No og:image for a discovery result: %s", type(exc).__name__)
         return None
-    except (UnsafeURLError, httpx.HTTPError, UnicodeError, ValueError) as exc:
+    try:
+        return _og_image_from_html(page.content, page.url)
+    except (UnicodeError, ValueError) as exc:
         logger.info("No og:image for a discovery result: %s", type(exc).__name__)
         return None
 
@@ -287,39 +261,24 @@ async def fetch_signed_image(url: str, signature: str) -> tuple[bytes, str]:
     try:
         async with httpx.AsyncClient(
             follow_redirects=False,
-            timeout=httpx.Timeout(_FETCH_TIMEOUT_SECONDS),
+            timeout=httpx.Timeout(IMAGE_PHASE_TIMEOUT_SECONDS),
             headers=headers,
         ) as client:
-            current_url = url
-            for _ in range(_MAX_REDIRECTS + 1):
-                await assert_url_safe(current_url)
-                response = await client.get(current_url)
-                if response.status_code in _REDIRECT_STATUSES:
-                    location = response.headers.get("location")
-                    if not location:
-                        break
-                    current_url = urljoin(current_url, location)
-                    continue
-                break
-            else:
-                raise ImageFetchError(f"Too many redirects fetching {url}")
-    except UnsafeURLError:
-        raise  # a ValueError the route maps to 400
-    except httpx.HTTPError as exc:
-        raise ImageFetchError(f"Network error fetching image: {exc}") from exc
+            image = await fetch_capped(
+                client,
+                url,
+                max_bytes=IMAGE_MAX_BYTES,
+                total_timeout_seconds=IMAGE_TOTAL_TIMEOUT_SECONDS,
+                max_redirects=DISCOVERY_FETCH_MAX_REDIRECTS,
+                # Anything but an allowed raster type is refused unread.
+                accept_content_type=is_allowed_image_type,
+            )
+    except CappedFetchError as exc:
+        # UnsafeURLError propagates unchanged: a ValueError the route maps to
+        # 400. The message names the host only.
+        raise ImageFetchError(str(exc)) from exc
 
-    if response.status_code >= 400:
-        raise ImageFetchError(f"Upstream returned HTTP {response.status_code}")
-
-    # Strip parameters: "image/jpeg; charset=binary" is still image/jpeg.
-    content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type not in _ALLOWED_IMAGE_TYPES:
-        raise ImageFetchError(f"Refusing non-image content type {content_type!r}")
-
-    if len(response.content) > _MAX_IMAGE_BYTES:
-        raise ImageFetchError("Image exceeds the size limit")
-
-    return response.content, content_type
+    return image.content, media_type(image.headers.get("content-type", ""))
 
 
 __all__ = [

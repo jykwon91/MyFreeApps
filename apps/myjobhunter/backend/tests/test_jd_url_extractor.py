@@ -22,9 +22,12 @@ The HTTP endpoint tests run through FastAPI's TestClient via the
 """
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import json
 import uuid
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -32,6 +35,7 @@ import httpx
 import pytest
 
 from platform_shared.core.url_safety import UnsafeURLError
+from platform_shared.testing.streamed_response import streamed_response
 
 from app.services.extraction.jd_url_extractor import (
     ExtractedJD,
@@ -40,6 +44,7 @@ from app.services.extraction.jd_url_extractor import (
     JDFetchTimeoutError,
     extract_from_url,
 )
+from app.services.extraction import jd_url_fetcher
 from app.services.extraction.jd_url_fetcher import validate_url as _validate_url
 from app.services.extraction.jd_url_parser import (
     find_jobposting_schema as _find_jobposting_schema,
@@ -131,9 +136,9 @@ def _wrap_html_with_schema(payload: object) -> str:
 
 
 def _build_httpx_response(text: str, status_code: int = 200) -> httpx.Response:
-    """Build a real httpx.Response so .text / .content / .status_code align."""
-    return httpx.Response(
-        status_code=status_code,
+    """A real httpx.Response with its body unread, as off the network."""
+    return streamed_response(
+        status_code,
         content=text.encode("utf-8"),
         request=httpx.Request("GET", "https://example.test/job"),
     )
@@ -142,8 +147,8 @@ def _build_httpx_response(text: str, status_code: int = 200) -> httpx.Response:
 class _FakeAsyncClient:
     """Stand-in for ``httpx.AsyncClient`` in async-with usage.
 
-    Implements ``__aenter__`` / ``__aexit__`` and a ``get`` coroutine that
-    returns / raises whatever was configured in the constructor.
+    Implements ``__aenter__`` / ``__aexit__`` and a ``stream`` context
+    manager that yields / raises whatever was configured in the constructor.
     """
 
     def __init__(
@@ -163,15 +168,39 @@ class _FakeAsyncClient:
     async def __aexit__(self, *args: Any) -> None:
         return None
 
-    async def get(self, url: str) -> httpx.Response:
+    @asynccontextmanager
+    async def stream(
+        self, method: str, url: str, **kwargs: Any,
+    ) -> AsyncIterator[httpx.Response]:
         self.last_url = url
         if self._raise is not None:
             raise self._raise
         assert self._response is not None
-        return self._response
+        yield self._response
 
 
-def _patch_httpx(client: _FakeAsyncClient) -> Any:
+async def _endless(chunk: bytes, *, pause: float = 0.0) -> AsyncIterator[bytes]:
+    while True:
+        if pause:
+            await asyncio.sleep(pause)
+        yield chunk
+
+
+def _streaming_client(body: Callable[[], AsyncIterator[bytes]]) -> httpx.AsyncClient:
+    """A real client over ``MockTransport`` serving a streamed 200 HTML body.
+
+    Built before ``_patch_httpx`` replaces ``httpx.AsyncClient``.
+    """
+    return httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200, headers={"content-type": "text/html"}, content=body(),
+            )
+        )
+    )
+
+
+def _patch_httpx(client: _FakeAsyncClient | httpx.AsyncClient) -> Any:
     """Patch httpx.AsyncClient to return ``client`` regardless of args."""
     return patch(
         "app.services.extraction.jd_url_fetcher.httpx.AsyncClient",
@@ -658,6 +687,46 @@ class TestFetchErrors:
                 await extract_from_url(
                     "https://broken.example.com/job",
                     user_id=uuid.uuid4(),
+                )
+
+    @pytest.mark.asyncio
+    async def test_endless_page_stops_at_the_size_cap(self) -> None:
+        # Buffering the whole body before checking its size would never
+        # finish here; the read must stop as soon as it passes the cap.
+        client = _streaming_client(lambda: _endless(b"x" * 65_536))
+        with _patch_httpx(client):
+            with pytest.raises(JDFetchError, match="exceeds"):
+                await asyncio.wait_for(
+                    extract_from_url("https://huge.example.com/job", user_id=uuid.uuid4()),
+                    timeout=10,
+                )
+
+    @pytest.mark.asyncio
+    async def test_slow_drip_page_hits_the_overall_deadline(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Each byte arrives far inside the per-read timeout; only an overall
+        # deadline ends this.
+        monkeypatch.setattr(jd_url_fetcher, "JOB_PAGE_TOTAL_TIMEOUT_SECONDS", 0.3)
+        client = _streaming_client(lambda: _endless(b"x", pause=0.05))
+        with _patch_httpx(client):
+            with pytest.raises(JDFetchTimeoutError):
+                await asyncio.wait_for(
+                    extract_from_url("https://slow.example.com/job", user_id=uuid.uuid4()),
+                    timeout=5,
+                )
+
+    @pytest.mark.asyncio
+    async def test_redirect_without_location_is_an_upstream_error(self) -> None:
+        # A 3xx with nowhere to go is not the posting: it maps to 502 rather
+        # than being parsed as if it were the page.
+        fake_client = _FakeAsyncClient(
+            response=_build_httpx_response("Moved", status_code=302),
+        )
+        with _patch_httpx(fake_client):
+            with pytest.raises(JDFetchError, match="HTTP 302"):
+                await extract_from_url(
+                    "https://moved.example.com/job", user_id=uuid.uuid4(),
                 )
 
     @pytest.mark.asyncio

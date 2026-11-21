@@ -119,12 +119,17 @@ def _resolve_host(
     lookup by the resolver. Patched in tests to avoid real DNS.
 
     Raises:
-        UnsafeURLError: the host could not be resolved.
+        UnsafeURLError: the host could not be resolved, or is not a valid
+            hostname.
     """
     try:
         infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
         raise UnsafeURLError(f"could not resolve host {host!r}") from exc
+    except (UnicodeError, ValueError) as exc:
+        # The IDNA codec rejects a malformed name before any lookup: an empty
+        # label (``a..b``), a label over 63 characters, a NUL byte.
+        raise UnsafeURLError(f"host {host!r} is not a valid hostname") from exc
 
     addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
     for info in infos:
@@ -162,7 +167,11 @@ def validate_public_url(
     if not isinstance(url, str) or not url.strip():
         raise UnsafeURLError("url must be a non-empty string")
 
-    parsed = urlparse(url.strip())
+    try:
+        parsed = urlparse(url.strip())
+    except ValueError as exc:
+        # A malformed bracketed host (``http://[::1``, ``http://[zz]/``).
+        raise UnsafeURLError("url is not well formed") from exc
 
     if parsed.scheme not in _ALLOWED_SCHEMES:
         raise UnsafeURLError(
