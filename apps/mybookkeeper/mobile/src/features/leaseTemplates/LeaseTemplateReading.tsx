@@ -7,7 +7,7 @@ export default function LeaseTemplateReading() {
   const { colors, spacing, fontSize } = useTheme();
   useAnnouncement(LEASE_TEMPLATE_FORM_MESSAGES.reading);
   return (
-    <LoadingRegion accessibilityLiveRegion="polite" label={LEASE_TEMPLATE_FORM_MESSAGES.reading} style={{ gap: spacing.md, padding: spacing.lg }} testID="lease-template-reading">
+    <LoadingRegion label={LEASE_TEMPLATE_FORM_MESSAGES.reading} style={{ gap: spacing.md, padding: spacing.lg }} testID="lease-template-reading">
       <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{LEASE_TEMPLATE_FORM_MESSAGES.reading}</Text>
       <Skeleton height={16} width="60%" />
       <Skeleton height={44} />

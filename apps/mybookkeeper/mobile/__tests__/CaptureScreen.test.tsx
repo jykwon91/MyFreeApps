@@ -3,7 +3,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { Linking } from "react-native";
+import { AccessibilityInfo, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { UPLOAD_PROCESSING_LABEL } from "../src/constants/capture";
 import CaptureScreen from "../src/features/capture/CaptureScreen";
@@ -112,6 +112,7 @@ describe("CaptureScreen", () => {
     expect(mockManipulate).toHaveBeenCalledWith(TAKEN.uri, { maxWidth: 2000, maxHeight: 2000 });
     expect(await screen.findByRole("button", { name: "Done (1)" })).toBeTruthy();
     expect(await screen.findByText("Got it. I'm reading it now.")).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("Got it. I'm reading it now.", { queue: true });
     expect(fakeFiles()).not.toContain(TAKEN.uri);
   });
 

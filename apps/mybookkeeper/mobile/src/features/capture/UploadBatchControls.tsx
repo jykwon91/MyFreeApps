@@ -1,6 +1,6 @@
 import { useCancelBatchMutation, useGetBatchStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
-import { LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { LoadingButton, useAnnouncement, useTheme, useToast } from "@platform/mobile";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch } from "react-redux";
@@ -11,6 +11,7 @@ import {
   CANCELLING_BATCH_LABEL,
   batchCancelledMessage,
   batchReadProgressLabel,
+  batchReadingStartedMessage,
   cancelBatchAccessibilityLabel,
 } from "../../constants/capture";
 import type { AppDispatch } from "../../lib/store";
@@ -31,6 +32,11 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: BATCH_STATUS_POLL_MS, skipPollingIfUnfocused: true });
   const [cancelBatch, { isLoading: isCancelling }] = useCancelBatchMutation();
 
+  const progress = batch ? batchReadProgressLabel(batch.completed, batch.total) : "";
+  // Only the start and the end are read out; a line for every check would pile up on iOS.
+  const isFinished = batch?.status === BATCH_STATUSES.DONE;
+  useAnnouncement(batch ? (isFinished ? progress : batchReadingStartedMessage(batch.total)) : undefined, "polite");
+
   useEffect(() => {
     if (batch?.status === BATCH_STATUSES.DONE) dispatch(uploadBatchRead(uri));
   }, [batch?.status, dispatch, uri]);
@@ -49,9 +55,7 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-      <Text accessibilityLiveRegion="polite" style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
-        {batch ? batchReadProgressLabel(batch.completed, batch.total) : ""}
-      </Text>
+      <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>{progress}</Text>
       <LoadingButton
         accessibilityLabel={cancelBatchAccessibilityLabel(name)}
         isLoading={isCancelling}

@@ -9,6 +9,8 @@ export const UPLOAD_QUEUE_DIRECTORY = "upload-queue";
 /** Two in a row means the connection is down, so the rest aren't tried. One may just be a file too big for a slow link. */
 export const NETWORK_FAILURES_BEFORE_STOP = 2;
 export const SENT_MESSAGE_MS = 5000;
+export const SENDING_MESSAGE = "Sending…";
+export const SENT_MESSAGE = "Got it. I'm reading it now.";
 export const REQUEST_TOO_LARGE_STATUS = 413;
 export const BAD_REQUEST_STATUS = 400;
 export const UNAUTHORIZED_STATUS = 401;
@@ -41,6 +43,11 @@ export const CANCEL_BATCH_FAILED = "I couldn't stop that upload. Want to try aga
 
 export function batchReadProgressLabel(completed: number, total: number): string {
   return `${completed} of ${total} read`;
+}
+
+/** Said once when a sent zip starts being read; the count on screen isn't read on every check. */
+export function batchReadingStartedMessage(total: number): string {
+  return total === 1 ? "Reading 1 file" : `Reading ${total} files`;
 }
 
 export function batchCancelledMessage(name: string): string {

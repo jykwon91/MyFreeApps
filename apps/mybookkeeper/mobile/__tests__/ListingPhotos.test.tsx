@@ -6,6 +6,7 @@ import type { AxiosAdapter } from "axios";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
+import { AccessibilityInfo } from "react-native";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, removeManyTitle } from "../src/constants/listingPhotos";
 import { LISTING_MESSAGES } from "../src/constants/listings";
 import ListingPhotosScreen from "../src/features/listings/ListingPhotosScreen";
@@ -30,6 +31,7 @@ jest.mock("react-native/Libraries/Modal/Modal", () => ({
 
 let alertSpy: jest.SpyInstance;
 beforeEach(() => {
+  jest.clearAllMocks();
   alertSpy = signInToWorkspace();
   resetFakeFiles();
   jest.mocked(preparePhoto).mockReset().mockImplementation(async (uri: string) => uri);
@@ -134,6 +136,11 @@ describe("adding photos", () => {
     expect(mockPreventRemove.active).toBe(true);
     await act(async () => finish[1]());
     await screen.findByText(MESSAGES.uploadedMany);
+    // Each batch is read out as it starts, not at every photo, so the lines don't pile up on iOS.
+    const spoken = jest.mocked(AccessibilityInfo.announceForAccessibilityWithOptions).mock.calls.map(([line]) => line);
+    expect(spoken.filter((line) => line.startsWith("Preparing"))).toEqual(["Preparing 1 of 2"]);
+    expect(spoken.some((line) => line.startsWith("Uploading 1 of"))).toBe(true);
+    expect(spoken).not.toContain("Uploading 2 of 2");
     expect(writesTo(server, "post", "/photos")).toHaveLength(2);
     expect(screen.queryByText(/^Preparing/)).toBeNull();
     expect(mockPreventRemove.active).toBe(false);
@@ -438,6 +445,7 @@ describe("working with a photo", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Photo 1 of 3, Cover" }));
     await fireEvent.press(screen.getByRole("button", { name: "Photo 3 of 3" }));
     await screen.findByText("2 selected");
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("2 selected", { queue: true });
     await fireEvent.press(button(MESSAGES.removeSelected));
     expect(alertSpy.mock.calls.at(-1)?.[0]).toBe(removeManyTitle(2));
     await pressAlertButton(alertSpy, MESSAGES.remove, act);

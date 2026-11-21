@@ -5,7 +5,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
@@ -365,6 +365,7 @@ describe("MoneyAnalysisScreen", () => {
       server.yearsStatus = 500;
       await show();
       expect(await screen.findByText(MESSAGES.yearsFailed)).toBeTruthy();
+      expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(MESSAGES.yearsFailed, { queue: true });
       server.yearsStatus = undefined;
       await fireEvent.press(screen.getByRole("button", { name: MESSAGES.retryYears }));
       await waitFor(() => expect(screen.queryByText(MESSAGES.yearsFailed)).toBeNull());

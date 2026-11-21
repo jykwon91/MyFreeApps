@@ -2,7 +2,7 @@ import { RENTAL_ROI_DEFAULT_TARGET_PCT } from "@mybookkeeper/api-client/constant
 import { useGetRentalRoiQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { rentalRoiHeadline } from "@mybookkeeper/api-client/utils/rentalRoi";
 import { formatMoneyCents } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, StaleDataBanner, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -15,11 +15,16 @@ import RentalRoiTotalCard from "./RentalRoiTotalCard";
 export default function RentalRoiScreen() {
   const { colors, fontSize, spacing } = useTheme();
   const [targetReturnPct, setTargetReturnPct] = useState(RENTAL_ROI_DEFAULT_TARGET_PCT);
+  const [hasChangedTarget, setHasChangedTarget] = useState(false);
 
   // Keep the last result while a new target loads so the UI shows "Updating..."
   // rather than the skeleton.
   const { currentData: data, error, isFetching, refetch } = useGetRentalRoiQuery({ targetReturnPct });
   const { refresh, refreshControl } = useRefresh(async () => { await refetch(); }, error);
+  const headline = data && data.properties.length > 0 && data.has_transactions ? rentalRoiHeadline(data.summary) : null;
+  // The headline is simply there when the screen opens; it follows the target typed below, so once
+  // the target changes, each new one is read out as it arrives.
+  useAnnouncement(hasChangedTarget && headline ? [headline.title, headline.coverage].filter(Boolean).join(", ") : undefined, "polite");
 
   if (error && !data) {
     return (
@@ -43,7 +48,7 @@ export default function RentalRoiScreen() {
     );
   }
 
-  if (!data.has_transactions) {
+  if (!data.has_transactions || !headline) {
     return (
       <EmptyState
         action={{ label: MESSAGES.noneTransactionsAction, onPress: () => router.push("/transactions") }}
@@ -52,8 +57,6 @@ export default function RentalRoiScreen() {
       />
     );
   }
-
-  const headline = rentalRoiHeadline(data.summary);
 
   return (
     <ScrollView
@@ -67,7 +70,6 @@ export default function RentalRoiScreen() {
 
         <View
           accessible
-          accessibilityLiveRegion="polite"
           testID="rental-roi-headline"
         >
           <Text
@@ -113,7 +115,10 @@ export default function RentalRoiScreen() {
         {/* Target input */}
         <RentalRoiTargetInput
           isUpdating={isFetching}
-          onChange={setTargetReturnPct}
+          onChange={(pct) => {
+            setHasChangedTarget(true);
+            setTargetReturnPct(pct);
+          }}
           value={targetReturnPct}
         />
 

@@ -69,7 +69,8 @@ describe("MoreScreen search", () => {
     expect(screen.getByText("Leases")).toBeTruthy();
     expect(screen.getAllByText("Leasing").length).toBeGreaterThan(0);
     expect(screen.queryByText("Calendar")).toBeNull();
-    expect(screen.getByText(/^\d+ results?$/).props.accessibilityLiveRegion).toBe("polite");
+    // The screen reads the count once typing pauses; a live region here would read it twice on Android.
+    expect(screen.getByText(/^\d+ results?$/).props.accessibilityLiveRegion).toBeUndefined();
   });
 
   it("hides the account section and version while searching, and brings them back", async () => {
@@ -173,6 +174,7 @@ describe("MoreScreen search", () => {
       });
       expect(announce).toHaveBeenCalledTimes(1);
       expect(announce).toHaveBeenCalledWith(expect.stringMatching(/^\d+ results?$/));
+      expect(AccessibilityInfo.announceForAccessibilityWithOptions).not.toHaveBeenCalled();
     } finally {
       jest.useRealTimers();
     }

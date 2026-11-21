@@ -1,4 +1,5 @@
 import { Text, View } from "react-native";
+import { useAnnouncement } from "../hooks/useAnnouncement";
 import { useTheme } from "../theme/useTheme";
 import type { LoadMoreFooterProps } from "../types/LoadMoreFooterProps";
 import LoadingButton from "./LoadingButton";
@@ -6,12 +7,15 @@ import LoadingButton from "./LoadingButton";
 /** Under a paged list: how many are showing, and a button for the next page. Render it only while there is one. */
 export default function LoadMoreFooter({ shown, total, isLoading, isError, onLoadMore, messages }: LoadMoreFooterProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const hasFailed = isError && !isLoading;
+  useAnnouncement(messages.showingCount(shown, total), "polite", { onChangeOnly: true });
+  useAnnouncement(hasFailed ? messages.couldntLoadMore : undefined);
   return (
     <View style={{ gap: spacing.sm }}>
-      <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.sm, color: colors.mutedForeground, textAlign: "center" }}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground, textAlign: "center" }}>
         {messages.showingCount(shown, total)}
       </Text>
-      {isError && !isLoading ? (
+      {hasFailed ? (
         <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText, textAlign: "center" }}>
           {messages.couldntLoadMore}
         </Text>

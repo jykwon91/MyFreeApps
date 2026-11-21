@@ -4,7 +4,7 @@ import {
   UNMARK_CAPITAL_IMPROVEMENT,
   UNMARKING_CAPITAL_IMPROVEMENT,
 } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
 import type { TransactionSelectionBarProps } from "../../types/TransactionSelectionBarProps";
@@ -28,6 +28,8 @@ export default function TransactionSelectionBar({
   const { colors, spacing, fontSize } = useTheme();
   const cannotApprove = selectedCount - approvableCount;
   const isBusy = isApproving || isDeleting || isMarking || isUnmarking;
+  const status = isChecking ? SELECTION_MESSAGES.checking : selectedCount === 1 ? "1 selected" : `${selectedCount} selected`;
+  useAnnouncement(status, "polite");
   return (
     <View
       style={{
@@ -38,9 +40,7 @@ export default function TransactionSelectionBar({
         backgroundColor: colors.background,
       }}
     >
-      <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-        {isChecking ? SELECTION_MESSAGES.checking : selectedCount === 1 ? "1 selected" : `${selectedCount} selected`}
-      </Text>
+      <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{status}</Text>
       {cannotApprove > 0 && !isChecking ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {cannotApprove === 1 ? "1 of these" : `${cannotApprove} of these`} can&apos;t be approved here: it has no property, or it&apos;s already approved.

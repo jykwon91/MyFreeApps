@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { StatusBar } from "expo-status-bar";
-import { Dimensions } from "react-native";
+import { AccessibilityInfo, Dimensions } from "react-native";
 import { WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES, pageAtOffset, photoViewerCounter } from "../src/constants/welcomeManualPhotoViewer";
 import WelcomeManualPhotoViewer from "../src/features/welcomeManuals/WelcomeManualPhotoViewer";
 import { isInsideAccessibleElement } from "../test-support/isInsideAccessibleElement";
@@ -45,6 +45,7 @@ describe("the photo viewer", () => {
     expect(screen.queryByRole("button", { name: MESSAGES.previous })).toBeNull();
     await fireEvent.press(button(MESSAGES.next));
     expect(screen.getByText("2 of 3")).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("2 of 3", { queue: true });
     await fireEvent.press(button(MESSAGES.next));
     expect(screen.getByText("3 of 3")).toBeTruthy();
     expect(screen.queryByRole("button", { name: MESSAGES.next })).toBeNull();

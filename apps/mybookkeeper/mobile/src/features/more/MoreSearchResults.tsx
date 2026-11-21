@@ -4,13 +4,13 @@ import { WEB_BASE_URL } from "../../constants/api";
 import { MORE_ACCOUNT_HREF, MORE_SEARCH_MESSAGES } from "../../constants/moreSearch";
 import type { MoreSearchResultsProps } from "../../types/MoreSearchResultsProps";
 
+/** The count shown above the results; MoreScreen reads it out once typing pauses. */
 export default function MoreSearchResults({ query, results, onShowAccount }: MoreSearchResultsProps) {
   const { colors, fontSize } = useTheme();
+  const count = MORE_SEARCH_MESSAGES.count(results.length);
   return (
     <View>
-      <Text accessibilityLiveRegion="polite" style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
-        {MORE_SEARCH_MESSAGES.count(results.length)}
-      </Text>
+      <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{count}</Text>
       {results.length === 0 ? (
         <EmptyState body={MORE_SEARCH_MESSAGES.emptyBody} heading={MORE_SEARCH_MESSAGES.emptyHeading(query.trim())} />
       ) : (

@@ -1,9 +1,9 @@
-import { Banner, useTheme } from "@platform/mobile";
+import { Banner, useAnnouncement, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { KEEP_BLOCKED_FILES_LABEL, REMOVE_BLOCKED_FILES_LABEL, SENT_MESSAGE_MS, SIGN_IN_AGAIN_MESSAGE } from "../../constants/capture";
+import { KEEP_BLOCKED_FILES_LABEL, REMOVE_BLOCKED_FILES_LABEL, SENDING_MESSAGE, SENT_MESSAGE, SENT_MESSAGE_MS, SIGN_IN_AGAIN_MESSAGE } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { waitingFilesMessage } from "../aiPermission/waitingFilesMessage";
 import { drainUploadQueue } from "./drainUploadQueue";
@@ -25,6 +25,9 @@ export default function UploadStatus() {
     const timer = setTimeout(() => dispatch(uploadSentSettled()), SENT_MESSAGE_MS);
     return () => clearTimeout(timer);
   }, [dispatch, phase, hasSettledFiles]);
+
+  const progress = phase === "sending" ? SENDING_MESSAGE : phase === "sent" ? SENT_MESSAGE : undefined;
+  useAnnouncement(progress, "polite");
 
   const dismiss = { label: "OK", onPress: () => void dispatch(uploadStatusDismissed()) };
   const removeBlocked = () => {
@@ -64,11 +67,7 @@ export default function UploadStatus() {
       {phase === "limitReached" ? (
         <Banner actions={[dismiss]} message="You've hit today's upload limit. Your photos are saved here, and I'll send them when you come back tomorrow." />
       ) : null}
-      {phase === "sending" || phase === "sent" ? (
-        <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-          {phase === "sending" ? "Sending…" : "Got it. I'm reading it now."}
-        </Text>
-      ) : null}
+      {progress ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{progress}</Text> : null}
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useAnnouncement, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { DOCUMENT_READER_FILE_TYPES } from "../../constants/documentReader";
@@ -29,6 +29,7 @@ export default function DocumentReader<TDraft>({ messages: MESSAGES, readers, on
   const reader = useReadDocument(readers, MESSAGES, onRead);
   const [isPickingLibrary, setIsPickingLibrary] = useState(false);
   const isBlocked = isDisabled || reader.isReading;
+  useAnnouncement(reader.isReading ? MESSAGES.reading : undefined, "polite");
 
   return (
     <View style={{ gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}>
@@ -63,7 +64,7 @@ export default function DocumentReader<TDraft>({ messages: MESSAGES, readers, on
         </>
       ) : null}
       {reader.isReading ? (
-        <View accessibilityLiveRegion="polite" style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <ActivityIndicator color={colors.primary} />
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.reading}</Text>
         </View>

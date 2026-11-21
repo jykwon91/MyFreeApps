@@ -1,4 +1,4 @@
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useAnnouncement, useTheme } from "@platform/mobile";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 
@@ -16,6 +16,9 @@ interface PropertyMultiSheetProps {
 export default function PropertyMultiSheet({ isOpen, properties, selectedIds, onChange, onClose, maxSelected }: PropertyMultiSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const isAtLimit = maxSelected !== undefined && selectedIds.length >= maxSelected;
+  const limitNotice = isAtLimit ? MESSAGES.propertyLimit(maxSelected) : undefined;
+  // Read when a tap reaches the limit, not each time the sheet is opened at it.
+  useAnnouncement(limitNotice, "polite", { onChangeOnly: true });
   const toggle = (id: string) => {
     if (selectedIds.includes(id)) onChange(selectedIds.filter((chosen) => chosen !== id));
     else if (!isAtLimit) onChange([...selectedIds, id]);
@@ -32,9 +35,9 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
             <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{MESSAGES.done}</Text>
           </Pressable>
         </View>
-        {isAtLimit ? (
-          <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
-            {MESSAGES.propertyLimit(maxSelected)}
+        {limitNotice ? (
+          <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
+            {limitNotice}
           </Text>
         ) : null}
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>

@@ -1,5 +1,5 @@
 import type { WelcomeManualSendResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-send-response";
-import { LoadingButton, useTheme, goBackOr } from "@platform/mobile";
+import { LoadingButton, useAnnouncement, useTheme, goBackOr } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES, emailOutcomeCopy } from "../../constants/welcomeManualForms";
 
@@ -15,8 +15,9 @@ interface WelcomeManualEmailOutcomeProps {
 export default function WelcomeManualEmailOutcome({ manualId, outcome, onTryAgain, onSendAnother }: WelcomeManualEmailOutcomeProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { heading, body } = emailOutcomeCopy(outcome);
+  useAnnouncement(`${heading} ${body}`, "polite");
   return (
-    <View accessibilityLiveRegion="polite" style={{ gap: spacing.md, padding: spacing.lg }}>
+    <View style={{ gap: spacing.md, padding: spacing.lg }}>
       <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{heading}</Text>
       <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{body}</Text>
       {outcome.status === "sent" ? (
