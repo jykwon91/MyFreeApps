@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { KANBAN_LANE_STORAGE_PREFIX } from "@/constants/account-preference-storage";
 import type { KanbanLane } from "@myjobhunter/api-client/types/kanban/kanban-lane";
 
 /**
@@ -15,10 +16,8 @@ import type { KanbanLane } from "@myjobhunter/api-client/types/kanban/kanban-lan
  * tabs (collapse a lane in tab A → tab B's kanban hides it on next
  * render).
  */
-const PREFIX = "mjh_kanban_lane_";
-
 function storageKey(lane: KanbanLane): string {
-  return `${PREFIX}${lane}`;
+  return `${KANBAN_LANE_STORAGE_PREFIX}${lane}`;
 }
 
 function readCollapsed(lane: KanbanLane): boolean {

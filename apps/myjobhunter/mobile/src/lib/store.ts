@@ -5,6 +5,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
+import { forgetAccountPreferences } from "./forgetAccountPreferences";
 import { clearResumeExportFiles } from "./resumeExportFiles";
 import { writeResumeSessionId } from "./resumeSessionStore";
 import { session } from "./session";
@@ -36,12 +37,13 @@ export const store = makeStore();
 refetchOnForeground(store.dispatch);
 
 // What one account leaves on the phone that the next shouldn't open: a copy of its data export or
-// its resume on the way to the share sheet, and the resume session it was working on (the next
-// account would only find it gone). None of these throw, so the cache reset below always runs.
+// its resume on the way to the share sheet, the resume session it was working on (the next
+// account would only find it gone), and its dismissed reminders and folded board lanes. None of these throw, so the cache reset below always runs.
 onAccountLeft(session, () => {
   clearDataExportFiles();
   void writeResumeSessionId(null);
   clearResumeExportFiles();
+  void forgetAccountPreferences();
 });
 // The analysis slice resets with the API cache, so the next account never sees the last one's.
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));

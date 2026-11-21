@@ -1,5 +1,6 @@
 import { onAccountLeft } from "@platform/ui";
 import { createAuthClient } from "@platform/ui/lib/authClient";
+import { forgetAccountPreferences } from "@/lib/forgetAccountPreferences";
 import { forgetResumeSession } from "@/lib/resumeSessionStorage";
 import { store } from "@/lib/store";
 
@@ -11,6 +12,10 @@ import.meta.hot?.dispose(authClient.dispose);
 // signing back in picks up where they were.
 const stopForgettingResumeSession = onAccountLeft(forgetResumeSession);
 import.meta.hot?.dispose(stopForgettingResumeSession);
+// Dismissed reminders and folded board lanes are that account's own choices too. Unlike the
+// session, an expired one keeps them for the same person: onAccountLeft doesn't fire for that.
+const stopForgettingPreferences = onAccountLeft(forgetAccountPreferences);
+import.meta.hot?.dispose(stopForgettingPreferences);
 
 export const {
   signIn,

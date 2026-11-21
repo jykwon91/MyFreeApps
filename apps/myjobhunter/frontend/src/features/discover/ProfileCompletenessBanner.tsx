@@ -14,12 +14,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
-
-const STORAGE_KEY = "mjh_discover_profile_banner_dismissed";
+import { PROFILE_BANNER_DISMISSED_STORAGE_KEY } from "@/constants/account-preference-storage";
 
 function readStoredDismissal(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "true";
+    return localStorage.getItem(PROFILE_BANNER_DISMISSED_STORAGE_KEY) === "true";
   } catch {
     return false;
   }
@@ -27,7 +26,7 @@ function readStoredDismissal(): boolean {
 
 function storeDismissal(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, "true");
+    localStorage.setItem(PROFILE_BANNER_DISMISSED_STORAGE_KEY, "true");
   } catch {
     // localStorage unavailable — best-effort; banner will reappear on reload
   }
