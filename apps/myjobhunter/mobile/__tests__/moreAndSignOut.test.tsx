@@ -5,6 +5,9 @@ import { Linking } from "react-native";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { MORE_MENU } from "../src/constants/moreMenu";
 import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
+import { DASHBOARD_FOLDS_KEY } from "../src/constants/dashboard";
+import { PROFILE_BANNER_DISMISSED_KEY } from "../src/constants/profileBanner";
+import { SECURITY_INTRO_DISMISSED_KEY } from "../src/constants/security";
 import { PROFILE_MESSAGES } from "../src/constants/profile";
 import { RESUME_EXPORT_DIRECTORY, RESUME_SESSION_ID_KEY } from "../src/constants/resumeStorage";
 import { PROFILE_TAB, TABS } from "../src/constants/tabs";
@@ -115,12 +118,15 @@ describe("the signed-in shell", () => {
     expect(openURL).not.toHaveBeenCalled();
   });
 
-  it("signs out of this phone, tells the server, forgets this account's resume work, and goes back to sign-in", async () => {
+  it("signs out of this phone, tells the server, forgets this account's resume work, dismissals and board folds, and goes back to sign-in", async () => {
     const sent = serve({
       "GET /auth/mobile/sessions": () => ({ status: 200, data: DEVICES }),
       "POST /auth/mobile/logout": () => ({ status: 204 }),
     });
     storedItems.set(RESUME_SESSION_ID_KEY, "rs1");
+    storedItems.set(PROFILE_BANNER_DISMISSED_KEY, "true");
+    storedItems.set(SECURITY_INTRO_DISMISSED_KEY, "true");
+    storedItems.set(DASHBOARD_FOLDS_KEY, JSON.stringify({ collapsedLanes: ["strong_fit"], isClosedOpen: true }));
     resumeCopyLeftIn("1");
     await renderApp("/more");
     // A copy left by a download the app was killed during goes at launch.
@@ -133,6 +139,9 @@ describe("the signed-in shell", () => {
     expect(sent).toContainEqual(expect.objectContaining({ route: "POST /auth/mobile/logout", body: { refresh_token: "r1" } }));
     await waitFor(() => expect(storedSession()).toBeNull());
     expect(storedItems.has(RESUME_SESSION_ID_KEY)).toBe(false);
+    expect(storedItems.has(PROFILE_BANNER_DISMISSED_KEY)).toBe(false);
+    expect(storedItems.has(SECURITY_INTRO_DISMISSED_KEY)).toBe(false);
+    expect(storedItems.has(DASHBOARD_FOLDS_KEY)).toBe(false);
     expect(fakeFiles()).toEqual([]);
   });
 });

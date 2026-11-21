@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import { AlertBox } from "@platform/ui";
 
+import { SECURITY_INTRO_DISMISSED_STORAGE_KEY } from "@/constants/account-preference-storage";
 import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DisplayNameSetting from "@/features/security/DisplayNameSetting";
@@ -19,7 +20,7 @@ import DeleteAccountModal from "@/features/security/DeleteAccountModal";
  */
 export default function Security() {
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable(
-    "mjh-security-info-dismissed",
+    SECURITY_INTRO_DISMISSED_STORAGE_KEY,
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 

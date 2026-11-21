@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { RESUME_CLICK_TIP_DISMISSED_STORAGE_KEY } from "@/constants/account-preference-storage";
 
-const DISMISS_KEY = "mjh:resumeRefinementClickTipDismissed";
 
 /**
  * One-time dismissible discovery tip for click-to-target. Also states
@@ -10,7 +10,7 @@ const DISMISS_KEY = "mjh:resumeRefinementClickTipDismissed";
  */
 export default function ClickToTargetTip() {
   const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(DISMISS_KEY) === "1",
+    () => localStorage.getItem(RESUME_CLICK_TIP_DISMISSED_STORAGE_KEY) === "1",
   );
   if (dismissed) return null;
 
@@ -25,7 +25,7 @@ export default function ClickToTargetTip() {
         type="button"
         aria-label="Dismiss tip"
         onClick={() => {
-          localStorage.setItem(DISMISS_KEY, "1");
+          localStorage.setItem(RESUME_CLICK_TIP_DISMISSED_STORAGE_KEY, "1");
           setDismissed(true);
         }}
         className="shrink-0 hover:text-foreground"
