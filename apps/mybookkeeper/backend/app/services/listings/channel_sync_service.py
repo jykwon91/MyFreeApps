@@ -14,7 +14,9 @@ channel_listing row and PRESERVE the existing blackouts — better to
 hold a few stale dates than to over-block by accident or under-block
 during a transient outage.
 
-The poll uses ``httpx`` with a 10s timeout. ``settings.app_url`` is sent
+The poll goes through ``platform_shared.core.capped_fetch`` (SSRF guard on
+every hop, one overall deadline, a streamed size cap; limits in
+``app.core.ical_feed_constants``). ``settings.app_url`` is sent
 as the ``User-Agent`` so channels can identify the source of the polls
 in their logs.
 """
@@ -24,13 +26,20 @@ import logging
 import traceback
 from datetime import datetime, timezone
 from typing import Literal
-from urllib.parse import urljoin
 
 import httpx
 
-from platform_shared.core.url_safety import UnsafeURLError, assert_url_safe
+from platform_shared.core.capped_fetch import fetch_capped
+from platform_shared.core.capped_fetch_error import CappedFetchError
+from platform_shared.core.url_safety import UnsafeURLError
 
 from app.core.config import settings
+from app.core.ical_feed_constants import (
+    ICAL_FEED_MAX_BYTES,
+    ICAL_FEED_MAX_REDIRECTS,
+    ICAL_FEED_PHASE_TIMEOUT_SECONDS,
+    ICAL_FEED_TOTAL_TIMEOUT_SECONDS,
+)
 from app.core.url_redaction import redact_url, redact_urls_in_text
 from app.db.session import unit_of_work
 from app.models.listings.channel_listing import ChannelListing
@@ -40,23 +49,6 @@ from app.services.listings.ical_parser import parse_ical_blackouts
 logger = logging.getLogger(__name__)
 
 ImportErrorCategory = Literal["transient", "auth", "config", "unknown"]
-
-# Per-feed HTTP timeout. Channels' iCal exports are tiny (text), so 10s
-# is generous. Any longer and a slow channel could starve the scheduler
-# loop on a host with many listings.
-_POLL_TIMEOUT_SECONDS: float = 10.0
-
-# Redirects are followed MANUALLY (httpx auto-follow disabled) so the SSRF
-# guard re-validates every hop — a public feed URL can 302 into an internal
-# one. A handful of hops covers legitimate canonicalisation (http→https,
-# trailing slash, vanity → real host).
-_MAX_REDIRECTS: int = 5
-_REDIRECT_STATUSES: frozenset[int] = frozenset({301, 302, 303, 307, 308})
-
-# Cap the body we buffer. iCal exports are small text; this bounds memory if a
-# user-supplied URL streams a huge response.
-_MAX_FEED_BYTES: int = 5_000_000
-
 
 def _failure_message(exc: BaseException) -> str:
     """Exception text safe to log and store: httpx embeds the full feed URL in it."""
@@ -69,47 +61,42 @@ def _user_agent() -> str:
 
 
 async def _fetch(url: str, *, client: httpx.AsyncClient) -> bytes:
-    """Fetch a single iCal feed, guarding against SSRF.
+    """Fetch a single iCal feed within its time and size limits.
 
-    The feed URL is user-supplied (``ical_import_url``), so every hop is
-    validated with ``assert_url_safe`` before egress and auto-redirects are
-    disabled — a public URL can ``302`` into an internal target (cloud
-    metadata, loopback, RFC1918, a sibling service on the Docker network).
+    The feed URL is user-supplied (``ical_import_url``). ``fetch_capped``
+    checks every hop with the SSRF guard before egress, bounds the whole
+    fetch with one deadline, and stops reading once the body passes the cap.
 
     Raises:
         UnsafeURLError: the URL (or a redirect hop) resolves to a non-public
             address, or is not http(s) on a standard web port.
-        httpx.HTTPError: transport failure, non-2xx response, too many
-            redirects, or a body exceeding ``_MAX_FEED_BYTES``.
+        CappedFetchError: timeout, non-2xx response, network failure, too
+            many redirects, or a body over ``ICAL_FEED_MAX_BYTES``.
     """
-    headers = {"User-Agent": _user_agent(), "Accept": "text/calendar"}
-    current_url = url
-    for _ in range(_MAX_REDIRECTS + 1):
-        # SSRF guard — never issue a request to a non-public target.
-        await assert_url_safe(current_url)
-        response = await client.get(
-            current_url,
-            timeout=_POLL_TIMEOUT_SECONDS,
-            headers=headers,
-            follow_redirects=False,
-        )
-        if response.status_code in _REDIRECT_STATUSES:
-            location = response.headers.get("location")
-            if not location:
-                break  # redirect status with no target — treat as final
-            current_url = urljoin(current_url, location)
-            continue
-        break
-    else:
-        raise httpx.HTTPError(f"exceeded {_MAX_REDIRECTS} redirects fetching feed")
+    response = await fetch_capped(
+        client,
+        url,
+        max_bytes=ICAL_FEED_MAX_BYTES,
+        total_timeout_seconds=ICAL_FEED_TOTAL_TIMEOUT_SECONDS,
+        max_redirects=ICAL_FEED_MAX_REDIRECTS,
+        headers={"User-Agent": _user_agent(), "Accept": "text/calendar"},
+    )
+    return response.content
 
-    response.raise_for_status()
-    content = response.content
-    if len(content) > _MAX_FEED_BYTES:
-        raise httpx.HTTPError(
-            f"iCal feed exceeds {_MAX_FEED_BYTES} bytes — refusing to parse"
-        )
-    return content
+
+def _category_for(exc: CappedFetchError) -> ImportErrorCategory:
+    """Who can fix a failed fetch: the channel (auth), the host (config) or time."""
+    if exc.reason == "http_status" and exc.status_code is not None:
+        if exc.status_code in (401, 403):
+            return "auth"
+        if 400 <= exc.status_code < 500:
+            return "config"
+        return "transient"
+    if exc.reason in (
+        "too_large", "too_many_redirects", "bad_encoding", "unexpected_content_type",
+    ):
+        return "config"
+    return "transient"
 
 
 async def poll_one(
@@ -126,38 +113,22 @@ async def poll_one(
     if channel_listing.ical_import_url is None:
         return
 
+    # Logs name the redacted feed only (host plus a short hash): the feed URL
+    # itself is a secret.
+    feed = redact_url(channel_listing.ical_import_url)
     category: ImportErrorCategory
     try:
         payload = await _fetch(channel_listing.ical_import_url, client=client)
         parsed = parse_ical_blackouts(payload)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (401, 403):
-            category = "auth"
-        elif 400 <= status < 500:
-            category = "config"
-        else:
-            category = "transient"
-        message = f"HTTPStatusError {status}: {redact_urls_in_text(str(exc))}"
+    except CappedFetchError as exc:
+        # fetch_capped already logged the reason and host. Its message names
+        # the host only; the redacted feed keeps the stored error in the same
+        # form as every other branch.
+        category = _category_for(exc)
+        message = f"{type(exc).__name__} ({feed}): {exc}"
         logger.warning(
             "iCal poll %s for channel_listing=%s url=%s: %s",
-            category, channel_listing.id, redact_url(channel_listing.ical_import_url), message,
-        )
-        async with unit_of_work() as db:
-            await channel_listing_repo.mark_imported(
-                db,
-                channel_listing.id,
-                last_imported_at=datetime.now(timezone.utc),
-                last_import_error=message[:500],
-                last_import_error_category=category,
-            )
-        return
-    except httpx.RequestError as exc:
-        category = "transient"
-        message = _failure_message(exc)
-        logger.warning(
-            "iCal poll transient for channel_listing=%s url=%s: %s",
-            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
+            category, channel_listing.id, feed, message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
@@ -176,7 +147,7 @@ async def poll_one(
         message = _failure_message(exc)
         logger.warning(
             "iCal poll blocked unsafe URL for channel_listing=%s url=%s: %s",
-            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
+            channel_listing.id, feed, message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
@@ -195,7 +166,7 @@ async def poll_one(
         # bare call stack instead so the failure stays diagnosable.
         logger.error(
             "iCal poll unknown error for channel_listing=%s url=%s: %s\n%s",
-            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
+            channel_listing.id, feed, message,
             "".join(traceback.format_tb(exc.__traceback__)),
         )
         async with unit_of_work() as db:
@@ -250,7 +221,9 @@ async def poll_all() -> int:
         return 0
 
     polled = 0
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(ICAL_FEED_PHASE_TIMEOUT_SECONDS),
+    ) as client:
         for row in rows:
             await poll_one(row, client=client)
             polled += 1

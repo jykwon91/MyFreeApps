@@ -1,6 +1,7 @@
 """Unit tests for the iCal poll service.
 
-Mocks ``httpx.AsyncClient`` so no real network calls fire. Patches
+Uses a real ``httpx.AsyncClient`` over ``httpx.MockTransport`` so no real
+network calls fire, and stubs DNS for the SSRF guard. Patches
 ``unit_of_work`` so the service writes through the test fixture's
 in-memory SQLite session instead of the production engine.
 
@@ -17,16 +18,24 @@ Verifies:
 """
 from __future__ import annotations
 
+import asyncio
+import ipaddress
 import uuid
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import date
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
 
+from platform_shared.core.capped_fetch_error import CappedFetchError
+from platform_shared.core import url_safety
 from platform_shared.core.url_safety import UnsafeURLError
+from platform_shared.testing.streamed_response import streamed_response
+
+from app.core.ical_feed_constants import ICAL_FEED_MAX_BYTES, ICAL_FEED_MAX_REDIRECTS
 
 from app.models.listings.channel import Channel
 from app.models.listings.channel_listing import ChannelListing
@@ -107,43 +116,83 @@ def _vevent(uid: str, start: str, end: str) -> str:
     )
 
 
-def _mock_client_returning(payload: bytes) -> AsyncMock:
-    """Build an AsyncMock client whose .get() resolves to a 200 response."""
-    response = MagicMock()
-    response.content = payload
-    response.raise_for_status = MagicMock(return_value=None)
+_PUBLIC_STUB_IP = "93.184.216.34"
 
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.get = AsyncMock(return_value=response)
-    return client
+# Kept before the autouse fixture below replaces it, for the one test that
+# needs the real resolver's handling of a malformed name.
+_REAL_RESOLVE_HOST = url_safety._resolve_host
 
 
-def _mock_client_raising(exc: Exception) -> AsyncMock:
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.get = AsyncMock(side_effect=exc)
-    return client
+def _resolve_for_tests(
+    host: str, port: int
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """Literal IPs are classified for real; hostnames resolve to a public IP."""
+    try:
+        return [ipaddress.ip_address(host)]
+    except ValueError:
+        return [ipaddress.ip_address(_PUBLIC_STUB_IP)]
 
 
-def _resp(status_code: int, *, content: bytes = b"", location: str | None = None) -> MagicMock:
-    """Build a fake httpx response with real dict headers.
+@pytest.fixture(autouse=True)
+def _stub_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "platform_shared.core.url_safety._resolve_host", _resolve_for_tests,
+    )
 
-    ``_fetch`` inspects ``.status_code``, ``.headers.get('location')``,
-    ``.raise_for_status()`` and ``.content`` — a plain ``MagicMock`` would
-    make ``headers.get`` return a truthy mock, so give it a real dict.
+
+Responder = Callable[[httpx.Request], httpx.Response]
+
+
+class _FeedClient(httpx.AsyncClient):
+    """A real ``httpx.AsyncClient`` over ``MockTransport``.
+
+    Streaming, redirects and timeouts all run through httpx itself, so the
+    tests exercise the real fetch path. ``urls`` records every request sent.
     """
-    r = MagicMock()
-    r.status_code = status_code
-    r.content = content
-    r.headers = {"location": location} if location is not None else {}
-    r.raise_for_status = MagicMock(return_value=None)
-    return r
+
+    def __init__(self, respond: Responder) -> None:
+        self.urls: list[str] = []
+
+        def handle(request: httpx.Request) -> httpx.Response:
+            self.urls.append(str(request.url))
+            return respond(request)
+
+        super().__init__(transport=httpx.MockTransport(handle))
 
 
-def _mock_client_sequence(responses: list[MagicMock]) -> AsyncMock:
-    """Client whose successive ``.get()`` calls return ``responses`` in order."""
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.get = AsyncMock(side_effect=list(responses))
-    return client
+def _mock_client_returning(payload: bytes) -> _FeedClient:
+    return _FeedClient(lambda request: streamed_response(200, content=payload))
+
+
+def _mock_client_raising(exc: Exception) -> _FeedClient:
+    def respond(request: httpx.Request) -> httpx.Response:
+        raise exc
+
+    return _FeedClient(respond)
+
+
+def _mock_client_status(status_code: int) -> _FeedClient:
+    return _FeedClient(lambda request: httpx.Response(status_code))
+
+
+def _resp(
+    status_code: int, *, content: bytes = b"", location: str | None = None,
+) -> httpx.Response:
+    headers = {"location": location} if location is not None else {}
+    return streamed_response(status_code, content=content, headers=headers)
+
+
+def _mock_client_sequence(responses: list[httpx.Response]) -> _FeedClient:
+    """Client whose successive requests get ``responses`` in order."""
+    remaining = list(responses)
+    return _FeedClient(lambda request: remaining.pop(0))
+
+
+async def _endless(chunk: bytes, *, pause: float = 0.0) -> AsyncIterator[bytes]:
+    while True:
+        if pause:
+            await asyncio.sleep(pause)
+        yield chunk
 
 
 def _patched_uow(session):
@@ -257,11 +306,8 @@ class TestPollOne:
         self, db, seeded_channel_listing,
     ) -> None:
         cl = seeded_channel_listing
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        exc = httpx.HTTPStatusError("401", request=MagicMock(), response=mock_response)
         with _patched_uow(db):
-            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+            await channel_sync_service.poll_one(cl, client=_mock_client_status(401))
 
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
@@ -272,11 +318,8 @@ class TestPollOne:
         self, db, seeded_channel_listing,
     ) -> None:
         cl = seeded_channel_listing
-        mock_response = MagicMock()
-        mock_response.status_code = 403
-        exc = httpx.HTTPStatusError("403", request=MagicMock(), response=mock_response)
         with _patched_uow(db):
-            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+            await channel_sync_service.poll_one(cl, client=_mock_client_status(403))
 
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
@@ -287,11 +330,8 @@ class TestPollOne:
         self, db, seeded_channel_listing,
     ) -> None:
         cl = seeded_channel_listing
-        mock_response = MagicMock()
-        mock_response.status_code = 400
-        exc = httpx.HTTPStatusError("400", request=MagicMock(), response=mock_response)
         with _patched_uow(db):
-            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+            await channel_sync_service.poll_one(cl, client=_mock_client_status(400))
 
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
@@ -302,11 +342,8 @@ class TestPollOne:
         self, db, seeded_channel_listing,
     ) -> None:
         cl = seeded_channel_listing
-        mock_response = MagicMock()
-        mock_response.status_code = 503
-        exc = httpx.HTTPStatusError("503", request=MagicMock(), response=mock_response)
         with _patched_uow(db):
-            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+            await channel_sync_service.poll_one(cl, client=_mock_client_status(503))
 
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
@@ -344,7 +381,7 @@ class TestPollOne:
         with _patched_uow(db):
             await channel_sync_service.poll_one(refreshed, client=client)
 
-        client.get.assert_not_called()
+        assert client.urls == []
 
 
 class TestFetchSSRFGuard:
@@ -369,7 +406,7 @@ class TestFetchSSRFGuard:
         client = _mock_client_sequence([])  # .get must never be reached
         with pytest.raises(UnsafeURLError):
             await channel_sync_service._fetch(url, client=client)
-        client.get.assert_not_called()
+        assert client.urls == []
 
     @pytest.mark.asyncio
     async def test_redirect_into_internal_target_blocked(self) -> None:
@@ -381,26 +418,86 @@ class TestFetchSSRFGuard:
         with pytest.raises(UnsafeURLError):
             await channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client)
         # First (public) request issued; the internal redirect never was.
-        assert client.get.call_count == 1
+        assert client.urls == ["http://8.8.8.8/cal.ics"]
 
     @pytest.mark.asyncio
     async def test_redirect_loop_trips_cap(self) -> None:
         # Always redirect to a public literal so every hop passes the SSRF
         # guard but the redirect cap eventually trips.
-        client = AsyncMock(spec=httpx.AsyncClient)
-        client.get = AsyncMock(
-            side_effect=lambda *a, **k: _resp(302, location="http://8.8.8.8/next")
+        client = _FeedClient(
+            lambda request: _resp(302, location="http://8.8.8.8/next")
         )
-        with pytest.raises(httpx.HTTPError):
+        with pytest.raises(CappedFetchError) as exc_info:
             await channel_sync_service._fetch("http://8.8.8.8/start", client=client)
-        assert client.get.call_count == channel_sync_service._MAX_REDIRECTS + 1
+        assert exc_info.value.reason == "too_many_redirects"
+        assert len(client.urls) == ICAL_FEED_MAX_REDIRECTS + 1
 
     @pytest.mark.asyncio
     async def test_oversized_body_rejected(self) -> None:
-        big = b"x" * (channel_sync_service._MAX_FEED_BYTES + 1)
+        big = b"x" * (ICAL_FEED_MAX_BYTES + 1)
         client = _mock_client_sequence([_resp(200, content=big)])
-        with pytest.raises(httpx.HTTPError):
+        with pytest.raises(CappedFetchError) as exc_info:
             await channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client)
+        assert exc_info.value.reason == "too_large"
+
+
+class TestFetchLimits:
+    """The feed fetch has one overall deadline and stops reading at the cap.
+
+    ``poll_all`` polls feeds one at a time, so a single slow or huge feed
+    would otherwise stall blackout sync for every other listing.
+    """
+
+    @pytest.mark.asyncio
+    async def test_endless_feed_stops_at_the_cap(self) -> None:
+        # Buffering the whole body first would never finish here.
+        client = _FeedClient(
+            lambda request: httpx.Response(200, content=_endless(b"x" * 65_536))
+        )
+        with pytest.raises(CappedFetchError) as exc_info:
+            await asyncio.wait_for(
+                channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client),
+                timeout=10,
+            )
+        assert exc_info.value.reason == "too_large"
+
+    @pytest.mark.asyncio
+    async def test_slow_drip_feed_hits_the_overall_deadline(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Every chunk arrives far inside the per-read timeout; only an overall
+        # deadline ends this.
+        monkeypatch.setattr(channel_sync_service, "ICAL_FEED_TOTAL_TIMEOUT_SECONDS", 0.3)
+        client = _FeedClient(
+            lambda request: httpx.Response(200, content=_endless(b"x", pause=0.05))
+        )
+        with pytest.raises(CappedFetchError) as exc_info:
+            await asyncio.wait_for(
+                channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client),
+                timeout=5,
+            )
+        assert exc_info.value.reason == "timeout"
+
+    @pytest.mark.asyncio
+    async def test_stalled_feed_recorded_as_transient_without_the_url(
+        self, db, seeded_channel_listing, monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        monkeypatch.setattr(channel_sync_service, "ICAL_FEED_TOTAL_TIMEOUT_SECONDS", 0.3)
+        cl = seeded_channel_listing
+        client = _FeedClient(
+            lambda request: httpx.Response(200, content=_endless(b"x", pause=0.05))
+        )
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=client)
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "transient"
+        assert refreshed.last_import_error is not None
+        assert "airbnb.com" in refreshed.last_import_error
+        assert "cal.ics" not in refreshed.last_import_error
+        assert "cal.ics" not in caplog.text
 
 
 class TestPollOneBlocksSSRF:
@@ -421,9 +518,86 @@ class TestPollOneBlocksSSRF:
         with _patched_uow(db):
             await channel_sync_service.poll_one(refreshed, client=client)
 
-        client.get.assert_not_called()
+        assert client.urls == []
         after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert after is not None
         assert after.last_import_error_category == "config"
         assert after.last_import_error is not None
         assert "UnsafeURLError" in after.last_import_error
+
+
+class TestPollOneLogsRedactedFeed:
+    """The feed URL is a secret: log lines carry only its redacted form (host and hash)."""
+
+    @pytest.mark.asyncio
+    async def test_unsafe_url_logs_redacted_feed_not_url(
+        self, db, seeded_channel_listing, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        cl = seeded_channel_listing
+        await channel_listing_repo.update(
+            db, cl.id, cl.listing_id,
+            {"ical_import_url": "http://127.0.0.1/private/secret-feed-token.ics"},
+        )
+        await db.commit()
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(refreshed, client=_mock_client_returning(b""))
+
+        assert "url=127.0.0.1#" in caplog.text
+        assert "secret-feed-token" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_unknown_error_logs_redacted_feed_not_url(
+        self, db, seeded_channel_listing, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        cl = seeded_channel_listing
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(
+                cl, client=_mock_client_raising(RuntimeError("unexpected parse failure")),
+            )
+
+        assert "url=airbnb.com#" in caplog.text
+        assert "cal.ics" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_malformed_hostname_recorded_as_config(
+        self, db, seeded_channel_listing, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # The IDNA codec rejects ``a..b`` before any lookup; that must be an
+        # unsafe-URL config error, not an exception out of the poll loop.
+        cl = seeded_channel_listing
+        await channel_listing_repo.update(
+            db, cl.id, cl.listing_id, {"ical_import_url": "https://a..b/cal.ics"},
+        )
+        await db.commit()
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+
+        monkeypatch.setattr(
+            "platform_shared.core.url_safety._resolve_host", _REAL_RESOLVE_HOST,
+        )
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(refreshed, client=_mock_client_returning(b""))
+
+        after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert after is not None
+        assert after.last_import_error_category == "config"
+
+    @pytest.mark.asyncio
+    async def test_unsupported_encoding_recorded_as_config(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        client = _FeedClient(
+            lambda request: streamed_response(
+                200, content=b"...", headers={"content-encoding": "br"},
+            )
+        )
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=client)
+
+        after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert after is not None
+        assert after.last_import_error_category == "config"
