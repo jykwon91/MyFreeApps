@@ -10,7 +10,9 @@ export interface CrateRow {
   cheapest: CrateBundleRow | null;
   /** The cheapest bundle's cost. */
   bundleCost: number | null;
-  /** Crate + cheapest bundle, only when both are known, never a partial sum. */
+  /** Copper the crate pays back when handed in (by tier). */
+  refund: number;
+  /** Crate + cheapest bundle - refund, only when both prices are known, never a partial sum; below zero is a profit. */
   total: number | null;
   /** Rewards the crate pays (tier x quality). */
   reward: number;
