@@ -220,6 +220,18 @@ describe("extending a lease", () => {
       expect(submitButton()).toBeDisabled();
     });
 
+    it("hands the reason to the date picker and the Extend button as their hint", async () => {
+      startServer();
+      await renderScreen();
+      await openSheet();
+      expect(screen.getByTestId("date-picker").props.accessibilityHint).toBeUndefined();
+      await pickDate(2027, 2, 28);
+      const reason = "Pick a date after February 28, 2027.";
+      expect(screen.getByText(reason, SHOWN)).toBeTruthy();
+      expect(screen.getByTestId("date-picker").props.accessibilityHint).toBe(reason);
+      expect(submitButton().props.accessibilityHint).toBe(reason);
+    });
+
     it("extends with the date and trimmed note, and emails nobody unless asked", async () => {
       const server = startServer();
       await renderScreen();

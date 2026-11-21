@@ -1,7 +1,7 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, confirmDiscard, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, FieldError, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, View } from "react-native";
 import {
@@ -45,6 +45,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
   const isSubmitting = useRef(false);
   const scroller = useRef<KeyboardAwareScrollRef>(null);
   const isLater = picked !== null && picked > endsOn;
+  const dateError = picked !== null && !isLater ? pickDateAfter(formatLongDate(endsOn)) : undefined;
 
   // The buttons sit below the calendar and note, so a message at the top would be off screen.
   useEffect(() => {
@@ -138,8 +139,11 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{extendContext(longEnd)}</Text>
           {failure ? <Banner message={failure} /> : null}
 
-          <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{LEASE_MESSAGES.newEndDate}</Text>
+          <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>
+            {LEASE_MESSAGES.newEndDate}
+          </Text>
           <DatePicker
+            hint={dateError}
             label={LEASE_MESSAGES.newEndDate}
             minimum={endsOn}
             onChange={(date) => {
@@ -147,7 +151,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
             }}
             value={picked && picked > endsOn ? picked : endsOn}
           />
-          {picked !== null && !isLater ? <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{pickDateAfter(longEnd)}</Text> : null}
+          <FieldError message={dateError} name={LEASE_MESSAGES.newEndDate} />
 
           <FormField
             editable={!isBusy}
@@ -164,7 +168,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
           ) : null}
           {applicant?.has_contact_email === false ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_MESSAGES.noEmailOnFile}</Text> : null}
 
-          <LoadingButton disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={submit}>
+          <LoadingButton accessibilityHint={dateError} disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={submit}>
             {LEASE_MESSAGES.extend}
           </LoadingButton>
           <LoadingButton disabled={isBusy} onPress={close} variant="ghost">

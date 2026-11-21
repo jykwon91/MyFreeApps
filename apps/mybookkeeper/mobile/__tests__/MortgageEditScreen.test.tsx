@@ -240,6 +240,16 @@ describe("adding a mortgage", () => {
     expect(requests.filter((r) => r.method?.toLowerCase() === "post")).toHaveLength(0);
   });
 
+  it("says why when no rate type is chosen, and the group carries the same reason as its hint", async () => {
+    const requests = startServer();
+    await show(<MortgageFormScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.saveNew }));
+    const reason = await screen.findByText("Pick whether the rate is fixed or adjustable.");
+    expect(reason).toBeTruthy();
+    expect(screen.getByLabelText(MESSAGES.rateType).props.accessibilityHint).toBe("Pick whether the rate is fixed or adjustable.");
+    expect(requests.filter((r) => r.method?.toLowerCase() === "post")).toHaveLength(0);
+  });
+
   it("adds the loan, then leaves", async () => {
     const requests = startServer();
     await show(<MortgageFormScreen />);

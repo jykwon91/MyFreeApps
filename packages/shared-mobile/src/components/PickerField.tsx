@@ -4,7 +4,7 @@ import { useTheme } from "../theme/useTheme";
 import type { PickerFieldProps } from "../types/PickerFieldProps";
 
 /** Looks like a FormField but opens a list of choices instead of the keyboard. */
-export default function PickerField({ label, valueLabel, onPress, hint, disabled = false }: PickerFieldProps) {
+export default function PickerField({ label, valueLabel, onPress, hint, error, disabled = false }: PickerFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.xs }}>
@@ -12,7 +12,7 @@ export default function PickerField({ label, valueLabel, onPress, hint, disabled
         {label}
       </Text>
       <Pressable
-        accessibilityHint={hint}
+        accessibilityHint={error ?? hint}
         accessibilityLabel={`${label}, ${valueLabel}`}
         accessibilityRole="button"
         accessibilityState={{ disabled }}
@@ -27,7 +27,7 @@ export default function PickerField({ label, valueLabel, onPress, hint, disabled
           paddingHorizontal: spacing.md,
           borderWidth: 1,
           borderRadius: radius.md,
-          borderColor: colors.inputBorder,
+          borderColor: error ? colors.destructiveText : colors.inputBorder,
           backgroundColor: pressed ? colors.muted : colors.background,
           opacity: disabled ? 0.5 : 1,
         })}
@@ -37,7 +37,7 @@ export default function PickerField({ label, valueLabel, onPress, hint, disabled
           ›
         </Text>
       </Pressable>
-      {hint ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{hint}</Text> : null}
+      {hint && !error ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{hint}</Text> : null}
     </View>
   );
 }

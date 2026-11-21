@@ -2,9 +2,9 @@ import { WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-clie
 import type { WelcomeManualEmailFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-email-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { emailProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
-import { type RefreshControlProps, Text, View } from "react-native";
+import { type RefreshControlProps, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_EMPTY_VALUES, WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEmailOutcome from "./WelcomeManualEmailOutcome";
@@ -18,7 +18,7 @@ interface WelcomeManualEmailFormProps {
 
 /** Emails a guest the guide. A by-the-room manual asks which room's guide to send. */
 export default function WelcomeManualEmailForm({ manual, refreshControl }: WelcomeManualEmailFormProps) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { spacing } = useTheme();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const hasRooms = manual.rooms.length > 0;
   const roomOptions = emailRoomOptions(manual.rooms);
@@ -37,12 +37,8 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
         <FormField editable={!isBusy} error={form.errorFor("recipient_name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH} onChangeText={(text) => edit("recipient_name", text)} value={values.recipient_name} />
         {hasRooms ? (
           <View style={{ gap: spacing.xs }}>
-            <PickerField disabled={isBusy} label={MESSAGES.roomLabel} onPress={() => setIsPickerOpen(true)} valueLabel={roomOptions.find((option) => option.value === values.room_id)?.label ?? MESSAGES.noRoomChosen} />
-            {form.errorFor("room_id") ? (
-              <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-                {form.errorFor("room_id")}
-              </Text>
-            ) : null}
+            <PickerField disabled={isBusy} error={form.errorFor("room_id")} label={MESSAGES.roomLabel} onPress={() => setIsPickerOpen(true)} valueLabel={roomOptions.find((option) => option.value === values.room_id)?.label ?? MESSAGES.noRoomChosen} />
+            <FieldError message={form.errorFor("room_id")} name={MESSAGES.roomLabel} />
           </View>
         ) : null}
         <LoadingButton disabled={isBusy} isLoading={isBusy} loadingText={MESSAGES.sending} onPress={() => { if (form.validate()) void send(values); }}>

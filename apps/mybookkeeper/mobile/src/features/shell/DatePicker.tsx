@@ -4,13 +4,14 @@ import { Platform } from "react-native";
 import { dateFromIso, fullDateLabel, isoFromDate } from "../../lib/localDate";
 
 /** iOS shows a calendar in place. Android's calendar is a dialog, so a button opens it. */
-export default function DatePicker({ label, minimum, onChange, value }: { label: string; minimum?: string; onChange: (iso: string) => void; value: string }) {
+export default function DatePicker({ label, hint, minimum, onChange, value }: { label: string; /** Read as the hint, e.g. why the chosen date is refused. */ hint?: string; minimum?: string; onChange: (iso: string) => void; value: string }) {
   const { colors } = useTheme();
   const minimumDate = minimum ? dateFromIso(minimum) : undefined;
   if (Platform.OS === "ios") {
     return (
       <DateTimePicker
         accentColor={colors.primary}
+        accessibilityHint={hint}
         accessibilityLabel={label}
         display="inline"
         minimumDate={minimumDate}
@@ -25,6 +26,7 @@ export default function DatePicker({ label, minimum, onChange, value }: { label:
   }
   return (
     <LoadingButton
+      accessibilityHint={hint}
       accessibilityLabel={`${label}: ${fullDateLabel(value)}. Change date`}
       onPress={() =>
         DateTimePickerAndroid.open({

@@ -4,7 +4,7 @@ import PickerField from "../components/PickerField";
 import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
-async function setup(props: { disabled?: boolean; hint?: string } = {}) {
+async function setup(props: { disabled?: boolean; hint?: string; error?: string } = {}) {
   const onPress = jest.fn();
   await render(<PickerField label="Category" onPress={onPress} valueLabel="Plumber" {...props} />);
   return onPress;
@@ -25,6 +25,15 @@ describe("PickerField", () => {
   it("shows the hint under the field", async () => {
     await setup({ hint: "Pick the trade." });
     expect(screen.getByText("Pick the trade.")).toBeTruthy();
+  });
+
+  it("reads the error as the hint, shows it only once, and outlines the field in the error colour", async () => {
+    await setup({ hint: "Pick the trade.", error: "Choose a category." });
+    const field = screen.getByRole("button", { name: "Category, Plumber" });
+    expect(field.props.accessibilityHint).toBe("Choose a category.");
+    expect(screen.queryByText("Pick the trade.")).toBeNull();
+    const { style } = field.props;
+    expect(StyleSheet.flatten(typeof style === "function" ? style({ pressed: false }) : style).borderColor).toBe(lightColors.destructiveText);
   });
 
   it("does nothing while disabled", async () => {
