@@ -537,6 +537,10 @@ test("the Auction house page downloads the MGA Prices addon with every house's p
   expect(data).toContain("[2320] = {vendor = true},");
   expect(data).toMatch(/\[2589\] = \{leveling = "[^"]*First Aid 1–\d+/);
   expect(data).toContain("crafts = {");
+  // Disenchant tables ride along when populated. The committed disenchantTables.json is an empty
+  // stub (run `python -m scripts.wow_professions.build` to populate it from the cmangos dump),
+  // so the downloaded Data.lua has no deItems/deTables sections yet.
+  expect(data).not.toContain("deItems");
   expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toContain("## SavedVariables: MGAPricesSettings");
   expect(asked).toEqual(expect.arrayContaining(["pvp/alliance", "pvp/horde", "pvp/neutral"]));
   await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();

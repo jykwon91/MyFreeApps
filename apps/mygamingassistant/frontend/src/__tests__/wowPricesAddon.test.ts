@@ -8,6 +8,7 @@ import { addonPriceLua } from "@/games/wow-forever/lib/auctionHouse/addonPriceLu
 import { pricesAddonZip } from "@/games/wow-forever/lib/auctionHouse/pricesAddonZip";
 import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
+import type { DisenchantTables } from "@/games/wow-forever/types/auctionHouse/disenchantTables";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
@@ -340,5 +341,110 @@ describe("crafting demand in the game's tooltips", () => {
     expect(quiet).toBeDefined();
     const [id, d] = quiet!;
     expect(tooltip(`hover(GameTooltip, ${id})`, CRAFT_DATA)).toEqual(["Auction (Alliance) | not on sale", `Reagent | ${d.recipes} recipes (${d.professions})`]);
+  });
+});
+
+describe("disenchant verdict", () => {
+  // Result materials: 11083 and 11082 are priced on the alliance house; 11084 is not (partial EV).
+  const SOUL_DUST = 11083;
+  const STRANGE_DUST = 11082;
+  // Disenchantable items: 5101 requires Enchanting skill 25; 5102 requires skill 0.
+  const DE_ITEM = 5101;
+  const DE_ITEM_FREE = 5102;
+
+  const DE_TABLES: DisenchantTables = {
+    items: { "5101": [4, 25], "5102": [4, 0] },
+    tables: {
+      "4": {
+        "11083": [1, 2, 75], // 75% chance, avg 1.5 dust
+        "11082": [1, 1, 20], // 20% chance, avg 1 dust
+        "11084": [1, 1, 5],  // 5% chance — no AH price in test → partial EV
+      },
+    },
+  };
+
+  // EV per item = 0.75×1.5×(200−10) + 0.20×1.0×(100−5) = 213.75 + 19 = 232.75 → floor 232c
+  const DE_EV = 232;
+
+  const DE_HOUSES = [
+    house("alliance", ALLIANCE_AT, [
+      [DE_ITEM, 100, 90, 50, 5, "DE Item"],
+      [SOUL_DUST, 200, 180, 100, 20, "Soul Dust"],
+      [STRANGE_DUST, 100, 90, 200, 30, "Strange Dust"],
+      // 11084 intentionally absent → partial EV, ~ prefix
+    ]),
+    house("horde", HORDE_AT, []),
+    house("neutral", null, []),
+  ];
+  const DE_DATA = addonPriceLua(DE_HOUSES, NO_CRAFTING, DE_TABLES);
+
+  function deTooltip(scenario: string, data = DE_DATA): string[] {
+    return runAddonLua([
+      ["Data.lua", data],
+      ["MGAPrices.lua", addonLua],
+      ["scenario", `NOW = ${ALLIANCE_EPOCH + 2 * HOUR}\n${scenario}`],
+    ]);
+  }
+
+  it("writes deItems and deTables into Data.lua, omitting them without disenchant data", () => {
+    expect(DE_DATA).toContain("  deItems = {");
+    expect(DE_DATA).toContain("    [5101] = {4, 25},");
+    expect(DE_DATA).toContain("    [5102] = {4, 0},");
+    expect(DE_DATA).toContain("  deTables = {");
+    expect(DE_DATA).toContain("    [4] = {");
+    expect(DE_DATA).toContain("      [11082] = {1, 1, 20},");
+    expect(DE_DATA).toContain("      [11083] = {1, 2, 75},");
+    expect(DE_DATA).toContain("      [11084] = {1, 1, 5},");
+    // Without disenchant param, no DE sections.
+    expect(addonPriceLua(DE_HOUSES, NO_CRAFTING)).not.toContain("deItems");
+  });
+
+  it("recommends disenchanting when it nets more than the AH and vendor, using ~ when some material prices are missing", () => {
+    // DE EV 232c beats ahNets 95c and vendor 20c by more than 10%.
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 25; hover(GameTooltip, ${DE_ITEM})`);
+    expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
+    expect(lines.some((l) => /Sell on AH|Vendor it/.test(l))).toBe(false);
+  });
+
+  it("falls back to AH vs vendor when AH nets more than 10% over both vendor and disenchanting", () => {
+    // Market 5000c: ahNets 4750c easily beats deEV 232c.
+    const highHouses = [
+      house("alliance", ALLIANCE_AT, [
+        [DE_ITEM, 5000, 4500, 10, 2, "DE Item"],
+        [SOUL_DUST, 200, 180, 100, 20, "Soul Dust"],
+        [STRANGE_DUST, 100, 90, 200, 30, "Strange Dust"],
+      ]),
+      house("horde", HORDE_AT, []),
+      house("neutral", null, []),
+    ];
+    const highData = addonPriceLua(highHouses, NO_CRAFTING, DE_TABLES);
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 25; hover(GameTooltip, ${DE_ITEM})`, highData);
+    // 5000 − 250 (5% cut) = 4750 net; 4750 − 20 vendor = 4730 over vendor.
+    expect(lines).toContain("Sell on AH | +4730c over vendor");
+  });
+
+  it("shows the AH or vendor verdict and a 'need Enchanting' info line when the player has no Enchanting", () => {
+    // enchSkill defaults to nil (no Enchanting).
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; hover(GameTooltip, ${DE_ITEM})`);
+    expect(lines).toContain("Sell on AH | +75c over vendor"); // ahNets 95 − vendor 20 = 75
+    expect(lines).toContain("Disenchant | need Enchanting");
+  });
+
+  it("shows the AH or vendor verdict and a 'need N Enchanting' info line when the player's skill is too low", () => {
+    // DE_ITEM requires skill 25; player has 10.
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 10; hover(GameTooltip, ${DE_ITEM})`);
+    expect(lines).toContain("Sell on AH | +75c over vendor");
+    expect(lines).toContain("Disenchant | need 25 Enchanting");
+  });
+
+  it("shows the disenchant verdict for a bind-on-pickup item a player with Enchanting can DE", () => {
+    // BoP: no AH option. Only disenchant vs vendor — DE wins here.
+    const lines = deTooltip(`sell[${DE_ITEM_FREE}] = 20; bind[${DE_ITEM_FREE}] = 1; enchSkill = 1; hover(GameTooltip, ${DE_ITEM_FREE})`);
+    expect(lines).toEqual([`Disenchant | ~${DE_EV}c`]);
+  });
+
+  it("shows vendor vs disenchant for a BoP item when the player has no Enchanting", () => {
+    const lines = deTooltip(`sell[${DE_ITEM_FREE}] = 20; bind[${DE_ITEM_FREE}] = 1; hover(GameTooltip, ${DE_ITEM_FREE})`);
+    expect(lines).toEqual(["Vendor it | vendor 20c", "Disenchant | need Enchanting"]);
   });
 });

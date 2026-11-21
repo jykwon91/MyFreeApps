@@ -26,6 +26,8 @@ local BIND_ON_PICKUP = 1
 -- The auction house only wins when it nets this much more than a vendor: an
 -- unsold auction loses its deposit, and selling takes a trip back to the mailbox.
 local AH_BEATS_VENDOR_BY = 1.1
+-- Disenchanting only wins when it nets this much more than the next option.
+local DE_BEATS_NEXT_BY = 1.1
 
 local LABEL = { 0.2, 0.67, 1 }
 local VALUE = { 1, 1, 1 }
@@ -90,23 +92,138 @@ local function vendorPrice(itemId)
   return select(11, getItemInfo(itemId))
 end
 
--- Sell on the AH or vendor it: the house's market value after its cut against
--- the vendor's price. Unknown until the client has the item's info cached.
+-- Returns the player's current Enchanting skill level, or nil if they have none.
+local function enchantingSkill()
+  local n = GetNumSkillLines and GetNumSkillLines() or 0
+  for i = 1, n do
+    local name, isHeader, _, rank = GetSkillLineInfo(i)
+    if not isHeader and name == "Enchanting" then return rank end
+  end
+  return nil
+end
+
+-- Returns the disenchant expected value (EV) in copper per item and whether any
+-- result material prices were missing from this house.
+local function disenchantEV(itemId, house)
+  local de = MGAPricesData and MGAPricesData.deItems and MGAPricesData.deItems[itemId]
+  if not de then return nil, false end
+  local tableId = de[1]
+  local deTable = MGAPricesData.deTables and MGAPricesData.deTables[tableId]
+  if not deTable then return nil, false end
+  local houseData = MGAPricesData.houses and MGAPricesData.houses[house]
+  local cut = houseData and houseData.cut or 0
+  local ev, anyMissing = 0, false
+  for resultId, entry in pairs(deTable) do
+    local minCount, maxCount, chance = entry[1], entry[2], entry[3]
+    local avgCount = (minCount + maxCount) / 2
+    local priceRow = houseData and houseData.items and houseData.items[resultId]
+    if priceRow then
+      -- The house takes its cut of each material we sell.
+      local netsEach = priceRow[1] - floor(priceRow[1] * cut)
+      ev = ev + (chance / 100) * avgCount * netsEach
+    else
+      anyMissing = true
+    end
+  end
+  return ev, anyMissing
+end
+
+-- Disenchant / Sell on AH / Vendor it: pick the best option.
+-- market=nil means the item can't be auctioned (BoP or not listed).
+-- Shows at most one verdict line and one detail line.
 local function addVerdict(tooltip, itemId, market, cut, count)
   local vendor = vendorPrice(itemId)
-  if not vendor or not cut then return end
-  if vendor == 0 then
-    line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED)
+  if vendor == nil then return end  -- item info not in client cache yet
+
+  local house = playerHouse()
+  local deEntry = MGAPricesData and MGAPricesData.deItems and MGAPricesData.deItems[itemId]
+
+  -- AH net value (nil when item can't be auctioned or has no price).
+  local ahNets
+  if market and cut then
+    local total = market * count
+    ahNets = total - floor(total * cut)
+  end
+  local vendorTotal = vendor * count
+
+  if deEntry then
+    local skill = enchantingSkill()
+    local requiredSkill = deEntry[2]
+
+    if skill == nil then
+      -- Player has no Enchanting — best AH/vendor verdict plus a DE info line.
+      if vendor == 0 then
+        if ahNets then line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED) end
+      elseif ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
+        line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
+        line(tooltip, "Disenchant", "need Enchanting", MUTED, MUTED)
+      else
+        line(tooltip, "Vendor it", ahNets and ("AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal)) or ("vendor " .. money(vendorTotal)), WARN, MUTED)
+        line(tooltip, "Disenchant", "need Enchanting", MUTED, MUTED)
+      end
+      return
+    end
+
+    if skill < requiredSkill then
+      -- Player has Enchanting but insufficient skill.
+      if vendor == 0 then
+        if ahNets then line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED) end
+      elseif ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
+        line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
+        line(tooltip, "Disenchant", "need " .. requiredSkill .. " Enchanting", MUTED, MUTED)
+      else
+        line(tooltip, "Vendor it", ahNets and ("AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal)) or ("vendor " .. money(vendorTotal)), WARN, MUTED)
+        line(tooltip, "Disenchant", "need " .. requiredSkill .. " Enchanting", MUTED, MUTED)
+      end
+      return
+    end
+
+    -- Player CAN disenchant — three-way verdict.
+    local deEV, deMissing = disenchantEV(itemId, house)
+    if deEV then deEV = deEV * count end
+    local prefix = (deEV and deMissing) and "~" or ""
+
+    if vendor == 0 then
+      -- No vendor: compare DE vs AH only.
+      if deEV and ahNets then
+        if deEV > ahNets * DE_BEATS_NEXT_BY then
+          line(tooltip, "Disenchant", prefix .. money(floor(deEV)), GOOD, VALUE)
+        else
+          line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED)
+        end
+      elseif deEV then
+        line(tooltip, "Disenchant", prefix .. money(floor(deEV)), GOOD, VALUE)
+      elseif ahNets then
+        line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED)
+      else
+        line(tooltip, "Disenchant", deMissing and "~ prices not loaded" or "not priced", MUTED, MUTED)
+      end
+      return
+    end
+
+    -- Full three-way: Disenchant / AH / Vendor.
+    if deEV and deEV > math.max(ahNets or 0, vendorTotal) * DE_BEATS_NEXT_BY then
+      line(tooltip, "Disenchant", prefix .. money(floor(deEV)), GOOD, VALUE)
+      return
+    end
+    -- DE didn't win; fall through to AH vs Vendor.
+    if ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
+      line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
+    else
+      line(tooltip, "Vendor it", ahNets and ("AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal)) or ("vendor " .. money(vendorTotal)), WARN, MUTED)
+    end
     return
   end
-  -- The house takes its cut, rounded down, of the whole sale.
-  local total = market * count
-  local nets = total - floor(total * cut)
-  local vendors = vendor * count
-  if nets > vendors * AH_BEATS_VENDOR_BY then
-    line(tooltip, "Sell on AH", "+" .. money(nets - vendors) .. " over vendor", GOOD, VALUE)
-  else
-    line(tooltip, "Vendor it", "AH nets " .. money(nets) .. " · vendor " .. money(vendors), WARN, MUTED)
+
+  -- No DE entry — existing two-way AH vs Vendor verdict.
+  if vendor == 0 then
+    if ahNets then line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED) end
+    return
+  end
+  if ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
+    line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
+  elseif ahNets then
+    line(tooltip, "Vendor it", "AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal), WARN, MUTED)
   end
 end
 
@@ -183,8 +300,12 @@ local function addPrice(tooltip, itemId)
   end
   local anywhere = houseRow("alliance", itemId) or houseRow("horde", itemId) or houseRow("neutral", itemId)
   if not anywhere and not canBeAuctioned(itemId) then
-    -- Quiet on your own soulbound gear, but a clicked chat link says why it has no price.
-    if tooltip == ItemRefTooltip then
+    -- BoP: can't auction. Show a disenchant verdict if the item is disenchantable,
+    -- otherwise fall back to the original chat-link message.
+    local deEntry = MGAPricesData.deItems and MGAPricesData.deItems[itemId]
+    if deEntry then
+      addVerdict(tooltip, itemId, nil, nil, stackCount(tooltip))
+    elseif tooltip == ItemRefTooltip then
       line(tooltip, "Auction", "can't be sold (binds when picked up)", LABEL, MUTED)
     end
     return

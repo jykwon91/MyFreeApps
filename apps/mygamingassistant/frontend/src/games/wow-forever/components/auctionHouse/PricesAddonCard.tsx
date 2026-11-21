@@ -11,12 +11,12 @@ export default function PricesAddonCard() {
       <div className="space-y-3 pt-2">
         <p>
           The MGA Prices addon shows an item&apos;s auction price when you mouse over it in WoW Forever: your faction&apos;s house,
-          or every house while you hold Shift. It also says whether to sell the item on the auction house or vendor it: what
-          your house pays after its cut against what a vendor pays. On crafting materials it shows which profession leveling routes use them
-          and the best craft that pays with them on your house: the demand that can push a price up. It also names what a
-          material is wanted for: the most valuable thing it goes into on your house, which can hold its price up even when
-          no craft pays. In chat, each item link
-          gets its price written after it, and hovering a link shows its tooltip (<code>/mgaprices chat</code> turns the
+          or every house while you hold Shift. It also tells you what to do with the item: disenchant it, sell it on the auction
+          house, or vendor it — whichever nets the most. For bind-on-pickup gear you can&apos;t sell, it compares disenchanting
+          against vendoring directly. On crafting materials it shows which profession leveling routes use them and the best craft
+          that pays with them on your house: the demand that can push a price up. It also names what a material is wanted for:
+          the most valuable thing it goes into on your house, which can hold its price up even when no craft pays. In chat, each
+          item link gets its price written after it, and hovering a link shows its tooltip (<code>/mgaprices chat</code> turns the
           prices in chat off or on).
         </p>
         <ol className="list-decimal space-y-1 pl-5">

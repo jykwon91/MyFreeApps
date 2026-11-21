@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-20",
+    "title": "MGA Prices: Disenchant verdict in tooltips",
+    "summary": "The MGA Prices addon now tells you whether to disenchant, sell on the auction house, or vendor an item — whichever nets the most. For bind-on-pickup gear you can't sell, it compares disenchanting against vendoring directly. Download the addon to get the update.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
     "date": "2026-11-19",
     "title": "Waylaid crates: cost per reward, cheapest first",
     "summary": "Every Waylaid Crate now shows how many rewards it pays (by tier, and Uncommon crates pay double) and what one reward costs, and the page puts the cheapest reward first. Sort by Total or Rewards instead if you like.",

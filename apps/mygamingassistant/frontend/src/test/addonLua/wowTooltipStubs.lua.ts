@@ -14,8 +14,14 @@ faction = "Alliance"
 bind = {}
 sell = {}
 out = {}
+-- enchSkill: nil = no Enchanting; a number = Enchanting skill rank.
+enchSkill = nil
 IsShiftKeyDown = function() return shift end
 UnitFactionGroup = function() return faction end
+GetNumSkillLines = function() return enchSkill ~= nil and 1 or 0 end
+GetSkillLineInfo = function(i)
+  if enchSkill ~= nil then return "Enchanting", false, false, enchSkill end
+end
 -- Like the Forever client: only C_Item.GetItemInfo, no global GetItemInfo.
 C_Item = { GetItemInfo = function(id) return "x",nil,nil,nil,nil,nil,nil,nil,nil,nil,sell[id],nil,nil, bind[id] end }
 GetCoinTextureString = function(c) return c .. "c" end

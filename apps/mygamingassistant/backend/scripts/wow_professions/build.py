@@ -17,6 +17,10 @@ Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
   reagents come from (vendors, drops, dungeon / raid drops, quests, disenchanting). Both are
   server-side, so they come from cmangos classic-db (GPL-3.0, pinned commit)
   and are kept apart with its LICENSE.
+* ``classic/disenchantTables.json`` — for the MGA Prices addon's disenchant verdict:
+  every disenchantable item's loot-table ID and required Enchanting skill, plus the
+  loot tables themselves (each result item with min/max count and chance %).
+  ``item_template.DisenchantID`` joined to ``disenchant_loot_template``; same LICENSE.
 * ``classic/skinning.json`` — for the Skinning guide: every mob a solo player
   can skin, once per zone it has a pack in (levels, spawns, densest pack, the
   leather it gives most), and the leather each mob level gives (cmangos
@@ -322,6 +326,61 @@ def disenchanted_items() -> dict[int, list[object]]:
 MOSTLY = 0.8
 
 
+def _result_counts(row: dict) -> tuple[int, int]:
+    """``(minCount, maxCount)`` for a disenchant loot row; both ≥ 1."""
+    min_count = max(1, int(row["mincountOrRef"] or 1))
+    max_count = max(min_count, int(row.get("maxcount") or min_count))
+    return min_count, max_count
+
+
+def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[int, dict[int, tuple[int, int, int]]]]:
+    """Disenchant data for the MGA Prices addon's three-way verdict.
+
+    Returns ``(items, tables)``:
+
+    * ``items``: ``{item_id: (table_id, required_enchanting_skill)}`` for every
+      item with a ``DisenchantID`` in ``item_template``.
+    * ``tables``: ``{table_id: {result_item_id: (min_count, max_count, chance_pct)}}``
+      where ``chance_pct`` is an integer 0-100.
+
+    Reads ``disenchant_loot_template`` joined to ``item_template.DisenchantID`` and
+    ``item_template.RequiredDisenchantSkill`` from the cmangos classic-db dump.
+    """
+    dump = read_dump(cmangos_dump(), {"disenchant_loot_template", "item_template"})
+
+    # Build result rows per table, excluding group-reference rows (mincountOrRef < 0).
+    raw_rows: dict[int, list[dict]] = defaultdict(list)
+    for r in dump["disenchant_loot_template"]:
+        if int(r["mincountOrRef"] or 0) >= 0:
+            raw_rows[int(r["entry"] or 0)].append(r)
+
+    # Compute per-table chance distributions, then build loot tables.
+    result_tables: dict[int, dict[int, tuple[int, int, int]]] = {}
+    for table_id, rows in raw_rows.items():
+        chances = _roll_chances(rows)
+        results: dict[int, tuple[int, int, int]] = {}
+        for row in rows:
+            result_id = int(row["item"] or 0)
+            if result_id and result_id in chances:
+                min_c, max_c = _result_counts(row)
+                results[result_id] = (min_c, max_c, round(chances[result_id]))
+        if results:
+            result_tables[table_id] = results
+
+    # Build item → (table_id, required_skill) for every item with DisenchantID.
+    items_map: dict[int, tuple[int, int]] = {}
+    for item in dump["item_template"]:
+        table_id = int(item["DisenchantID"] or 0)
+        if not table_id or table_id not in result_tables:
+            continue
+        item_id = int(item["entry"] or 0)
+        skill = int(item.get("RequiredDisenchantSkill") or 0)
+        if item_id:
+            items_map[item_id] = (table_id, skill)
+
+    return items_map, result_tables
+
+
 def _disenchant_kind(item: dict) -> str | None:
     """"weapon" (weapons, shields and off-hands — they share the weapon tables) / "armor" (worn armour)."""
     cls = int(item["class"] or 0)
@@ -470,6 +529,17 @@ def main() -> None:
         "reagents": {k: v for k, v in reagent_sources.items() if v},
         "disenchantColumns": DISENCHANT_COLUMNS,
         "disenchant": {str(i): lv for i, lv in sorted(disenchanted_items().items()) if i in reagent_ids},
+    })
+    de_items, de_tables = build_addon_disenchant_tables()
+    write_json(CLASSIC_DIR / "disenchantTables.json", {
+        "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
+        "itemColumns": ["table", "skill"],
+        "items": {str(item_id): list(entry) for item_id, entry in sorted(de_items.items())},
+        "resultColumns": ["min", "max", "chance"],
+        "tables": {
+            str(table_id): {str(result_id): list(counts) for result_id, counts in sorted(results.items())}
+            for table_id, results in sorted(de_tables.items())
+        },
     })
     skin_mobs = classic_sources.skinnable_mobs()
     skin_zones = {int(str(r[4])) for r in skin_mobs}
