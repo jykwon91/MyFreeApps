@@ -24,14 +24,19 @@
  *     match any company → triggers create-on-the-fly
  *   - Esc clears the typed value (does NOT close the parent dialog)
  *
+ * Accessibility: WAI-ARIA editable combobox with a listbox popup. DOM focus
+ * stays on the input; the highlighted row is exposed through
+ * aria-activedescendant.
+ *
  * Selecting an existing row calls onSelect(companyId, name). Selecting
  * the "+ Add" row calls onCreate(name) and the parent is responsible
  * for invoking the createCompany mutation.
  */
-import { useMemo, useRef, useState } from "react";
-import { Plus, Building2 } from "lucide-react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
+import AddCompanyRow from "./company-combobox/AddCompanyRow";
+import CompanyRow from "./company-combobox/CompanyRow";
 
 const NO_HIGHLIGHT = -1;
 const MAX_VISIBLE_ROWS = 8;
@@ -75,6 +80,7 @@ export default function CompanyCombobox({
   const [query, setQuery] = useState(initialValue);
   const [rawHighlight, setHighlight] = useState<number>(NO_HIGHLIGHT);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
 
   const filtered = useMemo(() => visibleCompanies(companies, query), [companies, query]);
 
@@ -91,6 +97,10 @@ export default function CompanyCombobox({
   // This is purely derived; no setState during render.
   const highlight =
     rawHighlight === NO_HIGHLIGHT || rawHighlight >= totalRows ? NO_HIGHLIGHT : rawHighlight;
+
+  const expanded = totalRows > 0;
+  const optionId = (idx: number) => `${listboxId}-option-${idx}`;
+  const activeDescendant = expanded && highlight !== NO_HIGHLIGHT ? optionId(highlight) : undefined;
 
   function commitHighlighted() {
     if (highlight === NO_HIGHLIGHT) {
@@ -147,6 +157,11 @@ export default function CompanyCombobox({
       <input
         ref={inputRef}
         type="text"
+        role="combobox"
+        aria-expanded={expanded}
+        aria-controls={expanded ? listboxId : undefined}
+        aria-autocomplete="list"
+        aria-activedescendant={activeDescendant}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -157,8 +172,9 @@ export default function CompanyCombobox({
         className={`w-full border rounded-md px-3 py-2 text-sm bg-background ${inputBorderClass}`}
       />
 
-      {totalRows > 0 ? (
+      {expanded ? (
         <ul
+          id={listboxId}
           role="listbox"
           aria-label="Matching companies"
           className="border rounded-md bg-background max-h-56 overflow-y-auto divide-y divide-border"
@@ -166,6 +182,7 @@ export default function CompanyCombobox({
           {filtered.map((company, idx) => (
             <CompanyRow
               key={company.id}
+              id={optionId(idx)}
               company={company}
               highlighted={idx === highlight}
               onClick={() => onSelect(company.id, company.name)}
@@ -174,6 +191,7 @@ export default function CompanyCombobox({
           ))}
           {showAddRow ? (
             <AddCompanyRow
+              id={optionId(addRowIndex)}
               name={trimmed}
               highlighted={addRowIndex === highlight}
               disabled={isCreating}
@@ -187,115 +205,7 @@ export default function CompanyCombobox({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Filtering — shared name/domain match, capped to the rows that fit.
-// ---------------------------------------------------------------------------
-
+// Shared name/domain match, capped to the rows that fit.
 function visibleCompanies(companies: Company[], query: string): Company[] {
   return filterCompanies(companies, query).slice(0, MAX_VISIBLE_ROWS);
-}
-
-// ---------------------------------------------------------------------------
-// Row sub-components — kept tiny so the parent reads top-down.
-// ---------------------------------------------------------------------------
-
-interface CompanyRowProps {
-  company: Company;
-  highlighted: boolean;
-  onClick: () => void;
-  onMouseEnter: () => void;
-}
-
-function CompanyRow({ company, highlighted, onClick, onMouseEnter }: CompanyRowProps) {
-  const baseClass = "flex items-center gap-2 px-3 py-2 cursor-pointer text-sm";
-  const stateClass = highlighted ? "bg-muted" : "hover:bg-muted/60";
-  return (
-    <li
-      role="option"
-      aria-selected={highlighted}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      className={`${baseClass} ${stateClass}`}
-    >
-      <CompanyAvatar logoUrl={company.logo_url} name={company.name} />
-      <span className="flex-1 truncate">{company.name}</span>
-      {company.primary_domain ? (
-        <span className="text-xs text-muted-foreground truncate">
-          {company.primary_domain}
-        </span>
-      ) : null}
-    </li>
-  );
-}
-
-interface AddCompanyRowProps {
-  name: string;
-  highlighted: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  onMouseEnter: () => void;
-}
-
-function AddCompanyRow({
-  name,
-  highlighted,
-  disabled,
-  onClick,
-  onMouseEnter,
-}: AddCompanyRowProps) {
-  const baseClass = "flex items-center gap-2 px-3 py-2 text-sm";
-  const stateClass = disabled
-    ? "text-muted-foreground cursor-not-allowed"
-    : highlighted
-      ? "bg-muted cursor-pointer"
-      : "hover:bg-muted/60 cursor-pointer";
-  return (
-    <li
-      role="option"
-      aria-selected={highlighted}
-      aria-disabled={disabled}
-      onClick={disabled ? undefined : onClick}
-      onMouseEnter={onMouseEnter}
-      className={`${baseClass} ${stateClass}`}
-    >
-      <Plus size={14} className="shrink-0" />
-      <span className="truncate">
-        Add <span className="font-medium">{name}</span>
-      </span>
-    </li>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Avatar — small logo with initial fallback.
-// ---------------------------------------------------------------------------
-
-interface CompanyAvatarProps {
-  logoUrl: string | null;
-  name: string;
-}
-
-function CompanyAvatar({ logoUrl, name }: CompanyAvatarProps) {
-  if (logoUrl) {
-    return (
-      <img
-        src={logoUrl}
-        alt=""
-        className="w-5 h-5 rounded-sm object-contain shrink-0 bg-muted"
-        // If the logo URL fails, fall back to nothing — the name still renders.
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
-        }}
-      />
-    );
-  }
-  const initial = name.trim().slice(0, 1).toUpperCase() || "?";
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-flex items-center justify-center w-5 h-5 rounded-sm bg-muted text-xs font-medium shrink-0"
-    >
-      {initial || <Building2 size={12} />}
-    </span>
-  );
 }
