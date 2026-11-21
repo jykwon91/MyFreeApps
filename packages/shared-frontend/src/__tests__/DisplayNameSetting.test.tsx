@@ -2,23 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@platform/ui/store/userApi", () => ({
+vi.mock("../store/userApi", () => ({
   useGetCurrentUserQuery: vi.fn(),
   useUpdateCurrentUserMutation: vi.fn(),
 }));
 
-vi.mock("@platform/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@platform/ui")>();
-  return {
-    ...actual,
-    showSuccess: vi.fn(),
-    showError: vi.fn(),
-  } as typeof import("@platform/ui");
-});
+vi.mock("../lib/toast-store", () => ({
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+}));
 
-import DisplayNameSetting from "@/features/security/DisplayNameSetting";
-import { useGetCurrentUserQuery, useUpdateCurrentUserMutation } from "@platform/ui/store/userApi";
-import { showSuccess, showError } from "@platform/ui";
+import DisplayNameSetting from "../components/auth/DisplayNameSetting";
+import { useGetCurrentUserQuery, useUpdateCurrentUserMutation } from "../store/userApi";
+import { showSuccess, showError } from "../lib/toast-store";
 
 const mockUseGetCurrentUserQuery = vi.mocked(useGetCurrentUserQuery);
 const mockUseUpdateCurrentUserMutation = vi.mocked(useUpdateCurrentUserMutation);
@@ -141,6 +137,29 @@ describe("DisplayNameSetting", () => {
     setupMutation();
     render(<DisplayNameSetting />);
     expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+
+  it("labels the input and uses the default description", () => {
+    render(<DisplayNameSetting />);
+    expect(screen.getByLabelText("Display name")).toBe(screen.getByRole("textbox"));
+    expect(screen.getByText("Shown in your profile and on exported data.")).toBeInTheDocument();
+  });
+
+  it("shows a custom description when the app passes one", () => {
+    render(<DisplayNameSetting description="Shown to your team." />);
+    expect(screen.getByText("Shown to your team.")).toBeInTheDocument();
+  });
+
+  it("links the too-long error to the input through aria-describedby", async () => {
+    const user = userEvent.setup();
+    render(<DisplayNameSetting />);
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.click(input);
+    await user.paste("x".repeat(101));
+    const alert = screen.getByRole("alert");
+    expect(input.getAttribute("aria-describedby")).toContain(alert.id);
+    expect(input).toHaveAttribute("aria-invalid", "true");
   });
 
   it("keeps a pasted name that is too long, says so, and won't save it", async () => {
