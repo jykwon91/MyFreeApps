@@ -111,6 +111,7 @@ const STUB_JOB: ResumeUploadJob = {
   file_content_type: "application/pdf",
   file_size_bytes: 12345,
   status: "queued",
+  retry_count: 0,
   error_message: null,
   result_parsed_fields: null,
   parser_version: null,

@@ -5,8 +5,13 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anthropic
+import httpx2
 import pytest
+from platform_shared.extraction import is_transient_failure
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.upload_processor_constants import TRANSIENT_ERROR_TYPES
 
 from app.models.documents.document import Document
 from app.models.organization.organization import Organization
@@ -14,6 +19,11 @@ from app.models.system.system_event import SystemEvent
 from app.models.system.usage_log import UsageLog
 from app.models.user.user import User
 from app.repositories import system_event_repo
+
+
+def _is_transient(exc: Exception) -> bool:
+    """The upload worker's retry decision."""
+    return is_transient_failure(exc, extra_transient=TRANSIENT_ERROR_TYPES)
 
 
 class TestSystemEventRepo:
@@ -149,55 +159,85 @@ class TestSystemEventRepo:
         assert len(by_type) == 1
 
 
+_ANTHROPIC_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+def _anthropic_status_error(
+    cls: type[anthropic.APIStatusError], status: int, error_type: str,
+) -> anthropic.APIStatusError:
+    response = httpx2.Response(status, request=_ANTHROPIC_REQUEST, headers={"retry-after": "0"})
+    body = {"type": "error", "error": {"type": error_type, "message": "provider detail"}}
+    return cls("provider detail", response=response, body=body)
+
+
+async def _error_from_extraction(sdk_error: Exception) -> Exception:
+    """What the worker actually catches when Claude fails mid-extraction.
+
+    Runs the real ``extract_from_text`` (shared service, throttle, backoff)
+    with only the SDK client faked to raise ``sdk_error``.
+    """
+    from app.services.extraction import claude_service
+
+    client = MagicMock()
+    client.messages.create = AsyncMock(side_effect=sdk_error)
+    with patch.object(claude_service._extraction, "_client", client), \
+            patch("asyncio.sleep", new=AsyncMock()):
+        try:
+            await claude_service.extract_from_text("Invoice from Acme")
+        except Exception as exc:  # noqa: BLE001 — the test inspects whatever was raised
+            return exc
+    raise AssertionError("extraction did not fail")
+
+
 class TestRetryLogic:
-    def test_is_transient_error_rate_limit(self) -> None:
-        import anthropic
-        from app.workers.upload_processor_worker import _is_transient_error
+    @pytest.fixture(autouse=True)
+    def _reset_throttle(self):
+        from app.services.extraction.claude_service import _throttle
 
-        mock_response = MagicMock()
-        mock_response.status_code = 429
-        exc = anthropic.RateLimitError(
-            message="rate limited",
-            response=mock_response,
-            body=None,
-        )
-        assert _is_transient_error(exc) is True
+        _throttle.consecutive_429s = 0
+        _throttle.resume_at = 0.0
+        yield
+        _throttle.consecutive_429s = 0
+        _throttle.resume_at = 0.0
 
-    def test_is_transient_error_5xx(self) -> None:
-        import anthropic
-        from app.workers.upload_processor_worker import _is_transient_error
+    @pytest.mark.parametrize(
+        "sdk_error",
+        [
+            _anthropic_status_error(anthropic.RateLimitError, 429, "rate_limit_error"),
+            _anthropic_status_error(anthropic.InternalServerError, 529, "overloaded_error"),
+            _anthropic_status_error(anthropic.InternalServerError, 500, "api_error"),
+            _anthropic_status_error(anthropic.APIStatusError, 408, "timeout_error"),
+            anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST),
+            anthropic.APIConnectionError(request=_ANTHROPIC_REQUEST),
+        ],
+        ids=["rate_limit", "overloaded", "server_error", "http_408", "timeout", "connection"],
+    )
+    @pytest.mark.asyncio
+    async def test_claude_failures_that_clear_on_their_own_are_retried(self, sdk_error) -> None:
 
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        exc = anthropic.APIStatusError(
-            message="server error",
-            response=mock_response,
-            body=None,
-        )
-        assert _is_transient_error(exc) is True
+        assert _is_transient(await _error_from_extraction(sdk_error)) is True
 
-    def test_is_transient_error_4xx_not_transient(self) -> None:
-        import anthropic
-        from app.workers.upload_processor_worker import _is_transient_error
+    @pytest.mark.parametrize(
+        "sdk_error",
+        [
+            _anthropic_status_error(anthropic.BadRequestError, 400, "invalid_request_error"),
+            _anthropic_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+            _anthropic_status_error(anthropic.NotFoundError, 404, "not_found_error"),
+        ],
+        ids=["invalid_request", "auth", "not_found"],
+    )
+    @pytest.mark.asyncio
+    async def test_claude_failures_a_retry_cannot_fix_are_final(self, sdk_error) -> None:
 
-        mock_response = MagicMock()
-        mock_response.status_code = 400
-        exc = anthropic.APIStatusError(
-            message="bad request",
-            response=mock_response,
-            body=None,
-        )
-        assert _is_transient_error(exc) is False
+        assert _is_transient(await _error_from_extraction(sdk_error)) is False
 
     def test_is_transient_error_timeout(self) -> None:
-        from app.workers.upload_processor_worker import _is_transient_error
 
-        assert _is_transient_error(asyncio.TimeoutError()) is True
+        assert _is_transient(asyncio.TimeoutError()) is True
 
     def test_is_transient_error_value_error_not_transient(self) -> None:
-        from app.workers.upload_processor_worker import _is_transient_error
 
-        assert _is_transient_error(ValueError("bad")) is False
+        assert _is_transient(ValueError("bad")) is False
 
     def test_compute_next_retry_exponential(self) -> None:
         from app.workers.upload_processor_worker import _compute_next_retry
@@ -240,16 +280,38 @@ class TestErrorClassification:
         assert "saving the extraction results" in user_msg
         assert diagnostic.startswith("IntegrityError")
 
-    def test_auth_error_message(self) -> None:
-        import anthropic
+    @pytest.mark.asyncio
+    async def test_auth_error_message(self) -> None:
         from app.workers.upload_processor_worker import _classify_extraction_error
 
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        exc = anthropic.AuthenticationError(message="bad key", response=mock_response, body=None)
+        exc = await _error_from_extraction(
+            _anthropic_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+        )
         user_msg, diagnostic = _classify_extraction_error(exc)
         assert "contact support" in user_msg
-        assert diagnostic.startswith("AuthenticationError")
+        assert diagnostic.startswith("ExtractionError")
+        assert "authentication_error" in diagnostic
+
+    @pytest.mark.asyncio
+    async def test_busy_claude_says_try_again_later(self) -> None:
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        exc = await _error_from_extraction(anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST))
+        user_msg, _ = _classify_extraction_error(exc)
+        assert user_msg == (
+            "The AI service is busy right now. Try re-extracting this document in a few minutes."
+        )
+
+    @pytest.mark.asyncio
+    async def test_rejected_document_message_hides_provider_text(self) -> None:
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        exc = await _error_from_extraction(
+            _anthropic_status_error(anthropic.BadRequestError, 400, "invalid_request_error"),
+        )
+        user_msg, _ = _classify_extraction_error(exc)
+        assert "couldn't read this document" in user_msg
+        assert "provider detail" not in user_msg
 
 
 class TestThrottleState:

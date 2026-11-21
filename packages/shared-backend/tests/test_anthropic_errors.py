@@ -16,6 +16,7 @@ from platform_shared.core.boot_guards import check_extraction_configured
 from platform_shared.extraction.anthropic_errors import (
     AnthropicFailureKind,
     map_anthropic_connection_error,
+    map_anthropic_error,
     map_anthropic_status_error,
 )
 from platform_shared.extraction.errors import ExtractionNotConfiguredError
@@ -44,6 +45,9 @@ def _status_error(
         (anthropic.BadRequestError, 400, "invalid_request_error", AnthropicFailureKind.INPUT_REJECTED, logging.WARNING),
         (anthropic.InternalServerError, 529, "overloaded_error", AnthropicFailureKind.UPSTREAM, logging.ERROR),
         (anthropic.InternalServerError, 500, "api_error", AnthropicFailureKind.UPSTREAM, logging.ERROR),
+        (anthropic.NotFoundError, 404, "not_found_error", AnthropicFailureKind.MISCONFIGURED, logging.ERROR),
+        (anthropic.APIStatusError, 408, "timeout_error", AnthropicFailureKind.UPSTREAM, logging.ERROR),
+        (anthropic.ConflictError, 409, "conflict_error", AnthropicFailureKind.UPSTREAM, logging.ERROR),
     ],
 )
 def test_status_errors_are_classified_and_logged(
@@ -93,6 +97,48 @@ def test_connection_error_is_upstream(caplog: pytest.LogCaptureFixture) -> None:
     assert failure.kind is AnthropicFailureKind.UPSTREAM
     assert failure.error_type == "connection_error"
     assert "APITimeoutError" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("kind", "transient"),
+    [
+        (AnthropicFailureKind.RATE_LIMITED, True),
+        (AnthropicFailureKind.UPSTREAM, True),
+        (AnthropicFailureKind.MISCONFIGURED, False),
+        (AnthropicFailureKind.INPUT_REJECTED, False),
+    ],
+)
+def test_only_rate_limits_and_upstream_trouble_are_transient(
+    kind: AnthropicFailureKind, transient: bool
+) -> None:
+    assert kind.is_transient is transient
+
+
+class TestMapAnthropicError:
+    def test_timeout_is_upstream(self) -> None:
+        failure = map_anthropic_error(anthropic.APITimeoutError(request=_REQUEST), log_prefix="x")
+        assert failure.kind is AnthropicFailureKind.UPSTREAM
+        assert failure.error_type == "connection_error"
+
+    def test_status_error_goes_through_the_status_mapping(self) -> None:
+        failure = map_anthropic_error(
+            _status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+            log_prefix="x",
+        )
+        assert failure.kind is AnthropicFailureKind.MISCONFIGURED
+        assert failure.status == 401
+
+    def test_unreadable_response_is_upstream_and_logged(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        exc = anthropic.APIResponseValidationError(
+            response=httpx2.Response(200, request=_REQUEST), body=None
+        )
+        with caplog.at_level(logging.ERROR):
+            failure = map_anthropic_error(exc, log_prefix="feature x")
+        assert failure.kind is AnthropicFailureKind.UPSTREAM
+        assert failure.error_type == "APIResponseValidationError"
+        assert "feature x: " in caplog.text
 
 
 class TestCheckExtractionConfigured:

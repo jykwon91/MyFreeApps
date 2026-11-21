@@ -8,6 +8,8 @@ export interface ResumeUploadJob {
   file_content_type: string | null;
   file_size_bytes: number | null;
   status: ResumeUploadJobStatus;
+  /** Temporary failures so far; a queued job with retries is waiting to try again. */
+  retry_count: number;
   error_message: string | null;
   result_parsed_fields: ResumeJobParsedFields | null;
   parser_version: string | null;

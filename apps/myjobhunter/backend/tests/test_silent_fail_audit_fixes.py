@@ -4,7 +4,8 @@ Audit findings:
 - Gmail surface: MJH has no gmail_service.py or email_discovery_service.py.
   Only surface is verification_email.py — already raises rather than returning
   bool. Covered here to prevent regression.
-- Claude backoff loop: logs WARNING on rate-limit. Covered here.
+- Claude backoff loop (the shared ``create_with_backoff``): logs WARNING on
+  rate-limit and re-raises once exhausted. Covered here.
 - _record_log: no bare except; DB write failures propagate. Covered here.
 - verification_email.send_verification_email: propagates send failures upward
   so the registration flow surfaces the error rather than silently succeeding.
@@ -14,151 +15,98 @@ See also test_turnstile_boot_check.py for the boot-guard parity tests.
 from __future__ import annotations
 
 import logging
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anthropic
+import httpx2
 import pytest
+from platform_shared.extraction import AnthropicFailureKind, ExtractionError, throttle
 
 
 # ---------------------------------------------------------------------------
-# Claude _call_with_backoff — rate-limit warning visibility
+# Claude calls go through the shared backoff — rate-limit warning visibility
 # ---------------------------------------------------------------------------
+
+_BACKOFF_LOGGER = "platform_shared.extraction.backoff"
+
+
+def _rate_limit_error(headers: dict[str, str]) -> anthropic.RateLimitError:
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx2.Response(429, request=request, headers=headers)
+    return anthropic.RateLimitError(
+        "rate limited",
+        response=response,
+        body={"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}},
+    )
+
+
+def _reply() -> MagicMock:
+    message = MagicMock(spec=anthropic.types.Message)
+    message.content = [MagicMock(text='{"ok": true}')]
+    message.usage = MagicMock(input_tokens=10, output_tokens=20)
+    message.model = "claude-sonnet-4-6"
+    return message
+
+
+@pytest.fixture(autouse=True)
+def _reset_shared_throttle():
+    """A 429 arms the process-global throttle; don't let it leak into other tests."""
+    yield
+    throttle.consecutive_429s = 0
+    throttle.resume_at = 0.0
+
+
+async def _call_claude_with(create) -> dict:
+    from app.services.extraction import claude_service
+
+    with (
+        patch.object(
+            claude_service, "_get_client",
+            return_value=MagicMock(messages=MagicMock(create=create)),
+        ),
+        patch.object(claude_service, "_record_log", new=AsyncMock()),
+        patch("asyncio.sleep", new=AsyncMock()),
+    ):
+        return await claude_service.call_claude(
+            system_prompt="test", user_content="hello", context_type="test",
+            user_id=uuid.uuid4(),
+        )
 
 
 class TestCallWithBackoffLogging:
-    """_call_with_backoff must log a WARNING (with structured fields) on every
-    rate-limit retry so production dashboards surface throttling without needing
-    to scan raw Anthropic response headers."""
+    """Every MJH Claude call must log a WARNING (with attempt info) on each
+    rate-limit retry so production dashboards surface throttling."""
 
     @pytest.mark.anyio
-    async def test_rate_limit_logs_warning(
+    async def test_rate_limit_logs_warning_and_retries(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """RateLimitError on first attempt must emit a WARNING log and retry."""
-        from app.services.extraction.claude_service import _call_with_backoff
+        create = AsyncMock(side_effect=[_rate_limit_error({"retry-after": "1"}), _reply()])
 
-        mock_message = MagicMock(spec=anthropic.types.Message)
-        mock_message.content = []
-        mock_message.usage = MagicMock(input_tokens=10, output_tokens=20)
-        mock_message.model = "claude-sonnet-4-6"
+        with caplog.at_level(logging.WARNING, logger=_BACKOFF_LOGGER):
+            result = await _call_claude_with(create)
 
-        rate_limit_exc = anthropic.RateLimitError(
-            message="rate limited",
-            response=MagicMock(headers={"retry-after": "1"}),
-            body=None,
+        assert result == {"ok": True}, "Should succeed on second attempt"
+        assert create.await_count == 2
+        warning_messages = " ".join(
+            r.getMessage() for r in caplog.records if r.levelno == logging.WARNING
         )
-
-        call_count = 0
-
-        async def _fake_create(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise rate_limit_exc
-            return mock_message
-
-        with (
-            patch(
-                "app.services.extraction.claude_service._get_client",
-                return_value=MagicMock(
-                    messages=MagicMock(create=_fake_create)
-                ),
-            ),
-            patch("asyncio.sleep", new=AsyncMock()),
-            caplog.at_level(logging.WARNING, logger="app.services.extraction.claude_service"),
-        ):
-            result = await _call_with_backoff(
-                model="claude-sonnet-4-6",
-                max_tokens=100,
-                system=[{"type": "text", "text": "test"}],
-                messages=[{"role": "user", "content": "hello"}],
-            )
-
-        assert result is mock_message, "Should succeed on second attempt"
-        warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
-        assert warning_records, (
-            "Expected at least one WARNING log on rate-limit retry; got none"
-        )
+        assert "rate limited" in warning_messages.lower()
+        assert "attempt 1/5" in warning_messages
 
     @pytest.mark.anyio
-    async def test_rate_limit_warning_contains_attempt_info(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """The WARNING message must include attempt count so operators can
-        track how often the API is being throttled."""
-        from app.services.extraction.claude_service import _call_with_backoff
+    async def test_rate_limit_exhausted_raises_classified_error(self) -> None:
+        """After 5 failed attempts the call raises (never swallows) — as a
+        rate-limited ExtractionError, which callers retry later."""
+        create = AsyncMock(side_effect=_rate_limit_error({}))
 
-        mock_message = MagicMock(spec=anthropic.types.Message)
-        mock_message.content = []
-        mock_message.usage = MagicMock(input_tokens=0, output_tokens=0)
-        mock_message.model = "claude-sonnet-4-6"
+        with pytest.raises(ExtractionError) as exc_info:
+            await _call_claude_with(create)
 
-        call_count = 0
-
-        async def _fake_create(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count <= 1:
-                raise anthropic.RateLimitError(
-                    message="rate limited",
-                    response=MagicMock(headers={}),
-                    body=None,
-                )
-            return mock_message
-
-        with (
-            patch(
-                "app.services.extraction.claude_service._get_client",
-                return_value=MagicMock(
-                    messages=MagicMock(create=_fake_create)
-                ),
-            ),
-            patch("asyncio.sleep", new=AsyncMock()),
-            caplog.at_level(logging.WARNING, logger="app.services.extraction.claude_service"),
-        ):
-            await _call_with_backoff(
-                model="claude-sonnet-4-6",
-                max_tokens=100,
-                system=[{"type": "text", "text": "test"}],
-                messages=[{"role": "user", "content": "hello"}],
-            )
-
-        warning_messages = " ".join(r.message for r in caplog.records if r.levelno == logging.WARNING)
-        # Should mention either "rate" or "attempt" so the operator knows the cause
-        assert any(kw in warning_messages.lower() for kw in ("rate", "attempt", "limit")), (
-            f"WARNING message should mention throttling context; got: {warning_messages!r}"
-        )
-
-    @pytest.mark.anyio
-    async def test_rate_limit_exhausted_raises(self) -> None:
-        """After 5 failed attempts the function must re-raise RateLimitError
-        rather than swallowing it — silent degradation on repeated throttling
-        would leave callers thinking the call succeeded."""
-        from app.services.extraction.claude_service import _call_with_backoff
-
-        async def _always_rate_limited(**kwargs):
-            raise anthropic.RateLimitError(
-                message="rate limited",
-                response=MagicMock(headers={}),
-                body=None,
-            )
-
-        with (
-            patch(
-                "app.services.extraction.claude_service._get_client",
-                return_value=MagicMock(
-                    messages=MagicMock(create=_always_rate_limited)
-                ),
-            ),
-            patch("asyncio.sleep", new=AsyncMock()),
-        ):
-            with pytest.raises(anthropic.RateLimitError):
-                await _call_with_backoff(
-                    model="claude-sonnet-4-6",
-                    max_tokens=100,
-                    system=[{"type": "text", "text": "test"}],
-                    messages=[{"role": "user", "content": "hello"}],
-                )
+        assert create.await_count == 5
+        assert exc_info.value.kind is AnthropicFailureKind.RATE_LIMITED
+        assert exc_info.value.is_transient
 
 
 # ---------------------------------------------------------------------------

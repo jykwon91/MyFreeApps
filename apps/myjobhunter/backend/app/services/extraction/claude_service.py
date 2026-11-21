@@ -8,12 +8,12 @@ Two entry points:
   for the resume parser worker; pins the resume system prompt and applies the
   resume-specific defaults dict-shape on the response.
 
-Both share the same singleton Anthropic client, exponential backoff on rate
-limits, and best-effort extraction_logs recording.
+Both share the same singleton Anthropic client, the shared throttle +
+exponential backoff on rate limits (``platform_shared.extraction.create_with_backoff``),
+and extraction_logs recording.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
@@ -23,10 +23,10 @@ from decimal import Decimal
 
 import anthropic
 from anthropic import Timeout
+from platform_shared.extraction import create_with_backoff, extraction_error_from_anthropic
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
-from app.models.system.extraction_log import ExtractionLog
 from app.repositories.system import extraction_log_repository
 from app.services.extraction.prompts.resume_prompt import RESUME_EXTRACTION_PROMPT
 
@@ -84,7 +84,9 @@ async def call_claude(
         Parsed dict from Claude's JSON response.
 
     Raises:
-        anthropic.APIError: on non-retryable API failures after backoff.
+        platform_shared.extraction.ExtractionError: any Anthropic API failure
+            (after the rate-limit backoff), classified by ``kind`` so callers
+            decide retry-vs-final without importing the SDK.
         ValueError: when Claude returns malformed JSON after all retries.
     """
     result = await call_claude_with_meta(
@@ -119,49 +121,68 @@ async def call_claude_with_meta(
     """
     truncated = user_content[:_MAX_TEXT_CHARS]
     started_at = time.monotonic()
-    status = "success"
-    error_message: str | None = None
     message: anthropic.types.Message | None = None
 
     try:
-        message = await _call_with_backoff(
-            model=_MODEL,
-            max_tokens=_MAX_TOKENS,
-            system=[{
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{
-                "role": "user",
-                "content": truncated,
-            }],
-        )
+        try:
+            message = await create_with_backoff(
+                _get_client(),
+                model=_MODEL,
+                max_tokens=_MAX_TOKENS,
+                system=[{
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{
+                    "role": "user",
+                    "content": truncated,
+                }],
+            )
+        except anthropic.APIError as exc:
+            raise extraction_error_from_anthropic(
+                exc, log_prefix=context_type, logger=logger,
+            ) from exc
         parsed = _parse_json_response(message)
-        input_tokens = message.usage.input_tokens if message and message.usage else 0
-        output_tokens = message.usage.output_tokens if message and message.usage else 0
-        cost_usd = Decimal(input_tokens * 3 + output_tokens * 15) / Decimal(1_000_000)
-        return {
-            "parsed": parsed,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost_usd": cost_usd,
-        }
     except Exception as exc:
-        status = "error"
-        error_message = str(exc)[:500]
+        # The Claude failure is what the caller must route on. A usage-log
+        # write failing on top of it is logged, never allowed to replace it.
+        try:
+            await _record_log(
+                user_id=user_id,
+                context_id=context_id,
+                context_type=context_type,
+                message=message,
+                duration_ms=int((time.monotonic() - started_at) * 1000),
+                status="error",
+                error_message=str(exc)[:500],
+            )
+        except Exception:
+            logger.exception(
+                "extraction_logs write failed while recording a %s failure", context_type,
+            )
         raise
-    finally:
-        duration_ms = int((time.monotonic() - started_at) * 1000)
-        await _record_log(
-            user_id=user_id,
-            context_id=context_id,
-            context_type=context_type,
-            message=message,
-            duration_ms=duration_ms,
-            status=status,
-            error_message=error_message,
-        )
+
+    # Success: the usage-log write is load-bearing for budget enforcement,
+    # so its failure propagates (see ``_record_log``).
+    await _record_log(
+        user_id=user_id,
+        context_id=context_id,
+        context_type=context_type,
+        message=message,
+        duration_ms=int((time.monotonic() - started_at) * 1000),
+        status="success",
+        error_message=None,
+    )
+    input_tokens = message.usage.input_tokens if message and message.usage else 0
+    output_tokens = message.usage.output_tokens if message and message.usage else 0
+    cost_usd = Decimal(input_tokens * 3 + output_tokens * 15) / Decimal(1_000_000)
+    return {
+        "parsed": parsed,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "cost_usd": cost_usd,
+    }
 
 
 async def extract_resume(
@@ -189,27 +210,6 @@ async def extract_resume(
         "summary": parsed.get("summary"),
         "headline": parsed.get("headline"),
     }
-
-
-async def _call_with_backoff(**kwargs: object) -> anthropic.types.Message:
-    """Call the Anthropic API with exponential backoff on rate-limit errors."""
-    for attempt in range(5):
-        try:
-            return await _get_client().messages.create(**kwargs)  # type: ignore[arg-type]
-        except anthropic.RateLimitError as exc:
-            retry_after = getattr(
-                getattr(exc, "response", None), "headers", {}
-            ).get("retry-after")
-            wait = float(retry_after) if retry_after else 60.0 * (2 ** attempt)
-            logger.warning(
-                "Anthropic rate-limited — waiting %.0fs (attempt %d/5)",
-                wait,
-                attempt + 1,
-            )
-            if attempt == 4:
-                raise
-            await asyncio.sleep(wait)
-    raise RuntimeError("unreachable")
 
 
 def _parse_json_response(message: anthropic.types.Message) -> dict:

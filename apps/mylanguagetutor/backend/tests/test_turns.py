@@ -42,6 +42,12 @@ def _auth_error() -> anthropic.APIStatusError:
     return anthropic.AuthenticationError("no", response=response, body=body)
 
 
+def _model_not_found() -> anthropic.NotFoundError:
+    response = httpx2.Response(404, request=_REQUEST)
+    body = {"type": "error", "error": {"type": "not_found_error", "message": "model: claude-x"}}
+    return anthropic.NotFoundError("no such model", response=response, body=body)
+
+
 def _parse_sse(body: str) -> list[tuple[str, Any]]:
     events: list[tuple[str, Any]] = []
     for block in body.replace("\r\n", "\n").split("\n\n"):
@@ -243,6 +249,19 @@ class TestFailurePaths:
     @pytest.mark.asyncio
     async def test_misconfigured_key_is_not_retryable(self, user_factory, as_user, fake_claude) -> None:
         fake_claude.reply_error = _auth_error()
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            session_id = await _new_session(authed)
+            resp = await _turn(authed, session_id)
+        events = _parse_sse(resp.text)
+        assert dict(events)["error"] == {"code": "tutor_misconfigured", "retryable": False}
+
+    @pytest.mark.asyncio
+    async def test_unknown_model_is_misconfigured_not_bad_input(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """A 404 means our model id or endpoint is wrong, never the learner's message."""
+        fake_claude.reply_error = _model_not_found()
         user = await user_factory()
         async with await as_user(user) as authed:
             session_id = await _new_session(authed)

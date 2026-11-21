@@ -32,9 +32,12 @@ import httpx
 import pytest
 
 from platform_shared.core.url_safety import UnsafeURLError
+from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
+from app.core.ai_failure_messages import AI_UNAVAILABLE_MESSAGE, AI_UNREADABLE_REPLY_MESSAGE
 from app.services.extraction.jd_url_extractor import (
     ExtractedJD,
+    JDAiExtractionError,
     JDFetchAuthRequiredError,
     JDFetchError,
     JDFetchTimeoutError,
@@ -533,21 +536,23 @@ class TestExtractFromUrlHtmlFallback:
 
     @pytest.mark.asyncio
     async def test_claude_failure_raises_jdfetcherror(self) -> None:
-        import anthropic
-
         fake_client = _FakeAsyncClient(
             response=_build_httpx_response(_NO_SCHEMA_HTML),
         )
         with _patch_httpx(fake_client), patch(
             "app.services.extraction.jd_url_parser.claude_service.call_claude",
             new_callable=AsyncMock,
-            side_effect=anthropic.APIConnectionError(request=None),
+            side_effect=ExtractionError("x", kind=AnthropicFailureKind.MISCONFIGURED),
         ):
-            with pytest.raises(JDFetchError, match="AI extraction"):
+            with pytest.raises(JDAiExtractionError) as exc_info:
                 await extract_from_url(
                     "https://example.com/posting",
                     user_id=uuid.uuid4(),
                 )
+
+        assert isinstance(exc_info.value, JDFetchError)
+        assert exc_info.value.kind is AnthropicFailureKind.MISCONFIGURED
+        assert str(exc_info.value) == AI_UNAVAILABLE_MESSAGE
 
     @pytest.mark.asyncio
     async def test_claude_invalid_json_raises_jdfetcherror(self) -> None:
@@ -559,11 +564,14 @@ class TestExtractFromUrlHtmlFallback:
             new_callable=AsyncMock,
             side_effect=ValueError("invalid json"),
         ):
-            with pytest.raises(JDFetchError, match="AI extraction"):
+            with pytest.raises(JDAiExtractionError) as exc_info:
                 await extract_from_url(
                     "https://example.com/posting",
                     user_id=uuid.uuid4(),
                 )
+
+        assert exc_info.value.kind is None
+        assert str(exc_info.value) == AI_UNREADABLE_REPLY_MESSAGE
 
 
 # ---------------------------------------------------------------------------

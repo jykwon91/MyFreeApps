@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anthropic
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -354,8 +355,7 @@ class TestGenerateAdviceIntegration:
         await db.commit()
 
         mock_response = MagicMock()
-        mock_response.content = [MagicMock()]
-        mock_response.content[0].text = json.dumps({
+        mock_response.content = [anthropic.types.TextBlock(type="text", text=json.dumps({
             "suggestions": [
                 {
                     "id": "rule_empty_data",
@@ -368,12 +368,12 @@ class TestGenerateAdviceIntegration:
                 },
             ],
             "disclaimer": "AI disclaimer",
-        })
+        }))]
         mock_response.usage = MagicMock()
         mock_response.usage.input_tokens = 1000
         mock_response.usage.output_tokens = 500
 
-        from app.services.tax import tax_advisor_service
+        from app.services.tax import tax_advisor_claude, tax_advisor_service
 
         @asynccontextmanager
         async def _fake():
@@ -384,7 +384,7 @@ class TestGenerateAdviceIntegration:
             patch("app.services.tax.tax_advisor_service.AsyncSessionLocal", _fake),
             patch("app.services.tax.tax_validation.unit_of_work", _fake),
             patch.object(
-                tax_advisor_service, "_create_with_backoff",
+                tax_advisor_claude, "_create_with_backoff",
                 new_callable=AsyncMock, return_value=mock_response,
             ),
         ):

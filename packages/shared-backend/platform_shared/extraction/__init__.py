@@ -12,15 +12,20 @@
 - ``find_json`` — pull the JSON payload out of a text response.
 - ``ExtractionNotConfiguredError`` / ``ExtractionError`` /
   ``ExtractionParseError`` — typed errors.
-- ``map_anthropic_status_error`` / ``map_anthropic_connection_error`` /
-  ``AnthropicFailure`` / ``AnthropicFailureKind`` — classify a raw SDK
-  failure (and log its documented ``error.type``) for callers that call
-  the SDK directly (MGA item reader, MyLanguageTutor).
+- ``map_anthropic_error`` / ``map_anthropic_status_error`` /
+  ``map_anthropic_connection_error`` / ``AnthropicFailure`` /
+  ``AnthropicFailureKind`` — classify a raw SDK failure (and log its
+  documented ``error.type``) for callers that call the SDK directly.
+- ``extraction_error_from_anthropic`` — the same classification as a typed
+  ``ExtractionError`` (what ``ExtractionService`` / ``ResearchService`` raise).
+- ``is_transient_failure`` — retry-later vs final for any exception, routed
+  on ``ExtractionError.kind`` plus the caller's own transient extras.
 """
 from platform_shared.extraction.anthropic_errors import (
     AnthropicFailure,
     AnthropicFailureKind,
     map_anthropic_connection_error,
+    map_anthropic_error,
     map_anthropic_status_error,
 )
 from platform_shared.extraction.backoff import (
@@ -33,6 +38,8 @@ from platform_shared.extraction.errors import (
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    extraction_error_from_anthropic,
+    is_transient_failure,
 )
 from platform_shared.extraction.json_extract import find_json
 from platform_shared.extraction.research import (
@@ -58,6 +65,9 @@ __all__ = [
     "ExtractionParseError",
     "AnthropicFailure",
     "AnthropicFailureKind",
+    "map_anthropic_error",
     "map_anthropic_status_error",
     "map_anthropic_connection_error",
+    "extraction_error_from_anthropic",
+    "is_transient_failure",
 ]

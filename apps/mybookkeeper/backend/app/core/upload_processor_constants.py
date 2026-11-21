@@ -11,6 +11,12 @@ POLL_INTERVAL_SECONDS: Final = 2
 MAX_CONCURRENT_USERS: Final = 5
 MAX_RETRIES: Final = 3
 
+# Non-Claude failures that clear on their own (the whole read timing out, a
+# dropped socket): passed as ``extra_transient`` to
+# ``platform_shared.extraction.is_transient_failure``. Claude failures carry
+# their own classification instead.
+TRANSIENT_ERROR_TYPES: Final[tuple[type[BaseException], ...]] = (TimeoutError, ConnectionError)
+
 # The poll loop touches this after every successful look for work and after
 # every document it finishes, so it only goes stale when the loop stops
 # making progress.

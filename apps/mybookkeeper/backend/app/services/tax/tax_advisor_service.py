@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TypedDict
 
+import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
@@ -21,10 +22,8 @@ from app.schemas.tax.tax_advisor import (
     TaxAdvisorResponse,
     TaxSuggestion,
 )
-from app.services.tax import tax_validation_service
+from app.services.tax import tax_advisor_claude, tax_validation_service
 from app.services.tax.tax_advisor_persistence import save_advice
-from app.services.extraction.claude_service import _create_with_backoff
-from app.services.extraction.prompts.tax_advisor_prompt import TAX_ADVISOR_PROMPT
 from app.core.tax_constants import SCHEDULE_E_LINE_LABELS
 
 logger = logging.getLogger(__name__)
@@ -138,8 +137,11 @@ async def generate_advice(
 
         tax_data = await _assemble_tax_data(db, tax_return)
 
-    message = await _call_claude(tax_data)
-    raw_text = message.content[0].text.strip()
+    message = await tax_advisor_claude.ask_tax_advisor(
+        model=MODEL_VERSION, tax_data_json=json.dumps(tax_data, cls=_DecimalEncoder, indent=2),
+    )
+    first_block = message.content[0]
+    raw_text = first_block.text.strip() if isinstance(first_block, anthropic.types.TextBlock) else ""
     input_tokens: int | None = message.usage.input_tokens if message.usage else None
     output_tokens: int | None = message.usage.output_tokens if message.usage else None
 
@@ -461,25 +463,6 @@ async def _load_known_issues(
         }
         for r in results
     ]
-
-
-async def _call_claude(tax_data: _TaxDataPayload):  # type: ignore[return]
-    """Send tax data to Claude and return the raw Message object."""
-    user_message = json.dumps(tax_data, cls=_DecimalEncoder, indent=2)
-
-    return await _create_with_backoff(
-        model=MODEL_VERSION,
-        max_tokens=8192,
-        system=[{
-            "type": "text",
-            "text": TAX_ADVISOR_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{
-            "role": "user",
-            "content": f"Analyze this tax data and return suggestions:\n\n{user_message}",
-        }],
-    )
 
 
 def _parse_and_validate(raw_response: str) -> TaxAdvisorResponse:
