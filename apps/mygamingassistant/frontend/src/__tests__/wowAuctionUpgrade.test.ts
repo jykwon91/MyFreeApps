@@ -187,6 +187,40 @@ describe("sortByUpgrade", () => {
     const result = sortByUpgrade(tied, tiedMap, "desc");
     expect(result.map((r) => r.name)).toEqual(["Alpha", "Zeal"]);
   });
+
+  it("sorts null-verdict items (e.g. spellPowerUnknown caster weapon) below real verdicts in both directions", () => {
+    // A known comparison where verdict is null (scorer provided but returns null —
+    // e.g. equippedComparisons returns null when spellPowerUnknown is true for either item).
+    const nullVerdictUpgrade: AuctionUpgrade = {
+      kind: "verdict",
+      verdict: null,
+      equippedItemId: 100,
+      equippedName: "Zum'rah's Vexing Cane",
+    };
+    const realUpgrade: AuctionUpgrade = {
+      kind: "verdict",
+      verdict: { kind: "upgrade", pct: 50, statsOnly: false, bothHands: false },
+      equippedItemId: 101,
+      equippedName: "Iron Knuckles",
+    };
+
+    const testItems = [price(1, "Zum'rah's AH Copy"), price(2, "Fist Weapon")];
+    const upgradeMap = new Map<number, AuctionUpgrade>([
+      [1, nullVerdictUpgrade],
+      [2, realUpgrade],
+    ]);
+
+    // desc: real upgrade (+50) first, then null-verdict (treated as -Infinity)
+    expect(sortByUpgrade(testItems, upgradeMap, "desc").map((r) => r.name)).toEqual([
+      "Fist Weapon",
+      "Zum'rah's AH Copy",
+    ]);
+    // asc: same — null-verdict still last even when reversing direction
+    expect(sortByUpgrade(testItems, upgradeMap, "asc").map((r) => r.name)).toEqual([
+      "Fist Weapon",
+      "Zum'rah's AH Copy",
+    ]);
+  });
 });
 
 // ─── buildUpgradeMap ─────────────────────────────────────────────────────────
