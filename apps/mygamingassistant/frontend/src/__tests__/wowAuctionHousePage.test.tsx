@@ -17,6 +17,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
   ...(await import("@/test/auctionPricesStub")).refreshApiStub,
 }));
 
+// No character is set in these tests; skip the RTK Query store requirement.
+vi.mock("@/games/wow-forever/api/wowCharacterApi", () => ({
+  useGetCharacterQuery: () => ({ data: undefined, isError: false }),
+}));
+
 function response(items: PriceListResponse["items"], faction: PriceFaction = "alliance"): PriceListResponse {
   return {
     region: "us",
