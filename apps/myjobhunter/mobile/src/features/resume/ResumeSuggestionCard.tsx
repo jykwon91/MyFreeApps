@@ -82,7 +82,7 @@ export default function ResumeSuggestionCard({ session, proposal, customFailure 
         onSend={proposal.send}
         value={proposal.composerText}
       />
-      <ResumeNavButtons isPending={proposal.isPending} sessionId={session.id} targetIndex={session.target_index} totalTargets={total} />
+      <ResumeNavButtons isPending={proposal.isPending} onMove={proposal.move} targetIndex={session.target_index} totalTargets={total} />
       <ResumeCustomSheet
         failure={customFailure}
         isOpen={proposal.mode === SuggestionMode.CUSTOM}

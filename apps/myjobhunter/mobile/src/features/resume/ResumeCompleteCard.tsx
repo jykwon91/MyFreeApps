@@ -9,7 +9,7 @@ import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeCompleteCardProps } from "../../types/ResumeCompleteCardProps";
 import ResumeCard from "./ResumeCard";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /** Once every suggestion is through: mark the resume done, then download it as a PDF or a Word file. */
 export default function ResumeCompleteCard({ session, exports }: ResumeCompleteCardProps) {

@@ -17,6 +17,11 @@ POST   /resume-refinement/sessions/{id}/complete            mark session done
 GET    /resume-refinement/sessions/{id}/export?format=pdf|docx   download document
 
 All routes require auth and are tenant-scoped on the session ``user_id``.
+
+accept, accept-flagged, custom, alternative and skip take optional
+``seen_target_index`` / ``seen_turn_count``: the suggestion the client was showing. When the session
+has moved past it they answer a coded 409 (``REFINEMENT_SUGGESTION_CHANGED``)
+and change nothing.
 """
 from __future__ import annotations
 
@@ -28,6 +33,10 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.resume_refinement_conflicts import (
+    SUGGESTION_CHANGED_CODE,
+    SUGGESTION_CHANGED_MESSAGE,
+)
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -36,8 +45,10 @@ from app.schemas.resume_refinement.session import (
     SessionStartRequest,
     SessionWithTurnsRead,
     TargetFromLineRequest,
+    TurnAcceptRequest,
     TurnAlternativeRequest,
     TurnCustomRequest,
+    TurnSkipRequest,
 )
 from app.services.resume_refinement import session_service
 from app.services.resume_refinement.errors import (
@@ -47,6 +58,7 @@ from app.services.resume_refinement.errors import (
     SessionNotFound,
     SourceJobNotFound,
     SourceJobNotReady,
+    SuggestionChanged,
 )
 from app.services.resume_refinement.export_service import (
     ExportFidelityError,
@@ -75,6 +87,14 @@ _PREPARE_LIMITER = RateLimiter(max_attempts=10, window_seconds=3600)
 # paces itself just under the short window all day.
 _TURN_LIMITER_PER_5_MIN = RateLimiter(max_attempts=60, window_seconds=300)
 _TURN_LIMITER_PER_HOUR = RateLimiter(max_attempts=300, window_seconds=3600)
+
+
+def _suggestion_changed() -> HTTPException:
+    """The coded 409 for an answer to a suggestion the session moved past."""
+    return HTTPException(
+        status_code=409,
+        detail={"code": SUGGESTION_CHANGED_CODE, "message": SUGGESTION_CHANGED_MESSAGE},
+    )
 
 
 @router.post("/sessions", response_model=SessionWithTurnsRead, status_code=201)
@@ -143,16 +163,24 @@ async def get_session(
 @router.post("/sessions/{session_id}/accept", response_model=SessionWithTurnsRead)
 async def accept_pending(
     session_id: uuid.UUID,
+    body: TurnAcceptRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
     check_user_rate_limit(
         user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
     )
+    seen = body or TurnAcceptRequest()
     try:
         session = await session_service.accept_pending(
-            db=db, user_id=user.id, session_id=session_id,
+            db=db,
+            user_id=user.id,
+            session_id=session_id,
+            seen_target_index=seen.seen_target_index,
+            seen_turn_count=seen.seen_turn_count,
         )
+    except SuggestionChanged as exc:
+        raise _suggestion_changed() from exc
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
@@ -165,6 +193,7 @@ async def accept_pending(
 @router.post("/sessions/{session_id}/accept-flagged", response_model=SessionWithTurnsRead)
 async def accept_flagged(
     session_id: uuid.UUID,
+    body: TurnAcceptRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
@@ -177,10 +206,17 @@ async def accept_flagged(
     check_user_rate_limit(
         user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
     )
+    seen = body or TurnAcceptRequest()
     try:
         session = await session_service.accept_flagged(
-            db=db, user_id=user.id, session_id=session_id,
+            db=db,
+            user_id=user.id,
+            session_id=session_id,
+            seen_target_index=seen.seen_target_index,
+            seen_turn_count=seen.seen_turn_count,
         )
+    except SuggestionChanged as exc:
+        raise _suggestion_changed() from exc
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
@@ -206,7 +242,11 @@ async def supply_custom(
             user_id=user.id,
             session_id=session_id,
             user_text=body.user_text,
+            seen_target_index=body.seen_target_index,
+            seen_turn_count=body.seen_turn_count,
         )
+    except SuggestionChanged as exc:
+        raise _suggestion_changed() from exc
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
@@ -232,7 +272,11 @@ async def request_alternative(
             user_id=user.id,
             session_id=session_id,
             hint=body.hint,
+            seen_target_index=body.seen_target_index,
+            seen_turn_count=body.seen_turn_count,
         )
+    except SuggestionChanged as exc:
+        raise _suggestion_changed() from exc
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
@@ -245,16 +289,24 @@ async def request_alternative(
 @router.post("/sessions/{session_id}/skip", response_model=SessionWithTurnsRead)
 async def skip_target(
     session_id: uuid.UUID,
+    body: TurnSkipRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
     check_user_rate_limit(
         user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
     )
+    seen = body or TurnSkipRequest()
     try:
         session = await session_service.skip_target(
-            db=db, user_id=user.id, session_id=session_id,
+            db=db,
+            user_id=user.id,
+            session_id=session_id,
+            seen_target_index=seen.seen_target_index,
+            seen_turn_count=seen.seen_turn_count,
         )
+    except SuggestionChanged as exc:
+        raise _suggestion_changed() from exc
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:

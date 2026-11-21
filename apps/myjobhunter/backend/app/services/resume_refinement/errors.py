@@ -51,3 +51,12 @@ class PreparationFailed(ResumeRefinementError):
     """Background session preparation could not produce a usable first
     proposal. The worker marks the session ``failed`` for the frontend's
     "Try again" affordance."""
+
+
+class SuggestionChanged(ResumeRefinementError):
+    """The user answered a suggestion the session has since moved past.
+
+    Raised when the client says which suggestion it was showing and the
+    session's position no longer matches, so the action would land on a
+    suggestion the user never saw.
+    """

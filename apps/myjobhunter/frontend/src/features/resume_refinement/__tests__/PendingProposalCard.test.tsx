@@ -12,6 +12,7 @@ vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
   useSupplyCustomRewriteMutation: () => idleMutation(),
   useRequestAlternativeMutation: () => [requestAlternative, { isLoading: false }],
   useSkipTargetMutation: () => idleMutation(),
+  useNavigateRefinementMutation: () => idleMutation(),
 }));
 
 vi.mock("@/features/resume_refinement/NavigationButtons", () => ({
@@ -30,7 +31,12 @@ describe("PendingProposalCard optimistic echo", () => {
     fireEvent.change(composer, { target: { value: "no em dashes" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    expect(requestAlternative).toHaveBeenCalledWith({ id: "session-1", hint: "no em dashes" });
+    expect(requestAlternative).toHaveBeenCalledWith({
+      id: "session-1",
+      seen_target_index: session.target_index,
+      seen_turn_count: 2,
+      hint: "no em dashes",
+    });
     expect(onEcho).toHaveBeenLastCalledWith({ text: "no em dashes" });
 
     rerender(

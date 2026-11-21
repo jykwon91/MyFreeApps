@@ -1,4 +1,6 @@
 import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
+import { REFINEMENT_CONFLICT_CODES } from "@myjobhunter/api-client/constants/refinementConflictCodes";
+import { REFINEMENT_FAILURES } from "@myjobhunter/api-client/constants/refinementFailures";
 import { REFINEMENT_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/refinementPolling";
 import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
@@ -19,6 +21,7 @@ import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -30,6 +33,10 @@ jest.mock("expo-sharing", () => ({ shareAsync: (...args: unknown[]) => mockShare
 
 const SESSION = "/resume-refinement/sessions/rs1";
 const RATE_LIMITED = RATE_LIMITED_MESSAGES.resumeRefinement;
+const LOST: FakeRoute = () => {
+  throw new Error("Network Error");
+};
+const SECOND_REWRITE = "Led a team of four engineers through a rewrite";
 const fail = (status: number, detail: unknown = "Anthropic overloaded_error 529") => (): FakeReply => ({ status, data: { detail } });
 
 function serveResume(session: RefinementSession, routes: Record<string, FakeRoute> = {}, jobs: readonly ResumeUploadJob[] = [resumeJobRecord()]) {
@@ -160,6 +167,57 @@ describe("loading the session", () => {
 });
 
 describe("acting on a suggestion", () => {
+  it("shows the next suggestion the moment an accept lands, even when the phone can't reload, so a second tap answers that one", async () => {
+    const next = refinementSessionRecord({ target_index: 1, turn_count: 3, pending_proposal: SECOND_REWRITE });
+    let offline = false;
+    const { sent } = await openOnSession(refinementSessionRecord(), {
+      [`POST ${SESSION}/accept`]: (): FakeReply => {
+        // The phone loses its signal right after the accept lands: a reload gets nothing.
+        offline = true;
+        return { status: 200, data: next };
+      },
+      [`GET ${SESSION}`]: (body, params): FakeReply | Promise<FakeReply> => (offline ? LOST(body, params) : { status: 200, data: refinementSessionRecord() }),
+    });
+    const FIRST_REWRITE = "Built 12 APIs serving 3M requests a day";
+    expect(screen.getByText(FIRST_REWRITE)).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.accept }));
+
+    expect(await screen.findByText(SECOND_REWRITE)).toBeTruthy();
+    expect(screen.queryByText(FIRST_REWRITE)).toBeNull();
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.accept }));
+    const accepts = sent.filter(({ route }) => route === `POST ${SESSION}/accept`).map(({ body }) => body);
+    expect(accepts).toEqual([
+      { seen_target_index: 0, seen_turn_count: 1 },
+      { seen_target_index: 1, seen_turn_count: 3 },
+    ]);
+  });
+
+  it("says an accept with no answer may have gone through, and that trying again is safe", async () => {
+    await openOnSession(refinementSessionRecord(), { [`POST ${SESSION}/accept`]: LOST });
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.accept }));
+
+    expect(await screen.findByText(unsureRepeatableMessage("that went through"))).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.actionFailed)).toBeNull();
+  });
+
+  it("says when the suggestion had already moved on, and shows the current one", async () => {
+    const next = refinementSessionRecord({ target_index: 1, turn_count: 3, pending_proposal: SECOND_REWRITE });
+    const { held } = await openOnSession(refinementSessionRecord(), {
+      [`POST ${SESSION}/skip`]: (): FakeReply => {
+        held.current = next;
+        return { status: 409, data: { detail: { code: REFINEMENT_CONFLICT_CODES.suggestionChanged, message: "server words" } } };
+      },
+    });
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.skip }));
+
+    expect(await screen.findByText(REFINEMENT_FAILURES.suggestionChanged)).toBeTruthy();
+    expect(await screen.findByText(SECOND_REWRITE)).toBeTruthy();
+    expect(screen.queryByText("server words", SHOWN)).toBeNull();
+  });
+
   it("says a rate-limited accept was rate limited, and keeps the suggestion to try again", async () => {
     await openOnSession(refinementSessionRecord(), { [`POST ${SESSION}/accept`]: fail(429) });
 

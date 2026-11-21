@@ -2,6 +2,7 @@ import { useDraftLinePicker } from "@myjobhunter/api-client/hooks/useDraftLinePi
 import { useRefinementProposal } from "@myjobhunter/api-client/hooks/useRefinementProposal";
 import type { PickedDraftLine } from "@myjobhunter/api-client/types/resume-refinement/picked-draft-line";
 import { SuggestionMode } from "@myjobhunter/api-client/types/resume-refinement/suggestion-mode";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 import { type KeyboardAwareScrollRef, SegmentedControl, StaleDataBanner, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
@@ -36,8 +37,12 @@ export default function ResumeSessionView({ session, onStartNew, isStale, renewS
   const picker = useDraftLinePicker(session, (error) => showToast(refinementFailure(error), "error"));
   const proposal = useRefinementProposal(session, {
     onSuccess: (message) => showToast(message),
+    // An answer whose reply was lost may have gone through, so it isn't called a failure. Sending it again is safe:
+    // every action on this card (accept, accept anyway, write my own, a reply, another take, skip) names the
+    // suggestion it was for, and the server refuses one whose suggestion has already moved on.
     onError: (error) => {
-      const message = refinementFailure(error);
+      const message = repeatableWriteFailure(error, refinementFailure);
+      if (!message) return;
       if (isCustomOpen.current) setCustomFailure(message);
       else showToast(message, "error");
     },

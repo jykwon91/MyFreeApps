@@ -1,6 +1,6 @@
 import { APPLICATION_DETAIL_MESSAGES } from "../src/constants/applicationDetail";
 import { WRITE_FAILURE_MESSAGES } from "../src/constants/writeFailure";
-import { createFailure, moveFailure, readFailure, repeatableWriteFailure, writeFailure } from "../src/lib/writeFailure";
+import { createFailure, moveFailure, readFailure, writeFailure } from "../src/lib/writeFailure";
 
 const COPY = { failed: "I couldn't add that contact. Want to try again?", checkWhere: "this application's contacts" };
 
@@ -25,18 +25,6 @@ describe("writeFailure, for a change or delete", () => {
 
   it("says nothing when signing out called it off", () => {
     expect(writeFailure({ name: "AbortError", message: "Aborted" }, "failed")).toBeNull();
-  });
-});
-
-describe("repeatableWriteFailure", () => {
-  it("leaves a real refusal to the caller's wording", () => {
-    expect(repeatableWriteFailure({ status: 400, data: { detail: "Bad" } }, () => "Couldn't save this posting")).toBe("Couldn't save this posting");
-  });
-
-  it("calls a lost answer unsure, without asking for the caller's wording", () => {
-    const describe = jest.fn(() => "Couldn't save this posting");
-    expect(repeatableWriteFailure({ status: "FETCH_ERROR" }, describe)).toBe(UNSURE);
-    expect(describe).not.toHaveBeenCalled();
   });
 });
 

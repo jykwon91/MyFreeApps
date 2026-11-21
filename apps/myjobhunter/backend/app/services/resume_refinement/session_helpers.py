@@ -54,8 +54,13 @@ async def _load_active(
     db: AsyncSession,
     session_id: uuid.UUID,
     user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> ResumeRefinementSession:
-    session = await session_repo.get_by_id_for_user(db, session_id, user_id)
+    """The user's active session; ``for_update`` holds its row lock until the next commit."""
+    session = await session_repo.get_by_id_for_user(
+        db, session_id, user_id, for_update=for_update,
+    )
     if session is None:
         raise SessionNotFound()
     if session.status != "active":
