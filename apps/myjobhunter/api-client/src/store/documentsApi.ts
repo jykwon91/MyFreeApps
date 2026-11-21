@@ -11,8 +11,8 @@ import { removalIsDone } from "../utils/removalIsDone";
 import { applicationDetailTags } from "../utils/applicationDetailTags";
 import type { DocumentUpdateArgs } from "../types/document/document-update-args";
 import type { DocumentDeleteArgs } from "../types/document/document-delete-args";
+import { DOCUMENTS_TAG } from "../constants/documentsTag";
 
-const DOCUMENTS_TAG = "Documents";
 const APPLICATIONS_TAG = "Applications";
 
 const documentsApi = baseApi

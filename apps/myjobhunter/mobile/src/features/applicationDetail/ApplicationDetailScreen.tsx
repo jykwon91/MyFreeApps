@@ -38,8 +38,10 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   }, [isLeaving]);
 
   if (!application && (isFetching || !error)) return <ApplicationDetailSkeleton />;
-  if (!application) {
-    const isGone = isNotFound(error);
+  const isGone = isNotFound(error);
+  // A 404 means it was deleted (on another device, say), even after it loaded: what's on screen
+  // can't be acted on, so it isn't kept under the offline banner. Not while leaving after a delete here.
+  if (!application || (isGone && !isLeaving)) {
     return (
       <EmptyState
         action={

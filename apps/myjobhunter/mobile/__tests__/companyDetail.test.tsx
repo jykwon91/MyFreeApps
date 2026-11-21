@@ -129,6 +129,23 @@ describe("the company screen", () => {
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
+  it("says it's gone, not what it loaded, when a refresh finds it deleted elsewhere", async () => {
+    let gone = false;
+    serve({
+      ...companyDetailRoutes(ACME),
+      [`GET /companies/${ID}`]: () => (gone ? { status: 404, data: { detail: "Company not found" } } : { status: 200, data: ACME }),
+    });
+    await renderCompanyDetail(ID);
+    await screen.findByRole("header", { name: "Acme Corp" });
+
+    gone = true;
+    await pullToRefresh();
+
+    expect(await screen.findByText(MESSAGES.cantFind)).toBeTruthy();
+    expect(screen.queryByRole("header", { name: "Acme Corp" })).toBeNull();
+    expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+  });
+
   it("offers to try again when the company won't load, and shows it once it does", async () => {
     let fails = true;
     serve({ ...companyDetailRoutes(ACME), [`GET /companies/${ID}`]: () => (fails ? { status: 500 } : { status: 200, data: ACME }) });
