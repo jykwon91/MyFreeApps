@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // renderHook needs a DOM; the package's own code still runs DOM-free in every other test.
 import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScenarioPath } from "../hooks/useScenarioPath";
 import type { Language } from "../types/catalog/language";
 import type { Scenario } from "../types/catalog/scenario";
@@ -83,5 +83,29 @@ describe("useScenarioPath", () => {
     expect(api.languages.refetch).toHaveBeenCalledTimes(1);
     expect(api.scenarios.refetch).toHaveBeenCalledTimes(1);
     expect(api.usage.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  describe("at the daily reset", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("refreshes usage while the cap banner is up, so it lifts without leaving the screen", () => {
+      vi.useFakeTimers({ now: new Date("2026-11-20T15:00:00Z") });
+      api.usage.data = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+      renderHook(() => useScenarioPath(PROFILE));
+
+      vi.advanceTimersByTime(8 * 3_600_000);
+      expect(api.usage.refetch).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(3_600_000 + 1000);
+      expect(api.usage.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not refresh when the cap is not reached", () => {
+      vi.useFakeTimers({ now: new Date("2026-11-20T15:00:00Z") });
+      api.usage.data = { remaining_fraction: 0.5, cap_reached: false, tutor_available: true };
+      renderHook(() => useScenarioPath(PROFILE));
+
+      vi.advanceTimersByTime(24 * 3_600_000);
+      expect(api.usage.refetch).not.toHaveBeenCalled();
+    });
   });
 });

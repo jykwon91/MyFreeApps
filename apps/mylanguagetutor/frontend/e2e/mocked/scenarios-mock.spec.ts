@@ -12,7 +12,7 @@ import { PHONE_VIEWPORT, TABLET_VIEWPORT } from "./constants/viewports";
 import { SCENARIOS } from "./fixtures/catalogFixtures";
 import { expectSkeletonRowsLineUp } from "./fixtures/skeletonAlignment";
 import { signedInTutor } from "./fixtures/signedInTutor";
-import { CAP_REACHED } from "./fixtures/tutorFixtures";
+import { CAP_REACHED, PLENTY_LEFT } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
 
@@ -48,6 +48,19 @@ for (const [label, now, copy] of [
     await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
   });
 }
+
+test("the cap notice on the scenario path lifts by itself when the reset passes with the page left open", async ({ page }) => {
+  await page.clock.install({ time: BEFORE_RESET });
+  const api = await signedInTutor(page, { usage: CAP_REACHED });
+
+  await page.goto("/scenarios");
+  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+
+  api.setUsage(PLENTY_LEFT);
+  await page.clock.fastForward("09:01:00");
+  await expect(page.getByText(/You've used today's practice time/)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
+});
 
 for (const failing of [LIST_SCENARIOS, GET_PROFILE]) {
   test(`a failed load (${failing}) says so instead of an empty path, and Try again recovers`, async ({ page }) => {

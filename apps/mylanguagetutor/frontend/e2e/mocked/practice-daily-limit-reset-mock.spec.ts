@@ -4,7 +4,8 @@
  * same day still answers, and lifts once the page comes back to the
  * foreground after the reset and usage shows budget again, so the learner can
  * send the answer the cap refused (kept on screen) without leaving the page.
- * Usage is asked about the open conversation's next turn.
+ * Usage is asked about the open conversation's next turn. A page left open
+ * and in view through the reset lifts the block by itself.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { DAILY_LIMIT_REACHED } from "./constants/refusalDetails";
@@ -60,6 +61,30 @@ test("the daily-cap block lifts when the learner comes back after the reset and 
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests).toHaveLength(2);
   expect(api.turnRequests[1].body).toEqual({ text: LEARNER_GREETING });
+});
+
+test("the daily-cap block lifts by itself when the reset passes with the page left open, and the refused answer can be sent", async ({ page }) => {
+  await page.clock.install({ time: BEFORE_RESET });
+  const api = await signedInTutor(page, {
+    turns: [refusedTurn(429, DAILY_LIMIT_REACHED), completeTurn({ reply: TUTOR_GREETING })],
+  });
+  const usageReads = () => api.reads.filter((read) => read.startsWith(USAGE_PATH)).length;
+
+  await openPractice(page, GREETINGS.title);
+  await sendTyped(page, LEARNER_GREETING);
+  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+  await expect.poll(usageReads).toBeGreaterThan(0);
+
+  // No focus, no navigation: only time passes.
+  const readsBeforeReset = usageReads();
+  await page.clock.fastForward(PAST_RESET);
+  await expect.poll(usageReads).toBeGreaterThan(readsBeforeReset);
+
+  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  expect(api.turnRequests).toHaveLength(2);
 });
 
 test("after the reset, usage that still says the budget is spent keeps the block", async ({ page }) => {
