@@ -2462,6 +2462,8 @@
     "frontend/src/shared/components/ui/Skeleton.tsx",
     "frontend/src/shared/components/ui/LoadErrorAlert.tsx",
     "frontend/src/admin/components/AdminLayout.tsx",
+    "frontend/src/shared/components/ResponsiveSidebar.tsx",
+    "frontend/src/shared/components/SidebarUserMenu.tsx",
     "frontend/vite.config.ts",
     "frontend/vitest.config.ts",
     "frontend/playwright.config.ts",
@@ -2481,6 +2483,7 @@
     "chrome-extension.spec.ts",
     "chrome-extension-sidepanel.spec.ts",
     "ux-fixes.spec.ts",
-    "info-banners.spec.ts"
+    "info-banners.spec.ts",
+    "mocked/narrow-screen-menu-mock.spec.ts"
   ]
 }
