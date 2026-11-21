@@ -5,10 +5,14 @@ import { PRICES_ADDON_ZIP_NAME } from "@/games/wow-forever/data/auctionHouse/pri
 import { DEFAULT_PRICE_SERVER } from "@/games/wow-forever/data/priceServers";
 import { PRICE_FACTIONS } from "@/games/wow-forever/data/priceFactions";
 import { fetchAskPrices } from "@/games/wow-forever/lib/ask/askLiveData";
+import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadDisenchantTables";
 import { pricesAddonZip } from "@/games/wow-forever/lib/auctionHouse/pricesAddonZip";
 import { downloadZip } from "@/lib/downloadBlob";
 
-/** Fetches every house's prices (and loads the recipe data for the crafting-demand lines) and downloads the MGA Prices addon with them inside. */
+/**
+ * Fetches every house's prices (and loads the recipe data for the crafting-demand lines and
+ * disenchant tables for the three-way verdict) and downloads the MGA Prices addon with them inside.
+ */
 export function useDownloadPricesAddon(): { download: () => Promise<void>; downloading: boolean } {
   const [downloading, setDownloading] = useState(false);
 
@@ -19,7 +23,8 @@ export function useDownloadPricesAddon(): { download: () => Promise<void>; downl
         Promise.all(PRICE_FACTIONS.map((faction) => fetchAskPrices({ server: DEFAULT_PRICE_SERVER, faction }))),
         loadAllCraftingData(),
       ]);
-      const zip = pricesAddonZip(houses, crafting);
+      const disenchant = loadDisenchantTables();
+      const zip = pricesAddonZip(houses, crafting, disenchant);
       downloadZip(zip, PRICES_ADDON_ZIP_NAME);
       showSuccess("MGA Prices is downloading. Unzip it into your AddOns folder.");
     } catch {

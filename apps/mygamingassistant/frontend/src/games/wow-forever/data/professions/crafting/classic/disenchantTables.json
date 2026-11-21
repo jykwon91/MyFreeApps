@@ -1,0 +1,7 @@
+{
+  "source": "cmangos/classic-db — regenerate with python -m scripts.wow_professions.build",
+  "itemColumns": ["table", "skill"],
+  "items": {},
+  "resultColumns": ["min", "max", "chance"],
+  "tables": {}
+}

@@ -3,12 +3,37 @@ import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
+import type { DisenchantTables } from "@/games/wow-forever/types/auctionHouse/disenchantTables";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 
 function epochSeconds(iso: string | null): number | null {
   if (!iso) return null;
   const ms = Date.parse(iso);
   return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+}
+
+/**
+ * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = {[resultId] = {min, max, chance}}`.
+ * Only written when the tables map is non-empty.
+ */
+function disenchantLines(de: DisenchantTables): string[] {
+  const tableIds = Object.keys(de.tables);
+  if (tableIds.length === 0) return [];
+
+  const lines: string[] = ["  deItems = {"];
+  for (const [itemId, entry] of Object.entries(de.items).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+    lines.push(`    [${itemId}] = {${entry[0]}, ${entry[1]}},`);
+  }
+  lines.push("  },", "  deTables = {");
+  for (const tableId of tableIds.sort((a, b) => Number(a) - Number(b))) {
+    lines.push(`    [${tableId}] = {`);
+    for (const [resultId, counts] of Object.entries(de.tables[tableId]).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+      lines.push(`      [${resultId}] = {${counts[0]}, ${counts[1]}, ${counts[2]}},`);
+    }
+    lines.push("    },");
+  }
+  lines.push("  },");
+  return lines;
 }
 
 /** `reagents[itemId]`: `{vendor = true}`, or `{leveling, recipes, professions}`. */
@@ -36,8 +61,16 @@ function reagentLines(crafting: CraftingByProfession): string[] {
  * leveling routes use each material. The top-level `updated` is the oldest
  * house's, so the addon's "download again" warning never understates how old
  * a price is.
+ *
+ * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = { [resultId] = {min, max, chance} }`
+ * carry the disenchant loot tables for the three-way Disenchant/AH/Vendor verdict. Only written
+ * when `disenchant` is provided and non-empty.
  */
-export function addonPriceLua(houses: readonly PriceListResponse[], crafting: CraftingByProfession): string {
+export function addonPriceLua(
+  houses: readonly PriceListResponse[],
+  crafting: CraftingByProfession,
+  disenchant?: DisenchantTables,
+): string {
   const out = [
     "-- MGA Prices data, from the MyGamingAssistant Auction house page (US).",
     "-- Download the addon again there to refresh these prices.",
@@ -63,6 +96,8 @@ export function addonPriceLua(houses: readonly PriceListResponse[], crafting: Cr
     houseLines.push("      },", "    },");
   }
   if (stamps.length > 0) out.push(`  updated = ${Math.min(...stamps)},`);
-  out.push(...reagentLines(crafting), "  houses = {", ...houseLines, "  },", "}", "");
+  out.push(...reagentLines(crafting));
+  if (disenchant) out.push(...disenchantLines(disenchant));
+  out.push("  houses = {", ...houseLines, "  },", "}", "");
   return out.join("\n");
 }

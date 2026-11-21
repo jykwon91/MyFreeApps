@@ -27,7 +27,9 @@ from scripts.wow_professions.build import (
     DISENCHANT_COLUMNS,
     _best_giver,
     _disenchant_kind,
+    _result_counts,
     _roll_chances,
+    build_addon_disenchant_tables,
     mark_bind_on_pickup,
     with_child_skill_lines,
 )
@@ -489,6 +491,71 @@ class TestDisenchantSources:
         assert de["11084"][4] is True  # Large Glimmering Shard: every blue gives one
         for row in de.values():
             assert 1 <= row[0] <= row[1] <= 60
+
+    def test_result_counts_clamps_min_to_1_and_max_to_min(self) -> None:
+        assert _result_counts({"mincountOrRef": "2", "maxcount": "4"}) == (2, 4)
+        assert _result_counts({"mincountOrRef": "1", "maxcount": "1"}) == (1, 1)
+        # Missing maxcount defaults to min
+        assert _result_counts({"mincountOrRef": "3", "maxcount": None}) == (3, 3)
+        # Zero min is clamped to 1
+        assert _result_counts({"mincountOrRef": "0", "maxcount": "0"}) == (1, 1)
+
+    def test_build_addon_disenchant_tables_produces_compact_mapping(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """build_addon_disenchant_tables maps items to their table+skill and tables to results."""
+        dump = {
+            "disenchant_loot_template": [
+                {"entry": "4", "item": "11083", "ChanceOrQuestChance": "75", "groupid": "1", "mincountOrRef": "1", "maxcount": "2"},
+                {"entry": "4", "item": "11082", "ChanceOrQuestChance": "20", "groupid": "1", "mincountOrRef": "1", "maxcount": "1"},
+                {"entry": "4", "item": "11084", "ChanceOrQuestChance": "0", "groupid": "1", "mincountOrRef": "1", "maxcount": "1"},
+            ],
+            "item_template": [
+                {"entry": "5101", "DisenchantID": "4", "RequiredDisenchantSkill": "25"},
+                {"entry": "5102", "DisenchantID": "4", "RequiredDisenchantSkill": "0"},
+                {"entry": "9999", "DisenchantID": "0", "RequiredDisenchantSkill": "0"},  # not disenchantable
+            ],
+        }
+        import scripts.wow_professions.build as build_module
+        from scripts.wow_world_map.sql_dump import read_dump as real_read_dump
+
+        def fake_read_dump(path: object, tables: set[str]) -> dict:
+            return {t: dump.get(t, []) for t in tables}
+
+        monkeypatch.setattr(build_module, "read_dump", fake_read_dump)
+        monkeypatch.setattr(build_module, "cmangos_dump", lambda: None)
+
+        items, tables = build_addon_disenchant_tables()
+
+        # Table 4 has three results: 75%, 20%, and the remaining 5% shared.
+        assert 4 in tables
+        assert 11083 in tables[4]
+        assert tables[4][11083] == (1, 2, 75)
+        assert tables[4][11082] == (1, 1, 20)
+        assert tables[4][11084] == (1, 1, 5)  # 100 - 75 - 20
+
+        # Items with DisenchantID map to their table and skill.
+        assert items[5101] == (4, 25)
+        assert items[5102] == (4, 0)
+        assert 9999 not in items  # DisenchantID = 0 excluded
+
+    def test_committed_disenchant_tables(self) -> None:
+        path = CRAFTING_DATA / "classic" / "disenchantTables.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["itemColumns"] == ["table", "skill"]
+        assert data["resultColumns"] == ["min", "max", "chance"]
+        # Every item entry is [table_id, skill_int].
+        for item_id, entry in data["items"].items():
+            assert len(entry) == 2, f"item {item_id} entry wrong length: {entry}"
+            assert isinstance(entry[0], int) and isinstance(entry[1], int)
+        # Every table entry maps result IDs to [min, max, chance].
+        for table_id, results in data["tables"].items():
+            for result_id, counts in results.items():
+                assert len(counts) == 3, f"table {table_id} result {result_id} wrong: {counts}"
+                min_c, max_c, chance = counts
+                assert 1 <= min_c <= max_c
+                assert 1 <= chance <= 100
+        # Items reference only table IDs that exist in the tables section.
+        for entry in data["items"].values():
+            assert str(entry[0]) in data["tables"], f"item references unknown table {entry[0]}"
 
     def test_committed_skinning(self) -> None:
         reagents = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["reagents"]
