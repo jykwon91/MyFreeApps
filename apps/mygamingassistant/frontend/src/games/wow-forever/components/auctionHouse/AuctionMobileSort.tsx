@@ -7,21 +7,26 @@ interface AuctionMobileSortProps {
   colSort: AuctionColumnSort | null;
   colDir: SortDirection;
   onColSort: (sort: AuctionColumnSort, dir: SortDirection) => void;
+  /** Show the Upgrade sort chip (a character's gear is known). */
+  showUpgrade: boolean;
 }
 
-const COLUMNS: { id: AuctionColumnSort; label: string }[] = [
+const BASE_COLUMNS: { id: AuctionColumnSort; label: string }[] = [
   { id: "item", label: "Item" },
   { id: "market", label: "Market" },
   { id: "cheapest", label: "Cheapest" },
   { id: "onsale", label: "On sale" },
 ];
 
+const UPGRADE_COLUMN: { id: AuctionColumnSort; label: string } = { id: "upgrade", label: "Upgrade" };
+
 /** Compact column-sort row shown below the results count on phones (hidden on sm+). */
-export default function AuctionMobileSort({ colSort, colDir, onColSort }: AuctionMobileSortProps) {
+export default function AuctionMobileSort({ colSort, colDir, onColSort, showUpgrade }: AuctionMobileSortProps) {
+  const columns = showUpgrade ? [...BASE_COLUMNS, UPGRADE_COLUMN] : BASE_COLUMNS;
   return (
     <div className="flex flex-wrap items-center gap-2 sm:hidden" aria-label="Sort results">
       <span className="text-xs text-muted-foreground">Sort:</span>
-      {COLUMNS.map(({ id, label }) => {
+      {columns.map(({ id, label }) => {
         const active = colSort === id;
         return (
           <button

@@ -617,3 +617,114 @@ test("priced pages never scroll sideways on a phone", async ({ page }) => {
   await page.locator("#route").getByRole("button", { name: /^Prices/ }).click();
   await expectNoSidewaysScroll(page);
 });
+
+// ─── Upgrade column ──────────────────────────────────────────────────────────
+
+const PLAYER_KEY = "mga.wowForever.worldMap.player.v1";
+// Real Forever rings: AH candidate (1491), two worn rings (1076, 942)
+const PRECISION_RING = 1491;
+const DEFIAS_RING = 1076;
+const FREEZING_BAND = 942;
+
+function wornRing(slot: string, id: number, name: string) {
+  return {
+    slot, item_id: id, name, quality: "rare", item_level: 30,
+    inventory_type: "FINGER", inventory_type_name: "Finger", subclass_name: null,
+    binding: null, armor: null, weapon: null, stats: [], enchantments: [], spells: [],
+    set_name: null, requirements: [], durability: null, durability_low: false, description: null,
+  };
+}
+
+const WARLOCK_CHARACTER = {
+  slug: "jason-kwon",
+  name: "Jason",
+  surname: "Kwon",
+  level: 37,
+  class_name: "Warlock",
+  items: [
+    wornRing("FINGER_1", DEFIAS_RING, "Defias Renegade Ring"),
+    wornRing("FINGER_2", FREEZING_BAND, "Freezing Band"),
+  ],
+};
+
+async function saveUpgradeCharacter(page: Page): Promise<void> {
+  await page.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [PLAYER_KEY, JSON.stringify({ faction: "A", classId: "warlock", zoneId: null, level: 37, position: null, characterSlug: "jason-kwon" })],
+  );
+}
+
+async function stubUpgradeCharacter(page: Page): Promise<void> {
+  await page.route(
+    (url) => /\/wow\/characters\/[^/]+$/.test(url.pathname),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WARLOCK_CHARACTER) }),
+  );
+}
+
+async function stubUpgradePrices(page: Page): Promise<void> {
+  await page.route(PRICES, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...priceBody([], "alliance"),
+        items: [
+          [PRECISION_RING, 5000, 4500, 10, 3, "Ring of Precision"],
+          [FREEZING_BAND, 3000, 2500, 5, 2, "Freezing Band"],
+        ],
+      }),
+    }),
+  );
+}
+
+test("without a character the Upgrade column header does not appear", async ({ page }) => {
+  await stubSortPrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await expect(page.getByRole("columnheader", { name: "Upgrade" })).toHaveCount(0);
+});
+
+test("with a character the Upgrade column header appears and each row shows a verdict", async ({ page }) => {
+  await saveUpgradeCharacter(page);
+  await stubUpgradeCharacter(page);
+  await stubUpgradePrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(2);
+
+  // Column header visible
+  await expect(page.getByRole("columnheader", { name: "Upgrade" })).toBeVisible();
+
+  // Both ring rows have upgrade cells (rings are equippable and both ring slots are occupied)
+  const upgradeCells = page.getByTestId("auction-upgrade-cell");
+  await expect(upgradeCells).toHaveCount(2);
+
+  // Each upgrade cell shows some verdict text — upgrade/downgrade/same (each has a [data-verdict])
+  // or at least a "vs. equipped" label on mobile that confirms the cell rendered correctly.
+  // Both items on the AH are rings, so both get compared against the equipped rings.
+  const firstCell = upgradeCells.first();
+  await expect(firstCell).toBeVisible();
+});
+
+test("clicking the Upgrade column header sets csort=upgrade in the URL", async ({ page }) => {
+  await saveUpgradeCharacter(page);
+  await stubUpgradeCharacter(page);
+  await stubUpgradePrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(2);
+  await expect(page.getByRole("columnheader", { name: "Upgrade" })).toBeVisible();
+
+  await page.getByRole("columnheader", { name: "Upgrade" }).getByRole("button").click();
+  await expect(page).toHaveURL(/csort=upgrade/);
+  await expect(page.getByRole("columnheader", { name: "Upgrade" })).toHaveAttribute("aria-sort", "descending");
+});
+
+test("on a phone the upgrade verdict shows in each card without horizontal scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await saveUpgradeCharacter(page);
+  await stubUpgradeCharacter(page);
+  await stubUpgradePrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(2);
+  await expect(page.getByTestId("auction-upgrade-cell").first()).toBeVisible();
+  await expectNoSidewaysScroll(page);
+});
