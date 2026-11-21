@@ -233,4 +233,50 @@ function shownPins()
 end
 function clickPin(n) named["MGADungeonQuestsPin" .. n].scripts.OnClick() end
 function clickBack() named.MGADungeonQuestsHome.scripts.OnClick() end
+-- Dungeon focus: shownFocus() prints "focus: <heading>" then "focus| <line>" per body line, or "focus: none";
+-- clickFocusClose() clicks its X. questLog entries take objectives = { {text, done} }. The quest tracker:
+-- watched = { questId, ... } (shown in that order); RaidNotice_AddMessage prints "warning: ...".
+function shownFocus()
+  local f = named.MGADungeonQuestsFocus
+  if not (f and f.shownFlag) then out[#out + 1] = "focus: none" return end
+  out[#out + 1] = "focus: " .. f.heading.text
+  for line in (f.body.text .. "\\n"):gmatch("(.-)\\n") do
+    out[#out + 1] = "focus| " .. plain(line):gsub("|TInterface\\\\RaidFrame\\\\ReadyCheck%-Ready:12|t", "[done]")
+  end
+end
+function clickFocusClose() named.MGADungeonQuestsFocusClose.scripts.OnClick() end
+watched = {}
+local function logIndexOf(id)
+  for i, q in ipairs(questLog) do if q.id == id then return i end end
+end
+function GetQuestLogIndexByID(id) return logIndexOf(id) or 0 end
+function GetNumQuestWatches() return #watched end
+function GetQuestIndexForWatch(i) return logIndexOf(watched[i]) end
+function AddQuestWatch(index)
+  local id = questLog[index].id
+  for _, w in ipairs(watched) do if w == id then return end end
+  watched[#watched + 1] = id
+end
+function RemoveQuestWatch(index)
+  local id = questLog[index].id
+  for i, w in ipairs(watched) do if w == id then table.remove(watched, i) return end end
+end
+function shownWatched()
+  local ids = {}
+  for _, w in ipairs(watched) do ids[#ids + 1] = tostring(w) end
+  out[#out + 1] = "watched: " .. table.concat(ids, ",")
+end
+C_QuestLog.GetQuestObjectives = function(id)
+  for _, q in ipairs(questLog) do
+    if q.id == id and q.objectives then
+      local list = {}
+      for i, o in ipairs(q.objectives) do list[i] = { text = o[1], finished = o[2] } end
+      return list
+    end
+  end
+  return {}
+end
+RaidWarningFrame = {}
+ChatTypeInfo = { RAID_WARNING = {} }
+function RaidNotice_AddMessage(_, text) out[#out + 1] = "warning: " .. text end
 `;

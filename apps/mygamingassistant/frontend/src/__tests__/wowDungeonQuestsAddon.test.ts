@@ -481,3 +481,109 @@ describe("MGA Dungeon Quests list and slash command", () => {
     expect(run(`${enter}; pending[1]()`, timers)).toHaveLength(1);
   });
 });
+
+describe("MGA Dungeon Quests dungeon focus", () => {
+  const enter = 'instance = { type = "party", id = 36 }; fire("PLAYER_ENTERING_WORLD")';
+  const leave = 'instance = nil; fire("PLAYER_ENTERING_WORLD")';
+  const vanCleef = 'questLog = { { id = 3, title = "The Defias Brotherhood", objectives = { { "Edwin VanCleef slain: 0/1", false } } } }';
+  const focus = (lines: string[]) => lines.filter((l) => l.startsWith("focus"));
+  const chat = (lines: string[]) => lines.filter((l) => l.startsWith("chat: ") && !l.includes("haven't picked up"));
+
+  it("inside a dungeon, tracks only its quests: objectives live from the quest log, then what's done", () => {
+    const setup = `questLog = {
+      { id = 3, objectives = { { "Edwin VanCleef slain: 0/1", false } } },
+      { id = 10, complete = true },
+    }`;
+    expect(focus(run(`${enter}; clear(); shownFocus()`, setup))).toEqual([
+      "focus: The Deadmines quests",
+      "focus| To do here",
+      "focus| The Defias Brotherhood",
+      "focus|    - Edwin VanCleef slain: 0/1",
+      "focus| Done - turn in when you're out",
+      "focus| [done] Collecting Memories",
+    ]);
+  });
+
+  it("names the dungeon's quests you never picked up, with who gives them and where", () => {
+    expect(focus(run(`${enter}; clear(); shownFocus()`))).toEqual([
+      "focus: The Deadmines quests",
+      "focus| Not picked up - you'd miss these",
+      "focus| The Defias Brotherhood",
+      "focus|    from Gryan Stoutmantle, Westfall 56.3, 47.5 (Sentinel Hill)",
+      "focus| Collecting Memories",
+      "focus|    from Wilder Thistlenettle, Stormwind City 65.1, 21.3",
+    ]);
+  });
+
+  it("ticks an objective as you finish it, and says when everything is done", () => {
+    const progress = `${enter}; questLog[1].objectives[1] = { "Edwin VanCleef slain: 1/1", true }; fire("QUEST_LOG_UPDATE"); clear(); shownFocus()`;
+    expect(focus(run(progress, `${vanCleef}; completed[10] = true`))).toContain("focus|    [done] Edwin VanCleef slain: 1/1");
+    expect(focus(run(`${enter}; clear(); shownFocus()`, "completed[3] = true; completed[10] = true"))).toEqual([
+      "focus: The Deadmines quests",
+      "focus| Every quest for this dungeon is done.",
+    ]);
+  });
+
+  it("falls back to the quest's objectives from our data when the client can't list them", () => {
+    const old = `${vanCleef}; C_QuestLog.GetQuestObjectives = nil; completed[10] = true`;
+    expect(focus(run(`${enter}; clear(); shownFocus()`, old))).toContain("focus|    - Kill Edwin VanCleef");
+    const leaderBoards = `${old}; function GetNumQuestLeaderBoards() return 1 end
+      function GetQuestLogLeaderBoard() return "Edwin VanCleef slain: 0/1", "monster", nil end`;
+    expect(focus(run(`${enter}; clear(); shownFocus()`, leaderBoards))).toContain("focus|    - Edwin VanCleef slain: 0/1");
+  });
+
+  it("shows nothing out in the world, or in a dungeon with no quests for you", () => {
+    expect(focus(run('fire("PLAYER_ENTERING_WORLD"); shownFocus()'))).toEqual(["focus: none"]);
+    expect(focus(run('instance = { type = "party", id = 43 }; player.level = 1; fire("PLAYER_ENTERING_WORLD"); shownFocus()'))).not.toEqual(["focus: none"]);
+    expect(focus(run('instance = { type = "party", id = 33 }; fire("PLAYER_ENTERING_WORLD"); shownFocus()'))).toEqual(["focus: none"]);
+  });
+
+  it("the quest tracker shows only the dungeon's quests inside, a quest picked up there joins, and it goes back on leaving", () => {
+    const setup = 'questLog = { { id = 99 }, { id = 3 } }; watched = { 99, 3 }';
+    expect(run(`${enter}; clear(); shownWatched()`, setup)).toEqual(["watched: 3"]);
+    expect(run(`${enter}; questLog[3] = { id = 10 }; fire("QUEST_ACCEPTED", 3, 10); clear(); shownWatched()`, setup)).toEqual([
+      "watched: 3,10",
+    ]);
+    expect(run(`${enter}; questLog[3] = { id = 10 }; fire("QUEST_ACCEPTED", 3, 10); ${leave}; clear(); shownWatched()`, setup)).toContain(
+      "watched: 3,99",
+    );
+  });
+
+  it("a reload inside keeps what the tracker showed before the dungeon", () => {
+    const setup = 'questLog = { { id = 99 }, { id = 3 } }; watched = { 99 }';
+    const reload = 'fire("PLAYER_ENTERING_WORLD", false, true)';
+    expect(run(`${enter}; ${reload}; ${leave}; clear(); shownWatched()`, setup)).toContain("watched: 99");
+  });
+
+  it("after a boss dies, says what's still to do; after the last boss, on screen too", () => {
+    const kill = (boss: string) => `${enter}; clear(); fire("ENCOUNTER_END", 1, "${boss}", 1, 5, 1)`;
+    expect(run(kill("Rhahk'Zor"), vanCleef)).toEqual([
+      "chat: MGA Dungeon Quests: Still to do in The Deadmines: The Defias Brotherhood (Edwin VanCleef slain: 0/1).",
+    ]);
+    expect(run(kill("Edwin VanCleef"), vanCleef)).toEqual([
+      "chat: MGA Dungeon Quests: don't leave yet. Still to do in The Deadmines: The Defias Brotherhood (Edwin VanCleef slain: 0/1).",
+      "warning: Don't leave yet: 1 quest unfinished here",
+    ]);
+    expect(run(`${kill("Edwin VanCleef")}`, "questLog = { { id = 3, complete = true } }")).toEqual([]);
+    expect(run(`${enter}; clear(); fire("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 0)`, vanCleef)).toEqual([]);
+  });
+
+  it("leaving with a quest unfinished says what, and leaving with them done says nothing", () => {
+    expect(run(`${enter}; clear(); ${leave}`, vanCleef)).toEqual([
+      "chat: MGA Dungeon Quests: you left The Deadmines with these unfinished: The Defias Brotherhood (Edwin VanCleef slain: 0/1).",
+      "warning: You left The Deadmines with quests unfinished",
+    ]);
+    expect(chat(run(`${enter}; clear(); ${leave}`, "questLog = { { id = 3, complete = true } }"))).toEqual([]);
+  });
+
+  it("/mgadq focus off turns it all off and gives the tracker back; the X hides it for this visit only", () => {
+    const setup = `${vanCleef}; questLog[2] = { id = 99 }; watched = { 99 }`;
+    expect(run(`${enter}; slash("focus off"); clear(); shownFocus(); shownWatched(); ${leave}`, setup)).toEqual([
+      "focus: none",
+      "watched: 99",
+    ]);
+    expect(run('slash("focus off")')).toEqual(["chat: MGA Dungeon Quests: dungeon focus off."]);
+    expect(focus(run(`${enter}; clickFocusClose(); fire("QUEST_LOG_UPDATE"); clear(); shownFocus()`, vanCleef))).toEqual(["focus: none"]);
+    expect(focus(run(`${enter}; clickFocusClose(); ${leave}; ${enter}; clear(); shownFocus()`, vanCleef))[0]).toBe("focus: The Deadmines quests");
+  });
+});

@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: MGA Dungeon Quests
-## Notes: A dungeon journal for WoW Forever: every dungeon, its bosses and loot, and every quest to pick up for it, ticked with the quests you've done, and map pins plus a route for the quests you're ready to turn in, and it notes where each Craftsman's Writ is delivered. /mgadq opens it.
+## Notes: A dungeon journal for WoW Forever: every dungeon, its bosses and loot, and every quest to pick up for it, ticked with the quests you've done, and map pins plus a route for the quests you're ready to turn in, inside a dungeon it tracks only that dungeon's quests and says what's left before you leave, and it notes where each Craftsman's Writ is delivered. /mgadq opens it.
 ## Author: MyGamingAssistant
-## Version: 2.3.0
+## Version: 2.4.0
 ## SavedVariables: MGADungeonQuestsSettings
 ## SavedVariablesPerCharacter: MGADungeonQuestsCharacter
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
