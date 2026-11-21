@@ -7,6 +7,12 @@ orchestrate, repositories return ORM rows. Every public function takes
 Soft-delete: ``deleted_at IS NULL`` is applied by default. Pass
 ``include_deleted=True`` to include soft-deleted rows (used by the
 soft-delete service function to make DELETE idempotent).
+
+Links to soft-deleted applications: the stored ``application_id`` is kept (an
+application can be restored), but every row returned here carries
+``live_application_id``, the link only while the application is live, and the
+``application_id`` filter matches live applications only. So no read offers a
+link to an application that can't be opened, and a restore brings it back.
 """
 from __future__ import annotations
 
@@ -15,11 +21,13 @@ from typing import Any
 
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import with_expression
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
 from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
 from app.core.enums import DocumentKind
+from app.models.application.application import Application
 from app.models.application.document import Document
 
 # Allowlist of columns safe to update via the dynamic ``update`` function.
@@ -32,6 +40,15 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "application_id",
 })
 
+# The document's application id while that application is live, else NULL.
+_LIVE_APPLICATION_ID = (
+    select(Application.id)
+    .where(Application.id == Document.application_id, Application.deleted_at.is_(None))
+    .correlate(Document)
+    .scalar_subquery()
+)
+_LOAD_LIVE_LINK = with_expression(Document.live_application_id, _LIVE_APPLICATION_ID)
+
 
 async def get_by_id_for_user(
     db: AsyncSession,
@@ -40,10 +57,16 @@ async def get_by_id_for_user(
     *,
     include_deleted: bool = False,
 ) -> Document | None:
-    """Return the document iff it belongs to ``user_id``."""
-    stmt = select(Document).where(
-        Document.id == document_id,
-        Document.user_id == user_id,
+    """Return the document iff it belongs to ``user_id``, with ``live_application_id`` loaded.
+
+    ``populate_existing`` reloads a row already in the session, so the link is
+    current after a write too.
+    """
+    stmt = (
+        select(Document)
+        .where(Document.id == document_id, Document.user_id == user_id)
+        .options(_LOAD_LIVE_LINK)
+        .execution_options(populate_existing=True)
     )
     if not include_deleted:
         stmt = stmt.where(Document.deleted_at.is_(None))
@@ -63,7 +86,9 @@ def _list_conditions(
         Document.deleted_at.is_(None),
     ]
     if application_id is not None:
+        # A deleted application's documents aren't listed as linked to it.
         conditions.append(Document.application_id == application_id)
+        conditions.append(_LIVE_APPLICATION_ID.is_not(None))
     if kind is not None:
         conditions.append(Document.kind == kind)
     return conditions
@@ -92,6 +117,7 @@ async def list_for_user(
     stmt = (
         select(Document)
         .where(*_list_conditions(user_id, application_id=application_id, kind=kind))
+        .options(_LOAD_LIVE_LINK)
         .order_by(Document.updated_at.desc(), Document.created_at.desc(), Document.id.desc())
         .offset(offset)
         .limit(limit)
@@ -131,6 +157,7 @@ async def list_by_application(
             Document.deleted_at.is_(None),
         )
         .order_by(Document.updated_at.desc(), Document.created_at.desc())
+        .options(_LOAD_LIVE_LINK)
     )
     return list(result.scalars().all())
 
@@ -167,11 +194,10 @@ async def latest_job_description_body(
 
 
 async def create(db: AsyncSession, document: Document) -> Document:
-    """Persist a new Document row."""
+    """Persist a new Document row and return it with ``live_application_id`` loaded."""
     db.add(document)
     await db.flush()
-    await db.refresh(document)
-    return document
+    return await _reload(db, document)
 
 
 async def update(
@@ -191,8 +217,18 @@ async def update(
     for key, value in safe_fields.items():
         setattr(document, key, value)
     await db.flush()
-    await db.refresh(document)
-    return document
+    return await _reload(db, document)
+
+
+async def _reload(db: AsyncSession, document: Document) -> Document:
+    """``document`` as stored, server defaults and ``live_application_id`` included."""
+    result = await db.execute(
+        select(Document)
+        .where(Document.id == document.id, Document.user_id == document.user_id)
+        .options(_LOAD_LIVE_LINK)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one()
 
 
 async def soft_delete(db: AsyncSession, document: Document) -> Document:
