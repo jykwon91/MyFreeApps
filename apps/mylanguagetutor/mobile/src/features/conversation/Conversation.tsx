@@ -6,7 +6,6 @@ import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedA
 import { HeaderKeyboardAvoidingView, PinnedBar, useAnnouncement, useTheme } from "@platform/mobile";
 import { type ComponentRef, useCallback, useRef, useState } from "react";
 import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput } from "react-native";
-import { CORRECTIONS_GRACE_MS } from "../../constants/conversation";
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
 import { useOnBackground } from "../../hooks/useOnBackground";
 import { useOnDeviceRecognition } from "../../hooks/useOnDeviceRecognition";
@@ -36,7 +35,8 @@ import TurnErrorBanner from "./TurnErrorBanner";
  * reply, as the website's live region tells them: TalkBack speaks on its own audio stream while the
  * tutor's voice plays as media, so a learner who has the media volume down still hears it. Going to the background stops a reply mid-stream as a
  * dropped connection would, and the learner tries again from there, as on the website; a reply that
- * has fully arrived is left to finish, though not waited on for long after the app comes back. The
+ * has fully arrived is left to finish, and once the app is back it is waited on while its connection
+ * still sends anything, so a dropped one doesn't leave Send on "Sending". The
  * screen stays awake while the learner can answer, until they've been idle a while. Speech stops on
  * a new turn, on leaving the screen and in the background, and listening stops there too, dropping what
  * was heard rather than sending half an answer.
@@ -80,7 +80,7 @@ export default function Conversation({ language, scenario, level }: Conversation
   useOnBackground(recognition.abort);
   useOnBackground(session.interrupt);
   useOnBackground(synthesis.cancel);
-  useOnResume(session.stopWaitingForCorrections, CORRECTIONS_GRACE_MS);
+  useOnResume(session.resume, 0);
   useAnnouncement(latestReply(session.entries), "polite");
   useAnnouncement(phaseAnnouncement(voice.phase, voice.view), "polite");
   const { awake, onActivity } = useAwakeUntilIdle(busy || recognition.listening);

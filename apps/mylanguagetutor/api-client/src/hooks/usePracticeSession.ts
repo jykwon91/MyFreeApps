@@ -8,6 +8,7 @@ import { nextUtcMidnight } from "../utils/nextUtcMidnight";
 import { usageAnsweredSince } from "../utils/usageAnsweredSince";
 import { usageBlock } from "../utils/usageBlock";
 import { MAX_TURN_CHARS } from "../constants/turnLimits";
+import { RESUMED_TURN_SILENCE_MS } from "../constants/turnRequest";
 import {
   CONNECTION_LOST,
   NETWORK_ERROR,
@@ -79,12 +80,43 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const interrupted = useRef<AbortController | null>(null);
   // The turn whose whole reply has arrived: the server has counted and charged it, so it isn't stopped.
   const replied = useRef<AbortController | null>(null);
-  // The turn in flight when ``interrupt`` last ran: the only one ``stopWaitingForCorrections`` may end.
+  // The turn in flight when ``interrupt`` last ran: the only one ``resume`` may end.
   const parked = useRef<AbortController | null>(null);
-  // The turn ``stopWaitingForCorrections`` gave up on, which ends complete without them.
+  // The turn ``resume`` is listening to, and the timer that gives up on it once its stream has been silent too long.
+  const watched = useRef<AbortController | null>(null);
+  const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The turn ``resume`` gave up on, which ends complete without its corrections.
   const gaveUp = useRef<AbortController | null>(null);
 
-  useEffect(() => () => abort.current?.abort(), []);
+  const stopWatching = useCallback(() => {
+    if (silenceTimer.current !== null) clearTimeout(silenceTimer.current);
+    silenceTimer.current = null;
+    watched.current = null;
+  }, []);
+
+  // (Re)starts the silence count for ``turn``: it ends once nothing more has arrived for long enough.
+  const watch = useCallback(
+    (turn: AbortController) => {
+      stopWatching();
+      watched.current = turn;
+      silenceTimer.current = setTimeout(() => {
+        silenceTimer.current = null;
+        watched.current = null;
+        if (abort.current !== turn) return;
+        gaveUp.current = turn;
+        turn.abort();
+      }, RESUMED_TURN_SILENCE_MS);
+    },
+    [stopWatching],
+  );
+
+  useEffect(
+    () => () => {
+      stopWatching();
+      abort.current?.abort();
+    },
+    [stopWatching],
+  );
 
   const limitLifted = limitResetsAt !== null && usageAnsweredSince(usage, limitResetsAt);
   useEffect(() => {
@@ -201,16 +233,25 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
               break;
             case "done":
               outcome.finished = true;
-              patchEntry(key, (e) => ({ ...e, status: event.status }));
+              // A whole reply can end complete without its corrections, if the server couldn't work them out.
+              patchEntry(key, (e) => ({
+                ...e,
+                status: event.status,
+                correctionsMissing: outcome.replyDone && !outcome.correctionsArrived,
+              }));
               break;
             case "turn.started":
               break;
           }
         };
 
+        // Anything arriving on a turn waited on after a return from the background shows its connection lives.
+        const onData = () => {
+          if (watched.current === controller) watch(controller);
+        };
         const wasInterrupted = () => interrupted.current === controller;
         try {
-          await streamTurn({ sessionId: id, text, onEvent, signal: controller.signal });
+          await streamTurn({ sessionId: id, text, onEvent, onData, signal: controller.signal });
         } catch (err) {
           // Unmounting abandons the turn. An interrupted one ends like a dropped connection, and
           // one given up on after its reply ends complete without its corrections. A connection that
@@ -238,13 +279,14 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
       };
 
       void run().finally(() => {
+        if (watched.current === controller) stopWatching();
         inFlight.current = false;
         abort.current = null;
         setRequestPhase("idle");
         dispatch(usageApiUtil.invalidateTags(["Usage"]));
       });
     },
-    [block, dispatch, ensureSession, handleRefusal, patchEntry, removeEntry, speak, stopSpeaking, streamTurn, ttsLocale],
+    [block, dispatch, ensureSession, handleRefusal, patchEntry, removeEntry, speak, stopSpeaking, stopWatching, streamTurn, ttsLocale, watch],
   );
 
   const retry = useCallback(() => {
@@ -263,19 +305,20 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   );
 
   const interrupt = useCallback(() => {
+    // Away again: a turn being waited on is waited on afresh from the next ``resume``.
+    stopWatching();
     parked.current = abort.current;
     if (!abort.current || replied.current === abort.current) return;
     interrupted.current = abort.current;
     abort.current.abort();
-  }, []);
+  }, [stopWatching]);
 
-  const stopWaitingForCorrections = useCallback(() => {
+  const resume = useCallback(() => {
     const turn = parked.current;
     parked.current = null;
     if (!turn || abort.current !== turn || replied.current !== turn) return;
-    gaveUp.current = turn;
-    abort.current.abort();
-  }, []);
+    watch(turn);
+  }, [watch]);
 
   const dismissFailure = useCallback(() => setFailure(null), []);
 
@@ -294,7 +337,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     send,
     retry,
     interrupt,
-    stopWaitingForCorrections,
+    resume,
     dismissFailure,
     dismissRetryPrompt,
   };

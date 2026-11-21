@@ -4,6 +4,8 @@ import type { TurnByteStream } from "@mylanguagetutor/api-client/types/stream/tu
 export interface FakeTurnStream {
   /** Writes one SSE event. */
   emit: (event: string, data: object) => void;
+  /** Writes the keep-alive comment the server sends while it has nothing else to say. */
+  keepAlive: () => void;
   /** The server finished the reply. */
   close: () => void;
   /** The connection broke mid-reply. */

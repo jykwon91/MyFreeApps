@@ -70,6 +70,12 @@ class Settings(BaseAppSettings):
     ltutor_history_turns: int = 20
     # In-process burst limiter per user (the durable caps are below).
     ltutor_turns_per_minute: int = 30
+    # How long a turn row may stay unsettled (``partial`` with no reply yet)
+    # before a new turn in its session is allowed anyway. A turn is settled
+    # within its reply and translation calls (each 45 s, retried once); past
+    # this it is a turn whose settlement never ran, which mustn't lock the
+    # session for good.
+    ltutor_unsettled_turn_max_age_seconds: int = 300
 
     # ------------------------------------------------------------------
     # Daily cost caps, in COST UNITS.

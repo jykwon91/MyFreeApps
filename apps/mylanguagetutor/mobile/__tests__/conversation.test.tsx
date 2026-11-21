@@ -2,7 +2,7 @@ import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCop
 import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { CONNECTION_LOST, NETWORK_ERROR, SESSION_NOT_FOUND } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
-import { TURN_RESPONSE_TIMEOUT_MS, TURN_STREAM_IDLE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
+import { RESUMED_TURN_SILENCE_MS, TURN_RESPONSE_TIMEOUT_MS, TURN_STREAM_IDLE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -11,7 +11,7 @@ import { storeSession } from "@platform/mobile/test-support/storedSession";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { AccessibilityInfo, ScrollView } from "react-native";
-import { CORRECTIONS_GRACE_MS, KEEP_AWAKE_IDLE_MS, SCENARIO_COMPLETE_MESSAGE } from "../src/constants/conversation";
+import { KEEP_AWAKE_IDLE_MS, SCENARIO_COMPLETE_MESSAGE } from "../src/constants/conversation";
 import { store } from "../src/lib/store";
 import { finish, finishAfterReply, moveApp, openCafe, refreshCount, serveConversation, serverWrites, write } from "../test-support/conversation";
 import { serveTurns, turnStream } from "../test-support/fakeExpoFetch";
@@ -493,7 +493,7 @@ describe("a typed conversation", () => {
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).toBeNull();
   });
 
-  it("stops waiting for a whole reply's corrections a moment after the app comes back", async () => {
+  it("stops waiting for a whole reply's corrections once nothing has arrived for a while after the app comes back", async () => {
     serveConversation();
     const stream = turnStream();
     serveTurns(() => ({ stream }));
@@ -507,7 +507,7 @@ describe("a typed conversation", () => {
     // The phone dropped the connection while asleep without telling the screen: nothing more arrives.
     await moveApp("background");
     await moveApp("active");
-    await act(async () => jest.advanceTimersByTime(CORRECTIONS_GRACE_MS - 1));
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS - 1));
     expect(screen.getByRole("button", { name: PRACTICE_COPY.sending })).toBeDisabled();
     expect(stream.isAborted()).toBe(false);
 
@@ -518,6 +518,31 @@ describe("a typed conversation", () => {
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).toBeNull();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).toBeNull();
     expect(screen.getByRole("button", { name: PRACTICE_COPY.send })).toBeTruthy();
+  });
+
+  it("keeps waiting for a whole reply's corrections after the app comes back while the connection keeps sending", async () => {
+    serveConversation();
+    const stream = turnStream();
+    serveTurns(() => ({ stream }));
+    await openCafe();
+
+    await write("Quiero un cafe");
+    await serverWrites(() => {
+      stream.emit("reply.delta", { text: "¡Hola!" });
+      stream.emit("reply.done", {});
+    });
+    await moveApp("background");
+    await moveApp("active");
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS - 1));
+    // The server is still working out the corrections, and its keep-alive says the connection lives.
+    await serverWrites(() => stream.keepAlive());
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS - 1));
+    expect(stream.isAborted()).toBe(false);
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.sending })).toBeDisabled();
+    await finishAfterReply(stream);
+
+    expect(await screen.findByText(CORRECTION.explanation)).toBeTruthy();
+    expect(screen.queryByText(PRACTICE_COPY.correctionsMissing)).toBeNull();
   });
 
   it("shows corrections that arrive soon after the app comes back", async () => {
@@ -533,9 +558,9 @@ describe("a typed conversation", () => {
     });
     await moveApp("background");
     await moveApp("active");
-    await act(async () => jest.advanceTimersByTime(CORRECTIONS_GRACE_MS - 1));
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS - 1));
     await finishAfterReply(stream);
-    await act(async () => jest.advanceTimersByTime(CORRECTIONS_GRACE_MS));
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS));
 
     expect(await screen.findByText(CORRECTION.explanation)).toBeTruthy();
     expect(screen.queryByText(PRACTICE_COPY.correctionsMissing)).toBeNull();
@@ -561,7 +586,7 @@ describe("a typed conversation", () => {
       streams[1].emit("reply.delta", { text: "¡Claro!" });
       streams[1].emit("reply.done", {});
     });
-    await act(async () => jest.advanceTimersByTime(CORRECTIONS_GRACE_MS));
+    await act(async () => jest.advanceTimersByTime(RESUMED_TURN_SILENCE_MS));
 
     expect(streams[1].isAborted()).toBe(false);
     expect(screen.queryByText(PRACTICE_COPY.correctionsMissing)).toBeNull();

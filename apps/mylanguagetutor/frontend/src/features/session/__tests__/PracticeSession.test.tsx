@@ -93,7 +93,7 @@ describe("PracticeSession", () => {
       send,
       retry: vi.fn(),
       interrupt: vi.fn(),
-      stopWaitingForCorrections: vi.fn(),
+      resume: vi.fn(),
       dismissFailure: vi.fn(),
       dismissRetryPrompt: vi.fn(),
     };

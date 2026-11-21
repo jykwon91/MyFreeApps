@@ -27,12 +27,5 @@ export const PARTIAL_REPLY_MARK = " …";
 /** How long the screen stays awake, after the last reply or keystroke, before it may sleep again. */
 export const KEEP_AWAKE_IDLE_MS = 5 * 60 * 1000;
 
-/**
- * After the app comes back, how long a turn whose whole reply has arrived may still wait for its
- * corrections. A connection that lived through the background delivers them within moments; one the
- * phone dropped while asleep never will, and Send would stay on "Sending".
- */
-export const CORRECTIONS_GRACE_MS = 3000;
-
 /** A control that can't be used right now: the microphone while a reply is on its way, replay while listening. */
 export const DISABLED_OPACITY = 0.5;

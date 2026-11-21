@@ -5,5 +5,7 @@ export interface StreamTurnOptions {
   sessionId: string;
   text: string;
   onEvent: TurnEventHandler;
+  /** Called whenever any of the stream arrives, keep-alives included: the connection is still alive. */
+  onData?: () => void;
   signal?: AbortSignal;
 }

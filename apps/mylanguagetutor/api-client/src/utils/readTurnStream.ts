@@ -16,13 +16,15 @@ import type { TurnEventHandler } from "../types/stream/turn-event-handler";
  * finished or a chunk holding several events: the read stops with a
  * ``TurnAbortedError`` (or the read's own abort error). A stream that sends nothing for
  * ``TURN_STREAM_IDLE_TIMEOUT_MS`` calls ``onStall`` (to abort the request) and fails with
- * ``connection_lost``; a long reply that keeps arriving is never cut off.
+ * ``connection_lost``; a long reply that keeps arriving is never cut off. ``onData`` hears every
+ * chunk that arrives, a keep-alive comment as much as an event.
  */
 export async function readTurnStream(
   body: TurnByteStream,
   onEvent: TurnEventHandler,
   signal?: AbortSignal,
   onStall: () => void = () => {},
+  onData: () => void = () => {},
 ): Promise<void> {
   const parser = createParser({
     onEvent(message) {
@@ -37,6 +39,7 @@ export async function readTurnStream(
       const { done, value } = await failIfStalled(reader.read(), TURN_STREAM_IDLE_TIMEOUT_MS, onStall);
       if (signal?.aborted) throw new TurnAbortedError();
       if (done) break;
+      onData();
       parser.feed(decoder.decode(value, { stream: true }));
     }
     parser.feed(decoder.decode());

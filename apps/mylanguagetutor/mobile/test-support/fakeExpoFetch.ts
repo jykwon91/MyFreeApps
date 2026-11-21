@@ -30,6 +30,10 @@ export function turnStream({ arrivesAsStopped }: FakeTurnStreamOptions = {}): Fa
       write({ event, data });
       notify();
     },
+    keepAlive: () => {
+      chunks.push(encoder.encode(": ping\n\n"));
+      notify();
+    },
     close: () => {
       isClosed = true;
       notify();
