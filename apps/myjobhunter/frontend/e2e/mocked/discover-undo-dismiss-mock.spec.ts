@@ -63,7 +63,7 @@ const POSTING = {
 const TOAST_EXPIRY_MS = 6_500;
 // The detail the backend's undo-dismiss answers 404 with (`_NOT_FOUND_DETAIL` in app/api/discover.py).
 const NOT_FOUND_DETAIL = "Discovery resource not found";
-const UNDO_DISMISS_GONE = "This posting can no longer be brought back. It may already be in your inbox.";
+const UNDO_DISMISS_GONE = "This posting can no longer be brought back. It may already be back in your list.";
 
 /** Stubs the inbox with one posting and records each dismiss / undo-dismiss call. */
 async function stubInbox(page: Page, { refuseUndo = false }: { refuseUndo?: boolean } = {}): Promise<string[]> {

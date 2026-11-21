@@ -304,7 +304,9 @@ async def dismiss_discovered(
     callers should validate / coerce before calling.
     """
     if job.saved_at is not None:
-        # The state CHECK constraint forbids both being set.
+        # The state CHECK constraint forbids both being set; remember the save
+        # so undo-dismiss can put the posting back in Saved.
+        job.saved_before_dismissed_at = job.saved_at
         job.saved_at = None
     if job.dismissed_at is None:
         job.dismissed_at = datetime.now(timezone.utc)
@@ -329,6 +331,7 @@ async def save_discovered(db: AsyncSession, job: DiscoveredJob) -> None:
     if job.dismissed_at is not None:
         job.dismissed_at = None
         job.dismissed_reason = None
+    job.saved_before_dismissed_at = None
     if job.saved_at is None:
         job.saved_at = datetime.now(timezone.utc)
     await db.flush()
@@ -357,9 +360,12 @@ async def get_restorable(
 
 
 async def undo_dismiss_discovered(db: AsyncSession, job: DiscoveredJob) -> None:
-    """Clear a loaded job's dismissal so it returns to the inbox."""
+    """Clear a loaded job's dismissal: back to Saved if it was saved when
+    dismissed (keeping its original save time), otherwise to the inbox."""
     job.dismissed_at = None
     job.dismissed_reason = None
+    job.saved_at = job.saved_before_dismissed_at
+    job.saved_before_dismissed_at = None
     await db.flush()
 
 

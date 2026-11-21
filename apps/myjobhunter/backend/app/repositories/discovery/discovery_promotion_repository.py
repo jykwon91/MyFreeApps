@@ -52,6 +52,7 @@ async def mark_promoted(
     job.promoted_application_id = application_id
     job.promoted_at = datetime.now(timezone.utc)
     job.saved_at = None
+    job.saved_before_dismissed_at = None
     job.dismissed_at = None
     job.dismissed_reason = None
     await db.flush()
