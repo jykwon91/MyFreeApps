@@ -148,7 +148,7 @@ export default function Login() {
         <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
           <Briefcase className="w-6 h-6 text-primary-foreground" aria-hidden />
         </div>
-        <span className="text-xl font-semibold tracking-tight">MyJobHunter</span>
+        <h1 className="text-xl font-semibold tracking-tight">MyJobHunter</h1>
       </div>
 
       <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-xs">
