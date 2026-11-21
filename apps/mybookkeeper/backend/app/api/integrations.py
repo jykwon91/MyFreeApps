@@ -26,8 +26,10 @@ from app.services.email.constants import (
     GMAIL_AUTH_EXPIRED_API_DETAIL,
     GMAIL_AUTH_EXPIRED_API_STATUS,
     GMAIL_LABEL_NOT_FOUND_MESSAGE,
+    GMAIL_TEMPORARILY_UNAVAILABLE_API_DETAIL,
+    GMAIL_TEMPORARILY_UNAVAILABLE_API_STATUS,
 )
-from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError, GmailTemporarilyUnavailableError
 from app.services.integrations import gmail_connect_return_service, integration_service
 from app.services.integrations.gmail_connect_error import GmailConnectError
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
@@ -92,6 +94,10 @@ async def sync_gmail(
         result = await discover_gmail_emails(ctx)
     except GmailAuthExpiredError:
         raise HTTPException(status_code=GMAIL_AUTH_EXPIRED_API_STATUS, detail=GMAIL_AUTH_EXPIRED_API_DETAIL)
+    except GmailTemporarilyUnavailableError:
+        raise HTTPException(
+            status_code=GMAIL_TEMPORARILY_UNAVAILABLE_API_STATUS, detail=GMAIL_TEMPORARILY_UNAVAILABLE_API_DETAIL,
+        )
     except GmailLabelNotFoundError as missing:
         raise HTTPException(status_code=422, detail=GMAIL_LABEL_NOT_FOUND_MESSAGE.format(label=missing.label))
     sync_log_id: int | None = result.sync_log_id

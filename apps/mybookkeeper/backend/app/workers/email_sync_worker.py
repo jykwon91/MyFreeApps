@@ -5,7 +5,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import organization_repo
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
-from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError, GmailTemporarilyUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,13 @@ async def sync_gmail_connection(target: GmailSyncTarget) -> None:
         logger.warning(
             "Gmail auth expired for user=%s org=%s -- user must reconnect",
             target.user_id, target.organization_id,
+        )
+        return
+    except GmailTemporarilyUnavailableError as exc:
+        # Not a revoked token: leave the connection alone and try again next cycle.
+        logger.warning(
+            "Gmail temporarily unavailable for user=%s org=%s -- retrying next cycle: %s",
+            target.user_id, target.organization_id, exc,
         )
         return
     except GmailLabelNotFoundError:

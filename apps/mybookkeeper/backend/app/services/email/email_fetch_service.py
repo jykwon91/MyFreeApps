@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import cast
 
 from google.auth.exceptions import RefreshError
+from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,10 +14,23 @@ from app.core.config import settings
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import EmailBodyData, FetchResult
+from app.models.integrations.integration import Integration
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
-from app.services.email.constants import UNREADABLE_EMAIL_PHOTO_ERROR
-from app.services.email.exceptions import GmailReauthRequiredError
+from app.services.email.constants import (
+    GMAIL_MESSAGE_GONE_ERROR,
+    GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+    GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR,
+    UNREADABLE_EMAIL_PHOTO_ERROR,
+)
+from app.services.email.exceptions import GmailReauthRequiredError, GmailTemporarilyUnavailableError
 from app.services.email.gmail_credentials import persist_refreshed_token
+from app.services.email.gmail_failure_classifier import (
+    classify_http_error,
+    classify_refresh_error,
+    describe_http_error,
+    refresh_error_code,
+)
+from app.services.email.gmail_failure_kind import GmailFailureKind
 from app.services.email.gmail_service import (
     fetch_attachment_bytes,
     fetch_email_body,
@@ -37,6 +51,8 @@ async def drain_gmail_fetch(ctx: RequestContext, sync_log_id: int | None = None)
 
     Stops immediately if a GmailReauthRequiredError is raised — the token is
     dead for this integration, so there is no point retrying the remaining items.
+    Also stops, without flagging the connection, when Google is down or
+    rate-limiting: the items stay pending and the next cycle fetches them.
     """
     items_processed = 0
     while True:
@@ -56,6 +72,13 @@ async def drain_gmail_fetch(ctx: RequestContext, sync_log_id: int | None = None)
             async with unit_of_work() as db:
                 await email_queue_repo.reset_stuck(db, ctx.organization_id, ["pending"], "failed", error="Fetch timed out")
             continue
+        except GmailTemporarilyUnavailableError as exc:
+            logger.warning(
+                "Stopping fetch drain for org=%s — Gmail is temporarily unavailable, pending items retry next cycle: %s",
+                ctx.organization_id, exc,
+            )
+            await _fail_running_sync_log(sync_log_id, GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR)
+            return
         except GmailReauthRequiredError:
             logger.warning(
                 "Stopping fetch drain for org=%s — Gmail token expired, needs_reauth already set",
@@ -116,46 +139,52 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
 
             await _complete_sync_log_if_done(db, sync_log_id, ctx)
 
-        await persist_refreshed_token(integration, creds, prior_token)
+        await _save_refreshed_token(integration, creds, prior_token)
         return FetchResult("fetched")
 
     except RefreshError as exc:
-        logger.warning(
-            "Gmail refresh token rejected for org=%s while fetching queue item %s: %s",
-            ctx.organization_id, item_id, exc,
-        )
-        async with unit_of_work() as db:
-            await integration_repo.mark_needs_reauth_if_unchanged(
-                db, integration, repr(exc)[:200], datetime.now(timezone.utc)
+        kind = classify_refresh_error(exc)
+        code = refresh_error_code(exc)
+        if kind is GmailFailureKind.TRANSIENT:
+            logger.warning(
+                "Google token endpoint unavailable for org=%s while fetching queue item %s: oauth_error=%s; "
+                "item stays pending for the next cycle",
+                ctx.organization_id, item_id, code,
             )
-            item_ref = await email_queue_repo.get_by_id(db, item_id)
-            if item_ref:
-                await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired")
+            raise GmailTemporarilyUnavailableError(str(exc)) from exc
+        if kind is not GmailFailureKind.REAUTH:
+            logger.error(
+                "Gmail token refresh failed for org=%s while fetching queue item %s: oauth_error=%s",
+                ctx.organization_id, item_id, code,
+            )
+            return await _fail_item(item_id, sync_log_id, str(exc))
+        logger.warning(
+            "Gmail refresh token revoked for org=%s while fetching queue item %s: oauth_error=%s",
+            ctx.organization_id, item_id, code,
+        )
+        await _mark_reauth_and_fail_item(integration, item_id, repr(exc), "Gmail auth expired")
         raise GmailReauthRequiredError(str(exc)) from exc
 
     except HttpError as exc:
-        status = getattr(getattr(exc, "resp", None), "status", None)
-        if status == 401:
-            logger.warning(
-                "Gmail token rejected (401) for org=%s while fetching queue item %s: status=%s",
-                ctx.organization_id, item_id, status,
-            )
-            async with unit_of_work() as db:
-                await integration_repo.mark_needs_reauth_if_unchanged(
-                    db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
-                )
-                item_ref = await email_queue_repo.get_by_id(db, item_id)
-                if item_ref:
-                    await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired (401)")
+        kind = classify_http_error(exc)
+        logger.warning(
+            "Gmail API failure for org=%s while fetching queue item %s: %s kind=%s",
+            ctx.organization_id, item_id, describe_http_error(exc), kind.value,
+        )
+        if kind is GmailFailureKind.REAUTH:
+            await _mark_reauth_and_fail_item(integration, item_id, f"HttpError 401: {exc!r}", "Gmail auth expired (401)")
             raise GmailReauthRequiredError(str(exc)) from exc
-        # Non-401 HttpError — treat as a transient failure, not a reauth event.
-        logger.exception("Gmail HttpError (status=%s) fetching queue item %s", status, item_id)
-        async with unit_of_work() as db:
-            item_ref = await email_queue_repo.get_by_id(db, item_id)
-            if item_ref:
-                await email_queue_repo.mark_status(db, item_ref, "failed", error=str(exc)[:1000])
-            await _fail_sync_log_if_done(db, sync_log_id, str(exc))
-        return FetchResult("failed", error=str(exc))
+        if kind is GmailFailureKind.SCOPE_MISSING:
+            await _mark_reauth_and_fail_item(
+                integration, item_id, f"HttpError 403: {exc!r}", GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+            )
+            raise GmailReauthRequiredError(str(exc)) from exc
+        if kind is GmailFailureKind.TRANSIENT:
+            raise GmailTemporarilyUnavailableError(str(exc)) from exc
+        if kind is GmailFailureKind.NOT_FOUND:
+            return await _fail_item(item_id, sync_log_id, GMAIL_MESSAGE_GONE_ERROR)
+        logger.exception("Gmail HttpError fetching queue item %s", item_id)
+        return await _fail_item(item_id, sync_log_id, str(exc))
 
     except UnreadableImage:
         # Stored as emailed it would keep the photo's GPS location, so it isn't stored.
@@ -164,18 +193,48 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             if item_ref:
                 await email_queue_repo.mark_status(db, item_ref, "failed", error=UNREADABLE_EMAIL_PHOTO_ERROR)
             await _fail_sync_log_if_done(db, sync_log_id, UNREADABLE_EMAIL_PHOTO_ERROR)
-        await persist_refreshed_token(integration, creds, prior_token)
+        await _save_refreshed_token(integration, creds, prior_token)
         return FetchResult("failed", error=UNREADABLE_EMAIL_PHOTO_ERROR)
 
     except Exception as e:
         logger.exception("Failed to fetch queue item %s", item_id)
-        async with unit_of_work() as db:
-            item_ref = await email_queue_repo.get_by_id(db, item_id)
-            if item_ref:
-                await email_queue_repo.mark_status(db, item_ref, "failed", error=str(e)[:1000])
+        return await _fail_item(item_id, sync_log_id, str(e))
 
-            await _fail_sync_log_if_done(db, sync_log_id, str(e))
-        return FetchResult("failed", error=str(e))
+
+async def _fail_item(item_id: uuid.UUID, sync_log_id: int, error: str) -> FetchResult:
+    async with unit_of_work() as db:
+        item_ref = await email_queue_repo.get_by_id(db, item_id)
+        if item_ref:
+            await email_queue_repo.mark_status(db, item_ref, "failed", error=error[:1000])
+        await _fail_sync_log_if_done(db, sync_log_id, error)
+    return FetchResult("failed", error=error)
+
+
+async def _mark_reauth_and_fail_item(
+    integration: Integration, item_id: uuid.UUID, reason: str, item_error: str,
+) -> None:
+    async with unit_of_work() as db:
+        await integration_repo.mark_needs_reauth_if_unchanged(db, integration, reason[:200], datetime.now(timezone.utc))
+        item_ref = await email_queue_repo.get_by_id(db, item_id)
+        if item_ref:
+            await email_queue_repo.mark_status(db, item_ref, "failed", error=item_error)
+
+
+async def _save_refreshed_token(integration: Integration, creds: Credentials, prior_token: str | None) -> None:
+    """The bytes are already stored; failing to save a refreshed token must not fail the item."""
+    try:
+        await persist_refreshed_token(integration, creds, prior_token)
+    except Exception:
+        logger.warning("Couldn't save the refreshed Gmail token after fetching an item", exc_info=True)
+
+
+async def _fail_running_sync_log(sync_log_id: int | None, error: str) -> None:
+    if sync_log_id is None:
+        return
+    async with unit_of_work() as db:
+        log = await sync_log_repo.get_by_id(db, sync_log_id)
+        if log and log.status == "running":
+            await sync_log_repo.mark_completed(db, log, "failed", error=error)
 
 
 async def _complete_sync_log_if_done(

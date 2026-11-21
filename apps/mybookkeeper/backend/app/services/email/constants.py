@@ -7,6 +7,16 @@ GMAIL_AUTH_EXPIRED_API_DETAIL = "Gmail connection expired, please reconnect"
 # 424 Failed Dependency, never 401: the app session is fine, Gmail is what failed, and
 # clients treat any 401 as "sign in again".
 GMAIL_AUTH_EXPIRED_API_STATUS = 424
+GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR = (
+    "Gmail didn't allow reading your mail — please disconnect and reconnect, and allow access to read email"
+)
+GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR = "Gmail is temporarily unavailable — will retry automatically"
+GMAIL_TEMPORARILY_UNAVAILABLE_API_DETAIL = "Gmail is temporarily unavailable, please try again shortly"
+GMAIL_TEMPORARILY_UNAVAILABLE_API_STATUS = 503
+GMAIL_MESSAGE_GONE_ERROR = "This email no longer exists in Gmail"
+# OAuth ``error`` values from Google's token endpoint that mean the grant is gone
+# (revoked, expired, password changed) and only a new consent can fix it.
+GOOGLE_REVOKED_GRANT_OAUTH_ERRORS = frozenset({"invalid_grant"})
 GMAIL_LABEL_NOT_FOUND_MESSAGE = (
     "I couldn't find a Gmail label called \"{label}\", so I didn't sync anything. "
     "Check the spelling, or clear the label to sync every email."
