@@ -12,6 +12,7 @@ from app.services.listings import channel_sync_service
 from tests.test_channel_sync_service import (  # noqa: F401 — fixture re-export
     _patched_uow,
     _mock_client_raising,
+    _mock_client_status,
     seeded_channel_listing,
 )
 
@@ -57,28 +58,28 @@ class TestRedactUrlsInText:
         assert redact_urls_in_text("connect timed out") == "connect timed out"
 
 
-def _status_error(status: int) -> httpx.HTTPStatusError:
-    request = httpx.Request("GET", FEED_URL)
-    response = httpx.Response(status, request=request)
-    return httpx.HTTPStatusError(
-        f"Client error '{status}' for url '{FEED_URL}'", request=request, response=response,
-    )
-
-
 FAILURES = [
-    pytest.param(_status_error(404), "config", id="http-4xx"),
-    pytest.param(_status_error(401), "auth", id="http-auth"),
-    pytest.param(_status_error(503), "transient", id="http-5xx"),
-    pytest.param(httpx.ConnectError(f"cannot connect to {FEED_URL}"), "transient", id="transport"),
-    pytest.param(RuntimeError(f"parser blew up on {FEED_URL}"), "unknown", id="unknown"),
+    pytest.param(lambda: _mock_client_status(404), "config", id="http-4xx"),
+    pytest.param(lambda: _mock_client_status(401), "auth", id="http-auth"),
+    pytest.param(lambda: _mock_client_status(503), "transient", id="http-5xx"),
+    pytest.param(
+        lambda: _mock_client_raising(httpx.ConnectError(f"cannot connect to {FEED_URL}")),
+        "transient",
+        id="transport",
+    ),
+    pytest.param(
+        lambda: _mock_client_raising(RuntimeError(f"parser blew up on {FEED_URL}")),
+        "unknown",
+        id="unknown",
+    ),
 ]
 
 
 class TestPollOneNeverLogsFeedSecret:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize(("exc", "category"), FAILURES)
+    @pytest.mark.parametrize(("make_client", "category"), FAILURES)
     async def test_failed_fetch_leaks_nothing(
-        self, db, seeded_channel_listing, caplog, exc, category,
+        self, db, seeded_channel_listing, caplog, make_client, category,
     ) -> None:
         cl = seeded_channel_listing
         await channel_listing_repo.update(db, cl.id, cl.listing_id, {"ical_import_url": FEED_URL})
@@ -87,7 +88,7 @@ class TestPollOneNeverLogsFeedSecret:
         assert refreshed is not None
 
         with caplog.at_level(logging.DEBUG), _patched_uow(db):
-            await channel_sync_service.poll_one(refreshed, client=_mock_client_raising(exc))
+            await channel_sync_service.poll_one(refreshed, client=make_client())
 
         assert caplog.records, "the failure must still be logged"
         for record in caplog.records:

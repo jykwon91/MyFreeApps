@@ -12,6 +12,7 @@ only as good as the encodings/redirects it fails to anticipate:
 - userinfo host smuggling (``http://trusted.com@127.0.0.1``)
 - multi-answer DNS rebinding (one reply mixing a public + private address)
 - unresolvable hosts
+- malformed hostnames the IDNA codec rejects (``a..b``, a 64-char label)
 
 Literal-IP cases need no network — ``getaddrinfo`` recognises numeric forms
 and returns them without a DNS lookup, so they are deterministic on every
@@ -217,6 +218,24 @@ class TestHostnameResolution:
             with pytest.raises(UnsafeURLError, match="could not resolve"):
                 validate_public_url("https://does-not-exist.invalid/")
 
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://a..b/",  # empty label
+            "https://" + "a" * 64 + ".example/",  # label over 63 characters
+        ],
+    )
+    def test_malformed_hostname_rejected_not_raised(self, url: str) -> None:
+        # The real resolver: IDNA rejects these before any lookup, with a
+        # UnicodeError that must not escape as anything but UnsafeURLError.
+        with pytest.raises(UnsafeURLError, match="not a valid hostname"):
+            validate_public_url(url)
+
+    @pytest.mark.parametrize("url", ["http://[::1/", "http://[zz]/"])
+    def test_malformed_bracketed_host_rejected_not_raised(self, url: str) -> None:
+        with pytest.raises(UnsafeURLError, match="not well formed"):
+            validate_public_url(url)
 
 # ---------------------------------------------------------------------------
 # Async wrapper
