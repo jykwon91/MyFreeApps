@@ -55,7 +55,7 @@ async def test_unique_name_per_user(
 
 
 @pytest.mark.asyncio
-async def test_find_by_user_and_name(
+async def test_find_by_org_user_and_name(
     db: AsyncSession, test_user: User, test_org: Organization,
 ) -> None:
     await reply_template_repo.create(
@@ -67,12 +67,12 @@ async def test_find_by_user_and_name(
         body_template="b",
     )
     await db.commit()
-    found = await reply_template_repo.find_by_user_and_name(
-        db, test_user.id, "Welcome",
+    found = await reply_template_repo.find_by_org_user_and_name(
+        db, test_org.id, test_user.id, "Welcome",
     )
     assert found is not None
-    miss = await reply_template_repo.find_by_user_and_name(
-        db, test_user.id, "nope",
+    miss = await reply_template_repo.find_by_org_user_and_name(
+        db, test_org.id, test_user.id, "nope",
     )
     assert miss is None
 

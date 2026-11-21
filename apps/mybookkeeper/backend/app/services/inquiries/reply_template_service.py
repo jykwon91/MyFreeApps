@@ -5,8 +5,8 @@ persist), repositories own queries.
 
 Responsibilities:
 - ``ensure_default_templates_for_user`` seeds three starter templates the
-  first time the host visits the templates UI. Idempotent via the per-user
-  UNIQUE on ``name`` — running it again is a no-op.
+  first time the host visits the templates UI in an organization. Idempotent
+  via the per-organization, per-user name lookup — running it again is a no-op.
 - ``list_templates`` returns the user's templates, calling the seed helper
   on every call so first-time hosts see something to pick from.
 - CRUD: create, update, archive (soft-delete via ``is_archived``).
@@ -88,17 +88,18 @@ async def ensure_default_templates_for_user(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> None:
-    """Seed the three default templates iff they don't already exist.
+    """Seed the three default templates iff they don't already exist in this org.
 
-    Idempotent — relies on the ``UNIQUE (user_id, name)`` constraint to skip
-    already-seeded names. Safe to call on every templates list fetch.
+    Idempotent per organization — skips names already present for this person
+    in this organization, so a second organization gets its own defaults. Safe
+    to call on every templates list fetch.
     """
     async with unit_of_work() as db:
         for spec in _DEFAULT_TEMPLATES:
             name = spec["name"]
             assert isinstance(name, str)
-            existing = await reply_template_repo.find_by_user_and_name(
-                db, user_id, name,
+            existing = await reply_template_repo.find_by_org_user_and_name(
+                db, organization_id, user_id, name,
             )
             if existing is not None:
                 continue
@@ -134,8 +135,9 @@ async def list_templates(
     return [ReplyTemplateResponse.model_validate(t) for t in templates]
 
 
-# The per-person unique name is the only constraint a create or rename can trip:
-# the workspace and person come from the session. Archived templates keep theirs.
+# The per-person, per-organization unique name is the only constraint a create or
+# rename can trip: the workspace and person come from the session. Archived
+# templates keep theirs.
 NAME_TAKEN_MESSAGE = "You already have a template with that name. Archived ones count too, so try another."
 
 

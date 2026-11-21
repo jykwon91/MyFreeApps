@@ -340,6 +340,45 @@ async def test_two_people_can_use_the_same_name(
     await reply_template_service.create_template(test_org.id, other_user.id, payload)
 
 
+async def _second_org(db: AsyncSession, user: User) -> Organization:
+    org = Organization(id=uuid.uuid4(), name="Second Org", created_by=user.id)
+    db.add(org)
+    await db.flush()
+    return org
+
+
+@pytest.mark.asyncio
+async def test_a_second_org_gets_its_own_default_templates(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    second_org = await _second_org(db, test_user)
+    await reply_template_service.ensure_default_templates_for_user(test_org.id, test_user.id)
+    await reply_template_service.ensure_default_templates_for_user(second_org.id, test_user.id)
+
+    for org in (test_org, second_org):
+        names = (await db.execute(
+            select(ReplyTemplate.name).where(
+                ReplyTemplate.organization_id == org.id,
+                ReplyTemplate.user_id == test_user.id,
+            ),
+        )).scalars().all()
+        assert sorted(names) == ["Initial inquiry reply", "Polite decline", "Welcome packet"]
+
+
+@pytest.mark.asyncio
+async def test_the_same_name_is_allowed_in_two_orgs(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    second_org = await _second_org(db, test_user)
+    payload = ReplyTemplateCreateRequest(name="Same", subject_template="s", body_template="b")
+    first = await reply_template_service.create_template(test_org.id, test_user.id, payload)
+    second = await reply_template_service.create_template(second_org.id, test_user.id, payload)
+    assert first.id != second.id
+
+    with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
+        await reply_template_service.create_template(second_org.id, test_user.id, payload)
+
+
 async def _archived_template(test_org: Organization, test_user: User):  # type: ignore[no-untyped-def]
     created = await reply_template_service.create_template(
         test_org.id, test_user.id,

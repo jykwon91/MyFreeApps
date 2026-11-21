@@ -51,14 +51,16 @@ async def get_by_id_in_org_for_user(
     return result.scalar_one_or_none()
 
 
-async def find_by_user_and_name(
+async def find_by_org_user_and_name(
     db: AsyncSession,
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     name: str,
 ) -> ReplyTemplate | None:
-    """Lookup by (user_id, name) for idempotent default-template seeding."""
+    """Lookup by (organization_id, user_id, name) for idempotent default-template seeding."""
     result = await db.execute(
         select(ReplyTemplate).where(
+            ReplyTemplate.organization_id == organization_id,
             ReplyTemplate.user_id == user_id,
             ReplyTemplate.name == name,
         )
