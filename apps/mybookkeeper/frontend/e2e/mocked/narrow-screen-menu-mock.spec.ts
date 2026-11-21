@@ -23,11 +23,13 @@ test("tabbing from the top never lands on the closed menu's links", async ({ pag
   await expect(page.getByRole("link", { name: "Transactions" })).toHaveCount(0);
 
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Open menu" })).toBeFocused();
   for (let i = 0; i < 10; i++) {
     await page.keyboard.press("Tab");
     const inSidebar = await page.evaluate(() => document.activeElement?.closest("aside") !== null);
-    expect(inSidebar, `tab stop ${i + 2} is inside the closed sidebar`).toBe(false);
+    expect(inSidebar, `tab stop ${i + 3} is inside the closed sidebar`).toBe(false);
   }
 });
 

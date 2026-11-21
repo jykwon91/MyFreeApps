@@ -9,7 +9,7 @@ import { NAV_GROUPS } from "@/app/lib/nav";
 import type { NavItem } from "@/shared/lib/constants";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
-import { ThemeToggle } from "@platform/ui";
+import { MAIN_CONTENT_ID, SkipLink, ThemeToggle } from "@platform/ui";
 import OrgSwitcher from "@/app/features/organizations/OrgSwitcher";
 import VersionTag from "@/app/components/VersionTag";
 import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
@@ -74,6 +74,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex md:h-screen md:overflow-hidden">
+      <SkipLink />
       <ResponsiveSidebar title="MyBookkeeper" header={<OrgSwitcher />}>
         {(closeDrawer) => (
           <>
@@ -136,7 +137,7 @@ export default function Layout() {
       </ResponsiveSidebar>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 pt-14 md:pt-0 md:overflow-auto flex flex-col">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 min-w-0 pt-14 md:pt-0 md:overflow-auto focus:outline-none flex flex-col">
         <PageErrorBoundary>
           <div className="flex-1">
             <Outlet />

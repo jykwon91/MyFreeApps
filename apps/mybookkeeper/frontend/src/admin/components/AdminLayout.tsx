@@ -4,7 +4,7 @@ import { cn } from "@/shared/utils/cn";
 import { ADMIN_NAV } from "@/admin/lib/nav";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
-import { ThemeToggle } from "@platform/ui";
+import { MAIN_CONTENT_ID, SkipLink, ThemeToggle } from "@platform/ui";
 import ResponsiveSidebar from "@/shared/components/ResponsiveSidebar";
 import SidebarUserMenu from "@/shared/components/SidebarUserMenu";
 import VersionTag from "@/app/components/VersionTag";
@@ -18,6 +18,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen flex md:h-screen md:overflow-hidden">
+      <SkipLink />
       <ResponsiveSidebar
         title="Admin"
         header={
@@ -75,7 +76,7 @@ export default function AdminLayout() {
         )}
       </ResponsiveSidebar>
 
-      <main className="flex-1 min-w-0 pt-14 md:pt-0 md:overflow-auto">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 min-w-0 pt-14 md:pt-0 md:overflow-auto focus:outline-none">
         <Outlet />
       </main>
     </div>
