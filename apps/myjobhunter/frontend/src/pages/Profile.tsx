@@ -72,6 +72,7 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+        <h1 className="sr-only">Profile</h1>
         <p className="text-destructive">Couldn't load profile. Try refreshing.</p>
       </div>
     );
@@ -115,6 +116,7 @@ export default function Profile() {
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <h1 className="sr-only">Profile</h1>
       {/* ------------------------------------------------------------------ */}
       {/* Header section */}
       {/* ------------------------------------------------------------------ */}
