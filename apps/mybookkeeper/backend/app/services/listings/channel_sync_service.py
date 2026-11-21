@@ -21,6 +21,7 @@ in their logs.
 from __future__ import annotations
 
 import logging
+import traceback
 from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import urljoin
@@ -30,6 +31,7 @@ import httpx
 from platform_shared.core.url_safety import UnsafeURLError, assert_url_safe
 
 from app.core.config import settings
+from app.core.url_redaction import redact_url, redact_urls_in_text
 from app.db.session import unit_of_work
 from app.models.listings.channel_listing import ChannelListing
 from app.repositories import channel_listing_repo, listing_blackout_repo
@@ -54,6 +56,11 @@ _REDIRECT_STATUSES: frozenset[int] = frozenset({301, 302, 303, 307, 308})
 # Cap the body we buffer. iCal exports are small text; this bounds memory if a
 # user-supplied URL streams a huge response.
 _MAX_FEED_BYTES: int = 5_000_000
+
+
+def _failure_message(exc: BaseException) -> str:
+    """Exception text safe to log and store: httpx embeds the full feed URL in it."""
+    return redact_urls_in_text(f"{type(exc).__name__}: {exc}")
 
 
 def _user_agent() -> str:
@@ -131,10 +138,10 @@ async def poll_one(
             category = "config"
         else:
             category = "transient"
-        message = f"HTTPStatusError {status}: {exc}"
+        message = f"HTTPStatusError {status}: {redact_urls_in_text(str(exc))}"
         logger.warning(
             "iCal poll %s for channel_listing=%s url=%s: %s",
-            category, channel_listing.id, channel_listing.ical_import_url, message,
+            category, channel_listing.id, redact_url(channel_listing.ical_import_url), message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
@@ -147,10 +154,10 @@ async def poll_one(
         return
     except httpx.RequestError as exc:
         category = "transient"
-        message = f"{type(exc).__name__}: {exc}"
+        message = _failure_message(exc)
         logger.warning(
             "iCal poll transient for channel_listing=%s url=%s: %s",
-            channel_listing.id, channel_listing.ical_import_url, message,
+            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
@@ -166,10 +173,10 @@ async def poll_one(
         # A configuration problem the operator fixes by editing the URL — not
         # a transient outage, and not worth an exception-level stack trace.
         category = "config"
-        message = f"{type(exc).__name__}: {exc}"
+        message = _failure_message(exc)
         logger.warning(
             "iCal poll blocked unsafe URL for channel_listing=%s url=%s: %s",
-            channel_listing.id, channel_listing.ical_import_url, message,
+            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
@@ -182,10 +189,14 @@ async def poll_one(
         return
     except Exception as exc:  # noqa: BLE001 — parse errors, unexpected failures
         category = "unknown"
-        message = f"{type(exc).__name__}: {exc}"
-        logger.exception(
-            "iCal poll unknown error for channel_listing=%s url=%s",
-            channel_listing.id, channel_listing.ical_import_url,
+        message = _failure_message(exc)
+        # No exc_info: the exception message and the frame locals both hold the
+        # feed URL, and Sentry would ship them. Log the redacted message plus the
+        # bare call stack instead so the failure stays diagnosable.
+        logger.error(
+            "iCal poll unknown error for channel_listing=%s url=%s: %s\n%s",
+            channel_listing.id, redact_url(channel_listing.ical_import_url), message,
+            "".join(traceback.format_tb(exc.__traceback__)),
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
