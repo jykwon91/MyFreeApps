@@ -18,6 +18,7 @@ import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { settledBoundingBox } from "@platform/ui/test-support/settledBoundingBox";
 
 const TEMPLATE = {
   id: "00000000-0000-0000-0000-0000000000c1",
@@ -110,7 +111,7 @@ test.describe("Reply panel templates", () => {
 
     const retry = page.getByTestId("inquiry-reply-panel").getByRole("button", { name: "Try again", exact: true });
     await expect(retry).toBeVisible();
-    const box = await retry.boundingBox();
+    const box = await settledBoundingBox(retry);
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
