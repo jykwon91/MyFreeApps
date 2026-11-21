@@ -41,11 +41,11 @@ export const DISCOVER_ACTION_MESSAGES = {
   restore: "Restore",
   restoring: "Restoring…",
   /** What Restore does, for screen readers. */
-  restoreHint: "Moves the posting back to your inbox",
-  restored: "Posting restored to your inbox",
+  restoreHint: "Moves the posting back to where it was",
+  restored: "Posting restored",
   restoreFailed: "Couldn't restore this posting",
   // undo-dismiss's 404 (Undo or Restore): brought back on another device, or expired/closed since.
-  undoDismissGone: "This posting can no longer be brought back. It may already be in your inbox.",
+  undoDismissGone: "This posting can no longer be brought back. It may already be back in your list.",
   // Dismiss, Save or Restore's coded 409: the posting was already added to Applications (on another device, or a moment ago).
   alreadyApplied: "This posting is already in your Applications.",
   // Save or Restore's coded 409: a dismissed posting whose twin from another source is already in Discover.

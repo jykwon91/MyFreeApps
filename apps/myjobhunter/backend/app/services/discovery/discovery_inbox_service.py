@@ -116,7 +116,8 @@ async def undo_dismiss_for_user(
     job_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> bool:
-    """Reverse a dismiss — clears dismissed_at and dismissed_reason.
+    """Reverse a dismiss — clears dismissed_at and dismissed_reason, and puts
+    a posting that was Saved when dismissed back in Saved.
 
     Returns False (→ 404) when the Dismissed view doesn't list the job: it
     doesn't exist / belongs to a different user, isn't dismissed, has

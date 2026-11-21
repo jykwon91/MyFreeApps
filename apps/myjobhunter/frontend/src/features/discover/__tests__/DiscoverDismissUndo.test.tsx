@@ -176,7 +176,7 @@ describe("Undo after dismissing a posting", () => {
     await dismissThePosting();
 
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByText("This posting can no longer be brought back. It may already be in your inbox.")).toBeInTheDocument();
+    expect(await screen.findByText("This posting can no longer be brought back. It may already be back in your list.")).toBeInTheDocument();
     expect(screen.queryByText("Discovery resource not found")).toBeNull();
     expect(screen.queryByText("Posting brought back")).toBeNull();
   });

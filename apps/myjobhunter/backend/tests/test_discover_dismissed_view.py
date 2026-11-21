@@ -220,6 +220,79 @@ async def test_dismissing_a_saved_posting_moves_it_from_saved_to_dismissed(
 
 
 @pytest.mark.asyncio
+async def test_undoing_the_dismissal_of_a_saved_posting_puts_it_back_in_saved(
+    db: AsyncSession, client: AsyncClient, user_factory, as_user,
+):
+    user = await user_factory()
+    saved_at = _now() - timedelta(days=3)
+    job = await _make_job(db, _uid(user), external_id="saved-undo", saved_at=saved_at)
+
+    async with await as_user(user) as a:
+        assert (await a.post(f"/discover/{job.id}/dismiss")).status_code == 204
+        db.expunge(job)
+        assert (await a.post(f"/discover/{job.id}/undo-dismiss")).status_code == 204
+        db.expunge_all()
+
+        assert (await a.get("/discover", params={"state": "dismissed"})).json()["total"] == 0
+        assert (await a.get("/discover")).json()["total"] == 0
+        saved = (await a.get("/discover", params={"state": "saved"})).json()
+        assert [item["id"] for item in saved["items"]] == [str(job.id)]
+        assert datetime.fromisoformat(saved["items"][0]["saved_at"]) == saved_at
+
+
+@pytest.mark.asyncio
+async def test_restoring_a_dismissed_saved_posting_returns_it_to_saved_not_the_inbox(
+    db: AsyncSession, client: AsyncClient, user_factory, as_user,
+):
+    user = await user_factory()
+    job = await _make_job(db, _uid(user), external_id="saved-restore", saved_at=_now())
+
+    async with await as_user(user) as a:
+        assert (await a.post(f"/discover/{job.id}/dismiss", json={"reason": "other"})).status_code == 204
+        db.expunge(job)
+        assert (await a.post(f"/discover/{job.id}/undo-dismiss")).status_code == 204
+        db.expunge_all()
+
+        assert (await a.get("/discover")).json()["total"] == 0
+        saved = (await a.get("/discover", params={"state": "saved"})).json()
+        assert [item["id"] for item in saved["items"]] == [str(job.id)]
+        assert saved["items"][0]["dismissed_reason"] is None
+
+
+@pytest.mark.asyncio
+async def test_saving_a_dismissed_posting_forgets_its_earlier_save(
+    db: AsyncSession, user_factory,
+):
+    user = await user_factory()
+    job = await _make_job(db, _uid(user), external_id="resaved", saved_at=_now())
+
+    await discovery_repository.dismiss_discovered(db, job)
+    assert job.saved_before_dismissed_at is not None
+    await discovery_repository.save_discovered(db, job)
+    assert job.saved_before_dismissed_at is None
+    assert job.saved_at is not None and job.dismissed_at is None
+
+    await discovery_repository.dismiss_discovered(db, job)
+    await discovery_repository.undo_dismiss_discovered(db, job)
+    assert job.saved_at is not None and job.dismissed_at is None
+
+
+@pytest.mark.asyncio
+async def test_dismissing_an_inbox_posting_twice_still_restores_to_the_inbox(
+    db: AsyncSession, user_factory,
+):
+    user = await user_factory()
+    job = await _make_job(db, _uid(user), external_id="inbox-twice")
+
+    await discovery_repository.dismiss_discovered(db, job)
+    await discovery_repository.dismiss_discovered(db, job)
+    await discovery_repository.undo_dismiss_discovered(db, job)
+
+    assert job.saved_at is None and job.saved_before_dismissed_at is None
+    assert job.dismissed_at is None
+
+
+@pytest.mark.asyncio
 async def test_dismissed_view_api_is_tenant_isolated(
     db: AsyncSession, client: AsyncClient, user_factory, as_user,
 ):

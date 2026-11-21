@@ -18,7 +18,7 @@ const SOURCES_ENDPOINT = /\/api\/discover\/sources(\?|$)/;
 const UNDO_ENDPOINT = /\/api\/discover\/([^/]+)\/undo-dismiss$/;
 // The detail the backend's undo-dismiss answers 404 with (`_NOT_FOUND_DETAIL` in app/api/discover.py).
 const NOT_FOUND_DETAIL = "Discovery resource not found";
-const UNDO_DISMISS_GONE = "This posting can no longer be brought back. It may already be in your inbox.";
+const UNDO_DISMISS_GONE = "This posting can no longer be brought back. It may already be back in your list.";
 const RESTORE_FAILED = "Couldn't restore this posting";
 const PHONE = { width: 375, height: 812 };
 const MIN_TOUCH_TARGET_PX = 44;
@@ -131,7 +131,7 @@ test("open Dismissed, see the reason, Restore shows it's working, confirms, and 
 
   restore.release();
 
-  await expect(toast(page, "Posting restored to your inbox")).toBeVisible();
+  await expect(toast(page, "Posting restored")).toBeVisible();
   await expect(postingTitle(page)).toHaveCount(0);
   await expect(page.getByText("No dismissed jobs", { exact: true })).toBeVisible();
   expect(restoredIds).toEqual([BACKEND_ROLE.id]);

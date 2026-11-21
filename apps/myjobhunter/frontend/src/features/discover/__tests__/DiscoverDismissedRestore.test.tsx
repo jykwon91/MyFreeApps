@@ -142,7 +142,7 @@ describe("the Dismissed tab", () => {
 
     releaseUndo();
 
-    expect(await screen.findByText("Posting restored to your inbox")).toBeInTheDocument();
+    expect(await screen.findByText("Posting restored")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(TITLE)).toBeNull());
     expect(await screen.findByText("No dismissed jobs")).toBeInTheDocument();
     expect(listRequests).toEqual(["dismissed", "dismissed"]);
@@ -155,7 +155,7 @@ describe("the Dismissed tab", () => {
     fireEvent.click(await screen.findByRole("button", { name: RESTORE }));
     releaseUndo();
 
-    expect(await screen.findByText("Posting restored to your inbox")).toBeInTheDocument();
+    expect(await screen.findByText("Posting restored")).toBeInTheDocument();
     await waitFor(() => expect(listRequests).toEqual(["dismissed", "dismissed"]));
     // The card is still on screen while the list refetches; a second tap would 404, so Restore stays off.
     expect(screen.getByText(TITLE)).toBeInTheDocument();
@@ -171,7 +171,7 @@ describe("the Dismissed tab", () => {
     fireEvent.click(await screen.findByRole("button", { name: RESTORE }));
     releaseUndo();
 
-    expect(await screen.findByText("This posting can no longer be brought back. It may already be in your inbox.")).toBeInTheDocument();
+    expect(await screen.findByText("This posting can no longer be brought back. It may already be back in your list.")).toBeInTheDocument();
     expect(screen.queryByText("Discovery resource not found")).toBeNull();
     await waitFor(() => expect(screen.queryByText(TITLE)).toBeNull());
     expect(await screen.findByText("No dismissed jobs")).toBeInTheDocument();

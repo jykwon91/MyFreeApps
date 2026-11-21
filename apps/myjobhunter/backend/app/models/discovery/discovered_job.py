@@ -24,7 +24,8 @@ Lifecycle:
 State invariants:
 
 - ``dismissed_at`` and ``saved_at`` are mutually exclusive
-  (chk_discovered_state).
+  (chk_discovered_state). Dismissing a Saved posting parks its save time in
+  ``saved_before_dismissed_at`` so undo / Restore returns it to Saved.
 - ``promoted_application_id`` and ``promoted_at`` rise/fall together
   (chk_discovered_promoted).
 - A promoted row is an application and leaves triage: Promote clears
@@ -166,6 +167,12 @@ class DiscoveredJob(Base):
         String(30), nullable=True,
     )
     saved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    # When the posting was saved, if it was Saved when dismissed. The state
+    # CHECK forbids saved_at and dismissed_at together, so Dismiss moves the
+    # save here; undo-dismiss / Restore put it back. NULL for any other row.
+    saved_before_dismissed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
     promoted_application_id: Mapped[uuid.UUID | None] = mapped_column(
