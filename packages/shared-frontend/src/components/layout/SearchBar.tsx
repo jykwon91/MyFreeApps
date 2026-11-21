@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 
 export interface SearchBarProps {
+  /** Accessible name for the search input — a placeholder is not a label. */
+  label: string;
   placeholder: string;
   onSearchSubmit?: (q: string) => void;
 }
 
-export default function SearchBar({ placeholder, onSearchSubmit }: SearchBarProps) {
+export default function SearchBar({ label, placeholder, onSearchSubmit }: SearchBarProps) {
   const [value, setValue] = useState("");
   const isMac =
     typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
@@ -23,6 +25,7 @@ export default function SearchBar({ placeholder, onSearchSubmit }: SearchBarProp
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        aria-label={label}
         placeholder={placeholder}
         className="pl-9 pr-14 py-1.5 text-sm rounded-md border bg-background w-64 focus:outline-none focus:ring-2 focus:ring-primary/30"
       />

@@ -60,6 +60,8 @@ export interface AppShellProps {
   onSignOut: () => void;
   headerTitle?: string;
   headerActions?: ReactNode;
+  /** Accessible name for the header search input. */
+  searchLabel?: string;
   searchPlaceholder?: string;
   onSearchSubmit?: (q: string) => void;
   children: ReactNode;
@@ -84,6 +86,7 @@ export default function AppShell({
   onSignOut,
   headerTitle,
   headerActions,
+  searchLabel = "Search",
   searchPlaceholder = "What are you looking for today?",
   onSearchSubmit,
   children,
@@ -283,6 +286,7 @@ export default function AppShell({
             <h1 className="text-base font-semibold truncate">{headerTitle}</h1>
           )}
           <SearchBar
+            label={searchLabel}
             placeholder={searchPlaceholder}
             onSearchSubmit={onSearchSubmit}
           />

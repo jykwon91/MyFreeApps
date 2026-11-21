@@ -545,6 +545,17 @@ describe("TwoFactorSetup — disable flow", () => {
     } as unknown as ReturnType<typeof useGetTotpStatusQuery>);
   });
 
+  it("names the disable code input with a real label, not just the placeholder", async () => {
+    const user = userEvent.setup();
+
+    renderComponent();
+    await user.click(screen.getByText("Disable 2FA"));
+
+    expect(screen.getByLabelText("6-digit authenticator code")).toBe(
+      screen.getByPlaceholderText("000000"),
+    );
+  });
+
   it("clicking Disable 2FA shows authenticator code input", async () => {
     const user = userEvent.setup();
 

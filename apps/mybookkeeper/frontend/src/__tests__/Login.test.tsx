@@ -55,6 +55,12 @@ function passwordInput(container: HTMLElement) {
 // ---------------------------------------------------------------------------
 
 describe("Login — normal login", () => {
+  it("ties the email and password labels to their inputs", () => {
+    renderLogin();
+    expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -216,6 +222,9 @@ describe("Login — TOTP challenge", () => {
   it("shows Authentication code label and input", async () => {
     await submitCredentials();
 
+    expect(screen.getByLabelText("Authentication code")).toBe(
+      screen.getByPlaceholderText("000000"),
+    );
     expect(screen.getByText("Authentication code")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("000000")).toBeInTheDocument();
   });

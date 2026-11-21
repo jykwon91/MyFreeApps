@@ -47,3 +47,30 @@ describe("PasswordPair — too-short feedback", () => {
     );
   });
 });
+
+describe("PasswordPair — accessible names", () => {
+  it("names both password inputs via their visible labels", () => {
+    renderPair();
+    const password = screen.getByLabelText("Password");
+    const confirm = screen.getByLabelText("Confirm password");
+    expect(password).toHaveAttribute("type", "password");
+    expect(confirm).toHaveAttribute("type", "password");
+    expect(password).not.toBe(confirm);
+  });
+
+  it("uses custom labels as the accessible names", () => {
+    renderPair({ label: "New password", confirmLabel: "Repeat new password" });
+    expect(screen.getByLabelText("New password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Repeat new password")).toBeInTheDocument();
+  });
+
+  it("keeps ids unique when two pairs render on one page", () => {
+    render(
+      <>
+        <PasswordPair password="" onPasswordChange={vi.fn()} confirmPassword="" onConfirmPasswordChange={vi.fn()} label="First" confirmLabel="First confirm" />
+        <PasswordPair password="" onPasswordChange={vi.fn()} confirmPassword="" onConfirmPasswordChange={vi.fn()} label="Second" confirmLabel="Second confirm" />
+      </>,
+    );
+    expect(screen.getByLabelText("First")).not.toBe(screen.getByLabelText("Second"));
+  });
+});

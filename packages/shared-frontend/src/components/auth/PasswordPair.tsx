@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 export interface PasswordPairProps {
@@ -77,14 +77,19 @@ export default function PasswordPair({
     if (onValidityChange) onValidityChange(isValid);
   }, [isValid, onValidityChange]);
 
-  const hintId = "platform-password-hint";
-  const errorId = "platform-password-confirm-error";
+  const uid = useId();
+  const passwordId = `${uid}-password`;
+  const confirmId = `${uid}-confirm`;
+  const hintId = `${uid}-hint`;
+  const errorId = `${uid}-confirm-error`;
 
   return (
     <>
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-sm font-medium">{label}</label>
+          <label htmlFor={passwordId} className="text-sm font-medium">
+            {label}
+          </label>
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
@@ -102,6 +107,7 @@ export default function PasswordPair({
           </button>
         </div>
         <input
+          id={passwordId}
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
@@ -129,8 +135,11 @@ export default function PasswordPair({
         )}
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">{confirmLabel}</label>
+        <label htmlFor={confirmId} className="block text-sm font-medium mb-1">
+          {confirmLabel}
+        </label>
         <input
+          id={confirmId}
           type={showPassword ? "text" : "password"}
           value={confirmPassword}
           onChange={(e) => onConfirmPasswordChange(e.target.value)}

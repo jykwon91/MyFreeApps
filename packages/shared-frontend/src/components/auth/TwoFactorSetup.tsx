@@ -267,7 +267,11 @@ export default function TwoFactorSetup() {
           <p className="text-sm text-muted-foreground">
             Enter a code from your authenticator app to disable 2FA.
           </p>
+          <label className="sr-only" htmlFor="totp-disable-code">
+            6-digit authenticator code
+          </label>
           <input
+            id="totp-disable-code"
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"

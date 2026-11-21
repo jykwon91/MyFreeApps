@@ -56,6 +56,13 @@ function termsCheckbox() {
 describe("Register \u2014 rendering", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
+  it("ties the name, email and password labels to their inputs", () => {
+    renderRegister();
+    expect(screen.getByLabelText("Name")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+  });
+
   it("renders the name input", () => {
     const { container } = renderRegister();
     expect(nameInput(container)).toBeInTheDocument();
