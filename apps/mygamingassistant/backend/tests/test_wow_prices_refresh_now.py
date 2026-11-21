@@ -8,6 +8,7 @@ game lock as the scheduled refresh.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -67,7 +68,7 @@ class FakeBlizzard:
         self.result = result
         self.calls = 0
 
-    async def __call__(self, houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def __call__(self, houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         self.calls += 1
         return {self._house.house_id: self.result}
 
@@ -244,7 +245,7 @@ async def test_a_refresh_that_crashes_before_storing_hands_the_cooldown_back_and
     claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
     assert claim is not None and claim.status == "started"
 
-    async def crash(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def crash(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         raise RuntimeError("connection reset")
 
     monkeypatch.setattr(price_refresh_service, "fetch_house_prices", crash)
@@ -261,7 +262,7 @@ async def test_a_refresh_that_stored_its_failure_keeps_its_own_cooldown(
     claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
     assert claim is not None
 
-    async def blizzard_down(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def blizzard_down(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         return {ALLIANCE.house_id: PriceFetchError("Service Unavailable", status_code=503, code="BLZWEBAPI00000503")}
 
     monkeypatch.setattr(price_refresh_service, "fetch_house_prices", blizzard_down)
@@ -279,7 +280,7 @@ async def test_a_failure_to_hand_the_cooldown_back_is_logged_not_raised(
     claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
     assert claim is not None
 
-    async def crash(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def crash(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         raise RuntimeError("connection reset")
 
     async def release_fails(*args: object, **kwargs: object) -> bool:
@@ -409,7 +410,7 @@ async def test_the_scheduler_refreshes_the_house_that_was_clicked_and_clears_the
 ) -> None:
     asked: list[list[MappedHouse] | None] = []
 
-    async def fake_fetch(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def fake_fetch(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         asked.append(houses)
         return {HORDE.house_id: _set()}
 
@@ -456,7 +457,7 @@ async def test_every_house_clicked_is_refreshed_oldest_first(
 ) -> None:
     asked: list[int] = []
 
-    async def fake_fetch(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def fake_fetch(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         assert houses is not None
         asked.append(houses[0].house_id)
         return {houses[0].house_id: _set()}
@@ -473,7 +474,7 @@ async def test_every_house_clicked_is_refreshed_oldest_first(
 async def test_a_click_whose_refresh_crashed_ends_with_an_answer_and_is_cleared(
     bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def crash(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def crash(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         raise RuntimeError("connection reset")
 
     monkeypatch.setattr(price_refresh_service, "fetch_house_prices", crash)
@@ -520,7 +521,7 @@ async def test_run_asks_blizzard_for_the_claimed_house_only(
 ) -> None:
     asked: list[list[MappedHouse] | None] = []
 
-    async def fake_fetch(houses: list[MappedHouse] | None = None) -> HouseResults:
+    async def fake_fetch(houses: list[MappedHouse] | None = None, **_kwargs: Any) -> HouseResults:
         asked.append(houses)
         return {ALLIANCE.house_id: _set()}
 
