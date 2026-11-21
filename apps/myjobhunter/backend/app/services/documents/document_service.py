@@ -62,7 +62,8 @@ def _to_response(doc: Document) -> DocumentResponse:
     return DocumentResponse(
         id=doc.id,
         user_id=doc.user_id,
-        application_id=doc.application_id,
+        # Only while the application is live: a deleted one can't be opened.
+        application_id=doc.live_application_id,
         title=doc.title,
         kind=doc.kind,  # type: ignore[arg-type]
         body=doc.body,

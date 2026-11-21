@@ -20,13 +20,14 @@ import { APPLICATION_EVENTS_TAG } from "../constants/applicationEventsTag";
 import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
 import { APPLICATIONS_TAG } from "../constants/applicationsTag";
 import { DISCOVERED_JOB_TAG } from "../constants/discoverTags";
+import { DOCUMENTS_TAG } from "../constants/documentsTag";
 import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { removalIsDone } from "../utils/removalIsDone";
 
 
 const applicationsApi = baseApi.enhanceEndpoints({
-  addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG, DISCOVERED_JOB_TAG],
+  addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG, DISCOVERED_JOB_TAG, DOCUMENTS_TAG],
 }).injectEndpoints({
   endpoints: (build) => ({
     /**
@@ -116,6 +117,8 @@ const applicationsApi = baseApi.enhanceEndpoints({
         { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
         // The server returns a promoted posting to the Discover inbox on delete.
         DISCOVERED_JOB_TAG,
+        // Documents stop showing a link to it, and leave its filtered list.
+        DOCUMENTS_TAG,
       ],
     }),
 

@@ -2,6 +2,7 @@ import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeou
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICATIONS_TAG } from "../constants/applicationsTag";
 import { COMPANIES_LIST_ID, COMPANIES_TAG } from "../constants/companiesTags";
+import { DOCUMENTS_TAG } from "../constants/documentsTag";
 import type { Company } from "../types/company";
 import type { CompanyListResponse } from "../types/company-list-response";
 import type { CompanyCreateRequest } from "../types/company-create-request";
@@ -12,7 +13,7 @@ import { companyResearchRunKey } from "../utils/companyResearchRunKey";
 const COMPANY_RESEARCH_TAG = "CompanyResearch";
 
 const companiesApi = baseApi
-  .enhanceEndpoints({ addTagTypes: [COMPANIES_TAG, COMPANY_RESEARCH_TAG, APPLICATIONS_TAG] })
+  .enhanceEndpoints({ addTagTypes: [COMPANIES_TAG, COMPANY_RESEARCH_TAG, APPLICATIONS_TAG, DOCUMENTS_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({
       listCompanies: build.query<CompanyListResponse, void>({
@@ -50,12 +51,15 @@ const companiesApi = baseApi
 
       // No Applications invalidation: the backend refuses to delete a company
       // that any application still references (CompanyHasApplicationsError),
-      // so a successful delete cannot affect an application view.
+      // so a successful delete cannot affect an application view. Documents do
+      // change: the company's deleted applications are purged with it, and the
+      // documents still filed under them go too.
       deleteCompany: build.mutation<void, string>({
         query: (id) => ({ url: `/companies/${id}`, method: "DELETE" }),
         invalidatesTags: (_result, _err, id) => [
           { type: COMPANIES_TAG, id },
           { type: COMPANIES_TAG, id: COMPANIES_LIST_ID },
+          DOCUMENTS_TAG,
         ],
       }),
 

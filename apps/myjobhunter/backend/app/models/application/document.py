@@ -20,7 +20,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, query_expression, relationship
 
 from app.core.document_limits import (
     DOCUMENT_CONTENT_TYPE_MAX_LEN,
@@ -49,6 +49,11 @@ class Document(Base):
         nullable=True,
         index=True,
     )
+
+    # ``application_id`` while that application is live, else None: a soft-deleted
+    # application keeps its stored link (for restore) but can't be opened. Not a
+    # column; ``document_repo`` loads it on every read it returns.
+    live_application_id: Mapped[uuid.UUID | None] = query_expression()
 
     # Human-readable title (e.g. "Cover letter for Acme SWE role").
     title: Mapped[str] = mapped_column(String(DOCUMENT_TITLE_MAX_LEN), nullable=False)

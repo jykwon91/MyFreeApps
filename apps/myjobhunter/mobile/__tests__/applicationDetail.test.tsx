@@ -152,6 +152,26 @@ it("keeps what it loaded on screen under a banner when a refresh fails", async (
   expect(screen.getByRole("header", { name: "Staff Engineer" })).toBeTruthy();
 });
 
+it("says it's gone, not what it loaded, when a refresh finds it deleted elsewhere", async () => {
+  let gone = false;
+  serve({
+    ...applicationDetailRoutes(STRIPE),
+    [`GET /applications/${ID}`]: () => (gone ? { status: 404, data: { detail: "Not Found" } } : { status: 200, data: STRIPE }),
+  });
+  await renderApplicationDetail(ID);
+  await screen.findByRole("header", { name: "Staff Engineer" });
+
+  gone = true;
+  await act(async () => {
+    await screen.getByTestId("application-detail").props.refreshControl.props.onRefresh();
+  });
+
+  expect(await screen.findByText(MESSAGES.cantFind)).toBeTruthy();
+  expect(screen.queryByRole("header", { name: "Staff Engineer" })).toBeNull();
+  expect(screen.queryByRole("button", { name: MESSAGES.delete })).toBeNull();
+  expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
+});
+
 it.each(["events", "documents"])("keeps what it loaded under a banner when refreshing the %s fails", async (section) => {
   let fails = false;
   const routes = applicationDetailRoutes(STRIPE);
