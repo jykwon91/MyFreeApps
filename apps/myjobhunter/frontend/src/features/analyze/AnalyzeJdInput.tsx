@@ -133,7 +133,7 @@ function TextPanel({
   const canSubmit = !isSubmitting && textValue.trim().length > 0;
   return (
     <div className="space-y-3">
-      {notice && <AlertBox variant="warning">{notice}</AlertBox>}
+      {notice && <AlertBox variant="warning" role="status">{notice}</AlertBox>}
       <label htmlFor="analyze-text" className="block text-sm font-medium">
         Paste the job description text
       </label>

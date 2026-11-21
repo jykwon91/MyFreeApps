@@ -192,7 +192,8 @@ describe("Login page", () => {
       await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
       await screen.findByTestId("resend-verification-banner");
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      // The banner's resend-failure region is on the page but says nothing yet.
+      for (const alert of screen.queryAllByRole("alert")) expect(alert).toBeEmptyDOMElement();
     });
 
     it("says to wait, not that the password is wrong, when sign-in is rate limited", async () => {
@@ -230,9 +231,9 @@ describe("Login page", () => {
       await waitFor(() => {
         expect(mockRequestVerifyToken).toHaveBeenCalledWith("noverify@example.com");
       });
-      expect(
-        await screen.findByTestId("resend-verification-sent"),
-      ).toHaveTextContent(/verification email sent/i);
+      await waitFor(() =>
+        expect(screen.getByTestId("resend-verification-sent")).toHaveTextContent(/verification email sent/i),
+      );
     });
   });
 });

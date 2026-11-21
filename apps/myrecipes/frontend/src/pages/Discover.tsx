@@ -241,7 +241,7 @@ export default function Discover() {
         </div>
       ) : null}
 
-      {error ? <AlertBox variant="warning">{error}</AlertBox> : null}
+      {error ? <AlertBox variant="warning" role="alert">{error}</AlertBox> : null}
 
       {content}
     </div>

@@ -111,6 +111,9 @@ export { default as LoginForm } from "./components/auth/LoginForm";
 export type { LoginFormProps } from "./components/auth/LoginForm";
 export { default as PasswordPair } from "./components/auth/PasswordPair";
 export type { PasswordPairProps } from "./components/auth/PasswordPair";
+export { default as ResendStatusAlert } from "./components/auth/ResendStatusAlert";
+export type { ResendStatusAlertProps } from "./types/resend-status-alert-props";
+export type { ResendStatus } from "./types/resend-status";
 
 // Forgot-password page (shared across all apps)
 export { default as ForgotPasswordPage } from "./pages/ForgotPasswordPage";

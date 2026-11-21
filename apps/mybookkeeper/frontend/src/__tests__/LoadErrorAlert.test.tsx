@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 describe("LoadErrorAlert", () => {
+  it("is read out by a screen reader as soon as it appears", () => {
+    render(<LoadErrorAlert message="I couldn't load your tenants." isRetrying={false} onRetry={vi.fn()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/^I couldn't load your tenants\.$/);
+  });
+
   it("says what didn't load and retries on click", async () => {
     const onRetry = vi.fn();
     render(<LoadErrorAlert message="I couldn't load your tenants." isRetrying={false} onRetry={onRetry} />);

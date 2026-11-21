@@ -10,10 +10,10 @@ import {
   describeAuthError,
   isUnverifiedLoginError,
   useIsAuthenticated,
+  ResendStatusAlert,
 } from "@platform/ui";
+import type { ResendStatus } from "@platform/ui";
 import { register, requestVerifyToken, signIn } from "@/lib/auth";
-import { ResendStatusMode } from "@/constants/resendStatusModes";
-import { ResendStatusAlert } from "@/components/ResendStatusAlert";
 
 interface LocationState {
   from?: string;
@@ -39,9 +39,7 @@ export default function Login() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [resendStatus, setResendStatus] = useState<ResendStatusMode>(
-    ResendStatusMode.IDLE,
-  );
+  const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
 
   // TOTP challenge state (C5) — populated after first signIn returns totp_required
   const [pendingCredentials, setPendingCredentials] = useState<
@@ -88,7 +86,7 @@ export default function Login() {
       // The resend banner says it; rethrowing would make LoginForm say it again.
       setPendingEmail(email);
       setNeedsVerification(true);
-      setResendStatus(ResendStatusMode.IDLE);
+      setResendStatus("idle");
     }
   }
 
@@ -105,12 +103,12 @@ export default function Login() {
 
   async function onResendVerification() {
     if (!pendingEmail) return;
-    setResendStatus(ResendStatusMode.SENDING);
+    setResendStatus("sending");
     try {
       await requestVerifyToken(pendingEmail);
-      setResendStatus(ResendStatusMode.SENT);
+      setResendStatus("sent");
     } catch {
-      setResendStatus(ResendStatusMode.ERROR);
+      setResendStatus("error");
     }
   }
 

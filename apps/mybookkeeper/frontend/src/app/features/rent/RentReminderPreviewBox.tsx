@@ -78,7 +78,7 @@ export default function RentReminderPreviewBox({
   }
 
   if (isError) {
-    return <AlertBox variant="error">Couldn&apos;t load the next reminder.</AlertBox>;
+    return <AlertBox variant="error" role="alert">Couldn&apos;t load the next reminder.</AlertBox>;
   }
 
   if (!preview) {

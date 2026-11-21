@@ -42,7 +42,7 @@ export default function PasteTextStep({
 
   return (
     <div className="space-y-3">
-      {notice && <AlertBox variant="warning">{notice}</AlertBox>}
+      {notice && <AlertBox variant="warning" role="status">{notice}</AlertBox>}
       <label htmlFor="add-app-text" className="block text-sm font-medium">
         Paste the job description text
       </label>

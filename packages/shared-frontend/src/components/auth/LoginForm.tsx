@@ -164,7 +164,7 @@ export default function LoginForm({
             />
             <p className="text-xs text-muted-foreground">{trustCopy}</p>
             {error && (
-              <AlertBox variant="error" className="text-sm" aria-live="polite">
+              <AlertBox variant="error" className="text-sm">
                 <span id={errorId} role="alert">
                   {error}
                 </span>

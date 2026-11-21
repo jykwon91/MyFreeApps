@@ -110,7 +110,7 @@ export default function RecipeImport() {
         title={PHOTO_IMPORT_COPY.title}
         subtitle="Snap or upload a photo of a recipe and we'll fill in the details for you to review."
       />
-      {extractError ? <AlertBox variant="warning">{extractError}</AlertBox> : null}
+      {extractError ? <AlertBox variant="warning" role="alert">{extractError}</AlertBox> : null}
       <RecipeImportUploadStep
         file={file}
         objectUrl={objectUrl}

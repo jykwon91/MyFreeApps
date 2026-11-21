@@ -1,4 +1,4 @@
-/** Matches the web sign-in page's resend button. */
+/** The resend-verification button and its outcomes, on the web and phone sign-in screens. */
 export const RESEND_VERIFICATION_COPY = {
   label: "Resend verification email",
   loading: "Sending...",

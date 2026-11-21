@@ -4,17 +4,17 @@ import { Lock } from "lucide-react";
 import {
   AuthPageFooter,
   LoadingButton,
+  ResendStatusAlert,
   describeAuthError,
   isUnverifiedLoginError,
   useIsAuthenticated,
 } from "@platform/ui";
+import type { ResendStatus } from "@platform/ui";
 import { requestVerifyToken, signIn } from "@/lib/auth";
 
 interface LocationState {
   from?: string;
 }
-
-type ResendStatus = "idle" | "sending" | "sent" | "error";
 
 /**
  * Login page for the single-user MyPizzaTracker.
@@ -246,25 +246,7 @@ export default function Login() {
                   Please verify your email before signing in. Check your inbox for the
                   verification link.
                 </p>
-                {resendStatus === "sent" ? (
-                  <p className="text-emerald-700">
-                    Verification email sent. Check your inbox.
-                  </p>
-                ) : resendStatus === "error" ? (
-                  <p className="text-destructive">
-                    Couldn't resend right now. Try again shortly.
-                  </p>
-                ) : (
-                  <LoadingButton
-                    type="button"
-                    isLoading={resendStatus === "sending"}
-                    loadingText="Sending..."
-                    className="w-full"
-                    onClick={onResendVerification}
-                  >
-                    Resend verification email
-                  </LoadingButton>
-                )}
+                <ResendStatusAlert status={resendStatus} onResend={onResendVerification} />
               </div>
             ) : null}
           </>
