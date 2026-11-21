@@ -81,6 +81,8 @@ export { useTurnstileToken } from "./hooks/useTurnstileToken";
 export { turnstileSiteKey } from "./lib/turnstile-site-key";
 export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";
 export type { ConfirmDialogProps } from "./components/ui/ConfirmDialog";
+export { default as ModalDialog } from "./components/ui/ModalDialog";
+export type { ModalDialogProps } from "./components/ui/ModalDialogProps";
 export { default as Panel } from "./components/ui/Panel";
 export { default as PanelTitle } from "./components/ui/PanelTitle";
 export { default as PanelCloseButton } from "./components/ui/PanelCloseButton";

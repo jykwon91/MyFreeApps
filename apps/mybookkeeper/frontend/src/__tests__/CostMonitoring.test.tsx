@@ -195,6 +195,30 @@ describe("CostMonitoring", () => {
     expect(screen.getByText("Alert Thresholds")).toBeInTheDocument();
   });
 
+  it("shows threshold settings as a dialog that Escape closes, giving focus back to the settings button", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CostMonitoring />);
+    const opener = screen.getByRole("button", { name: "Alert threshold settings" });
+    await user.click(opener);
+
+    const dialog = screen.getByRole("dialog", { name: "Alert Thresholds" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  it("closes threshold settings on its named close button", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CostMonitoring />);
+    await user.click(screen.getByRole("button", { name: "Alert threshold settings" }));
+
+    await user.click(screen.getByRole("button", { name: "Close alert thresholds" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("shows skeleton when summary is loading", () => {
     vi.mocked(useGetCostSummaryQuery).mockReturnValue({
       data: undefined,

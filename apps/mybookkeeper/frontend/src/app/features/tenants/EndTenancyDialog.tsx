@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
 import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { hasHttpStatus } from "@/shared/utils/http-status";

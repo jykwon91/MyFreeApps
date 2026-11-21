@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 
@@ -262,5 +263,45 @@ describe("PhotoLightbox", () => {
     expect(screen.queryByTestId("photo-lightbox-prev")).not.toBeInTheDocument();
     expect(screen.queryByTestId("photo-lightbox-next")).not.toBeInTheDocument();
     expect(screen.getByTestId("photo-lightbox-counter")).toHaveTextContent("1 / 1");
+  });
+
+  it("is a dialog named Photo viewer that takes focus and keeps Tab inside", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Behind</button>
+        <PhotoLightbox photos={THREE_PHOTOS} currentIndex={1} onClose={onClose} onNavigate={onNavigate} />
+      </>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Photo viewer" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    for (let i = 0; i < 5; i += 1) {
+      await user.tab();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+    expect(screen.queryByRole("button", { name: "Behind" })).not.toBeInTheDocument();
+  });
+
+  it("closes once on Escape from inside the dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <PhotoLightbox photos={THREE_PHOTOS} currentIndex={0} onClose={onClose} onNavigate={onNavigate} />,
+    );
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close on a click on the image", async () => {
+    const user = userEvent.setup();
+    render(
+      <PhotoLightbox photos={THREE_PHOTOS} currentIndex={0} onClose={onClose} onNavigate={onNavigate} />,
+    );
+
+    await user.click(screen.getByTestId("photo-lightbox-image"));
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import { useState } from "react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { LoadingButton, ModalDialog, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import DocumentTitleField from "./DocumentTitleField";
@@ -49,71 +50,68 @@ export default function DocumentEditDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={() => onOpenChange(false)}
+    <ModalDialog
+      testId="document-edit-dialog"
+      onClose={() => onOpenChange(false)}
+      closeOnBackdropClick
+      panelClassName="bg-background border rounded-xl shadow-lg w-full max-w-lg p-6 space-y-4"
     >
-      <div
-        className="bg-background border rounded-xl shadow-lg w-full max-w-lg mx-4 p-6 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold">Edit Document</h2>
+      <Dialog.Title className="text-lg font-semibold">Edit Document</Dialog.Title>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <DocumentTitleField id="edit-doc-title" value={title} onChange={setTitle} error={titleProblem} />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <DocumentTitleField id="edit-doc-title" value={title} onChange={setTitle} error={titleProblem} />
 
+        <div className="space-y-1">
+          <label className="text-sm font-medium" htmlFor="edit-doc-kind">
+            Type
+          </label>
+          <select
+            id="edit-doc-kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as DocumentKind)}
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+          >
+            {DOCUMENT_KIND_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {!document.has_file ? (
           <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="edit-doc-kind">
-              Type
+            <label className="text-sm font-medium" htmlFor="edit-doc-body">
+              Content
             </label>
-            <select
-              id="edit-doc-kind"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as DocumentKind)}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            >
-              {DOCUMENT_KIND_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <textarea
+              id="edit-doc-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={8}
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-y font-mono"
+            />
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            File: <span className="font-medium">{document.filename}</span> — file content cannot
+            be replaced. Create a new document to upload a different file.
+          </p>
+        )}
 
-          {!document.has_file ? (
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="edit-doc-body">
-                Content
-              </label>
-              <textarea
-                id="edit-doc-body"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={8}
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-y font-mono"
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              File: <span className="font-medium">{document.filename}</span> — file content cannot
-              be replaced. Create a new document to upload a different file.
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="px-4 py-2 text-sm border border-input rounded-md hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <LoadingButton type="submit" isLoading={isLoading}>
-              Save changes
-            </LoadingButton>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="px-4 py-2 text-sm border border-input rounded-md hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <LoadingButton type="submit" isLoading={isLoading}>
+            Save changes
+          </LoadingButton>
+        </div>
+      </form>
+    </ModalDialog>
   );
 }

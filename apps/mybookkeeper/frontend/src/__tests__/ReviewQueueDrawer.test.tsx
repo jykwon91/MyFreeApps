@@ -1,6 +1,7 @@
 import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
@@ -157,6 +158,22 @@ describe("ReviewQueueDrawer", () => {
       </Provider>,
     );
     fireEvent.click(screen.getByTestId("review-queue-backdrop"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a dialog named by its heading that holds focus and closes on Escape", async () => {
+    const onClose = vi.fn();
+    render(
+      <Provider store={store}>
+        <ReviewQueueDrawer isOpen={true} onClose={onClose} />
+      </Provider>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Booking review queue" });
+    expect(dialog).toHaveAccessibleDescription("Emails from channels that need a one-time decision");
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    await userEvent.keyboard("{Escape}");
+
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

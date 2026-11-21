@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
-import { X, FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { fetchDocumentBlob } from "@/shared/services/documentService";
 import { showError, FormField } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
@@ -18,7 +18,7 @@ import TransactionDuplicateActions from "@/app/features/transactions/Transaction
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
-import SourcePreviewBody from "./SourcePreviewBody";
+import SourcePreviewDialog from "./SourcePreviewDialog";
 import TransactionFieldError from "./TransactionFieldError";
 
 export interface TransactionFormProps {
@@ -71,15 +71,6 @@ export default function TransactionForm({
   }, []);
 
   useEffect(() => revokePreview, [revokePreview]);
-
-  useEffect(() => {
-    if (!sourcePreview) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") revokePreview();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [sourcePreview, revokePreview]);
 
   const handleViewSource = useCallback(async (docId: string) => {
     if (isOpeningSource) return;
@@ -145,23 +136,7 @@ export default function TransactionForm({
       )}
 
       {sourcePreview && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={revokePreview}>
-          <div className="bg-card rounded-lg shadow-xl max-w-3xl max-h-[80vh] w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <span className="text-sm font-medium truncate">{transaction.source_file_name}</span>
-              <button type="button" onClick={revokePreview} className="text-muted-foreground hover:text-foreground p-1">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="overflow-auto max-h-[calc(80vh-3rem)] flex items-center justify-center">
-              <SourcePreviewBody
-                mode={sourcePreview.type}
-                url={sourcePreview.url}
-                fileName={transaction.source_file_name}
-              />
-            </div>
-          </div>
-        </div>
+        <SourcePreviewDialog preview={sourcePreview} fileName={transaction.source_file_name} onClose={revokePreview} />
       )}
 
       <FormField label="Date" dirty={!!dirtyFields.transaction_date}>
