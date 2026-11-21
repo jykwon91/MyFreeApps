@@ -13,6 +13,7 @@ import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
 import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
 import { characterCounter } from "@platform/core/utils/characterCounter";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { discoveryDefaultsFrom } from "@myjobhunter/api-client/utils/discoveryDefaultsFrom";
 import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";
@@ -144,7 +145,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
       showToast(ACTIONS.updated);
       onClose();
     } catch (error) {
-      setFailure(discoverFailureMessage(error, ACTIONS.updateFailed));
+      setFailure(repeatableWriteFailure(error, (refusal) => discoverFailureMessage(refusal, ACTIONS.updateFailed)));
     }
   }
 

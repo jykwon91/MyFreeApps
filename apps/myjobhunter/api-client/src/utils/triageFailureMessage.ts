@@ -17,7 +17,7 @@ const CONFLICT_MESSAGES: Record<DiscoverConflictError["data"]["detail"]["code"],
  *   a moment before), so it has left Discover;
  * - duplicate: a dismissed posting whose twin from another source is already in Discover;
  * - no longer listed: the same, but that twin has since expired or closed.
- * Anything else: the server's reason when it gave one, else the action's own `fallback`.
+ * Anything else: a plain "already removed" line on a 404, else the server's reason when it gave one, else the action's own `fallback`.
  */
 export function triageFailureMessage(error: unknown, fallback: string): string {
   if (isDiscoverConflictError(error)) return CONFLICT_MESSAGES[error.data.detail.code];

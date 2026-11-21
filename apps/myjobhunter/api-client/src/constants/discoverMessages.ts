@@ -61,6 +61,8 @@ export const DISCOVER_ACTION_MESSAGES = {
   defaultsFailed: "Saved search created, but couldn't update your defaults",
   updated: "Saved search updated",
   updateFailed: "Couldn't update saved search",
+  // Any Discovery 404 (the saved search or posting was removed on another device, or by a double tap), instead of the server's generic "not found".
+  gone: "That was already removed. It may have been deleted on another device.",
 } as const;
 
 /** A dismissed posting's line in the Dismissed view: when, and why if the user said. */
