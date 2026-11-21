@@ -20,6 +20,7 @@ import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubTransactionPages } from "./fixtures/mockTransactions";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { settledBoundingBox } from "@platform/ui/test-support/settledBoundingBox";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 
@@ -180,7 +181,7 @@ test.describe("Transaction editor: unsaved changes", () => {
     await page.keyboard.press("Escape");
 
     for (const name of ["Discard", "Keep editing", "Save & close"]) {
-      const box = await prompt(page).getByRole("button", { name }).boundingBox();
+      const box = await settledBoundingBox(prompt(page).getByRole("button", { name }));
       expect(box, name).not.toBeNull();
       expect(box!.height, name).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       expect(box!.x, name).toBeGreaterThanOrEqual(0);

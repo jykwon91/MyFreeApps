@@ -24,6 +24,7 @@ import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { settledBoundingBox } from "@platform/ui/test-support/settledBoundingBox";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -367,7 +368,7 @@ test.describe("Archived reply templates layout", () => {
       await openPage(page, MANY.map((row) => ({ ...row })));
       const restore = page.getByRole("button", { name: "Restore Archived one" });
       await expect(restore).toBeVisible();
-      const box = await restore.boundingBox();
+      const box = await settledBoundingBox(restore);
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
