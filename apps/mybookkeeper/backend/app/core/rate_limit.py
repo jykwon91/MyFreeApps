@@ -56,6 +56,8 @@ __all__ = [
     "insurance_policy_extract_limiter",
     "mortgage_statement_extract_limiter",
     "utility_offer_search_limiter",
+    "lease_placeholder_suggest_limiter",
+    "document_re_extract_limiter",
     "frontend_error_limiter",
     "require_turnstile",
     "check_login_rate_limit",
@@ -94,6 +96,12 @@ mortgage_statement_extract_limiter = RateLimiter(max_attempts=30, window_seconds
 # The client's 15-minute cache absorbs ordinary page views, so this only bounds
 # a caller deliberately hammering the PUCT host through us.
 utility_offer_search_limiter = RateLimiter(max_attempts=60, window_seconds=3600)
+# Each call reads every source file of a lease template and makes a paid model
+# request, and the host can re-run it on the same template as often as they like.
+lease_placeholder_suggest_limiter = RateLimiter(max_attempts=30, window_seconds=3600)
+# Re-reading a stored document is a paid model request that the upload cap
+# never sees, since the file is already stored.
+document_re_extract_limiter = RateLimiter(max_attempts=60, window_seconds=3600)
 frontend_error_limiter = RateLimiter(max_attempts=50, window_seconds=3600)
 # Guest welcome-manual PIN attempts. The per-manual lockout stops guessing one
 # guide; this stops one client sweeping many guides.

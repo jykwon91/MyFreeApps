@@ -16,10 +16,12 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
+from app.core.rate_limit import lease_placeholder_suggest_limiter
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.leases.suggest_placeholders_response import (
@@ -35,10 +37,10 @@ from app.services.leases.template_placeholder_extractor import (
 )
 
 
-def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
-    return RequestContext(
-        organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER,
-    )
+def _ctx(
+    org_id: uuid.UUID, user_id: uuid.UUID, role: OrgRole = OrgRole.OWNER,
+) -> RequestContext:
+    return RequestContext(organization_id=org_id, user_id=user_id, org_role=role)
 
 
 def _ok_suggestions_response() -> SuggestPlaceholdersResponse:
@@ -173,6 +175,65 @@ class TestSuggestPlaceholdersRoute:
             assert "long" in body["pages_note"].lower()
         finally:
             app.dependency_overrides.clear()
+
+
+class TestSuggestPlaceholdersAccessAndLimit:
+    """The call is a paid model request, so viewers are refused and callers throttled."""
+
+    _SERVICE = "app.api.lease_templates.lease_template_service.suggest_ai_placeholders"
+
+    def _post(self, role: OrgRole, user_id: uuid.UUID | None = None):  # type: ignore[no-untyped-def]
+        user_id = user_id or uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(
+            uuid.uuid4(), user_id, role,
+        )
+        try:
+            return TestClient(app).post(
+                f"/lease-templates/{uuid.uuid4()}/suggest-placeholders",
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_viewer_gets_403_and_the_model_is_not_called(self) -> None:
+        with patch(self._SERVICE, new_callable=AsyncMock) as mock_suggest:
+            resp = self._post(OrgRole.VIEWER)
+        assert resp.status_code == 403, resp.text
+        mock_suggest.assert_not_called()
+
+    @pytest.mark.parametrize("role", [OrgRole.OWNER, OrgRole.ADMIN, OrgRole.USER])
+    def test_writer_roles_succeed(self, role: OrgRole) -> None:
+        with patch(
+            self._SERVICE, new_callable=AsyncMock, return_value=_ok_suggestions_response(),
+        ):
+            resp = self._post(role)
+        assert resp.status_code == 200, resp.text
+
+    def test_over_the_limit_returns_429_before_the_model_is_called(self) -> None:
+        with patch.object(
+            lease_placeholder_suggest_limiter, "check",
+            side_effect=HTTPException(429, "slow down"),
+        ), patch(self._SERVICE, new_callable=AsyncMock) as mock_suggest:
+            resp = self._post(OrgRole.OWNER)
+        assert resp.status_code == 429, resp.text
+        mock_suggest.assert_not_called()
+
+    def test_limit_is_keyed_per_user(self) -> None:
+        user_id = uuid.uuid4()
+        with patch.object(lease_placeholder_suggest_limiter, "check") as mock_check, patch(
+            self._SERVICE, new_callable=AsyncMock, return_value=_ok_suggestions_response(),
+        ):
+            self._post(OrgRole.OWNER, user_id)
+        assert str(user_id) in mock_check.call_args.args[0]
+
+    def test_real_limiter_returns_429_once_the_allowance_is_spent(self) -> None:
+        user_id = uuid.uuid4()
+        with patch(
+            self._SERVICE, new_callable=AsyncMock, return_value=_ok_suggestions_response(),
+        ):
+            statuses = [self._post(OrgRole.OWNER, user_id).status_code for _ in range(200)]
+        assert statuses[0] == 200
+        assert 429 in statuses
+        assert set(statuses[: statuses.index(429)]) == {200}
 
 
 # ---------------------------------------------------------------------------
