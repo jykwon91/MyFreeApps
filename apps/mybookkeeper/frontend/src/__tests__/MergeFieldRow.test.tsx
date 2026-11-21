@@ -36,9 +36,7 @@ describe("MergeFieldRow", () => {
     const onSelect = vi.fn();
     render(<MergeFieldRow {...defaultProps} onSelect={onSelect} />);
 
-    const buttons = screen.getAllByRole("button");
-    // Side B is the second button
-    await user.click(buttons[1]);
+    await user.click(screen.getByRole("radio", { name: /Email/ }));
     expect(onSelect).toHaveBeenCalledWith("b");
   });
 
@@ -47,8 +45,7 @@ describe("MergeFieldRow", () => {
     const onSelect = vi.fn();
     render(<MergeFieldRow {...defaultProps} selected="b" onSelect={onSelect} />);
 
-    const buttons = screen.getAllByRole("button");
-    await user.click(buttons[0]);
+    await user.click(screen.getByRole("radio", { name: /Upload/ }));
     expect(onSelect).toHaveBeenCalledWith("a");
   });
 
@@ -64,5 +61,22 @@ describe("MergeFieldRow", () => {
     );
     const warningIcon = container.querySelector(".text-amber-500");
     expect(warningIcon).toBeInTheDocument();
+  });
+
+  it("exposes the two sides as a radiogroup named after the field, with the chosen side checked", () => {
+    render(<MergeFieldRow {...defaultProps} selected="b" />);
+    expect(screen.getByRole("radiogroup", { name: "Vendor" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("ACME Corporation");
+    expect(screen.getByRole("radio", { name: /Upload/, checked: false })).toBeInTheDocument();
+  });
+
+  it("moves the choice to the other side with the arrow keys", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<MergeFieldRow {...defaultProps} onSelect={onSelect} />);
+    screen.getByRole("radio", { name: /Upload/ }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: /Email/ })).toHaveFocus();
+    expect(onSelect).toHaveBeenCalledWith("b");
   });
 });

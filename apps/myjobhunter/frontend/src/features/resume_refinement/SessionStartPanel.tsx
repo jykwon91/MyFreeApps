@@ -7,6 +7,7 @@ import {
   LoadingButton,
   Skeleton,
   showError,
+  useRadioGroup,
 } from "@platform/ui";
 import { resumesApi, useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
 import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
@@ -32,6 +33,11 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
   const [picked, setPicked] = useState<string | null>(null);
 
   const completedJobs = completedResumeJobs(jobs);
+  const { getRadioProps } = useRadioGroup(
+    completedJobs.map((job) => job.id),
+    picked,
+    setPicked,
+  );
 
   if (isLoading) {
     return (
@@ -80,13 +86,13 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
         Pick the resume you want to refine. We'll critique it, suggest specific
         rewrites, and you'll iterate until you're happy.
       </p>
-      <div className="space-y-2">
+      <div role="radiogroup" aria-label="Resume to refine" className="space-y-2">
         {completedJobs.map((job) => (
           <ResumeJobOption
             key={job.id}
             job={job}
             selected={picked === job.id}
-            onSelect={() => setPicked(job.id)}
+            radioProps={getRadioProps(job.id)}
           />
         ))}
       </div>

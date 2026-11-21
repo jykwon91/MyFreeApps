@@ -88,7 +88,7 @@ test.describe("Document CRUD — text document", () => {
       await expect(page.getByRole("heading", { name: "Add Document" })).toBeVisible({ timeout: 5_000 });
 
       // Switch to text mode
-      await page.getByRole("button", { name: "Write text" }).click();
+      await page.getByRole("radio", { name: "Write text" }).click();
 
       // Fill in the form
       await page.getByLabel(/title/i).fill("My E2E Cover Letter");

@@ -11,7 +11,7 @@ import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage, AlertBox, useLiveSearchParams } from "@platform/ui";
 import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
-import TilePicker from "@/shared/components/ui/TilePicker";
+import { TilePicker } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { ConfirmDialog } from "@platform/ui";
 import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
@@ -139,6 +139,7 @@ export default function Properties() {
           <AddressInputs form={form} onChange={setField} />
           <FormField label="Classification" group>
             <TilePicker
+              ariaLabel="Classification"
               options={CLASSIFICATION_OPTIONS}
               value={form.classification}
               onChange={(v) => setClassification(v as PropertyClassification)}

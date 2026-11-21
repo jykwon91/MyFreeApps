@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
-import TilePicker from "@/shared/components/ui/TilePicker";
+import { TilePicker } from "@platform/ui";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import {
   useGetPropertiesQuery,
@@ -69,6 +69,7 @@ export default function PropertyOccupancyFixer({
   return (
     <div className="mt-3 space-y-3" data-testid="property-occupancy-fixer">
       <TilePicker
+        ariaLabel="Property classification"
         options={CLASSIFICATION_OPTIONS.filter(
           (option) => option.value !== "unclassified",
         )}

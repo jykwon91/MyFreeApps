@@ -39,7 +39,7 @@ test.describe("Button loading states", () => {
       await page.getByPlaceholder("Houston").fill("Austin");
       await page.getByPlaceholder("TX").fill("TX");
       await page.getByPlaceholder("77023").fill("78701");
-      await section.getByRole("button", { name: "Investment Property" }).click();
+      await section.getByRole("radio", { name: "Investment Property" }).click();
 
       const addBtn = page.getByRole("button", { name: /add property|adding/i });
       await addBtn.click();
@@ -65,7 +65,7 @@ test.describe("Button loading states", () => {
       await page.getByPlaceholder("Houston").fill("Austin");
       await page.getByPlaceholder("TX").fill("TX");
       await page.getByPlaceholder("77023").fill("78701");
-      await section.getByRole("button", { name: "Investment Property" }).click();
+      await section.getByRole("radio", { name: "Investment Property" }).click();
       await page.getByRole("button", { name: /add property/i }).click();
       await expect(toastRegion(page).getByText("Property created")).toBeVisible({ timeout: 10000 });
       await expect(page.locator("li").filter({ hasText: name })).toBeVisible({ timeout: 10000 });

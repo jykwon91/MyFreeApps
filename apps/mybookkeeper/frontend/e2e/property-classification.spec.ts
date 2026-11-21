@@ -63,8 +63,8 @@ test.describe("Property Classification", () => {
 
   test("classification tile picker is visible in create form", async ({ authedPage: page }) => {
     const section = page.locator("section").first();
-    await expect(section.getByRole("button", { name: "Investment Property" })).toBeVisible();
-    await expect(section.getByRole("button", { name: "Primary Residence" })).toBeVisible();
+    await expect(section.getByRole("radio", { name: "Investment Property" })).toBeVisible();
+    await expect(section.getByRole("radio", { name: "Primary Residence" })).toBeVisible();
     await expect(section.getByRole("button", { name: "Second Home" })).toBeVisible();
     await expect(section.getByRole("button", { name: "Not Sure Yet" })).toBeVisible();
   });
@@ -143,7 +143,7 @@ test.describe("Property Classification", () => {
     const editCard = page.locator("li").filter({ has: page.getByRole("button", { name: /save/i }) });
 
     // Change classification to investment via tile picker
-    await editCard.getByRole("button", { name: "Investment Property" }).click();
+    await editCard.getByRole("radio", { name: "Investment Property" }).click();
     await expect(selectByLabel(editCard, "Rental type")).toBeVisible();
     await selectByLabel(editCard, "Rental type").selectOption("short_term");
 

@@ -226,4 +226,26 @@ describe("DashboardFilterBar", () => {
     expect(onResetCategories).toHaveBeenCalled();
     expect(onPropertyIdsChange).toHaveBeenCalledWith([]);
   });
+
+  it("exposes the presets as a radiogroup with the active preset checked", () => {
+    render(<DashboardFilterBar {...defaultProps()} />);
+    expect(screen.getByRole("radiogroup", { name: "Category filter" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("All");
+  });
+
+  it("checks the Income preset when it is active", () => {
+    render(
+      <DashboardFilterBar
+        {...defaultProps({ isFiltered: true, filterState: makeFilterState({ preset: "income" }) })}
+      />,
+    );
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("Income");
+  });
+
+  it("does not make the whole bar a button that contains other buttons", () => {
+    render(<DashboardFilterBar {...defaultProps()} />);
+    const bar = screen.getByTestId("dashboard-filter-bar");
+    expect(bar.querySelector("[role='button'] button")).toBeNull();
+    expect(screen.getByTestId("filter-expand-toggle")).toHaveAttribute("aria-expanded", "false");
+  });
 });

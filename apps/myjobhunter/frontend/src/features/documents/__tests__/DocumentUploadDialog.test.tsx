@@ -101,11 +101,32 @@ describe("DocumentUploadDialog", () => {
     expect(screen.queryByLabelText(/content/i)).not.toBeInTheDocument();
   });
 
+  it("exposes the mode switch as a radiogroup with the current mode checked", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    expect(screen.getByRole("radiogroup", { name: "Document source" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("Upload file");
+
+    await user.click(screen.getByRole("radio", { name: "Write text" }));
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("Write text");
+  });
+
+  it("switches mode with the arrow keys", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    screen.getByRole("radio", { name: "Upload file" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Write text" })).toHaveFocus();
+    expect(screen.getByLabelText(/content/i)).toBeInTheDocument();
+  });
+
   it("switches to text mode when 'Write text' is clicked", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    await user.click(screen.getByRole("button", { name: "Write text" }));
+    await user.click(screen.getByRole("radio", { name: "Write text" }));
 
     expect(screen.getByLabelText(/content/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/file/i)).not.toBeInTheDocument();
@@ -132,7 +153,7 @@ describe("DocumentUploadDialog", () => {
     renderDialog({ onOpenChange });
 
     // Switch to text mode
-    await user.click(screen.getByRole("button", { name: "Write text" }));
+    await user.click(screen.getByRole("radio", { name: "Write text" }));
 
     // Fill in the form
     await user.type(screen.getByLabelText(/title/i), "My Cover Letter");
@@ -175,7 +196,7 @@ describe("DocumentUploadDialog", () => {
       [mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateDocumentMutation>,
     );
     renderDialog();
-    await user.click(screen.getByRole("button", { name: "Write text" }));
+    await user.click(screen.getByRole("radio", { name: "Write text" }));
 
     const title = screen.getByLabelText(/title/i);
     expect(title).not.toHaveAttribute("maxLength");
