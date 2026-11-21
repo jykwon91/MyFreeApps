@@ -26,6 +26,7 @@ function clientItem(id: number, over: Partial<ClientItem> = {}): ClientItem {
     stats: { stamina: 10, strength: 5 },
     classes: null,
     damageUnknown: false,
+    spellPowerUnknown: false,
     otherEffects: 0,
     randomSuffix: false,
     ...over,
