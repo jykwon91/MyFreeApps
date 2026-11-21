@@ -19,6 +19,7 @@ from decimal import Decimal, InvalidOperation
 import httpx
 
 from app.core.config import settings
+from app.core.government_feed_constants import FEED_TOTAL_DEADLINE_SECONDS
 from app.core.mortgage_enums import TERM_MONTHS_15_YEAR, TERM_MONTHS_30_YEAR
 from app.core.pmms_rate_constants import (
     PMMS_BACKOFF_SECONDS,
@@ -33,6 +34,7 @@ from app.core.pmms_rate_constants import (
 )
 from app.schemas.mortgage.mortgage_rate_observation import MortgageRateObservation
 from app.schemas.mortgage.mortgage_rate_survey import MortgageRateSurvey
+from app.services.feed_failure_cache import FeedFailureCache
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,10 @@ class MortgageRateFeedUnavailableError(RuntimeError):
 
 # Process-local. Holds a public national average, nothing user-specific.
 _cache: tuple[float, MortgageRateSurvey] | None = None
+
+# The survey is one national document, so it has a single failure key.
+_FAILURE_KEY = "pmms"
+_failures = FeedFailureCache()
 
 
 def _user_agent() -> str:
@@ -199,13 +205,38 @@ def parse_survey_csv(body: str, *, today: _dt.date) -> MortgageRateSurvey:
     )
 
 
+async def _fetch_survey_uncached(*, today: _dt.date) -> MortgageRateSurvey:
+    try:
+        async with asyncio.timeout(FEED_TOTAL_DEADLINE_SECONDS):
+            return parse_survey_csv(await _request_csv(), today=today)
+    except TimeoutError as exc:
+        logger.warning(
+            "FRED PMMS gave no answer within %ss", FEED_TOTAL_DEADLINE_SECONDS,
+        )
+        raise MortgageRateFeedUnavailableError(
+            "mortgage rate survey timed out"
+        ) from exc
+
+
 async def fetch_rate_survey(*, today: _dt.date) -> MortgageRateSurvey:
-    """The latest 30-year and 15-year fixed averages, cached per process."""
+    """The latest 30-year and 15-year fixed averages, cached per process.
+
+    A failure is remembered briefly too, so an outage costs one slow attempt
+    rather than one per page view.
+    """
     global _cache
 
     if _cache is not None and (time.monotonic() - _cache[0]) < PMMS_CACHE_TTL_SECONDS:
         return _cache[1]
 
-    survey = parse_survey_csv(await _request_csv(), today=today)
+    recent_failure = _failures.recent_failure(_FAILURE_KEY)
+    if recent_failure is not None:
+        raise MortgageRateFeedUnavailableError(recent_failure)
+
+    try:
+        survey = await _fetch_survey_uncached(today=today)
+    except MortgageRateFeedUnavailableError as exc:
+        _failures.record(_FAILURE_KEY, str(exc))
+        raise
     _cache = (time.monotonic(), survey)
     return survey

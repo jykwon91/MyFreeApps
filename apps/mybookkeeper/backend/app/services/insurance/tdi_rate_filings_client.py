@@ -35,6 +35,7 @@ from app.core.tdi_rate_filings_constants import (
     TDI_RATE_FILINGS_URL,
 )
 from app.schemas.insurance.insurance_rate_filing import InsuranceRateFiling
+from app.services.feed_failure_cache import FeedFailureCache
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,10 @@ class RateFilingFeedUnavailableError(RuntimeError):
 
 # Process-local, holds nothing user-specific, needs no invalidation story.
 _cache: tuple[float, list[InsuranceRateFiling]] | None = None
+
+# The whole dwelling line is one request, so it has a single failure key.
+_FAILURE_KEY = "tdi"
+_failures = FeedFailureCache()
 
 
 def _user_agent() -> str:
@@ -155,8 +160,10 @@ async def _request_payload(params: dict[str, str]) -> Any:
                     "rate filing feed returned an error"
                 ) from exc
             except httpx.TransportError as exc:
+                # The next attempt may run a full timeout after the backoff, so
+                # it must be able to FINISH inside the budget, not merely start.
                 spent = attempt >= MAX_FETCH_ATTEMPTS or (
-                    time.monotonic() + delay >= deadline
+                    time.monotonic() + delay + FETCH_TIMEOUT_SECONDS >= deadline
                 )
                 if spent:
                     logger.warning(
@@ -204,10 +211,19 @@ async def fetch_dwelling_filings() -> list[InsuranceRateFiling]:
         "$limit": str(MAX_FILINGS_FETCHED),
     }
 
-    payload = await _request_payload(params)
+    recent_failure = _failures.recent_failure(_FAILURE_KEY)
+    if recent_failure is not None:
+        raise RateFilingFeedUnavailableError(recent_failure)
 
-    if not isinstance(payload, list):
-        raise RateFilingFeedUnavailableError("rate filing feed returned an unexpected shape")
+    try:
+        payload = await _request_payload(params)
+        if not isinstance(payload, list):
+            raise RateFilingFeedUnavailableError(
+                "rate filing feed returned an unexpected shape"
+            )
+    except RateFilingFeedUnavailableError as exc:
+        _failures.record(_FAILURE_KEY, str(exc))
+        raise
 
     filings = [
         filing

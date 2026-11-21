@@ -48,8 +48,10 @@ _ROW = {
 @pytest.fixture(autouse=True)
 def _clear_cache():
     client._cache = None
+    client._failures.reset()
     yield
     client._cache = None
+    client._failures.reset()
 
 
 @pytest.fixture
