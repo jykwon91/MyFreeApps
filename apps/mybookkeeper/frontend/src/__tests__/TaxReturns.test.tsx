@@ -199,6 +199,8 @@ describe('TaxReturns', () => {
     expect(screen.getByText('Create Tax Return')).toBeInTheDocument();
     expect(screen.getByText('Tax Year')).toBeInTheDocument();
     expect(screen.getByText('Filing Status')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Tax Year' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Filing Status' })).toBeInTheDocument();
   });
 
   it('hides create form when Cancel is clicked', async () => {

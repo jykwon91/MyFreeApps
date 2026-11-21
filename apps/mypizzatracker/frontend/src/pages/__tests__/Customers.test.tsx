@@ -80,6 +80,20 @@ describe("Customers page search results", () => {
   });
 });
 
+describe("Customers page field names", () => {
+  beforeEach(() => {
+    stateFor = () => loaded;
+  });
+
+  it("names the search box and the notes field", () => {
+    render(<CustomersPage />);
+    expect(screen.getByRole("searchbox", { name: "Search customers by name or phone" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit notes for Ana Lopez" }));
+    expect(screen.getByRole("textbox", { name: "Notes for Ana Lopez" })).toBeInTheDocument();
+  });
+});
+
 describe("Customers page paging", () => {
   beforeEach(() => {
     loadMore.mockClear();

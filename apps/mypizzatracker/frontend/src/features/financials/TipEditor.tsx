@@ -39,6 +39,7 @@ export default function TipEditor({ dropId, current, readOnly }: TipEditorProps)
     <span className="inline-flex items-center gap-2 justify-end">
       <input
         type="number"
+        aria-label="Tip total"
         step="0.01"
         min="0"
         value={value}

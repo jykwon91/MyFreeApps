@@ -118,6 +118,15 @@ describe("AddApplicationDialog — the company is added on Save", () => {
     expect(createApplicationMock).not.toHaveBeenCalled();
   });
 
+  it("names the company picker with the visible Company label once it is opened", async () => {
+    serveLists([]);
+    const user = await readLink();
+
+    await user.click(screen.getByRole("button", { name: /not right\? change/i }));
+
+    expect(screen.getByRole("textbox", { name: /^Company/ })).toBeInTheDocument();
+  });
+
   it("adds the company with the posting's domain on Save, researches it, and saves under it", async () => {
     serveLists([]);
     const user = await readLink();

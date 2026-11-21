@@ -54,6 +54,7 @@ export default function PlaceholderSpecRow({ templateId, placeholder }: Placehol
       <td className="px-3 py-2">
         <input
           type="text"
+          aria-label={`Display label for [${placeholder.key}]`}
           value={draft.display_label}
           onChange={(e) => setDraft((d) => ({ ...d, display_label: e.target.value }))}
           onBlur={(e) => {
@@ -67,6 +68,7 @@ export default function PlaceholderSpecRow({ templateId, placeholder }: Placehol
       </td>
       <td className="px-3 py-2">
         <select
+          aria-label={`Input type for [${placeholder.key}]`}
           value={draft.input_type}
           onChange={(e) => {
             const next = e.target.value as LeasePlaceholderInputType;
@@ -95,6 +97,7 @@ export default function PlaceholderSpecRow({ templateId, placeholder }: Placehol
       <td className="px-3 py-2">
         <input
           type="text"
+          aria-label={`Default source for [${placeholder.key}]`}
           value={draft.default_source}
           placeholder="e.g. applicant.legal_name"
           onChange={(e) =>
@@ -112,6 +115,7 @@ export default function PlaceholderSpecRow({ templateId, placeholder }: Placehol
       <td className="px-3 py-2">
         <input
           type="text"
+          aria-label={`Computed expression for [${placeholder.key}]`}
           value={draft.computed_expr}
           placeholder="(MOVE-OUT DATE - MOVE-IN DATE).days"
           onChange={(e) =>

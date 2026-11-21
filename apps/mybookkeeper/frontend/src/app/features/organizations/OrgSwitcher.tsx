@@ -90,6 +90,7 @@ export default function OrgSwitcher() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Organization name"
+            aria-label="Organization name"
             maxLength={ORGANIZATION_NAME_MAX_LENGTH}
             className="w-full border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
             autoFocus

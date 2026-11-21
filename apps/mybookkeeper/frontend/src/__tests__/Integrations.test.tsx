@@ -177,6 +177,7 @@ describe("Integrations", () => {
     renderWithProviders(<Integrations />);
     expect(screen.getByText("Only sync emails with label")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("e.g. Receipts")).toBeInTheDocument();
+    expect(screen.getByLabelText("Only sync emails with label")).toBe(screen.getByPlaceholderText("e.g. Receipts"));
   });
 
   it("initializes label input from the saved label when Gmail is connected", () => {

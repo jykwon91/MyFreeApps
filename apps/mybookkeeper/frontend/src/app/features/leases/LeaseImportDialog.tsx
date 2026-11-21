@@ -249,6 +249,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
               accept=".pdf,.docx,.jpg,.jpeg,.png,.webp"
               onChange={handleFileChange}
               className="sr-only"
+              aria-label="Choose lease documents to import"
               data-testid="import-file-input"
             />
 

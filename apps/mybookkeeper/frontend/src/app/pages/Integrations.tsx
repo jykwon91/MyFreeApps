@@ -1,5 +1,5 @@
 import { formatCount } from "@/shared/utils/count";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
@@ -22,6 +22,7 @@ import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function Integrations() {
   const canWrite = useCanWrite();
+  const labelInputId = useId();
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("integrations-info-dismissed");
   const { data: integrations = [], isLoading, refetch } = useGetIntegrationsQuery();
   const gmail = integrations.find((i) => i.provider === "gmail");
@@ -219,12 +220,13 @@ export default function Integrations() {
 
             {gmail ? (
               <div className="mt-4 pt-4 border-t">
-                <label className="text-sm font-medium text-muted-foreground block mb-1.5">
+                <label htmlFor={labelInputId} className="text-sm font-medium text-muted-foreground block mb-1.5">
                   Only sync emails with label
                 </label>
                 {canWrite ? (
                   <div className="flex items-center gap-2">
                     <input
+                      id={labelInputId}
                       type="text"
                       value={labelInput}
                       onChange={(e) => setLabelInput(e.target.value)}

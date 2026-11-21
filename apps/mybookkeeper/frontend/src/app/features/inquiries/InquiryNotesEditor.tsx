@@ -45,6 +45,7 @@ export default function InquiryNotesEditor({ inquiryId, initialNotes }: InquiryN
   return (
     <textarea
       data-testid="inquiry-notes-editor"
+      aria-label="Inquiry notes"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void handleBlur()}

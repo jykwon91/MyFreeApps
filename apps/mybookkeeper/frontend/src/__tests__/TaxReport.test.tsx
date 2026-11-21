@@ -119,6 +119,7 @@ describe('TaxReport', () => {
     renderWithProviders(<TaxReport />);
     const selects = screen.getAllByRole('combobox');
     expect(selects.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('combobox', { name: 'Tax year' })).toBeInTheDocument();
   });
 
   it('shows skeleton when loading', () => {

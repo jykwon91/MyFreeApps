@@ -178,6 +178,7 @@ describe('Documents', () => {
   it('renders the file name search input', () => {
     renderWithProviders(<Documents />);
     expect(screen.getByPlaceholderText('Search by file name...')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search documents by file name' })).toBeInTheDocument();
   });
 
   it('renders document file names from API data', () => {

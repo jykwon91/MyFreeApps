@@ -84,7 +84,7 @@ export default function TaxReturns() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Tax Year</label>
-              <Select value={newYear} onChange={(e) => setNewYear(Number(e.target.value))}>
+              <Select value={newYear} onChange={(e) => setNewYear(Number(e.target.value))} aria-label="Tax Year">
                 {taxReturnYearChoices().map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -92,7 +92,7 @@ export default function TaxReturns() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Filing Status</label>
-              <Select value={newFilingStatus} onChange={(e) => setNewFilingStatus(e.target.value)}>
+              <Select value={newFilingStatus} onChange={(e) => setNewFilingStatus(e.target.value)} aria-label="Filing Status">
                 {FILING_STATUSES.map((fs) => (
                   <option key={fs.value} value={fs.value}>{fs.label}</option>
                 ))}

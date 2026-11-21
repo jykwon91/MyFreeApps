@@ -255,6 +255,7 @@ export default function Documents() {
           value={controls.searchQuery}
           onChange={(e) => controls.setSearchQuery(e.target.value)}
           placeholder="Search by file name..."
+          aria-label="Search documents by file name"
           className="w-full border rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>

@@ -87,7 +87,7 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
 
         <div>
           <label className="text-sm font-medium mb-1 block">Property (optional)</label>
-          <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="w-full">
+          <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="w-full" aria-label="Property (optional)">
             <option value="">No property</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>

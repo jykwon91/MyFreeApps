@@ -105,6 +105,14 @@ describe("OrgSwitcher", () => {
     expect(screen.getByPlaceholderText("Organization name")).toHaveValue("Lake House");
   });
 
+  it("names the new-organization field for assistive tech", async () => {
+    const user = userEvent.setup();
+    render(<OrgSwitcher />);
+    await user.click(screen.getByText("First Org"));
+    await user.click(screen.getByText("New organization"));
+    expect(screen.getByRole("textbox", { name: "Organization name" })).toBeInTheDocument();
+  });
+
   it("returns null when no current org", () => {
     vi.mocked(useCurrentOrg).mockReturnValue(null);
     const { container } = render(<OrgSwitcher />);

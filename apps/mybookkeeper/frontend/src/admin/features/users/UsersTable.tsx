@@ -61,6 +61,7 @@ export default function UsersTable({
       <input
         type="text"
         placeholder="Search by email or name..."
+        aria-label="Search users by email or name"
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         className="border rounded px-3 py-2 text-sm bg-background w-full max-w-sm"
@@ -96,6 +97,7 @@ export default function UsersTable({
                     ) : (
                       <select
                         value={u.role}
+                        aria-label={`Role for ${u.email}`}
                         onChange={(e) =>
                           onRoleChange(u.id, e.target.value as Role)
                         }

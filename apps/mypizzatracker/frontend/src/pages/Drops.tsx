@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   Button,
   EmptyState,
@@ -22,6 +22,7 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 export default function DropsPage() {
+  const statusFilterId = useId();
   const [statusFilter, setStatusFilter] = useState<DropStatus | "">("");
   // currentData is this filter's result; data would keep the previous filter's drops.
   const { currentData: drops, isError, error, refetch } = useListDropsQuery(
@@ -53,8 +54,9 @@ export default function DropsPage() {
       ) : null}
 
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Filter:</span>
+        <label htmlFor={statusFilterId} className="text-xs text-muted-foreground">Filter:</label>
         <Select
+          id={statusFilterId}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as DropStatus | "")}
           className="w-44"

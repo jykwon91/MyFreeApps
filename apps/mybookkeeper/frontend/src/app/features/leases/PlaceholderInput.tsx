@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 import ProvenanceBadge from "@/app/features/leases/ProvenanceBadge";
@@ -23,6 +24,7 @@ export default function PlaceholderInput({
   provenance,
   onChange,
 }: PlaceholderInputProps) {
+  const inputId = useId();
   const inputType = (() => {
     switch (placeholder.input_type) {
       case "email":
@@ -40,11 +42,12 @@ export default function PlaceholderInput({
 
   return (
     <div data-testid={`generate-field-${placeholder.key}`}>
-      <label className="block text-sm font-medium mb-1">
+      <label htmlFor={inputId} className="block text-sm font-medium mb-1">
         {placeholder.display_label}
         {placeholder.required ? <span className="text-destructive ml-0.5">*</span> : null}
       </label>
       <input
+        id={inputId}
         type={inputType}
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -77,9 +77,9 @@ export default function CompanyConfirmStep({
       <ReviewBanner sourceUrl={state.sourceUrl} summary={state.summary} />
 
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <span id={`${uid}-company`} className="block text-sm font-medium mb-1">
           Company <span className="text-destructive">*</span>
-        </label>
+        </span>
         {state.changingCompany ? (
           <div className="space-y-2">
             <CompanyCombobox
@@ -89,6 +89,7 @@ export default function CompanyConfirmStep({
               onSelect={onSelectExisting}
               onCreate={onCreateOnTheFly}
               onCancel={onCancelChangingCompany}
+              labelledBy={`${uid}-company`}
             />
             <button
               type="button"
