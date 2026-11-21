@@ -20,7 +20,8 @@ apply the per-user rate limit between them (a refused request spends no quota):
 
 Fail-loud:
   - TavilyNotConfiguredError → propagated to the route → HTTP 503.
-  - anthropic.APIError / ValueError from Claude → propagated → HTTP 502.
+  - ExtractionError (classified Anthropic failure) / ValueError from Claude
+    → propagated → HTTP 502 with our own copy.
   - Company not found or wrong tenant → returns None → route emits HTTP 404.
   - A run already in flight → ResearchAlreadyRunningError → HTTP 409.
 """
@@ -203,7 +204,7 @@ async def run_claimed_research(
 
     Raises:
         TavilyNotConfiguredError: if Tavily API key is missing in non-dev.
-        anthropic.APIError: on non-retryable Claude API failures.
+        platform_shared.extraction.ExtractionError: on Claude API failures.
         ValueError: if Claude returns malformed JSON.
     """
     company_id = company.id

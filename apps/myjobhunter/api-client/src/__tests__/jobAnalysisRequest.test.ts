@@ -15,7 +15,7 @@ import type { JobAnalysis } from "../types/job-analysis/job-analysis";
 import { analysisFailureFrom } from "../utils/analysisFailureFrom";
 import { describeAnalyzeError } from "../utils/describeAnalyzeError";
 
-const failed = (status: number, detail = "Couldn't analyze this job: Error code: 529 - overloaded_error") => ({ status, data: { detail } });
+const failed = (status: number, detail = "The AI service is busy right now. Try again in a minute.") => ({ status, data: { detail } });
 
 function analysis(id: string): JobAnalysis {
   return {

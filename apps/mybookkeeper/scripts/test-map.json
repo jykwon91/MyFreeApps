@@ -1900,6 +1900,8 @@
         "backend/app/api/tax_year_profiles.py",
         "backend/app/api/taxpayer_profiles.py",
         "backend/app/api/tax_returns.py",
+        "backend/app/api/tax_advisor_error_mapping.py",
+        "backend/app/core/tax_advisor_failure_messages.py",
         "frontend/src/app/pages/TaxReturns.tsx",
         "frontend/src/app/pages/TaxReturnDetail.tsx",
         "frontend/src/app/pages/TaxDocuments.tsx",
@@ -1950,6 +1952,7 @@
       ],
       "backend_tests": [
         "test_tax_advisor_service.py",
+        "test_tax_advisor_failures.py",
         "test_tax_return_enums.py",
         "test_tax_completeness_service.py",
         "test_tax_extraction_service.py",

@@ -46,6 +46,7 @@ const job = {
   file_content_type: "application/pdf",
   file_size_bytes: 1000,
   status: "complete",
+  retry_count: 0,
   error_message: null,
   result_parsed_fields: null,
   parser_version: null,

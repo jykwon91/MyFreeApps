@@ -30,6 +30,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.ai_failure_http import ai_failure_http_exception
 from app.core.auth import current_active_user
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
@@ -59,6 +60,7 @@ from app.services.application.application_transition_service import (
 )
 from app.services.application.jd_parsing_service import JdParseError, parse_jd
 from app.services.extraction.jd_url_extractor import (
+    JDAiExtractionError,
     JDFetchAuthRequiredError,
     JDFetchError,
     JDFetchTimeoutError,
@@ -140,8 +142,7 @@ async def parse_job_description(
 
     Rate limited per user (20 / 5 min); 429 when exceeded.
 
-    Returns HTTP 502 if the Claude API call fails so the client can surface
-    a clear "AI parsing unavailable" message rather than a generic 500.
+    Returns HTTP 502 (our own copy; Retry-After when temporary) if Claude fails.
 
     No ``db`` session needed — the only DB write is an extraction_log row
     written inside ``claude_service._record_log`` via its own session.
@@ -150,10 +151,7 @@ async def parse_job_description(
     try:
         result = await parse_jd(payload.jd_text, user.id)
     except JdParseError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"JD parsing failed: {exc}",
-        ) from exc
+        raise ai_failure_http_exception(exc.kind) from exc
     return JdParseResponse(**result.to_dict())
 
 
@@ -209,6 +207,8 @@ async def extract_from_url_endpoint(
             status_code=504,
             detail=f"Timed out fetching URL: {exc}",
         ) from exc
+    except JDAiExtractionError as exc:
+        raise ai_failure_http_exception(exc.kind) from exc
     except JDFetchError as exc:
         raise HTTPException(
             status_code=502,

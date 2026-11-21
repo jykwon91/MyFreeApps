@@ -8,6 +8,7 @@ on_rate_limit hook never breaks the backoff.
 """
 from __future__ import annotations
 
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import anthropic
@@ -43,6 +44,13 @@ def _server_error() -> anthropic.InternalServerError:
     req = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
     resp = httpx.Response(500, request=req)
     return anthropic.InternalServerError("boom", response=resp, body=None)
+
+
+def _overloaded_error() -> anthropic.InternalServerError:
+    req = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    resp = httpx.Response(529, request=req, headers={"request-id": "req_011abc"})
+    body = {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}
+    return anthropic.InternalServerError("Overloaded", response=resp, body=body)
 
 
 class TestThrottleState:
@@ -116,3 +124,20 @@ class TestCreateWithBackoff:
                 client, on_rate_limit=bad_hook, max_attempts=2, model="m", max_tokens=1
             )
         assert client.messages.create.await_count == 2
+
+
+class TestNonRateLimitErrorLogging:
+    async def test_logs_real_status_error_type_and_request_id(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        client = MagicMock()
+        client.messages.create = AsyncMock(side_effect=_overloaded_error())
+
+        with caplog.at_level(logging.WARNING, logger=backoff.__name__):
+            with pytest.raises(anthropic.InternalServerError):
+                await create_with_backoff(client, model="m", max_tokens=1)
+
+        message = caplog.records[-1].getMessage()
+        assert "type=overloaded_error" in message
+        assert "status=529" in message
+        assert "request_id=req_011abc" in message

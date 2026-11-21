@@ -19,7 +19,9 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
+from app.core.ai_failure_messages import AI_BUSY_MESSAGE, AI_UNREADABLE_REPLY_MESSAGE
 from app.services.application.jd_parsing_service import (
     JdParseError,
     JdParseResult,
@@ -243,17 +245,20 @@ class TestParseJd:
 
     @pytest.mark.asyncio
     async def test_claude_api_error_raises_jd_parse_error(self) -> None:
-        import anthropic
-
+        """A classified Claude failure keeps its kind and uses our own copy."""
         user_id = uuid.uuid4()
+        failure = ExtractionError("x", kind=AnthropicFailureKind.UPSTREAM)
 
         with patch(
             "app.services.application.jd_parsing_service.claude_service.call_claude",
             new_callable=AsyncMock,
-            side_effect=anthropic.APIConnectionError(request=None),
+            side_effect=failure,
         ):
-            with pytest.raises(JdParseError, match="Claude extraction failed"):
+            with pytest.raises(JdParseError) as exc_info:
                 await parse_jd(SAMPLE_JD, user_id)
+
+        assert exc_info.value.kind is AnthropicFailureKind.UPSTREAM
+        assert str(exc_info.value) == AI_BUSY_MESSAGE
 
     @pytest.mark.asyncio
     async def test_invalid_json_raises_jd_parse_error(self) -> None:
@@ -264,8 +269,11 @@ class TestParseJd:
             new_callable=AsyncMock,
             side_effect=ValueError("Claude returned invalid JSON"),
         ):
-            with pytest.raises(JdParseError, match="Claude extraction failed"):
+            with pytest.raises(JdParseError) as exc_info:
                 await parse_jd(SAMPLE_JD, user_id)
+
+        assert exc_info.value.kind is None
+        assert str(exc_info.value) == AI_UNREADABLE_REPLY_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +329,7 @@ class TestParseJdEndpoint:
                 )
 
         assert resp.status_code == 502, resp.text
-        assert "JD parsing failed" in resp.json()["detail"]
+        assert resp.json()["detail"] == AI_UNREADABLE_REPLY_MESSAGE
 
     @pytest.mark.asyncio
     async def test_parse_jd_unauthenticated_returns_401(self, client) -> None:

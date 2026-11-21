@@ -11,11 +11,7 @@ from typing import Any
 
 import anthropic
 
-from platform_shared.extraction.anthropic_errors import (
-    AnthropicFailure,
-    map_anthropic_connection_error,
-    map_anthropic_status_error,
-)
+from platform_shared.extraction.anthropic_errors import map_anthropic_error
 
 from app.core.config import settings
 from app.services.tutor.corrections_mapper import (
@@ -28,17 +24,6 @@ from app.services.tutor.prompt_builder import build_translation_request
 from app.services.tutor.usage_units import CallUsage, units_for
 
 logger = logging.getLogger(__name__)
-
-
-def classify_failure(exc: Exception, log_prefix: str) -> AnthropicFailure:
-    """Maps an Anthropic error to the failure kind, logging its ``error.type``."""
-    if isinstance(exc, anthropic.APIStatusError):
-        return map_anthropic_status_error(exc, log_prefix=log_prefix, logger=logger)
-    return map_anthropic_connection_error(
-        exc,  # type: ignore[arg-type]
-        log_prefix=log_prefix,
-        logger=logger,
-    )
 
 
 def _first_text(message: Any) -> str:
@@ -62,8 +47,8 @@ async def run_corrections(
             messages=request.messages,
             **request.extra,
         )
-    except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-        classify_failure(exc, "tutor corrections")
+    except anthropic.APIError as exc:
+        map_anthropic_error(exc, log_prefix="tutor corrections", logger=logger)
         return None, CallUsage()
     usage = CallUsage.from_api(getattr(message, "usage", None))
     session = prepared.prompt.session
@@ -88,8 +73,8 @@ async def run_translation(
             system=request.system,
             messages=request.messages,
         )
-    except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-        classify_failure(exc, "tutor translation")
+    except anthropic.APIError as exc:
+        map_anthropic_error(exc, log_prefix="tutor translation", logger=logger)
         return None, CallUsage()
     text = " ".join(_first_text(message).split())
     return (text or None), CallUsage.from_api(getattr(message, "usage", None))

@@ -23,11 +23,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.services.discovery import discovery_score_service
-from app.services.job_analysis.job_analysis_service import (
-    JobAnalysisError,
-    PERMANENT_ANTHROPIC_CODES,
-    TRANSIENT_ANTHROPIC_CODES,
-)
+import anthropic
+import httpx2
+from platform_shared.extraction import AnthropicFailureKind, extraction_error_from_anthropic
+
+from app.core.ai_failure_messages import AI_BUSY_MESSAGE, AI_UNAVAILABLE_MESSAGE
+from app.services.job_analysis.job_analysis_service import JobAnalysisError
+
+_TRANSIENT_KINDS = [k for k in AnthropicFailureKind if k.is_transient]
+_PERMANENT_KINDS = [k for k in AnthropicFailureKind if not k.is_transient]
+_ANTHROPIC_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+def _status_error(
+    cls: type[anthropic.APIStatusError], status: int, error_type: str,
+) -> anthropic.APIStatusError:
+    response = httpx2.Response(status, request=_ANTHROPIC_REQUEST)
+    body = {"type": "error", "error": {"type": error_type, "message": "provider detail"}}
+    return cls("provider detail", response=response, body=body)
 
 
 # Bound at import time, before conftest's function-scoped
@@ -78,14 +91,20 @@ def _make_analysis(cost: float = 0.005) -> MagicMock:
     return analysis
 
 
-def _make_transient_error(code: str = "rate_limit_error") -> JobAnalysisError:
-    """Create a transient JobAnalysisError (retryable=True)."""
-    return JobAnalysisError(f"Anthropic error: {code}", code=code, retryable=True)
+def _make_transient_error(
+    code: str = "rate_limit_error",
+    kind: AnthropicFailureKind = AnthropicFailureKind.RATE_LIMITED,
+) -> JobAnalysisError:
+    """Create a transient JobAnalysisError (a kind a later pass can fix)."""
+    return JobAnalysisError.from_ai_failure(kind, code)
 
 
-def _make_permanent_error(code: str = "authentication_error") -> JobAnalysisError:
-    """Create a permanent JobAnalysisError (retryable=False)."""
-    return JobAnalysisError(f"Anthropic error: {code}", code=code, retryable=False)
+def _make_permanent_error(
+    code: str = "authentication_error",
+    kind: AnthropicFailureKind = AnthropicFailureKind.MISCONFIGURED,
+) -> JobAnalysisError:
+    """Create a permanent JobAnalysisError (a kind no retry can fix)."""
+    return JobAnalysisError.from_ai_failure(kind, code)
 
 
 def _prefilter_result(rows: list[DiscoveredJob], *, branch: str = "embedding"):
@@ -293,9 +312,9 @@ class TestTransientErrorHandling:
         assert mock_score.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_all_transient_error_codes_trigger_continue(self) -> None:
-        """Every code in TRANSIENT_ANTHROPIC_CODES causes a continue, not a raise."""
-        for code in TRANSIENT_ANTHROPIC_CODES:
+    async def test_all_transient_error_kinds_trigger_continue(self) -> None:
+        """Every transient failure kind causes a continue, not a raise."""
+        for kind in _TRANSIENT_KINDS:
             user_id = uuid.uuid4()
             job = _make_job(user_id)
 
@@ -308,7 +327,10 @@ class TestTransientErrorHandling:
                 patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
                 patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
                 patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
-                patch(_SCORE_JD_PATH, new=AsyncMock(side_effect=_make_transient_error(code))),
+                patch(
+                    _SCORE_JD_PATH,
+                    new=AsyncMock(side_effect=_make_transient_error(str(kind), kind)),
+                ),
                 patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
                 patch(_SENTRY_CAPTURE_EXC_PATH),
                 patch(_SENTRY_CAPTURE_MSG_PATH),
@@ -540,9 +562,9 @@ class TestPermanentErrors:
         assert exc_info.value.retryable is False
 
     @pytest.mark.asyncio
-    async def test_all_permanent_error_codes_re_raise(self) -> None:
-        """Every code in PERMANENT_ANTHROPIC_CODES triggers an immediate re-raise."""
-        for code in PERMANENT_ANTHROPIC_CODES:
+    async def test_all_permanent_error_kinds_re_raise(self) -> None:
+        """Every permanent failure kind triggers an immediate re-raise."""
+        for kind in _PERMANENT_KINDS:
             user_id = uuid.uuid4()
             job = _make_job(user_id)
 
@@ -557,7 +579,7 @@ class TestPermanentErrors:
                 patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
                 patch(
                     _SCORE_JD_PATH,
-                    new=AsyncMock(side_effect=_make_permanent_error(code)),
+                    new=AsyncMock(side_effect=_make_permanent_error(str(kind), kind)),
                 ),
                 patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
                 patch(_SENTRY_CAPTURE_EXC_PATH),
@@ -567,7 +589,7 @@ class TestPermanentErrors:
                 with pytest.raises(JobAnalysisError) as exc_info:
                     await discovery_score_service.score_user_inbox(user_id, batch=10)
 
-            assert exc_info.value.code == code
+            assert exc_info.value.kind is kind
             assert exc_info.value.retryable is False
 
     @pytest.mark.asyncio
@@ -775,7 +797,7 @@ class TestPrefilterIntegration:
 
 
 class TestJobAnalysisErrorStructure:
-    """Tests for JobAnalysisError field semantics and from_anthropic() factory."""
+    """Tests for JobAnalysisError field semantics and from_ai_failure() factory."""
 
     def test_default_is_retryable(self) -> None:
         """JobAnalysisError with no kwargs defaults to retryable=True, code=None."""
@@ -788,103 +810,38 @@ class TestJobAnalysisErrorStructure:
         assert err.retryable is False
         assert err.code == "authentication_error"
 
-    def test_from_anthropic_rate_limit_is_transient(self) -> None:
-        """RateLimitError maps to retryable=True."""
-        import anthropic
-        from unittest.mock import MagicMock
+    @pytest.mark.parametrize(
+        ("sdk_error", "code", "retryable", "message"),
+        [
+            (_status_error(anthropic.RateLimitError, 429, "rate_limit_error"),
+             "rate_limit_error", True, AI_BUSY_MESSAGE),
+            (_status_error(anthropic.InternalServerError, 529, "overloaded_error"),
+             "overloaded_error", True, AI_BUSY_MESSAGE),
+            (anthropic.APIConnectionError(request=_ANTHROPIC_REQUEST),
+             "connection_error", True, AI_BUSY_MESSAGE),
+            (anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST),
+             "connection_error", True, AI_BUSY_MESSAGE),
+            (_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+             "authentication_error", False, AI_UNAVAILABLE_MESSAGE),
+            (_status_error(anthropic.NotFoundError, 404, "not_found_error"),
+             "not_found_error", False, AI_UNAVAILABLE_MESSAGE),
+        ],
+        ids=["rate-limit", "overloaded", "connection", "timeout", "auth", "not-found"],
+    )
+    def test_from_ai_failure_routes_on_the_shared_kind(
+        self, sdk_error, code, retryable, message,
+    ) -> None:
+        """The classified Claude failure decides retryable; the message is our copy."""
+        extraction_error = extraction_error_from_anthropic(sdk_error, log_prefix="test")
+        wrapped = JobAnalysisError.from_ai_failure(extraction_error.kind, extraction_error.error_type)
+        assert wrapped.code == code
+        assert wrapped.kind is extraction_error.kind
+        assert wrapped.retryable is retryable
+        assert str(wrapped) == message
+        assert "provider detail" not in str(wrapped)
 
-        mock_response = MagicMock()
-        mock_response.headers = {}
-        mock_response.request = MagicMock()
-        mock_response.status_code = 429
-        exc = anthropic.RateLimitError(
-            "rate limit",
-            response=mock_response,
-            body={"error": {"type": "rate_limit_error"}},
-        )
-        wrapped = JobAnalysisError.from_anthropic(exc)
-        assert wrapped.code == "rate_limit_error"
+    def test_from_ai_failure_unreadable_reply_is_retryable(self) -> None:
+        """A reply that failed parsing (no kind) can succeed on the next pass."""
+        wrapped = JobAnalysisError.from_ai_failure(None)
+        assert wrapped.kind is None
         assert wrapped.retryable is True
-
-    def test_from_anthropic_authentication_error_is_permanent(self) -> None:
-        """AuthenticationError maps to retryable=False."""
-        import anthropic
-        from unittest.mock import MagicMock
-
-        mock_response = MagicMock()
-        mock_response.headers = {}
-        mock_response.request = MagicMock()
-        mock_response.status_code = 401
-        exc = anthropic.AuthenticationError(
-            "bad key",
-            response=mock_response,
-            body={"error": {"type": "authentication_error"}},
-        )
-        wrapped = JobAnalysisError.from_anthropic(exc)
-        assert wrapped.code == "authentication_error"
-        assert wrapped.retryable is False
-
-    def test_from_anthropic_invalid_request_is_permanent(self) -> None:
-        """BadRequestError with invalid_request_error type maps to retryable=False."""
-        import anthropic
-        from unittest.mock import MagicMock
-
-        mock_response = MagicMock()
-        mock_response.headers = {}
-        mock_response.request = MagicMock()
-        mock_response.status_code = 400
-        exc = anthropic.BadRequestError(
-            "bad request",
-            response=mock_response,
-            body={"error": {"type": "invalid_request_error"}},
-        )
-        wrapped = JobAnalysisError.from_anthropic(exc)
-        assert wrapped.code == "invalid_request_error"
-        assert wrapped.retryable is False
-
-    def test_from_anthropic_overloaded_is_transient(self) -> None:
-        """InternalServerError with overloaded_error type maps to retryable=True.
-
-        Anthropic signals "overloaded" via HTTP 529 which is caught by
-        ``anthropic.InternalServerError`` (the public subclass of
-        ``APIStatusError``). ``OverloadedError`` exists in the private module
-        but is not exported — we test the public class with the correct body.
-        """
-        import anthropic
-        from unittest.mock import MagicMock
-
-        mock_response = MagicMock()
-        mock_response.headers = {}
-        mock_response.request = MagicMock()
-        mock_response.status_code = 529
-        # InternalServerError is the public subclass that catches 529 responses.
-        exc = anthropic.InternalServerError(
-            "overloaded",
-            response=mock_response,
-            body={"error": {"type": "overloaded_error"}},
-        )
-        wrapped = JobAnalysisError.from_anthropic(exc)
-        assert wrapped.code == "overloaded_error"
-        assert wrapped.retryable is True
-
-    def test_from_anthropic_connection_error_is_transient(self) -> None:
-        """APIConnectionError maps to code='connection_error', retryable=True."""
-        import anthropic
-        from unittest.mock import MagicMock
-
-        exc = anthropic.APIConnectionError(request=MagicMock())
-        wrapped = JobAnalysisError.from_anthropic(exc)
-        assert wrapped.code == "connection_error"
-        assert wrapped.retryable is True
-
-    def test_error_codes_in_transient_set_are_retryable(self) -> None:
-        """Every code in TRANSIENT_ANTHROPIC_CODES produces retryable=True."""
-        for code in TRANSIENT_ANTHROPIC_CODES:
-            err = JobAnalysisError("test", code=code, retryable=True)
-            assert err.retryable is True, f"Expected retryable for code={code}"
-
-    def test_error_codes_in_permanent_set_are_not_retryable(self) -> None:
-        """Every code in PERMANENT_ANTHROPIC_CODES produces retryable=False."""
-        for code in PERMANENT_ANTHROPIC_CODES:
-            err = JobAnalysisError("test", code=code, retryable=False)
-            assert err.retryable is False, f"Expected not-retryable for code={code}"

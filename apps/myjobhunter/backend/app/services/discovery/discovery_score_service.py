@@ -47,14 +47,14 @@ Transient Anthropic errors (``rate_limit_error``, ``overloaded_error``,
   logs. Remaining rows stay with ``score IS NULL`` — the next scheduled
   pass picks them up.
 
-Permanent Anthropic errors (``authentication_error``,
-``invalid_request_error``) indicate a configuration bug — the loop
+Claude failures whose shared kind is not transient (credentials, a
+missing model, a rejected request) indicate a configuration bug — the loop
 fails-loud immediately by re-raising, so a broken deploy doesn't
 silently produce zero scores forever.
 
-Non-Anthropic failures (validation errors, malformed JSON) are treated
-as transient per-row failures (``retryable=True`` on JobAnalysisError
-when ``code`` is None) so a single bad posting doesn't abort the batch.
+Non-Anthropic failures (validation errors, malformed JSON; ``kind`` is
+None on JobAnalysisError) are counted as per-row failures toward the
+circuit-breaker so a single bad posting doesn't abort the batch.
 
 Sentry tags emitted on every failure:
 
@@ -90,7 +90,6 @@ from app.repositories.system import extraction_log_repository
 from app.services.discovery import discovery_prefilter_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
-    PERMANENT_ANTHROPIC_CODES,
     score as score_jd,
 )
 
@@ -213,12 +212,13 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                 attempt_index=attempt_index,
             )
 
-            # Permanent errors are config bugs — fail-loud so the operator
+            # A Claude failure no retry can fix (credentials, missing model,
+            # rejected request) is a config bug — fail-loud so the operator
             # sees a crash on the next Sentry alert instead of a silent
             # zero-score inbox. The BackgroundTask runner will log the
             # exception; the current iteration's remaining rows stay
             # unscored for the next pass.
-            if exc.code in PERMANENT_ANTHROPIC_CODES:
+            if exc.kind is not None and not exc.kind.is_transient:
                 logger.error(
                     "discovery score: permanent error — aborting loop "
                     "user=%s job=%s code=%s err=%s",

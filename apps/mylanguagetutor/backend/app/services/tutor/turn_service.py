@@ -47,6 +47,7 @@ from pydantic import BaseModel
 from platform_shared.extraction.anthropic_errors import (
     AnthropicFailure,
     AnthropicFailureKind,
+    map_anthropic_error,
 )
 
 from app.core.config import settings
@@ -76,7 +77,6 @@ from app.services.tutor.prompt_builder import (
 )
 from app.services.tutor.turn_calls import (
     cancel_task,
-    classify_failure,
     corrections_usage_if_done,
     run_corrections,
     run_translation,
@@ -312,8 +312,8 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncGenerator[TurnEvent, None]
                         yield TurnEvent(EVENT_REPLY_DELTA, ReplyDeltaEvent(text=text))
                 final = await stream.get_final_message()
                 reply_usage = CallUsage.from_api(getattr(final, "usage", None))
-        except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-            failure = classify_failure(exc, "tutor reply")
+        except anthropic.APIError as exc:
+            failure = map_anthropic_error(exc, log_prefix="tutor reply", logger=logger)
 
         reply_text = "".join(reply_parts).strip()
         if failure is not None or not reply_text:

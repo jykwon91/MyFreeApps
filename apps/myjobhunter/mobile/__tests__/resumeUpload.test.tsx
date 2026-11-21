@@ -1,5 +1,6 @@
 import "@platform/mobile/test-support/reactNativeFormData";
 import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
+import { RESUME_JOB_RETRY_NOTE } from "@myjobhunter/api-client/constants/resumeJobRetryNote";
 import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
 import { RESUME_UPLOAD_MAX_BYTES, RESUME_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/resumeUploadLimits";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
@@ -218,6 +219,14 @@ describe("uploading a resume on Resume", () => {
     expect(screen.queryByText(/pdfminer/)).toBeNull();
     expect(screen.getByRole("radio", { name: /ada\.pdf/ })).toBeTruthy();
     expect(screen.queryByRole("radio", { name: /ada-2026\.pdf/ })).toBeNull();
+  });
+
+  it("says an upload waiting to be read again is being retried", async () => {
+    serveUploads([{ ...QUEUED, retry_count: 1 }, resumeJobRecord()]);
+    await openResume();
+
+    const row = within(await screen.findByLabelText(MESSAGES.uploadsLabel)).getByTestId("resume-upload-status");
+    expect(within(row).getByText(RESUME_JOB_RETRY_NOTE)).toBeTruthy();
   });
 
   it.each([
