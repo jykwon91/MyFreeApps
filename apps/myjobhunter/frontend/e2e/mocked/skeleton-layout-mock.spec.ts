@@ -32,7 +32,7 @@ test("applications skeleton has the loaded table's columns and row count", async
   const skeletonRows = await skeleton.locator("tbody tr").count();
 
   release();
-  await expect(page.getByRole("cell", { name: "Role 0" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Role 0", exact: true })).toBeVisible();
   const table = page.getByRole("table");
   expect(await headerTexts(table)).toEqual(skeletonHeaders);
   expect(await table.locator("tbody tr").count()).toBe(skeletonRows);

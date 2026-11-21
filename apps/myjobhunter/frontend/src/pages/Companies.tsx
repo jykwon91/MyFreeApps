@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Building2, Plus } from "lucide-react";
 import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import CompaniesSkeleton from "@/features/companies/CompaniesSkeleton";
@@ -24,7 +23,6 @@ const COLUMNS: ColumnDef<Company>[] = [
 ];
 
 export default function Companies() {
-  const navigate = useNavigate();
   const { data, isLoading, isError, error } = useListCompaniesQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const copy = EMPTY_STATES.companies;
@@ -94,7 +92,7 @@ export default function Companies() {
         data={items}
         columns={COLUMNS}
         getRowId={(row) => row.id}
-        onRowClick={(row) => navigate(`/companies/${row.id}`)}
+        getRowHref={(row) => `/companies/${row.id}`}
       />
     </div>
   );

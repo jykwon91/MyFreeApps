@@ -167,10 +167,10 @@ test.describe("Applications list — Status column", () => {
 
       // The backend auto-logs an "applied" event when an application is created,
       // so the Status column always shows "Applied" for a new application even when
-      // no explicit events are logged via the API. The row uses role="button" so
-      // td.nth(1) targets the Status cell (column index 1).
-      const row = page.getByRole("button").filter({ hasText: "No Events Role" });
-      await expect(row.locator("td").nth(1)).toHaveText("Applied");
+      // no explicit events are logged via the API. The Status cell is the third
+      // cell of the row (Company, Role, Status).
+      const row = page.getByRole("row").filter({ hasText: "No Events Role" });
+      await expect(row.getByRole("cell").nth(2)).toHaveText("Applied");
     } finally {
       await deleteTestUser(request, user);
     }

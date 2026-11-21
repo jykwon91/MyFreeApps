@@ -32,7 +32,7 @@ test.describe("Company Research panel", () => {
       await page.getByRole("button", { name: /^add company$/i }).click();
 
       // Navigate to the company detail page
-      const row = page.getByRole("button").filter({ hasText: "Research Test Corp" }).first();
+      const row = page.getByRole("link", { name: "Research Test Corp", exact: true });
       await expect(row).toBeVisible({ timeout: 5_000 });
       await row.click();
       await page.waitForURL("**/companies/**");
@@ -63,7 +63,7 @@ test.describe("Company Research panel", () => {
       await page.getByLabel(/^name/i).fill("Research Error Corp");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
-      const row = page.getByRole("button").filter({ hasText: "Research Error Corp" }).first();
+      const row = page.getByRole("link", { name: "Research Error Corp", exact: true });
       await expect(row).toBeVisible({ timeout: 5_000 });
       await row.click();
       await page.waitForURL("**/companies/**");

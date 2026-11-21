@@ -47,7 +47,7 @@ test.describe("Applications — inline company create", () => {
         page.getByText(/Regression Corp.*added|added.*Regression Corp/i).first(),
       ).toBeVisible({ timeout: 5_000 });
 
-      await expect(page.getByRole("button", { name: /Regression Corp/i }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: "Regression Corp", exact: true })).toBeVisible();
       await expect(page.getByText("regression.example.com").first()).toBeVisible();
     } finally {
       await deleteTestUser(request, user);

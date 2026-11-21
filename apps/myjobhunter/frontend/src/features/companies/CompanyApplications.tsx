@@ -4,6 +4,7 @@ import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
 import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messages";
 import { COMPANY_APPLICATIONS_MESSAGES as MESSAGES } from "@/constants/company-applications-messages";
 import { DEFAULT_APPLICATIONS_TABLE_SORTING } from "@/constants/default-applications-table-sorting";
+import { applicationRowLabel } from "@/lib/applicationRowLabel";
 import type { Application } from "@myjobhunter/api-client/types/application";
 import type { CompanyApplicationsProps } from "@/types/company/company-applications-props";
 
@@ -36,7 +37,7 @@ const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
 ];
 
 /** A company's applications: skeleton while loading, an error with retry, or the paged, server-sorted table. */
-export default function CompanyApplications({ companyName, list, onSortingChange, onOpen }: CompanyApplicationsProps) {
+export default function CompanyApplications({ companyName, list, onSortingChange }: CompanyApplicationsProps) {
   const [isRetrying, setIsRetrying] = useState(false);
 
   async function retry(): Promise<void> {
@@ -76,7 +77,8 @@ export default function CompanyApplications({ companyName, list, onSortingChange
           data={list.applications}
           columns={APPLICATION_COLUMNS}
           getRowId={(row) => row.id}
-          onRowClick={(row) => onOpen(row.id)}
+          getRowHref={(row) => `/applications/${row.id}`}
+          getRowActionLabel={applicationRowLabel}
           defaultSorting={DEFAULT_APPLICATIONS_TABLE_SORTING}
           enableSortingRemoval={false}
           onSortingChange={onSortingChange}

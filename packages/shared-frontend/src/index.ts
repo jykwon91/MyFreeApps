@@ -30,6 +30,7 @@ export { MENU_ITEM_FOCUS_CLASS, FOCUS_RING_CLASS } from "./constants/menu-item-f
 export { formatSalaryRange, SALARY_PERIOD_LABELS } from "./utils/salary-range";
 export { formatTag } from "./utils/tag";
 export { isNotFound } from "./utils/isNotFound";
+export { isOwnClick } from "./utils/isOwnClick";
 export { extractErrorMessage } from "./utils/errorMessage";
 export { describeAuthError } from "./utils/describeAuthError";
 export { isAlreadyVerifiedError } from "./utils/isAlreadyVerifiedError";
@@ -159,6 +160,8 @@ export { default as DataTable } from "./components/data/DataTable";
 export type { DataTableProps } from "./types/data-table-props";
 export type { ColumnDef } from "./types/data-table-column-def";
 export type { SortingState, PaginationState } from "@tanstack/react-table";
+export { default as RowPrimaryAction } from "./components/data/RowPrimaryAction";
+export type { RowPrimaryActionProps } from "./types/row-primary-action-props";
 export { default as DataTableHeaderCell } from "./components/data/DataTableHeaderCell";
 export type { DataTableHeaderCellProps } from "./types/data-table-header-cell-props";
 export { default as Pagination } from "./components/data/Pagination";

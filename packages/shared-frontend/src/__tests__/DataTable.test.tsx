@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createPortal } from "react-dom";
+import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import DataTable from "../components/data/DataTable";
 import ControlledSortDataTable from "./ControlledSortDataTable";
 import type { ColumnDef } from "../types/data-table-column-def";
@@ -21,7 +23,16 @@ const data: Row[] = [
   { id: "2", name: "Bob", status: "Inactive" },
 ];
 
+function PersonPage() {
+  const { id } = useParams();
+  return <p>Person {id}</p>;
+}
+
 describe("DataTable", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders data rows", () => {
     render(<DataTable data={data} columns={columns} />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -71,43 +82,212 @@ describe("DataTable", () => {
     expect(screen.queryByText("No results found")).toBeNull();
   });
 
-  it("calls onRowClick with row data when a row is clicked", async () => {
-    const onRowClick = vi.fn();
-    render(
-      <DataTable
-        data={data}
-        columns={columns}
-        onRowClick={onRowClick}
-        getRowId={(row) => row.id}
-      />
-    );
-    await userEvent.click(screen.getByText("Alice"));
-    expect(onRowClick).toHaveBeenCalledWith(data[0]);
+  describe("clickable rows", () => {
+    function bodyRows(): HTMLElement[] {
+      return screen.getAllByRole("row").slice(1);
+    }
+
+    it("keeps each row a table row with cells, and puts a named button in the first cell", () => {
+      render(<DataTable data={data} columns={columns} onRowClick={vi.fn()} getRowId={(row) => row.id} />);
+      const rows = bodyRows();
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row).not.toHaveAttribute("role");
+        expect(row).not.toHaveAttribute("tabindex");
+        expect(within(row).getAllByRole("cell")).toHaveLength(2);
+      }
+      const [firstCell, secondCell] = within(rows[0]).getAllByRole("cell");
+      expect(within(firstCell).getByRole("button", { name: "Alice" })).toHaveAttribute("type", "button");
+      expect(within(secondCell).queryByRole("button")).toBeNull();
+      expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+    });
+
+    it("opens the row with Enter and with Space on its button, once each", async () => {
+      const onRowClick = vi.fn();
+      render(<DataTable data={data} columns={columns} onRowClick={onRowClick} getRowId={(row) => row.id} />);
+      const button = screen.getByRole("button", { name: "Bob" });
+      button.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+      expect(onRowClick).toHaveBeenLastCalledWith(data[1]);
+      await userEvent.keyboard(" ");
+      expect(onRowClick).toHaveBeenCalledTimes(2);
+      expect(onRowClick).toHaveBeenLastCalledWith(data[1]);
+    });
+
+    it("reaches the row buttons with Tab after the header buttons", async () => {
+      render(<DataTable data={data} columns={columns} onRowClick={vi.fn()} getRowId={(row) => row.id} />);
+      await userEvent.tab();
+      await userEvent.tab();
+      await userEvent.tab();
+      expect(screen.getByRole("button", { name: "Alice" })).toHaveFocus();
+      await userEvent.tab();
+      expect(screen.getByRole("button", { name: "Bob" })).toHaveFocus();
+    });
+
+    it("opens once for a click on the button and once for a click elsewhere on the row", async () => {
+      const onRowClick = vi.fn();
+      render(<DataTable data={data} columns={columns} onRowClick={onRowClick} getRowId={(row) => row.id} />);
+      await userEvent.click(screen.getByRole("button", { name: "Alice" }));
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+      expect(onRowClick).toHaveBeenLastCalledWith(data[0]);
+      await userEvent.click(screen.getByText("Inactive"));
+      expect(onRowClick).toHaveBeenCalledTimes(2);
+      expect(onRowClick).toHaveBeenLastCalledWith(data[1]);
+    });
+
+    it("leaves clicks on another control in the row to that control", async () => {
+      const onRowClick = vi.fn();
+      const onArchive = vi.fn();
+      const withAction: ColumnDef<Row>[] = [
+        ...columns,
+        {
+          id: "actions",
+          header: "Actions",
+          enableSorting: false,
+          cell: () => (
+            <button type="button" onClick={onArchive}>
+              Archive
+            </button>
+          ),
+        },
+      ];
+      render(<DataTable data={data} columns={withAction} onRowClick={onRowClick} getRowId={(row) => row.id} />);
+      await userEvent.click(within(bodyRows()[0]).getByRole("button", { name: "Archive" }));
+      expect(onArchive).toHaveBeenCalledTimes(1);
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+
+    it("puts the button in the column named by primaryColumnId", async () => {
+      const onRowClick = vi.fn();
+      render(
+        <DataTable data={data} columns={columns} onRowClick={onRowClick} primaryColumnId="status" getRowId={(row) => row.id} />,
+      );
+      const [nameCell, statusCell] = within(bodyRows()[0]).getAllByRole("cell");
+      expect(within(nameCell).queryByRole("button")).toBeNull();
+      await userEvent.click(within(statusCell).getByRole("button", { name: "Active" }));
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+      expect(onRowClick).toHaveBeenCalledWith(data[0]);
+    });
+
+    it("rejects a primaryColumnId that isn't one of its columns", () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      expect(() =>
+        render(<DataTable data={data} columns={columns} onRowClick={vi.fn()} primaryColumnId="missing" />),
+      ).toThrow(/primaryColumnId "missing"/);
+    });
+
+    it("leaves clicks in a portalled menu opened from a cell to that menu", async () => {
+      const onRowClick = vi.fn();
+      const onItem = vi.fn();
+      const withMenu: ColumnDef<Row>[] = [
+        ...columns,
+        {
+          id: "menu",
+          header: "Menu",
+          enableSorting: false,
+          cell: () =>
+            createPortal(
+              <div>
+                <span>Menu heading</span>
+                <button type="button" onClick={onItem}>
+                  Item
+                </button>
+              </div>,
+              document.body,
+            ),
+        },
+      ];
+      render(<DataTable data={[data[0]]} columns={withMenu} onRowClick={onRowClick} getRowId={(row) => row.id} />);
+      await userEvent.click(screen.getByRole("button", { name: "Item" }));
+      await userEvent.click(screen.getByText("Menu heading"));
+      expect(onItem).toHaveBeenCalledTimes(1);
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+
+    it("names the row's button with getRowActionLabel", async () => {
+      const onRowClick = vi.fn();
+      render(
+        <DataTable
+          data={data}
+          columns={columns}
+          onRowClick={onRowClick}
+          getRowActionLabel={(row) => `Open ${row.name} (${row.status})`}
+          getRowId={(row) => row.id}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Open Bob (Inactive)" }));
+      expect(onRowClick).toHaveBeenCalledWith(data[1]);
+    });
+
+    it("reports a control nested inside the row's button", () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const nested: ColumnDef<Row>[] = [
+        { id: "name", header: "Name", cell: () => <a href="/elsewhere">Alice</a> },
+      ];
+      render(<DataTable data={[data[0]]} columns={nested} onRowClick={vi.fn()} getRowId={(row) => row.id} />);
+      expect(error).toHaveBeenCalledWith(expect.stringMatching(/can't nest/), expect.any(HTMLAnchorElement));
+    });
+
+    it("does not report a primary cell that is plain text", () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      render(<DataTable data={data} columns={columns} onRowClick={vi.fn()} getRowId={(row) => row.id} />);
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it("does not make rows interactive when onRowClick is not provided", () => {
+      render(<DataTable data={data} columns={columns} />);
+      const body = screen.getByRole("table").querySelector("tbody");
+      if (!body) throw new Error("table has no body");
+      expect(within(body).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
-  it("calls onRowClick when Enter is pressed on a row", async () => {
-    const onRowClick = vi.fn();
-    render(
-      <DataTable
-        data={data}
-        columns={columns}
-        onRowClick={onRowClick}
-        getRowId={(row) => row.id}
-      />
-    );
-    const body = screen.getByRole("table").querySelector("tbody");
-    if (!body) throw new Error("table has no body");
-    const rows = within(body).getAllByRole("button");
-    rows[0].focus();
-    await userEvent.keyboard("{Enter}");
-    expect(onRowClick).toHaveBeenCalled();
-  });
+  describe("rows that open a page", () => {
+    function renderLinked() {
+      return render(
+        <MemoryRouter initialEntries={["/people"]}>
+          <Routes>
+            <Route
+              path="/people"
+              element={
+                <DataTable
+                  data={data}
+                  columns={columns}
+                  getRowHref={(row) => `/people/${row.id}`}
+                  getRowActionLabel={(row) => `Open ${row.name}`}
+                  getRowId={(row) => row.id}
+                />
+              }
+            />
+            <Route path="/people/:id" element={<PersonPage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    }
 
-  it("does not make rows interactive when onRowClick is not provided", () => {
-    render(<DataTable data={data} columns={columns} />);
-    const body = screen.getByRole("table").querySelector("tbody");
-    if (!body) throw new Error("table has no body");
-    expect(within(body).queryAllByRole("button")).toHaveLength(0);
+    it("keeps rows as table rows and makes the primary cell a link to the row's page", () => {
+      renderLinked();
+      const rows = screen.getAllByRole("row").slice(1);
+      expect(rows[0]).not.toHaveAttribute("role");
+      expect(within(rows[0]).getAllByRole("cell")).toHaveLength(2);
+      const link = within(rows[0]).getByRole("link", { name: "Open Alice" });
+      expect(link).toHaveAttribute("href", "/people/1");
+      expect(within(rows[0]).queryByRole("button")).toBeNull();
+    });
+
+    it("follows the link with Enter", async () => {
+      renderLinked();
+      screen.getByRole("link", { name: "Open Bob" }).focus();
+      await userEvent.keyboard("{Enter}");
+      expect(screen.getByText("Person 2")).toBeInTheDocument();
+    });
+
+    it("goes to the row's page on a click elsewhere on the row", async () => {
+      renderLinked();
+      await userEvent.click(screen.getByText("Inactive"));
+      expect(screen.getByText("Person 2")).toBeInTheDocument();
+    });
   });
 
   describe("sorting", () => {

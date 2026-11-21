@@ -2,6 +2,8 @@ import { useTable, flexRender, type RowData } from "@tanstack/react-table";
 import { cn } from "../../utils/cn";
 import Skeleton from "../ui/Skeleton";
 import DataTableHeaderCell from "./DataTableHeaderCell";
+import DataTableBodyRow from "./DataTableBodyRow";
+import DataTableLinkRow from "./DataTableLinkRow";
 import { useControllableState } from "../../hooks/useControllableState";
 import { DATA_TABLE_FEATURES } from "../../constants/data-table-features";
 import { DATA_TABLE_DEFAULT_PAGINATION } from "../../constants/data-table-default-pagination";
@@ -15,6 +17,9 @@ export default function DataTable<T extends RowData>({
   loadingRowCount = 5,
   emptyState,
   onRowClick,
+  getRowHref,
+  primaryColumnId,
+  getRowActionLabel,
   getRowId,
   className,
   sorting,
@@ -57,6 +62,12 @@ export default function DataTable<T extends RowData>({
   const headerGroups = table.getHeaderGroups();
   const rows = table.getRowModel().rows;
   const showEmpty = !loading && rows.length === 0 && emptyState;
+  const columnIds = table.getAllLeafColumns().map((column) => column.id);
+  if (primaryColumnId !== undefined && !columnIds.includes(primaryColumnId)) {
+    throw new Error(`DataTable: primaryColumnId "${primaryColumnId}" is not one of its columns`);
+  }
+  const opens = onRowClick !== undefined || getRowHref !== undefined;
+  const actionColumnId = opens ? (primaryColumnId ?? columnIds[0]) : undefined;
 
   return (
     <div className={cn("w-full overflow-x-auto", className)}>
@@ -85,35 +96,22 @@ export default function DataTable<T extends RowData>({
                   ))}
                 </tr>
               ))
-            : rows.map((row, idx) => (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "border-b transition-colors",
-                    idx % 2 === 1 && "bg-muted/30",
-                    onRowClick && "cursor-pointer hover:bg-muted/60"
-                  )}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  onKeyDown={
-                    onRowClick
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onRowClick(row.original);
-                          }
-                        }
-                      : undefined
-                  }
-                  role={onRowClick ? "button" : undefined}
-                  tabIndex={onRowClick ? 0 : undefined}
-                >
-                  {row.getAllCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2.5">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+            : rows.map((row, idx) => {
+                const rowProps = {
+                  row,
+                  striped: idx % 2 === 1,
+                  actionColumnId,
+                  actionLabel: getRowActionLabel?.(row.original),
+                };
+                if (getRowHref) return <DataTableLinkRow key={row.id} {...rowProps} href={getRowHref(row.original)} />;
+                return (
+                  <DataTableBodyRow
+                    key={row.id}
+                    {...rowProps}
+                    onOpen={onRowClick ? () => onRowClick(row.original) : undefined}
+                  />
+                );
+              })}
         </tbody>
       </table>
       {showEmpty && <div className="py-4">{emptyState}</div>}

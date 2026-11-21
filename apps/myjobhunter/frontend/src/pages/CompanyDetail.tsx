@@ -150,7 +150,6 @@ export default function CompanyDetail() {
         companyName={company.name}
         list={applications}
         onSortingChange={setSorting}
-        onOpen={(applicationId) => navigate(`/applications/${applicationId}`)}
       />
     </div>
   );

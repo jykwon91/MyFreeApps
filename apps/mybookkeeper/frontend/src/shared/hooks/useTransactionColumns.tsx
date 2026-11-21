@@ -11,14 +11,13 @@ import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { SELECTING_ALL_LABEL } from "@/shared/lib/transaction-list-messages";
 import type { SelectAllControl } from "@/shared/types/select-all-control";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { Button } from "@platform/ui";
+import { Button, RowPrimaryAction } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
 import TransactionRowCheckbox from "@/app/features/transactions/TransactionRowCheckbox";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
-import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 
 interface ColumnActions {
   /** Opens a transaction for editing; its vendor is the button that does it. */

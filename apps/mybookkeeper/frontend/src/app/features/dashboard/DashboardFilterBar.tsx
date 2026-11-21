@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRadioGroup } from "@platform/ui";
+import { isOwnClick, useRadioGroup } from "@platform/ui";
 import { Filter, ChevronDown, ChevronUp, X } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { INCOME_CATEGORY_LIST, EXPENSE_CATEGORY_LIST_FILTER } from "@/shared/lib/dashboard-filter-config";
@@ -72,10 +72,8 @@ export default function DashboardFilterBar({
       <div
         className="flex items-center gap-3 px-4 py-3 flex-wrap cursor-pointer"
         onClick={(e) => {
-          // Don't toggle if clicking on interactive children (buttons, dropdowns)
-          const target = e.target as HTMLElement;
-          if (target.closest("button, [role='menu'], [role='menuitemcheckbox'], [data-radix-collection-item]")) return;
-          setExpanded((prev) => !prev);
+          // Clicks on the bar's own controls (and its portalled dropdowns) are theirs, not a toggle.
+          if (isOwnClick(e.target, e.currentTarget)) setExpanded((prev) => !prev);
         }}
       >
         <div className="flex items-center gap-2 text-muted-foreground">

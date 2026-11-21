@@ -42,10 +42,8 @@ test.describe("Companies CRUD", () => {
         page.getByRole("region", { name: /notifications/i }).getByText(/Test Company Inc/),
       ).toBeVisible({ timeout: 5_000 });
 
-      // The company appears in the table — use exact text on the name cell
-      await expect(
-        page.getByRole("button").filter({ hasText: "Test Company Inc" }).first(),
-      ).toBeVisible();
+      // The company appears in the table — its name cell is the row's link
+      await expect(page.getByRole("link", { name: "Test Company Inc", exact: true })).toBeVisible();
       await expect(page.getByText("testcompany.example.com")).toBeVisible();
     } finally {
       await deleteTestUser(request, user);
@@ -71,8 +69,8 @@ test.describe("Companies CRUD", () => {
       await page.getByLabel(/^domain/i).fill("detailtest.example.com");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
-      // Wait for the row to appear in the table (the button role row contains the name)
-      const detailRow = page.getByRole("button").filter({ hasText: "Detail Test Corp" }).first();
+      // Wait for the row to appear in the table (its name cell is the row's link)
+      const detailRow = page.getByRole("link", { name: "Detail Test Corp", exact: true });
       await expect(detailRow).toBeVisible({ timeout: 5_000 });
 
       // Click into the detail row
@@ -111,7 +109,7 @@ test.describe("Companies CRUD", () => {
       await page.getByLabel(/^name/i).fill("To Delete Corp");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
-      const deleteRow = page.getByRole("button").filter({ hasText: "To Delete Corp" }).first();
+      const deleteRow = page.getByRole("link", { name: "To Delete Corp", exact: true });
       await expect(deleteRow).toBeVisible({ timeout: 5_000 });
 
       // Navigate to detail
