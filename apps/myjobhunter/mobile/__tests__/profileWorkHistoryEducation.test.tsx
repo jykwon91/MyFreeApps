@@ -55,11 +55,12 @@ beforeEach(() => {
   mockDecimalSeparator = ".";
 });
 
-/** Opens a date field's picker, turns it to `date`, and closes it again. */
-async function pickDate(label: string, date: Date): Promise<void> {
-  await fireEvent.press(screen.getByRole("button", { name: `Choose ${label.toLowerCase()}` }));
+/** Opens a date field's picker, turns it to `date`, and closes it again. A required field's buttons say so. */
+async function pickDate(label: string, date: Date, required = false): Promise<void> {
+  const suffix = required ? ", required" : "";
+  await fireEvent.press(screen.getByRole("button", { name: `Choose ${label.toLowerCase()}${suffix}` }));
   await fireEvent(screen.getByTestId(`${label}-picker`), "change", {}, date);
-  await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${label.toLowerCase()}` }));
+  await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${label.toLowerCase()}${suffix}` }));
 }
 
 describe("work history", () => {
@@ -83,7 +84,7 @@ describe("work history", () => {
 
     await fireEvent.changeText(screen.getByLabelText(`${WORK.companyLabel}, required`), "  Globex ");
     await fireEvent.changeText(screen.getByLabelText(`${WORK.titleLabel}, required`), "Staff Engineer");
-    await pickDate(WORK.startLabel, new Date(2019, 5, 10));
+    await pickDate(WORK.startLabel, new Date(2019, 5, 10), true);
     expect(screen.getByText("Jun 10, 2019")).toBeTruthy();
     await pickDate(WORK.endLabel, new Date(2022, 0, 31));
     await fireEvent.changeText(screen.getByLabelText(WORK.bulletsLabel), "Shipped billing\n\n  Mentored three engineers  ");
@@ -110,7 +111,7 @@ describe("work history", () => {
     await fireEvent.press(await screen.findByRole("button", { name: WORK.add }));
     await fireEvent.changeText(screen.getByLabelText(`${WORK.companyLabel}, required`), "Globex");
     await fireEvent.changeText(screen.getByLabelText(`${WORK.titleLabel}, required`), "Engineer");
-    await pickDate(WORK.startLabel, new Date(2019, 5, 10));
+    await pickDate(WORK.startLabel, new Date(2019, 5, 10), true);
     await pickDate(WORK.endLabel, new Date(2022, 0, 31));
 
     await fireEvent.press(screen.getByLabelText(WORK.currentLabel));
@@ -131,7 +132,7 @@ describe("work history", () => {
     expect(screen.getByText(PROBLEMS.titleRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.startDateRequired)).toBeTruthy();
 
-    await pickDate(WORK.startLabel, new Date(2022, 0, 1));
+    await pickDate(WORK.startLabel, new Date(2022, 0, 1), true);
     await pickDate(WORK.endLabel, new Date(2021, 0, 1));
     expect(await screen.findByText(PROBLEMS.endBeforeStart)).toBeTruthy();
     expect(sentTo(sent, "POST /work-history")).toEqual([]);
@@ -141,7 +142,7 @@ describe("work history", () => {
     serve(profileRoutes());
     await renderProfile();
     await fireEvent.press(await screen.findByRole("button", { name: WORK.add }));
-    await pickDate(WORK.startLabel, new Date(2019, 5, 10));
+    await pickDate(WORK.startLabel, new Date(2019, 5, 10), true);
     await fireEvent.press(screen.getByRole("button", { name: `Choose ${WORK.endLabel.toLowerCase()}` }));
 
     expect(screen.getByTestId(`${WORK.endLabel}-picker`).props.minimumDate).toEqual(new Date(2019, 5, 10));
@@ -152,7 +153,7 @@ describe("work history", () => {
     serve({ ...profileRoutes({ workHistory: [ACME] }), "PATCH /work-history/wh-1": held.route });
     await renderProfile();
     await fireEvent.press(await screen.findByRole("button", { name: `${PROFILE.edit} Acme Corp` }));
-    await fireEvent.press(screen.getByRole("button", { name: `Change ${WORK.startLabel.toLowerCase()}` }));
+    await fireEvent.press(screen.getByRole("button", { name: `Change ${WORK.startLabel.toLowerCase()}, required` }));
     expect(screen.getByTestId(`${WORK.startLabel}-picker`)).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: PROFILE.saveChanges }));
@@ -161,7 +162,7 @@ describe("work history", () => {
 
     expect(await screen.findByText(WORK.couldntUpdate)).toBeTruthy();
     expect(screen.queryByTestId(`${WORK.startLabel}-picker`)).toBeNull();
-    expect(screen.getByRole("button", { name: `Change ${WORK.startLabel.toLowerCase()}` })).toBeTruthy();
+    expect(screen.getByRole("button", { name: `Change ${WORK.startLabel.toLowerCase()}, required` })).toBeTruthy();
   });
 
   it("edits a role from what's saved, sending every field, and shows the change", async () => {
@@ -219,7 +220,7 @@ describe("work history", () => {
     await fireEvent.press(await screen.findByRole("button", { name: WORK.add }));
     await fireEvent.changeText(screen.getByLabelText(`${WORK.companyLabel}, required`), "Globex");
     await fireEvent.changeText(screen.getByLabelText(`${WORK.titleLabel}, required`), "Engineer");
-    await pickDate(WORK.startLabel, new Date(2019, 5, 10));
+    await pickDate(WORK.startLabel, new Date(2019, 5, 10), true);
     await fireEvent.press(screen.getByRole("button", { name: WORK.create }));
 
     expect(await screen.findByText(WORK.couldntCreate)).toBeTruthy();

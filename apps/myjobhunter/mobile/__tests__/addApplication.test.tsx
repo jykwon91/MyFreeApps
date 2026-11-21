@@ -734,9 +734,9 @@ describe("the day applied", () => {
 
   /** Opens the "Applied on" picker, turns it to `date`, and closes it again. */
   async function pickAppliedOn(date: Date): Promise<void> {
-    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}` }));
+    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}, required` }));
     await fireEvent(screen.getByTestId(`${MESSAGES.appliedOnLabel}-picker`), "change", {}, date);
-    await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${APPLIED_ON}` }));
+    await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${APPLIED_ON}, required` }));
   }
 
   function daysFromToday(days: number): Date {
@@ -748,7 +748,7 @@ describe("the day applied", () => {
     await typeInStripe();
     expect(screen.getByText(formatIsoDate(localToday()))).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}` }));
+    await fireEvent.press(screen.getByRole("button", { name: `Change ${APPLIED_ON}, required` }));
     expect(screen.getByTestId(`${MESSAGES.appliedOnLabel}-picker`).props.maximumDate).toEqual(daysFromToday(0));
   });
 

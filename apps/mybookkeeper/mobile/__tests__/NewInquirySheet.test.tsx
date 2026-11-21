@@ -74,8 +74,8 @@ describe("adding an inquiry by hand", () => {
     expect(screen.getByRole("radio", { name: "Direct" }).props.accessibilityState.checked).toBe(true);
     expect(screen.queryByLabelText(/inquiry ID/)).toBeNull();
     for (const label of ["Email", "Phone", "Employer / hospital", "Notes"]) expect(screen.getByLabelText(label)).toBeTruthy();
-    expect(screen.getByText("Desired start date")).toBeTruthy();
-    expect(screen.getByText("Desired end date")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose desired start date" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose desired end date" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Date received, / })).toBeTruthy();
     expect(screen.getByText("Time received")).toBeTruthy();
   });
