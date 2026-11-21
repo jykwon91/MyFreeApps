@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { useRadioGroup } from "@platform/ui";
 import { cn } from "@/shared/utils/cn";
 import { FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
 import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
@@ -25,6 +26,8 @@ export default function MergeFieldRow({
   onSelect,
   showAmountWarning,
 }: MergeFieldRowProps) {
+  const { getRadioProps } = useRadioGroup(["a", "b"], selected, (side) => onSelect(side as MergeFieldSide));
+
   return (
     <div className="grid grid-cols-[6rem_1fr_1fr] sm:grid-cols-[8rem_1fr_1fr] gap-2 items-center py-2 border-b last:border-b-0">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">
@@ -34,39 +37,41 @@ export default function MergeFieldRow({
         )}
       </span>
 
-      {/* Side A */}
-      <button
-        type="button"
-        onClick={() => onSelect("a")}
-        className={cn(
-          "text-left text-sm rounded px-2 py-1.5 border-l-2 transition-all min-h-[44px] sm:min-h-0 break-words",
-          selected === "a"
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-foreground"
-            : "border-transparent opacity-50 hover:opacity-75",
-        )}
-      >
-        <span className="block text-[10px] font-medium text-muted-foreground mb-0.5 uppercase">
-          {labelA}
-        </span>
-        <span>{valueA ?? "—"}</span>
-      </button>
+      <div role="radiogroup" aria-label={FIELD_LABELS[field]} className="col-span-2 grid grid-cols-2 gap-2">
+        {/* Side A */}
+        <button
+          type="button"
+          {...getRadioProps("a")}
+          className={cn(
+            "text-left text-sm rounded px-2 py-1.5 border-l-2 transition-all min-h-[44px] sm:min-h-0 break-words",
+            selected === "a"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-foreground"
+              : "border-transparent opacity-50 hover:opacity-75",
+          )}
+        >
+          <span className="block text-[10px] font-medium text-muted-foreground mb-0.5 uppercase">
+            {labelA}
+          </span>
+          <span>{valueA ?? "—"}</span>
+        </button>
 
-      {/* Side B */}
-      <button
-        type="button"
-        onClick={() => onSelect("b")}
-        className={cn(
-          "text-left text-sm rounded px-2 py-1.5 border-l-2 transition-all min-h-[44px] sm:min-h-0 break-words",
-          selected === "b"
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-foreground"
-            : "border-transparent opacity-50 hover:opacity-75",
-        )}
-      >
-        <span className="block text-[10px] font-medium text-muted-foreground mb-0.5 uppercase">
-          {labelB}
-        </span>
-        <span>{valueB ?? "—"}</span>
-      </button>
+        {/* Side B */}
+        <button
+          type="button"
+          {...getRadioProps("b")}
+          className={cn(
+            "text-left text-sm rounded px-2 py-1.5 border-l-2 transition-all min-h-[44px] sm:min-h-0 break-words",
+            selected === "b"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-foreground"
+              : "border-transparent opacity-50 hover:opacity-75",
+          )}
+        >
+          <span className="block text-[10px] font-medium text-muted-foreground mb-0.5 uppercase">
+            {labelB}
+          </span>
+          <span>{valueB ?? "—"}</span>
+        </button>
+      </div>
     </div>
   );
 }

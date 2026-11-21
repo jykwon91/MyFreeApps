@@ -891,6 +891,7 @@
         "PublicInquiryForm.test.tsx",
         "publicInquiryMoveInDate.test.ts",
         "ReplyTemplatesManager.test.tsx",
+        "ReplyTemplatePicker.test.tsx",
         "reply-template-renderer.test.ts",
         "list-load-mode.test.ts",
         "detail-load-mode.test.ts",

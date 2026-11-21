@@ -1,3 +1,4 @@
+import { useRadioGroup } from "@platform/ui";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import ReplyTemplateCard from "./ReplyTemplateCard";
 
@@ -19,14 +20,23 @@ export default function ReplyTemplatePicker({
   onSelect,
   disabled = false,
 }: ReplyTemplatePickerProps) {
+  const { getRadioProps } = useRadioGroup(
+    templates.map((template) => template.id),
+    selectedTemplateId,
+    (id) => {
+      const template = templates.find((t) => t.id === id);
+      if (template) onSelect(template);
+    },
+  );
+
   return (
-    <div className="space-y-2 p-3" data-testid="reply-template-picker">
+    <div role="radiogroup" aria-label="Reply template" className="space-y-2 p-3" data-testid="reply-template-picker">
       {templates.map((template) => (
         <ReplyTemplateCard
           key={template.id}
           template={template}
           selected={template.id === selectedTemplateId}
-          onSelect={() => onSelect(template)}
+          radioProps={getRadioProps(template.id)}
           disabled={disabled}
         />
       ))}

@@ -51,6 +51,14 @@ describe("Onboarding \u2014 step 0 (tax situation)", () => {
     expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
   });
 
+  it("exposes each tax situation as a toggle that reports whether it is selected", async () => {
+    renderOnboarding();
+    const rental = screen.getByRole("button", { name: /Rental Properties/ });
+    expect(rental).toHaveAttribute("aria-pressed", "false");
+    await userEvent.setup().click(rental);
+    expect(rental).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("renders Rental Properties as a selectable option", () => {
     renderOnboarding();
     expect(screen.getByText("Rental Properties")).toBeInTheDocument();
@@ -138,6 +146,24 @@ describe("Onboarding \u2014 step navigation", () => {
   it("Next button on step 2 is disabled until a filing status is selected", async () => {
     await advanceToStep1();
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  it("exposes the filing statuses as radios and checks the chosen one", async () => {
+    const user = await advanceToStep1();
+    expect(screen.getByRole("radiogroup", { name: "Filing status" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { checked: true })).toBeNull();
+    await user.click(screen.getByRole("radio", { name: /Single/ }));
+    expect(screen.getByRole("radio", { checked: true })).toHaveTextContent("Single");
+  });
+
+  it("lets the filing status be chosen with the keyboard", async () => {
+    const user = await advanceToStep1();
+    await user.tab();
+    expect(screen.getAllByRole("radio")[0]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getAllByRole("radio")[1]).toHaveFocus();
+    expect(screen.getByRole("radio", { checked: true })).toBe(screen.getAllByRole("radio")[1]);
+    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
   });
 
   it("enables Next on step 2 after selecting a filing status", async () => {

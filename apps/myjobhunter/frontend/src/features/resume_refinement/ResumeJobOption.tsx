@@ -1,3 +1,4 @@
+import type { RadioItemProps } from "@platform/ui";
 import { resumeJobFileName } from "@myjobhunter/api-client/utils/resumeJobFileName";
 import { resumeJobSummary } from "@myjobhunter/api-client/utils/resumeJobSummary";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
@@ -5,14 +6,14 @@ import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-uploa
 interface ResumeJobOptionProps {
   job: ResumeUploadJob;
   selected: boolean;
-  onSelect: () => void;
+  radioProps: RadioItemProps;
 }
 
-export default function ResumeJobOption({ job, selected, onSelect }: ResumeJobOptionProps) {
+export default function ResumeJobOption({ job, selected, radioProps }: ResumeJobOptionProps) {
   return (
     <button
       type="button"
-      onClick={onSelect}
+      {...radioProps}
       className={`w-full text-left rounded-md border p-3 transition ${
         selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
       }`}

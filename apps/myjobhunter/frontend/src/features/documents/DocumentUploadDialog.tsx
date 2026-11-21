@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { LoadingButton, showError, showSuccess, extractErrorMessage, useRadioGroup } from "@platform/ui";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import DocumentTitleField from "./DocumentTitleField";
@@ -35,6 +35,7 @@ export default function DocumentUploadDialog({
 
   const isLoading = creatingText || uploading;
   const titleProblem = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
+  const { getRadioProps } = useRadioGroup(["file", "text"], mode, (next) => setMode(next as CreateMode));
 
   function reset() {
     setTitle("");
@@ -91,10 +92,10 @@ export default function DocumentUploadDialog({
         <h2 className="text-lg font-semibold">Add Document</h2>
 
         {/* Mode toggle */}
-        <div className="flex gap-2 p-1 bg-muted rounded-lg">
+        <div role="radiogroup" aria-label="Document source" className="flex gap-2 p-1 bg-muted rounded-lg">
           <button
             type="button"
-            onClick={() => setMode("file")}
+            {...getRadioProps("file")}
             className={`flex-1 py-1.5 text-sm rounded-md transition-colors ${
               mode === "file" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"
             }`}
@@ -103,7 +104,7 @@ export default function DocumentUploadDialog({
           </button>
           <button
             type="button"
-            onClick={() => setMode("text")}
+            {...getRadioProps("text")}
             className={`flex-1 py-1.5 text-sm rounded-md transition-colors ${
               mode === "text" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"
             }`}

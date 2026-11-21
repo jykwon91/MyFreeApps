@@ -89,6 +89,8 @@ export { default as InlineBoldText } from "./components/ui/InlineBoldText";
 export { default as MultiChipInput } from "./components/ui/MultiChipInput";
 export { default as ToggleChipGroup } from "./components/ui/ToggleChipGroup";
 export type { ToggleOption, ToggleChipGroupProps } from "./components/ui/ToggleChipGroup";
+export { default as TilePicker } from "./components/ui/TilePicker";
+export type { TileOption } from "./components/ui/TilePicker";
 export { default as ThemeToggle } from "./components/ui/ThemeToggle";
 
 // Layout components
@@ -158,6 +160,8 @@ export { default as KofiButton } from "./components/widgets/KofiButton";
 export { default as YouTubeEmbed } from "./components/embed/YouTubeEmbed";
 
 // Hooks
+export { useRadioGroup } from "./hooks/useRadioGroup";
+export type { RadioItemProps } from "./types/RadioItemProps";
 export { useDebouncedValue } from "./hooks/useDebouncedValue";
 export { useForgetMutationArgs } from "./hooks/useForgetMutationArgs";
 export { useMediaQuery } from "./hooks/useMediaQuery";

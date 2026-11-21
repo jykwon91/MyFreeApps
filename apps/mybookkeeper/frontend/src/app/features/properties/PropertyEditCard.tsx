@@ -8,7 +8,7 @@ import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage } from "@platform/ui";
 import { Button, FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
-import TilePicker from "@/shared/components/ui/TilePicker";
+import { TilePicker } from "@platform/ui";
 import { fromProperty, toAddress, addressComplete } from "@mybookkeeper/api-client/utils/propertyForm";
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
@@ -105,6 +105,7 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
       <AddressInputs form={form} onChange={setField} />
       <FormField label="Classification" group>
         <TilePicker
+          ariaLabel="Classification"
           options={CLASSIFICATION_OPTIONS}
           value={form.classification}
           onChange={(v) => setClassification(v as PropertyClassification)}

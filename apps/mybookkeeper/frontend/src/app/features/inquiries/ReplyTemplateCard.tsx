@@ -1,10 +1,11 @@
+import type { RadioItemProps } from "@platform/ui";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { replyTemplatePreview } from "@mybookkeeper/api-client/utils/replyTemplatePreview";
 
 export interface ReplyTemplateCardProps {
   template: ReplyTemplate;
   selected: boolean;
-  onSelect: () => void;
+  radioProps: RadioItemProps;
   disabled?: boolean;
 }
 
@@ -17,7 +18,7 @@ export interface ReplyTemplateCardProps {
 export default function ReplyTemplateCard({
   template,
   selected,
-  onSelect,
+  radioProps,
   disabled = false,
 }: ReplyTemplateCardProps) {
   const preview = replyTemplatePreview(template.body_template);
@@ -25,7 +26,7 @@ export default function ReplyTemplateCard({
   return (
     <button
       type="button"
-      onClick={onSelect}
+      {...radioProps}
       disabled={disabled}
       data-testid={`reply-template-card-${template.id}`}
       data-selected={selected ? "true" : "false"}

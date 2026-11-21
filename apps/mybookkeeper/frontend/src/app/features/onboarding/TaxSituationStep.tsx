@@ -20,7 +20,7 @@ export default function TaxSituationStep({ value, onChange }: TaxSituationStepPr
       <p className="text-sm text-muted-foreground">
         Select everything that applies to you — I'll use this to figure out which tax forms are relevant.
       </p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div role="group" aria-label="Tax situation" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {TAX_SITUATION_OPTIONS.map((option) => {
           const selected = value.includes(option.value);
           return (
@@ -28,6 +28,7 @@ export default function TaxSituationStep({ value, onChange }: TaxSituationStepPr
               key={option.value}
               type="button"
               onClick={() => toggle(option.value)}
+              aria-pressed={selected}
               className={cn(
                 "text-left rounded-lg border p-4 transition-colors min-h-[44px]",
                 selected

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRadioGroup } from "@platform/ui";
 import { Filter, ChevronDown, ChevronUp, X } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { INCOME_CATEGORY_LIST, EXPENSE_CATEGORY_LIST_FILTER } from "@/shared/lib/dashboard-filter-config";
@@ -54,12 +55,20 @@ export default function DashboardFilterBar({
   const incomeUntouched = !touchedGroups.has("income") && INCOME_CATEGORY_LIST.every((cat) => selectedCategories.has(cat));
   const expenseUntouched = !touchedGroups.has("expenses") && EXPENSE_CATEGORY_LIST_FILTER.every((cat) => selectedCategories.has(cat));
 
+  const activePreset = PRESETS.find((p) => (p.key === "all" ? !isFiltered : preset === p.key))?.key ?? null;
+  const { getRadioProps } = useRadioGroup(
+    PRESETS.map((p) => p.key),
+    activePreset,
+    (key) => { onSetPreset(key as CategoryFilterPreset); setTouchedGroups(new Set()); },
+  );
+
   const hasPropertyFilter = selectedPropertyIds.length > 0;
   const hasAnyFilter = isFiltered || hasPropertyFilter;
 
   return (
     <div className="bg-card border rounded-lg" data-testid="dashboard-filter-bar">
-      {/* Compact bar: property dropdown + category presets + toggle — entire row expands */}
+      {/* Compact bar: property dropdown + category presets + toggle. A click on empty space also
+          expands it; keyboard users use the expand toggle button, so the row itself is not a control. */}
       <div
         className="flex items-center gap-3 px-4 py-3 flex-wrap cursor-pointer"
         onClick={(e) => {
@@ -68,9 +77,6 @@ export default function DashboardFilterBar({
           if (target.closest("button, [role='menu'], [role='menuitemcheckbox'], [data-radix-collection-item]")) return;
           setExpanded((prev) => !prev);
         }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((prev) => !prev); } }}
       >
         <div className="flex items-center gap-2 text-muted-foreground">
           <Filter size={16} />
@@ -102,14 +108,14 @@ export default function DashboardFilterBar({
         )}
 
         {/* Category preset buttons */}
-        <div className="flex gap-1.5">
+        <div role="radiogroup" aria-label="Category filter" className="flex gap-1.5">
           {PRESETS.map((p) => {
-            const isActive = p.key === "all" ? !isFiltered : preset === p.key;
+            const isActive = p.key === activePreset;
             return (
               <button
                 key={p.key}
                 type="button"
-                onClick={() => { onSetPreset(p.key); setTouchedGroups(new Set()); }}
+                {...getRadioProps(p.key)}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] sm:min-h-[32px]",
                   isActive

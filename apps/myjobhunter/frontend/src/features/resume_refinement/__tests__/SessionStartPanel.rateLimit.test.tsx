@@ -25,7 +25,9 @@ vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
 }));
 
 vi.mock("@/features/resume_refinement/ResumeJobOption", () => ({
-  default: ({ onSelect }: { onSelect: () => void }) => <button onClick={onSelect}>pick resume</button>,
+  default: ({ radioProps }: { radioProps: { onClick: () => void } }) => (
+    <button onClick={radioProps.onClick}>pick resume</button>
+  ),
 }));
 
 describe("SessionStartPanel rate limit", () => {

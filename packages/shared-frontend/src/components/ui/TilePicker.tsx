@@ -1,4 +1,5 @@
 import { cn } from "../../utils/cn";
+import { useRadioGroup } from "../../hooks/useRadioGroup";
 
 export interface TileOption {
   value: string;
@@ -11,18 +12,40 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   columns?: 1 | 2;
+  /** Accessible name of the group (what is being chosen). */
+  ariaLabel?: string;
+  /** Id of an element that names the group, used instead of ariaLabel. */
+  ariaLabelledBy?: string;
 }
 
-export default function TilePicker({ options, value, onChange, columns = 1 }: Props) {
+export default function TilePicker({
+  options,
+  value,
+  onChange,
+  columns = 1,
+  ariaLabel,
+  ariaLabelledBy,
+}: Props) {
+  const { getRadioProps } = useRadioGroup(
+    options.map((option) => option.value),
+    value,
+    onChange,
+  );
+
   return (
-    <div className={cn("grid gap-3", columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      className={cn("grid gap-3", columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}
+    >
       {options.map((option) => {
         const selected = value === option.value;
         return (
           <button
             key={option.value}
             type="button"
-            onClick={() => onChange(option.value)}
+            {...getRadioProps(option.value)}
             className={cn(
               "text-left rounded-lg border p-4 transition-colors min-h-[44px] flex items-start gap-3",
               selected
@@ -31,6 +54,7 @@ export default function TilePicker({ options, value, onChange, columns = 1 }: Pr
             )}
           >
             <span
+              aria-hidden="true"
               className={cn(
                 "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
                 selected ? "border-primary bg-primary" : "border-muted-foreground",
