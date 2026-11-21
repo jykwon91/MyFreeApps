@@ -35,6 +35,7 @@ function gearItem(id: number, over: Partial<ClientItem>): ClientItem {
     stats: {},
     classes: null,
     damageUnknown: false,
+    spellPowerUnknown: false,
     otherEffects: 0,
     randomSuffix: false,
     ...over,

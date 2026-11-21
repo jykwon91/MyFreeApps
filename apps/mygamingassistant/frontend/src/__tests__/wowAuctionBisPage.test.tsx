@@ -37,6 +37,7 @@ function neck(id: number, requiredLevel = 0): ClientItem {
     stats: { spell_damage: id },
     classes: null,
     damageUnknown: false,
+    spellPowerUnknown: false,
     otherEffects: 0,
     randomSuffix: false,
   };

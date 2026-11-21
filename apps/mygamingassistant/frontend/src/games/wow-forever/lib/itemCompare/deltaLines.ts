@@ -37,6 +37,7 @@ export function deltaLines(delta: ItemDelta): DeltaLine[] {
 export function deltaNotes(delta: ItemDelta): string[] {
   const notes: string[] = [];
   if (delta.damageNotCompared) notes.push(COPY.damageNotCompared);
+  if (delta.spellPowerUnknown) notes.push(COPY.spellPowerNotCompared);
   if (delta.otherEffects) notes.push(COPY.otherEffectsNotCompared);
   return notes;
 }

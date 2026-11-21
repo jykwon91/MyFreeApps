@@ -30,6 +30,7 @@ function clientItem(overrides: Partial<ClientItem>): ClientItem {
     classes: null,
     damageUnknown: false,
     otherEffects: 0,
+    spellPowerUnknown: false,
     randomSuffix: false,
     ...overrides,
   };
@@ -145,7 +146,7 @@ describe("what changes between two items", () => {
   it("reports identical items as no change", () => {
     const item = clientItem({ armor: 30, stats: { stamina: 5 } });
     const delta = compareItems(item, { ...item, id: 2 });
-    expect(delta).toEqual({ stats: [], armor: 0, dps: null, otherEffects: false, damageNotCompared: false });
+    expect(delta).toEqual({ stats: [], armor: 0, dps: null, otherEffects: false, damageNotCompared: false, spellPowerUnknown: false });
     expect(deltaLines(delta)).toEqual([]);
   });
 });
@@ -163,6 +164,7 @@ describe("the delta's lines", () => {
       dps: 2.5,
       otherEffects: false,
       damageNotCompared: false,
+      spellPowerUnknown: false,
     });
     expect(lines.map((l) => l.text)).toEqual([
       "−4 Armor",
@@ -268,6 +270,16 @@ describe("what a comparison cannot cover", () => {
       expect(deltaNotes(delta)).toEqual(["Damage not compared"]);
     }
     expect(compareItems(known, known).damageNotCompared).toBe(false);
+  });
+
+  it("flags spell power as unknown when either item is a caster weapon without spell stats in the game files", () => {
+    const plain = clientItem({ slot: "main_hand" });
+    const cane = clientItem({ slot: "main_hand", spellPowerUnknown: true });
+    for (const delta of [compareItems(plain, cane), compareItems(cane, plain)]) {
+      expect(delta.spellPowerUnknown).toBe(true);
+      expect(deltaNotes(delta)).toContain("Spell power isn't in the game files for one of these items, so it isn't counted");
+    }
+    expect(compareItems(plain, plain).spellPowerUnknown).toBe(false);
   });
 });
 

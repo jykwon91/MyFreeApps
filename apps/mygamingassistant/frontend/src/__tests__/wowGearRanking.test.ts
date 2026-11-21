@@ -27,6 +27,7 @@ function item(id: number, patch: Partial<ClientItem>): ClientItem {
     stats: {},
     classes: null,
     damageUnknown: false,
+    spellPowerUnknown: false,
     otherEffects: 0,
     randomSuffix: false,
     ...patch,

@@ -44,6 +44,7 @@ function clientItem(overrides: Partial<ClientItem>): ClientItem {
     classes: null,
     damageUnknown: false,
     otherEffects: 0,
+    spellPowerUnknown: false,
     randomSuffix: false,
     ...overrides,
   };
@@ -289,6 +290,22 @@ describe("Auction house item tooltip", () => {
     hover();
     const block = screen.getByTestId("item-compare-block");
     expect(block).toHaveTextContent("Damage not compared");
+    expect(block).not.toHaveTextContent("No stat changes");
+  });
+
+  it("says spell power is not in the game files when the worn item is a caster weapon without spell stats", () => {
+    saveCharacter();
+    const staff = clientItem({ slot: "main_hand", stats: {} });
+    tooltipData.mockReturnValue({ status: ITEM_TOOLTIP_STATUS.READY, data: { item: staff, facts: { bind: null, buyPrice: null, crafted: [] } } });
+    clientItems.mockReturnValue({
+      status: LOAD_STATUS.ready,
+      list: { byId: new Map([[WORN_RING_ID, clientItem({ id: WORN_RING_ID, slot: "main_hand", stats: {}, spellPowerUnknown: true })]]) },
+    });
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [worn("MAIN_HAND", WORN_RING_ID, "Zum'rah's Vexing Cane")] }, isError: false });
+    renderName();
+    hover();
+    const block = screen.getByTestId("item-compare-block");
+    expect(block).toHaveTextContent("Spell power isn't in the game files for one of these items, so it isn't counted");
     expect(block).not.toHaveTextContent("No stat changes");
   });
 

@@ -41,6 +41,7 @@ export default function ItemStatsBlock({ item, facts, showVendorPrice = true, cl
         </>
       ) : null}
       {item.damageUnknown ? <p className="text-muted-foreground">Damage isn't in the game files.</p> : null}
+      {item.spellPowerUnknown ? <p className="text-muted-foreground">Spell power isn't in the game files.</p> : null}
       {item.armor ? <p>{item.armor} Armor</p> : null}
       {lines
         .filter((line) => !line.equip)

@@ -247,3 +247,13 @@ def test_random_suffix_items(items: dict[int, dict[str, Any]]) -> None:
     assert suffix["source"].startswith("cmangos/classic-db@")
     assert suffix["ids"] and set(suffix["ids"]) <= set(items)
     assert (ITEMS_DIR / "classic" / "LICENSE").exists()
+
+
+@pytest.mark.parametrize(("item_id", "expected"), [
+    # Zum'rah's Vexing Cane (18082): Flags_4 & 0x100, no spell stat => spellPowerUnknown.
+    (18082, 1),
+    # Twisted Shadow Staff (282014): Flags_4 & 0x100, but has stat 88 (shadow_spell_damage) => not unknown.
+    (282014, 0),
+])
+def test_caster_weapon_spell_power_unknown(items: dict[int, dict[str, Any]], item_id: int, expected: int) -> None:
+    assert items[item_id]["spellPowerUnknown"] == expected

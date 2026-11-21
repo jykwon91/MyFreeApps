@@ -6,6 +6,12 @@
     "to": "/wow-forever/compare"
   },
   {
+    "date": "2026-11-21",
+    "title": "Caster weapon spell power note",
+    "summary": "When comparing a caster weapon on the auction house against one you wear, a note now appears if either weapon gets hidden spell power from the game that isn't in the item files — so the comparison is never shown as complete when it isn't.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
     "date": "2026-11-20",
     "title": "Auction House: sort results by column",
     "summary": "Click any column header — Item, Market value, Cheapest, or On sale — to sort the results by that column. Click again to reverse direction. The sort is saved in the link so sharing it keeps the order.",

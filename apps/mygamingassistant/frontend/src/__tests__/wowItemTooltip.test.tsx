@@ -37,6 +37,7 @@ const FELCLOTH_PANTS: ClientItem = {
   stats: { intellect: 12, shadow_spell_damage: 26 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };

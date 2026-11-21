@@ -20,6 +20,7 @@ const RANKED: RankedGearItem = {
     stats: { intellect: 12 },
     classes: null,
     damageUnknown: false,
+    spellPowerUnknown: false,
     otherEffects: 0,
     randomSuffix: false,
   },

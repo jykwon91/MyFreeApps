@@ -43,6 +43,7 @@ const ITEM: ClientItem = {
   stats: { spirit: 4, stamina: 9, hit_pct: 1 },
   classes: null,
   damageUnknown: false,
+  spellPowerUnknown: false,
   otherEffects: 0,
   randomSuffix: false,
 };

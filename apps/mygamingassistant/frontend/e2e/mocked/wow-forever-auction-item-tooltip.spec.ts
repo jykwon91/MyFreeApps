@@ -24,6 +24,9 @@ const NOW = new Date("2026-11-13T12:00:00Z");
 const PRECISION_RING = 1491; // +6 Agility, +3 Spirit
 const DEFIAS_RING = 1076; // +4 Agility, +6 Stamina
 const FREEZING_BAND = 942; // +13 Frost spell damage
+// Caster weapon pair: Shadow Staff has spell stats (spellPowerUnknown=0); the Cane has none (=1).
+const SHADOW_STAFF = 282014; // Twisted Shadow Staff — Flags_4 & 0x100, has shadow_spell_damage
+const ZUMRAHS_CANE = 18082; // Zum'rah's Vexing Cane — Flags_4 & 0x100, no spell stat
 
 const PRICE_ROWS: [number, string][] = [
   [PRECISION_RING, "Ring of Precision"],
@@ -205,6 +208,40 @@ test("the name is a 44px target, and the keyboard opens the dialog, reaches its 
   await page.keyboard.press("Escape");
   await expect(tooltip).toHaveCount(0);
   await expect(name).toBeFocused();
+});
+
+test("hovering a caster weapon over a worn caster weapon without spell stats notes spell power isn't counted", async ({ page }) => {
+  // Shadow Staff on the AH, Cane worn in main hand. The Cane has hidden spell power
+  // the game files don't give, so the note must appear.
+  const caneCharacter = {
+    slug: "jason-kwon", name: "Jason", surname: "Kwon", level: 60,
+    class_name: "Warlock",
+    items: [{ ...worn("MAIN_HAND", ZUMRAHS_CANE, "Zum'rah's Vexing Cane"), inventory_type: "WEAPON" }],
+  };
+  await page.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [PLAYER_KEY, JSON.stringify({ faction: "A", classId: "warlock", zoneId: null, level: 60, position: null, characterSlug: "jason-kwon" })],
+  );
+  await page.route("**/wow/prices**", (route) =>
+    route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        region: "us", server: "pvp", faction: "alliance",
+        source_updated_at: UPDATED_AT, fetched_at: UPDATED_AT,
+        columns: COLUMNS,
+        items: [[SHADOW_STAFF, 5000, 4500, 1, 1, "Twisted Shadow Staff"]],
+      }),
+    }),
+  );
+  await page.route((url) => /\/wow\/characters\/[^/]+$/.test(url.pathname), (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(caneCharacter) }),
+  );
+  const name = await rowName(page, "Twisted Shadow Staff");
+  await name.hover();
+  const tooltip = page.getByTestId("item-compare-tooltip");
+  await expect(tooltip).toBeVisible();
+  const block = tooltip.getByTestId("item-compare-block").filter({ hasText: "Zum'rah's Vexing Cane" });
+  await expect(block).toContainText("Spell power isn't in the game files for one of these items, so it isn't counted");
 });
 
 test("a character that fails to load is a short note, and the item's stats still show", async ({ page }) => {

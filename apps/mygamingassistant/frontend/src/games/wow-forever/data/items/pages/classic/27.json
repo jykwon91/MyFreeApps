@@ -168,6 +168,7 @@
 "14235":{"drop":{"world":true,"levels":[32,45],"mobs":[["Ironeye the Invincible",37,37,0.2,1441,"The Shimmering Flats",87.2,78.4,"rare"]],"more":0,"zones":[1441]}},
 "14299":{"drop":{"world":true,"levels":[48,58],"mobs":[],"more":0,"zones":[]},"instance":{"mobs":[["Princess Theradras",51,51,0.2,349,"boss"]],"more":0}},
 "14427":{"drop":{"world":true,"levels":[44,51],"mobs":[["The Reak",49,49,0.4,1425,"Skulk Rock",58.9,43.1,"rare"]],"more":0,"zones":[1425]}},
+"14555":{"drop":{"world":true,"levels":[58,63],"mobs":[],"more":0,"zones":[]}},
 "14683":{"drop":{"world":true,"levels":[54,61],"mobs":[],"more":0,"zones":[]}},
 "14747":{"drop":{"world":true,"levels":[18,26],"mobs":[["Swiftmane",21,21,0.7,1413,"Ratchet",61.2,34.5,"rare"]],"more":0,"zones":[1413]},"instance":{"mobs":[["Edwin VanCleef",21,21,0.0,36,"boss"]],"more":0}},
 "14811":{"drop":{"world":true,"levels":[58,63],"mobs":[["Azuregos",63,63,2.5,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,2.5,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Emeriss",63,63,1.6,2832,"boss"],["Lethon",63,63,1.6,2832,"boss"],["Nefarian",63,63,1.6,469,"boss"],["Taerar",63,63,1.6,2832,"boss"],["Ysondre",63,63,1.6,2832,"boss"],["Gahz'ranka",63,63,0.8,309,"boss"]],"more":1}},

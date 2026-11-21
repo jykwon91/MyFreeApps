@@ -10,6 +10,7 @@ import type { WeaponStats } from "@/games/wow-forever/types/compareItem";
 const COLUMNS = [
   "id", "name", "quality", "slot", "itemType", "itemLevel", "requiredLevel",
   "armor", "weapon", "stats", "classes", "damageUnknown", "otherEffects",
+  "spellPowerUnknown",
 ] as const;
 
 type Column = (typeof COLUMNS)[number];
@@ -85,6 +86,7 @@ export function decodeClientItems(file: ClientItemFile, randomSuffixIds: readonl
       classes: classesOf(row[at.classes]),
       damageUnknown: row[at.damageUnknown] === 1,
       otherEffects: num(row[at.otherEffects]),
+      spellPowerUnknown: row[at.spellPowerUnknown] === 1,
       randomSuffix: suffix.has(id),
     });
   }
