@@ -112,7 +112,7 @@ async def create_invite(
     # service has already returned). If SMTP fails the row stays — the
     # admin can resend via a future cancel-and-reissue flow rather than
     # being left with an orphan email-but-no-row.
-    send_invite_email(result.invite.email, result.raw_token)
+    await send_invite_email(result.invite.email, result.raw_token)
     return _to_read(result.invite)
 
 

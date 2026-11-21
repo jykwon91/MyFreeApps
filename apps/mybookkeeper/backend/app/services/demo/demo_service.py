@@ -93,7 +93,7 @@ async def create_demo_user(
     email_sent = False
     if recipient_email:
         app_url = settings.app_url or settings.frontend_url or "https://mybookkeeper.app"
-        email_sent = send_demo_invite(
+        email_sent = await send_demo_invite(
             recipient_email=recipient_email,
             display_name=tag,
             login_email=email,

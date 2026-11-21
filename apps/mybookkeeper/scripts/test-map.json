@@ -134,6 +134,7 @@
         "test_account_deletion.py",
         "test_data_export.py",
         "test_email_verification.py",
+        "test_auth_email_delivery.py",
         "test_login_ip_rate_limit.py",
         "test_password_validation.py",
         "test_totp_service.py",

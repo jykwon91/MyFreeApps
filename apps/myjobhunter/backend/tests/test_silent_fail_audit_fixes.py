@@ -175,7 +175,7 @@ class TestVerificationEmailRaisesOnFailure:
     propagates failures — these tests verify that contract is intact.
     """
 
-    def test_send_failure_propagates(self) -> None:
+    async def test_send_failure_propagates(self) -> None:
         """When the underlying send raises, send_verification_email must
         propagate it rather than catching and returning False."""
         from app.services.email.email_sender import EmailSendError
@@ -183,12 +183,12 @@ class TestVerificationEmailRaisesOnFailure:
 
         with patch(
             "app.services.email.verification_email.send_email_or_raise",
-            side_effect=EmailSendError("SMTP connection refused"),
+            side_effect=EmailSendError("SMTP connection refused", kind="transient"),
         ):
             with pytest.raises(EmailSendError):
-                send_verification_email("user@example.com", "tok123")
+                await send_verification_email("user@example.com", "tok123")
 
-    def test_not_configured_propagates(self) -> None:
+    async def test_not_configured_propagates(self) -> None:
         """When email is not configured, the error propagates — not swallowed."""
         from app.services.email.email_sender import EmailNotConfiguredError
         from app.services.email.verification_email import send_verification_email
@@ -198,9 +198,9 @@ class TestVerificationEmailRaisesOnFailure:
             side_effect=EmailNotConfiguredError("no backend configured"),
         ):
             with pytest.raises(EmailNotConfiguredError):
-                send_verification_email("user@example.com", "tok123")
+                await send_verification_email("user@example.com", "tok123")
 
-    def test_send_success_does_not_raise(self) -> None:
+    async def test_send_success_does_not_raise(self) -> None:
         """When send succeeds, the function completes without raising."""
         from app.services.email.verification_email import send_verification_email
 
@@ -209,7 +209,7 @@ class TestVerificationEmailRaisesOnFailure:
             return_value=None,
         ):
             # Must complete without raising
-            send_verification_email("user@example.com", "tok123")
+            await send_verification_email("user@example.com", "tok123")
 
 
 # ---------------------------------------------------------------------------

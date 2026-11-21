@@ -1,7 +1,6 @@
 """Tell the operator, once, when a rent reminder didn't go out."""
 from __future__ import annotations
 
-import asyncio
 import html
 import logging
 import uuid
@@ -99,8 +98,8 @@ async def alert_operator(send_id: uuid.UUID) -> bool:
     if not operator:
         logger.warning("Rent reminder %s failed and the operator has no email", send_id)
         return False
-    delivered = await asyncio.to_thread(
-        email_service.send_email, [operator], subject, email_html(body),
+    delivered = await email_service.send_email(
+        [operator], subject, email_html(body),
     )
     if not delivered:
         logger.warning("Could not email the operator about failed reminder %s", send_id)

@@ -9,12 +9,15 @@ injected, so nothing depends on the real clock except the repository's own
 from __future__ import annotations
 
 import datetime as _dt
+import io
+import smtplib
 import uuid
 from contextlib import ExitStack, asynccontextmanager
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from platform_shared.services.email_service import EmailService
 from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,8 +59,8 @@ def wired(db: AsyncSession):
     """Route every reminder module's transactions into the test session and
     mock the outside world. Yields the email/SMS mocks."""
     fake = _fake_uow(db)
-    send_email_or_raise = MagicMock()
-    send_email = MagicMock(return_value=True)
+    send_email_or_raise = AsyncMock()
+    send_email = AsyncMock(return_value=True)
     sms_send = MagicMock(return_value="httpsms-msg-1")
     with ExitStack() as stack:
         for target in (
@@ -173,7 +176,44 @@ class TestProjectionMatchesGenerator:
         assert [p.amount for p in projected] == [Decimal("822.58"), Decimal("750.00")]
 
 
+class _OfflineSmtp(smtplib.SMTP):
+    """Real smtplib command encoding over a fake socket that answers 250."""
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        super().__init__()
+        self.sock = MagicMock()
+        self.file = io.BytesIO(b"250 ok\r\n" * 10)
+        self.ehlo_resp = b"ok"
+        self.esmtp_features = {}
+
+    def starttls(self, *_args: object, **_kwargs: object) -> tuple[int, bytes]:
+        return 220, b"ready"
+
+    def login(self, *_args: object, **_kwargs: object) -> tuple[int, bytes]:
+        return 235, b"ok"
+
+
 class TestScheduledSend:
+    @pytest.mark.asyncio
+    async def test_unsendable_address_is_an_email_send_failure(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        # smtplib sends addresses as ASCII; a non-ASCII one used to escape as
+        # UnicodeEncodeError and be recorded as an unexpected crash.
+        applicant_id = await _tenant(db)
+        applicant = await db.get(Applicant, applicant_id)
+        applicant.contact_email = "jos\u00e9@example.com"
+        await db.flush()
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        real = EmailService(smtp_host="smtp.example.com", smtp_user="u@example.com", smtp_password="p")
+        wired["email"].side_effect = real.send_or_raise_async
+
+        with patch("smtplib.SMTP", _OfflineSmtp):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "email_send_failed")
+
     @pytest.mark.asyncio
     async def test_sends_once_and_is_idempotent(self, db: AsyncSession, wired) -> None:
         applicant_id = await _tenant(db)

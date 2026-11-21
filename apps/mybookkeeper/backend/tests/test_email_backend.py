@@ -23,23 +23,24 @@ def backend(request: pytest.FixtureRequest) -> Iterator[None]:
 
 
 @pytest.mark.parametrize("backend", ["console"], indirect=True)
-def test_console_logs_the_send_without_smtp(backend: None, caplog: pytest.LogCaptureFixture) -> None:
+async def test_console_logs_the_send_without_smtp(backend: None, caplog: pytest.LogCaptureFixture) -> None:
     with patch("smtplib.SMTP") as smtp, caplog.at_level("INFO"):
-        email_service.send_email_or_raise(["owner@example.com"], "Verify your email", "<p>Hi</p>")
+        await email_service.send_email_or_raise(["owner@example.com"], "Verify your email", "<p>Hi</p>")
     smtp.assert_not_called()
     assert "[email:console]" in caplog.text
     assert email_service.is_configured() is True
 
 
 @pytest.mark.parametrize("backend", ["smtp"], indirect=True)
-def test_smtp_still_sends_over_smtp(backend: None) -> None:
+async def test_smtp_still_sends_over_smtp(backend: None) -> None:
     with (
         patch.object(settings, "smtp_user", "mbk@example.com"),
         patch.object(settings, "smtp_password", "app-password"),
         patch("smtplib.SMTP") as smtp,
     ):
+        smtp.return_value.sendmail.return_value = {}
         email_service._get_email_service.cache_clear()
-        email_service.send_email_or_raise(["owner@example.com"], "Verify your email", "<p>Hi</p>")
+        await email_service.send_email_or_raise(["owner@example.com"], "Verify your email", "<p>Hi</p>")
     smtp.assert_called_once()
 
 

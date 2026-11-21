@@ -148,8 +148,7 @@ async def _send(outbound: _Outbound) -> str | None:
         recipient = (outbound.tenant_email or "").strip()
         if not recipient:
             raise _Undeliverable(ERROR_NO_RECIPIENT)
-        await asyncio.to_thread(
-            email_service.send_email_or_raise,
+        await email_service.send_email_or_raise(
             [recipient],
             outbound.subject,
             alerts.email_html(outbound.body),

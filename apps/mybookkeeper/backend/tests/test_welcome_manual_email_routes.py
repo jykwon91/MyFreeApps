@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -116,7 +116,7 @@ class TestDemoAccounts:
             yield db
 
         monkeypatch.setattr("app.core.permissions.AsyncSessionLocal", _same_session)
-        send_email = MagicMock(return_value=True)
+        send_email = AsyncMock(return_value=True)
         monkeypatch.setattr(
             "app.services.welcome_manuals.welcome_manual_email_service.email_service.send_email", send_email,
         )
@@ -202,7 +202,7 @@ class TestSendOutcomes:
         )
         captured: dict[str, object] = {}
 
-        def _fake_send(to, subject, body_html, *, attachments=None, reply_to=None):
+        async def _fake_send(to, subject, body_html, *, attachments=None, reply_to=None):
             captured["to"] = to
             captured["subject"] = subject
             captured["attachments"] = attachments
@@ -258,7 +258,7 @@ class TestSendOutcomes:
             lambda: False,
         )
         # send_email must NOT be called when unconfigured.
-        def _explode(*a, **k):  # pragma: no cover - asserts it's never called
+        async def _explode(*a, **k):  # pragma: no cover - asserts it's never called
             raise AssertionError("send_email should not be called when SMTP unconfigured")
 
         monkeypatch.setattr(
@@ -297,7 +297,7 @@ class TestSendOutcomes:
         )
         monkeypatch.setattr(
             welcome_manual_email_service.email_service, "send_email",
-            lambda *a, **k: False,
+            AsyncMock(return_value=False),
         )
 
         _override_auth(test_org.id, test_user.id)

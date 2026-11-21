@@ -171,7 +171,7 @@ async def send_inquiry_notification(
     )
 
     try:
-        return email_service.send_email([operator_email], subject, body)
+        return await email_service.send_email([operator_email], subject, body)
     except Exception:  # noqa: BLE001 — email failures must not crash the request
         logger.warning(
             "Failed to send inquiry notification for %s", inquiry_id, exc_info=True,

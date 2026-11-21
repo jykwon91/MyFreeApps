@@ -99,7 +99,7 @@ class UserManager(PlatformBaseUserManager[User]):
         kennethmontgo@gmail.com bug class (registered-but-unverified
         account with no recovery path).
         """
-        send_verification_email(user.email, token)
+        await send_verification_email(user.email, token)
         logger.info("Verification email sent to %s", user.email)
         await log_auth_event(
             self.user_db.session,
@@ -117,7 +117,7 @@ class UserManager(PlatformBaseUserManager[User]):
         fails 5xx and the user retries — never returns 2xx with the reset
         email lost.
         """
-        send_password_reset_email(user.email, token)
+        await send_password_reset_email(user.email, token)
         logger.info("Password reset email sent to %s", user.email)
         await log_auth_event(
             self.user_db.session,

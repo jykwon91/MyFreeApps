@@ -7,6 +7,8 @@ Covers:
 - Best-effort send() returning bool (for non-critical emails).
 - Critical-path send_or_raise() raising on any failure (for verification,
   password reset, and other emails where silent loss leaves the user broken).
+- The SMTP timeout, the typed EmailSendError (kind / smtp_code / refused
+  recipients), and the *_async methods that keep the send off the event loop.
 """
 import smtplib
 import ssl
@@ -19,6 +21,13 @@ from platform_shared.services.email_service import (
     EmailSendError,
     EmailService,
 )
+
+
+def _accepting_server() -> MagicMock:
+    """A mock SMTP connection whose ``sendmail`` accepts every recipient."""
+    server = MagicMock()
+    server.sendmail.return_value = {}
+    return server
 
 
 def _configured_service() -> EmailService:
@@ -37,11 +46,10 @@ class TestStarttlsContext:
     def test_starttls_called_with_ssl_context(self) -> None:
         """Verify starttls receives a non-None SSLContext on a successful send."""
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
 
             service.send(["recipient@example.com"], "Subject", "<p>Body</p>")
 
@@ -62,7 +70,7 @@ class TestStarttlsContext:
         """The SSLContext should be created via ssl.create_default_context()
         so CA verification and hostname checking are on by default."""
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[ssl.SSLContext] = []
 
         def _capture_starttls(*args: object, **kwargs: object) -> None:
@@ -73,8 +81,7 @@ class TestStarttlsContext:
         mock_server.starttls.side_effect = _capture_starttls
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
 
             service.send(["recipient@example.com"], "Subject", "<p>Body</p>")
 
@@ -109,11 +116,10 @@ class TestEmailServiceBehaviour:
 
     def test_send_returns_true_on_success(self) -> None:
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
 
             result = service.send(["x@example.com"], "subj", "<p>body</p>")
 
@@ -158,6 +164,7 @@ class TestSendOrRaise:
         with patch("smtplib.SMTP", side_effect=underlying):
             with pytest.raises(EmailSendError) as exc:
                 service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        assert exc.value.smtp_code == 550
         cause = exc.value.__cause__
         assert isinstance(cause, smtplib.SMTPDataError)
         assert cause.smtp_code == 550
@@ -165,11 +172,10 @@ class TestSendOrRaise:
 
     def test_returns_none_on_success(self) -> None:
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
 
             result = service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
 
@@ -205,15 +211,14 @@ class TestAttachments:
 
     def test_no_attachments_keeps_alternative_envelope(self) -> None:
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             service.send_or_raise(
                 ["x@example.com"], "subj", "<p>body</p>",
             )
@@ -225,15 +230,14 @@ class TestAttachments:
         from platform_shared.services.email_attachment import EmailAttachment
 
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             service.send_or_raise(
                 ["x@example.com"], "subj", "<p>body</p>",
                 attachments=[
@@ -258,7 +262,7 @@ class TestAttachments:
         from platform_shared.services.email_attachment import EmailAttachment
 
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
@@ -271,8 +275,7 @@ class TestAttachments:
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             service.send_or_raise(
                 ["x@example.com"], "subj", "<p>body</p>",
                 attachments=[
@@ -293,15 +296,14 @@ class TestAttachments:
         from platform_shared.services.email_attachment import EmailAttachment
 
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             ok = service.send(
                 ["x@example.com"], "subj", "<p>body</p>",
                 attachments=[
@@ -325,15 +327,14 @@ class TestReplyTo:
 
     def _capture_raw(self, reply_to: str | None) -> str:
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             service.send_or_raise(
                 ["guest@example.com"], "subj", "<p>body</p>", reply_to=reply_to,
             )
@@ -351,15 +352,14 @@ class TestReplyTo:
 
     def test_send_best_effort_threads_reply_to(self) -> None:
         service = _configured_service()
-        mock_server = MagicMock()
+        mock_server = _accepting_server()
         captured: list[str] = []
         mock_server.sendmail.side_effect = (
             lambda from_addr, to, raw: captured.append(raw)
         )
 
         with patch("smtplib.SMTP") as mock_smtp_cls:
-            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
-            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_smtp_cls.return_value = mock_server
             ok = service.send(
                 ["guest@example.com"], "subj", "<p>body</p>",
                 reply_to="host@example.com",

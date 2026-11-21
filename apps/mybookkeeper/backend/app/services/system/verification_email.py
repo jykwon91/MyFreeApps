@@ -15,7 +15,7 @@ def _build_verification_html(verify_url: str) -> str:
     return build_verification_html(verify_url=verify_url, branding=MBK_BRANDING)
 
 
-def send_verification_email(recipient_email: str, token: str) -> None:
+async def send_verification_email(recipient_email: str, token: str) -> None:
     """Send the email-verification message to a newly registered user.
 
     Critical-path transactional email — raises rather than returning a
@@ -34,4 +34,4 @@ def send_verification_email(recipient_email: str, token: str) -> None:
     verify_url = f"{base_url}/verify-email?token={token}"
     html = _build_verification_html(verify_url)
     subject = "Verify your MyBookkeeper email"
-    send_email_or_raise([recipient_email], subject, html)
+    await send_email_or_raise([recipient_email], subject, html)

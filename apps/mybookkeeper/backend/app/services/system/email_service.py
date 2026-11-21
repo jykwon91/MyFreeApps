@@ -7,7 +7,9 @@ best-effort split live in the shared layer. This module:
   - Constructs the EmailService from MBK Settings
   - Exposes module-level functions matching the historical API
     (send_email, send_email_or_raise, is_configured, get_recipients,
-    send_cost_alert, send_test_email) so existing callers don't change
+    send_cost_alert, send_test_email). They are ``async``: the shared
+    service runs the blocking SMTP conversation in a worker thread so a
+    slow SMTP server can't freeze the event loop
   - Owns the MBK-specific cost alert + test email HTML templates
   - Routes the cost-alert recipients list (an MBK-specific feature)
 """
@@ -52,7 +54,7 @@ def get_recipients() -> list[str]:
     return [addr.strip() for addr in raw.split(",") if addr.strip()]
 
 
-def send_email(
+async def send_email(
     to: list[str],
     subject: str,
     body_html: str,
@@ -72,12 +74,12 @@ def send_email(
     """
     if not to:
         return False
-    return _get_email_service().send(
+    return await _get_email_service().send_async(
         to, subject, body_html, attachments=attachments, reply_to=reply_to,
     )
 
 
-def send_email_or_raise(
+async def send_email_or_raise(
     to: list[str],
     subject: str,
     body_html: str,
@@ -96,12 +98,12 @@ def send_email_or_raise(
         EmailSendError: If SMTP send fails (network, auth, recipient
             rejected).
     """
-    _get_email_service().send_or_raise(
+    await _get_email_service().send_or_raise_async(
         to, subject, body_html, attachments=attachments, reply_to=reply_to,
     )
 
 
-def send_cost_alert(severity: str, message: str, cost: float, budget: float) -> bool:
+async def send_cost_alert(severity: str, message: str, cost: float, budget: float) -> bool:
     """Best-effort cost-alert email — operator-facing, OK to drop on failure."""
     recipients = get_recipients()
     if not recipients:
@@ -134,10 +136,10 @@ def send_cost_alert(severity: str, message: str, cost: float, budget: float) -> 
     </div>
     """
 
-    return send_email(recipients, f"[MyBookkeeper] Cost Alert &mdash; {label}", html)
+    return await send_email(recipients, f"[MyBookkeeper] Cost Alert &mdash; {label}", html)
 
 
-def send_test_email(to: str) -> bool:
+async def send_test_email(to: str) -> bool:
     """Best-effort test email — used by the operator-only POST /admin/test-email
     endpoint to verify SMTP wiring. Reasonable to swallow the failure (the
     HTTP response surfaces it via the False return)."""
@@ -153,7 +155,7 @@ def send_test_email(to: str) -> bool:
       </div>
     </div>
     """
-    return send_email([to], "[MyBookkeeper] Email Test &mdash; Success", html)
+    return await send_email([to], "[MyBookkeeper] Email Test &mdash; Success", html)
 
 
 __all__ = [

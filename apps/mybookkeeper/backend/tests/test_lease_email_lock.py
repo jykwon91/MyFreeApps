@@ -9,7 +9,7 @@ import datetime as _dt
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +54,7 @@ async def test_a_regenerate_after_the_email_was_read_is_refused_and_the_old_file
                 outcome["error"] = exc
 
     monkeypatch.setattr(f"{EMAIL}.unit_of_work", uow_with_a_regenerate_after_the_first_commit)
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage, send)
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:
@@ -73,7 +73,7 @@ async def test_the_lease_stays_locked_when_the_send_fails_and_can_be_sent_again(
 ) -> None:
     user_id, org_id, _, lease, _ = await lease_with_rendered_attachment(db)
     monkeypatch.setattr(f"{EMAIL}.unit_of_work", real_uow)
-    send = MagicMock(side_effect=[False, True])
+    send = AsyncMock(side_effect=[False, True])
     p = email_patches(storage_double(), send)
     args = dict(lease_id=lease.id, user_id=user_id, organization_id=org_id)
 
@@ -93,7 +93,7 @@ async def test_nothing_is_stamped_when_there_is_nothing_to_send(
 ) -> None:
     user_id, org_id, _, lease, _ = await lease_with_rendered_attachment(db)
     monkeypatch.setattr(f"{EMAIL}.unit_of_work", real_uow)
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage_double(), send, SimpleNamespace(legal_name="J", contact_email=None))
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:
@@ -114,7 +114,7 @@ async def test_the_stamp_is_rolled_back_when_a_file_cannot_be_fetched(
     monkeypatch.setattr(f"{EMAIL}.unit_of_work", real_uow)
     storage = storage_double()
     storage.download_file.side_effect = RuntimeError("storage down")
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage, send)
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:

@@ -519,7 +519,7 @@ async def test_extension_email_sends_only_that_addendum(db: AsyncSession) -> Non
 
     storage = MagicMock()
     storage.download_file.side_effect = lambda key: key.encode()
-    send_email = MagicMock(return_value=True)
+    send_email = AsyncMock(return_value=True)
 
     with patch(
         "app.services.leases.lease_email_service.unit_of_work", _fake_uow_for(db),
