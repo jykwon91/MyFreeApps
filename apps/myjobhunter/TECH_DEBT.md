@@ -138,7 +138,7 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 
 #### ~~HIGH — MinIO `delete_file` swallows S3Error, no audit trail for orphaned objects~~ RESOLVED
 
-**Resolved:** PR (mbk-storage-delete-error-codes). Structured warning log now emits `bucket`, `key`, `code`, and `message` so Sentry can group failures by S3 error code (`AccessDenied` vs `NoSuchKey` vs transient). Fixed in all three StorageClient implementations: `platform_shared/core/storage.py`, `apps/mybookkeeper/backend/app/core/storage.py`, and `apps/myjobhunter/backend/app/core/storage.py`. Non-S3 exceptions now propagate instead of being silently swallowed. Return type unchanged (`None`) so all 20+ call sites are unaffected.
+**Resolved:** `delete_file` (now only in `platform_shared/core/storage.py`) raises every failure except an object that is already gone (`NoSuchKey`), so callers know the object is still there. Account and company deletion (`platform_shared/services/stored_file_removal.py`) log each file left behind at ERROR with its `key` and S3 `code`, so Sentry can group them by reason.
 
 ### ~~HIGH — Gmail email enumeration silently skips messages on fetch failure~~ RESOLVED
 

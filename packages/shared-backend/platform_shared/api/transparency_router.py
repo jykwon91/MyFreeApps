@@ -27,10 +27,10 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-import urllib3
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
 
+from platform_shared.core.storage import STORAGE_UNAVAILABLE_ERRORS, describe_storage_error
 from platform_shared.schemas.common import StatusResponse
 from platform_shared.schemas.transparency import TransparencyResponse
 from platform_shared.services.transparency import (
@@ -39,16 +39,9 @@ from platform_shared.services.transparency import (
     transparency_store,
 )
 from platform_shared.services.transparency.donation_outcome import DonationOutcome
-from platform_shared.services.transparency.transparency_store import (
-    S3Error,
-    StorageNotConfiguredError,
-)
+from platform_shared.services.transparency.transparency_store import StorageNotConfiguredError
 
 logger = logging.getLogger(__name__)
-
-# Failures reaching MinIO at all (as opposed to an S3 error response):
-# urllib3's MaxRetryError / ProtocolError etc., and socket-level OSErrors.
-_STORAGE_TRANSPORT_ERRORS: tuple[type[Exception], ...] = (urllib3.exceptions.HTTPError, OSError)
 
 # Webhook response status for each outcome. "ignored" is still a 200: the
 # payload is unusable, and a re-delivery would be just as unusable.
@@ -87,20 +80,12 @@ def build_transparency_router(settings: object) -> APIRouter:
             # MinIO unconfigured (local dev / before the operator sets it up).
             # Report "not configured" so the widget hides rather than erroring.
             return transparency_store.project_response(None, now, [])
-        except S3Error as exc:
-            # Present-but-unreadable is an honest "temporarily unavailable" —
-            # don't masquerade it as "not configured", which would silently
-            # hide a real backend problem.
-            logger.warning(
-                "transparency read failed: code=%s message=%s", exc.code, exc.message,
-            )
-            raise HTTPException(
-                status_code=503, detail="transparency_unavailable",
-            ) from exc
-        except (*_STORAGE_TRANSPORT_ERRORS, ValidationError, ValueError) as exc:
-            # MinIO unreachable (connection refused, retries exhausted) or a
-            # corrupt object: also "temporarily unavailable".
-            logger.warning("transparency read failed: %s: %s", type(exc).__name__, exc)
+        except (*STORAGE_UNAVAILABLE_ERRORS, ValidationError, ValueError) as exc:
+            # Storage failing (an S3 error code such as SlowDown, an unreadable
+            # reply, MinIO unreachable) or a corrupt object: an honest
+            # "temporarily unavailable". Don't masquerade it as "not
+            # configured", which would silently hide a real backend problem.
+            logger.warning("transparency read failed: %s", describe_storage_error(exc))
             raise HTTPException(
                 status_code=503, detail="transparency_unavailable",
             ) from exc
@@ -139,25 +124,14 @@ def build_transparency_router(settings: object) -> APIRouter:
             outcome = await asyncio.to_thread(
                 kofi_service.record_donation, settings, payload,  # type: ignore[arg-type]
             )
-        except S3Error as exc:
+        except (
+            *STORAGE_UNAVAILABLE_ERRORS, StorageNotConfiguredError, ValidationError, ValueError,
+        ) as exc:
             # Surface a 500 so Ko-fi retries — never silently drop a donation.
             logger.error(
-                "Ko-fi webhook storage failure: message_id=%s code=%s message=%s",
+                "Ko-fi webhook storage failure: message_id=%s error=%s",
                 payload.message_id,
-                exc.code,
-                exc.message,
-            )
-            raise HTTPException(
-                status_code=500, detail="transparency_store_error",
-            ) from exc
-        except (
-            *_STORAGE_TRANSPORT_ERRORS, StorageNotConfiguredError, ValidationError, ValueError,
-        ) as exc:
-            logger.error(
-                "Ko-fi webhook storage failure: message_id=%s error=%s: %s",
-                payload.message_id,
-                type(exc).__name__,
-                exc,
+                describe_storage_error(exc),
             )
             raise HTTPException(
                 status_code=500, detail="transparency_store_error",

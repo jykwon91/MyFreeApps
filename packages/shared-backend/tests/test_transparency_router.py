@@ -18,6 +18,7 @@ import pytest
 import urllib3
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from minio.error import InvalidResponseError, ServerError
 
 from platform_shared.api import transparency_router
 from platform_shared.api.transparency_router import build_transparency_router
@@ -26,9 +27,12 @@ from platform_shared.schemas.transparency import MonthBucket, TransparencyDocume
 from platform_shared.services.transparency import (
     anthropic_cost_service,
     cost_sync,
+    donation_store,
     transparency_store,
 )
 from tests.conftest import FakeStorageClient, make_s3_error
+from tests.fake_s3_reply import FakeS3Reply
+from tests.fake_s3_server import fake_s3_server, s3_error_xml
 
 _FORM_HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
 
@@ -329,6 +333,27 @@ class TestKofiWebhookStorageFailure:
             for r in caplog.records
         )
 
+    def test_non_xml_storage_reply_returns_500_so_ko_fi_retries(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_storage: FakeStorageClient,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        def _bad_gateway(key: str) -> bool:
+            raise InvalidResponseError(502, "text/html", "<html>Bad Gateway</html>")
+
+        monkeypatch.setattr(fake_storage, "object_exists", _bad_gateway)
+        resp = _client(_settings()).post(
+            "/donations/kofi-webhook",
+            content=_form_body(_payload(message_id="m1")),
+            headers=_FORM_HEADERS,
+        )
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "transparency_store_error"
+        # The type is logged, never the proxy's error page.
+        assert "error=InvalidResponseError" in caplog.text
+        assert "Bad Gateway" not in caplog.text
+
 
 class TestGetTransparencyStorageFailure:
     @pytest.mark.parametrize(
@@ -336,6 +361,8 @@ class TestGetTransparencyStorageFailure:
         [
             urllib3.exceptions.MaxRetryError(None, "/bkt", "connection refused"),  # type: ignore[arg-type]
             ConnectionRefusedError("connection refused"),
+            InvalidResponseError(502, "text/html", "<html>Bad Gateway</html>"),
+            ServerError("server failed with HTTP status code 503", 503),
         ],
     )
     def test_unreachable_storage_returns_503(
@@ -348,6 +375,21 @@ class TestGetTransparencyStorageFailure:
         resp = _client(_settings()).get("/transparency")
         assert resp.status_code == 503
         assert resp.json()["detail"] == "transparency_unavailable"
+
+    def test_minio_slow_down_after_retries_returns_503_with_its_code_logged(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        transparency_store.reset_shared_storage_cache()
+        donation_store.reset_donation_cache()
+        reply = FakeS3Reply(503, s3_error_xml("SlowDown", "Please reduce your request rate."))
+        try:
+            with fake_s3_server(reply) as endpoint:
+                resp = _client(_settings(minio_endpoint=endpoint)).get("/transparency")
+        finally:
+            transparency_store.reset_shared_storage_cache()
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "transparency_unavailable"
+        assert any("code=SlowDown" in r.getMessage() for r in caplog.records)
 
     def test_corrupt_donation_record_returns_503_and_logs_its_key(
         self, fake_storage: FakeStorageClient, caplog: pytest.LogCaptureFixture,

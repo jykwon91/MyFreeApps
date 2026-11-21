@@ -4,6 +4,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from minio.error import S3Error
 
 from app.core.storage import (
     StorageClient,
@@ -144,22 +145,22 @@ class TestStorageClientMethods:
         client.delete_file("org/uuid/file.pdf")
         mock_minio.remove_object.assert_called_once_with("test-bucket", "org/uuid/file.pdf")
 
-    def test_delete_file_logs_s3_error_code_and_does_not_raise(self) -> None:
-        from minio.error import S3Error
+    def test_delete_file_raises_s3_error_so_the_caller_knows_the_object_remains(self) -> None:
         client, mock_minio = self._make_client()
         # S3Error(response, code, message, ...) — first arg is the HTTP response object.
         # Passing a dummy string keeps the constructor happy for unit tests.
-        error = S3Error("_response", "AccessDenied", "Access Denied.", "", "", "")
-        mock_minio.remove_object.side_effect = error
-        with patch("platform_shared.core.storage.logger") as mock_logger:
+        mock_minio.remove_object.side_effect = S3Error(
+            "_response", "AccessDenied", "Access Denied.", "", "", "",
+        )
+        with pytest.raises(S3Error) as exc_info:
             client.delete_file("org/uuid/file.pdf")
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args
-            # Structured log must include bucket, key, and the S3 error code so
-            # Sentry can group failures by reason (AccessDenied vs NoSuchKey etc.)
-            assert "AccessDenied" in str(call_args)
-            assert "org/uuid/file.pdf" in str(call_args)
-            assert "test-bucket" in str(call_args)
+        assert exc_info.value.code == "AccessDenied"
+
+    @pytest.mark.parametrize("code", ["NoSuchKey", "NoSuchObject"])
+    def test_delete_file_treats_an_object_already_gone_as_removed(self, code: str) -> None:
+        client, mock_minio = self._make_client()
+        mock_minio.remove_object.side_effect = S3Error("_response", code, "missing", "", "", "")
+        client.delete_file("org/uuid/file.pdf")
 
     def test_delete_file_propagates_non_s3_errors(self) -> None:
         client, mock_minio = self._make_client()
@@ -215,28 +216,6 @@ class TestStorageClientMethods:
         assert call.kwargs["response_headers"] == {
             "response-content-disposition": 'attachment; filename="Lease.pdf"',
         }
-
-    def test_head_object_returns_metadata_when_present(self) -> None:
-        client, mock_minio = self._make_client()
-        stat = MagicMock()
-        stat.size = 1234
-        stat.etag = "abc"
-        stat.content_type = "image/jpeg"
-        stat.last_modified = "2026-01-01"
-        mock_minio.stat_object.return_value = stat
-        result = client.head_object("k")
-        assert result == {
-            "size": 1234,
-            "etag": "abc",
-            "content_type": "image/jpeg",
-            "last_modified": "2026-01-01",
-        }
-
-    def test_head_object_returns_none_when_missing(self) -> None:
-        from minio.error import S3Error
-        client, mock_minio = self._make_client()
-        mock_minio.stat_object.side_effect = S3Error("_response", "NoSuchKey", "missing", "", "", "")
-        assert client.head_object("k") is None
 
     def test_ensure_bucket_creates_when_missing(self) -> None:
         client, mock_minio = self._make_client()

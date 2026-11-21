@@ -12,8 +12,7 @@ from __future__ import annotations
 from minio.error import S3Error
 from platform_shared.core import async_storage
 from platform_shared.core.storage import StorageClient
-
-_MISSING_CODES = frozenset({"NoSuchKey", "NoSuchObject"})
+from platform_shared.core.storage_constants import STORAGE_MISSING_OBJECT_CODES
 
 
 class StoredFileMissingError(LookupError):
@@ -41,5 +40,5 @@ async def load_stored_file(storage: StorageClient, storage_key: str) -> bytes:
 
 
 def _raise_if_missing(exc: S3Error, storage_key: str) -> None:
-    if exc.code in _MISSING_CODES:
+    if exc.code in STORAGE_MISSING_OBJECT_CODES:
         raise StoredFileMissingError(storage_key) from exc

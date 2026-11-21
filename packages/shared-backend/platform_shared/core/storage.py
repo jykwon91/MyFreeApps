@@ -49,7 +49,6 @@ import os
 import re
 import uuid
 from datetime import timedelta
-from typing import Any
 from urllib.parse import urlparse
 
 import certifi
@@ -61,10 +60,16 @@ from minio.error import S3Error
 from platform_shared.core.storage_constants import (
     STORAGE_CONNECT_TIMEOUT_SECONDS,
     STORAGE_MAX_RETRIES,
+    STORAGE_MISSING_OBJECT_CODES,
     STORAGE_POOL_MAXSIZE,
     STORAGE_READ_TIMEOUT_SECONDS,
     STORAGE_RETRY_BACKOFF_FACTOR,
     STORAGE_RETRY_STATUS_CODES,
+)
+from platform_shared.core.storage_errors import (
+    STORAGE_UNAVAILABLE_ERRORS,
+    describe_storage_error,
+    storage_error_code,
 )
 
 logger = logging.getLogger(__name__)
@@ -170,6 +175,13 @@ def _build_http_client() -> urllib3.PoolManager:
             total=STORAGE_MAX_RETRIES,
             backoff_factor=STORAGE_RETRY_BACKOFF_FACTOR,
             status_forcelist=STORAGE_RETRY_STATUS_CODES,
+            # MinIO sends ``Retry-After: 120`` with SlowDown and quorum errors;
+            # obeying it would hold a storage thread for minutes per call.
+            respect_retry_after_header=False,
+            # Once retries run out, hand minio-py the last response so it raises
+            # ``S3Error`` with MinIO's code (``SlowDown``, ``InternalError``)
+            # rather than urllib3's ``MaxRetryError``, which drops it.
+            raise_on_status=False,
         ),
     )
 
@@ -207,21 +219,21 @@ class StorageClient:
             response.release_conn()
 
     def delete_file(self, key: str) -> None:
+        """Remove one object. An object already gone counts as removed.
+
+        Any other failure raises, so the caller knows the object is still there.
+        """
         try:
             self._client.remove_object(self._bucket, key)
         except S3Error as exc:
-            logger.warning(
-                "MinIO delete_file failed: bucket=%s key=%s code=%s message=%s",
-                self._bucket,
-                key,
-                exc.code,
-                exc.message,
-            )
+            if exc.code not in STORAGE_MISSING_OBJECT_CODES:
+                raise
 
     def delete_files(self, keys: list[str]) -> list[str]:
         """Remove many objects in batched requests. Returns the keys that failed.
 
-        Failures are logged, not raised, matching ``delete_file``. The result
+        A key MinIO refuses to delete is logged and returned, not raised. A
+        failure of a whole request (MinIO unreachable, a 5xx) raises. The result
         iterator ``remove_objects`` returns is lazy: nothing is deleted until it
         is consumed.
         """
@@ -249,35 +261,18 @@ class StorageClient:
             if obj.object_name is not None
         ]
 
-    def head_object(self, key: str) -> dict[str, Any] | None:
-        """Return object metadata, or ``None`` if the object does not exist."""
-        try:
-            stat = self._client.stat_object(self._bucket, key)
-        except S3Error as exc:
-            if exc.code in {"NoSuchKey", "NoSuchObject"}:
-                return None
-            logger.warning("head_object failed for %s", key, exc_info=True)
-            return None
-        return {
-            "size": stat.size,
-            "etag": stat.etag,
-            "content_type": stat.content_type,
-            "last_modified": stat.last_modified,
-        }
-
     def object_exists(self, key: str) -> bool:
         """Whether the object exists. ``False`` only on NoSuchKey.
 
-        Distinct from ``head_object``: this re-raises transient S3 errors
-        (network blip, signature mismatch, server 5xx) so the caller sees
-        a real exception instead of confusing a service outage with a
-        missing object. Used by per-request response builders to flag
-        orphan attachment rows whose underlying file is gone.
+        Re-raises every other error (network blip, signature mismatch, server
+        5xx) so the caller sees a real exception instead of confusing a service
+        outage with a missing object. Used by per-request response builders to
+        flag orphan attachment rows whose underlying file is gone.
         """
         try:
             self._client.stat_object(self._bucket, key)
         except S3Error as exc:
-            if exc.code in {"NoSuchKey", "NoSuchObject"}:
+            if exc.code in STORAGE_MISSING_OBJECT_CODES:
                 return False
             raise
         return True
@@ -446,9 +441,12 @@ def build_storage_client(
 
 
 __all__ = [
+    "STORAGE_UNAVAILABLE_ERRORS",
     "StorageClient",
     "StorageNotConfiguredError",
     "build_storage_client",
+    "describe_storage_error",
+    "storage_error_code",
     # Internal helpers re-exported for tests + per-app extensions:
     "_DualEndpointStorageClient",
     "_parse_endpoint",

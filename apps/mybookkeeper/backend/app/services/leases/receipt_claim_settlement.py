@@ -72,7 +72,7 @@ async def delete_stored_pdf(storage_key: str) -> None:
     try:
         await async_storage.delete_file(_storage_module.get_storage(), storage_key)
     except Exception:
-        logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
+        logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key, exc_info=True)
 
 
 async def settle_earlier_attempt(

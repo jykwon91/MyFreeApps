@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from platform_shared.core.storage import StorageClient
+from platform_shared.core.storage import StorageClient, storage_error_code
 
 logger = logging.getLogger(__name__)
 
@@ -22,5 +22,8 @@ def remove_stored_files(
     for key in storage_keys:
         try:
             get_storage().delete_file(key)
-        except Exception:
-            logger.exception("Stored file left behind after account deletion: key=%s", key)
+        except Exception as exc:
+            logger.exception(
+                "Stored file left behind after account deletion: key=%s code=%s",
+                key, storage_error_code(exc),
+            )

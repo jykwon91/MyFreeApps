@@ -18,10 +18,16 @@ STORAGE_READ_TIMEOUT_SECONDS: Final = 60.0
 
 # Retries for connection errors and the 5xx statuses below (urllib3 retries
 # only idempotent methods on read errors). Fewer than minio-py's default 5:
-# each retry can wait a full timeout.
+# each retry can wait a full timeout. The pauses between retries come from the
+# backoff factor alone (0, 0.4, 0.8 s): MinIO's ``Retry-After`` header (120 s on
+# SlowDown) is ignored, so a throttled MinIO can't hold a storage thread for
+# minutes.
 STORAGE_MAX_RETRIES: Final = 3
 STORAGE_RETRY_BACKOFF_FACTOR: Final = 0.2
 STORAGE_RETRY_STATUS_CODES: Final = (500, 502, 503, 504)
+
+# S3 error codes that mean the object isn't there.
+STORAGE_MISSING_OBJECT_CODES: Final = frozenset({"NoSuchKey", "NoSuchObject"})
 
 # Pooled connections per host, as minio-py's default.
 STORAGE_POOL_MAXSIZE: Final = 10
