@@ -143,6 +143,28 @@ describe("PracticeSession", () => {
     expect(speakAll).toHaveBeenCalledWith("¡Hola! ¿Qué quieres?", expect.any(Number));
   });
 
+  it("disables Replay and Slow while a reply is arriving, and enables them once it has finished", () => {
+    localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
+    sessionState = { ...sessionState, entries: [TUTOR_TURN], requestPhase: "replying" };
+    const { rerender } = renderScreen();
+
+    expect(screen.getByRole("button", { name: "Replay" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Slow" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(speakAll).not.toHaveBeenCalled();
+
+    sessionState = { ...sessionState, requestPhase: "idle" };
+    rerender(
+      <MemoryRouter>
+        <PracticeSession language={LANGUAGE} scenario={SCENARIO} level="beginner" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "Replay" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(speakAll).toHaveBeenCalledWith("¡Hola! ¿Qué quieres?", expect.any(Number));
+  });
+
   it("pressing the mic while a replay is playing stops it first", () => {
     localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
     sessionState = { ...sessionState, entries: [TUTOR_TURN] };

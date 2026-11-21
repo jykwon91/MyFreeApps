@@ -34,5 +34,5 @@ export const KEEP_AWAKE_IDLE_MS = 5 * 60 * 1000;
  */
 export const CORRECTIONS_GRACE_MS = 3000;
 
-/** A control that can't be used right now: the microphone while a reply is on its way, replay while listening. */
+/** A control that can't be used right now: the microphone while a reply is on its way, replay while listening or a reply is arriving. */
 export const DISABLED_OPACITY = 0.5;

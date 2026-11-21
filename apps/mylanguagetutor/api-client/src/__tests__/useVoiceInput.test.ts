@@ -3,6 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useVoiceInput } from "../hooks/useVoiceInput";
+import type { RequestPhase } from "../types/session/request-phase";
 import type { VoiceInputConfig } from "../types/session/voice-input-config";
 import type { SpeechRecognitionControls } from "../types/speech/speech-recognition-controls";
 
@@ -90,6 +91,17 @@ describe("useVoiceInput", () => {
     rerender({ listening: true });
     expect(result.current.canReplay).toBe(false);
     rerender({ listening: false });
+    expect(result.current.canReplay).toBe(true);
+  });
+
+  it("doesn't allow replaying while a reply is on its way, and allows it again once the turn is done", () => {
+    const { result, rerender } = renderHook(({ requestPhase }) => useVoiceInput(config({ requestPhase })), {
+      initialProps: { requestPhase: "waiting" as RequestPhase },
+    });
+    expect(result.current.canReplay).toBe(false);
+    rerender({ requestPhase: "replying" });
+    expect(result.current.canReplay).toBe(false);
+    rerender({ requestPhase: "idle" });
     expect(result.current.canReplay).toBe(true);
   });
 
