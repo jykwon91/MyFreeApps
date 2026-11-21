@@ -58,6 +58,21 @@ def _reset_login_limiter():
     login_limiter._buckets.clear()
 
 
+@pytest.fixture(autouse=True)
+def _clear_price_response_cache():
+    """Reset the in-process prices cache between tests.
+
+    The cache is keyed by ETag, which is derived from ``fetched_at``. Tests
+    that refresh with the same timestamp produce the same ETag — without this
+    fixture a second refresh with the same ``now=NOW`` but different data
+    would hit the first test's cached bytes instead of loading from the DB.
+    """
+    from app.services.wow.prices import price_response_cache
+    price_response_cache._cache._data.clear()
+    yield
+    price_response_cache._cache._data.clear()
+
+
 @pytest_asyncio.fixture(scope="session")
 async def db_engine():
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
