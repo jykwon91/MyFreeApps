@@ -29,7 +29,10 @@ from app.services.listings import listing_service
 from app.services.system.inquiry_notification_email import (
     send_inquiry_notification,
 )
-from platform_shared.services.turnstile_service import verify_turnstile_token
+from platform_shared.services.turnstile_service import (
+    TURNSTILE_PROVIDER_UNAVAILABLE_CODE,
+    verify_turnstile_token,
+)
 
 # Per-IP submission rate limiter — independent of the login limiter so a
 # spammer can't exhaust their IP's login budget by hammering the public form
@@ -43,6 +46,12 @@ public_inquiry_limiter = RateLimiter(
 # "tell us more" gate. Keeps anti-spam intel out of the response so an
 # attacker probing the form can't tell which check tripped.
 _GENERIC_REJECTION = "Something went wrong, please try again."
+
+# Cloudflare siteverify was unreachable: the visitor did nothing wrong and
+# nothing was recorded, so ask them to resubmit rather than flagging them.
+_CAPTCHA_UNAVAILABLE_DETAIL = (
+    "The captcha check is unavailable right now. Please try again in a moment."
+)
 
 # NO ``prefix`` here. The frontend hits ``/api/listings/public/{slug}`` and
 # ``/api/inquiries/public``, but both production Caddy (``uri strip_prefix
@@ -103,11 +112,13 @@ async def submit_public_inquiry(
     # Step 2: Turnstile (no-op when secret is empty).
     # Don't reject on failure here — pass the result into the spam pipeline so
     # it can log the assessment row + flip spam_status. The bot still sees a 200.
-    turnstile_passed, _ = await verify_turnstile_token(
+    turnstile_passed, turnstile_error_codes = await verify_turnstile_token(
         payload.turnstile_token,
         client_ip,
         secret_key=settings.turnstile_secret_key,
     )
+    if TURNSTILE_PROVIDER_UNAVAILABLE_CODE in turnstile_error_codes:
+        raise HTTPException(status_code=503, detail=_CAPTCHA_UNAVAILABLE_DETAIL)
 
     # Steps 3-11 happen in the service.
     result = await public_inquiry_service.submit_public_inquiry(

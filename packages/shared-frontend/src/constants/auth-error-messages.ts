@@ -21,5 +21,6 @@ export const AUTH_ERROR_MESSAGES: ReadonlyMap<string, string> = new Map([
   ["captcha_expired_please_retry", "The captcha check expired. Please complete it again and retry."],
   ["captcha_verification_failed", "We couldn't verify the captcha check. Please complete it again and retry."],
   ["captcha_service_misconfigured", "The captcha check is unavailable right now. Please try again later."],
+  ["captcha_service_unavailable", "The captcha check is unavailable right now. Please try again in a moment."],
   ["Internal Server Error", AUTH_ERROR_FALLBACK],
 ]);
