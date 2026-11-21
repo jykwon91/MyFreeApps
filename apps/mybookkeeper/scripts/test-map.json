@@ -870,6 +870,7 @@
         "test_inquiry_notification_email.py",
         "test_inquiry_dates_migration.py",
         "test_listing_slug.py",
+        "test_reply_template_org_role.py",
         "test_reply_template_renderer.py",
         "test_reply_template_repo.py",
         "test_reply_template_routes.py",
