@@ -35,7 +35,7 @@
 # bookmarks on the sslip.io URL keep working. Caddy auto-provisions TLS
 # certs for both via Let's Encrypt. Drop the sslip.io address once the
 # new domain is verified live.
-mybookkeeper.myfreeapps.org, 165-245-134-251.sslip.io {
+mybookkeeper.myfreeapps.org, 165-22-33-145.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -51,7 +51,7 @@ mybookkeeper.myfreeapps.org, 165-245-134-251.sslip.io {
 # host Caddy terminates TLS for storage.<domain> and proxies plaintext to
 # MinIO. Backends sign presigned URLs against this hostname so the browser
 # can fetch attachments directly without round-tripping through any API.
-storage.myfreeapps.org, storage.165-245-134-251.sslip.io {
+storage.myfreeapps.org, storage.165-22-33-145.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -63,7 +63,7 @@ storage.myfreeapps.org, storage.165-245-134-251.sslip.io {
 }
 
 # MyJobHunter — separate subdomain.
-myjobhunter.myfreeapps.org, myjobhunter.165-245-134-251.sslip.io {
+myjobhunter.myfreeapps.org, myjobhunter.165-22-33-145.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
