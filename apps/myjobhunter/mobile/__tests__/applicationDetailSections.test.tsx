@@ -164,7 +164,8 @@ describe("the activity timeline", () => {
     const [body] = sent.filter(({ route }) => route === `POST /applications/${ID}/events`).map((request) => request.body);
     expect(body).toEqual({
       event_type: "interview_scheduled",
-      occurred_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/),
+      // Left at now, so it goes as the moment of logging (see the "left at now" test below).
+      occurred_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
       source: "manual",
       note: "First round",
       interview_details: { type: "phone", duration_minutes: 60, location_or_link: "https://zoom.example.com/1", interviewer_names: ["Ada", "Grace"] },
@@ -213,6 +214,19 @@ describe("the activity timeline", () => {
     expect(sent.filter(({ route }) => route === `POST /applications/${ID}/events`).map(({ body }) => [body.event_type, body.interview_details, body.note])).toEqual([
       ["follow_up_sent", null, null],
     ]);
+  });
+
+  it("sends a 'When' left at now as the moment of logging, so it outranks a stage move made earlier that minute", async () => {
+    const sent = serve({ ...applicationDetailRoutes(STRIPE), [`POST /applications/${ID}/events`]: created });
+    await renderApplicationDetail(ID);
+    await fireEvent.press(await screen.findByRole("button", { name: EVENTS.logEvent }));
+    await fireEvent.press(screen.getByRole("radio", { name: "Rejected" }));
+    const pressedAt = Date.now();
+    await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
+
+    expect(await screen.findByText(EVENTS.logged)).toBeTruthy();
+    const [logged] = sent.filter(({ route }) => route === `POST /applications/${ID}/events`);
+    expect(new Date(String(logged?.body.occurred_at)).getTime()).toBeGreaterThanOrEqual(pressedAt);
   });
 
   it("keeps the sheet open and says the event may have been logged when the server breaks without a reason", async () => {

@@ -15,7 +15,7 @@ Status query: ``list_with_status`` returns
 latest stage-defining ``event_type`` from ``application_events`` via a LATERAL join on the
 covering index ``ix_appevent_app_occurred(application_id, occurred_at)
 INCLUDE (event_type)`` (ties on ``occurred_at`` broken by ``created_at`` then
-``id``; see ``application_list_query``), and the third element is the ``companies.name`` of
+``id``; see ``latest_event_order``), and the third element is the ``companies.name`` of
 the application's owning company (INNER joined since
 ``applications.company_id`` is non-null). The INCLUDE column lets PostgreSQL
 satisfy the lateral read entirely from the index leaf pages (Index Only Scan)
@@ -31,7 +31,6 @@ from typing import Any
 
 from sqlalchemy import delete, func, literal_column, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
@@ -44,11 +43,11 @@ from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.repositories.application.application_list_query import (
-    LATEST_EVENT_ORDER,
     latest_event_lateral,
     list_conditions,
     sort_expressions,
 )
+from app.repositories.application.latest_event_order import LATEST_EVENT_ORDER
 
 
 # Allowlist of columns that can be applied via the dynamic ``update``
@@ -160,36 +159,6 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application
         )
     )
     return list(result.scalars().all())
-
-
-async def get_with_detail(
-    db: AsyncSession,
-    application_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> Application | None:
-    """Return an application with eagerly-loaded events and contacts.
-
-    Events are ordered newest-first; contacts are ordered oldest-first.
-    Returns ``None`` if the application does not exist, is soft-deleted,
-    or belongs to a different user (tenant isolation).
-
-    Uses ``selectinload`` for both relationships — two additional SELECT
-    statements instead of a JOIN, which avoids row-multiplication when both
-    collections are non-empty.
-    """
-    result = await db.execute(
-        select(Application)
-        .options(
-            selectinload(Application.events),
-            selectinload(Application.contacts),
-        )
-        .where(
-            Application.id == application_id,
-            Application.user_id == user_id,
-            Application.deleted_at.is_(None),
-        )
-    )
-    return result.scalar_one_or_none()
 
 
 async def list_with_status(

@@ -7,10 +7,11 @@ Kept separate from ``ApplicationResponse`` to avoid loading these
 collections for list endpoints (``GET /applications``) and write
 endpoints (POST/PATCH) where they are unnecessary.
 
-The events are ordered by ``occurred_at DESC`` (newest first) — this
-ordering is applied by the repository and preserved here via the list
-order from the eager-load.  Callers can rely on the list being sorted
-without re-sorting client-side.
+The events are newest first in the same order the board and list use to
+pick the current stage (``occurred_at``, then ``created_at``, then ``id``,
+all descending), applied by the event repository. Callers can rely on the
+first stage-defining event being the application's current stage without
+re-sorting client-side.
 """
 from __future__ import annotations
 

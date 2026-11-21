@@ -40,6 +40,7 @@ from app.schemas.application.application_detail_response import ApplicationDetai
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_event_update_request import ApplicationEventUpdateRequest
+from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
 
@@ -74,26 +75,29 @@ async def get_application_detail(
     user_id: uuid.UUID,
     application_id: uuid.UUID,
 ) -> ApplicationDetailResponse | None:
-    """Return a non-deleted application with eagerly-loaded events and contacts.
+    """Return a non-deleted application with its events and contacts.
 
-    Events are sorted newest-first; contacts are sorted oldest-first (insertion
-    order). Returns ``None`` if the application is missing, soft-deleted, or
-    belongs to another user.
+    Events are newest-first in ``LATEST_EVENT_ORDER``, the order the board and
+    list use to pick the current stage, so the timeline's first stage event is
+    the stage shown everywhere. Contacts are oldest-first (insertion order).
+    Returns ``None`` if the application is missing, soft-deleted, or belongs
+    to another user.
     """
-    application = await application_repository.get_with_detail(db, application_id, user_id)
+    application = await application_repository.get_by_id(db, application_id, user_id)
     if application is None:
         return None
 
-    # Sort events newest-first (the selectinload does not guarantee order).
-    sorted_events = sorted(application.events, key=lambda e: e.occurred_at, reverse=True)
-    sorted_contacts = sorted(application.contacts, key=lambda c: c.created_at)
+    events = await application_event_repository.list_by_application(db, user_id, application_id)
+    contacts = await application_contact_repository.list_by_application(db, user_id, application_id)
 
     update = {
-        "events": [ApplicationEventResponse.model_validate(e) for e in sorted_events],
-        "contacts": [ApplicationContactResponse.model_validate(c) for c in sorted_contacts],
+        "events": [ApplicationEventResponse.model_validate(e) for e in events],
+        "contacts": [ApplicationContactResponse.model_validate(c) for c in contacts],
     }
 
-    response = ApplicationDetailResponse.model_validate(application)
+    response = ApplicationDetailResponse.model_validate(
+        ApplicationResponse.model_validate(application).model_dump(),
+    )
     # The inline JD view (OverviewSection) reads ``jd_text``. When the JD was
     # attached as a job_description document instead of typed into the
     # application, that column is empty — fall back to the document body so the

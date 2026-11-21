@@ -11,7 +11,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement, Lateral, UnaryExpression, case, func, null, select
+from sqlalchemy import ColumnElement, Lateral, case, func, null, select
 
 from app.core.application_list_constants import (
     REMOTE_SORT_RANKS,
@@ -23,16 +23,7 @@ from app.core.application_sort_field import ApplicationSortField
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
-
-# Which event is an application's latest stage event. Two events can share an
-# ``occurred_at`` (a kanban move and its note, an import), so the later-written
-# one wins, then the higher id, and the same event is chosen on every read.
-LATEST_EVENT_ORDER: tuple[UnaryExpression[Any], ...] = (
-    ApplicationEvent.occurred_at.desc(),
-    ApplicationEvent.created_at.desc(),
-    ApplicationEvent.id.desc(),
-)
-
+from app.repositories.application.latest_event_order import LATEST_EVENT_ORDER
 
 def latest_event_lateral(user_id: uuid.UUID) -> Lateral:
     """The application's most recent stage-defining event, as a LATERAL row.
