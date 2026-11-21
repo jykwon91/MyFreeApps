@@ -33,8 +33,10 @@ export default function DungeonQuestsAddonCard() {
           says you&apos;ve done, with what to do next: who to get it from and where, what to kill or collect, or who to turn it
           in to. Route shows the quickest way there from where you stand, by foot, flight path, boat or zeppelin, and moves the map pin along as you go. Any quest you&apos;ve finished, dungeon or not, gets a pin on your World Map at
           whoever takes it back, and <code>/mgadq turnin</code> (or the map&apos;s Route turn-ins button) takes you to them all in
-          the quickest order. It also reminds you in chat when you enter a dungeon with quests you
-          haven&apos;t picked up, and notes where each Craftsman&apos;s Writ you pick up is delivered, for the Crafting writs page.
+          the quickest order. Inside a dungeon, a tracker shows only that dungeon&apos;s quests: each objective as you finish
+          it, what&apos;s done, and what you never picked up. Your quest tracker shows just those quests until you leave, and
+          after a boss dies (or if you walk out) it says what&apos;s still left, so you don&apos;t have to run it again. It also
+          reminds you in chat when you enter a dungeon with quests you haven&apos;t picked up, and notes where each Craftsman&apos;s Writ you pick up is delivered, for the Crafting writs page.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>
@@ -46,7 +48,8 @@ export default function DungeonQuestsAddonCard() {
             Restart the game, or type <code>/reload</code>.
           </li>
           <li>
-            Type <code>/mgadq</code> to open it. <code>/mgadq remind off</code> turns the chat reminder off, <code>/mgadq pins off</code> the map pins.
+            Type <code>/mgadq</code> to open it. <code>/mgadq remind off</code> turns the chat reminder off, <code>/mgadq pins off</code> the map pins,{" "}
+            <code>/mgadq focus off</code> the dungeon tracker.
           </li>
         </ol>
         <Button onClick={download} data-testid="dungeon-quests-addon-download">

@@ -1421,6 +1421,271 @@ function M.Show(dungeon)
   frame:Show()
 end
 
+-- Dungeon focus -------------------------------------------------------------------------------
+-- Inside a dungeon, a tracker lists only that dungeon's quests: each one's objectives live from your
+-- quest log, what's ready to turn in, and what you never picked up. Your quest tracker shows only those
+-- quests while you're inside, and goes back to what it showed when you leave. A boss kill, and leaving,
+-- name anything still to do, so nothing is missed and the dungeon needn't be run again.
+
+local FOCUS_TODO, FOCUS_DONE = "|cffffd100-|r", "|TInterface\\RaidFrame\\ReadyCheck-Ready:12|t"
+local focusFrame, focused = nil, nil -- the tracker, and the dungeon it's for (nil = not in one)
+local focusClosed = false -- closed with its X: stays closed for this visit
+
+local function focusOn()
+  return not (MGADungeonQuestsSettings and MGADungeonQuestsSettings.focus == false)
+end
+
+local function logIndex(id)
+  if GetQuestLogIndexByID then
+    local i = GetQuestLogIndexByID(id)
+    if i and i > 0 then return i end
+  end
+  return nil
+end
+
+-- A quest's objectives as the game tracks them: { {text, done} }, or nil when the client can't say.
+function M.QuestObjectives(id)
+  if C_QuestLog and C_QuestLog.GetQuestObjectives then
+    local list = C_QuestLog.GetQuestObjectives(id)
+    if list and #list > 0 then
+      local out = {}
+      for i, o in ipairs(list) do out[i] = { text = o.text or "", done = o.finished and true or false } end
+      return out
+    end
+  end
+  local index = logIndex(id)
+  if index and GetNumQuestLeaderBoards and GetQuestLogLeaderBoard then
+    local out = {}
+    for j = 1, GetNumQuestLeaderBoards(index) or 0 do
+      local text, _, finished = GetQuestLogLeaderBoard(j, index)
+      out[#out + 1] = { text = text or "", done = finished and true or false }
+    end
+    if #out > 0 then return out end
+  end
+  return nil
+end
+
+-- The quests done inside a dungeon that you haven't turned in, in your lines' order:
+-- { step, state, objectives }, state = "complete", true (in your log) or false (not picked up).
+function M.FocusQuests(dungeon)
+  local out, inLog = {}, M.QuestsInLog()
+  for _, line in ipairs(M.LinesFor(dungeon)) do
+    local done = M.DoneSteps(line, inLog)
+    for i, step in ipairs(line.steps) do
+      if step.dungeon and not done[i] then
+        local state = inLog[step.id] or false
+        local objectives = nil
+        if state == true then
+          objectives = M.QuestObjectives(step.id)
+          if not objectives then
+            objectives = {}
+            for j, text in ipairs(step.objectives or {}) do objectives[j] = { text = text, done = false } end
+          end
+        end
+        out[#out + 1] = { step = step, state = state, objectives = objectives }
+      end
+    end
+  end
+  return out
+end
+
+-- What's still to do here: one line per quest you have that isn't finished, with its open objectives.
+function M.LeftToDo(dungeon)
+  local left = {}
+  for _, q in ipairs(M.FocusQuests(dungeon)) do
+    if q.state == true then
+      local open = {}
+      for _, o in ipairs(q.objectives) do
+        if not o.done then open[#open + 1] = o.text end
+      end
+      if #open > 0 then left[#left + 1] = q.step.title .. " (" .. table.concat(open, ", ") .. ")"
+      elseif #q.objectives == 0 then left[#left + 1] = q.step.title end
+    end
+  end
+  return left
+end
+
+-- The tracker's text: what to do here (objective by objective), what's done, what you never picked up.
+function M.FocusText(dungeon)
+  local doing, ready, missing = {}, {}, {}
+  for _, q in ipairs(M.FocusQuests(dungeon)) do
+    if q.state == "complete" then
+      ready[#ready + 1] = FOCUS_DONE .. " " .. q.step.title
+    elseif q.state then
+      doing[#doing + 1] = "|cffffffff" .. q.step.title .. "|r"
+      for _, o in ipairs(q.objectives) do
+        doing[#doing + 1] = o.done and ("   " .. FOCUS_DONE .. " |cff808080" .. o.text .. "|r") or ("   " .. FOCUS_TODO .. " " .. o.text)
+      end
+      if #q.objectives == 0 then doing[#doing + 1] = "   |cff808080its goals are in your quest log|r" end
+    else
+      local from = giverText(q.step)
+      missing[#missing + 1] = "|cffff6060" .. q.step.title .. "|r" .. (from and ("\n   |cff808080" .. from .. "|r") or "")
+    end
+  end
+  local out = {}
+  local function group(heading, rows)
+    if #rows == 0 then return end
+    out[#out + 1] = "|cffffd100" .. heading .. "|r"
+    for _, r in ipairs(rows) do out[#out + 1] = r end
+  end
+  group("To do here", doing)
+  group("Done - turn in when you're out", ready)
+  group("Not picked up - you'd miss these", missing)
+  if #out == 0 then out[1] = "|cff20ff20Every quest for this dungeon is done.|r" end
+  return table.concat(out, "\n")
+end
+
+local function newFocusFrame()
+  local f = CreateFrame("Frame", "MGADungeonQuestsFocus", UIParent)
+  f:SetSize(300, 60)
+  f:SetPoint("TOPRIGHT", -40, -220)
+  f:SetFrameStrata("MEDIUM")
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", f.StartMoving)
+  f:SetScript("OnDragStop", f.StopMovingOrSizing)
+  local back = f:CreateTexture(nil, "BACKGROUND")
+  back:SetAllPoints()
+  back:SetColorTexture(0, 0, 0, 0.7)
+  f.heading = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.heading:SetPoint("TOPLEFT", 10, -8)
+  f.heading:SetWidth(250)
+  f.heading:SetJustifyH("LEFT")
+  f.body = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  f.body:SetPoint("TOPLEFT", 10, -28)
+  f.body:SetWidth(280)
+  f.body:SetJustifyH("LEFT")
+  local close = CreateFrame("Button", "MGADungeonQuestsFocusClose", f, "UIPanelCloseButton")
+  close:SetSize(24, 24)
+  close:SetPoint("TOPRIGHT", 0, 0)
+  close:SetScript("OnClick", function()
+    focusClosed = true
+    f:Hide()
+  end)
+  return f
+end
+
+-- Draws the tracker for the dungeon you're in, or hides it.
+function M.DrawFocus()
+  if not focused or not focusOn() or focusClosed or #M.LinesFor(focused) == 0 then
+    if focusFrame then focusFrame:Hide() end
+    return
+  end
+  focusFrame = focusFrame or newFocusFrame()
+  focusFrame.heading:SetText(focused.name .. " quests")
+  focusFrame.body:SetText(M.FocusText(focused))
+  focusFrame:SetHeight(40 + (focusFrame.body:GetStringHeight() or 0))
+  focusFrame:Show()
+end
+
+-- The game's quest tracker (the classic watch list, by quest log index), kept as quest ids.
+local function watchedIds()
+  if not (GetNumQuestWatches and GetQuestIndexForWatch and GetQuestLogTitle) then return nil end
+  local ids = {}
+  for i = 1, GetNumQuestWatches() or 0 do
+    local index = GetQuestIndexForWatch(i)
+    local id = index and select(8, GetQuestLogTitle(index))
+    if id and id > 0 then ids[#ids + 1] = id end
+  end
+  return ids
+end
+
+local function setWatch(id, on)
+  local index = logIndex(id)
+  if not index then return end
+  if on then AddQuestWatch(index) else RemoveQuestWatch(index) end
+end
+
+local function trackerChanged()
+  if QuestWatch_Update then pcall(QuestWatch_Update) end
+end
+
+-- Shows only this dungeon's quests in the quest tracker, keeping what it showed per character, so a
+-- disconnect inside still puts it back the next time you're out.
+local function focusTracker(dungeon)
+  local before = watchedIds()
+  if not before or not AddQuestWatch or not RemoveQuestWatch then return end
+  MGADungeonQuestsCharacter = MGADungeonQuestsCharacter or {}
+  if not MGADungeonQuestsCharacter.watchedBefore then MGADungeonQuestsCharacter.watchedBefore = before end
+  local mine = {}
+  for _, q in ipairs(M.FocusQuests(dungeon)) do
+    if q.state then mine[#mine + 1] = q.step.id end
+  end
+  local isMine = {}
+  for _, id in ipairs(mine) do isMine[id] = true end
+  for _, id in ipairs(before) do
+    if not isMine[id] then setWatch(id, false) end
+  end
+  for _, id in ipairs(mine) do setWatch(id, true) end
+  trackerChanged()
+end
+
+-- Puts the quest tracker back as it was before the dungeon.
+local function restoreTracker()
+  local before = MGADungeonQuestsCharacter and MGADungeonQuestsCharacter.watchedBefore
+  if not before or not AddQuestWatch or not RemoveQuestWatch then return end
+  MGADungeonQuestsCharacter.watchedBefore = nil
+  local keep = {}
+  for _, id in ipairs(before) do keep[id] = true end
+  for _, id in ipairs(watchedIds() or {}) do
+    if not keep[id] then setWatch(id, false) end
+  end
+  for _, id in ipairs(before) do setWatch(id, true) end
+  trackerChanged()
+end
+
+-- A dungeon quest picked up inside joins the tracker.
+function M.QuestAccepted(id)
+  if not focused or not focusOn() or not (MGADungeonQuestsCharacter and MGADungeonQuestsCharacter.watchedBefore) then return end
+  for _, q in ipairs(M.FocusQuests(focused)) do
+    if q.step.id == id then
+      setWatch(id, true)
+      trackerChanged()
+      return
+    end
+  end
+end
+
+local function warnScreen(text)
+  if RaidNotice_AddMessage and RaidWarningFrame and ChatTypeInfo and ChatTypeInfo.RAID_WARNING then
+    RaidNotice_AddMessage(RaidWarningFrame, text, ChatTypeInfo.RAID_WARNING)
+  end
+end
+
+-- After a boss dies, what's still to do here; after the dungeon's last boss, on screen as well.
+function M.BossKilled(bossName)
+  if not focused or not focusOn() then return end
+  local left = M.LeftToDo(focused)
+  if #left == 0 then return end
+  local bosses = focused.bosses or {}
+  local last = bosses[#bosses] ~= nil and bosses[#bosses].name == bossName
+  say((last and "don't leave yet. " or "") .. "Still to do in " .. focused.name .. ": " .. table.concat(left, "; ") .. ".")
+  if last then warnScreen("Don't leave yet: " .. #left .. (#left == 1 and " quest" or " quests") .. " unfinished here") end
+end
+
+-- Entering, leaving, or moving between instances.
+function M.UpdateFocus()
+  local d = currentDungeon()
+  if d == focused then return M.DrawFocus() end
+  local left = (focused and focusOn()) and M.LeftToDo(focused) or {}
+  if #left > 0 and not d then
+    say("you left " .. focused.name .. " with these unfinished: " .. table.concat(left, "; ") .. ".")
+    warnScreen("You left " .. focused.name .. " with quests unfinished")
+  end
+  focused, focusClosed = d, false
+  if d and focusOn() then focusTracker(d) else restoreTracker() end
+  M.DrawFocus()
+end
+
+function M.SetFocus(on)
+  MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
+  MGADungeonQuestsSettings.focus = on
+  focusClosed = false
+  if focused and on then focusTracker(focused) elseif not on then restoreTracker() end
+  M.DrawFocus()
+end
+
 -- Slash command and events -------------------------------------------------------------------
 
 local function remindersOn()
@@ -1530,7 +1795,8 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
   word = word and word:lower()
   if word == "help" then
     say("/mgadq opens the dungeon you're in, else the journal. /mgadq <dungeon> (deadmines, sfk, vc...) opens one. /mgadq list. " ..
-      "/mgadq turnin routes you through your finished quests. /mgadq pins on|off shows them on the World Map. /mgadq writs: the writs noted so far. /mgadq remind on|off.")
+      "/mgadq turnin routes you through your finished quests. /mgadq pins on|off shows them on the World Map. /mgadq writs: the writs noted so far. /mgadq remind on|off. " ..
+      "/mgadq focus on|off: inside a dungeon, track only its quests.")
   elseif word == "list" then
     M.Show(nil)
   elseif word == "writs" or word == "writ" then
@@ -1546,6 +1812,9 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
     MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
     MGADungeonQuestsSettings.remind = rest:lower() ~= "off"
     say("reminder on entering a dungeon " .. (MGADungeonQuestsSettings.remind and "on." or "off."))
+  elseif word == "focus" then
+    M.SetFocus(rest:lower() ~= "off")
+    say("dungeon focus " .. (focusOn() and "on: inside a dungeon you'll see only its quests." or "off."))
   elseif msg == "" then
     M.Show(currentDungeon())
   else
@@ -1572,12 +1841,27 @@ local events = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ADDON_LOADED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "GET_ITEM_INFO_RECEIVED", "TAXIMAP_OPENED" }) do
   events:RegisterEvent(e)
 end
+-- A boss kill; an event the client doesn't have is left out rather than erroring.
+pcall(events.RegisterEvent, events, "ENCOUNTER_END")
 local QUEST_EVENTS = { QUEST_ACCEPTED = true, QUEST_TURNED_IN = true, QUEST_REMOVED = true, QUEST_LOG_UPDATE = true }
-events:SetScript("OnEvent", function(_, event, arg1, isReloadingUi)
+
+local function later(seconds, fn)
+  if C_Timer and C_Timer.After then C_Timer.After(seconds, fn) else fn() end
+end
+
+events:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
   if QUEST_EVENTS[event] then
     M.RecordWrits()
     M.CheckTurnIns()
     if WorldMapFrame and WorldMapFrame:IsShown() then M.DrawTurnInPins() end
+    if event == "QUEST_ACCEPTED" and arg2 then M.QuestAccepted(arg2) end
+    M.DrawFocus()
+  end
+  if event == "ENCOUNTER_END" then
+    local success = select(3, ...)
+    -- The kill's quest credit lands just after the encounter ends.
+    if success == 1 or success == true then later(1, function() M.BossKilled(arg2) end) end
+    return
   end
   if event == "ADDON_LOADED" then
     if arg1 == "Blizzard_WorldMap" then M.HookWorldMap() end
@@ -1587,9 +1871,12 @@ events:SetScript("OnEvent", function(_, event, arg1, isReloadingUi)
   elseif event == "PLAYER_ENTERING_WORLD" then
     M.HookWorldMap()
     M.ReplanRoute()
-    if isReloadingUi then return end
+    if arg2 then return M.UpdateFocus() end -- a reload
     -- The quest log and completed quests may not be filled in yet as the loading screen ends.
-    if C_Timer and C_Timer.After then C_Timer.After(3, remind) else remind() end
+    later(3, function()
+      remind()
+      M.UpdateFocus()
+    end)
   elseif event == "GET_ITEM_INFO_RECEIVED" then
     itemArrived()
   elseif frame and frame:IsShown() then

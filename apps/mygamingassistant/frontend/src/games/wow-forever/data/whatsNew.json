@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Dungeon Quests: dungeon focus",
+    "summary": "Inside a dungeon the addon now tracks only that dungeon's quests: each objective as you finish it, what's done, and anything you never picked up. Your quest tracker shows just those until you leave, and after a boss dies, or if you walk out, it tells you what's still left so you don't have to run it again.",
+    "to": "/wow-forever/dungeons?addon=open"
+  },
+  {
+    "date": "2026-11-21",
     "title": "Waylaid crates count the hand-in refund",
     "summary": "Handing a crate in pays back 5s (Apprentice), 10s (Journeyman), 15s (Expert) or 20s (Artisan). That now comes off each crate's total and its cost per reward, and a crate whose refund beats its cost shows as a profit.",
     "to": "/wow-forever/crates"
