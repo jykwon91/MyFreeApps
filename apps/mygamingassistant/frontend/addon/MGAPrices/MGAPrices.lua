@@ -93,13 +93,32 @@ local function vendorPrice(itemId)
 end
 
 -- Returns the player's current Enchanting skill level, or nil if they have none.
+-- A collapsed header in the skills window hides its lines from GetSkillLineInfo, so
+-- collapsed headers are opened for the read and closed again after.
 local function enchantingSkill()
-  local n = GetNumSkillLines and GetNumSkillLines() or 0
-  for i = 1, n do
-    local name, isHeader, _, rank = GetSkillLineInfo(i)
-    if not isHeader and name == "Enchanting" then return rank end
+  if not GetNumSkillLines then return nil end
+  local opened = {}
+  local i = 1
+  while i <= GetNumSkillLines() do
+    local name, isHeader, isExpanded = GetSkillLineInfo(i)
+    if isHeader and not isExpanded and ExpandSkillHeader then
+      ExpandSkillHeader(i)
+      table.insert(opened, name)
+    end
+    i = i + 1
   end
-  return nil
+  local rank
+  for j = 1, GetNumSkillLines() do
+    local name, isHeader, _, skillRank = GetSkillLineInfo(j)
+    if not isHeader and name == "Enchanting" then rank = skillRank end
+  end
+  for k = #opened, 1, -1 do
+    for j = 1, GetNumSkillLines() do
+      local name, isHeader = GetSkillLineInfo(j)
+      if isHeader and name == opened[k] then CollapseSkillHeader(j); break end
+    end
+  end
+  return rank
 end
 
 -- Returns the disenchant expected value (EV) in copper per item and whether any
@@ -181,7 +200,8 @@ local function addVerdict(tooltip, itemId, market, cut, count)
     -- Player CAN disenchant — three-way verdict.
     local deEV, deMissing = disenchantEV(itemId, house)
     if deEV then deEV = deEV * count end
-    local prefix = (deEV and deMissing) and "~" or ""
+    -- "~": some material has no price here, or the item is one Forever added (its table is Classic's rule, an estimate).
+    local prefix = (deEV and (deMissing or deEntry[3])) and "~" or ""
 
     if vendor == 0 then
       -- No vendor: compare DE vs AH only.

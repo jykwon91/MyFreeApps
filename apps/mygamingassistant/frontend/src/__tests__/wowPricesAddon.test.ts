@@ -1,3 +1,4 @@
+import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadDisenchantTables";
 import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGAPrices/MGAPrices.lua?raw";
@@ -353,13 +354,15 @@ describe("disenchant verdict", () => {
   const DE_ITEM_FREE = 5102;
 
   const DE_TABLES: DisenchantTables = {
-    items: { "5101": [4, 25], "5102": [4, 0] },
+    items: { "5101": [4, 25], "5102": [4, 0], "5103": [5, 0] },
+    estimated: new Set(["5103"]),
     tables: {
       "4": {
         "11083": [1, 2, 75], // 75% chance, avg 1.5 dust
         "11082": [1, 1, 20], // 20% chance, avg 1 dust
         "11084": [1, 1, 5],  // 5% chance — no AH price in test → partial EV
       },
+      "5": { "11083": [1, 2, 75], "11082": [1, 1, 20] }, // every material priced
     },
   };
 
@@ -390,6 +393,7 @@ describe("disenchant verdict", () => {
     expect(DE_DATA).toContain("  deItems = {");
     expect(DE_DATA).toContain("    [5101] = {4, 25},");
     expect(DE_DATA).toContain("    [5102] = {4, 0},");
+    expect(DE_DATA).toContain("    [5103] = {5, 0, true},");
     expect(DE_DATA).toContain("  deTables = {");
     expect(DE_DATA).toContain("    [4] = {");
     expect(DE_DATA).toContain("      [11082] = {1, 1, 20},");
@@ -423,6 +427,14 @@ describe("disenchant verdict", () => {
     expect(lines).toContain("Sell on AH | +4730c over vendor");
   });
 
+  it("finds Enchanting under a collapsed Professions header, and leaves the header collapsed", () => {
+    const lines = deTooltip(
+      `sell[${DE_ITEM}] = 20; enchSkill = 25; professionsCollapsed = true; hover(GameTooltip, ${DE_ITEM}); table.insert(out, "collapsed " .. tostring(professionsCollapsed))`,
+    );
+    expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
+    expect(lines).toContain("collapsed true");
+  });
+
   it("shows the AH or vendor verdict and a 'need Enchanting' info line when the player has no Enchanting", () => {
     // enchSkill defaults to nil (no Enchanting).
     const lines = deTooltip(`sell[${DE_ITEM}] = 20; hover(GameTooltip, ${DE_ITEM})`);
@@ -441,6 +453,23 @@ describe("disenchant verdict", () => {
     // BoP: no AH option. Only disenchant vs vendor — DE wins here.
     const lines = deTooltip(`sell[${DE_ITEM_FREE}] = 20; bind[${DE_ITEM_FREE}] = 1; enchSkill = 1; hover(GameTooltip, ${DE_ITEM_FREE})`);
     expect(lines).toEqual([`Disenchant | ~${DE_EV}c`]);
+  });
+
+  it("marks an item Forever added with ~ even when every material is priced: its table is an estimate", () => {
+    const lines = deTooltip(`sell[5103] = 20; bind[5103] = 1; enchSkill = 1; hover(GameTooltip, 5103)`);
+    expect(lines).toEqual([`Disenchant | ~${DE_EV}c`]);
+    const classic = addonPriceLua(DE_HOUSES, NO_CRAFTING, { ...DE_TABLES, items: { "5103": [5, 0] }, estimated: new Set() });
+    expect(deTooltip(`sell[5103] = 20; bind[5103] = 1; enchSkill = 1; hover(GameTooltip, 5103)`, classic)).toEqual([`Disenchant | ${DE_EV}c`]);
+  });
+
+  it("the bundled tables give gear Forever added Classic's table for its quality, level and type, marked estimated", () => {
+    const de = loadDisenchantTables();
+    // White Obsidian Wand: a rare level 44 wand Forever added — Classic's rare level 41-46 table.
+    expect(de.items["274425"]).toEqual([45, 0]);
+    expect(de.estimated.has("274425")).toBe(true);
+    // A Classic item keeps its own table and isn't an estimate.
+    expect(de.items["647"]).toEqual([64, 0]);
+    expect(de.estimated.has("647")).toBe(false);
   });
 
   it("shows vendor vs disenchant for a BoP item when the player has no Enchanting", () => {

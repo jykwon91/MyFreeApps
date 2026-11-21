@@ -5,6 +5,8 @@
 export interface DisenchantTables {
   /** `itemId → [tableId, requiredEnchantingSkill]` for every disenchantable item. */
   items: Record<string, [number, number]>;
+  /** Items in `items` whose table is Classic's rule applied to gear Forever added: an estimate. */
+  estimated: ReadonlySet<string>;
   /**
    * `tableId → { resultItemId → [minCount, maxCount, chancePercent] }`.
    * `chancePercent` is 0.1-100, to one decimal (Nexus Crystal drops 0.5% of the time).

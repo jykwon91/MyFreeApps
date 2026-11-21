@@ -29,7 +29,10 @@ from scripts.wow_professions.build import (
     _disenchant_kind,
     _result_counts,
     _roll_chances,
+    band_table,
     build_addon_disenchant_tables,
+    disenchant_bands,
+    forever_disenchant_items,
     mark_bind_on_pickup,
     with_child_skill_lines,
 )
@@ -536,6 +539,44 @@ class TestDisenchantSources:
         assert items[5101] == (4, 25)
         assert items[5102] == (4, 0)
         assert 9999 not in items  # DisenchantID = 0 excluded
+
+    def test_forever_gear_gets_classic_table_for_its_quality_level_and_type(self) -> None:
+        def classic(entry: int, table: int, quality: int, level: int, cls: int = 4, subclass: int = 2, inventory: int = 5) -> dict:
+            return {"entry": str(entry), "DisenchantID": str(table), "Quality": str(quality), "ItemLevel": str(level),
+                    "class": str(cls), "subclass": str(subclass), "InventoryType": str(inventory)}
+
+        bands = disenchant_bands([
+            classic(1, 6, 2, 36), classic(2, 6, 2, 40), classic(3, 7, 2, 41),  # green armour
+            classic(4, 26, 2, 36, cls=2, subclass=0, inventory=13),  # green weapon
+            classic(5, 45, 3, 41, cls=2, subclass=19, inventory=26), classic(6, 46, 3, 46, cls=2, subclass=19, inventory=26),
+            classic(7, 0, 2, 38),  # no DisenchantID: ignored
+        ])
+        assert band_table(bands, 2, "armor", 38) == 6  # between Classic levels: the band at or below
+        assert band_table(bands, 2, "armor", 70) == 7  # above the highest: the highest
+        assert band_table(bands, 2, "armor", 20) is None  # below the lowest: nothing
+
+        def item(id_: int, quality: str, slot: str, level: int, *, item_type: str = "Cloth", armor: int | None = None,
+                 weapon: list[float] | None = None) -> dict:
+            return {"id": id_, "quality": quality, "slot": slot, "itemType": item_type, "itemLevel": level,
+                    "armor": armor, "weapon": weapon}
+
+        out = forever_disenchant_items(bands, [
+            item(274425, "rare", "ranged", 44, item_type="Wand", weapon=[49, 92, 1.7]),
+            item(200001, "uncommon", "chest", 38, armor=50),
+            item(200002, "uncommon", "one_hand", 38, item_type="Sword", weapon=[10, 20, 2.0]),
+            item(200003, "uncommon", "finger", 41),  # rings: armour, no armour value
+            item(200004, "uncommon", "thrown", 38, item_type="Thrown", weapon=[5, 9, 2.0]),  # can't be disenchanted
+            item(200005, "common", "chest", 38, armor=20),  # white: no
+            item(1, "uncommon", "chest", 36, armor=40),  # a Classic item: keeps Classic's own row
+        ], classic_ids={1, 2, 3, 4, 5, 6, 7})
+        assert out == {274425: 45, 200001: 6, 200002: 26, 200003: 7}
+
+    def test_committed_forever_disenchant_items(self) -> None:
+        data = json.loads((CRAFTING_DATA / "classic" / "disenchantTables.json").read_text(encoding="utf-8"))
+        forever = data["foreverItems"]
+        assert forever["274425"] == 45  # White Obsidian Wand: rare level 44
+        assert not set(forever) & set(data["items"])
+        assert set(forever.values()) <= {int(t) for t in data["tables"]}
 
     def test_committed_disenchant_tables(self) -> None:
         path = CRAFTING_DATA / "classic" / "disenchantTables.json"

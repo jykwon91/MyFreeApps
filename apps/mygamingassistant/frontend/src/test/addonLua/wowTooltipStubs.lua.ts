@@ -18,10 +18,22 @@ out = {}
 enchSkill = nil
 IsShiftKeyDown = function() return shift end
 UnitFactionGroup = function() return faction end
-GetNumSkillLines = function() return enchSkill ~= nil and 1 or 0 end
-GetSkillLineInfo = function(i)
-  if enchSkill ~= nil then return "Enchanting", false, false, enchSkill end
+-- The skills window: a Professions header (collapsed when professionsCollapsed) over Enchanting.
+professionsCollapsed = false
+local function skillLines()
+  local lines = { { "Professions", true } }
+  if enchSkill ~= nil and not professionsCollapsed then table.insert(lines, { "Enchanting", false, enchSkill }) end
+  return lines
 end
+GetNumSkillLines = function() return #skillLines() end
+GetSkillLineInfo = function(i)
+  local l = skillLines()[i]
+  if not l then return nil end
+  if l[2] then return l[1], true, not professionsCollapsed, 0 end
+  return l[1], false, false, l[3]
+end
+ExpandSkillHeader = function() professionsCollapsed = false end
+CollapseSkillHeader = function() professionsCollapsed = true end
 -- Like the Forever client: only C_Item.GetItemInfo, no global GetItemInfo.
 C_Item = { GetItemInfo = function(id) return "x",nil,nil,nil,nil,nil,nil,nil,nil,nil,sell[id],nil,nil, bind[id] end }
 GetCoinTextureString = function(c) return c .. "c" end

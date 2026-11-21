@@ -13,8 +13,8 @@ function epochSeconds(iso: string | null): number | null {
 }
 
 /**
- * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = {[resultId] = {min, max, chance}}`.
- * Only written when the tables map is non-empty.
+ * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = {[resultId] = {min, max, chance}}`;
+ * a third `true` marks gear Forever added, whose table is an estimate. Only written when the tables map is non-empty.
  */
 function disenchantLines(de: DisenchantTables): string[] {
   const tableIds = Object.keys(de.tables);
@@ -22,7 +22,7 @@ function disenchantLines(de: DisenchantTables): string[] {
 
   const lines: string[] = ["  deItems = {"];
   for (const [itemId, entry] of Object.entries(de.items).sort((a, b) => Number(a[0]) - Number(b[0]))) {
-    lines.push(`    [${itemId}] = {${entry[0]}, ${entry[1]}},`);
+    lines.push(`    [${itemId}] = {${entry[0]}, ${entry[1]}${de.estimated.has(itemId) ? ", true" : ""}},`);
   }
   lines.push("  },", "  deTables = {");
   for (const tableId of tableIds.sort((a, b) => Number(a) - Number(b))) {
