@@ -57,8 +57,9 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: () => ({ data: { items: [], total: 0 }, isLoading: false, isError: false }),
   useLazyListCompaniesQuery: () => [loadList],
   useCreateCompanyMutation: () => [createCompanyMock, { isLoading: false }],
-  useTriggerCompanyResearchMutation: () => [researchMock, { isLoading: false }],
 }));
+
+vi.mock("@myjobhunter/api-client/hooks/useStartCompanyResearch", () => ({ useStartCompanyResearch: () => researchMock }));
 
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useCreateApplicationMutation: () => [createApplicationMock, { isLoading: false }],
@@ -99,7 +100,7 @@ describe("AddApplicationDialog — the company is added on Save", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     extractMock.mockReturnValue({ unwrap: () => Promise.resolve(EXTRACT), abort: vi.fn() });
-    researchMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
+    researchMock.mockReturnValue(Promise.resolve(undefined));
     createApplicationMock.mockReturnValue({ unwrap: () => Promise.resolve({ id: "app-1" }) });
     createCompanyMock.mockReturnValue({ unwrap: () => Promise.resolve(company("co-linear", "Linear", "linear.app")) });
   });

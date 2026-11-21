@@ -7,6 +7,7 @@ import type { CompanyListResponse } from "../types/company-list-response";
 import type { CompanyCreateRequest } from "../types/company-create-request";
 import type { CompanyUpdateRequest } from "../types/company-update-request";
 import type { CompanyResearch } from "../types/company-research";
+import { companyResearchRunKey } from "../utils/companyResearchRunKey";
 
 const COMPANY_RESEARCH_TAG = "CompanyResearch";
 
@@ -76,6 +77,16 @@ const companiesApi = baseApi
           data: {},
           timeout: MODEL_REQUEST_TIMEOUT_MS,
         }),
+        // The result goes into the company's research cache as soon as it lands, even when no
+        // screen is open: the run's own entry is only for "in flight", so a later screen reads it here.
+        async onQueryStarted(companyId, { dispatch, queryFulfilled }) {
+          try {
+            const { data } = await queryFulfilled;
+            await dispatch(companiesApi.util.upsertQueryData("getCompanyResearch", companyId, data));
+          } catch {
+            // A failed run leaves the cached research as it was.
+          }
+        },
         invalidatesTags: (_result, _err, companyId) => [
           { type: COMPANY_RESEARCH_TAG, id: companyId },
         ],
@@ -93,3 +104,16 @@ export const {
   useGetCompanyResearchQuery,
   useTriggerCompanyResearchMutation,
 } = companiesApi;
+
+/**
+ * Starts a company's research under the store key its screens share, so a company opened while the
+ * run is going shows it running. For runs started away from the company's screen (as after adding a
+ * company with a new application); the screen itself uses `useCompanyResearchRun`.
+ */
+export function startCompanyResearchRun(
+  companyId: string,
+): ReturnType<typeof companiesApi.endpoints.triggerCompanyResearch.initiate> {
+  return companiesApi.endpoints.triggerCompanyResearch.initiate(companyId, {
+    fixedCacheKey: companyResearchRunKey(companyId),
+  });
+}

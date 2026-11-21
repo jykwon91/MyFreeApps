@@ -43,6 +43,7 @@ from app.services.company.company_service import (
     CompanyHasApplicationsError,
     DuplicatePrimaryDomainError,
 )
+from app.services.company.research_already_running_error import ResearchAlreadyRunningError
 from app.services.integrations.tavily_service import TavilyNotConfiguredError
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ router = APIRouter()
 
 _NOT_FOUND_DETAIL = "Company not found"
 _RESEARCH_NOT_FOUND_DETAIL = "No research has been run for this company yet"
+_RESEARCH_ALREADY_RUNNING_DETAIL = "Research for this company is already running"
 
 # Per-user limits for research runs. Each run is the most expensive call in the
 # app: two Tavily searches plus a Claude synthesis, 10-30 s synchronous. A
@@ -245,20 +247,32 @@ async def trigger_company_research(
     search results and synthesise them with Claude. Phase 5 will move this
     to a background queue.
 
-    Rate limited per user (10 / 5 min, 30 / hour); 429 when exceeded.
+    Rate limited per user (10 / 5 min, 30 / hour); 429 when exceeded. The
+    limit is applied after the company and in-flight checks, so a 404 or a
+    409 doesn't use up the user's quota.
 
     Returns 404 if the company does not exist or belongs to another user.
+    Returns 409 if a run for this company is already in flight.
     Returns 503 if the Tavily API key is not configured.
     Returns 502 if the Anthropic API call fails.
     Returns 200 with the populated research record on success.
     """
-    check_user_rate_limit(
-        user.id, _RESEARCH_LIMITER_PER_5_MIN, _RESEARCH_LIMITER_PER_HOUR,
-    )
     try:
-        research = await company_research_service.run_research(
+        company = await company_research_service.claim_run(
             db, company_id=company_id, user_id=user.id
         )
+        if company is None:
+            raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+        check_user_rate_limit(
+            user.id, _RESEARCH_LIMITER_PER_5_MIN, _RESEARCH_LIMITER_PER_HOUR,
+        )
+        research = await company_research_service.run_claimed_research(
+            db, company=company, user_id=user.id
+        )
+    except HTTPException:
+        raise
+    except ResearchAlreadyRunningError as exc:
+        raise HTTPException(status_code=409, detail=_RESEARCH_ALREADY_RUNNING_DETAIL) from exc
     except TavilyNotConfiguredError as exc:
         raise HTTPException(
             status_code=503,
@@ -311,8 +325,5 @@ async def trigger_company_research(
             status_code=500,
             detail=f"Research failed: {type(exc).__name__}",
         ) from exc
-
-    if research is None:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
 
     return CompanyResearchResponse.model_validate(research)

@@ -1,4 +1,5 @@
-import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@myjobhunter/api-client/store/companiesApi";
+import { useCompanyResearchRun } from "@myjobhunter/api-client/hooks/useCompanyResearchRun";
+import { useGetCompanyResearchQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import { isNotFound } from "@platform/core/utils/isNotFound";
@@ -17,7 +18,8 @@ export default function CompanyResearchSection({ companyId, companyName }: Compa
   const { spacing } = useTheme();
   const { showToast } = useToast();
   const query = useGetCompanyResearchQuery(companyId);
-  const [triggerResearch, run] = useTriggerCompanyResearchMutation();
+  // The run's state lives in the store, so going back and reopening the company mid-run still shows it running.
+  const [triggerResearch, run] = useCompanyResearchRun(companyId);
   const mode = companyResearchMode({
     research: query.data,
     isQueryError: query.isError,

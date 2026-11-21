@@ -23,13 +23,16 @@ import { Alert } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../src/constants/addApplication";
 import { formatIsoDate } from "../src/lib/formatIsoDate";
 import { APPLICATION_MESSAGES } from "../src/constants/applications";
+import { COMPANY_RESEARCH_MESSAGES } from "../src/constants/companyResearch";
 import { store } from "../src/lib/store";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { applicationRecord } from "../test-support/applicationRecord";
 import { companyRecord } from "../test-support/companyRecord";
+import { researchRecord } from "../test-support/researchRecord";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
+import { renderCompanyDetail } from "../test-support/renderCompanyDetail";
 import { storeSession, tokens } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
@@ -211,6 +214,42 @@ describe("from a link", () => {
     ]);
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-new" });
     await waitFor(() => expect(requestsTo(sent, "POST /companies/co-new/research")).toHaveLength(1));
+  });
+
+  it("shows the new company's research running when the company is opened while it runs, then its result, from one run", async () => {
+    const linear = companyRecord({ id: "co-new", name: "Linear" });
+    let researched = false;
+    let answer: () => void = () => undefined;
+    const sent = serveAdd({
+      "POST /applications/extract-from-url": ok(extracted({ company: "Linear", company_website: "https://linear.app/" })),
+      "POST /companies": ok(linear),
+      [`GET /companies/${linear.id}`]: ok(linear),
+      [`GET /companies/${linear.id}/research`]: () =>
+        researched ? { status: 200, data: researchRecord({ company_id: linear.id, overall_sentiment: "positive" }) } : fail(404)(),
+      "POST /companies/co-new/research": () =>
+        new Promise<FakeReply>((resolve) => {
+          answer = () => {
+            researched = true;
+            resolve({ status: 200, data: researchRecord({ company_id: linear.id, overall_sentiment: "positive" }) });
+          };
+        }),
+    });
+    await openAddScreen();
+    await readLink();
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.save }));
+    await screen.findByText(MESSAGES.added);
+    await waitFor(() => expect(requestsTo(sent, "POST /companies/co-new/research")).toHaveLength(1));
+
+    // Open the company (same store) while its research is in flight.
+    await act(async () => screen.unmount());
+    await renderCompanyDetail(linear.id);
+    const research = within(await screen.findByTestId("company-research"));
+    expect(await research.findByText(COMPANY_RESEARCH_MESSAGES.runningNote("Linear"))).toBeTruthy();
+    expect(research.queryByRole("button", { name: COMPANY_RESEARCH_MESSAGES.run })).toBeNull();
+
+    await act(async () => answer());
+    expect(await research.findByText("Positive")).toBeTruthy();
+    expect(requestsTo(sent, "POST /companies/co-new/research")).toHaveLength(1);
   });
 
   it("pastes a link from the clipboard and reads it straight away, as pasting does on the website", async () => {

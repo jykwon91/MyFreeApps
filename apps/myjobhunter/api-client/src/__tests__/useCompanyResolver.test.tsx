@@ -16,8 +16,8 @@ const triggerResearch = vi.fn();
 vi.mock("../store/companiesApi", () => ({
   useLazyListCompaniesQuery: () => [loadCompanies],
   useCreateCompanyMutation: () => [createCompany],
-  useTriggerCompanyResearchMutation: () => [triggerResearch],
 }));
+vi.mock("../hooks/useStartCompanyResearch", () => ({ useStartCompanyResearch: () => triggerResearch }));
 
 const hostnameOf = (url: string) => new URL(url).hostname;
 const always = () => true;
@@ -61,7 +61,7 @@ function resolver() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  triggerResearch.mockImplementation(() => ({ unwrap: () => Promise.resolve({}) }));
+  triggerResearch.mockImplementation(() => Promise.resolve({}));
 });
 
 describe("reading a posting", () => {

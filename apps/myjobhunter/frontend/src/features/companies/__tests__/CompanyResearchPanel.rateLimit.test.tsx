@@ -7,7 +7,7 @@ import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLim
 import CompanyResearchPanel from "../CompanyResearchPanel";
 
 const trigger = vi.fn();
-let mutationState: { isLoading: boolean; isError: boolean; error: unknown };
+let mutationState: { isLoading: boolean; isUninitialized: boolean; isError: boolean; error: unknown; reset: () => void };
 
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),
@@ -25,7 +25,7 @@ const limited = { status: 429, data: { detail: "Too many attempts" } };
 describe("CompanyResearchPanel rate limit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mutationState = { isLoading: false, isError: false, error: undefined };
+    mutationState = { isLoading: false, isUninitialized: true, isError: false, error: undefined, reset: vi.fn() };
     trigger.mockReturnValue({ unwrap: () => Promise.reject(limited) });
   });
 
@@ -40,7 +40,7 @@ describe("CompanyResearchPanel rate limit", () => {
   });
 
   it("shows the research message in the failed panel and Retry runs the research again", async () => {
-    mutationState = { isLoading: false, isError: true, error: limited };
+    mutationState = { isLoading: false, isUninitialized: false, isError: true, error: limited, reset: vi.fn() };
     render(<CompanyResearchPanel companyId="c1" />);
 
     expect(screen.getByText(RATE_LIMITED_MESSAGES.companyResearch)).toBeInTheDocument();

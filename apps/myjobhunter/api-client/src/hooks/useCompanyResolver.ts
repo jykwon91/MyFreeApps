@@ -1,8 +1,5 @@
-import {
-  useCreateCompanyMutation,
-  useLazyListCompaniesQuery,
-  useTriggerCompanyResearchMutation,
-} from "../store/companiesApi";
+import { useCreateCompanyMutation, useLazyListCompaniesQuery } from "../store/companiesApi";
+import { useStartCompanyResearch } from "./useStartCompanyResearch";
 import type { CompanyResolver, IsCurrent } from "../types/application/company-resolver";
 import type { ExtractedCompanyHints } from "../types/application/extracted-company-hints";
 import type { ReadCompanyOutcome } from "../types/application/read-company-outcome";
@@ -30,7 +27,7 @@ import { resolveExtractedCompany } from "../utils/resolveExtractedCompany";
 export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
   const [loadCompanies] = useLazyListCompaniesQuery();
   const [createCompany] = useCreateCompanyMutation();
-  const [triggerCompanyResearch] = useTriggerCompanyResearchMutation();
+  const startCompanyResearch = useStartCompanyResearch();
 
   /** `fresh` refetches even when the list is cached; otherwise a cached or in-flight list will do. */
   async function trackedCompanies(fresh: boolean): Promise<Company[]> {
@@ -39,9 +36,8 @@ export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
 
   async function addCompany(request: CompanyCreateRequest): Promise<Company> {
     const created = await createCompany(request).unwrap();
-    void triggerCompanyResearch(created.id)
-      .unwrap()
-      .catch((error: unknown) => console.warn("Background company research failed:", error));
+    // Keyed to the new company, so opening it while this runs shows the run rather than offering a second.
+    void startCompanyResearch(created.id).catch((error: unknown) => console.warn("Background company research failed:", error));
     return created;
   }
 

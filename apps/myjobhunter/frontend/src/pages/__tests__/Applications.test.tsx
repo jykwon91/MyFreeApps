@@ -20,7 +20,10 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useLazyListCompaniesQuery: vi.fn(() => [vi.fn()]),
   useCreateCompanyMutation: vi.fn(),
-  useTriggerCompanyResearchMutation: vi.fn(),
+}));
+
+vi.mock("@myjobhunter/api-client/hooks/useStartCompanyResearch", () => ({
+  useStartCompanyResearch: () => vi.fn(() => Promise.resolve(undefined)),
 }));
 
 // Suppress radix-dialog portal errors in jsdom.
@@ -58,14 +61,12 @@ import {
 import {
   useListCompaniesQuery,
   useCreateCompanyMutation,
-  useTriggerCompanyResearchMutation,
 } from "@myjobhunter/api-client/store/companiesApi";
 
 const mockUseListApplications = vi.mocked(useListApplicationsInfiniteQuery);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
-const mockUseTriggerCompanyResearchMutation = vi.mocked(useTriggerCompanyResearchMutation);
 const mockUseParseJobDescriptionMutation = vi.mocked(useParseJobDescriptionMutation);
 const mockUseExtractJdFromUrlMutation = vi.mocked(useExtractJdFromUrlMutation);
 
@@ -75,10 +76,6 @@ const stubMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
 
 const stubCompanyMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
   typeof useCreateCompanyMutation
->;
-
-const stubResearchMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
-  typeof useTriggerCompanyResearchMutation
 >;
 
 const stubParseJdMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
@@ -142,7 +139,6 @@ describe("Applications page", () => {
     vi.clearAllMocks();
     mockUseCreateApplicationMutation.mockReturnValue(stubMutation);
     mockUseCreateCompanyMutation.mockReturnValue(stubCompanyMutation);
-    mockUseTriggerCompanyResearchMutation.mockReturnValue(stubResearchMutation);
     mockUseParseJobDescriptionMutation.mockReturnValue(stubParseJdMutation);
     mockUseExtractJdFromUrlMutation.mockReturnValue(stubExtractJdMutation);
     mockUseListCompaniesQuery.mockReturnValue({

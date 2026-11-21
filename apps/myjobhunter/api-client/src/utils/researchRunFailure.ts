@@ -7,6 +7,7 @@ function reasonFor(status: number | undefined): ResearchRunFailureReason {
   if (status === 503) return "not-configured";
   if (status === 404) return "company-gone";
   if (status === 429) return "rate-limited";
+  if (status === 409) return "already-running";
   return "retryable";
 }
 

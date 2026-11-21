@@ -21,7 +21,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company import Company
+from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_research_repository
+from app.services.company import company_research_service
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +70,16 @@ MOCK_CLAUDE_RESPONSE = {
 }
 
 
+async def _claim_and_run(
+    db: AsyncSession, *, company_id: uuid.UUID, user_id: uuid.UUID,
+) -> CompanyResearch | None:
+    """As the route runs it: claim the company's run, then run it (None for a company that isn't the user's)."""
+    company = await company_research_service.claim_run(db, company_id=company_id, user_id=user_id)
+    if company is None:
+        return None
+    return await company_research_service.run_claimed_research(db, company=company, user_id=user_id)
+
+
 # ---------------------------------------------------------------------------
 # Happy path
 # ---------------------------------------------------------------------------
@@ -81,7 +93,7 @@ class TestCompanyResearchServiceHappyPath:
         as_user,
         db: AsyncSession,
     ) -> None:
-        """run_research persists a CompanyResearch + ResearchSource rows."""
+        """A run persists a CompanyResearch + ResearchSource rows."""
         user = await user_factory()
 
         async with await as_user(user) as authed:
@@ -103,9 +115,7 @@ class TestCompanyResearchServiceHappyPath:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            from app.services.company import company_research_service
-
-            research = await company_research_service.run_research(
+            research = await _claim_and_run(
                 db,
                 company_id=company_id,
                 user_id=uuid.UUID(user["id"]),
@@ -142,15 +152,13 @@ class TestCompanyResearchServiceHappyPath:
         as_user,
         db: AsyncSession,
     ) -> None:
-        """Second run_research call replaces the first record."""
+        """A second run replaces the first record."""
         user = await user_factory()
 
         async with await as_user(user) as authed:
             resp = await authed.post("/companies", json=_make_company_payload())
             assert resp.status_code == 201
             company_id = uuid.UUID(resp.json()["id"])
-
-        from app.services.company import company_research_service
 
         first_response = {**MOCK_CLAUDE_RESPONSE, "sentiment": "mixed"}
         second_response = {**MOCK_CLAUDE_RESPONSE, "sentiment": "positive"}
@@ -169,10 +177,10 @@ class TestCompanyResearchServiceHappyPath:
                 new=AsyncMock(side_effect=[first_response, second_response]),
             ),
         ):
-            r1 = await company_research_service.run_research(
+            r1 = await _claim_and_run(
                 db, company_id=company_id, user_id=uuid.UUID(user["id"])
             )
-            r2 = await company_research_service.run_research(
+            r2 = await _claim_and_run(
                 db, company_id=company_id, user_id=uuid.UUID(user["id"])
             )
 
@@ -196,7 +204,7 @@ class TestCompanyResearchTenantIsolation:
         as_user,
         db: AsyncSession,
     ) -> None:
-        """run_research returns None when user_id doesn't own the company."""
+        """Claiming returns None when user_id doesn't own the company."""
         owner = await user_factory()
         attacker = await user_factory()
 
@@ -205,9 +213,7 @@ class TestCompanyResearchTenantIsolation:
             assert resp.status_code == 201
             company_id = uuid.UUID(resp.json()["id"])
 
-        from app.services.company import company_research_service
-
-        result = await company_research_service.run_research(
+        result = await _claim_and_run(
             db,
             company_id=company_id,
             user_id=uuid.UUID(attacker["id"]),
@@ -221,12 +227,10 @@ class TestCompanyResearchTenantIsolation:
         user_factory,
         db: AsyncSession,
     ) -> None:
-        """run_research returns None when company_id doesn't exist."""
+        """Claiming returns None when company_id doesn't exist."""
         user = await user_factory()
 
-        from app.services.company import company_research_service
-
-        result = await company_research_service.run_research(
+        result = await _claim_and_run(
             db,
             company_id=uuid.uuid4(),
             user_id=uuid.UUID(user["id"]),
@@ -256,8 +260,6 @@ class TestCompanyResearchServiceErrors:
             assert resp.status_code == 201
             company_id = uuid.UUID(resp.json()["id"])
 
-        from app.services.company import company_research_service
-
         with (
             patch(
                 "app.services.company.company_research_service.search_company",
@@ -273,7 +275,7 @@ class TestCompanyResearchServiceErrors:
             ),
         ):
             with pytest.raises(ValueError, match="Claude returned invalid JSON"):
-                await company_research_service.run_research(
+                await _claim_and_run(
                     db,
                     company_id=company_id,
                     user_id=uuid.UUID(user["id"]),
@@ -585,8 +587,6 @@ class TestResearchSourceDedup:
             company_id_str = create.json()["id"]
             company_id = uuid.UUID(company_id_str)
 
-        from app.services.company import company_research_service
-
         with (
             patch(
                 "app.services.company.company_research_service.search_company",
@@ -601,7 +601,7 @@ class TestResearchSourceDedup:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            r1 = await company_research_service.run_research(
+            r1 = await _claim_and_run(
                 db, company_id=company_id, user_id=uuid.UUID(user["id"])
             )
 
@@ -619,7 +619,7 @@ class TestResearchSourceDedup:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            r2 = await company_research_service.run_research(
+            r2 = await _claim_and_run(
                 db, company_id=company_id, user_id=uuid.UUID(user["id"])
             )
 
@@ -681,8 +681,6 @@ class TestCompanyResearchPersonalisation:
             assert create.status_code == 201
             company_id = uuid.UUID(create.json()["id"])
 
-        from app.services.company import company_research_service
-
         captured: dict[str, str] = {}
 
         async def _fake_call_claude(*, system_prompt, user_content, **kw):
@@ -704,7 +702,7 @@ class TestCompanyResearchPersonalisation:
                 new=AsyncMock(side_effect=_fake_call_claude),
             ),
         ):
-            await company_research_service.run_research(
+            await _claim_and_run(
                 db, company_id=company_id, user_id=user_id
             )
 
@@ -732,8 +730,6 @@ class TestCompanyResearchPersonalisation:
             assert create.status_code == 201
             company_id = uuid.UUID(create.json()["id"])
 
-        from app.services.company import company_research_service
-
         captured: dict[str, str] = {}
 
         async def _fake_call_claude(*, system_prompt, user_content, **kw):
@@ -754,7 +750,7 @@ class TestCompanyResearchPersonalisation:
                 new=AsyncMock(side_effect=_fake_call_claude),
             ),
         ):
-            await company_research_service.run_research(
+            await _claim_and_run(
                 db, company_id=company_id, user_id=user_id
             )
 
