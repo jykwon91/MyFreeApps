@@ -31,7 +31,7 @@ vi.mock("@platform/core/store/baseQuery", () => ({
         },
       };
     }
-    if (url === "/usage/today") return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: true } };
+    if (url === "/usage/today") return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: true, session_limit_reached: false } };
     return { error: { status: 404, data: {} } };
   },
 }));

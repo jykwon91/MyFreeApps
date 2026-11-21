@@ -6,7 +6,7 @@
  * a session deleted elsewhere, a rejected token, and a turn the server never
  * answers. Transient failures offer
  * Try again, which sends exactly what the learner said; blocks say why and stop
- * further turns (a daily-cap refusal keeps the learner's answer on screen); a
+ * further turns (a daily-cap or turn-limit refusal keeps the learner's answer on screen); a
  * rejected token signs the learner out.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -40,7 +40,7 @@ import { sessionIdAt } from "./fixtures/fixtureIds";
 import { goal, openPractice, sendTyped } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { completeTurn, cutAfterCorrections, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
-import { TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
+import { SESSION_FULL, TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
 
@@ -202,6 +202,33 @@ for (const [detail, copy] of [
     await expect(page).toHaveURL(/\/scenarios$/);
   });
 }
+
+test("a conversation that used its last turn says so before the learner speaks again", async ({ page }) => {
+  const api = await signedInTutor(page, { turns: [completeTurn({ reply: TUTOR_GREETING })] });
+
+  await openPractice(page, GREETINGS.title);
+  api.setUsage(SESSION_FULL);
+  await sendTyped(page, LEARNER_GREETING);
+
+  await expect(page.getByText(SESSION_LIMIT_COPY)).toBeVisible();
+  // The finished turn stays, and nothing is left to answer with.
+  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(api.turnRequests).toHaveLength(1);
+});
+
+test("a turn refused for the turn limit in a race keeps the learner's answer on screen", async ({ page }) => {
+  await signedInTutor(page, { turns: [refusedTurn(409, SESSION_TURN_LIMIT)] });
+
+  await openPractice(page, GREETINGS.title);
+  await sendTyped(page, LEARNER_GREETING);
+
+  await expect(page.getByText(SESSION_LIMIT_COPY)).toBeVisible();
+  await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
+});
 
 test("a tutor switched off is announced on arrival, before the learner answers", async ({ page }) => {
   const api = await signedInTutor(page, { usage: TUTOR_OFF });

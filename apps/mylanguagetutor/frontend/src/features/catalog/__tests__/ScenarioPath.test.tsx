@@ -59,7 +59,7 @@ describe("ScenarioPath", () => {
     for (const refetch of [refetchLanguages, refetchScenarios, refetchUsage]) refetch.mockReset();
     languages = { data: [SPANISH], isError: false };
     scenarios = { data: SCENARIOS, isError: false };
-    usage = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true };
+    usage = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true, session_limit_reached: false };
   });
 
   it("shows a placeholder until the scenarios load", () => {
@@ -94,7 +94,7 @@ describe("ScenarioPath", () => {
   });
 
   it("says when today's practice is used up, and still lists the scenarios", () => {
-    usage = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+    usage = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
     renderPath();
 
     expect(screen.getByText(sessionBlockMessage("daily_limit"))).toBeInTheDocument();
