@@ -18,6 +18,7 @@ export const SKILL_MESSAGES = {
   creating: "Adding…",
   created: "Skill added.",
   couldntCreate: "I couldn't add that skill. Want to try again?",
+  checkWhere: "your skills",
   removeTitle: "Remove this skill?",
   removeBody: "It will be taken off your profile.",
   removed: "Skill removed.",

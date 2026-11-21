@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DiscoveryFetchResult } from "../types/discovery/discovery-fetch-result";
+import { DISCOVER_ACTION_MESSAGES } from "../constants/discoverMessages";
 import { describeRefreshError } from "../utils/describeRefreshError";
 import { describeRefreshResult } from "../utils/describeRefreshResult";
 import { discoverFailureMessage } from "../utils/discoverFailureMessage";
@@ -53,5 +54,9 @@ describe("discoverFailureMessage", () => {
     expect(discoverFailureMessage({ status: 409, data: { detail: "Already promoted" } }, "Couldn't add")).toBe("Already promoted");
     expect(discoverFailureMessage({ status: 422, data: { detail: [{ msg: "bad" }] } }, "Couldn't add")).toBe("Couldn't add");
     expect(discoverFailureMessage(new Error("Network Error"), "Couldn't add")).toBe("Couldn't add");
+  });
+
+  it("says what it acted on is gone on a 404, not the server's generic \"not found\"", () => {
+    expect(discoverFailureMessage({ status: 404, data: { detail: "Discovery resource not found" } }, "Couldn't add")).toBe(DISCOVER_ACTION_MESSAGES.gone);
   });
 });

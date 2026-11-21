@@ -25,6 +25,7 @@ export const SCREENING_MESSAGES = {
   created: "Screening answer added.",
   updated: "Answer updated.",
   couldntCreate: "I couldn't add that answer. Want to try again?",
+  checkWhere: "your screening answers",
   alreadyAnswered: `${PROFILE_FORM_PROBLEMS.screeningAlreadyAnswered} Pull down on your profile to see it.`,
   couldntUpdate: "I couldn't save that answer. Want to try again?",
   removeTitle: "Remove this answer?",
