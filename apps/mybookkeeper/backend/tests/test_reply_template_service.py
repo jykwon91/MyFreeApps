@@ -126,7 +126,7 @@ async def test_update_template_changes_fields(
         ),
     )
     updated = await reply_template_service.update_template(
-        test_user.id, created.id,
+        test_org.id, test_user.id, created.id,
         ReplyTemplateUpdateRequest(name="renamed"),
     )
     assert updated.name == "renamed"
@@ -144,7 +144,7 @@ async def test_update_template_cross_user_raises(
     )
     with pytest.raises(LookupError):
         await reply_template_service.update_template(
-            uuid.uuid4(), created.id,
+            test_org.id, uuid.uuid4(), created.id,
             ReplyTemplateUpdateRequest(name="evil"),
         )
 
@@ -159,7 +159,7 @@ async def test_archive_template(
             name="t", subject_template="s", body_template="b",
         ),
     )
-    await reply_template_service.archive_template(test_user.id, created.id)
+    await reply_template_service.archive_template(test_org.id, test_user.id, created.id)
     # After archive, list should not include it.
     templates = await reply_template_service.list_templates(
         test_org.id, test_user.id,
@@ -174,7 +174,7 @@ async def test_archive_template_missing_raises(
 ) -> None:
     with pytest.raises(LookupError):
         await reply_template_service.archive_template(
-            test_user.id, uuid.uuid4(),
+            test_org.id, test_user.id, uuid.uuid4(),
         )
 
 
@@ -304,7 +304,7 @@ async def test_rename_to_a_name_already_used_says_so_and_changes_nothing(
 
     with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
         await reply_template_service.update_template(
-            test_user.id, other.id, ReplyTemplateUpdateRequest(name="Taken"),
+            test_org.id, test_user.id, other.id, ReplyTemplateUpdateRequest(name="Taken"),
         )
 
     names = (await db.execute(
@@ -319,7 +319,7 @@ async def test_an_archived_template_still_holds_its_name(
 ) -> None:
     payload = ReplyTemplateCreateRequest(name="Old", subject_template="s", body_template="b")
     archived = await reply_template_service.create_template(test_org.id, test_user.id, payload)
-    await reply_template_service.archive_template(test_user.id, archived.id)
+    await reply_template_service.archive_template(test_org.id, test_user.id, archived.id)
 
     with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
         await reply_template_service.create_template(test_org.id, test_user.id, payload)
@@ -345,7 +345,7 @@ async def _archived_template(test_org: Organization, test_user: User):  # type: 
         test_org.id, test_user.id,
         ReplyTemplateCreateRequest(name="Old", subject_template="s", body_template="b"),
     )
-    await reply_template_service.archive_template(test_user.id, created.id)
+    await reply_template_service.archive_template(test_org.id, test_user.id, created.id)
     return created
 
 
@@ -372,14 +372,15 @@ async def test_an_archived_template_cant_be_changed(
 ) -> None:
     archived = await _archived_template(test_org, test_user)
     user_id = test_user.id  # each refused change rolls back, which expires test_user
+    org_id = test_org.id
 
     with pytest.raises(LookupError):
         await reply_template_service.update_template(
-            user_id, archived.id, ReplyTemplateUpdateRequest(name="New name"),
+            org_id, user_id, archived.id, ReplyTemplateUpdateRequest(name="New name"),
         )
     with pytest.raises(LookupError):
         await reply_template_service.update_template(
-            user_id, archived.id, ReplyTemplateUpdateRequest(is_archived=True),
+            org_id, user_id, archived.id, ReplyTemplateUpdateRequest(is_archived=True),
         )
 
     row = (await db.execute(
@@ -395,7 +396,7 @@ async def test_an_archived_template_can_be_restored_and_changed_at_once(
     archived = await _archived_template(test_org, test_user)
 
     restored = await reply_template_service.update_template(
-        test_user.id, archived.id,
+        test_org.id, test_user.id, archived.id,
         ReplyTemplateUpdateRequest(is_archived=False, name="Back again"),
     )
 
@@ -412,7 +413,7 @@ async def test_restoring_someone_else_s_template_raises(
 
     with pytest.raises(LookupError):
         await reply_template_service.update_template(
-            uuid.uuid4(), archived.id, ReplyTemplateUpdateRequest(is_archived=False),
+            test_org.id, uuid.uuid4(), archived.id, ReplyTemplateUpdateRequest(is_archived=False),
         )
 
 

@@ -1,8 +1,9 @@
 """HTTP routes for reply-template CRUD.
 
 Templates are per-user (not org-shared in PR 2.3 — see RENTALS_PLAN.md §13
-OUT OF SCOPE). All endpoints scope by ``ctx.user_id`` so a host can only
-see / mutate their own templates.
+OUT OF SCOPE). All endpoints scope by ``ctx.organization_id`` and
+``ctx.user_id`` so a host can only see / mutate their own templates, and only
+in the org whose role was checked.
 """
 from __future__ import annotations
 
@@ -55,7 +56,7 @@ async def update_template(
 ) -> ReplyTemplateResponse:
     try:
         return await reply_template_service.update_template(
-            ctx.user_id, template_id, payload,
+            ctx.organization_id, ctx.user_id, template_id, payload,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Reply template not found") from exc
@@ -69,7 +70,9 @@ async def archive_template(
     ctx: RequestContext = Depends(require_write_access),
 ) -> Response:
     try:
-        await reply_template_service.archive_template(ctx.user_id, template_id)
+        await reply_template_service.archive_template(
+            ctx.organization_id, ctx.user_id, template_id,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Reply template not found") from exc
     return Response(status_code=204)

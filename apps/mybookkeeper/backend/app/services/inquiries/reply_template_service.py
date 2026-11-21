@@ -165,6 +165,7 @@ async def create_template(
 
 
 async def update_template(
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     template_id: uuid.UUID,
     payload: ReplyTemplateUpdateRequest,
@@ -172,8 +173,8 @@ async def update_template(
     fields = payload.to_update_dict()
     async with unit_of_work() as db:
         # Locked so an archive landing at the same moment can't slip in between check and write.
-        template = await reply_template_repo.get_by_id_and_user(
-            db, template_id, user_id, for_update=True,
+        template = await reply_template_repo.get_by_id_in_org_for_user(
+            db, template_id, organization_id, user_id, for_update=True,
         )
         # An archived template can only be restored; it can't be changed while archived.
         if template is None or (template.is_archived and fields.get("is_archived") is not False):
@@ -186,11 +187,14 @@ async def update_template(
 
 
 async def archive_template(
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     template_id: uuid.UUID,
 ) -> None:
     async with unit_of_work() as db:
-        archived = await reply_template_repo.archive(db, template_id, user_id)
+        archived = await reply_template_repo.archive(
+            db, template_id, organization_id, user_id,
+        )
         if not archived:
             raise LookupError(f"Reply template {template_id} not found")
 
@@ -220,8 +224,8 @@ async def render_for_inquiry(
 ) -> RenderedTemplateResponse:
     """Resolve template + inquiry + listing + user, then render."""
     async with AsyncSessionLocal() as db:
-        template = await reply_template_repo.get_by_id_and_user(
-            db, template_id, user_id,
+        template = await reply_template_repo.get_by_id_in_org_for_user(
+            db, template_id, organization_id, user_id,
         )
         if template is None or template.is_archived:
             raise LookupError(f"Reply template {template_id} not found")

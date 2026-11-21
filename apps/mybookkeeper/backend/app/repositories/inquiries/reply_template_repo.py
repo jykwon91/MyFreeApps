@@ -27,16 +27,22 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
 })
 
 
-async def get_by_id_and_user(
+async def get_by_id_in_org_for_user(
     db: AsyncSession,
     template_id: uuid.UUID,
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     *,
     for_update: bool = False,
 ) -> ReplyTemplate | None:
-    """Return the template iff it exists and belongs to the given user."""
+    """Return the template iff it belongs to the given user in the given org.
+
+    The org is the request's org, so the role check made for that org covers
+    the template being read or changed.
+    """
     stmt = select(ReplyTemplate).where(
         ReplyTemplate.id == template_id,
+        ReplyTemplate.organization_id == organization_id,
         ReplyTemplate.user_id == user_id,
     )
     if for_update:
@@ -129,6 +135,7 @@ async def update_template(
 async def archive(
     db: AsyncSession,
     template_id: uuid.UUID,
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> bool:
     """Soft-delete: set is_archived=true. Returns True iff a row was updated."""
@@ -136,6 +143,7 @@ async def archive(
         update(ReplyTemplate)
         .where(
             ReplyTemplate.id == template_id,
+            ReplyTemplate.organization_id == organization_id,
             ReplyTemplate.user_id == user_id,
             ReplyTemplate.is_archived.is_(False),
         )

@@ -94,7 +94,7 @@ async def test_list_by_user_excludes_archived_by_default(
         name="t2", subject_template="s2", body_template="b2",
     )
     await db.commit()
-    await reply_template_repo.archive(db, t1.id, test_user.id)
+    await reply_template_repo.archive(db, t1.id, test_org.id, test_user.id)
     await db.commit()
 
     active = await reply_template_repo.list_by_user(
@@ -143,14 +143,14 @@ async def test_archive_returns_true_then_false(
         name="t", subject_template="s", body_template="b",
     )
     await db.commit()
-    assert await reply_template_repo.archive(db, template.id, test_user.id) is True
+    assert await reply_template_repo.archive(db, template.id, test_org.id, test_user.id) is True
     await db.commit()
     # Idempotent — archiving again is a no-op (returns False, doesn't error).
-    assert await reply_template_repo.archive(db, template.id, test_user.id) is False
+    assert await reply_template_repo.archive(db, template.id, test_org.id, test_user.id) is False
 
 
 @pytest.mark.asyncio
-async def test_get_by_id_and_user_scopes_to_user(
+async def test_get_by_id_in_org_for_user_scopes_to_org_and_user(
     db: AsyncSession, test_user: User, test_org: Organization,
 ) -> None:
     template = await reply_template_repo.create(
@@ -161,13 +161,37 @@ async def test_get_by_id_and_user_scopes_to_user(
     )
     await db.commit()
 
-    found = await reply_template_repo.get_by_id_and_user(
-        db, template.id, test_user.id,
+    found = await reply_template_repo.get_by_id_in_org_for_user(
+        db, template.id, test_org.id, test_user.id,
     )
     assert found is not None
 
     other_user_id = uuid.uuid4()
-    miss = await reply_template_repo.get_by_id_and_user(
-        db, template.id, other_user_id,
+    miss = await reply_template_repo.get_by_id_in_org_for_user(
+        db, template.id, test_org.id, other_user_id,
     )
     assert miss is None
+
+    other_org_miss = await reply_template_repo.get_by_id_in_org_for_user(
+        db, template.id, uuid.uuid4(), test_user.id,
+    )
+    assert other_org_miss is None
+
+
+@pytest.mark.asyncio
+async def test_archive_in_another_org_changes_nothing(
+    db: AsyncSession, test_user: User, test_org: Organization,
+) -> None:
+    template = await reply_template_repo.create(
+        db,
+        organization_id=test_org.id,
+        user_id=test_user.id,
+        name="t", subject_template="s", body_template="b",
+    )
+    await db.commit()
+
+    assert await reply_template_repo.archive(
+        db, template.id, uuid.uuid4(), test_user.id,
+    ) is False
+    await db.refresh(template)
+    assert template.is_archived is False
