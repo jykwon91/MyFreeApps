@@ -427,6 +427,14 @@ describe("disenchant verdict", () => {
     expect(lines).toContain("Sell on AH | +4730c over vendor");
   });
 
+  it("finds Enchanting under a collapsed Professions header, and leaves the header collapsed", () => {
+    const lines = deTooltip(
+      `sell[${DE_ITEM}] = 20; enchSkill = 25; professionsCollapsed = true; hover(GameTooltip, ${DE_ITEM}); table.insert(out, "collapsed " .. tostring(professionsCollapsed))`,
+    );
+    expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
+    expect(lines).toContain("collapsed true");
+  });
+
   it("shows the AH or vendor verdict and a 'need Enchanting' info line when the player has no Enchanting", () => {
     // enchSkill defaults to nil (no Enchanting).
     const lines = deTooltip(`sell[${DE_ITEM}] = 20; hover(GameTooltip, ${DE_ITEM})`);
