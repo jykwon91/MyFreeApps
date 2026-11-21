@@ -36,19 +36,19 @@ from app.services.storage.presigned_url_attacher import (
 )
 
 
-def attach_presigned_urls_to_files(
+async def attach_presigned_urls_to_files(
     files: list[LeaseTemplateFileResponse],
 ) -> list[LeaseTemplateFileResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         files,
         sentry_event_name="lease_template_file_storage_object_missing",
     )
 
 
-def attach_presigned_urls_to_attachments(
+async def attach_presigned_urls_to_attachments(
     attachments: list[SignedLeaseAttachmentResponse],
 ) -> list[SignedLeaseAttachmentResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         attachments,
         sentry_event_name="lease_attachment_storage_object_missing",
         download_filename_resolver=friendly_download_filename,

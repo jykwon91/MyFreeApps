@@ -62,6 +62,7 @@ async def get(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     include_deleted: bool = False,
+    for_update: bool = False,
 ) -> InsurancePolicy | None:
     stmt = select(InsurancePolicy).where(
         InsurancePolicy.id == policy_id,
@@ -70,6 +71,8 @@ async def get(
     )
     if not include_deleted:
         stmt = stmt.where(InsurancePolicy.deleted_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update()
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 

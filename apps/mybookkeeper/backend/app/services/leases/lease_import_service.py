@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import logging
 import uuid
+
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
 
 from app.core.config import settings as _settings
 from app.core.storage import get_storage
@@ -19,9 +22,10 @@ from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
     AttachmentTooLargeError,
     AttachmentTypeRejectedError,
-    StorageNotConfiguredError,
+    SignedLeaseNotFoundError,
     _validate_parent_lease,
 )
+from app.services.leases.lease_attachments_present import attachments_present_check
 from app.services.leases.lease_lifecycle_service import get_lease
 from app.services.leases.lease_references import resolve_lease_listing_id
 from app.services.storage.attachment_content import (
@@ -29,8 +33,6 @@ from app.services.storage.attachment_content import (
     UnsupportedAttachmentType,
     clean_attachment,
 )
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +125,6 @@ async def import_signed_lease(
     heuristic.
     """
     storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
 
     processed: list[tuple[bytes, str, str]] = []
     for content, filename in files:
@@ -183,33 +183,43 @@ async def import_signed_lease(
         )
         lease_id = lease.id
 
-    uploaded: list[str] = []
-    try:
+    attachment_ids = [uuid.uuid4() for _ in processed]
+    objects = [
+        NewStoredObject(f"signed-leases/{lease_id}/{attachment_id}", content, ct)
+        for attachment_id, (content, _filename, ct) in zip(attachment_ids, processed)
+    ]
+    keys = [obj.key for obj in objects]
+    await upload_objects(storage, objects)
+
+    async with CommittedWriteGuard(
+        storage, keys, attachments_present_check(lease_id, user_id, organization_id, keys),
+    ) as guard:
         async with unit_of_work() as db:
-            for position, (content, filename, ct) in enumerate(processed):
-                attachment_id = uuid.uuid4()
-                storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-                storage.upload_file(storage_key, content, ct)
-                uploaded.append(storage_key)
-                kind = _infer_attachment_kind(filename, position)
+            # Locked and checked again: the lease may have been deleted during the upload.
+            locked = await signed_lease_repo.get(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                for_update=True,
+            )
+            if locked is None:
+                raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+            for position, (attachment_id, obj, (content, filename, ct)) in enumerate(
+                zip(attachment_ids, objects, processed),
+            ):
                 await signed_lease_attachment_repo.create(
                     db,
                     lease_id=lease_id,
-                    storage_key=storage_key,
+                    storage_key=obj.key,
                     filename=filename or f"attachment-{attachment_id.hex}",
                     content_type=ct,
                     size_bytes=len(content),
-                    kind=kind,
+                    kind=_infer_attachment_kind(filename, position),
                     uploaded_by_user_id=user_id,
                     uploaded_at=now,
                 )
-    except Exception:
-        for storage_key in uploaded:
-            try:
-                storage.delete_file(storage_key)
-            except Exception:  # noqa: BLE001
-                logger.warning("Failed to clean up import attachment %s", storage_key)
-        raise
+            guard.rows_written()
 
     return await get_lease(
         user_id=user_id,

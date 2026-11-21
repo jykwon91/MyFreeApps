@@ -45,7 +45,6 @@ _UPLOAD_LIMITER = RateLimiter(max_attempts=10, window_seconds=300)
 @router.post("/resumes", response_model=ResumeUploadJobResponse, status_code=201)
 async def upload_resume(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ResumeUploadJobResponse:
     """Accept a resume file upload, store it in MinIO, and queue a parse job.
@@ -63,7 +62,6 @@ async def upload_resume(
             content_type=file.content_type or "",
             user_id=user.id,
             profile_id=profile.id,
-            db=db,
         )
     except ResumeRejected as exc:
         msg = str(exc)

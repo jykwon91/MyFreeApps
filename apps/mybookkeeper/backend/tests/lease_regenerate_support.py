@@ -25,7 +25,7 @@ from tests.lease_template_upload_support import UnitOfWorkFactory
 PDF = "app.services.leases.lease_pdf_service"
 LIFECYCLE = "app.services.leases.lease_lifecycle_service"
 RENDER = "app.services.leases.lease_render_service"
-CLEANUP = "app.services.storage.stored_file_cleanup"
+OUTCOME = "app.services.leases.lease_attachments_present"
 OLD_KEY = "signed-leases/lease/old-rendered"
 
 
@@ -39,7 +39,7 @@ async def real_uow(_db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> 
             async with session.begin():
                 yield session
 
-    for target in (PDF, LIFECYCLE, RENDER):
+    for target in (PDF, LIFECYCLE, OUTCOME):
         monkeypatch.setattr(f"{target}.unit_of_work", uow)
     yield uow
 
@@ -96,7 +96,6 @@ async def lease_with_rendered_attachment(db: AsyncSession):
 def patches(storage: MagicMock):
     return (
         patch(f"{PDF}.get_storage", return_value=storage),
-        patch(f"{CLEANUP}.get_storage", return_value=storage),
         patch(f"{RENDER}.render_md", return_value="# Hello"),
         patch(f"{RENDER}.render_md_text_to_pdf_or_keep", return_value=b"%PDF new"),
     )
@@ -104,7 +103,7 @@ def patches(storage: MagicMock):
 
 async def regenerate(storage, user_id, org_id, lease, template_ids):
     p = patches(storage)
-    with p[0], p[1], p[2], p[3]:
+    with p[0], p[1], p[2]:
         return await add_templates_and_generate(
             user_id=user_id,
             organization_id=org_id,

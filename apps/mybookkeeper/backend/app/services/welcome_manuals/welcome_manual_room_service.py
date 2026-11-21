@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.storage import get_storage
 from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_ROOMS
 from app.db.session import unit_of_work
 from app.models.welcome_manuals.welcome_manual import WelcomeManual
@@ -23,12 +24,13 @@ from app.repositories import (
 from app.schemas.welcome_manuals.welcome_manual_room_response import (
     WelcomeManualRoomResponse,
 )
-from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.welcome_manuals.reorder_check import is_exact_permutation
 from app.services.welcome_manuals.welcome_manual_scope import (
     ManualNotFoundError,
     RoomNotFoundError,
 )
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
+
 
 class TooManyRoomsError(Exception):
     """The manual already has the maximum number of rooms (-> HTTP 409)."""
@@ -133,7 +135,7 @@ async def delete_room(
 
     # Best-effort object-store cleanup outside the transaction — the rows are
     # already gone; anything left behind can be swept later.
-    await delete_stored_files(storage_keys)
+    await delete_stored_files(get_storage(), storage_keys)
 
 
 async def reorder_rooms(

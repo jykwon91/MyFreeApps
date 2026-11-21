@@ -40,7 +40,7 @@ TODAY = _dt.date(2026, 1, 1)
 
 async def _generate(storage, user_id: uuid.UUID, org_id: uuid.UUID, lease_id: uuid.UUID) -> SignedLeaseResponse:
     p = patches(storage)
-    with p[0], p[1], p[2], p[3]:
+    with p[0], p[1], p[2]:
         detail, _ = await generate_lease(user_id=user_id, organization_id=org_id, lease_id=lease_id, today=TODAY)
     return detail
 

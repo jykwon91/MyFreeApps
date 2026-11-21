@@ -51,7 +51,7 @@ from app.services.welcome_manuals.section_image_response_builder import (
 )
 
 
-def _build_section_responses(sections, images, fields) -> list[WelcomeManualSectionResponse]:
+async def _build_section_responses(sections, images, fields) -> list[WelcomeManualSectionResponse]:
     """Build ordered section responses with each section's fields + images attached.
 
     ``images`` and ``fields`` are flat lists of ORM rows spanning ALL the
@@ -62,7 +62,7 @@ def _build_section_responses(sections, images, fields) -> list[WelcomeManualSect
     (no lazy load).
     """
     image_responses = [WelcomeManualSectionImageResponse.model_validate(img) for img in images]
-    signed = attach_presigned_urls(image_responses)
+    signed = await attach_presigned_urls(image_responses)
     images_by_section: dict[uuid.UUID, list[WelcomeManualSectionImageResponse]] = {}
     for image in signed:
         images_by_section.setdefault(image.section_id, []).append(image)
@@ -126,7 +126,7 @@ async def get_manual(
     room_responses = [WelcomeManualRoomResponse.model_validate(r) for r in rooms]
     return _to_response(
         manual,
-        _build_section_responses(sections, images, fields),
+        await _build_section_responses(sections, images, fields),
         place_responses,
         room_responses,
     )
@@ -217,7 +217,7 @@ async def create_manual(
         # Freshly-seeded sections never have images yet. New manuals start
         # with zero places and zero rooms — a manual is whole-property until
         # the host splits it by room.
-        return _to_response(manual, _build_section_responses(sections, [], fields), [], [])
+        return _to_response(manual, await _build_section_responses(sections, [], fields), [], [])
 
 
 async def update_manual(
@@ -257,7 +257,7 @@ async def update_manual(
         room_responses = [WelcomeManualRoomResponse.model_validate(r) for r in rooms]
         return _to_response(
             manual,
-            _build_section_responses(sections, images, fields),
+            await _build_section_responses(sections, images, fields),
             place_responses,
             room_responses,
         )

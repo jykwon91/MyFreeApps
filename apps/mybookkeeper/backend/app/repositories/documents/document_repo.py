@@ -198,15 +198,40 @@ async def refresh(db: AsyncSession, document: Document) -> None:
     await db.refresh(document)
 
 
-async def soft_delete_by_user(db: AsyncSession, document_ids: list[uuid.UUID]) -> None:
+async def soft_delete_by_user(
+    db: AsyncSession, organization_id: uuid.UUID, document_ids: list[uuid.UUID],
+) -> None:
     """Soft-delete documents a user removed, dropping any file bytes held in the database."""
     if not document_ids:
         return
     await db.execute(
         sa_update(Document)
-        .where(Document.id.in_(document_ids))
+        .where(Document.organization_id == organization_id, Document.id.in_(document_ids))
         .values(status="deleted", deleted_at=datetime.now(timezone.utc), file_content=None)
     )
+
+
+async def soft_delete_still_failed(
+    db: AsyncSession, organization_id: uuid.UUID, document_ids: list[uuid.UUID],
+) -> list[str]:
+    """Soft-delete those of the documents that are still ``failed``.
+
+    A document re-extracted meanwhile (back to processing) is left alone.
+    Returns the storage keys of the documents actually deleted.
+    """
+    if not document_ids:
+        return []
+    result = await db.execute(
+        sa_update(Document)
+        .where(
+            Document.organization_id == organization_id,
+            Document.id.in_(document_ids),
+            Document.status == "failed",
+        )
+        .values(status="deleted", deleted_at=datetime.now(timezone.utc), file_content=None)
+        .returning(Document.file_storage_key)
+    )
+    return [key for key in result.scalars() if key]
 
 
 async def soft_delete_duplicate(db: AsyncSession, document: Document) -> None:
@@ -229,11 +254,21 @@ async def find_by_content_hash(
     return result.scalar_one_or_none()
 
 
-async def list_by_batch_content_hash_for_update(
-    db: AsyncSession, organization_id: uuid.UUID, batch_content_hash: str
-) -> Sequence[Document]:
-    """Lock the live documents unpacked from a zip with this hash, oldest first."""
+async def any_with_storage_keys(
+    db: AsyncSession, organization_id: uuid.UUID, storage_keys: list[str],
+) -> bool:
+    """Whether any document row, deleted or not, points at one of these objects."""
     result = await db.execute(
+        select(Document.id).where(
+            Document.organization_id == organization_id,
+            Document.file_storage_key.in_(storage_keys),
+        ).limit(1)
+    )
+    return result.first() is not None
+
+
+def _live_batch_with_content_hash(organization_id: uuid.UUID, batch_content_hash: str) -> Select[tuple[Document]]:
+    return (
         select(Document)
         .where(
             Document.organization_id == organization_id,
@@ -241,7 +276,23 @@ async def list_by_batch_content_hash_for_update(
             Document.deleted_at.is_(None),
         )
         .order_by(Document.created_at, Document.id)
-        .with_for_update(key_share=True)
+    )
+
+
+async def list_by_batch_content_hash(
+    db: AsyncSession, organization_id: uuid.UUID, batch_content_hash: str
+) -> Sequence[Document]:
+    """The live documents unpacked from a zip with this hash, oldest first. No lock."""
+    result = await db.execute(_live_batch_with_content_hash(organization_id, batch_content_hash))
+    return result.scalars().all()
+
+
+async def list_by_batch_content_hash_for_update(
+    db: AsyncSession, organization_id: uuid.UUID, batch_content_hash: str
+) -> Sequence[Document]:
+    """Lock the live documents unpacked from a zip with this hash, oldest first."""
+    result = await db.execute(
+        _live_batch_with_content_hash(organization_id, batch_content_hash).with_for_update(key_share=True)
     )
     return result.scalars().all()
 

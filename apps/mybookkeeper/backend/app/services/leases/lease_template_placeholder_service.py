@@ -28,7 +28,7 @@ from app.schemas.leases.suggest_placeholders_response import (
 from app.services.leases.template_placeholder_extractor import (
     suggest_placeholders as _ai_suggest_placeholders,
 )
-from app.services.storage.stored_file import read_stored_file
+from app.services.storage.stored_file import load_stored_file
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ async def suggest_ai_placeholders(
 
     extracted_texts: list[str] = []
     for f in files:
-        raw = read_stored_file(storage, f.storage_key)
+        raw = await load_stored_file(storage, f.storage_key)
         extracted_texts.append(extract_text_from_upload(raw, f.content_type))
 
     combined_text = "\n\n".join(t for t in extracted_texts if t.strip())

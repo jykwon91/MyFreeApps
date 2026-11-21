@@ -2,7 +2,7 @@
 
 Objects are uploaded before the rows that reference them. Wrap the transaction::
 
-    async with CommittedWriteGuard(new_keys, rows_present) as guard:
+    async with CommittedWriteGuard(storage, new_keys, rows_present) as guard:
         async with unit_of_work() as db:
             ... write rows ...
             guard.set_superseded(keys_no_longer_referenced)
@@ -26,30 +26,32 @@ and says whether the new rows are visible.
 * Once the commit is confirmed, the superseded objects are removed, even when
   the request was cancelled meanwhile.
 
-Cleanup runs shielded so a cancelled request still finishes it.
+Cleanup and the outcome check run to completion even when the request is
+cancelled, however many times.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from types import TracebackType
 
-from app.services.storage.stored_file_cleanup import delete_stored_files
+from platform_shared.core.run_to_completion import run_to_completion
+from platform_shared.core.storage import StorageClient
+from platform_shared.services.storage.rows_present import RowsPresent
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
 logger = logging.getLogger(__name__)
-
-RowsPresent = Callable[[], Awaitable[bool]]
 
 
 class CommittedWriteGuard:
     def __init__(
         self,
+        storage: StorageClient,
         new_keys: list[str],
         rows_present: RowsPresent,
         *,
         absence_conclusive: bool = True,
     ) -> None:
+        self._storage = storage
         self._new_keys = new_keys
         self._rows_present = rows_present
         self._absence_conclusive = absence_conclusive
@@ -71,9 +73,9 @@ class CommittedWriteGuard:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> bool:
-        committed = True if exc is None else await asyncio.shield(self._resolve_outcome())
+        committed = True if exc is None else await run_to_completion(self._resolve_outcome())
         if committed:
-            await asyncio.shield(delete_stored_files(self._superseded))
+            await run_to_completion(delete_stored_files(self._storage, self._superseded))
         if exc is None:
             return False
         if committed and isinstance(exc, Exception):
@@ -106,5 +108,8 @@ class CommittedWriteGuard:
                     self._new_keys, exc_info=True,
                 )
                 return None
-        await delete_stored_files(self._new_keys)
+        await delete_stored_files(self._storage, self._new_keys)
         return False
+
+
+__all__ = ["CommittedWriteGuard", "RowsPresent"]

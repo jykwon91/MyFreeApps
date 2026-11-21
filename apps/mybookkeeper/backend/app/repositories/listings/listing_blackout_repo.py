@@ -197,13 +197,16 @@ async def get_by_id_scoped_to_organization(
     *,
     blackout_id: uuid.UUID,
     organization_id: uuid.UUID,
+    for_update: bool = False,
 ) -> ListingBlackout | None:
     """Fetch a blackout row, scoped via JOIN to the parent listing's org.
 
     Returns None if the blackout does not exist OR belongs to a different org.
     Used by the notes-update and attachment endpoints for tenant-scoped access.
+    ``for_update=True`` locks the blackout row (not the listing) until the
+    transaction ends.
     """
-    result = await db.execute(
+    query = (
         select(ListingBlackout)
         .join(Listing, Listing.id == ListingBlackout.listing_id)
         .where(
@@ -211,6 +214,20 @@ async def get_by_id_scoped_to_organization(
             Listing.organization_id == organization_id,
             Listing.deleted_at.is_(None),
         )
+    )
+    if for_update:
+        query = query.with_for_update(of=ListingBlackout)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def lock_by_id(db: AsyncSession, blackout_id: uuid.UUID) -> ListingBlackout | None:
+    """Lock a blackout row by id, whatever state its listing is in; None if it's gone.
+
+    For a commit-outcome check on a row the caller just wrote under it.
+    """
+    result = await db.execute(
+        select(ListingBlackout).where(ListingBlackout.id == blackout_id).with_for_update()
     )
     return result.scalar_one_or_none()
 

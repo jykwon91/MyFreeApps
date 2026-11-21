@@ -20,23 +20,22 @@ async def get_for_update(
     applicant_id: uuid.UUID,
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
+    include_deleted: bool = False,
 ) -> Applicant | None:
-    """Return the non-deleted applicant owned by (organization_id, user_id),
-    row-locked (``SELECT ... FOR UPDATE``) until the transaction ends.
+    """Return the applicant owned by (organization_id, user_id), row-locked
+    (``SELECT ... FOR UPDATE``) until the transaction ends. Soft-deleted rows
+    are skipped unless ``include_deleted``.
 
     A concurrent caller blocks here until the first commits, then reads the
     fresh row.
     """
-    stmt = (
-        select(Applicant)
-        .where(
-            Applicant.id == applicant_id,
-            Applicant.organization_id == organization_id,
-            Applicant.user_id == user_id,
-            Applicant.deleted_at.is_(None),
-        )
-        .options(selectinload(Applicant.signed_leases))
-        .with_for_update(of=Applicant)
+    stmt = select(Applicant).where(
+        Applicant.id == applicant_id,
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
     )
+    if not include_deleted:
+        stmt = stmt.where(Applicant.deleted_at.is_(None))
+    stmt = stmt.options(selectinload(Applicant.signed_leases)).with_for_update(of=Applicant)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()

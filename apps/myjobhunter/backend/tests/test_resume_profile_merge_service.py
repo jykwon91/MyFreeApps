@@ -207,7 +207,7 @@ async def test_worker_uploading_same_resume_twice_adds_no_duplicates(
     text = "Jane Doe\nEngineer\n"
     storage = _fake_storage(pdf_bytes)
     claude = AsyncMock(return_value={"work_history": _WORK, "education": _EDU, "skills": []})
-    extractor = MagicMock(return_value=(text, len(text)))
+    extractor = AsyncMock(return_value=(text, len(text)))
 
     for _ in range(2):
         async with (await as_user(user)) as authed:
@@ -218,7 +218,7 @@ async def test_worker_uploading_same_resume_twice_adds_no_duplicates(
                 )
         assert resp.status_code == 201
         with (
-            patch("app.core.storage.get_storage", return_value=storage),
+            patch("app.workers.resume_parser_worker.get_storage", return_value=storage),
             patch("app.workers.resume_parser_worker.extract_text", extractor),
             patch("app.workers.resume_parser_worker.extract_resume", claude),
         ):

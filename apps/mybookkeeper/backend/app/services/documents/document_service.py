@@ -2,12 +2,14 @@
 import logging
 import uuid
 
+from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.models.documents.document import Document
 from app.models.responses.document_delete_result import DocumentDeleteResult
-from app.repositories import document_repo, transaction_repo
+from app.repositories import document_repo, lock_timeout_repo, transaction_repo
 from app.services.documents.document_errors import DocumentBeingReadError
 from app.services.documents.document_mime_type import stored_document_mime_type
 from app.services.documents.document_read_state import (
@@ -19,7 +21,11 @@ from app.services.extraction.extractor_service import (
     detect_file_type,
     unsupported_file_message,
 )
-from app.services.storage.stored_file_cleanup import delete_stored_files
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
+from platform_shared.services.storage.stored_object_cleanup import delete_stored_files
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +60,9 @@ async def delete_documents(
             if doc.file_storage_key:
                 storage_keys.append(doc.file_storage_key)
             deletable.append(document_id)
-        await document_repo.soft_delete_by_user(db, deletable)
+        await document_repo.soft_delete_by_user(db, ctx.organization_id, deletable)
 
-    await delete_stored_files(storage_keys)
+    await delete_stored_files(get_storage(), storage_keys)
     return DocumentDeleteResult(
         deleted=deletable,
         not_found=[i for i in requested if i not in live],
@@ -78,38 +84,58 @@ async def replace_file(
     content = await clean_document_file(content, filename)
     mime_type = stored_document_mime_type(content, file_type)
 
-    new_key: str | None = None
-    old_key: str | None = None
-    try:
+    # Refuse early, before anything is stored; checked again under the lock.
+    async with unit_of_work() as db:
+        _replaceable(await document_repo.get_by_id(db, document_id, ctx.organization_id))
+
+    # The new file goes to storage before the transaction, so the row lock is
+    # never held while it uploads.
+    storage = get_storage()
+    new_key = storage.generate_key(str(ctx.organization_id), filename)
+    await upload_objects(storage, [NewStoredObject(new_key, content, mime_type)])
+    async with CommittedWriteGuard(
+        storage, [new_key], _points_at_file_check(ctx.organization_id, document_id, new_key),
+    ) as guard:
         async with unit_of_work() as db:
-            doc = await document_repo.get_by_id_with_content(
+            doc = _replaceable(await document_repo.get_by_id_with_content(
                 db, document_id, ctx.organization_id, for_update=True,
-            )
-            if not doc:
-                raise ValueError("Document not found")
-            if is_being_read(doc):
-                raise DocumentBeingReadError()
-
-            storage = get_storage()
-            if storage:
-                old_key = doc.file_storage_key
-                new_key = storage.generate_key(str(ctx.organization_id), filename)
-                storage.upload_file(new_key, content, mime_type)
-                doc.file_content = None
-                doc.file_storage_key = new_key
-            else:
-                doc.file_content = content
-                doc.file_storage_key = None
-
+            ))
+            guard.set_superseded([doc.file_storage_key] if doc.file_storage_key else [])
+            doc.file_content = None
+            doc.file_storage_key = new_key
             doc.file_name = filename
             doc.file_type = file_type
             doc.file_mime_type = mime_type
-    except Exception:
-        # The row did not change, so the object uploaded for it is an orphan.
-        await delete_stored_files([new_key] if new_key else [])
-        raise
+            guard.rows_written()
 
-    await delete_stored_files([old_key] if old_key else [])
+
+def _replaceable(doc: Document | None) -> Document:
+    if doc is None:
+        raise ValueError("Document not found")
+    if is_being_read(doc):
+        raise DocumentBeingReadError()
+    return doc
+
+
+def _points_at_file_check(
+    organization_id: uuid.UUID, document_id: uuid.UUID, storage_key: str,
+) -> RowsPresent:
+    """Whether the document now points at ``storage_key``.
+
+    Takes the row lock first (bounded by a lock timeout), which waits for the
+    original transaction to finish; a timeout or any error leaves the outcome
+    unknown.
+    """
+
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            await lock_timeout_repo.set_local_lock_timeout(db, OUTCOME_CHECK_LOCK_TIMEOUT_MS)
+            doc = await document_repo.get_by_id(
+                db, document_id, organization_id, include_deleted=True, for_update=True,
+            )
+        return doc is not None and doc.file_storage_key == storage_key
+
+    return rows_present
 
 
 async def re_extract_document(
@@ -180,7 +206,7 @@ async def cancel_batch(ctx: RequestContext, batch_id: str) -> int:
         )
         cancellable = [d for d in unfinished if not is_claimed_by_worker(d)]
         storage_keys = [d.file_storage_key for d in cancellable if d.file_storage_key]
-        await document_repo.soft_delete_by_user(db, [d.id for d in cancellable])
+        await document_repo.soft_delete_by_user(db, ctx.organization_id, [d.id for d in cancellable])
 
-    await delete_stored_files(storage_keys)
+    await delete_stored_files(get_storage(), storage_keys)
     return len(cancellable)

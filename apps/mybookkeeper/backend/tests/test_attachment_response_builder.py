@@ -54,35 +54,35 @@ def _mock_storage(*, exists: bool = True, raise_exc: Exception | None = None) ->
 
 
 class TestAttachPresignedUrlsToAttachments:
-    def test_empty_list_returns_empty(self) -> None:
+    async def test_empty_list_returns_empty(self) -> None:
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
         ) as get_storage:
-            result = attach_presigned_urls_to_attachments([])
+            result = await attach_presigned_urls_to_attachments([])
             assert result == []
             get_storage.assert_not_called()
 
-    def test_present_object_gets_presigned_url(self) -> None:
+    async def test_present_object_gets_presigned_url(self) -> None:
         row = _row()
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            [out] = attach_presigned_urls_to_attachments([row])
+            [out] = await attach_presigned_urls_to_attachments([row])
         assert out.is_available is True
         assert out.presigned_url == "https://example.com/signed-url"
         storage.object_exists.assert_called_once_with(row.storage_key)
         storage.generate_presigned_url.assert_called_once()
 
-    def test_unsigned_lease_uses_original_filename_in_disposition(self) -> None:
+    async def test_unsigned_lease_uses_original_filename_in_disposition(self) -> None:
         row = _row(filename="Lease Agreement.pdf", kind="signed_lease")
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_urls_to_attachments([row])
+            await attach_presigned_urls_to_attachments([row])
         disposition = storage.generate_presigned_url.call_args.kwargs[
             "response_content_disposition"
         ]
@@ -90,7 +90,7 @@ class TestAttachPresignedUrlsToAttachments:
         assert "tenant signed" not in disposition
         assert "fully signed" not in disposition
 
-    def test_tenant_signed_lease_appends_tenant_signed_suffix(self) -> None:
+    async def test_tenant_signed_lease_appends_tenant_signed_suffix(self) -> None:
         row = _row(
             filename="Lease Agreement.pdf",
             kind="signed_lease",
@@ -101,13 +101,13 @@ class TestAttachPresignedUrlsToAttachments:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_urls_to_attachments([row])
+            await attach_presigned_urls_to_attachments([row])
         disposition = storage.generate_presigned_url.call_args.kwargs[
             "response_content_disposition"
         ]
         assert 'filename="Lease Agreement - tenant signed.pdf"' in disposition
 
-    def test_fully_signed_lease_appends_fully_signed_suffix(self) -> None:
+    async def test_fully_signed_lease_appends_fully_signed_suffix(self) -> None:
         now = _dt.datetime.now(_dt.timezone.utc)
         row = _row(
             filename="Lease Agreement.pdf",
@@ -120,13 +120,13 @@ class TestAttachPresignedUrlsToAttachments:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_urls_to_attachments([row])
+            await attach_presigned_urls_to_attachments([row])
         disposition = storage.generate_presigned_url.call_args.kwargs[
             "response_content_disposition"
         ]
         assert 'filename="Lease Agreement - fully signed.pdf"' in disposition
 
-    def test_inspection_kind_keeps_original_filename(self) -> None:
+    async def test_inspection_kind_keeps_original_filename(self) -> None:
         # Even if the signing-state columns are populated by accident,
         # non-lease kinds must not get the suffix.
         now = _dt.datetime.now(_dt.timezone.utc)
@@ -141,14 +141,14 @@ class TestAttachPresignedUrlsToAttachments:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_urls_to_attachments([row])
+            await attach_presigned_urls_to_attachments([row])
         disposition = storage.generate_presigned_url.call_args.kwargs[
             "response_content_disposition"
         ]
         assert 'filename="Move-In Inspection.pdf"' in disposition
         assert "signed" not in disposition
 
-    def test_missing_object_flips_is_available_and_skips_url(self) -> None:
+    async def test_missing_object_flips_is_available_and_skips_url(self) -> None:
         row = _row(presigned_url=None, is_available=True)
         storage = _mock_storage(exists=False)
         with patch(
@@ -157,7 +157,7 @@ class TestAttachPresignedUrlsToAttachments:
         ), patch(
             "app.services.storage.presigned_url_attacher.sentry_sdk",
         ) as sentry_mock:
-            [out] = attach_presigned_urls_to_attachments([row])
+            [out] = await attach_presigned_urls_to_attachments([row])
         assert out.is_available is False
         assert out.presigned_url is None
         storage.generate_presigned_url.assert_not_called()
@@ -174,7 +174,7 @@ class TestAttachPresignedUrlsToAttachments:
         assert tag_calls["lease_id"] == str(row.lease_id)
         assert tag_calls["id"] == str(row.id)
 
-    def test_transient_error_propagates(self) -> None:
+    async def test_transient_error_propagates(self) -> None:
         row = _row()
         storage = _mock_storage(raise_exc=RuntimeError("MinIO 503"))
         with patch(
@@ -182,9 +182,9 @@ class TestAttachPresignedUrlsToAttachments:
             return_value=storage,
         ):
             with pytest.raises(RuntimeError, match="MinIO 503"):
-                attach_presigned_urls_to_attachments([row])
+                await attach_presigned_urls_to_attachments([row])
 
-    def test_mixed_present_and_missing_in_one_call(self) -> None:
+    async def test_mixed_present_and_missing_in_one_call(self) -> None:
         present = _row()
         missing = _row()
 
@@ -199,7 +199,7 @@ class TestAttachPresignedUrlsToAttachments:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ), patch("app.services.storage.presigned_url_attacher.sentry_sdk"):
-            results = attach_presigned_urls_to_attachments([present, missing])
+            results = await attach_presigned_urls_to_attachments([present, missing])
 
         by_id = {r.id: r for r in results}
         assert by_id[present.id].is_available is True

@@ -105,7 +105,7 @@ async def test_regenerate_render_failure_keeps_old_attachments_and_removes_new_u
         return "# Hello"
 
     p = patches(storage)
-    with p[0], p[1], p[3], patch(f"{RENDER}.render_md", side_effect=render_second_fails):
+    with p[0], p[2], patch(f"{RENDER}.render_md", side_effect=render_second_fails):
         with pytest.raises(ValueError):
             await add_templates_and_generate(
                 user_id=user_id, organization_id=org_id, lease_id=lease_id,
@@ -113,8 +113,8 @@ async def test_regenerate_render_failure_keeps_old_attachments_and_removes_new_u
             )
 
     assert await rendered_keys(db, lease_id) == [OLD_KEY]
-    uploaded = [c.args[0] for c in storage.upload_file.call_args_list]
-    assert len(uploaded) == 1 and set(uploaded) <= set(deleted(storage))
+    # Every file renders before any is stored, so a render failure stores nothing.
+    storage.upload_file.assert_not_called()
     assert OLD_KEY not in deleted(storage)
 
 
@@ -189,7 +189,7 @@ async def test_generate_twice_replaces_the_earlier_rendered_documents(
     storage = storage_double()
     p = patches(storage)
 
-    with p[0], p[1], p[2], p[3]:
+    with p[0], p[1], p[2]:
         for _ in range(2):
             await generate_lease(
                 user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
@@ -211,7 +211,7 @@ async def test_generate_commit_failure_keeps_old_documents_and_removes_new_uploa
     p = patches(storage)
 
     # Use 1 is the read; use 2 is the write transaction whose commit fails.
-    with p[0], p[1], p[2], p[3], patch(f"{PDF}.unit_of_work", failing_commit(real_uow, on_call=2)):
+    with p[0], p[1], p[2], patch(f"{PDF}.unit_of_work", failing_commit(real_uow, on_call=2)):
         with pytest.raises(CommitFailedError):
             await generate_lease(
                 user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),

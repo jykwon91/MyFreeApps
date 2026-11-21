@@ -92,7 +92,6 @@ SECTION_LOCKED = {
     "update_field": (fields, lambda: fields.update_field(ORG, USER, MANUAL, SECTION, ROW, {"label": "x"})),
     "reorder_fields": (fields, lambda: fields.reorder_fields(ORG, USER, MANUAL, SECTION, [ROW])),
     "delete_field": (fields, lambda: fields.delete_field(ORG, USER, MANUAL, SECTION, ROW)),
-    "upload_images": (images, lambda: images.upload_images(ORG, USER, MANUAL, SECTION, _jpeg())),
     "update_image": (images, lambda: images.update_image(ORG, USER, MANUAL, SECTION, ROW, {"caption": "c"})),
     "reorder_images": (images, lambda: images.reorder_images(ORG, USER, MANUAL, SECTION, [ROW])),
     "delete_image": (images, lambda: images.delete_image(ORG, USER, MANUAL, SECTION, ROW)),
@@ -184,13 +183,31 @@ async def test_section_writes_lock_the_manual(name: str, monkeypatch: pytest.Mon
 @pytest.mark.asyncio
 async def test_field_and_image_writes_lock_the_section(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
     module, call = SECTION_LOCKED[name]
-    if name == "upload_images":
-        monkeypatch.setattr(images, "get_storage", lambda: object())
-        monkeypatch.setattr(images, "process_image", lambda content, declared_content_type=None: SimpleNamespace(content=content, content_type="image/jpeg"))
     sql = await _run(monkeypatch, module, call, statements=2)
     assert "welcome_manual_sections" in sql[1]
     assert _locks(sql[1]), f"{name} must lock the section row"
     assert not _locks(sql[0]), f"{name} only needs to read the manual"
+
+
+@pytest.mark.asyncio
+async def test_an_image_upload_locks_the_section_only_once_the_images_are_stored(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The check before the upload is a plain read; the write that records the
+    images locks the section, after the upload (no lock is held while it runs)."""
+    storage = MagicMock()
+    storage.generate_key.side_effect = lambda prefix, name: f"{prefix}/{name}"
+    storage.delete_files.return_value = []
+    monkeypatch.setattr(images, "get_storage", lambda: storage)
+    monkeypatch.setattr(images, "process_image", lambda content, declared_content_type=None: SimpleNamespace(content=content, content_type="image/jpeg"))
+
+    sql = await _run(monkeypatch, images, lambda: images.upload_images(ORG, USER, MANUAL, SECTION, _jpeg()), statements=5)
+
+    precheck, write = sql[:3], sql[3:]
+    assert not any(_locks(q) for q in precheck)
+    assert "welcome_manual_sections" in write[1] and _locks(write[1])
+    assert not _locks(write[0])
+    storage.upload_file.assert_called_once()
 
 
 @pytest.mark.asyncio

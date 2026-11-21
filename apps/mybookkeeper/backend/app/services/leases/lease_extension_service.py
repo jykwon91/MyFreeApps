@@ -22,19 +22,20 @@ reject because the lease is closed.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
-import logging
 import uuid
+
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.applicants.applicant_event import ApplicantEvent
+from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_event_repo, applicant_repo
-from app.repositories.leases import (
-    lease_term_version_repo,
-    signed_lease_attachment_repo,
-    signed_lease_repo,
-)
+from app.repositories.leases import lease_term_version_repo, signed_lease_repo
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.services.leases._lease_helpers import (
     UNDO_WINDOW_DAYS,
@@ -43,10 +44,10 @@ from app.services.leases._lease_helpers import (
     _term_end_before,
     _undo_window_is_open,
 )
+from app.services.leases.lease_attachments_present import attachments_present_check
+from app.services.leases.lease_extension_record import record_extension
 from app.services.leases.lease_lifecycle_service import get_lease
 from app.services.leases.renderer import render_md, render_pdf_from_text
-
-logger = logging.getLogger(__name__)
 
 
 # Statuses for which an extension is a valid mutation. Outside this set,
@@ -141,41 +142,22 @@ async def extend_lease(
     """
     now = _dt.datetime.now(_dt.timezone.utc)
 
+    # Read and render without holding the lease lock: the PDF is built and
+    # stored before the write below takes it.
     async with unit_of_work() as db:
-        # Locked so two overlapping requests can't both pass the end-date check,
-        # which would write two addenda and email the tenant twice.
         lease = await signed_lease_repo.get(
             db,
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
-            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
-
-        if lease.status not in EXTENSION_ALLOWED_STATUSES:
-            raise InvalidLeaseStatusForExtensionError(
-                f"Lease status '{lease.status}' cannot be extended. "
-                "Only signed or active leases can be extended.",
-            )
-
-        if lease.ends_on is None:
-            raise MissingCurrentEndDateError(
-                "Lease has no current end date set — fill in the original "
-                "term before extending.",
-            )
-
-        if new_ends_on <= lease.ends_on:
-            raise NewEndDateNotAfterCurrentError(
-                f"new_ends_on ({new_ends_on.isoformat()}) must be strictly "
-                f"after the current end date ({lease.ends_on.isoformat()}).",
-            )
-
+        _assert_extendable(lease, new_ends_on)
         original_starts_on = lease.starts_on or lease.ends_on
         original_ends_on = lease.ends_on
 
-        applicant, _inquiry, property_record, user_record = (
+        _applicant, _inquiry, property_record, user_record = (
             await _load_resolution_context(
                 db,
                 lease=lease,
@@ -183,9 +165,8 @@ async def extend_lease(
                 user_id=user_id,
             )
         )
-
-        substitutions = _build_substitutions(
-            applicant=applicant,
+        rendered_text = render_md(_DEFAULT_ADDENDUM_TEMPLATE, _build_substitutions(
+            applicant=_applicant,
             property_record=property_record,
             user_record=user_record,
             original_starts_on=original_starts_on,
@@ -193,102 +174,58 @@ async def extend_lease(
             new_ends_on=new_ends_on,
             notes=notes,
             effective_date=now.date(),
-        )
+        ))
 
-        rendered_text = render_md(_DEFAULT_ADDENDUM_TEMPLATE, substitutions)
-        pdf_bytes = render_pdf_from_text(rendered_text)
+    pdf_bytes = await asyncio.to_thread(render_pdf_from_text, rendered_text)
+    attachment_id = uuid.uuid4()
+    storage_key = f"signed-leases/{lease_id}/{attachment_id}"
+    storage = get_storage()
+    await upload_objects(storage, [NewStoredObject(storage_key, pdf_bytes, "application/pdf")])
 
-        attachment_id = uuid.uuid4()
-        storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-        storage = get_storage()
-        storage.upload_file(storage_key, pdf_bytes, "application/pdf")
-
-        try:
-            attachment = await signed_lease_attachment_repo.create(
-                db,
-                id=attachment_id,
-                lease_id=lease.id,
-                storage_key=storage_key,
-                filename=_addendum_filename(new_ends_on),
-                content_type="application/pdf",
-                size_bytes=len(pdf_bytes),
-                kind="signed_addendum",
-                uploaded_by_user_id=user_id,
-                uploaded_at=now,
-            )
-
-            # Undo returns to the seed. The backfill only covered leases that
-            # existed when the table arrived, so later ones get theirs here.
-            # A lease already extended without one keeps none: its current end
-            # date is not its original term.
-            if not await lease_term_version_repo.list_by_lease(db, lease_id=lease.id):
-                await lease_term_version_repo.create(
-                    db,
-                    lease_id=lease.id,
-                    starts_on=original_starts_on,
-                    ends_on=original_ends_on,
-                    source_attachment_id=None,
-                    created_by_user_id=user_id,
-                    created_at=now,
-                )
-
-            extension = await lease_term_version_repo.create(
-                db,
-                lease_id=lease.id,
-                starts_on=original_starts_on,
-                ends_on=new_ends_on,
-                source_attachment_id=attachment.id,
-                created_by_user_id=user_id,
-                created_at=now,
-            )
-
-            await signed_lease_repo.update_lease(
+    async with CommittedWriteGuard(
+        storage, [storage_key],
+        attachments_present_check(lease_id, user_id, organization_id, [storage_key]),
+    ) as guard:
+        async with unit_of_work() as db:
+            # Locked so two overlapping requests can't both pass the end-date
+            # check, which would write two addenda and email the tenant twice.
+            lease = await signed_lease_repo.get(
                 db,
                 lease_id=lease_id,
                 user_id=user_id,
                 organization_id=organization_id,
-                fields={"ends_on": new_ends_on, "updated_at": now},
+                for_update=True,
             )
-
-            if applicant is not None:
-                tenancy_restarted = applicant.tenant_ended_at is not None
-                ended_tenancy = None
-                if tenancy_restarted:
-                    # Undo needs these to put the end back; clearing wipes them.
-                    ended_tenancy = {
-                        "ended_at": applicant.tenant_ended_at.isoformat(),
-                        "reason": applicant.tenant_ended_reason,
-                    }
-                    await applicant_repo.clear_tenancy_ended(
-                        db, applicant=applicant, now=now,
-                    )
-                await applicant_event_repo.append(
-                    db,
-                    applicant_id=applicant.id,
-                    event_type="tenancy_extended",
-                    actor="host",
-                    occurred_at=now,
-                    payload={
-                        "lease_id": str(lease_id),
-                        "previous_ends_on": original_ends_on.isoformat(),
-                        "new_ends_on": new_ends_on.isoformat(),
-                        "tenancy_restarted": tenancy_restarted,
-                        "lease_term_version_id": str(extension.id),
-                        "ended_tenancy": ended_tenancy,
-                    },
+            if lease is None:
+                raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+            _assert_extendable(lease, new_ends_on)
+            if (lease.starts_on or lease.ends_on, lease.ends_on) != (original_starts_on, original_ends_on):
+                # The addendum states the term it extends; it no longer matches.
+                raise NewEndDateNotAfterCurrentError(
+                    "The lease's term changed while this extension was being "
+                    "prepared. Reload the lease and try again.",
                 )
-        except Exception:
-            # DB write failed after we uploaded the PDF — best-effort cleanup
-            # of the orphan object so the bucket doesn't accumulate dead files
-            # on retries.
-            try:
-                storage.delete_file(storage_key)
-            except Exception:  # noqa: BLE001
-                logger.warning(
-                    "Failed to clean up orphan extension addendum %s",
-                    storage_key,
-                )
-            raise
+            applicant, _inquiry, _property, _user = await _load_resolution_context(
+                db,
+                lease=lease,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+            await record_extension(
+                db,
+                lease=lease,
+                applicant=applicant,
+                user_id=user_id,
+                organization_id=organization_id,
+                attachment_id=attachment_id,
+                storage_key=storage_key,
+                pdf_size=len(pdf_bytes),
+                original_starts_on=original_starts_on,
+                original_ends_on=original_ends_on,
+                new_ends_on=new_ends_on,
+                now=now,
+            )
+            guard.rows_written()
 
     detail = await get_lease(
         user_id=user_id,
@@ -296,6 +233,26 @@ async def extend_lease(
         lease_id=lease_id,
     )
     return detail, attachment_id
+
+
+def _assert_extendable(lease: SignedLease, new_ends_on: _dt.date) -> None:
+    if lease.status not in EXTENSION_ALLOWED_STATUSES:
+        raise InvalidLeaseStatusForExtensionError(
+            f"Lease status '{lease.status}' cannot be extended. "
+            "Only signed or active leases can be extended.",
+        )
+
+    if lease.ends_on is None:
+        raise MissingCurrentEndDateError(
+            "Lease has no current end date set — fill in the original "
+            "term before extending.",
+        )
+
+    if new_ends_on <= lease.ends_on:
+        raise NewEndDateNotAfterCurrentError(
+            f"new_ends_on ({new_ends_on.isoformat()}) must be strictly "
+            f"after the current end date ({lease.ends_on.isoformat()}).",
+        )
 
 
 async def undo_extension(
@@ -440,10 +397,6 @@ def _ended_tenancy_to_restore(
         if payload.get("lease_term_version_id") == str(version_id):
             saved = payload.get("ended_tenancy")
     return saved
-
-
-def _addendum_filename(new_ends_on: _dt.date) -> str:
-    return f"Lease Extension Addendum - through {new_ends_on.isoformat()}.pdf"
 
 
 def _build_substitutions(

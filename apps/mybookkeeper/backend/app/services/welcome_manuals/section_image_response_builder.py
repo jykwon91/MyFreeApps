@@ -15,10 +15,10 @@ from app.services.storage.presigned_url_attacher import (
 )
 
 
-def attach_presigned_urls(
+async def attach_presigned_urls(
     images: list[WelcomeManualSectionImageResponse],
 ) -> list[WelcomeManualSectionImageResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         images,
         sentry_event_name="welcome_manual_image_storage_object_missing",
     )

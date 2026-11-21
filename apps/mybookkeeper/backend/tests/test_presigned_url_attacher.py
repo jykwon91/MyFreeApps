@@ -16,7 +16,9 @@ direct contract for the shared helper.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
+import time
 import uuid
 from unittest.mock import MagicMock, patch
 
@@ -71,29 +73,29 @@ def _mock_storage(*, exists: bool = True, raise_exc: Exception | None = None) ->
 
 
 class TestSharedHelper:
-    def test_empty_list(self) -> None:
+    async def test_empty_list(self) -> None:
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
         ) as get_storage:
-            assert attach_presigned_url_with_head_check(
+            assert await attach_presigned_url_with_head_check(
                 [], sentry_event_name="test_event",
             ) == []
             get_storage.assert_not_called()
 
-    def test_present_object(self) -> None:
+    async def test_present_object(self) -> None:
         row = _row()
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            [out] = attach_presigned_url_with_head_check(
+            [out] = await attach_presigned_url_with_head_check(
                 [row], sentry_event_name="test_event",
             )
         assert out.is_available is True
         assert out.presigned_url == "https://example.com/signed-url"
 
-    def test_missing_object_flips_flag(self) -> None:
+    async def test_missing_object_flips_flag(self) -> None:
         row = _row()
         storage = _mock_storage(exists=False)
         with patch(
@@ -102,25 +104,25 @@ class TestSharedHelper:
         ), patch(
             "app.services.storage.presigned_url_attacher.sentry_sdk",
         ) as sentry_mock:
-            [out] = attach_presigned_url_with_head_check(
+            [out] = await attach_presigned_url_with_head_check(
                 [row], sentry_event_name="test_event",
             )
         assert out.is_available is False
         assert out.presigned_url is None
         sentry_mock.capture_message.assert_called_once()
 
-    def test_transient_error_propagates(self) -> None:
+    async def test_transient_error_propagates(self) -> None:
         storage = _mock_storage(raise_exc=RuntimeError("MinIO 503"))
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
             with pytest.raises(RuntimeError, match="MinIO 503"):
-                attach_presigned_url_with_head_check(
+                await attach_presigned_url_with_head_check(
                     [_row()], sentry_event_name="test_event",
                 )
 
-    def test_screening_row_with_no_storage_key_passes_through(self) -> None:
+    async def test_screening_row_with_no_storage_key_passes_through(self) -> None:
         # Screening rows can exist without an uploaded report; their
         # ``report_storage_key`` is None and we should NOT HEAD-check or
         # falsely flag them missing.
@@ -130,7 +132,7 @@ class TestSharedHelper:
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            [out] = attach_presigned_url_with_head_check(
+            [out] = await attach_presigned_url_with_head_check(
                 [row],
                 storage_key_attr="report_storage_key",
                 sentry_event_name="test_event",
@@ -139,14 +141,14 @@ class TestSharedHelper:
         assert out.presigned_url is None
         storage.object_exists.assert_not_called()
 
-    def test_resolver_attaches_content_disposition(self) -> None:
+    async def test_resolver_attaches_content_disposition(self) -> None:
         row = _row(filename="Lease Agreement.pdf")
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_url_with_head_check(
+            await attach_presigned_url_with_head_check(
                 [row],
                 sentry_event_name="test_event",
                 download_filename_resolver=lambda r: f"{r.filename}",
@@ -157,14 +159,14 @@ class TestSharedHelper:
             "filename*=UTF-8''Lease%20Agreement.pdf"
         )
 
-    def test_resolver_returning_none_skips_disposition(self) -> None:
+    async def test_resolver_returning_none_skips_disposition(self) -> None:
         row = _row()
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_url_with_head_check(
+            await attach_presigned_url_with_head_check(
                 [row],
                 sentry_event_name="test_event",
                 download_filename_resolver=lambda r: None,
@@ -172,21 +174,21 @@ class TestSharedHelper:
         call = storage.generate_presigned_url.call_args
         assert call.kwargs["response_content_disposition"] is None
 
-    def test_no_resolver_passes_no_disposition(self) -> None:
+    async def test_no_resolver_passes_no_disposition(self) -> None:
         row = _row()
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            attach_presigned_url_with_head_check(
+            await attach_presigned_url_with_head_check(
                 [row],
                 sentry_event_name="test_event",
             )
         call = storage.generate_presigned_url.call_args
         assert call.kwargs["response_content_disposition"] is None
 
-    def test_mixed_present_and_missing(self) -> None:
+    async def test_mixed_present_and_missing(self) -> None:
         present = _row()
         missing = _row()
 
@@ -203,13 +205,51 @@ class TestSharedHelper:
         ), patch(
             "app.services.storage.presigned_url_attacher.sentry_sdk",
         ):
-            results = attach_presigned_url_with_head_check(
+            results = await attach_presigned_url_with_head_check(
                 [present, missing], sentry_event_name="test_event",
             )
 
         by_id = {r.id: r for r in results}
         assert by_id[present.id].is_available is True
         assert by_id[missing.id].is_available is False
+
+    async def test_checks_files_concurrently_off_the_event_loop(self) -> None:
+        """A page with many files must not check them one by one on the loop.
+
+        Each check blocks its thread for 0.1 s, like a slow MinIO. One after
+        another, ten would take a second and freeze every other request.
+        """
+        def slow_check(_key: str) -> bool:
+            time.sleep(0.1)
+            return True
+
+        storage = _mock_storage()
+        storage.object_exists.side_effect = slow_check
+        ticks = 0
+        done = False
+
+        async def ticker() -> None:
+            nonlocal ticks
+            while not done:
+                ticks += 1
+                await asyncio.sleep(0.01)
+
+        ticking = asyncio.create_task(ticker())
+        started = time.monotonic()
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            out = await attach_presigned_url_with_head_check(
+                [_row() for _ in range(10)], sentry_event_name="test_event",
+            )
+        elapsed = time.monotonic() - started
+        done = True
+        await ticking
+
+        assert all(r.is_available for r in out)
+        assert elapsed < 0.5
+        assert ticks >= 5
 
 
 class TestBuildAttachmentDisposition:

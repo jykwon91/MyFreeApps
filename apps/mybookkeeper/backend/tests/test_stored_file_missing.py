@@ -28,7 +28,11 @@ from app.models.organization.organization_member import OrgRole
 from app.services.extraction import document_draft_reader
 from app.services.extraction.document_draft_reader import UnreadableDocumentError
 from app.services.leases import lease_template_placeholder_service
-from app.services.storage.stored_file import StoredFileMissingError, read_stored_file
+from app.services.storage.stored_file import (
+    StoredFileMissingError,
+    load_stored_file,
+    read_stored_file,
+)
 
 
 def _s3_error(code: str) -> S3Error:
@@ -76,6 +80,30 @@ class TestReadStoredFile:
     def test_any_other_storage_error_still_propagates(self) -> None:
         with pytest.raises(S3Error):
             read_stored_file(_storage_raising("AccessDenied"), "k")
+
+
+class TestLoadStoredFile:
+    """The async read gives the same answers as ``read_stored_file``."""
+
+    @pytest.mark.asyncio
+    async def test_returns_the_bytes(self) -> None:
+        storage = MagicMock()
+        storage.download_file.return_value = b"content"
+
+        assert await load_stored_file(storage, "k") == b"content"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("code", ["NoSuchKey", "NoSuchObject"])
+    async def test_a_missing_object_raises_stored_file_missing(self, code: str) -> None:
+        with pytest.raises(StoredFileMissingError) as info:
+            await load_stored_file(_storage_raising(code), "lease-templates/a/b")
+
+        assert info.value.storage_key == "lease-templates/a/b"
+
+    @pytest.mark.asyncio
+    async def test_any_other_storage_error_still_propagates(self) -> None:
+        with pytest.raises(S3Error):
+            await load_stored_file(_storage_raising("AccessDenied"), "k")
 
 
 class TestSuggestPlaceholders:

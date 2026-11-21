@@ -25,3 +25,13 @@ STORAGE_RETRY_STATUS_CODES: Final = (500, 502, 503, 504)
 
 # Pooled connections per host, as minio-py's default.
 STORAGE_POOL_MAXSIZE: Final = 10
+
+# Threads that run storage calls for async code. Storage has its own pool so a
+# stalled MinIO can't take the threads that email, SMS and file parsing use
+# from the default executor. At most the connection pool size, so no thread
+# waits for a free connection.
+STORAGE_THREAD_POOL_SIZE: Final = 8
+
+# Existence checks one read page runs at once. Half the storage threads, so a
+# page with many files leaves room for uploads and downloads.
+STORAGE_CHECK_CONCURRENCY: Final = 4

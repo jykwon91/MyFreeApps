@@ -96,7 +96,7 @@ async def test_generate_on_a_signed_lease_is_refused(db: AsyncSession, real_uow)
     storage = storage_double()
 
     p = patches(storage)
-    with p[0], p[1], p[2], p[3], pytest.raises(LeaseDocumentsLockedError):
+    with p[0], p[1], p[2], pytest.raises(LeaseDocumentsLockedError):
         await generate_lease(
             user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
         )
@@ -150,7 +150,7 @@ async def test_a_generated_lease_already_emailed_to_the_tenant_is_locked(db: Asy
     with pytest.raises(LeaseDocumentsLockedError):
         await regenerate(storage, user_id, org_id, lease, [template_id])
     p = patches(storage)
-    with p[0], p[1], p[2], p[3], pytest.raises(LeaseDocumentsLockedError):
+    with p[0], p[1], p[2], pytest.raises(LeaseDocumentsLockedError):
         await generate_lease(
             user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
         )

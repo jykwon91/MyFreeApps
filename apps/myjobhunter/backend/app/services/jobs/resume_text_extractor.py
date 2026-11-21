@@ -5,8 +5,13 @@ when no readable text can be pulled from the file (e.g. a scanned/image-only PDF
 """
 from __future__ import annotations
 
-import io
 import logging
+
+from platform_shared.extraction.files import (
+    LEGACY_DOC_MESSAGE,
+    extract_text_from_docx,
+    extract_text_from_pdf,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +20,12 @@ class ResumeTextExtractionFailed(Exception):
     """Raised when a file yields no extractable text."""
 
 
-def extract_text(content_bytes: bytes, content_type: str) -> tuple[str, int]:
+async def extract_text(content_bytes: bytes, content_type: str) -> tuple[str, int]:
     """Extract plain text from ``content_bytes``.
+
+    PDF and DOCX parsing is CPU-bound and runs in a worker thread (via the
+    shared extraction helpers), so a large resume doesn't freeze the worker's
+    event loop.
 
     Args:
         content_bytes: Raw file bytes downloaded from MinIO.
@@ -30,12 +39,18 @@ def extract_text(content_bytes: bytes, content_type: str) -> tuple[str, int]:
             (e.g. an image-only scanned PDF).
     """
     if content_type == "application/pdf":
-        return _extract_pdf(content_bytes)
-    if content_type in (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword",
-    ):
-        return _extract_docx(content_bytes)
+        return _non_empty(
+            await extract_text_from_pdf(content_bytes),
+            "no extractable text — the PDF may be image-only or scanned",
+        )
+    if content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        return _non_empty(
+            await extract_text_from_docx(content_bytes),
+            "no extractable text — the DOCX appears to contain only images",
+        )
+    if content_type == "application/msword":
+        # A legacy .doc is not a DOCX zip; the DOCX reader would only report it unreadable.
+        raise ResumeTextExtractionFailed(LEGACY_DOC_MESSAGE)
     if content_type == "text/plain":
         return _extract_text_plain(content_bytes)
 
@@ -44,32 +59,9 @@ def extract_text(content_bytes: bytes, content_type: str) -> tuple[str, int]:
     return _extract_text_plain(content_bytes)
 
 
-def _extract_pdf(content_bytes: bytes) -> tuple[str, int]:
-    import pypdf  # noqa: PLC0415 — lazy import keeps worker startup fast
-
-    reader = pypdf.PdfReader(io.BytesIO(content_bytes))
-    pages: list[str] = []
-    for page in reader.pages:
-        page_text = page.extract_text() or ""
-        pages.append(page_text)
-
-    text = "\n".join(pages).strip()
+def _non_empty(text: str | None, empty_message: str) -> tuple[str, int]:
     if not text:
-        raise ResumeTextExtractionFailed(
-            "no extractable text — the PDF may be image-only or scanned"
-        )
-    return text, len(text)
-
-
-def _extract_docx(content_bytes: bytes) -> tuple[str, int]:
-    import mammoth  # noqa: PLC0415
-
-    result = mammoth.extract_raw_text(io.BytesIO(content_bytes))
-    text = (result.value or "").strip()
-    if not text:
-        raise ResumeTextExtractionFailed(
-            "no extractable text — the DOCX appears to contain only images"
-        )
+        raise ResumeTextExtractionFailed(empty_message)
     return text, len(text)
 
 

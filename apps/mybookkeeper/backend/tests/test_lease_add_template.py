@@ -363,9 +363,6 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
     ), _patch(
         "app.services.leases.lease_pdf_service.get_storage",
         return_value=storage,
-    ), _patch(
-        "app.services.storage.stored_file_cleanup.get_storage",
-        return_value=storage,
     ):
         await add_templates_and_generate(
             user_id=user_id,

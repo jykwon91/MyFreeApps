@@ -35,7 +35,7 @@ _SLUG_GENERATION_ATTEMPTS = 5
 logger = logging.getLogger(__name__)
 
 
-def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse:
+async def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse:
     """Convert an ORM Listing + its related rows to a response model.
 
     Centralising this construction prevents drift between get + create + update
@@ -47,7 +47,7 @@ def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse
     photo_responses = [ListingPhotoResponse.model_validate(p) for p in photos]
     return base.model_copy(update={
         "amenities": list(listing.amenities or []),
-        "photos": attach_presigned_urls(photo_responses),
+        "photos": await attach_presigned_urls(photo_responses),
         "external_ids": [ListingExternalIdResponse.model_validate(x) for x in external_ids],
     })
 
@@ -68,7 +68,7 @@ async def get_listing(
             raise LookupError(f"Listing {listing_id} not found")
         photos = await listing_photo_repo.list_by_listing(db, listing.id)
         external_ids = await listing_external_id_repo.list_by_listing(db, listing.id)
-    return _to_listing_response(listing, photos, external_ids)
+    return await _to_listing_response(listing, photos, external_ids)
 
 
 async def get_public_listing(slug: str) -> PublicListingResponse:
@@ -170,7 +170,7 @@ async def create_listing(
             large_dog_disclosure=payload.large_dog_disclosure,
             slug=slug,
         )
-        return _to_listing_response(listing)
+        return await _to_listing_response(listing)
 
 
 async def update_listing(
@@ -202,7 +202,7 @@ async def update_listing(
 
         photos = await listing_photo_repo.list_by_listing(db, listing.id)
         external_ids = await listing_external_id_repo.list_by_listing(db, listing.id)
-        return _to_listing_response(listing, photos, external_ids)
+        return await _to_listing_response(listing, photos, external_ids)
 
 
 async def soft_delete_listing(

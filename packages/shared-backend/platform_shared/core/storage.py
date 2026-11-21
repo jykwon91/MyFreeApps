@@ -14,6 +14,9 @@ Per-request paths therefore never see ``None`` — silent degradation
 (``presigned_url=None`` placeholders) is gone. See the MBK PR #201–#204
 postmortem for the bug trail this pattern caused.
 
+Async code calls the client through ``platform_shared.core.async_storage``,
+which keeps these blocking calls off the event loop.
+
 Apps thin-wrap this module with their own ``app/core/storage.py``:
 
     from platform_shared.core.storage import (
@@ -310,9 +313,12 @@ class StorageClient:
             ),
         )
 
+    def bucket_exists(self) -> bool:
+        return self._client.bucket_exists(self._bucket)
+
     def ensure_bucket(self) -> None:
         """Create the bucket if it doesn't exist. Idempotent."""
-        if not self._client.bucket_exists(self._bucket):
+        if not self.bucket_exists():
             self._client.make_bucket(self._bucket)
 
     @staticmethod

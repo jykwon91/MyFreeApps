@@ -17,19 +17,25 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import logging
 import uuid
 from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+from platform_shared.schemas.storage.new_stored_object import NewStoredObject
+from platform_shared.services.storage.committed_write_guard import CommittedWriteGuard
+from platform_shared.services.storage.object_upload import upload_objects
+from platform_shared.services.storage.rows_present import RowsPresent
 
 from app.core.applicant_enums import SCREENING_PROVIDERS, SCREENING_STATUSES
+from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.repositories import lock_timeout_repo
 from app.repositories.applicants import (
     applicant_event_repo,
+    applicant_lock_repo,
     applicant_repo,
     screening_result_repo,
 )
@@ -49,8 +55,6 @@ from app.services.screening.report_processor import (
     ProcessedReport,
     process_report,
 )
-
-logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -279,9 +283,10 @@ async def record_result(
 
     Pipeline:
         validate(status, snippet)
-        → process_report (size + sniff + ClamAV + EXIF strip)
         → applicant ownership check (404)
+        → process_report (size + sniff + ClamAV + EXIF strip)
         → storage.upload_file
+        → (re-locked ownership check, all in one guarded transaction)
         → screening_result_repo.create
         → applicant_event_repo.append("screening_completed")
         → audit_event("screening.result_uploaded")
@@ -299,23 +304,28 @@ async def record_result(
     """
     _validate_upload_payload(status, adverse_action_snippet)
     provider = get_provider(provider_name)
+    # Nothing is stored for an applicant the caller can't see.
+    async with unit_of_work() as db:
+        if await applicant_repo.get(
+            db, applicant_id=applicant_id, organization_id=organization_id, user_id=user_id,
+        ) is None:
+            raise LookupError(f"Applicant {applicant_id} not found")
+
     processed: ProcessedReport = await asyncio.to_thread(
         process_report, file_content, declared_content_type=declared_content_type,
     )
 
     storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-
     storage_key = _build_storage_key(applicant_id, processed.content_type)
+    await upload_objects(storage, [NewStoredObject(storage_key, processed.content, processed.content_type)])
 
-    # Upload BEFORE the DB transaction so a storage failure rolls back
-    # cleanly without leaving an orphan DB row.
-    storage.upload_file(storage_key, processed.content, processed.content_type)
-
-    try:
+    async with CommittedWriteGuard(
+        storage, [storage_key],
+        _result_present_check(applicant_id, organization_id, user_id, storage_key),
+    ) as guard:
         async with unit_of_work() as db:
-            applicant = await applicant_repo.get(
+            # Locked and checked again: the applicant may have been deleted during the upload.
+            applicant = await applicant_lock_repo.get_for_update(
                 db,
                 applicant_id=applicant_id,
                 organization_id=organization_id,
@@ -357,20 +367,40 @@ async def record_result(
                 new_value=f"{provider.name}:{status}:{storage_key}",
             )
             response = ScreeningResultResponse.model_validate(result)
-    except Exception:
-        # Best-effort cleanup of the just-uploaded object so we don't leak
-        # storage on partial failures (mirrors listing_photo_service).
-        try:
-            storage.delete_file(storage_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete orphan screening report %s after DB error",
-                storage_key,
-                exc_info=True,
-            )
-        raise
+            guard.rows_written()
 
     return response
+
+
+def _result_present_check(
+    applicant_id: uuid.UUID, organization_id: uuid.UUID, user_id: uuid.UUID, storage_key: str,
+) -> RowsPresent:
+    """Whether the screening result row exists.
+
+    Takes the applicant lock first (bounded by a lock timeout), which waits for
+    the original transaction to finish; a timeout or any error leaves the
+    outcome unknown. A soft-deleted applicant keeps its results; an applicant
+    that is gone took them with it.
+    """
+
+    async def rows_present() -> bool:
+        async with unit_of_work() as db:
+            await lock_timeout_repo.set_local_lock_timeout(db, OUTCOME_CHECK_LOCK_TIMEOUT_MS)
+            applicant = await applicant_lock_repo.get_for_update(
+                db,
+                applicant_id=applicant_id,
+                organization_id=organization_id,
+                user_id=user_id,
+                include_deleted=True,
+            )
+            if applicant is None:
+                return False
+            results = await screening_result_repo.list_for_applicant(
+                db, applicant_id=applicant_id, organization_id=organization_id, user_id=user_id,
+            )
+        return any(r.report_storage_key == storage_key for r in results)
+
+    return rows_present
 
 
 async def list_results(

@@ -193,7 +193,7 @@ class TestDeleteRoomKeyCollection:
             events.append("collect_keys")
             return await real_list(*args, **kwargs)
 
-        async def _sweep(keys: list[str]) -> None:
+        async def _sweep(_storage: object, keys: list[str]) -> None:
             events.append(f"delete:{sorted(keys)}")
 
         @asynccontextmanager

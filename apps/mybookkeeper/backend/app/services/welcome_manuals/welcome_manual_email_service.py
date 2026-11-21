@@ -22,10 +22,13 @@ message rather than a network error.
 """
 from __future__ import annotations
 
+import asyncio
 import html as html_mod
 import logging
 import re
 import uuid
+
+from platform_shared.core import async_storage
 
 from app.core.storage import StorageNotConfiguredError, get_storage
 from app.db.session import unit_of_work
@@ -111,7 +114,7 @@ def _filename(manual_title: str) -> str:
     return f"{slug or 'welcome-guide'}.pdf"
 
 
-def _fetch_image_bytes(images, *, manual_id: uuid.UUID) -> dict[uuid.UUID, bytes]:
+async def _fetch_image_bytes(images, *, manual_id: uuid.UUID) -> dict[uuid.UUID, bytes]:
     """Download each section image's bytes from storage, keyed by image id.
 
     On a storage outage (``StorageNotConfiguredError``) returns an empty map so
@@ -133,7 +136,7 @@ def _fetch_image_bytes(images, *, manual_id: uuid.UUID) -> dict[uuid.UUID, bytes
     by_image: dict[uuid.UUID, bytes] = {}
     for image in images:
         try:
-            by_image[image.id] = storage.download_file(image.storage_key)
+            by_image[image.id] = await async_storage.download_file(storage, image.storage_key)
         except Exception:  # noqa: BLE001 — skip just this image
             logger.warning(
                 "welcome_manual_email.image_fetch_failed manual_id=%s storage_key=%s",
@@ -228,8 +231,9 @@ async def send_manual_to_guest(
             error_reason="smtp_not_configured",
         )
 
-    image_bytes = _fetch_image_bytes(images, manual_id=manual_id)
-    pdf_bytes = generate_welcome_manual_pdf(
+    image_bytes = await _fetch_image_bytes(images, manual_id=manual_id)
+    pdf_bytes = await asyncio.to_thread(
+        generate_welcome_manual_pdf,
         _build_pdf_data(manual, sections, images, fields, image_bytes, room_name),
     )
 

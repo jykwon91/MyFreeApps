@@ -20,10 +20,10 @@ from app.services.storage.presigned_url_attacher import (
 )
 
 
-def attach_presigned_urls(
+async def attach_presigned_urls(
     photos: list[ListingPhotoResponse],
 ) -> list[ListingPhotoResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         photos,
         sentry_event_name="listing_photo_storage_object_missing",
     )

@@ -46,7 +46,7 @@ async def test_a_regenerate_after_the_email_was_read_is_refused_and_the_old_file
         if first:
             outcome["ran"] = None
             try:
-                with regenerate_patches[0], regenerate_patches[1], regenerate_patches[2], regenerate_patches[3]:
+                with regenerate_patches[0], regenerate_patches[1], regenerate_patches[2]:
                     await generate_lease(
                         user_id=user_id, organization_id=org_id, lease_id=lease_id, today=_dt.date(2026, 1, 1),
                     )

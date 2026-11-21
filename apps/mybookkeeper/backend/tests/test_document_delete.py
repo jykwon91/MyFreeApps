@@ -43,7 +43,6 @@ from tests.document_support import (
 
 SERVICE = "app.services.documents.document_service"
 QUERY_SERVICE = "app.services.documents.document_query_service"
-CLEANUP = "app.services.storage.stored_file_cleanup"
 
 
 @pytest.fixture
@@ -51,7 +50,6 @@ def storage() -> Iterator[MagicMock]:
     fake = MagicMock()
     fake.delete_files.return_value = []
     with (
-        patch(f"{CLEANUP}.get_storage", return_value=fake),
         patch(f"{SERVICE}.get_storage", return_value=fake),
     ):
         yield fake
@@ -454,15 +452,22 @@ class TestBeingReadGuardsOtherWrites:
         ctx = RequestContext(organization_id=org_id, user_id=user.id, org_role=OrgRole.OWNER)
         storage.generate_key.return_value = "k/new"
 
-        @asynccontextmanager
-        async def failing_commit() -> AsyncIterator[AsyncSession]:
-            yield db
-            raise RuntimeError("commit failed")
+        sessions = {"n": 0}
 
-        with patch(f"{SERVICE}.unit_of_work", failing_commit), pytest.raises(RuntimeError):
+        @asynccontextmanager
+        async def commit_of_the_write_fails() -> AsyncIterator[AsyncSession]:
+            sessions["n"] += 1
+            yield db
+            if sessions["n"] == 2:  # the check before the upload is the first
+                await db.rollback()
+                raise RuntimeError("commit failed")
+
+        with patch(f"{SERVICE}.unit_of_work", commit_of_the_write_fails), pytest.raises(RuntimeError):
             await document_service.replace_file(ctx, doc.id, b"%PDF-1.4 new", "new.pdf", "application/pdf")
 
         storage.delete_files.assert_called_once_with(["k/new"])
+        await db.refresh(doc)
+        assert doc.file_storage_key == "k/old"
 
 
 class TestCancelBatch:
@@ -513,7 +518,7 @@ class TestClaimSkipsDeletedRows:
     async def test_a_deleted_queued_document_is_never_claimed(self, db) -> None:
         user, org_id = await _setup_org_and_user(db)
         doc = await _add_doc(db, org_id, user.id, status="processing")
-        await document_repo.soft_delete_by_user(db, [doc.id])
+        await document_repo.soft_delete_by_user(db, doc.organization_id, [doc.id])
         await db.commit()
 
         assert await document_repo.claim_next_processing(db) is None

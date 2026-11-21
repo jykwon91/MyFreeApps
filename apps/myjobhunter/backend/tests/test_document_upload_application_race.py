@@ -53,6 +53,7 @@ async def test_application_soft_deleted_during_upload_gets_no_document(
 
     monkeypatch.setattr(document_service, "_verify_application_ownership", verify_then_delete)
     storage = MagicMock()
+    storage.delete_files.return_value = []
     storage.generate_key.return_value = f"documents/fake-{uuid.uuid4().hex}/file.pdf"
     monkeypatch.setattr(document_service, "get_storage", lambda: storage)
 
@@ -69,7 +70,7 @@ async def test_application_soft_deleted_during_upload_gets_no_document(
 
     assert checks == 2
     storage.upload_file.assert_called_once()
-    storage.delete_file.assert_called_once_with(storage.generate_key.return_value)
+    storage.delete_files.assert_called_once_with([storage.generate_key.return_value])
     count = await db.execute(
         select(func.count()).select_from(Document).where(Document.user_id == user_id),
     )

@@ -16,10 +16,10 @@ from app.services.storage.presigned_url_attacher import (
 )
 
 
-def attach_presigned_urls(
+async def attach_presigned_urls(
     attachments: list[InsurancePolicyAttachmentResponse],
 ) -> list[InsurancePolicyAttachmentResponse]:
-    return attach_presigned_url_with_head_check(
+    return await attach_presigned_url_with_head_check(
         attachments,
         sentry_event_name="insurance_attachment_storage_object_missing",
     )

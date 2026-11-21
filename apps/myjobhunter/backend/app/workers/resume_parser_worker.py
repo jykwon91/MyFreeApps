@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 import anthropic
 import sqlalchemy.exc
 
+from platform_shared.core import async_storage
+
+from app.core.storage import get_storage
 from app.db.session import AsyncSessionLocal
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
@@ -141,15 +144,13 @@ async def _run_extraction(
     embedding is built from (work history or skills), so the caller knows
     to refresh it. Education is not part of the embedding.
     """
-    from app.core.storage import get_storage  # noqa: PLC0415 — deferred to avoid startup cost
-
     # 1. Download from MinIO.
     storage = get_storage()
-    file_bytes = storage.download_file(file_path)
+    file_bytes = await async_storage.download_file(storage, file_path)
     logger.debug("Downloaded %d bytes for job %s", len(file_bytes), job_id)
 
     # 2. Extract plain text.
-    text, char_count = extract_text(file_bytes, content_type)
+    text, char_count = await extract_text(file_bytes, content_type)
     logger.debug("Extracted %d chars from job %s", char_count, job_id)
 
     # 3. Call Claude.
