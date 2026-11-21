@@ -11,9 +11,10 @@ Two distinct shapes live here:
    non-200, so this endpoint always returns 200 with this shape.
 
 2. ``TransparencyDocument`` / ``MonthBucket`` — the PERSISTED shape stored
-   as a single JSON object in the shared MinIO bucket. One app (the
-   ``transparency_primary``) writes it (Ko-fi webhook → donations, daily
-   cost poll → costs); every app reads it. Per-month buckets so the widget
+   as a single JSON object in the shared MinIO bucket. Only the daily cost
+   poll of the ``transparency_primary`` app writes it; every app reads it.
+   Donations are stored separately, one object each (see
+   ``donation_store`` and ``DonationRecord``). Per-month buckets so the widget
    can show "this month's donations vs this month's costs"; old buckets are
    pruned by the cost sync to bound object growth.
 
@@ -56,11 +57,14 @@ class TransparencyResponse(BaseModel):
 class MonthBucket(BaseModel):
     """Per-month accumulator inside the stored document.
 
-    ``donation_message_ids`` is the dedup set: Ko-fi can re-deliver a
-    webhook, so each ``message_id`` is recorded once and re-deliveries are
-    no-ops. ``costs_cents`` is computed by the daily poll (fixed monthly
-    constants + that month's Anthropic spend); ``donations_cents`` is
-    accumulated from verified webhooks.
+    ``costs_cents`` is computed by the daily poll (fixed monthly constants +
+    that month's Anthropic spend).
+
+    ``donations_cents`` and ``donation_message_ids`` are the OLD place
+    donations were kept, before each became its own object. They are read
+    only so the first poll after deploy can move them out
+    (``donation_store.migrate_legacy_donations``), which then empties them;
+    nothing writes new donations here.
     """
 
     donations_cents: int = 0
@@ -72,9 +76,8 @@ class TransparencyDocument(BaseModel):
     """The single shared object persisted in the shared MinIO bucket.
 
     ``schema_version`` lets a future migration recognise older shapes.
-    ``updated_at`` is the timestamp of the most recent write of any kind
-    (donation received OR cost poll), surfaced to the widget as
-    "last synced". ``months`` maps ``"YYYY-MM"`` → :class:`MonthBucket`.
+    ``updated_at`` is the timestamp of the most recent cost poll (its only
+    writer), surfaced to the widget as "last synced". ``months`` maps ``"YYYY-MM"`` → :class:`MonthBucket`.
     """
 
     schema_version: int = 1

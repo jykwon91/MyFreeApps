@@ -2,8 +2,11 @@
 
 ``costs_cents`` for a month = the fixed monthly constants the operator sets
 (VPS + domain) PLUS that month's Anthropic API spend pulled from the Admin
-Cost Report. Donations are written by the webhook; this sync owns only the
-cost side of the shared object.
+Cost Report. This sync is the ONLY writer of ``report.json``; donations are
+separate per-donation objects written by the webhook (``donation_store``).
+Each run also moves any donations still kept the old way inside
+``report.json`` out into those objects, and prunes donation objects older
+than the retention window.
 
 Run once a day (and once when the process starts) by the primary app's single
 scheduler worker, via ``scheduler.run_cost_sync_once``.
@@ -28,6 +31,7 @@ from typing import Protocol
 from platform_shared.schemas.transparency import TransparencyDocument
 from platform_shared.services.transparency import (
     anthropic_cost_service,
+    donation_store,
     transparency_store,
 )
 
@@ -62,9 +66,11 @@ async def run_cost_sync(
     """Recompute and persist the current month's ``costs_cents``.
 
     Returns the computed ``costs_cents`` (fixed constants + month-to-date
-    Anthropic spend). Reads the shared document, updates ONLY the current
-    month's cost side (leaving donations untouched), prunes stale months,
-    bumps ``updated_at``, and writes it back.
+    Anthropic spend). Reads the shared document, moves any old-style
+    in-report donations out to per-donation objects (written BEFORE the
+    report is saved without them, so a failure in between loses nothing),
+    updates the current month's costs, prunes stale months, bumps
+    ``updated_at``, writes it back, then prunes old donation objects.
 
     Raises :class:`~platform_shared.services.transparency.anthropic_cost_service.AnthropicCostError`
     if the Anthropic call fails — the caller decides whether to swallow it
@@ -85,11 +91,13 @@ async def run_cost_sync(
     )
 
     document = await asyncio.to_thread(transparency_store.load_document, settings) or TransparencyDocument()
+    await asyncio.to_thread(donation_store.migrate_legacy_donations, settings, document)
     bucket = transparency_store.get_or_create_bucket(document, now)
     bucket.costs_cents = costs_cents
     document.updated_at = now.isoformat()
     transparency_store.prune_old_months(document, now)
     await asyncio.to_thread(transparency_store.save_document, settings, document)
+    await asyncio.to_thread(donation_store.prune_old_donations, settings, now)
 
     logger.info(
         "Transparency cost sync: month=%s costs_cents=%d "
