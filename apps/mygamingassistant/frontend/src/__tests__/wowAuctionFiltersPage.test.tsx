@@ -19,6 +19,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
 const loadClientItems = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/clientItemsLoader", () => ({ loadClientItems }));
 
+// No character is set in these tests; skip the RTK Query store requirement.
+vi.mock("@/games/wow-forever/api/wowCharacterApi", () => ({
+  useGetCharacterQuery: () => ({ data: undefined, isError: false }),
+}));
+
 const G = 10_000;
 const HELM = 9394; // a rare plate helm in the real icon map
 const SHARD = 14344; // Large Brilliant Shard: rare
@@ -262,7 +267,7 @@ describe("Auction house list: empty and paging", () => {
       Array.from({ length: 120 }, (_, i) => ({ itemId: 1000 + i, name: `Thing ${i}`, marketValue: 100 + i + bump, minBuyout: 100, quantity: 10, listings: 2 }));
     const list = (items: AuctionPrice[], key: string) => (
       <MemoryRouter>
-        <AuctionResults items={items} resultsKey={key} bisPicks={null} note={() => null} colSort={null} colDir="desc" onColSort={() => undefined} />
+        <AuctionResults items={items} resultsKey={key} bisPicks={null} note={() => null} colSort={null} colDir="desc" onColSort={() => undefined} upgradeMap={null} />
       </MemoryRouter>
     );
     const view = render(list(things(0), "a"));
