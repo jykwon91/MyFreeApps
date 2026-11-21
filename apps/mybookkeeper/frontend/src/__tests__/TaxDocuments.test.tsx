@@ -251,7 +251,7 @@ describe("TaxDocuments", () => {
 
   it("year selector shows available years from tax returns", () => {
     renderPage();
-    const select = screen.getByRole("combobox");
+    const select = screen.getByRole("combobox", { name: "Filter by tax year" });
     expect(select).toBeInTheDocument();
     const options = select.querySelectorAll("option");
     const yearValues = Array.from(options).map((o) => o.textContent);

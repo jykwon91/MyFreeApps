@@ -56,6 +56,7 @@ export default function CustomersPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by name or phone..."
+            aria-label="Search customers by name or phone"
             className="flex-1 px-3 py-2 rounded border bg-background text-sm"
           />
         </label>
@@ -177,6 +178,7 @@ function CustomerCard({ row }: CustomerCardProps) {
               rows={3}
               maxLength={2000}
               placeholder="e.g. prefers extra crispy crust"
+              aria-label={`Notes for ${row.name}`}
               className="w-full px-3 py-2 rounded border bg-background text-sm"
             />
             <div className="flex gap-2">

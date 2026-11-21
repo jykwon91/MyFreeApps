@@ -53,6 +53,8 @@ export interface CompanyComboboxProps {
   errorState?: boolean;
   /** Esc handler if the parent wants to dismiss (e.g., re-collapse the pill). */
   onCancel?: () => void;
+  /** Id of a visible element that names the input; replaces the default "Company name" label. */
+  labelledBy?: string;
 }
 
 export default function CompanyCombobox({
@@ -64,6 +66,7 @@ export default function CompanyCombobox({
   autoFocus = true,
   errorState = false,
   onCancel,
+  labelledBy,
 }: CompanyComboboxProps) {
   // initialValue acts as the seed for the typed query. The parent is
   // expected to use a `key` prop to remount the combobox when it wants
@@ -148,7 +151,8 @@ export default function CompanyCombobox({
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type a company name…"
-        aria-label="Company name"
+        aria-label={labelledBy ? undefined : "Company name"}
+        aria-labelledby={labelledBy}
         autoFocus={autoFocus}
         className={`w-full border rounded-md px-3 py-2 text-sm bg-background ${inputBorderClass}`}
       />

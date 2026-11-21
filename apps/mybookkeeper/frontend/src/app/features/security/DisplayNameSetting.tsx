@@ -73,6 +73,7 @@ export default function DisplayNameSetting() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Jane Smith"
+          aria-label="Display name"
           disabled={loading}
           className="flex-1 px-3 py-2 text-sm border rounded-md disabled:opacity-50"
           maxLength={USER_NAME_INPUT_MAX_LENGTH}

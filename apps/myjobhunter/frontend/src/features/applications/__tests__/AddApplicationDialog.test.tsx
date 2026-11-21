@@ -723,7 +723,7 @@ describe("AddApplicationDialog — pill change request", () => {
     await user.click(screen.getByRole("button", { name: /not right\? change/i }));
 
     // Combobox replaces the pill with name pre-populated.
-    const comboInput = screen.getByLabelText(/company name/i) as HTMLInputElement;
+    const comboInput = screen.getByRole("textbox", { name: /^Company/ }) as HTMLInputElement;
     expect(comboInput.value).toBe("Pivotal Health");
   });
 });

@@ -106,6 +106,7 @@ describe("LeaseImportDialog", () => {
     expect(screen.getByTestId("import-applicant-select")).toBeInTheDocument();
     expect(screen.getByTestId("import-file-drop-zone")).toBeInTheDocument();
     expect(screen.getByTestId("import-submit")).toBeInTheDocument();
+    expect(screen.getByLabelText("Choose lease documents to import")).toBe(screen.getByTestId("import-file-input"));
   });
 
   it("submit button is disabled when no applicant selected", () => {

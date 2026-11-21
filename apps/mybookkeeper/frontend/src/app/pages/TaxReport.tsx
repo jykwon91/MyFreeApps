@@ -59,7 +59,7 @@ export default function TaxReport() {
               <Download size={14} className="mr-1.5" />
               Export PDF
             </Button>
-            <Select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            <Select value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Tax year">
               {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}

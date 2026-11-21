@@ -39,6 +39,7 @@ export default function TaxDocuments() {
           <div className="relative">
             <select
               value={selectedYear ?? ""}
+              aria-label="Filter by tax year"
               onChange={(e) =>
                 setSelectedYear(e.target.value ? Number(e.target.value) : undefined)
               }

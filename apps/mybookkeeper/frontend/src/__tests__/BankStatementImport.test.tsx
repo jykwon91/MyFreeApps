@@ -59,6 +59,11 @@ describe("BankStatementImport", () => {
     expect(await screen.findByText("Home Depot")).toBeInTheDocument();
   });
 
+  it("names the property picker", () => {
+    renderImport();
+    expect(screen.getByRole("combobox", { name: "Property (optional)" })).toBeInTheDocument();
+  });
+
   it("sends no property when none is chosen", async () => {
     resolveWith(RESULT);
     renderImport();
