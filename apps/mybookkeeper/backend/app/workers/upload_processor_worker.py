@@ -22,8 +22,8 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import anthropic
 import sqlalchemy.exc
+from platform_shared.extraction import AnthropicFailureKind, ExtractionError, is_transient_failure
 from platform_shared.workers.entrypoint import run_until_signalled, run_worker
 from platform_shared.workers.heartbeat import clear_heartbeat, touch_heartbeat
 from platform_shared.workers.wait_or_stop import wait_or_stop
@@ -35,6 +35,7 @@ from app.core.upload_processor_constants import (
     MAX_CONCURRENT_USERS,
     MAX_RETRIES,
     POLL_INTERVAL_SECONDS,
+    TRANSIENT_ERROR_TYPES,
 )
 from app.core.upload_processor_guard import check_heartbeat_outlasts_extraction
 from app.db.session import AsyncSessionLocal, engine
@@ -44,23 +45,6 @@ from app.services.system.cost_service import check_cost_alerts
 from app.services.system.event_service import record_event
 
 logger = logging.getLogger(__name__)
-
-_TRANSIENT_ERROR_TYPES = (
-    anthropic.RateLimitError,
-    anthropic.APIStatusError,
-    asyncio.TimeoutError,
-    ConnectionError,
-    TimeoutError,
-)
-
-
-def _is_transient_error(exc: Exception) -> bool:
-    if isinstance(exc, anthropic.RateLimitError):
-        return True
-    if isinstance(exc, anthropic.APIStatusError) and exc.status_code < 500:
-        return False
-    return isinstance(exc, _TRANSIENT_ERROR_TYPES)
-
 
 def _compute_next_retry(retry_count: int) -> datetime:
     delay_seconds = (2 ** retry_count) * 60
@@ -80,8 +64,12 @@ def _classify_extraction_error(exc: Exception) -> tuple[str, str]:
         user_message = "Extraction timed out. The document may be too large or complex."
     elif isinstance(exc, (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.DBAPIError)):
         user_message = "Something went wrong while saving the extraction results. Try re-extracting this document."
-    elif isinstance(exc, anthropic.AuthenticationError):
+    elif isinstance(exc, ExtractionError) and exc.is_transient:
+        user_message = "The AI service is busy right now. Try re-extracting this document in a few minutes."
+    elif isinstance(exc, ExtractionError) and exc.kind is AnthropicFailureKind.MISCONFIGURED:
         user_message = "There's a problem connecting to the AI service. Please contact support."
+    elif isinstance(exc, ExtractionError) and exc.kind is AnthropicFailureKind.INPUT_REJECTED:
+        user_message = "The AI service couldn't read this document. Check that the file opens, then re-upload it."
     else:
         user_message = "An unexpected error occurred during extraction. Try re-extracting this document."
     return user_message, diagnostic
@@ -133,7 +121,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
             logger.exception("Cost alert check failed for org %s", org_id)
     except Exception as exc:
         logger.exception("Failed to process document %s", doc_id)
-        transient = _is_transient_error(exc)
+        transient = is_transient_failure(exc, extra_transient=TRANSIENT_ERROR_TYPES)
         error_msg, diagnostic = _classify_extraction_error(exc)
 
         async with AsyncSessionLocal() as db:

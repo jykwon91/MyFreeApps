@@ -25,7 +25,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.ai_failure_http import ai_failure_http_exception
 from app.core.auth import current_active_user
+from app.core.job_failure_messages import JOB_ANALYSIS_FAILED_MESSAGE
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -98,10 +100,9 @@ async def analyze_job(
             detail=f"Timed out fetching URL: {exc}",
         ) from exc
     except JobAnalysisError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Couldn't analyze this job: {exc}",
-        ) from exc
+        if exc.kind is not None:
+            raise ai_failure_http_exception(exc.kind) from exc
+        raise HTTPException(status_code=502, detail=JOB_ANALYSIS_FAILED_MESSAGE) from exc
 
     return JobAnalysisResponse.model_validate(analysis)
 

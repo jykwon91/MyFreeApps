@@ -2,9 +2,9 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from platform_shared.extraction import ExtractionError
 
-logger = logging.getLogger(__name__)
-
+from app.api.tax_advisor_error_mapping import tax_advisor_failure_http
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org, require_org_role
 from app.models.organization.organization_member import OrgRole
@@ -31,6 +31,7 @@ from app.services.tax import (
 from app.services.tax.tax_advisor_service import RateLimitExceeded
 from app.services.tax.tax_return_service import InvalidFieldOverrideError
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tax-returns", tags=["tax-returns"])
 
 
@@ -235,6 +236,9 @@ async def generate_advice(
         raise HTTPException(status_code=404, detail=str(e))
     except RateLimitExceeded as e:
         raise HTTPException(status_code=429, detail=str(e))
+    except ExtractionError as e:
+        # Already logged with its error type by the shared classification.
+        raise tax_advisor_failure_http(e.kind) from e
     except Exception:
         logger.exception("Tax advisor failed for return %s", return_id)
         raise HTTPException(status_code=500, detail="Failed to generate tax advice")

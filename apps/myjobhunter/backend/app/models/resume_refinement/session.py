@@ -60,8 +60,17 @@ class ResumeRefinementSession(Base):
     # Worker claim marker for the ``preparing`` state: set atomically by
     # ``claim_next_preparing`` so concurrent worker replicas never
     # prepare the same session twice. Cleared on transient failure so
-    # the next poll retries.
+    # a later poll retries.
     preparation_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
+    # Temporary preparation failures so far, and when the session may be
+    # claimed again (NULL: now). Bounded by REFINEMENT_PREP_MAX_RETRIES.
+    preparation_retry_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False,
+    )
+    preparation_next_retry_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
 

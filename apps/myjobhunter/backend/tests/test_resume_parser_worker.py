@@ -3,7 +3,8 @@
 Covers:
   - Happy path: queued job → text extraction → mocked Claude → DB rows written
   - Text extraction failure (image-only PDF) → job marked failed
-  - Claude API failure → job marked failed with message
+  - Claude failure: transient → requeued with backoff; permanent or out of
+    retries → failed with our own copy (never the provider's text)
   - Idempotency: claim_next_queued returns None the second time
   - Mapper: work_history, education, skill mapping from Claude output
   - Mapper: skill in-batch deduplication (same name lower-case)
@@ -17,10 +18,19 @@ from datetime import date
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anthropic
+import httpx2
 import pytest
 
 from platform_shared.extraction.files import LEGACY_DOC_MESSAGE
 
+from app.core.ai_failure_messages import (
+    AI_BUSY_MESSAGE,
+    AI_RETRY_SCHEDULED_MESSAGE,
+    AI_UNAVAILABLE_MESSAGE,
+    AI_UNREADABLE_REPLY_MESSAGE,
+)
+from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
@@ -417,19 +427,29 @@ async def test_process_one_text_extraction_failure(user_factory, as_user):
     assert "image-only" in data["error_message"] or "scanned" in data["error_message"] or "extractable" in data["error_message"]
 
 
-@pytest.mark.asyncio
-async def test_process_one_claude_failure(user_factory, as_user):
-    """Claude API error → job marked failed with the error message."""
-    import anthropic
+_ANTHROPIC_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+def _anthropic_status_error(
+    cls: type[anthropic.APIStatusError], status: int, error_type: str,
+) -> anthropic.APIStatusError:
+    response = httpx2.Response(status, request=_ANTHROPIC_REQUEST)
+    body = {"type": "error", "error": {"type": error_type, "message": "provider detail"}}
+    return cls("provider detail", response=response, body=body)
+
+
+async def _process_with_claude_raising(as_user: Any, user: dict, sdk_error: Exception) -> dict:
+    """Upload a resume, run the worker once with the real ``extract_resume``
+    (only the Anthropic SDK client faked to raise ``sdk_error``), return the job."""
+    from app.services.extraction import claude_service
     from app.workers.resume_parser_worker import process_one
 
-    user = await user_factory()
     pdf_bytes = b"%PDF-1.4 placeholder"
     resume_text = "Jane Doe Engineer\n"
-
     fake_storage = _make_fake_storage(pdf_bytes)
     fake_extractor = AsyncMock(return_value=(resume_text, len(resume_text)))
-    failing_claude = AsyncMock(side_effect=anthropic.APIConnectionError(request=MagicMock()))
+    sdk_client = MagicMock()
+    sdk_client.messages.create = AsyncMock(side_effect=sdk_error)
 
     with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
         async with (await as_user(user)) as authed:
@@ -438,23 +458,127 @@ async def test_process_one_claude_failure(user_factory, as_user):
                 files={"file": ("resume.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
             )
     assert resp.status_code == 201
-    job_id = resp.json()["id"]
 
     with (
         patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", fake_extractor),
-        patch("app.workers.resume_parser_worker.extract_resume", failing_claude),
+        patch.object(claude_service, "_get_client", return_value=sdk_client),
     ):
-        found = await process_one()
-
-    assert found is True
+        assert await process_one() is True
+        # A job waiting out its backoff is not claimed again straight away.
+        assert await process_one() is False
 
     async with (await as_user(user)) as authed:
-        job_resp = await authed.get(f"/resume-upload-jobs/{job_id}")
+        job_resp = await authed.get(f"/resume-upload-jobs/{resp.json()['id']}")
     assert job_resp.status_code == 200
-    data = job_resp.json()
+    return job_resp.json()
+
+
+@pytest.mark.parametrize(
+    "sdk_error",
+    [
+        anthropic.APIConnectionError(request=_ANTHROPIC_REQUEST),
+        anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST),
+        _anthropic_status_error(anthropic.InternalServerError, 529, "overloaded_error"),
+    ],
+    ids=["connection", "timeout", "overloaded"],
+)
+@pytest.mark.asyncio
+async def test_process_one_transient_claude_failure_is_retried_later(
+    user_factory, as_user, sdk_error,
+):
+    """Claude busy / unreachable → requeued with backoff, not failed."""
+    user = await user_factory()
+    data = await _process_with_claude_raising(as_user, user, sdk_error)
+
+    assert data["status"] == "queued"
+    assert data["retry_count"] == 1
+    assert data["error_message"] == AI_RETRY_SCHEDULED_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_process_one_permanent_claude_failure_fails_with_our_copy(user_factory, as_user):
+    """A rejected API key won't fix itself → failed now, without provider text."""
+    user = await user_factory()
+    data = await _process_with_claude_raising(
+        as_user, user,
+        _anthropic_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+    )
+
     assert data["status"] == "failed"
-    assert data["error_message"] is not None
+    assert data["error_message"] == AI_UNAVAILABLE_MESSAGE
+    assert "provider detail" not in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_transient_failure_after_the_retry_budget_fails(user_factory, as_user, monkeypatch):
+    """Once the retry budget is spent, a transient failure is final."""
+    from app.workers import resume_parser_worker
+
+    monkeypatch.setattr(resume_parser_worker, "RESUME_PARSE_MAX_RETRIES", 0)
+    user = await user_factory()
+    data = await _process_with_claude_raising(
+        as_user, user, anthropic.APIConnectionError(request=_ANTHROPIC_REQUEST),
+    )
+
+    assert data["status"] == "failed"
+    assert data["error_message"] == AI_BUSY_MESSAGE
+
+
+async def _process_with_worker_raising(as_user: Any, user: dict, target: str, error: Exception) -> dict:
+    """Upload a resume, run the worker once with ``target`` (a name in the
+    worker module) raising ``error``, and return the job as the API shows it."""
+    from app.workers.resume_parser_worker import process_one
+
+    pdf_bytes = b"%PDF-1.4 placeholder"
+    fake_storage = _make_fake_storage(pdf_bytes)
+    with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
+        async with (await as_user(user)) as authed:
+            resp = await authed.post(
+                "/resumes",
+                files={"file": ("resume.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+            )
+    assert resp.status_code == 201
+
+    with (
+        patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
+        patch(
+            "app.workers.resume_parser_worker.extract_text",
+            AsyncMock(return_value=("Jane Doe Engineer\n", 18)),
+        ),
+        patch(f"app.workers.resume_parser_worker.{target}", side_effect=error),
+    ):
+        assert await process_one() is True
+
+    async with (await as_user(user)) as authed:
+        job_resp = await authed.get(f"/resume-upload-jobs/{resp.json()['id']}")
+    return job_resp.json()
+
+
+@pytest.mark.asyncio
+async def test_unreadable_claude_reply_fails_with_our_copy(user_factory, as_user):
+    """Claude answered with something that isn't the JSON asked for → our copy, not the parse error."""
+    user = await user_factory()
+    data = await _process_with_worker_raising(
+        as_user, user, "extract_resume", ValueError("Claude returned invalid JSON: Sure! Here's the resume"),
+    )
+
+    assert data["status"] == "failed"
+    assert data["error_message"] == AI_UNREADABLE_REPLY_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_internal_error_fails_with_generic_copy(user_factory, as_user):
+    """A database or storage error's text is for the logs, never the job row."""
+    user = await user_factory()
+    data = await _process_with_worker_raising(
+        as_user, user, "extract_resume",
+        RuntimeError("connection to server at 10.0.0.5 port 5432 failed"),
+    )
+
+    assert data["status"] == "failed"
+    assert data["error_message"] == RESUME_PARSE_FAILED_MESSAGE
+    assert "10.0.0.5" not in data["error_message"]
 
 
 @pytest.mark.asyncio

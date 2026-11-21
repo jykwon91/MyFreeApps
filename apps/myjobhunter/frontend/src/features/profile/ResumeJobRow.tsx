@@ -4,6 +4,8 @@ import { Badge } from "@platform/ui";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 import type { ResumeUploadJobStatus } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job-status";
 import { RESUME_JOB_STATUS_LABELS } from "@myjobhunter/api-client/constants/resumeJobStatusLabels";
+import { RESUME_JOB_RETRY_NOTE } from "@myjobhunter/api-client/constants/resumeJobRetryNote";
+import { isResumeJobRetrying } from "@myjobhunter/api-client/utils/isResumeJobRetrying";
 import { resumeJobMeta } from "@myjobhunter/api-client/utils/resumeJobMeta";
 import { resumeJobParsedResults } from "@myjobhunter/api-client/utils/resumeJobParsedResults";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
@@ -28,6 +30,7 @@ const STATUS_COLORS: Record<ResumeUploadJobStatus, BadgeColor> = {
 type ResumeJobRowMode =
   | { kind: "complete"; parsedFields: NonNullable<ResumeUploadJob["result_parsed_fields"]> }
   | { kind: "failed"; errorMessage: string }
+  | { kind: "retrying" }
   | { kind: "in-progress" };
 
 function useResumeJobMode(job: ResumeUploadJob): ResumeJobRowMode {
@@ -37,6 +40,9 @@ function useResumeJobMode(job: ResumeUploadJob): ResumeJobRowMode {
   }
   if (job.status === "failed" && job.error_message) {
     return { kind: "failed", errorMessage: job.error_message };
+  }
+  if (isResumeJobRetrying(job)) {
+    return { kind: "retrying" };
   }
   return { kind: "in-progress" };
 }
@@ -58,6 +64,9 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
           <p className="text-xs text-muted-foreground">{resumeJobMeta(job)}</p>
           {mode.kind === "failed" ? (
             <p className="text-xs text-destructive mt-0.5 truncate">{mode.errorMessage}</p>
+          ) : null}
+          {mode.kind === "retrying" ? (
+            <p className="text-xs text-muted-foreground mt-0.5" data-testid="resume-job-retry-note">{RESUME_JOB_RETRY_NOTE}</p>
           ) : null}
         </div>
 

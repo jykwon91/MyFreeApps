@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -338,9 +338,10 @@ async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | No
     ``FOR UPDATE SKIP LOCKED`` so only one worker replica can claim a
     given session. The claim marker is ``preparation_started_at``
     (status stays ``preparing`` — the frontend keeps showing the
-    progress card either way).
+    progress card either way). A session waiting out a retry backoff
+    (``preparation_next_retry_at`` in the future) is not claimable yet.
 
-    Returns ``None`` when nothing is waiting.
+    Returns ``None`` when nothing is due.
     """
     now = datetime.now(timezone.utc)
     subq = (
@@ -348,6 +349,10 @@ async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | No
         .where(
             ResumeRefinementSession.status == "preparing",
             ResumeRefinementSession.preparation_started_at.is_(None),
+            or_(
+                ResumeRefinementSession.preparation_next_retry_at.is_(None),
+                ResumeRefinementSession.preparation_next_retry_at <= now,
+            ),
         )
         .order_by(ResumeRefinementSession.created_at.asc())
         .limit(1)
@@ -398,10 +403,14 @@ async def release_preparation_claim(
     db: AsyncSession,
     session: ResumeRefinementSession,
     note: str,
+    *,
+    next_retry_at: datetime,
 ) -> ResumeRefinementSession:
-    """Transient preparation failure — release the claim so the next
-    worker poll retries. Status stays ``preparing``."""
+    """Transient preparation failure — release the claim so a worker poll
+    retries once ``next_retry_at`` has passed. Status stays ``preparing``."""
     session.preparation_started_at = None
+    session.preparation_retry_count += 1
+    session.preparation_next_retry_at = next_retry_at
     session.error_message = note
     await db.flush()
     await db.commit()
@@ -413,10 +422,13 @@ async def reset_for_retry(
     db: AsyncSession,
     session: ResumeRefinementSession,
 ) -> ResumeRefinementSession:
-    """User-initiated retry of a ``failed`` preparation: re-queue it."""
+    """User-initiated retry of a ``failed`` preparation: re-queue it now,
+    with a fresh retry budget."""
     session.status = "preparing"
     session.error_message = None
     session.preparation_started_at = None
+    session.preparation_retry_count = 0
+    session.preparation_next_retry_at = None
     await db.flush()
     await db.commit()
     await db.refresh(session)

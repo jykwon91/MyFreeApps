@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
+import { RESUME_JOB_RETRY_NOTE } from "@myjobhunter/api-client/constants/resumeJobRetryNote";
 
 // ---------------------------------------------------------------------------
 // Mock child components and @platform/ui to avoid deep render.
@@ -48,6 +49,7 @@ function makeJob(overrides: Partial<ResumeUploadJob> = {}): ResumeUploadJob {
     file_content_type: "application/pdf",
     file_size_bytes: 12345,
     status: "queued",
+    retry_count: 0,
     error_message: null,
     result_parsed_fields: null,
     parser_version: null,
@@ -126,6 +128,22 @@ describe("ResumeJobRow — status badges", () => {
       />,
     );
     expect(screen.getByText("no extractable text")).toBeInTheDocument();
+  });
+
+  it("says a queued job is waiting to retry after a temporary failure", () => {
+    render(
+      <ResumeJobRow
+        job={makeJob({ status: "queued", retry_count: 1, error_message: "Claude is busy right now." })}
+        onDownload={NOOP_DOWNLOAD}
+        isDownloading={false}
+      />,
+    );
+    expect(screen.getByTestId("resume-job-retry-note")).toHaveTextContent(RESUME_JOB_RETRY_NOTE);
+  });
+
+  it("shows no retry note on a queued job that hasn't failed yet", () => {
+    render(<ResumeJobRow job={makeJob({ status: "queued" })} onDownload={NOOP_DOWNLOAD} isDownloading={false} />);
+    expect(screen.queryByTestId("resume-job-retry-note")).toBeNull();
   });
 });
 

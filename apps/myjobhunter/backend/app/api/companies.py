@@ -23,11 +23,12 @@ from __future__ import annotations
 import logging
 import uuid
 
-import anthropic
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from platform_shared.extraction import ExtractionError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.ai_failure_http import ai_failure_http_exception
 from app.core.auth import current_active_user
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
@@ -254,7 +255,8 @@ async def trigger_company_research(
     Returns 404 if the company does not exist or belongs to another user.
     Returns 409 if a run for this company is already in flight.
     Returns 503 if the Tavily API key is not configured.
-    Returns 502 if the Anthropic API call fails.
+    Returns 502 if the Anthropic API call fails (our own copy as the detail,
+    with Retry-After when the failure is temporary).
     Returns 200 with the populated research record on success.
     """
     try:
@@ -278,15 +280,18 @@ async def trigger_company_research(
             status_code=503,
             detail=f"Tavily research is not configured: {exc}",
         ) from exc
-    except (anthropic.APIError, ValueError) as exc:
+    except ExtractionError as exc:
         logger.exception(
-            "Company research failed: AI synthesis error company_id=%s",
+            "Company research failed: AI synthesis error company_id=%s kind=%s type=%s",
+            company_id, exc.kind, exc.error_type,
+        )
+        raise ai_failure_http_exception(exc.kind) from exc
+    except ValueError as exc:
+        logger.exception(
+            "Company research failed: unreadable AI reply company_id=%s",
             company_id,
         )
-        raise HTTPException(
-            status_code=502,
-            detail=f"AI synthesis failed: {exc}",
-        ) from exc
+        raise ai_failure_http_exception(None) from exc
     except httpx.HTTPStatusError as exc:
         logger.exception(
             "Company research failed: Tavily HTTP %s company_id=%s",

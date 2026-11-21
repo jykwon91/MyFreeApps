@@ -1,5 +1,7 @@
 import { RESUME_JOB_STATUS_LABELS } from "@myjobhunter/api-client/constants/resumeJobStatusLabels";
 import { RESUME_JOB_STATUS_TONES } from "@myjobhunter/api-client/constants/resumeJobStatusTones";
+import { RESUME_JOB_RETRY_NOTE } from "@myjobhunter/api-client/constants/resumeJobRetryNote";
+import { isResumeJobRetrying } from "@myjobhunter/api-client/utils/isResumeJobRetrying";
 import { resumeJobFileName } from "@myjobhunter/api-client/utils/resumeJobFileName";
 import { Chip, ClampedText, LARGE_TEXT_FILE_NAME_LINES, useTheme } from "@platform/mobile";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -13,12 +15,13 @@ export default function ResumeUploadStatusRow({ job }: ResumeUploadStatusRowProp
   const name = resumeJobFileName(job);
   const status = RESUME_JOB_STATUS_LABELS[job.status];
   const isReading = job.status === "queued" || job.status === "processing";
+  const isRetrying = isResumeJobRetrying(job);
   return (
     <View
       style={{ gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}
       testID="resume-upload-status"
     >
-      <View accessible accessibilityLabel={job.status === "failed" ? `${name}, ${status}. ${MESSAGES.readFailed}` : `${name}, ${status}`} style={{ gap: spacing.xs }}>
+      <View accessible accessibilityLabel={job.status === "failed" ? `${name}, ${status}. ${MESSAGES.readFailed}` : isRetrying ? `${name}, ${status}. ${RESUME_JOB_RETRY_NOTE}` : `${name}, ${status}`} style={{ gap: spacing.xs }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <ClampedText largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES} numberOfLines={1} style={{ flex: 1, color: colors.foreground, fontSize: fontSize.sm, fontWeight: "600" }}>
             {name}
@@ -28,6 +31,7 @@ export default function ResumeUploadStatusRow({ job }: ResumeUploadStatusRowProp
         </View>
         {/* The server's own reason can be technical, so the phone says what to do instead. */}
         {job.status === "failed" ? <Text style={{ color: colors.destructiveText, fontSize: fontSize.xs }}>{MESSAGES.readFailed}</Text> : null}
+        {isRetrying ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{RESUME_JOB_RETRY_NOTE}</Text> : null}
       </View>
       <ResumeUploadDetails job={job} />
     </View>
