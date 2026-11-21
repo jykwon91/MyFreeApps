@@ -1,15 +1,15 @@
 [
   {
-    "date": "2026-11-20",
-    "title": "Auction House: upgrade overview for your character",
-    "summary": "Look up your character and each result row now shows whether the item is an upgrade, downgrade or the same as what you have equipped — plus the item it would replace. Click the Upgrade column header to sort by biggest upgrade first. Rings and trinkets compare against whichever slot gives the better result.",
-    "to": "/wow-forever/auction-house"
-  },
-  {
     "date": "2026-11-21",
     "title": "MGA Loot: school spell damage now counts",
     "summary": "The MGA Loot addon left Shadow, Fire, Frost, Nature, Arcane and Holy damage out of its score, so gear like the Twisted Shadow Staff read as a big downgrade. It now scores them with your class's weights. Download the addon from Item compare to get the fix.",
     "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-20",
+    "title": "Auction House: upgrade overview for your character",
+    "summary": "Look up your character and each result row now shows whether the item is an upgrade, downgrade or the same as what you have equipped — plus the item it would replace. Click the Upgrade column header to sort by biggest upgrade first. Rings and trinkets compare against whichever slot gives the better result.",
+    "to": "/wow-forever/auction-house"
   },
   {
     "date": "2026-11-20",
