@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SCREENING_MESSAGES as MESSAGES } from "../../constants/profileScreening";
-import { writeFailure } from "../../lib/writeFailure";
+import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { ScreeningAnswerSheetProps } from "../../types/ScreeningAnswerSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
@@ -36,7 +36,8 @@ export default function ScreeningAnswerSheet({ existing, answeredKeys, onClose }
   const choices = (eeoc: boolean) => unanswered.filter((question) => question.eeoc === eeoc).map(({ key, label }) => ({ value: key, label }));
 
   // A 409 means this question was answered meanwhile (another device, or a double tap).
-  const createFailure = (error: unknown) => (isConflict(error) ? MESSAGES.alreadyAnswered : MESSAGES.couldntCreate);
+  const createdFailure = (error: unknown) =>
+    isConflict(error) ? MESSAGES.alreadyAnswered : createFailure(error, { failed: MESSAGES.couldntCreate, checkWhere: MESSAGES.checkWhere });
 
   async function save(): Promise<void> {
     if (problem) return;
@@ -48,7 +49,7 @@ export default function ScreeningAnswerSheet({ existing, answeredKeys, onClose }
       showToast(existing ? MESSAGES.updated : MESSAGES.created);
       onClose();
     } catch (error) {
-      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : createFailure(error));
+      setFailure(existing ? writeFailure(error, MESSAGES.couldntUpdate, PROFILE_MESSAGES.gone) : createdFailure(error));
     }
   }
 

@@ -33,6 +33,7 @@ import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { REFRESH_FREQUENCY_OPTIONS } from "../../constants/refreshFrequency";
 import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSearchSheet";
+import { repeatableWriteFailure } from "../../lib/writeFailure";
 import { withChipDrafts } from "../../lib/withChipDrafts";
 import type { ChipDraftField } from "../../types/ChipDraftField";
 import type { ChipDrafts } from "../../types/ChipDrafts";
@@ -144,7 +145,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
       showToast(ACTIONS.updated);
       onClose();
     } catch (error) {
-      setFailure(discoverFailureMessage(error, ACTIONS.updateFailed));
+      setFailure(repeatableWriteFailure(error, (refusal) => discoverFailureMessage(refusal, ACTIONS.updateFailed)));
     }
   }
 
