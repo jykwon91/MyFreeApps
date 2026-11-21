@@ -140,6 +140,12 @@ class Settings(BaseAppSettings):
     # Public inquiry form filters (T0 spam controls)
     # ------------------------------------------------------------------
     inquiry_spam_threshold: int = 30
+    # Haiku-class model for the public-inquiry triage call (same id the
+    # MyLanguageTutor app configures for its fast calls).
+    inquiry_spam_model: str = "claude-haiku-4-5"
+    # Short and un-retried: the call sits on an unauthenticated endpoint, and a
+    # failure degrades to ``unscored`` rather than blocking the prospect.
+    inquiry_spam_timeout_seconds: float = 15.0
     inquiry_block_disposable_email: bool = True
     inquiry_public_rate_limit_max: int = 5
     inquiry_public_rate_limit_window_seconds: int = 3600

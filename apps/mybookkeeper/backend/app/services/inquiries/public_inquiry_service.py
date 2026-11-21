@@ -49,8 +49,11 @@ from app.schemas.inquiries.public_inquiry_request import (
     is_valid_employment_status,
 )
 from app.services.inquiries import inquiry_spam_scorer
+from app.services.inquiries.pending_claude_scoring import PendingClaudeScoring
 
 logger = logging.getLogger(__name__)
+
+_PRIVATE_LISTING_ADDRESS = "[private]"  # we never reveal the host's address
 
 # Phone normalization — strip every non-digit, then check length is 10 or 11
 # (US 10-digit or +1 prefixed).
@@ -110,7 +113,55 @@ async def submit_public_inquiry(
     ``turnstile_passed`` and ``rate_limited`` are pre-computed by the route
     (they're per-IP, not per-payload) — passing them in here keeps the
     service pure-async and trivially unit-testable without a fake Request.
+
+    The Claude call (step 10) runs between two transactions, never inside one:
+    this endpoint is unauthenticated, and holding a DB connection across a
+    slow third-party call would make pool exhaustion cheap to trigger. The
+    inquiry is committed as ``unscored`` first, so a failure at any later point
+    leaves it visible to the operator.
     """
+    prepared = await _run_pre_scoring_steps(
+        payload=payload,
+        client_ip=client_ip,
+        user_agent=user_agent,
+        turnstile_passed=turnstile_passed,
+        rate_limited=rate_limited,
+    )
+    if isinstance(prepared, PublicInquiryResult):
+        return prepared
+
+    scoring = await inquiry_spam_scorer.score_inquiry(
+        name=payload.name,
+        email=prepared.email,
+        phone=prepared.phone,
+        current_city=payload.current_city.strip(),
+        current_country=payload.current_country,
+        current_region=payload.current_region.strip(),
+        employment_status=payload.employment_status,
+        move_in_date=payload.move_in_date.isoformat(),
+        move_out_date=payload.move_out_date.isoformat(),
+        occupant_count=payload.occupant_count,
+        has_pets=payload.has_pets,
+        pets_description=payload.pets_description,
+        vehicle_count=payload.vehicle_count,
+        why_this_room=prepared.why_this_room,
+        additional_notes=payload.additional_notes,
+        listing_address=_PRIVATE_LISTING_ADDRESS,
+        listing_monthly_rent=prepared.listing_monthly_rent,
+        listing_type=prepared.listing_type,
+    )
+    return await _record_scoring(prepared, scoring)
+
+
+async def _run_pre_scoring_steps(
+    *,
+    payload: PublicInquiryRequest,
+    client_ip: str | None,
+    user_agent: str | None,
+    turnstile_passed: bool,
+    rate_limited: bool,
+) -> PublicInquiryResult | PendingClaudeScoring:
+    """Steps 1-9 in one transaction. Returns a final result, or the state needed to score."""
     # --- Step 1: Rate limit ---
     if rate_limited:
         # Caller has not yet inserted an inquiry; we have no FK to attach
@@ -270,53 +321,43 @@ async def submit_public_inquiry(
                 spam_status="spam",
             )
 
-        # --- Step 10: Claude scoring ---
-        listing_address = "[private]"  # we never reveal the host's address
-        scoring = await inquiry_spam_scorer.score_inquiry(
-            name=payload.name,
+        return PendingClaudeScoring(
+            inquiry_id=inquiry.id,
+            organization_id=inquiry.organization_id,
             email=email_str,
             phone=normalized_phone,
-            current_city=payload.current_city.strip(),
-            current_country=payload.current_country,
-            current_region=payload.current_region.strip(),
-            employment_status=payload.employment_status,
-            move_in_date=payload.move_in_date.isoformat(),
-            move_out_date=payload.move_out_date.isoformat(),
-            occupant_count=payload.occupant_count,
-            has_pets=payload.has_pets,
-            pets_description=payload.pets_description,
-            vehicle_count=payload.vehicle_count,
             why_this_room=why,
-            additional_notes=payload.additional_notes,
-            listing_address=listing_address,
             listing_monthly_rent=str(listing.monthly_rate),
             listing_type=listing.room_type,
         )
 
+
+async def _record_scoring(
+    pending: PendingClaudeScoring,
+    scoring: inquiry_spam_scorer.ClaudeScoringResult | inquiry_spam_scorer.ClaudeScoringDegraded,
+) -> PublicInquiryResult:
+    """Step 10 persistence: write the Claude assessment and the final triage status."""
+    async with unit_of_work() as db:
         if isinstance(scoring, inquiry_spam_scorer.ClaudeScoringDegraded):
+            # The inquiry row was committed as ``unscored``; keep that status so
+            # the operator still sees it (All / Inbox, not buried in Spam), and
+            # record why scoring didn't happen.
             await inquiry_spam_assessment_repo.create(
                 db,
-                inquiry_id=inquiry.id,
+                inquiry_id=pending.inquiry_id,
                 assessment_type="claude_score",
                 passed=None,
                 details_json={
-                    "error": "claude_parse_failed",
+                    "error": scoring.error_type,
+                    "status": scoring.status,
                     "raw": scoring.raw_response or "",
-                    "details": scoring.error,
                 },
-            )
-            # Graceful degradation — operator still sees the inquiry, just
-            # without an AI score. Treat as ``unscored`` so it shows in
-            # the All / Inbox tab default view (not buried in Spam).
-            final_status = "unscored"
-            await inquiry_repo.update_spam_triage(
-                db, inquiry.id, spam_status=final_status, spam_score=None,
             )
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
-                inquiry_id=inquiry.id,
-                organization_id=inquiry.organization_id,
-                spam_status=final_status,
+                inquiry_id=pending.inquiry_id,
+                organization_id=pending.organization_id,
+                spam_status="unscored",
                 notify_operator=True,
                 notify_subject_prefix="",
             )
@@ -326,7 +367,7 @@ async def submit_public_inquiry(
         score = scoring.score
         await inquiry_spam_assessment_repo.create(
             db,
-            inquiry_id=inquiry.id,
+            inquiry_id=pending.inquiry_id,
             assessment_type="claude_score",
             passed=score >= threshold,
             score=float(score),
@@ -352,13 +393,13 @@ async def submit_public_inquiry(
             subject_prefix = ""
 
         await inquiry_repo.update_spam_triage(
-            db, inquiry.id, spam_status=final_status, spam_score=float(score),
+            db, pending.inquiry_id, spam_status=final_status, spam_score=float(score),
         )
 
         return PublicInquiryResult(
             outcome=PublicInquiryOutcome.SUCCESS,
-            inquiry_id=inquiry.id,
-            organization_id=inquiry.organization_id,
+            inquiry_id=pending.inquiry_id,
+            organization_id=pending.organization_id,
             spam_status=final_status,
             notify_operator=notify,
             notify_subject_prefix=subject_prefix,

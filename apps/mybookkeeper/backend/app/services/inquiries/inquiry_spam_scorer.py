@@ -10,10 +10,15 @@ Claude Haiku at ~500 input + 200 output tokens per call ≈ $0.0003 each.
 1000 inquiries / month ≈ $0.30. Negligible.
 
 # Failure mode
-Any Anthropic exception (5xx, timeout, rate limit, parse error) returns a
-``ClaudeScoringDegraded`` outcome — the caller stores ``spam_status='unscored'``
-and lets the inquiry through to the operator. We never block legitimate
-prospects because a third-party API was down.
+Anthropic API failures (status errors, connection errors/timeouts) and
+unparseable responses return a ``ClaudeScoringDegraded`` outcome carrying
+Anthropic's ``error.type`` and HTTP status — the caller stores
+``spam_status='unscored'`` and lets the inquiry through to the operator. We
+never block legitimate prospects because a third-party API was down. The
+shared classifier logs every failure (ERROR for credential, not-found and
+upstream faults; WARNING for rate limits and rejected input) so a dead model
+id or revoked key is visible, not silently degraded. Any other exception is a
+bug and propagates.
 """
 from __future__ import annotations
 
@@ -24,17 +29,30 @@ from dataclasses import dataclass
 
 import anthropic
 from anthropic import Timeout
+from platform_shared.extraction import (
+    map_anthropic_connection_error,
+    map_anthropic_status_error,
+)
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Haiku — fast + cheap. The triage task is simple enough that Sonnet is
-# overkill; Haiku has been adequate for similar classification tasks in
-# production. Model name kept in one place so we can A/B-test later.
-CLAUDE_MODEL = "claude-haiku-4-6"
+# The model is ``settings.inquiry_spam_model`` (Haiku-class: the triage task is
+# simple enough that Sonnet is overkill).
 CLAUDE_MAX_TOKENS = 200
-CLAUDE_TIMEOUT_S = 30.0
+CLAUDE_CONNECT_TIMEOUT_S = 5.0
+PARSE_FAILED_ERROR_TYPE = "claude_parse_failed"
+LOG_PREFIX = "inquiry spam scoring"
+
+# One client for the process (one connection pool, not one per public
+# submission). ``max_retries=0``: a failed call degrades to ``unscored``, so
+# the SDK's default retries would only stretch an unauthenticated request.
+_client = anthropic.AsyncAnthropic(
+    api_key=settings.anthropic_api_key,
+    max_retries=0,
+    timeout=Timeout(settings.inquiry_spam_timeout_seconds, connect=CLAUDE_CONNECT_TIMEOUT_S),
+)
 
 # PII redaction patterns. Run BEFORE the prompt is sent to Claude so the
 # operator's audit trail in ``inquiry_spam_assessments.details_json`` doesn't
@@ -80,8 +98,14 @@ class ClaudeScoringResult:
 
 @dataclass
 class ClaudeScoringDegraded:
-    """Claude API failed — caller treats this as ``spam_status='unscored''``."""
-    error: str
+    """Claude scoring failed — caller treats this as ``spam_status='unscored'``.
+
+    ``error_type`` is Anthropic's ``error.type`` (``not_found_error``,
+    ``authentication_error``...), ``http_<status>``, ``connection_error`` or
+    ``claude_parse_failed``; ``status`` is the HTTP status when there was one.
+    """
+    error_type: str
+    status: int | None
     raw_prompt: str
     raw_response: str | None
 
@@ -205,7 +229,7 @@ async def score_inquiry(
     listing_type: str,
     client: anthropic.AsyncAnthropic | None = None,
 ) -> ClaudeScoringResult | ClaudeScoringDegraded:
-    """Run Claude triage. Always returns — never raises."""
+    """Run Claude triage. Returns a degraded outcome for API/parse failures."""
     prompt = _build_prompt(
         name=name,
         email=email,
@@ -227,35 +251,47 @@ async def score_inquiry(
         listing_type=listing_type,
     )
 
-    api_client = client or anthropic.AsyncAnthropic(
-        api_key=settings.anthropic_api_key,
-        timeout=Timeout(CLAUDE_TIMEOUT_S, connect=10.0),
-    )
+    api_client = client or _client
 
     raw_response: str | None = None
     try:
         message = await api_client.messages.create(
-            model=CLAUDE_MODEL,
+            model=settings.inquiry_spam_model,
             max_tokens=CLAUDE_MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}],
         )
         raw_response = message.content[0].text if message.content else ""
         score, reason, flags = _parse_response(raw_response)
-        return ClaudeScoringResult(
-            score=score,
-            reason=reason,
-            flags=flags,
+    except anthropic.APIStatusError as exc:
+        failure = map_anthropic_status_error(exc, log_prefix=LOG_PREFIX, logger=logger)
+        return ClaudeScoringDegraded(
+            error_type=failure.error_type,
+            status=failure.status,
             raw_prompt=prompt,
-            raw_response=raw_response,
+            raw_response=None,
         )
-    except Exception as exc:  # noqa: BLE001 — graceful degrade for any failure
+    except anthropic.APIConnectionError as exc:
+        failure = map_anthropic_connection_error(exc, log_prefix=LOG_PREFIX, logger=logger)
+        return ClaudeScoringDegraded(
+            error_type=failure.error_type,
+            status=None,
+            raw_prompt=prompt,
+            raw_response=None,
+        )
+    except (ValueError, KeyError, TypeError) as exc:
         logger.warning(
-            "Claude spam scoring failed (%s) — degrading to unscored",
-            exc,
-            exc_info=True,
+            "%s: response not parseable: %s", LOG_PREFIX, type(exc).__name__,
         )
         return ClaudeScoringDegraded(
-            error=f"{type(exc).__name__}: {exc}",
+            error_type=PARSE_FAILED_ERROR_TYPE,
+            status=None,
             raw_prompt=prompt,
             raw_response=raw_response,
         )
+    return ClaudeScoringResult(
+        score=score,
+        reason=reason,
+        flags=flags,
+        raw_prompt=prompt,
+        raw_response=raw_response,
+    )

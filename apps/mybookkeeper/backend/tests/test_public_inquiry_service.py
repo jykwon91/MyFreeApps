@@ -358,7 +358,8 @@ class TestClaudeDegradation:
         self, db: AsyncSession, test_listing: Listing, patch_session,
     ) -> None:
         degraded = ClaudeScoringDegraded(
-            error="ConnectionError: timeout",
+            error_type="not_found_error",
+            status=404,
             raw_prompt="prompt",
             raw_response=None,
         )
@@ -387,6 +388,44 @@ class TestClaudeDegradation:
             )
         ).scalar_one()
         assert claude_row.passed is None  # graceful degrade signal
+        # The real reason is recorded, not a misleading "parse failed".
+        assert claude_row.details_json["error"] == "not_found_error"
+        assert claude_row.details_json["status"] == 404
+
+    @pytest.mark.asyncio
+    async def test_claude_call_runs_outside_any_transaction(
+        self, db: AsyncSession, test_listing: Listing, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        open_transactions = 0
+        open_during_call: list[int] = []
+
+        @asynccontextmanager
+        async def _uow():
+            nonlocal open_transactions
+            open_transactions += 1
+            try:
+                yield db
+                await db.commit()
+            finally:
+                open_transactions -= 1
+
+        async def _score(**_: object) -> ClaudeScoringResult:
+            open_during_call.append(open_transactions)
+            return _clean_claude_result()
+
+        monkeypatch.setattr(public_inquiry_service, "unit_of_work", _uow)
+        monkeypatch.setattr(inquiry_spam_scorer, "score_inquiry", _score)
+
+        result = await public_inquiry_service.submit_public_inquiry(
+            payload=_payload(),
+            client_ip="1.2.3.4",
+            user_agent="Mozilla/5.0",
+            turnstile_passed=True,
+            rate_limited=False,
+        )
+
+        assert open_during_call == [0]
+        assert result.spam_status == "clean"
 
 
 class TestSubmitTiming:
