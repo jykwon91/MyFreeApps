@@ -252,6 +252,66 @@ class TestNonOwner:
             ).status_code == 404
 
     @pytest.mark.asyncio
+    async def test_non_owner_cannot_log_a_cook_on_someone_elses_recipe(
+        self, user_factory, as_user,
+    ) -> None:
+        owner = await user_factory()
+        attacker = await user_factory()
+        created = await _create_recipe(as_user, owner, f"Cook {uuid.uuid4().hex[:8]}")
+        rid = created["id"]
+        vid = created["latest_version"]["id"]
+
+        async with await as_user(attacker) as authed:
+            resp = await authed.post(
+                f"/recipes/{rid}/versions/{vid}/cooks", json={"rating": 5}
+            )
+        assert resp.status_code == 404
+
+        async with await as_user(owner) as authed:
+            cooks = (await authed.get(f"/recipes/{rid}/cooks")).json()
+        assert cooks == []
+
+    @pytest.mark.asyncio
+    async def test_cannot_log_a_cook_on_another_users_version_via_own_recipe(
+        self, user_factory, as_user,
+    ) -> None:
+        owner = await user_factory()
+        attacker = await user_factory()
+        victim = await _create_recipe(as_user, owner, f"Vic {uuid.uuid4().hex[:8]}")
+        mine = await _create_recipe(as_user, attacker, f"Mine {uuid.uuid4().hex[:8]}")
+        victim_vid = victim["latest_version"]["id"]
+
+        async with await as_user(attacker) as authed:
+            resp = await authed.post(
+                f"/recipes/{mine['id']}/versions/{victim_vid}/cooks",
+                json={"rating": 5},
+            )
+        assert resp.status_code == 404
+
+        async with await as_user(owner) as authed:
+            cooks = (await authed.get(f"/recipes/{victim['id']}/cooks")).json()
+        assert cooks == []
+
+    @pytest.mark.asyncio
+    async def test_cannot_fork_a_new_version_from_another_users_version(
+        self, user_factory, as_user,
+    ) -> None:
+        owner = await user_factory()
+        attacker = await user_factory()
+        victim = await _create_recipe(as_user, owner, f"Vic {uuid.uuid4().hex[:8]}")
+        mine = await _create_recipe(as_user, attacker, f"Mine {uuid.uuid4().hex[:8]}")
+        victim_vid = victim["latest_version"]["id"]
+
+        async with await as_user(attacker) as authed:
+            resp = await authed.post(
+                f"/recipes/{mine['id']}/versions",
+                json={**_TWEAK_BODY, "base_version_id": victim_vid},
+            )
+            assert resp.status_code == 400
+            versions = (await authed.get(f"/recipes/{mine['id']}/versions")).json()
+        assert len(versions) == 1
+
+    @pytest.mark.asyncio
     async def test_non_owner_version_rollups_hidden_even_with_cooks(
         self, user_factory, as_user, client: AsyncClient,
     ) -> None:
