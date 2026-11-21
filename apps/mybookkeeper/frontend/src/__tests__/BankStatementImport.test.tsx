@@ -22,7 +22,7 @@ function renderImport() {
   const view = render(
     <BankStatementImport properties={[{ id: "p1", name: "Oak Street" } as never]} {...handlers} />,
   );
-  const input = view.container.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = view.baseElement.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(["a,b\n"], "statement.csv", { type: "text/csv" })] } });
   return handlers;
 }

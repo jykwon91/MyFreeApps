@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
@@ -8,6 +9,7 @@ import { pagedListView } from "@/shared/lib/paged-list-view";
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
+import ModalDialog from "@/shared/components/ui/ModalDialog";
 import { LEASE_IMPORT_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
 import { leaseImportForm } from "@/shared/lib/lease-upload-form";
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
@@ -73,249 +75,243 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="lease-import-dialog-title"
-      data-testid="lease-import-dialog"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    <ModalDialog
+      testId="lease-import-dialog"
+      onClose={onClose}
+      preventClose={isLoading}
+      panelClassName="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
     >
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6 space-y-5">
-          <h2
-            id="lease-import-dialog-title"
-            className="text-lg font-semibold"
-          >
-            Import signed lease
-          </h2>
+      <div className="p-6 space-y-5">
+        <Dialog.Title className="text-lg font-semibold">
+          Import signed lease
+        </Dialog.Title>
 
-          <form onSubmit={handleSubmit} className="space-y-4" data-testid="lease-import-form">
-            {/* Applicant */}
+        <form onSubmit={handleSubmit} className="space-y-4" data-testid="lease-import-form">
+          {/* Applicant */}
+          <div className="space-y-1">
+            <label
+              htmlFor="import-applicant"
+              className="block text-sm font-medium"
+            >
+              Applicant <span className="text-destructive">*</span>
+            </label>
+            <PagedSelect
+              id="import-applicant"
+              value={applicantId}
+              onChange={(e) => setApplicantId(e.target.value)}
+              required
+              className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
+              data-testid="import-applicant-select"
+              aria-busy={applicantsMode === "loading"}
+              emptyLabel="— select applicant —"
+              noun="applicants"
+              options={applicantOptions}
+              pages={applicantPages}
+            />
+          </div>
+
+          {/* Listing (optional) */}
+          <div className="space-y-1">
+            <label
+              htmlFor="import-listing"
+              className="block text-sm font-medium"
+            >
+              Listing{" "}
+              <span className="text-muted-foreground text-xs font-normal">
+                (optional)
+              </span>
+            </label>
+            <ListingSelect
+              id="import-listing"
+              value={listingId}
+              onChange={(e) => setListingId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
+              data-testid="import-listing-select"
+              emptyLabel="— none —"
+            />
+          </div>
+
+          {/* Term dates */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label
-                htmlFor="import-applicant"
+                htmlFor="import-starts-on"
                 className="block text-sm font-medium"
               >
-                Applicant <span className="text-destructive">*</span>
-              </label>
-              <PagedSelect
-                id="import-applicant"
-                value={applicantId}
-                onChange={(e) => setApplicantId(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
-                data-testid="import-applicant-select"
-                aria-busy={applicantsMode === "loading"}
-                emptyLabel="— select applicant —"
-                noun="applicants"
-                options={applicantOptions}
-                pages={applicantPages}
-              />
-            </div>
-
-            {/* Listing (optional) */}
-            <div className="space-y-1">
-              <label
-                htmlFor="import-listing"
-                className="block text-sm font-medium"
-              >
-                Listing{" "}
-                <span className="text-muted-foreground text-xs font-normal">
+                Lease starts
+                <span className="text-muted-foreground text-xs font-normal ml-1">
                   (optional)
                 </span>
               </label>
-              <ListingSelect
-                id="import-listing"
-                value={listingId}
-                onChange={(e) => setListingId(e.target.value)}
+              <input
+                id="import-starts-on"
+                type="date"
+                value={startsOn}
+                onChange={(e) => setStartsOn(e.target.value)}
                 className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
-                data-testid="import-listing-select"
-                emptyLabel="— none —"
+                data-testid="import-starts-on"
               />
             </div>
-
-            {/* Term dates */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label
-                  htmlFor="import-starts-on"
-                  className="block text-sm font-medium"
-                >
-                  Lease starts
-                  <span className="text-muted-foreground text-xs font-normal ml-1">
-                    (optional)
-                  </span>
-                </label>
-                <input
-                  id="import-starts-on"
-                  type="date"
-                  value={startsOn}
-                  onChange={(e) => setStartsOn(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
-                  data-testid="import-starts-on"
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="import-ends-on"
-                  className="block text-sm font-medium"
-                >
-                  Lease ends
-                  <span className="text-muted-foreground text-xs font-normal ml-1">
-                    (optional)
-                  </span>
-                </label>
-                <input
-                  id="import-ends-on"
-                  type="date"
-                  value={endsOn}
-                  onChange={(e) => setEndsOn(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
-                  data-testid="import-ends-on"
-                />
-                {problems.endsOn ? (
-                  <p role="alert" className="text-xs text-destructive" data-testid="import-ends-on-error">
-                    {LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn]}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Notes */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="import-notes"
-                  className="block text-sm font-medium"
-                >
-                  Notes
-                  <span className="text-muted-foreground text-xs font-normal ml-1">
-                    (optional)
-                  </span>
-                </label>
-                <span
-                  className={`text-xs ${notesRemaining < 100 ? "text-destructive" : "text-muted-foreground"}`}
-                >
-                  {notesRemaining}
-                </span>
-              </div>
-              <textarea
-                id="import-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                maxLength={LEASE_NOTES_MAX_LENGTH}
-                rows={3}
-                placeholder="Any context about this lease — signing date, source, etc."
-                className="w-full px-3 py-2 text-sm border rounded-md"
-                data-testid="import-notes"
-              />
-            </div>
-
-            {/* File upload */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">
-                Files <span className="text-destructive">*</span>
+              <label
+                htmlFor="import-ends-on"
+                className="block text-sm font-medium"
+              >
+                Lease ends
                 <span className="text-muted-foreground text-xs font-normal ml-1">
-                  — PDF, DOCX, JPG, PNG, WebP
+                  (optional)
                 </span>
               </label>
-
-              <div
-                className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const dropped = Array.from(e.dataTransfer.files);
-                  setFiles((prev) => [...prev, ...dropped]);
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    fileInputRef.current?.click();
-                  }
-                }}
-                data-testid="import-file-drop-zone"
-              >
-                <p className="text-sm text-muted-foreground">
-                  Drag and drop files here, or{" "}
-                  <span className="text-primary underline">browse</span>
-                </p>
-              </div>
-
               <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.docx,.jpg,.jpeg,.png,.webp"
-                onChange={handleFileChange}
-                className="sr-only"
-                data-testid="import-file-input"
+                id="import-ends-on"
+                type="date"
+                value={endsOn}
+                onChange={(e) => setEndsOn(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
+                data-testid="import-ends-on"
               />
-
-              {files.length > 0 ? (
-                <ul className="space-y-1" data-testid="import-file-list">
-                  {files.map((file, i) => (
-                    <li
-                      key={`${file.name}-${i}`}
-                      className="flex items-center justify-between gap-2 text-sm border rounded px-3 py-1.5"
-                    >
-                      <span className="truncate">
-                        {i === 0 ? (
-                          <span className="text-muted-foreground text-xs mr-1">
-                            [signed lease]
-                          </span>
-                        ) : null}
-                        {file.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="text-destructive hover:underline text-xs shrink-0 min-h-[44px] sm:min-h-0"
-                        aria-label={`Remove ${file.name}`}
-                        data-testid={`import-remove-file-${i}`}
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {problems.endsOn ? (
+                <p role="alert" className="text-xs text-destructive" data-testid="import-ends-on-error">
+                  {LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn]}
+                </p>
               ) : null}
             </div>
+          </div>
 
-            {/* Status note */}
-            <p className="text-xs text-muted-foreground">
-              Status will be set to{" "}
-              <span className="font-medium text-foreground">Signed</span> — imported leases are
-              already signed.
-            </p>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onClose}
-                disabled={isLoading}
-                data-testid="import-cancel"
+          {/* Notes */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="import-notes"
+                className="block text-sm font-medium"
               >
-                Cancel
-              </Button>
-              <LoadingButton
-                type="submit"
-                isLoading={isLoading}
-                loadingText="Importing..."
-                disabled={!isValid}
-                data-testid="import-submit"
+                Notes
+                <span className="text-muted-foreground text-xs font-normal ml-1">
+                  (optional)
+                </span>
+              </label>
+              <span
+                className={`text-xs ${notesRemaining < 100 ? "text-destructive" : "text-muted-foreground"}`}
               >
-                Import lease
-              </LoadingButton>
+                {notesRemaining}
+              </span>
             </div>
-          </form>
-        </div>
+            <textarea
+              id="import-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={LEASE_NOTES_MAX_LENGTH}
+              rows={3}
+              placeholder="Any context about this lease — signing date, source, etc."
+              className="w-full px-3 py-2 text-sm border rounded-md"
+              data-testid="import-notes"
+            />
+          </div>
+
+          {/* File upload */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">
+              Files <span className="text-destructive">*</span>
+              <span className="text-muted-foreground text-xs font-normal ml-1">
+                — PDF, DOCX, JPG, PNG, WebP
+              </span>
+            </label>
+
+            <div
+              className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const dropped = Array.from(e.dataTransfer.files);
+                setFiles((prev) => [...prev, ...dropped]);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              data-testid="import-file-drop-zone"
+            >
+              <p className="text-sm text-muted-foreground">
+                Drag and drop files here, or{" "}
+                <span className="text-primary underline">browse</span>
+              </p>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.jpg,.jpeg,.png,.webp"
+              onChange={handleFileChange}
+              className="sr-only"
+              data-testid="import-file-input"
+            />
+
+            {files.length > 0 ? (
+              <ul className="space-y-1" data-testid="import-file-list">
+                {files.map((file, i) => (
+                  <li
+                    key={`${file.name}-${i}`}
+                    className="flex items-center justify-between gap-2 text-sm border rounded px-3 py-1.5"
+                  >
+                    <span className="truncate">
+                      {i === 0 ? (
+                        <span className="text-muted-foreground text-xs mr-1">
+                          [signed lease]
+                        </span>
+                      ) : null}
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="text-destructive hover:underline text-xs shrink-0 min-h-[44px] sm:min-h-0"
+                      aria-label={`Remove ${file.name}`}
+                      data-testid={`import-remove-file-${i}`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
+          {/* Status note */}
+          <p className="text-xs text-muted-foreground">
+            Status will be set to{" "}
+            <span className="font-medium text-foreground">Signed</span> — imported leases are
+            already signed.
+          </p>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={isLoading}
+              data-testid="import-cancel"
+            >
+              Cancel
+            </Button>
+            <LoadingButton
+              type="submit"
+              isLoading={isLoading}
+              loadingText="Importing..."
+              disabled={!isValid}
+              data-testid="import-submit"
+            >
+              Import lease
+            </LoadingButton>
+          </div>
+        </form>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

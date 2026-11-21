@@ -1,6 +1,8 @@
 import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import ModalDialog from "@/shared/components/ui/ModalDialog";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
@@ -113,113 +115,110 @@ export default function ExtendLeaseDialog({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-label="Extend lease"
-      aria-modal="true"
-      data-testid="extend-lease-dialog"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    <ModalDialog
+      testId="extend-lease-dialog"
+      onClose={onClose}
+      hasDescription
+      panelClassName="bg-card rounded-lg shadow-lg p-6 w-full max-w-md space-y-4"
     >
-      <div className="bg-card rounded-lg shadow-lg p-6 w-full max-w-md space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold">Extend lease</h2>
-          <p className="text-sm text-muted-foreground">
-            Current end date:{" "}
-            <span className="font-medium text-foreground">{currentEndsOn}</span>.
-            I'll auto-render an extension addendum PDF and attach it to the lease.
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <label
-            htmlFor="extend-lease-new-end"
-            className="block text-sm font-medium"
-          >
-            New end date
-          </label>
-          <input
-            id="extend-lease-new-end"
-            type="date"
-            data-testid="extend-lease-new-end"
-            value={newEndsOn}
-            min={currentEndsOn}
-            onChange={(e) => setNewEndsOn(e.target.value)}
-            className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
-          />
-          {newEndsOn !== "" && newEndsOn <= currentEndsOn ? (
-            <p
-              className="text-xs text-red-600"
-              data-testid="extend-lease-new-end-error"
-            >
-              New end date must be after {currentEndsOn}.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-1">
-          <label
-            htmlFor="extend-lease-notes"
-            className="block text-sm font-medium"
-          >
-            Notes{" "}
-            <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <textarea
-            id="extend-lease-notes"
-            data-testid="extend-lease-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={NOTES_MAX_LENGTH}
-            rows={3}
-            placeholder="e.g. Tenant requested 6-month extension at current rent"
-            className="w-full px-3 py-2 text-sm border rounded-md resize-none"
-          />
-          <p className="text-right text-xs text-muted-foreground">
-            {notes.length}/{NOTES_MAX_LENGTH}
-          </p>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            data-testid="extend-lease-email-tenant"
-            checked={emailTenant}
-            disabled={!tenantHasEmail}
-            onChange={(e) => setEmailTenant(e.target.checked)}
-            className="h-4 w-4"
-          />
-          <span>Email the tenant the rendered addendum</span>
-        </label>
-        {tenantHasEmail ? null : (
-          <p className="text-xs text-muted-foreground" data-testid="extend-lease-no-email">
-            The applicant has no email on file. Add one in the Sensitive section of the applicant page first.
-          </p>
-        )}
-
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-testid="extend-lease-cancel"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <LoadingButton
-            type="button"
-            variant="primary"
-            size="sm"
-            data-testid="extend-lease-confirm"
-            isLoading={isLoading}
-            loadingText="Extending..."
-            disabled={!isValid}
-            onClick={() => void handleConfirm()}
-          >
-            Extend lease
-          </LoadingButton>
-        </div>
+      <div className="space-y-1">
+        <Dialog.Title className="text-base font-semibold">Extend lease</Dialog.Title>
+        <Dialog.Description className="text-sm text-muted-foreground">
+          Current end date:{" "}
+          <span className="font-medium text-foreground">{currentEndsOn}</span>.
+          I'll auto-render an extension addendum PDF and attach it to the lease.
+        </Dialog.Description>
       </div>
-    </div>
+
+      <div className="space-y-1">
+        <label
+          htmlFor="extend-lease-new-end"
+          className="block text-sm font-medium"
+        >
+          New end date
+        </label>
+        <input
+          id="extend-lease-new-end"
+          type="date"
+          data-testid="extend-lease-new-end"
+          value={newEndsOn}
+          min={currentEndsOn}
+          onChange={(e) => setNewEndsOn(e.target.value)}
+          className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
+        />
+        {newEndsOn !== "" && newEndsOn <= currentEndsOn ? (
+          <p
+            className="text-xs text-red-600"
+            data-testid="extend-lease-new-end-error"
+          >
+            New end date must be after {currentEndsOn}.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-1">
+        <label
+          htmlFor="extend-lease-notes"
+          className="block text-sm font-medium"
+        >
+          Notes{" "}
+          <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        <textarea
+          id="extend-lease-notes"
+          data-testid="extend-lease-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          maxLength={NOTES_MAX_LENGTH}
+          rows={3}
+          placeholder="e.g. Tenant requested 6-month extension at current rent"
+          className="w-full px-3 py-2 text-sm border rounded-md resize-none"
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {notes.length}/{NOTES_MAX_LENGTH}
+        </p>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          data-testid="extend-lease-email-tenant"
+          checked={emailTenant}
+          disabled={!tenantHasEmail}
+          onChange={(e) => setEmailTenant(e.target.checked)}
+          className="h-4 w-4"
+        />
+        <span>Email the tenant the rendered addendum</span>
+      </label>
+      {tenantHasEmail ? null : (
+        <p className="text-xs text-muted-foreground" data-testid="extend-lease-no-email">
+          The applicant has no email on file. Add one in the Sensitive section of the applicant page first.
+        </p>
+      )}
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="extend-lease-cancel"
+          onClick={onClose}
+        >
+          Cancel
+        </Button>
+        <LoadingButton
+          type="button"
+          variant="primary"
+          size="sm"
+          data-testid="extend-lease-confirm"
+          isLoading={isLoading}
+          loadingText="Extending..."
+          disabled={!isValid}
+          onClick={() => void handleConfirm()}
+        >
+          Extend lease
+        </LoadingButton>
+      </div>
+    </ModalDialog>
   );
 }

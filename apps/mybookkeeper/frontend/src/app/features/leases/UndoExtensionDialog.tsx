@@ -1,5 +1,7 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useUndoSignedLeaseExtensionMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import ModalDialog from "@/shared/components/ui/ModalDialog";
 
 export interface UndoExtensionDialogProps {
   leaseId: string;
@@ -48,7 +50,7 @@ function describeConflict(detail: ConflictDetail): string {
 /**
  * Confirmation dialog for undoing a recent lease extension.
  *
- * Matches the EndTenancyDialog pattern (inline modal, no Radix dependency).
+ * Matches the EndTenancyDialog pattern.
  * The rendered addendum attachment is intentionally preserved as an audit
  * record — the dialog copy makes that explicit so the host isn't surprised.
  */
@@ -76,47 +78,44 @@ export default function UndoExtensionDialog({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-label="Undo extension"
-      aria-modal="true"
-      data-testid="undo-extension-dialog"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    <ModalDialog
+      testId="undo-extension-dialog"
+      onClose={onClose}
+      hasDescription
+      panelClassName="bg-card rounded-lg shadow-lg p-6 w-full max-w-md space-y-4"
     >
-      <div className="bg-card rounded-lg shadow-lg p-6 w-full max-w-md space-y-4">
-        <h2 className="text-base font-semibold">Undo extension</h2>
-        <p className="text-sm text-muted-foreground">
-          Roll the end date back from{" "}
-          <span className="font-medium text-foreground">
-            {currentExtendedEndsOn}
-          </span>
-          {" "}to the previous term. The rendered addendum stays attached to
-          the lease as an audit record.
-        </p>
+      <Dialog.Title className="text-base font-semibold">Undo extension</Dialog.Title>
+      <Dialog.Description className="text-sm text-muted-foreground">
+        Roll the end date back from{" "}
+        <span className="font-medium text-foreground">
+          {currentExtendedEndsOn}
+        </span>
+        {" "}to the previous term. The rendered addendum stays attached to
+        the lease as an audit record.
+      </Dialog.Description>
 
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-testid="undo-extension-cancel"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <LoadingButton
-            type="button"
-            variant="primary"
-            size="sm"
-            data-testid="undo-extension-confirm"
-            isLoading={isLoading}
-            loadingText="Undoing..."
-            onClick={() => void handleConfirm()}
-          >
-            Undo extension
-          </LoadingButton>
-        </div>
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="undo-extension-cancel"
+          onClick={onClose}
+        >
+          Cancel
+        </Button>
+        <LoadingButton
+          type="button"
+          variant="primary"
+          size="sm"
+          data-testid="undo-extension-confirm"
+          isLoading={isLoading}
+          loadingText="Undoing..."
+          onClick={() => void handleConfirm()}
+        >
+          Undo extension
+        </LoadingButton>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

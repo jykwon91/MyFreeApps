@@ -19,9 +19,9 @@ import { FORM_DIALOG_MIN_WIDE_PX, FORM_DIALOG_MAX_NARROW_PX } from "./fixtures/c
 
 const DESKTOP = { width: 1280, height: 900 };
 
-/** The element carrying the max-width: the panel inside the backdrop. */
+/** The element carrying the max-width: the dialog panel. */
 function panelOf(page: Page, testId: string) {
-  return page.locator(`[data-testid="${testId}"] > div`);
+  return page.getByTestId(testId);
 }
 
 async function widthOf(page: Page, testId: string): Promise<number> {

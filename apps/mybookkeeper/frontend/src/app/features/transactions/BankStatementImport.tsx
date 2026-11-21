@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Upload, FileSpreadsheet, X, Loader2 } from "lucide-react";
 import { useImportBankCsvMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -6,6 +7,7 @@ import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/Im
 import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
 import { bankImportSummary } from "@mybookkeeper/api-client/utils/bankImportSummary";
 import { Button } from "@platform/ui";
+import ModalDialog from "@/shared/components/ui/ModalDialog";
 import Select from "@/shared/components/ui/Select";
 
 export interface BankStatementImportProps {
@@ -42,111 +44,113 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
   }, [file, propertyId, importBankCsv, onSuccess, onError]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-      <div role="dialog" aria-modal="true" aria-labelledby="bank-import-title" className="bg-card border rounded-lg shadow-lg w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 id="bank-import-title" className="text-base font-semibold">Import Bank Statement</h2>
-          <button onClick={onClose} aria-label="Close import modal" className="text-muted-foreground hover:text-foreground">
-            <X size={18} />
+    <ModalDialog
+      testId="bank-statement-import-dialog"
+      onClose={onClose}
+      panelClassName="bg-card border rounded-lg shadow-lg w-full max-w-lg"
+    >
+      <div className="flex items-center justify-between px-6 py-4 border-b">
+        <Dialog.Title className="text-base font-semibold">Import Bank Statement</Dialog.Title>
+        <button type="button" onClick={onClose} aria-label="Close import modal" className="text-muted-foreground hover:text-foreground">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">CSV File</label>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors"
+          >
+            {file ? (
+              <div className="flex items-center justify-center gap-2 text-sm">
+                <FileSpreadsheet size={18} className="text-green-600" />
+                <span>{file.name}</span>
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-sm">
+                <Upload size={24} className="mx-auto mb-2 opacity-50" />
+                <p>Click to select a CSV file</p>
+                <p className="text-xs mt-1">Supports Chase, Wells Fargo, Bank of America, and generic formats</p>
+              </div>
+            )}
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">CSV File</label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors"
-            >
-              {file ? (
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <FileSpreadsheet size={18} className="text-green-600" />
-                  <span>{file.name}</span>
-                </div>
-              ) : (
-                <div className="text-muted-foreground text-sm">
-                  <Upload size={24} className="mx-auto mb-2 opacity-50" />
-                  <p>Click to select a CSV file</p>
-                  <p className="text-xs mt-1">Supports Chase, Wells Fargo, Bank of America, and generic formats</p>
-                </div>
-              )}
-            </button>
-          </div>
+        <div>
+          <label className="text-sm font-medium mb-1 block">Property (optional)</label>
+          <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="w-full">
+            <option value="">No property</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Property (optional)</label>
-            <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="w-full">
-              <option value="">No property</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </Select>
-          </div>
-
-          {result ? (
-            <div className="space-y-3">
-              <div className="text-sm">
-                <span className="font-medium">Format detected:</span>{" "}
-                <span className="capitalize">{result.format_detected}</span>
-              </div>
-              {result.preview.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted text-muted-foreground">
-                      <tr>
-                        <th className="text-left px-3 py-2">Date</th>
-                        <th className="text-left px-3 py-2">Vendor</th>
-                        <th className="text-right px-3 py-2">Amount</th>
-                        <th className="text-left px-3 py-2">Type</th>
-                        <th className="text-left px-3 py-2">Category</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {result.preview.map((row, i) => (
-                        <tr key={i} className="hover:bg-muted/40">
-                          <td className="px-3 py-2">{row.date}</td>
-                          <td className="px-3 py-2 truncate max-w-[120px]">{row.vendor ?? ""}</td>
-                          <td className="px-3 py-2 text-right">${row.amount}</td>
-                          <td className="px-3 py-2 capitalize">{row.transaction_type}</td>
-                          <td className="px-3 py-2">{row.category.replace(/_/g, " ")}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
+        {result ? (
+          <div className="space-y-3">
+            <div className="text-sm">
+              <span className="font-medium">Format detected:</span>{" "}
+              <span className="capitalize">{result.format_detected}</span>
             </div>
-          ) : null}
-        </div>
-
-        <div className="flex justify-end gap-2 px-6 py-4 border-t">
-          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button
-            size="sm"
-            onClick={handleImport}
-            disabled={!file || importing}
-          >
-            {importing ? (
-              <>
-                <Loader2 size={14} className="mr-1.5 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <Upload size={14} className="mr-1.5" />
-                Import
-              </>
-            )}
-          </Button>
-        </div>
+            {result.preview.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-3 py-2">Date</th>
+                      <th className="text-left px-3 py-2">Vendor</th>
+                      <th className="text-right px-3 py-2">Amount</th>
+                      <th className="text-left px-3 py-2">Type</th>
+                      <th className="text-left px-3 py-2">Category</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {result.preview.map((row, i) => (
+                      <tr key={i} className="hover:bg-muted/40">
+                        <td className="px-3 py-2">{row.date}</td>
+                        <td className="px-3 py-2 truncate max-w-[120px]">{row.vendor ?? ""}</td>
+                        <td className="px-3 py-2 text-right">${row.amount}</td>
+                        <td className="px-3 py-2 capitalize">{row.transaction_type}</td>
+                        <td className="px-3 py-2">{row.category.replace(/_/g, " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-    </div>
+
+      <div className="flex justify-end gap-2 px-6 py-4 border-t">
+        <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+        <Button
+          size="sm"
+          onClick={handleImport}
+          disabled={!file || importing}
+        >
+          {importing ? (
+            <>
+              <Loader2 size={14} className="mr-1.5 animate-spin" />
+              Importing...
+            </>
+          ) : (
+            <>
+              <Upload size={14} className="mr-1.5" />
+              Import
+            </>
+          )}
+        </Button>
+      </div>
+    </ModalDialog>
   );
 }
