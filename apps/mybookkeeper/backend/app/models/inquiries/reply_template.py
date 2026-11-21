@@ -79,9 +79,13 @@ class ReplyTemplate(Base):
     )
 
     __table_args__ = (
-        # Per-user UNIQUE template names — prevents duplicate "Initial reply"
-        # entries from accidental re-seeds. Idempotent seeding relies on this.
-        UniqueConstraint("user_id", "name", name="uq_reply_template_user_name"),
+        # Template names are unique per person within an organization, archived
+        # ones included. Prevents duplicate "Initial reply" entries from
+        # accidental re-seeds; idempotent per-org seeding relies on this.
+        UniqueConstraint(
+            "organization_id", "user_id", "name",
+            name="uq_reply_template_org_user_name",
+        ),
         # Inbox display index — active templates ordered for the picker.
         Index(
             "ix_reply_templates_org_order_active",

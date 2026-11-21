@@ -237,7 +237,7 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Graceful degradation: if MinIO is unconfigured or unreachable, listing reads still succeed with `presigned_url=null`; photo upload returns 503. Listing reads must never crash on a storage outage.
 
 **Reply templates (PR 2.3):**
-- Per-user templates stored in `reply_templates` (UNIQUE on `(user_id, name)` so the idempotent default-template seed can re-run safely).
+- Per-user, per-org templates stored in `reply_templates` (UNIQUE on `(organization_id, user_id, name)`, archived rows included, so the idempotent default-template seed can re-run safely and each org gets its own defaults).
 - Variable allowlist: `$name`, `$listing`, `$dates`, `$start_date`, `$end_date`, `$employer`, `$host_name`, `$host_phone`. Defined in `backend/app/core/inquiry_enums.py:REPLY_TEMPLATE_VARIABLES`. Substitution is longest-key-first so `$host_name` never partially matches `$name`.
 - Renderer is a pure function in `services/inquiries/reply_template_renderer.py` — frontend mirrors it in `app/features/inquiries/reply-template-renderer.ts` for unit-test parity but the live UI calls the backend's `/render-template` endpoint as the source of truth.
 - **Auto-prepend rule (RENTALS_PLAN.md §9.3):** when the inquiry's linked listing has `pets_on_premises = true` AND a `large_dog_disclosure` is set, the disclosure is auto-prepended to the rendered body as a separate paragraph. Host should never have to remember to mention the dog. Mandatory. Sending enforces it too (`inquiry_reply_service.send_reply`): a custom or edited reply gets the disclosure added unless it, or an earlier reply to that inquirer, already says it.
