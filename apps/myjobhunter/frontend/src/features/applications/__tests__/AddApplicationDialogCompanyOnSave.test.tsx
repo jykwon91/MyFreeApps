@@ -125,7 +125,7 @@ describe("AddApplicationDialog — the company is added on Save", () => {
 
     await user.click(screen.getByRole("button", { name: /not right\? change/i }));
 
-    expect(screen.getByRole("textbox", { name: /^Company/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^Company/ })).toBeInTheDocument();
   });
 
   it("adds the company with the posting's domain on Save, researches it, and saves under it", async () => {
