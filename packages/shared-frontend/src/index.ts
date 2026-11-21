@@ -26,6 +26,7 @@ export { formatDate, timeAgo } from "./utils/date";
 export { formatFileSize } from "./utils/file-size";
 export { nextTabIndex } from "./utils/tabKeyboard";
 export { TAB_KEYS } from "./constants/tab-keys";
+export { MENU_ITEM_FOCUS_CLASS, FOCUS_RING_CLASS } from "./constants/menu-item-focus";
 export { formatSalaryRange, SALARY_PERIOD_LABELS } from "./utils/salary-range";
 export { formatTag } from "./utils/tag";
 export { isNotFound } from "./utils/isNotFound";

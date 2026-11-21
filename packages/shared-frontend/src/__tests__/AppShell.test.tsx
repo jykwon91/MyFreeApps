@@ -10,6 +10,7 @@
  *   - navSections: each section is headed (a heading, not a label, so a section named like a form field doesn't clash); on the collapsed rail its heading becomes a divider
  */
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -171,5 +172,19 @@ describe("AppShell — collapsible", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(screen.getAllByTestId("nav-item-dot")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Macros (new)" })).toHaveAttribute("aria-label", "Macros (new)");
+  });
+});
+
+describe("AppShell — user menu keyboard focus", () => {
+  it("highlights the sign-out item when reached with the keyboard", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    const trigger = screen.getAllByRole("button").find((b) => b.getAttribute("aria-haspopup") === "menu");
+    expect(trigger).toBeDefined();
+    trigger!.focus();
+    await user.keyboard("{Enter}{ArrowDown}");
+    const item = screen.getByRole("menuitem", { name: /sign out/i });
+    expect(item).toHaveAttribute("data-highlighted");
+    expect(item.className).toContain("data-[highlighted]:ring-2");
   });
 });

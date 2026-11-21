@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
+import { FOCUS_RING_CLASS } from "../../constants/menu-item-focus";
 
 interface MultiChipInputProps {
   value: string[];
@@ -59,7 +60,7 @@ export default function MultiChipInput({
   return (
     <div>
       <div
-        className="flex flex-wrap gap-1.5 items-center px-2 py-1.5 border border-input rounded-md bg-background min-h-[44px]"
+        className="flex flex-wrap gap-1.5 items-center px-2 py-1.5 border border-input rounded-md bg-background min-h-[44px] focus-within:ring-2 focus-within:ring-primary"
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((chip, i) => (
@@ -74,7 +75,7 @@ export default function MultiChipInput({
                 e.stopPropagation();
                 removeAt(i);
               }}
-              className="inline-flex items-center justify-center w-4 h-4 hover:text-destructive"
+              className={`inline-flex items-center justify-center w-4 h-4 rounded hover:text-destructive ${FOCUS_RING_CLASS}`}
               aria-label={`Remove ${chip}`}
             >
               <X className="w-3 h-3" />
@@ -105,7 +106,7 @@ export default function MultiChipInput({
               key={s}
               type="button"
               onClick={() => addValue(s)}
-              className="px-2 py-0.5 text-xs border border-dashed border-muted-foreground/40 rounded text-muted-foreground hover:text-foreground hover:border-foreground"
+              className={`px-2 py-0.5 text-xs border border-dashed border-muted-foreground/40 rounded text-muted-foreground hover:text-foreground hover:border-foreground ${FOCUS_RING_CLASS}`}
             >
               + {s}
             </button>

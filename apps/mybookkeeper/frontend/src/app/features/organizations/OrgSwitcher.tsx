@@ -6,7 +6,7 @@ import { switchOrg } from "@/shared/store/organizationSlice";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import { useState } from "react";
 import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
-import { showError } from "@platform/ui";
+import { showError, MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { CREATE_ORGANIZATION_MESSAGES } from "@/shared/lib/organization-messages";
 
@@ -63,7 +63,7 @@ export default function OrgSwitcher() {
             {organizations.map((org) => (
               <DropdownMenu.Item
                 key={org.id}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none hover:bg-muted"
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer ${MENU_ITEM_FOCUS_CLASS}`}
                 onSelect={() => handleSwitch(org.id)}
               >
                 <span className="flex-1 truncate">{org.name}</span>
@@ -73,7 +73,7 @@ export default function OrgSwitcher() {
             ))}
             <DropdownMenu.Separator className="h-px bg-border my-1" />
             <DropdownMenu.Item
-              className="flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none hover:bg-muted text-muted-foreground"
+              className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer text-muted-foreground ${MENU_ITEM_FOCUS_CLASS}`}
               onSelect={() => setShowCreate(true)}
             >
               <Plus size={14} />

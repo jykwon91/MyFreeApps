@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import { ChevronDown } from "lucide-react";
 import { SIGNED_LEASE_STATUS_LABELS, SIGNED_LEASE_STATUS_NEXT } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { SIGNED_LEASE_STATUS_BADGE_COLORS } from "@/shared/lib/lease-labels";
@@ -75,7 +76,7 @@ export default function SignedLeaseStatusPicker({
           {nextStates.map((next) => (
             <DropdownMenu.Item
               key={next}
-              className="px-3 py-2 text-sm rounded-md cursor-pointer outline-none hover:bg-muted focus:bg-muted"
+              className={`px-3 py-2 text-sm rounded-md cursor-pointer ${MENU_ITEM_FOCUS_CLASS}`}
               onSelect={() => onChange(next)}
               data-testid={`signed-lease-status-picker-option-${next}`}
             >

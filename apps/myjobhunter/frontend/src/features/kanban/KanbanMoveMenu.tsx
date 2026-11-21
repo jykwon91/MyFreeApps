@@ -10,7 +10,7 @@
 import { useEffect, useRef } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Check } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
@@ -70,7 +70,7 @@ export default function KanbanMoveMenu({ item, column, isMoving, onMove, shouldF
               <DropdownMenu.RadioItem
                 key={target}
                 value={target}
-                className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded px-3 text-sm outline-none data-[highlighted]:bg-muted data-[state=checked]:font-semibold"
+                className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded px-3 text-sm ${MENU_ITEM_FOCUS_CLASS} data-[state=checked]:font-semibold`}
               >
                 <span className="flex w-4 shrink-0 justify-center">
                   <DropdownMenu.ItemIndicator>

@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation, type NavLinkRenderProps } from "reac
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "../../utils/cn";
+import { MENU_ITEM_FOCUS_CLASS } from "../../constants/menu-item-focus";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
 import { readLocalStorage, writeLocalStorage } from "../../lib/safeStorage";
@@ -261,7 +262,7 @@ export default function AppShell({
                   sideOffset={4}
                 >
                   <DropdownMenu.Item
-                    className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-muted text-destructive outline-none min-h-[44px]"
+                    className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-destructive min-h-[44px] ${MENU_ITEM_FOCUS_CLASS}`}
                     onSelect={onSignOut}
                   >
                     <LogOut className="w-4 h-4" />

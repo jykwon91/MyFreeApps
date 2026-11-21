@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { MENU_ITEM_FOCUS_CLASS } from "@platform/ui";
 import { ChevronDown } from "lucide-react";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
@@ -58,14 +59,14 @@ export default function PropertyMultiSelect({ properties, selectedIds, onChange,
         >
           <div className="flex gap-1 px-2 py-1">
             <DropdownMenu.Item
-              className="text-xs text-primary hover:underline cursor-pointer outline-none"
+              className={`text-xs text-primary hover:underline cursor-pointer rounded px-1 ${MENU_ITEM_FOCUS_CLASS}`}
               onSelect={(e) => { e.preventDefault(); handleSelectAll(); }}
             >
               All
             </DropdownMenu.Item>
             <span className="text-xs text-muted-foreground">·</span>
             <DropdownMenu.Item
-              className="text-xs text-muted-foreground hover:underline cursor-pointer outline-none"
+              className={`text-xs text-muted-foreground hover:underline cursor-pointer rounded px-1 ${MENU_ITEM_FOCUS_CLASS}`}
               onSelect={(e) => { e.preventDefault(); handleClear(); }}
             >
               Clear
@@ -87,7 +88,7 @@ export default function PropertyMultiSelect({ properties, selectedIds, onChange,
                 onCheckedChange={(c) => handleCheck(prop.id, c)}
                 onSelect={(e) => e.preventDefault()}
                 disabled={disabled}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer outline-none hover:bg-muted data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed"
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer ${MENU_ITEM_FOCUS_CLASS} data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed`}
               >
                 <DropdownMenu.ItemIndicator>
                   <span className="block h-3.5 w-3.5 rounded border-2 border-primary bg-primary" aria-hidden />
