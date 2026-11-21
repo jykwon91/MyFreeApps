@@ -16,6 +16,7 @@ import { renderProfile } from "../test-support/renderProfile";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { workHistoryRecord } from "../test-support/workHistoryRecord";
+import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
@@ -279,6 +280,20 @@ describe("education", () => {
     expect(await screen.findByText(EDUCATION.created)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([{ school: "Tech Institute", degree: null, field: null, start_year: 2016, end_year: null, gpa: "3.9" }]);
     expect(within(await screen.findByTestId(`education-${NEW_IDS.education}`)).getByText("Tech Institute")).toBeTruthy();
+  });
+
+  it("moves through the school's fields with the keyboard's Next key, ending on Done at the GPA", async () => {
+    serve(profileRoutes());
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: EDUCATION.add }));
+    const labels = [`${EDUCATION.schoolLabel}, required`, EDUCATION.degreeLabel, EDUCATION.fieldLabel, EDUCATION.startYearLabel, EDUCATION.endYearLabel, EDUCATION.gpaLabel];
+    const inputs = labels.map((label) => screen.getByLabelText(label));
+    expect(inputs.map((input) => input.props.returnKeyType)).toEqual(["next", "next", "next", "next", "next", "done"]);
+    forgetFocusedFields();
+    for (let step = 0; step < 5; step += 1) {
+      await fireEvent(inputs[step], "submitEditing");
+      expect(lastFocusedField()).toBe(labels[step + 1]);
+    }
   });
 
   it("asks for the school, and checks the years and GPA, before sending", async () => {

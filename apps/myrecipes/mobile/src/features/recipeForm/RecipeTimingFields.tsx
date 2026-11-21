@@ -6,12 +6,13 @@ import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { RecipeTimingFieldsProps } from "../../types/RecipeTimingFieldsProps";
 
 /** Servings, then prep and cook minutes side by side, as on the website. */
-export default function RecipeTimingFields({ values, problems, disabled, onEdit }: RecipeTimingFieldsProps) {
+export default function RecipeTimingFields({ values, problems, disabled, onEdit, fields }: RecipeTimingFieldsProps) {
   const { spacing } = useTheme();
 
   return (
     <>
       <FormField
+        {...fields.field("servings")}
         editable={!disabled}
         counter={characterCounter(values.servings.trim(), RECIPE_SERVINGS_MAX_LENGTH)}
         error={problems.servings}
@@ -22,6 +23,7 @@ export default function RecipeTimingFields({ values, problems, disabled, onEdit 
       />
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <FormField
+          {...fields.field("prepMinutes")}
           editable={!disabled}
           error={problems.prepMinutes}
           keyboardType="number-pad"
@@ -31,6 +33,7 @@ export default function RecipeTimingFields({ values, problems, disabled, onEdit 
           value={values.prepMinutes}
         />
         <FormField
+          {...fields.field("cookMinutes")}
           editable={!disabled}
           error={problems.cookMinutes}
           keyboardType="number-pad"

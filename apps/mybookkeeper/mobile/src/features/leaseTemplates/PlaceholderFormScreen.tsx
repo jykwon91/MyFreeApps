@@ -4,7 +4,7 @@ import type { LeasePlaceholderFormField } from "@mybookkeeper/api-client/types/l
 import type { LeasePlaceholderFormValues } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-values";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import { placeholderDirtyFields, placeholderFormProblems, placeholderToFormValues } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
@@ -25,6 +25,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
   const problems = placeholderFormProblems(values);
   const isDirty = placeholderDirtyFields(values, started).length > 0;
   const locked = isBusy || isLeaving;
+  const fields = useFieldChain(["label", "defaultSource", values.input_type === "computed" && "computedExpr"]);
   useDiscardPrompt(isDirty && !isLeaving, isBusy);
 
   function edit<F extends LeasePlaceholderFormField>(field: F, value: LeasePlaceholderFormValues[F]): void {
@@ -46,6 +47,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         {message ? <Banner message={message} /> : null}
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.key}: [${placeholder.key}]`}</Text>
         <FormField
+          {...fields.field("label")}
           editable={!locked}
           error={labelProblem}
           hint={MESSAGES.labelHint}
@@ -58,6 +60,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         <PickerField disabled={locked} label={MESSAGES.type} onPress={() => setIsPickerOpen(true)} valueLabel={LEASE_PLACEHOLDER_INPUT_TYPE_LABELS[values.input_type]} />
         <SwitchRow disabled={locked} label={MESSAGES.requiredSwitch} onValueChange={(next) => edit("required", next)} value={values.required} />
         <FormField
+          {...fields.field("defaultSource")}
           autoCapitalize="none"
           editable={!locked}
           error={defaultProblem}
@@ -69,6 +72,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         />
         {values.input_type === "computed" ? (
           <FormField
+            {...fields.field("computedExpr")}
             autoCapitalize="none"
             editable={!locked}
             hint={MESSAGES.computedHint}

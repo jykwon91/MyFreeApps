@@ -2,7 +2,7 @@ import { WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-clie
 import type { WelcomeManualEmailFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-email-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { emailProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
 import { type RefreshControlProps, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_EMPTY_VALUES, WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
@@ -19,6 +19,7 @@ interface WelcomeManualEmailFormProps {
 /** Emails a guest the guide. A by-the-room manual asks which room's guide to send. */
 export default function WelcomeManualEmailForm({ manual, refreshControl }: WelcomeManualEmailFormProps) {
   const { spacing } = useTheme();
+  const fields = useFieldChain(["email", "name"]);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const hasRooms = manual.rooms.length > 0;
   const roomOptions = emailRoomOptions(manual.rooms);
@@ -33,8 +34,8 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
     <>
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         {failure ? <Banner message={failure} /> : null}
-        <FormField autoCapitalize="none" editable={!isBusy} error={form.errorFor("recipient_email")} keyboardType="email-address" label={MESSAGES.emailLabel} onChangeText={(text) => edit("recipient_email", text)} required value={values.recipient_email} />
-        <FormField editable={!isBusy} error={form.errorFor("recipient_name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH} onChangeText={(text) => edit("recipient_name", text)} value={values.recipient_name} />
+        <FormField {...fields.field("email")} autoCapitalize="none" editable={!isBusy} error={form.errorFor("recipient_email")} keyboardType="email-address" label={MESSAGES.emailLabel} onChangeText={(text) => edit("recipient_email", text)} required value={values.recipient_email} />
+        <FormField {...fields.field("name")} editable={!isBusy} error={form.errorFor("recipient_name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH} onChangeText={(text) => edit("recipient_name", text)} value={values.recipient_name} />
         {hasRooms ? (
           <View style={{ gap: spacing.xs }}>
             <PickerField disabled={isBusy} error={form.errorFor("room_id")} label={MESSAGES.roomLabel} onPress={() => setIsPickerOpen(true)} valueLabel={roomOptions.find((option) => option.value === values.room_id)?.label ?? MESSAGES.noRoomChosen} />

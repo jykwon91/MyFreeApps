@@ -1,8 +1,9 @@
 import { CHANGE_NOTE_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { FormField, LoadingButton, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../../constants/tweakRecipe";
+import type { RecipeDetailField } from "../../types/RecipeDetailField";
 import type { TweakRecipeFormProps } from "../../types/TweakRecipeFormProps";
 import RecipeFormLayout from "../recipeForm/RecipeFormLayout";
 import RecipeRowsEditor from "../recipeForm/RecipeRowsEditor";
@@ -18,6 +19,7 @@ export default function TweakRecipeForm({ recipe, version }: TweakRecipeFormProp
   const form = useTweakRecipeForm(recipe.id, version);
   const locked = form.isSaving || form.isLeaving;
   useDiscardPrompt(form.isDirty && !form.isLeaving, form.isSaving);
+  const fields = useFieldChain<RecipeDetailField>(["servings", "prepMinutes", "cookMinutes"]);
 
   return (
     <RecipeFormLayout testID="tweak-recipe">
@@ -41,7 +43,7 @@ export default function TweakRecipeForm({ recipe, version }: TweakRecipeFormProp
         required
         value={form.changeNote}
       />
-      <RecipeTimingFields disabled={locked} onEdit={form.edit} problems={form.problems} values={form.values} />
+      <RecipeTimingFields disabled={locked} fields={fields} onEdit={form.edit} problems={form.problems} values={form.values} />
       <RecipeRowsEditor disabled={locked} problems={form.problems} rows={form.rows} values={form.values} />
       <LoadingButton disabled={form.isLeaving} isLoading={form.isSaving} loadingText={MESSAGES.saving} onPress={form.save}>
         {MESSAGES.save}

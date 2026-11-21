@@ -5,7 +5,7 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import type { ListingRoomType } from "@mybookkeeper/api-client/types/listing/listing-room-type";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import { EMPTY_LISTING_FORM, listingDirtyFields, listingFormProblems, listingToFormValues } from "@mybookkeeper/api-client/utils/listingForm";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
@@ -29,6 +29,17 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
   const problems = listingFormProblems(sent);
   const isDirty = Object.keys(listingDirtyFields(sent, saved)).length > 0;
   const locked = isBusy || isLeaving;
+  const fields = useFieldChain([
+    "title",
+    "description",
+    "monthlyRate",
+    "weeklyRate",
+    "nightlyRate",
+    "minStay",
+    "maxStay",
+    "amenities",
+    values.pets_on_premises && "petDisclosure",
+  ]);
   const errorFor = (field: keyof ListingFormValues) => (hasTried ? problems[field] : undefined);
 
   useDiscardPrompt(isDirty && !isLeaving, isBusy);
@@ -48,10 +59,11 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
     <>
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
-        <FormField editable={!locked} error={errorFor("title")} label={MESSAGES.title} maxLength={LISTING_TITLE_MAX_LENGTH} onChangeText={(text) => edit("title", text)} required value={values.title} />
+        <FormField {...fields.field("title")} editable={!locked} error={errorFor("title")} label={MESSAGES.title} maxLength={LISTING_TITLE_MAX_LENGTH} onChangeText={(text) => edit("title", text)} required value={values.title} />
         <PropertyChoiceField disabled={locked} error={errorFor("property_id")} messages={LISTING_PROPERTY_CHOICE} onChange={(id) => edit("property_id", id)} value={values.property_id} />
-        <FormField editable={!locked} hint={MESSAGES.descriptionHint} label={MESSAGES.description} multiline onChangeText={(text) => edit("description", text)} value={values.description} />
+        <FormField {...fields.target("description")} editable={!locked} hint={MESSAGES.descriptionHint} label={MESSAGES.description} multiline onChangeText={(text) => edit("description", text)} value={values.description} />
         <FormField
+          {...fields.field("monthlyRate")}
           editable={!locked}
           error={errorFor("monthly_rate")}
           keyboardType="decimal-pad"
@@ -61,19 +73,19 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
           required
           value={values.monthly_rate}
         />
-        <FormField editable={!locked} error={errorFor("weekly_rate")} keyboardType="decimal-pad" label={MESSAGES.weeklyRate} onChangeText={(text) => edit("weekly_rate", text)} value={values.weekly_rate} />
-        <FormField editable={!locked} error={errorFor("nightly_rate")} keyboardType="decimal-pad" label={MESSAGES.nightlyRate} onChangeText={(text) => edit("nightly_rate", text)} value={values.nightly_rate} />
-        <FormField editable={!locked} error={errorFor("min_stay_days")} keyboardType="number-pad" label={MESSAGES.minStay} onChangeText={(text) => edit("min_stay_days", daysInput(text))} value={values.min_stay_days} />
-        <FormField editable={!locked} error={errorFor("max_stay_days")} keyboardType="number-pad" label={MESSAGES.maxStay} onChangeText={(text) => edit("max_stay_days", daysInput(text))} value={values.max_stay_days} />
+        <FormField {...fields.field("weeklyRate")} editable={!locked} error={errorFor("weekly_rate")} keyboardType="decimal-pad" label={MESSAGES.weeklyRate} onChangeText={(text) => edit("weekly_rate", text)} value={values.weekly_rate} />
+        <FormField {...fields.field("nightlyRate")} editable={!locked} error={errorFor("nightly_rate")} keyboardType="decimal-pad" label={MESSAGES.nightlyRate} onChangeText={(text) => edit("nightly_rate", text)} value={values.nightly_rate} />
+        <FormField {...fields.field("minStay")} editable={!locked} error={errorFor("min_stay_days")} keyboardType="number-pad" label={MESSAGES.minStay} onChangeText={(text) => edit("min_stay_days", daysInput(text))} value={values.min_stay_days} />
+        <FormField {...fields.field("maxStay")} editable={!locked} error={errorFor("max_stay_days")} keyboardType="number-pad" label={MESSAGES.maxStay} onChangeText={(text) => edit("max_stay_days", daysInput(text))} value={values.max_stay_days} />
         <PickerField disabled={locked} label={MESSAGES.roomType} onPress={() => setPicking("room")} valueLabel={LISTING_ROOM_TYPE_LABELS[values.room_type]} />
         <PickerField disabled={locked} label={MESSAGES.status} onPress={() => setPicking("status")} valueLabel={LISTING_STATUS_LABELS[values.status]} />
         <SwitchRow disabled={locked} label={MESSAGES.privateBath} onValueChange={(next) => edit("private_bath", next)} value={values.private_bath} />
         <SwitchRow disabled={locked} label={MESSAGES.parking} onValueChange={(next) => edit("parking_assigned", next)} value={values.parking_assigned} />
         <SwitchRow disabled={locked} label={MESSAGES.furnished} onValueChange={(next) => edit("furnished", next)} value={values.furnished} />
-        <FormField editable={!locked} error={errorFor("amenities")} hint={MESSAGES.amenitiesHint} label={MESSAGES.amenities} onChangeText={(text) => edit("amenities", text)} value={values.amenities} />
+        <FormField {...fields.field("amenities")} editable={!locked} error={errorFor("amenities")} hint={MESSAGES.amenitiesHint} label={MESSAGES.amenities} onChangeText={(text) => edit("amenities", text)} value={values.amenities} />
         <SwitchRow disabled={locked} label={MESSAGES.pets} onValueChange={(next) => edit("pets_on_premises", next)} value={values.pets_on_premises} />
         {values.pets_on_premises ? (
-          <FormField editable={!locked} hint={MESSAGES.petDisclosureHint} label={MESSAGES.petDisclosure} multiline onChangeText={(text) => edit("large_dog_disclosure", text)} value={values.large_dog_disclosure} />
+          <FormField {...fields.target("petDisclosure")} editable={!locked} hint={MESSAGES.petDisclosureHint} label={MESSAGES.petDisclosure} multiline onChangeText={(text) => edit("large_dog_disclosure", text)} value={values.large_dog_disclosure} />
         ) : null}
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={original ? MESSAGES.saving : MESSAGES.adding} onPress={save}>
           {original ? MESSAGES.save : MESSAGES.add}

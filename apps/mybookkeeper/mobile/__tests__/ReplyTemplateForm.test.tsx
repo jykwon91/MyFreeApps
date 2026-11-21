@@ -14,6 +14,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aReplyTemplate } from "../test-support/aReplyTemplate";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
+import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
@@ -533,5 +534,18 @@ describe("the edit and new screens", () => {
     await show(<ReplyTemplateCreateScreen />);
     expect(await screen.findByText(MESSAGES.viewOnlyHeading)).toBeTruthy();
     expect(screen.queryByLabelText("Name, required")).toBeNull();
+  });
+});
+
+describe("the keyboard's Next key", () => {
+  it("moves from the name to the subject, then from the subject to the message", async () => {
+    serverWith([]);
+    await showCreate();
+    forgetFocusedFields();
+    expect(subjectInput().props.returnKeyType).toBe("next");
+    await fireEvent(nameInput(), "submitEditing");
+    expect(lastFocusedField()).toBe("Subject, required");
+    await fireEvent(subjectInput(), "submitEditing");
+    expect(lastFocusedField()).toBe("Message, required");
   });
 });

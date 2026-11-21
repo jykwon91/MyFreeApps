@@ -4,7 +4,7 @@ import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE, LEASE_VALUE
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
-import { Banner, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useDiscardPrompt, useFieldChain, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } from "../../constants/leaseDocuments";
@@ -39,6 +39,8 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
   const asked = prefillItemsToAsk(items);
   const problems = prefillProblems(items, documentValues(items, edits), decimalSeparator);
   const locked = write.isBusy || isLeaving;
+  // A read-only value can't be typed in, so Return skips it.
+  const inputs = useFieldChain(asked.filter((item) => item.input_type !== "date" && !item.is_read_only).map((item) => item.key));
 
   useDiscardPrompt((documentValuesChanged(items, edits) || write.isBusy) && !isLeaving, write.isBusy);
 
@@ -111,6 +113,7 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
         return (
           <PlaceholderField
             caption={item.is_read_only ? LEASE_VALUE_READ_ONLY_NOTE : isEdited || !provenance ? null : prefillCaption(provenance)}
+            chain={inputs.field(item.key)}
             error={hasTried && problem ? (problem === "required" ? PLACEHOLDER_PROBLEM_MESSAGES.required : PLACEHOLDER_PROBLEM_MESSAGES.not_a_number(decimalSeparator)) : undefined}
             inputType={item.input_type}
             isDisabled={locked || item.is_read_only}

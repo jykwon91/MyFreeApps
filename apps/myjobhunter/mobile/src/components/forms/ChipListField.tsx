@@ -8,7 +8,7 @@ import type { ChipListFieldProps } from "../../types/ChipListFieldProps";
  * The phone's form of the website's chip input: type an entry and tap Add, Return or a comma, or
  * leave the field; tap an entry to remove it, or a suggestion to add it.
  */
-export default function ChipListField({ label, values, onChange, draft, onDraftChange, placeholder, hint, suggestions = [], required, disabled = false }: ChipListFieldProps) {
+export default function ChipListField({ label, values, onChange, draft, onDraftChange, placeholder, hint, suggestions = [], required, disabled = false, inputRef }: ChipListFieldProps) {
   const { colors, spacing, fontSize } = useTheme();
   const offered = suggestions.filter((suggestion) => !values.some((value) => value.toLowerCase() === suggestion.toLowerCase()));
 
@@ -34,6 +34,7 @@ export default function ChipListField({ label, values, onChange, draft, onDraftC
       <FormField
         editable={!disabled}
         hint={hint}
+        ref={inputRef}
         label={label}
         onBlur={() => addDraft(draft)}
         onChangeText={type}

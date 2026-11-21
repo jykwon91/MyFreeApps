@@ -1,4 +1,4 @@
-import { FormField, useTheme } from "@platform/mobile";
+import { type FieldChainProps, FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { PLACEHOLDER_KEYBOARDS } from "../../constants/newLease";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -12,9 +12,11 @@ interface PlaceholderFieldProps {
   error?: string;
   isDisabled: boolean;
   onChange: (value: string) => void;
+  /** Where Return goes from a typed field; a date field has no keyboard. */
+  chain: FieldChainProps;
 }
 
-export default function PlaceholderField({ label, inputType: type, required, value, caption, error, isDisabled, onChange }: PlaceholderFieldProps) {
+export default function PlaceholderField({ label, inputType: type, required, value, caption, error, isDisabled, onChange, chain }: PlaceholderFieldProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View pointerEvents={isDisabled ? "none" : "auto"} style={{ gap: spacing.xs }}>
@@ -29,6 +31,7 @@ export default function PlaceholderField({ label, inputType: type, required, val
         />
       ) : (
         <FormField
+          {...chain}
           autoCapitalize={type === "email" ? "none" : undefined}
           autoCorrect={type === "email" ? false : undefined}
           editable={!isDisabled}

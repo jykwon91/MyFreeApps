@@ -1,5 +1,5 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { Banner, confirmDiscard, FormField, LoadingButton, ScrollWithPinnedBar, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, confirmDiscard, FormField, LoadingButton, ScrollWithPinnedBar, useConfirmLeave, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import {
@@ -29,7 +29,8 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
   const [values, setValues] = useState<ReplyTemplateFormValues>(() => toFormValues(original));
   const [hasTried, setHasTried] = useState(false);
   const { templates, submit, isBusy, isLeaving, failure, clearFailure } = useSaveReplyTemplate(original);
-  const insertion = useVariableInsertion(values, (field, text) => setValues((current) => ({ ...current, [field]: text })));
+  const fields = useFieldChain(["name", "subject", "body"]);
+  const insertion = useVariableInsertion(values, (field, text) => setValues((current) => ({ ...current, [field]: text })), fields.focus);
 
   const clean = normalise(values);
   const problems = formProblems(clean, templates, original?.id ?? null);
@@ -69,18 +70,18 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
     >
       {banner ? <Banner message={banner} /> : null}
       <FormField
+        {...fields.field("name")}
         editable={!isBusy}
         error={nameError}
         hint={MESSAGES.nameHint}
         label={MESSAGES.nameLabel}
         maxLength={REPLY_TEMPLATE_NAME_MAX_LENGTH}
         onChangeText={(name) => edit("name", name)}
-        onSubmitEditing={() => insertion.focus("subject")}
         required
-        returnKeyType="next"
         value={values.name}
       />
       <FormField
+        {...fields.field("subject")}
         {...fieldProps("subject")}
         error={hasTried ? problems.subject : undefined}
         label={MESSAGES.subject}
@@ -90,6 +91,7 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
         value={values.subject}
       />
       <FormField
+        {...fields.target("body")}
         {...fieldProps("body")}
         error={hasTried ? problems.body : undefined}
         hint={messageHint}

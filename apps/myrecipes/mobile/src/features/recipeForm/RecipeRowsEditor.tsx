@@ -1,6 +1,8 @@
-import { LoadingButton } from "@platform/mobile";
+import { LoadingButton, useFieldChain } from "@platform/mobile";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import type { IngredientFieldKey } from "../../types/IngredientFieldKey";
 import type { RecipeRowsEditorProps } from "../../types/RecipeRowsEditorProps";
+import { ingredientFieldKey } from "../../utils/ingredientFieldKey";
 import RecipeSectionHeading from "../recipes/RecipeSectionHeading";
 import IngredientRowEditor from "./IngredientRowEditor";
 import SectionProblem from "./SectionProblem";
@@ -9,6 +11,10 @@ import StepRowEditor from "./StepRowEditor";
 /** A recipe form's ingredients and steps, each with its problems and a button to add another. */
 export default function RecipeRowsEditor({ values, problems, rows, disabled }: RecipeRowsEditorProps) {
   const { ingredients, steps } = values;
+  // Return moves through each ingredient's fields and on to the next ingredient's name.
+  const fields = useFieldChain<IngredientFieldKey>(
+    ingredients.flatMap((row) => [ingredientFieldKey(row.key, "name"), ingredientFieldKey(row.key, "quantity"), ingredientFieldKey(row.key, "unit"), ingredientFieldKey(row.key, "note")]),
+  );
 
   return (
     <>
@@ -17,6 +23,7 @@ export default function RecipeRowsEditor({ values, problems, rows, disabled }: R
       {ingredients.map((row, index) => (
         <IngredientRowEditor
           disabled={disabled}
+          fields={fields}
           isLast={index === ingredients.length - 1}
           isNew={row.key === rows.addedKey}
           key={row.key}

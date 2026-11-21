@@ -1,3 +1,5 @@
+import type { FieldChainProps } from "@platform/mobile";
+
 export interface BoardFieldsProps {
   /** The board token or company slug, as typed. */
   label: string;
@@ -13,4 +15,6 @@ export interface BoardFieldsProps {
   onKeywordsDraftChange: (draft: string) => void;
   keywordsHint: string;
   disabled: boolean;
+  /** Where Return goes from the token or slug. */
+  chain: FieldChainProps;
 }

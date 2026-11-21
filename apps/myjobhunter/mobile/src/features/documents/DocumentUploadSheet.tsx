@@ -8,7 +8,7 @@ import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUpl
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
-import { FieldError, FieldLabel, filePart, FormField, FormSheet, LoadingButton, requiredFieldLabel, useTheme, useToast, type FileForUpload } from "@platform/mobile";
+import { FieldError, FieldLabel, filePart, FormField, FormSheet, LoadingButton, requiredFieldLabel, useFieldChain, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
@@ -32,6 +32,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
   const isBusy = isUploading || isPicking;
   const titleTooLong = tooLongProblem(title.trim(), DOCUMENT_TITLE_MAX_LENGTH);
   const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : titleTooLong;
+  const fields = useFieldChain(["title"], { onLast: upload, isLastBlocked: isBusy, lastReturnKey: "done" });
   const fileError = hasTried && !file ? MESSAGES.fileRequired : undefined;
 
   async function choose(): Promise<void> {
@@ -85,7 +86,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
         </LoadingButton>
         <FieldError message={fileError} name={MESSAGES.fileLabel} />
       </View>
-      <FormField counter={characterCounter(title.trim(), DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
+      <FormField {...fields.field("title")} counter={characterCounter(title.trim(), DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />
       {/* Nothing to press while the picker is up; Cancel also waits out an upload, as closing the sheet does. */}
       <SheetButtons

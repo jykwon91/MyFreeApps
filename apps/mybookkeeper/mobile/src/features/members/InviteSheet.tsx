@@ -1,6 +1,6 @@
 import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useFieldChain, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
@@ -25,6 +25,7 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
   const isSubmitting = useRef(false);
 
   const isDirty = email.trim() !== initialEmail.trim() || role !== initialRole;
+  const fields = useFieldChain(["email"], { onLast: submit, isLastBlocked: isSending, lastReturnKey: "send" });
 
   async function submit(): Promise<void> {
     if (isSubmitting.current) return;
@@ -50,6 +51,7 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
   return (
     <FormSheet failure={failure} hasUnsavedChanges={isDirty} isBusy={isSending} isOpen onRequestClose={onClose} title={MESSAGES.inviteTitle}>
       <FormField
+        {...fields.field("email")}
         autoCapitalize="none"
         autoComplete="email"
         autoCorrect={false}

@@ -1,7 +1,9 @@
-import { type ComponentRef, useEffect, useRef, useState } from "react";
-import { BackHandler, Pressable, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { BackHandler, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInFailureMessage } from "../auth/signInFailureMessage";
+import { useFieldChain } from "../hooks/useFieldChain";
+import { usePendingPress } from "../hooks/usePendingPress";
 import { useSession } from "../hooks/useSession";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
@@ -28,7 +30,9 @@ export default function SignInScreen({ appName, webBaseUrl, registration = "open
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [needsCode, setNeedsCode] = useState(false);
-  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
+  // One guard for Return and Sign in, so neither can sign in a second time while one is under way.
+  const signIn = usePendingPress(submitCredentials);
+  const fields = useFieldChain(["email", "password"], { onLast: signIn.press, isLastBlocked: signIn.isPending });
   const { bottom } = useSafeAreaInsets();
 
   // Also covers a link to this screen when already signed in. Waiting for the state means
@@ -54,7 +58,7 @@ export default function SignInScreen({ appName, webBaseUrl, registration = "open
   function showFailure(next: SignInFailure): void {
     if (next === "bad_credentials") {
       setPasswordError(signInFailureMessage(next, appName));
-      passwordInput.current?.focus();
+      fields.focus("password");
     } else {
       if (next === "not_verified") setUnverifiedEmail(email.trim());
       setFailure(next);
@@ -110,6 +114,7 @@ export default function SignInScreen({ appName, webBaseUrl, registration = "open
                 Sign in
               </Text>
               <FormField
+                {...fields.field("email")}
                 autoCapitalize="none"
                 autoComplete="email"
                 autoCorrect={false}
@@ -117,22 +122,17 @@ export default function SignInScreen({ appName, webBaseUrl, registration = "open
                 keyboardType="email-address"
                 label="Email"
                 onChangeText={setEmail}
-                onSubmitEditing={() => passwordInput.current?.focus()}
-                returnKeyType="next"
-                submitBehavior="submit"
                 textContentType="username"
                 value={email}
               />
               <FormField
+                {...fields.field("password")}
                 autoCapitalize="none"
                 autoComplete="current-password"
                 autoCorrect={false}
                 error={passwordError}
                 label="Password"
                 onChangeText={setPassword}
-                onSubmitEditing={() => void submitCredentials()}
-                ref={passwordInput}
-                returnKeyType="go"
                 secureTextEntry={!isPasswordVisible}
                 textContentType="password"
                 trailing={
@@ -157,7 +157,7 @@ export default function SignInScreen({ appName, webBaseUrl, registration = "open
               />
               {failure ? <Banner message={signInFailureMessage(failure, appName)} /> : null}
               {failure === "not_verified" ? <ResendVerificationEmail email={unverifiedEmail} /> : null}
-              <LoadingButton loadingText="Signing in..." onPress={submitCredentials}>
+              <LoadingButton isLoading={signIn.isPending} loadingText="Signing in..." onPress={signIn.press}>
                 Sign in
               </LoadingButton>
               <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>
