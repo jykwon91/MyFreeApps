@@ -63,6 +63,22 @@ describe("readTurnStream", () => {
     expect(onEvent.mock.calls.map((call) => call[0])).toEqual([{ type: "reply.done" }]);
   });
 
+  it("tells onData of every chunk that arrives, a keep-alive comment as much as an event", async () => {
+    const onEvent = vi.fn();
+    const onData = vi.fn();
+
+    await readTurnStream(
+      sseBody(['event: reply.done\ndata: {}\n\n', ": ping\n\n", 'event: done\ndata: {"status":"complete","usage":{"remaining_fraction":0.5}}\n\n']),
+      onEvent,
+      undefined,
+      undefined,
+      onData,
+    );
+
+    expect(onData).toHaveBeenCalledTimes(3);
+    expect(onEvent.mock.calls.map((call) => call[0].type)).toEqual(["reply.done", "done"]);
+  });
+
   it("maps a failed read to network_error and releases the reader", async () => {
     const body = failingBody(new TypeError("network lost"));
 

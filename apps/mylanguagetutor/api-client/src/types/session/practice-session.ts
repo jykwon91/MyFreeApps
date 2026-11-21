@@ -24,12 +24,14 @@ export interface PracticeSession {
    */
   interrupt: () => void;
   /**
-   * Stops waiting on the turn that was in flight at the last ``interrupt``, if its whole reply has
-   * arrived and it is still waiting, as when its connection may have died while the phone was in
-   * the background: it ends complete, its corrections marked missing. Any other turn, such as one
-   * sent since, is left alone.
+   * The conversation is back from where ``interrupt`` last ran (the phone back from the background).
+   * The turn in flight then, if its whole reply has arrived and it is still waiting, keeps waiting
+   * while its stream keeps sending, since the server finishes the turn either way. Once nothing has
+   * arrived for ``RESUMED_TURN_SILENCE_MS`` its connection is taken to have died while the phone was
+   * away: it ends complete, its corrections marked missing. Any other turn, such as one sent since,
+   * is left alone.
    */
-  stopWaitingForCorrections: () => void;
+  resume: () => void;
   dismissFailure: () => void;
   dismissRetryPrompt: (key: string) => void;
 }

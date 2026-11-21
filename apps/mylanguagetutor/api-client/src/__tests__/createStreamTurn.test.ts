@@ -271,6 +271,19 @@ describe("createStreamTurn with a renewable sign-in", () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
+  it("tells onData of the stream's chunks, keep-alives included, on a turn sent again after renewing", async () => {
+    const fetch = vi
+      .fn<TurnFetch>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(new Response(sseBody([": ping\n\n", 'event: reply.delta\ndata: {"text":"Hola"}\n\n']), { status: 200 }));
+    const { streamTurn } = setupRenewing(fetch, "renewed");
+    const onData = vi.fn();
+
+    await streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {}, onData });
+
+    expect(onData).toHaveBeenCalledTimes(2);
+  });
+
   it("renews only once: a second 401 goes to onUnauthorized", async () => {
     const fetch = vi.fn<TurnFetch>().mockImplementation(async () => unauthorized());
     const { streamTurn, renewSession, onUnauthorized } = setupRenewing(fetch, "renewed");
