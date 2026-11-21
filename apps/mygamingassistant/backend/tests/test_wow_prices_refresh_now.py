@@ -1,8 +1,9 @@
 """Refresh now on the Auction house page: POST/GET /api/wow/prices/refresh and the claim behind it.
 
 A claim is one atomic UPDATE of the house's ``checked_at``, so the cooldown counts the scheduler's
-runs, failed tries and other clicks alike; the refresh itself runs after the response, for that one
-house, under the same game lock as the scheduled refresh.
+runs, failed tries and other clicks alike. The API only records the click and asks the scheduler
+process to carry it out; the scheduler's ``run_requested`` refreshes that one house, under the same
+game lock as the scheduled refresh.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api import wow_prices
 from app.core.config import settings
+from app.core.scheduler_constants import JOB_RUN_PRICE_REFRESH_REQUESTS
 from app.core.wow_prices import (
     PRICE_REFRESH_COOLDOWN,
     PRICE_REFRESH_RATE_LIMIT,
@@ -27,6 +29,9 @@ from app.models.game.game import Game
 from app.models.wow.price_feed import WowPriceFeed
 from app.repositories.game.game_repo import get_game_by_slug
 from app.repositories.wow import price_feed_repo
+from app.services.scheduling import scheduler_control_service
+from app.services.scheduling.job_not_scheduled_error import JobNotScheduledError
+from app.services.scheduling.scheduler_not_running_error import SchedulerNotRunningError
 from app.services.wow.prices import price_refresh_now_service, price_refresh_service
 from app.services.wow.prices.auction_item_price import AuctionItemPrice
 from app.services.wow.prices.blizzard_price_fetch import HouseResults
@@ -35,6 +40,7 @@ from app.services.wow.prices.house_prices import HousePrices
 from app.services.wow.prices.mapped_house import MappedHouse
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 from app.services.wow.prices.price_refresh_claim import PriceRefreshClaim
+from app.services.wow.prices.price_refresh_unavailable_error import PriceRefreshUnavailableError
 
 URL = "/api/wow/prices/refresh"
 PVP = PRICE_SERVER_HOUSES["pvp"]
@@ -80,13 +86,22 @@ def _refreshes_switched_on(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def ran(monkeypatch: pytest.MonkeyPatch) -> list[PriceRefreshClaim]:
-    """The claims the route handed to the background refresh (which is not run here)."""
+    """The claims the route handed to the scheduler (which is not running here).
+
+    The route must never refresh anything itself: a download in the API process is what the
+    scheduler is for, so any call to the refresh fails the test.
+    """
     claims: list[PriceRefreshClaim] = []
 
     async def record(claim: PriceRefreshClaim) -> None:
         claims.append(claim)
 
-    monkeypatch.setattr(price_refresh_now_service, "run", record)
+    async def never(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the API process must not refresh prices itself")
+
+    monkeypatch.setattr(price_refresh_now_service, "hand_to_scheduler", record)
+    monkeypatch.setattr(price_refresh_service, "refresh_house", never)
+    monkeypatch.setattr(price_refresh_service, "refresh_all", never)
     return claims
 
 
@@ -323,6 +338,167 @@ async def test_no_game_cannot_be_claimed(bound_unit_of_work: AsyncSession, monke
     assert await price_refresh_now_service.claim("pvp", "alliance", now=NOW) is None
 
 
+async def test_a_claim_records_the_click_for_the_scheduler(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+    before = NOW - timedelta(hours=2)
+    await _asked_for(bound_unit_of_work, wow_game, before)
+
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+
+    assert claim is not None and claim.status == "started"
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.refresh_requested_at == NOW and feed.refresh_previous_checked_at == before
+
+
+async def test_a_refused_claim_records_no_second_click(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+    assert (await price_refresh_now_service.claim("pvp", "alliance", now=NOW)) is not None
+
+    refused = await price_refresh_now_service.claim("pvp", "alliance", now=NOW + timedelta(seconds=30))
+
+    assert refused is not None and refused.status == "cooldown"
+    assert (await _feed(bound_unit_of_work, wow_game)).refresh_requested_at == NOW
+
+
+# --- the hand-off to the scheduler ----------------------------------------------------
+
+
+async def test_a_started_claim_asks_the_scheduler_for_the_requests_job(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[str] = []
+
+    async def request_run(job_id: str, **kwargs: object) -> None:
+        asked.append(job_id)
+
+    monkeypatch.setattr(scheduler_control_service, "request_run", request_run)
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+    assert claim is not None
+
+    await price_refresh_now_service.hand_to_scheduler(claim)
+
+    assert asked == [JOB_RUN_PRICE_REFRESH_REQUESTS]
+    # Nothing is fetched or cleared by the API: the click waits for the scheduler.
+    assert (await _feed(bound_unit_of_work, wow_game)).refresh_requested_at == NOW
+
+
+@pytest.mark.parametrize("error", [SchedulerNotRunningError("down"), JobNotScheduledError("run_wow_price_refresh_requests")])
+async def test_a_scheduler_that_cannot_take_the_click_hands_the_cooldown_back(
+    error: Exception, bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    before = NOW - timedelta(hours=2)
+    await _asked_for(bound_unit_of_work, wow_game, before)
+
+    async def request_run(job_id: str, **kwargs: object) -> None:
+        raise error
+
+    monkeypatch.setattr(scheduler_control_service, "request_run", request_run)
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+    assert claim is not None
+
+    with pytest.raises(PriceRefreshUnavailableError):
+        await price_refresh_now_service.hand_to_scheduler(claim)
+
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.checked_at == before and feed.refresh_requested_at is None
+    assert feed.last_error is None
+    again = await price_refresh_now_service.claim("pvp", "alliance", now=NOW + timedelta(seconds=5))
+    assert again is not None and again.status == "started"
+
+
+async def test_the_scheduler_refreshes_the_house_that_was_clicked_and_clears_the_click(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[list[MappedHouse] | None] = []
+
+    async def fake_fetch(houses: list[MappedHouse] | None = None) -> HouseResults:
+        asked.append(houses)
+        return {HORDE.house_id: _set()}
+
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", fake_fetch)
+    claim = await price_refresh_now_service.claim("pvp", "horde", now=NOW)
+    assert claim is not None and claim.status == "started"
+
+    handled = await price_refresh_now_service.run_requested()
+
+    assert handled == 1 and asked == [[HORDE]]
+    feed = await _feed(bound_unit_of_work, wow_game, HORDE)
+    assert feed.item_count == 1 and feed.refresh_requested_at is None and feed.refresh_previous_checked_at is None
+
+
+async def test_the_scheduler_with_no_clicks_waiting_fetches_nothing(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fetch = FakeBlizzard(ALLIANCE, _set())
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", fetch)
+
+    assert await price_refresh_now_service.run_requested() == 0
+    assert fetch.calls == 0
+
+
+async def test_a_click_for_a_house_stored_since_is_cleared_without_a_download(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fetch = FakeBlizzard(ALLIANCE, _set())
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", fetch)
+    assert (await price_refresh_now_service.claim("pvp", "alliance", now=NOW)) is not None
+    # A scheduled refresh stored the house between the click and the scheduler's run.
+    await price_refresh_service.store_house(
+        bound_unit_of_work, wow_game.id, ALLIANCE, _set(), NOW + timedelta(minutes=1),
+    )
+
+    assert await price_refresh_now_service.run_requested() == 1
+
+    assert fetch.calls == 0
+    assert (await _feed(bound_unit_of_work, wow_game)).refresh_requested_at is None
+
+
+async def test_every_house_clicked_is_refreshed_oldest_first(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[int] = []
+
+    async def fake_fetch(houses: list[MappedHouse] | None = None) -> HouseResults:
+        assert houses is not None
+        asked.append(houses[0].house_id)
+        return {houses[0].house_id: _set()}
+
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", fake_fetch)
+    assert (await price_refresh_now_service.claim("pvp", "horde", now=NOW)) is not None
+    assert (await price_refresh_now_service.claim("pvp", "alliance", now=NOW + timedelta(seconds=3))) is not None
+
+    assert await price_refresh_now_service.run_requested() == 2
+
+    assert asked == [HORDE.house_id, ALLIANCE.house_id]
+
+
+async def test_a_click_whose_refresh_crashed_ends_with_an_answer_and_is_cleared(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def crash(houses: list[MappedHouse] | None = None) -> HouseResults:
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", crash)
+    assert (await price_refresh_now_service.claim("pvp", "alliance", now=NOW)) is not None
+
+    await price_refresh_now_service.run_requested()
+
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.refresh_requested_at is None
+    assert feed.checked_at is None and feed.last_error == "The refresh stopped before it saved anything"
+
+
+async def test_a_newer_click_is_not_cleared_by_an_older_runs_clean_up(
+    bound_unit_of_work: AsyncSession, wow_game: Game,
+) -> None:
+    assert (await price_refresh_now_service.claim("pvp", "alliance", now=NOW)) is not None
+
+    cleared = await price_feed_repo.clear_request(
+        bound_unit_of_work, wow_game.id, "us", ALLIANCE.house_id, requested_at=NOW - timedelta(minutes=9),
+    )
+
+    assert cleared is False
+    assert (await _feed(bound_unit_of_work, wow_game)).refresh_requested_at == NOW
+
+
 # --- the refresh ------------------------------------------------------------------
 
 
@@ -474,6 +650,21 @@ async def test_the_route_is_limited_per_ip(client: AsyncClient, wow_game: Game, 
 
     assert codes[-1] == 429
     assert 429 not in codes[:-1]
+
+
+async def test_the_route_is_a_503_and_spends_no_cooldown_when_the_scheduler_cannot_take_the_click(
+    client: AsyncClient, db: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def request_run(job_id: str, **kwargs: object) -> None:
+        raise SchedulerNotRunningError("the scheduler service is not reporting in")
+
+    monkeypatch.setattr(scheduler_control_service, "request_run", request_run)
+
+    response = await client.post(URL)
+
+    assert response.status_code == 503 and response.json()["detail"] == "price_refresh_unavailable"
+    again = await client.post(URL)
+    assert again.status_code == 503  # not 200 "cooldown": the failed click handed its cooldown back
 
 
 async def test_the_route_is_a_503_when_price_refreshes_are_switched_off(

@@ -13,6 +13,7 @@ JOB_SYNC_ALL_SOURCES: Final = "sync_all_sources"
 JOB_CLEANUP_DOWNLOADS: Final = "cleanup_ingestion_downloads"
 JOB_RAID_NOTIFICATIONS: Final = "raid_notifications"
 JOB_REFRESH_WOW_PRICES: Final = "refresh_wow_prices"
+JOB_RUN_PRICE_REFRESH_REQUESTS: Final = "run_wow_price_refresh_requests"
 JOB_PURGE_FEATURE_SUBMISSIONS: Final = "purge_wow_feature_submissions"
 JOB_RECORD_SERVER_STATUS: Final = "record_wow_server_status"
 JOB_PURGE_SERVER_STATUS: Final = "purge_wow_server_status_history"
@@ -24,6 +25,9 @@ TRIGGERABLE_JOB_IDS: Final = frozenset({JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLO
 
 RAID_NOTIFICATIONS_INTERVAL_SECONDS: Final = 60
 CLEANUP_DOWNLOADS_INTERVAL_HOURS: Final = 1
+# "Refresh now" clicks reach run_wow_price_refresh_requests through the scheduler_job channel; the
+# interval only sweeps up a click whose run never finished (a deploy killed it).
+PRICE_REFRESH_REQUESTS_INTERVAL_HOURS: Final = 1
 
 # How often the scheduler process syncs with the ``scheduler_job`` table:
 # it starts the runs the API requested, then records every job's next run

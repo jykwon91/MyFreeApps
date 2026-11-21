@@ -61,6 +61,11 @@ class WowPriceFeed(Base):
     fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Last time we asked at all, whatever the answer.
     checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A "Refresh now" click waiting for the scheduler: the ``checked_at`` stamp the click claimed (None
+    # once the scheduler has dealt with it) and the stamp it replaced, so a refresh that stored nothing
+    # can hand the cooldown back.
+    refresh_requested_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    refresh_previous_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_error: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     last_error_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

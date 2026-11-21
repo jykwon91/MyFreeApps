@@ -102,7 +102,8 @@ async def claim_refresh(
 ) -> bool:
     """Take the right to refresh a house now: stamp ``checked_at`` with ``at`` unless the house
     was asked for since ``claimable_before``. One atomic UPDATE, so two clicks (or two workers)
-    can't both win."""
+    can't both win. The same UPDATE records the click for the scheduler to carry out (the stamp it
+    replaced is kept so a refresh that stores nothing can hand the cooldown back)."""
     await get_or_create(db, game_id, region, house_id, faction)
     result = await db.execute(
         sql_update(WowPriceFeed)
@@ -112,7 +113,43 @@ async def claim_refresh(
             WowPriceFeed.house_id == house_id,
             or_(WowPriceFeed.checked_at.is_(None), WowPriceFeed.checked_at <= claimable_before),
         )
-        .values(checked_at=at)
+        .values(
+            checked_at=at,
+            refresh_requested_at=at,
+            refresh_previous_checked_at=WowPriceFeed.checked_at,
+        )
+        .returning(WowPriceFeed.id)
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def list_requested(db: AsyncSession, game_id: uuid.UUID, region: str) -> list[WowPriceFeed]:
+    """Every house with a "Refresh now" click the scheduler hasn't dealt with yet, oldest click first."""
+    result = await db.execute(
+        select(WowPriceFeed)
+        .where(
+            WowPriceFeed.game_id == game_id,
+            WowPriceFeed.region == region,
+            WowPriceFeed.refresh_requested_at.is_not(None),
+        )
+        .order_by(WowPriceFeed.refresh_requested_at)
+    )
+    return list(result.scalars().all())
+
+
+async def clear_request(
+    db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int, *, requested_at: datetime,
+) -> bool:
+    """Mark the click stamped ``requested_at`` as dealt with. A newer click on the house is never cleared."""
+    result = await db.execute(
+        sql_update(WowPriceFeed)
+        .where(
+            WowPriceFeed.game_id == game_id,
+            WowPriceFeed.region == region,
+            WowPriceFeed.house_id == house_id,
+            WowPriceFeed.refresh_requested_at == requested_at,
+        )
+        .values(refresh_requested_at=None, refresh_previous_checked_at=None)
         .returning(WowPriceFeed.id)
     )
     return result.scalar_one_or_none() is not None

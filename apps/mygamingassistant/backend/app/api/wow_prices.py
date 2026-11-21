@@ -7,11 +7,11 @@
           server or unknown faction is a 422.
 
     POST /api/wow/prices/refresh?server=pvp&faction=alliance|horde|neutral
-        — "Refresh now": pull that ONE house from Blizzard in the background
-          (202 started), at most once per ``PRICE_REFRESH_COOLDOWN`` per house
+        — "Refresh now": the scheduler pulls that ONE house from Blizzard in the
+          background (202 started; the API only records the click), at most once per ``PRICE_REFRESH_COOLDOWN`` per house
           (200 cooldown + retry_after_seconds), or 200 refreshing while a
           scheduled refresh is already running. 429 past the per-IP limit,
-          503 when price refreshes are switched off.
+          503 when price refreshes are switched off or the scheduler isn't running.
     GET /api/wow/prices/refresh?server=&faction=
         — the house's snapshot time, last download, when "Refresh now" works
           again and when the last refresh failed; never cached, so the page
@@ -23,7 +23,7 @@ only when a new set lands, so a revisit is a 304.
 """
 from typing import Final
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +46,7 @@ from app.schemas.wow.price_list import WowPriceList
 from app.schemas.wow.price_refresh_response import WowPriceRefreshResponse
 from app.schemas.wow.price_refresh_state import WowPriceRefreshState
 from app.services.wow.prices import price_read_service, price_refresh_now_service
+from app.services.wow.prices.price_refresh_unavailable_error import PriceRefreshUnavailableError
 
 router = APIRouter(tags=["wow"])
 
@@ -58,6 +59,7 @@ price_refresh_state_limiter = RateLimiter(
 
 PRICE_REFRESH_DISABLED: Final = "price_refresh_disabled"
 PRICES_UNAVAILABLE: Final = "prices_unavailable"
+PRICE_REFRESH_UNAVAILABLE: Final = "price_refresh_unavailable"
 
 # Prices refresh every few hours; ten minutes of browser cache costs nothing.
 PRICE_CACHE_SECONDS: Final = 600
@@ -96,11 +98,10 @@ async def get_price_refresh_state(
 async def refresh_prices(
     request: Request,
     response: Response,
-    background: BackgroundTasks,
     server: PriceServer = Query(DEFAULT_PRICE_SERVER),
     faction: PriceFaction = Query(DEFAULT_PRICE_FACTION),
 ) -> WowPriceRefreshResponse:
-    """"Refresh now": pull ONE house from Blizzard after this response. Public, limited per IP."""
+    """"Refresh now": ask the scheduler to pull ONE house from Blizzard; answers once the click is recorded. Public, limited per IP."""
     if not settings.wow_price_refresh_enabled:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=PRICE_REFRESH_DISABLED)
     check_with_retry_after(price_refresh_limiter, f"wow-price-refresh:{get_client_ip(request)}")
@@ -110,5 +111,8 @@ async def refresh_prices(
     if claim.status != "started":
         response.status_code = status.HTTP_200_OK
         return WowPriceRefreshResponse(status=claim.status, retry_after_seconds=claim.retry_after_seconds)
-    background.add_task(price_refresh_now_service.run, claim)
+    try:
+        await price_refresh_now_service.hand_to_scheduler(claim)
+    except PriceRefreshUnavailableError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=PRICE_REFRESH_UNAVAILABLE)
     return WowPriceRefreshResponse(status="started", retry_after_seconds=claim.retry_after_seconds)

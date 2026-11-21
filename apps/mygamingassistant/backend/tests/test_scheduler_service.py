@@ -31,6 +31,7 @@ from app.core.scheduler_constants import (
     JOB_RAID_NOTIFICATIONS,
     JOB_RECORD_SERVER_STATUS,
     JOB_REFRESH_WOW_PRICES,
+    JOB_RUN_PRICE_REFRESH_REQUESTS,
     JOB_SYNC_ALL_SOURCES,
 )
 from app.schemas.system.run_now_outcome import RunNowOutcome
@@ -48,6 +49,7 @@ _JOB_BODIES = (
     "run_sync_all_sources",
     "run_raid_notifications",
     "run_refresh_wow_prices",
+    "run_price_refresh_requests",
     "run_record_server_status",
     "run_purge_server_status_history",
     "run_purge_character_metrics",
@@ -59,7 +61,7 @@ _JOB_BODIES = (
 _ALWAYS_ON = {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS}
 _ALL_JOBS = _ALWAYS_ON | {
     JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS,
-    JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS,
+    JOB_REFRESH_WOW_PRICES, JOB_RUN_PRICE_REFRESH_REQUESTS, JOB_RECORD_SERVER_STATUS,
 }
 
 
@@ -123,7 +125,9 @@ async def test_retention_purges_run_with_every_switch_off() -> None:
 async def test_serve_only_prod_keeps_prices_and_server_status() -> None:
     # SCHEDULER_ENABLED=false must stop neither the prices nor the history.
     _start(source_jobs=False, raid_notifications=True)
-    assert _job_ids() == _ALWAYS_ON | {JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS}
+    assert _job_ids() == _ALWAYS_ON | {
+        JOB_REFRESH_WOW_PRICES, JOB_RUN_PRICE_REFRESH_REQUESTS, JOB_RECORD_SERVER_STATUS,
+    }
 
 
 @pytest.mark.asyncio
@@ -150,6 +154,7 @@ async def test_raid_notifications_only_when_discord_is_on() -> None:
         (JOB_CLEANUP_DOWNLOADS, timedelta(hours=1), 1800),
         (JOB_RAID_NOTIFICATIONS, timedelta(seconds=60), 60),
         (JOB_REFRESH_WOW_PRICES, timedelta(hours=5), 3600),
+        (JOB_RUN_PRICE_REFRESH_REQUESTS, timedelta(hours=1), 3600),
         (JOB_RECORD_SERVER_STATUS, timedelta(minutes=5), 300),
         (JOB_PURGE_FEATURE_SUBMISSIONS, timedelta(hours=24), 3600),
         (JOB_PURGE_SERVER_STATUS, timedelta(hours=24), 3600),

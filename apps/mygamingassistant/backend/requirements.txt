@@ -102,6 +102,8 @@ idna==3.20
     #   email-validator
     #   httpx
     #   httpx2
+ijson==3.4.0.post0
+    # via mygamingassistant-backend
 iniconfig==2.3.0
     # via pytest
 jiter==0.17.0

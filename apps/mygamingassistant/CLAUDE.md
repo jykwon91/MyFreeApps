@@ -1408,11 +1408,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`price_refresh_now_service.claim` -> `price_feed_repo.claim_refresh`) is one atomic UPDATE
   of `WowPriceFeed.checked_at`, refused inside `PRICE_REFRESH_COOLDOWN` (10 min, counted from
   ANY ask for that house: the scheduler, a failed try, another click; per house; safe across
-  the 2 uvicorn workers; no migration). Answers: 202 `started` (the refresh runs after the
-  response via `refresh_house`, which takes the same advisory lock as `refresh_all`), 200
+  the 2 uvicorn workers). The same UPDATE records the click (`refresh_requested_at`);
+  the API NEVER downloads Blizzard's auction data (the API was OOM-killed doing it) — it asks
+  the scheduler for the `run_wow_price_refresh_requests` job (`hand_to_scheduler`), which
+  runs `run_requested` -> `refresh_house` (same advisory lock as `refresh_all`) and clears the
+  click. Auction payloads are streamed (`ijson`, `blizzard_stream.py`), never held whole.
+  Answers: 202 `started` (the scheduler picks it up within `TICK_INTERVAL_SECONDS`), 200
   `cooldown` (+ `retry_after_seconds`), 200 `refreshing` (the lock is held, e.g. a scheduled
   run; peeked through `pg_locks` so it never makes that run skip, no cooldown spent), 503
-  `price_refresh_disabled` when `WOW_PRICE_REFRESH_ENABLED` is false, 404 when the game isn't
+  `price_refresh_disabled` when `WOW_PRICE_REFRESH_ENABLED` is false (or
+  `price_refresh_unavailable` when the scheduler isn't running; the click's cooldown is handed back), 404 when the game isn't
   seeded, 429 past 5 per 10 min per IP. `GET /api/wow/prices/refresh` is the polled state
   (`Cache-Control: no-store`; `fetched_at`, `source_updated_at`, `refresh_available_at`,
   `refresh_failed_at`), because GET prices is cached for 10 min. Outcome (`prices/priceRefresh.ts`):
