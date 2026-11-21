@@ -23,6 +23,7 @@ from the operator entirely) or ranked on a blended rate that nobody pays.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import math
 import uuid
@@ -40,6 +41,7 @@ from app.core.utility_plan_constants import (
     SERVICE_TYPE_ELECTRICITY,
 )
 from app.db.session import unit_of_work
+from app.models.properties.utility_plan import UtilityPlan
 from app.repositories.properties import property_repo, utility_plan_repo
 from app.schemas.properties.utility_offer import UtilityOffer
 from app.schemas.properties.utility_offer_group import UtilityOfferGroup
@@ -175,6 +177,32 @@ def _rank_time_of_use(
     return kept[:MAX_TIME_OF_USE_OFFERS_PER_PROPERTY], withheld
 
 
+def _needs_offers(plan: UtilityPlan) -> bool:
+    return (
+        plan.rate_type != RATE_TYPE_REGULATED
+        and plan.avg_price_cents_per_kwh_at_1000 is not None
+    )
+
+
+async def _fetch_offers_or_none(zip_code: str) -> list[UtilityOffer] | None:
+    """The offers for one ZIP, or None when the feed could not supply them."""
+    try:
+        return await fetch_offers(zip_code)
+    except OfferFeedUnavailableError:
+        return None
+
+
+async def _fetch_offers_by_zip(zip_codes: set[str]) -> dict[str, list[UtilityOffer] | None]:
+    """Fetch each distinct ZIP once, concurrently.
+
+    Properties sharing a ZIP share one answer, and an outage on N distinct ZIPs
+    costs one timeout rather than N back to back.
+    """
+    ordered = sorted(zip_codes)
+    results = await asyncio.gather(*(_fetch_offers_or_none(z) for z in ordered))
+    return dict(zip(ordered, results, strict=True))
+
+
 async def find_better_plans(
     *,
     user_id: uuid.UUID,
@@ -199,12 +227,23 @@ async def find_better_plans(
         if plan.service_type == SERVICE_TYPE_ELECTRICITY and plan.id in current_ids
     ]
 
+    zip_by_property = {
+        plan.property_id: derive_zip_code(addresses.get(plan.property_id))
+        for plan in current_electricity
+    }
+    zips_to_fetch: set[str] = set()
+    for plan in current_electricity:
+        zip_code = zip_by_property[plan.property_id]
+        if zip_code is not None and _needs_offers(plan):
+            zips_to_fetch.add(zip_code)
+    offers_by_zip = await _fetch_offers_by_zip(zips_to_fetch)
+
     groups: list[UtilityOfferGroup] = []
     for plan in current_electricity:
         group = UtilityOfferGroup(
             property_id=plan.property_id,
             property_name=names.get(plan.property_id),
-            zip_code=derive_zip_code(addresses.get(plan.property_id)),
+            zip_code=zip_by_property[plan.property_id],
             current_provider_name=plan.provider_name,
             current_price_cents_per_kwh_at_1000=plan.avg_price_cents_per_kwh_at_1000,
             switch_cost_cents=switch_cost_cents(
@@ -229,9 +268,8 @@ async def find_better_plans(
             groups.append(group)
             continue
 
-        try:
-            available = await fetch_offers(group.zip_code)
-        except OfferFeedUnavailableError:
+        available = offers_by_zip[group.zip_code]
+        if available is None:
             group.unavailable_reason = _FEED_DOWN_REASON
             groups.append(group)
             continue

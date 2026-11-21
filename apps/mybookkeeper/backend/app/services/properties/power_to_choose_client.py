@@ -7,6 +7,7 @@ compare to what a property already pays, is decided in
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from decimal import Decimal
@@ -15,6 +16,7 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.core.government_feed_constants import FEED_TOTAL_DEADLINE_SECONDS
 from app.core.power_to_choose_constants import (
     FEED_RATE_TYPE_FIXED,
     OFFER_CACHE_TTL_SECONDS,
@@ -22,6 +24,7 @@ from app.core.power_to_choose_constants import (
     POWER_TO_CHOOSE_PLANS_URL,
 )
 from app.schemas.properties.utility_offer import UtilityOffer
+from app.services.feed_failure_cache import FeedFailureCache
 from app.services.properties._offer_ranking import (
     clean_special_terms,
     is_teaser_priced,
@@ -49,6 +52,10 @@ class OfferFeedUnavailableError(RuntimeError):
 # so within the TTL every caller for a ZIP can share one fetch. Process-local by
 # design: it holds nothing user-specific and needs no invalidation story.
 _cache: dict[str, tuple[float, list[UtilityOffer]]] = {}
+
+# ZIP -> why the last fetch failed. Keyed per ZIP because the feed is queried
+# per ZIP and one region failing says nothing about another.
+_failures = FeedFailureCache()
 
 
 def _user_agent() -> str:
@@ -131,28 +138,23 @@ def _to_offer(row: dict[str, Any]) -> UtilityOffer | None:
     )
 
 
-async def fetch_offers(zip_code: str) -> list[UtilityOffer]:
-    """Every usable fixed-rate offer published for ``zip_code``.
-
-    Raises ``OfferFeedUnavailableError`` rather than returning an empty list on
-    failure: "the feed is down" and "there are no offers here" lead to different
-    words on screen, and collapsing them would quietly tell the operator they
-    have nothing to switch to.
-    """
-    cached = _cache.get(zip_code)
-    if cached is not None and (time.monotonic() - cached[0]) < OFFER_CACHE_TTL_SECONDS:
-        return cached[1]
-
+async def _fetch_offers_uncached(zip_code: str) -> list[UtilityOffer]:
     try:
-        async with httpx.AsyncClient(timeout=OFFER_FETCH_TIMEOUT_SECONDS) as client:
-            response = await client.get(
-                POWER_TO_CHOOSE_PLANS_URL,
-                params={"zip_code": zip_code},
-                headers={"User-Agent": _user_agent(), "Accept": "application/json"},
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            payload = response.json()
+        async with asyncio.timeout(FEED_TOTAL_DEADLINE_SECONDS):
+            async with httpx.AsyncClient(timeout=OFFER_FETCH_TIMEOUT_SECONDS) as client:
+                response = await client.get(
+                    POWER_TO_CHOOSE_PLANS_URL,
+                    params={"zip_code": zip_code},
+                    headers={"User-Agent": _user_agent(), "Accept": "application/json"},
+                    follow_redirects=True,
+                )
+                response.raise_for_status()
+                payload = response.json()
+    except TimeoutError as exc:
+        logger.warning(
+            "Power to Choose gave no answer within %ss", FEED_TOTAL_DEADLINE_SECONDS,
+        )
+        raise OfferFeedUnavailableError("offer feed timed out") from exc
     except httpx.HTTPStatusError as exc:
         logger.warning(
             "Power to Choose returned HTTP %s: %s",
@@ -180,5 +182,30 @@ async def fetch_offers(zip_code: str) -> list[UtilityOffer]:
         for offer in (_to_offer(row) for row in rows if isinstance(row, dict))
         if offer is not None
     ]
+    return offers
+
+
+async def fetch_offers(zip_code: str) -> list[UtilityOffer]:
+    """Every usable fixed-rate offer published for ``zip_code``.
+
+    Raises ``OfferFeedUnavailableError`` rather than returning an empty list on
+    failure: "the feed is down" and "there are no offers here" lead to different
+    words on screen, and collapsing them would quietly tell the operator they
+    have nothing to switch to. A failure is remembered briefly so an outage
+    costs one slow attempt per ZIP rather than one per page view.
+    """
+    cached = _cache.get(zip_code)
+    if cached is not None and (time.monotonic() - cached[0]) < OFFER_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    recent_failure = _failures.recent_failure(zip_code)
+    if recent_failure is not None:
+        raise OfferFeedUnavailableError(recent_failure)
+
+    try:
+        offers = await _fetch_offers_uncached(zip_code)
+    except OfferFeedUnavailableError as exc:
+        _failures.record(zip_code, str(exc))
+        raise
     _cache[zip_code] = (time.monotonic(), offers)
     return offers
