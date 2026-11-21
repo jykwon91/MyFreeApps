@@ -12,18 +12,23 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
+from pathlib import Path
 from typing import Any
 
 import anthropic
+import anyio
 import httpx2
 import pytest
+from fastapi import routing as fastapi_routing
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
+from app.main import app
 from app.services.tutor import quota_service, turn_service
 from app.services.tutor.turn_slots import turn_slots
 
@@ -62,6 +67,15 @@ async def _fetch(sql: str, **params: Any) -> list[Any]:
     try:
         async with engine.connect() as conn:
             return list((await conn.execute(text(sql), params)).all())
+    finally:
+        await engine.dispose()
+
+
+async def _execute(sql: str, **params: Any) -> None:
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text(sql), params)
     finally:
         await engine.dispose()
 
@@ -399,12 +413,18 @@ class TestClientDisconnect:
         assert await _bucket(quota_service.user_bucket(user_id)) == prepared.reservation.units
 
     @pytest.mark.asyncio
-    async def test_disconnect_after_reply_done_records_the_reply_as_delivered(
+    async def test_disconnect_after_reply_done_still_finishes_the_turn(
         self, user_factory, as_user, fake_claude,
     ) -> None:
-        """The stream dropped while corrections ran: the learner has the whole reply,
-        so the turn is complete (no corrections), counted once, quota kept."""
+        """The stream dropped while the corrections and translation were still being
+        worked out (the phone backgrounded, the tab closed): the learner has the whole
+        reply, so the turn finishes anyway. It is complete with its corrections and
+        translation, the goal it met counts on the next turn, and only actual usage is
+        charged, not the reservation."""
         fake_claude.create_gate = asyncio.Event()
+        fake_claude.corrections_json = (
+            '{"corrections": [], "retry_prompt": null, "goals_met_this_turn": [0]}'
+        )
         user = await user_factory()
         user_id = uuid.UUID(user["id"])
         async with await as_user(user) as authed:
@@ -412,25 +432,94 @@ class TestClientDisconnect:
 
         prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
         stream = turn_service.stream_turn(prepared)
-        names = [(await stream.__anext__()).name for _ in range(4)]
-        assert names == ["turn.started", "reply.delta", "reply.delta", "reply.done"]
-        # Sent: the server goes on to wait for the corrections, and the client goes away.
-        waiting = asyncio.create_task(stream.__anext__())
+        names: list[str] = []
+        scopes: list[anyio.CancelScope] = []
+
+        async def read() -> None:
+            async for event in stream:
+                names.append(event.name)
+
+        async def request() -> None:
+            # FastAPI's SSE response reads the generator in a task group whose
+            # scope it cancels when the client disconnects.
+            async with anyio.create_task_group() as group:
+                scopes.append(group.cancel_scope)
+                group.start_soon(read)
+
+        running = asyncio.create_task(request())
         while len(fake_claude.create_calls) < 2:
             await asyncio.sleep(0)
-        waiting.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await waiting
+        assert names == ["turn.started", "reply.delta", "reply.delta", "reply.done"]
+        # Sent: the server goes on to wait for the corrections, and the client goes away.
+        scopes[0].cancel()
+        await asyncio.sleep(0.05)
+        # The request waits for the turn to finish; its calls were not cancelled with it.
+        assert not running.done()
+        rows = await _fetch("SELECT status FROM tutor_turn WHERE id = :id", id=prepared.turn_id)
+        assert rows[0][0] == "partial"
+        fake_claude.create_gate.set()
+        await asyncio.wait_for(running, timeout=5)
+        assert names == ["turn.started", "reply.delta", "reply.delta", "reply.done"]
 
         rows = await _fetch(
-            "SELECT status, reply_text, corrections_json, cost_units FROM tutor_turn WHERE id = :id",
+            "SELECT status, reply_text, corrections_json, translation_text, cost_units"
+            " FROM tutor_turn WHERE id = :id",
             id=prepared.turn_id,
         )
         assert rows[0][0] == "complete"
         assert rows[0][1] is not None  # the reply, encrypted
-        assert rows[0][2] is None
-        assert rows[0][3] == prepared.reservation.units
-        assert await _bucket(quota_service.user_bucket(user_id)) == prepared.reservation.units
+        assert rows[0][2] is not None  # the corrections, encrypted
+        assert rows[0][3] is not None  # the translation, encrypted
+        expected = _expected_units(fake_claude)
+        assert expected < prepared.reservation.units
+        assert rows[0][4] == expected
+        assert await _bucket(quota_service.user_bucket(user_id)) == expected
+        assert await _bucket(quota_service.GLOBAL_BUCKET) == expected
+        sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
+        assert sessions[0][0] == 1
+
+        fake_claude.create_gate = None
+        fake_claude.corrections_json = (
+            '{"corrections": [], "retry_prompt": null, "goals_met_this_turn": [1]}'
+        )
+        async with await as_user(user) as authed:
+            resp = await _turn(authed, str(session_id), "un cafe por favor")
+        assert dict(_parse_sse(resp.text))["corrections"]["scenario_state"]["goals_met"] == [0, 1]
+
+    @pytest.mark.asyncio
+    async def test_a_turn_that_cannot_be_finished_after_its_reply_stays_complete_and_keeps_the_reservation(
+        self, user_factory, as_user, fake_claude, monkeypatch, caplog,
+    ) -> None:
+        """An unexpected failure working out a delivered reply's corrections, with the
+        client still there: the learner has the whole reply, so the stream ends with
+        ``done`` (complete, no corrections) and the turn is complete and counted; its
+        usage is unknown, so the reservation stays charged. Logged once."""
+
+        async def broken_corrections(*_args: Any) -> None:
+            raise RuntimeError("unexpected")
+
+        monkeypatch.setattr(turn_service, "run_corrections", broken_corrections)
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+            resp = await _turn(authed, str(session_id))
+
+        assert resp.status_code == 200
+        events = _parse_sse(resp.text)
+        assert _names(events) == ["turn.started", "reply.delta", "reply.delta", "reply.done", "done"]
+        assert dict(events)["done"]["status"] == "complete"
+        failures = [r for r in caplog.records if "could not be finished" in r.getMessage()]
+        assert len(failures) == 1
+        rows = await _fetch(
+            "SELECT status, corrections_json, cost_units FROM tutor_turn WHERE id = :id",
+            id=uuid.UUID(events[0][1]["turn_id"]),
+        )
+        assert rows[0][0] == "complete"
+        assert rows[0][1] is None
+        reserved = await _bucket(quota_service.user_bucket(user_id))
+        assert reserved > _expected_units(fake_claude)
+        assert rows[0][2] == reserved
         sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
         assert sessions[0][0] == 1
 
@@ -614,3 +703,219 @@ class TestRefusedBeforeClaude:
     async def test_requires_auth(self, client: AsyncClient) -> None:
         resp = await client.post(f"/sessions/{uuid.uuid4()}/turns", json={"text": "hola"})
         assert resp.status_code == 401
+
+
+class _DroppableRequest:
+    """POST /sessions/{id}/turns straight through the ASGI app (middleware and all),
+    with the client's side of the connection under the test's control: it can stop
+    reading (``stall``) and hang up (``disconnect``), which ``httpx`` can't do."""
+
+    def __init__(self, session_id: uuid.UUID, authorization: str, *, stall: bool = False) -> None:
+        body = json.dumps({"text": "hola"}).encode()
+        self._body: bytes | None = body
+        self._stall = stall
+        self._hung_up = asyncio.Event()
+        self.received = bytearray()
+        self.scope: dict[str, Any] = {
+            "type": "http",
+            # uvicorn's spec version: Starlette then listens for the disconnect itself.
+            "asgi": {"version": "3.0", "spec_version": "2.3"},
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": f"/sessions/{session_id}/turns",
+            "raw_path": f"/sessions/{session_id}/turns".encode(),
+            "root_path": "",
+            "query_string": b"",
+            "headers": [
+                (b"host", b"test"),
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+                (b"authorization", authorization.encode()),
+            ],
+            "client": ("127.0.0.1", 50000),
+            "server": ("test", 80),
+        }
+
+    def start(self) -> asyncio.Task[None]:
+        return asyncio.create_task(app(self.scope, self._receive, self._send))
+
+    def disconnect(self) -> None:
+        self._hung_up.set()
+
+    async def _receive(self) -> dict[str, Any]:
+        if self._body is not None:
+            body, self._body = self._body, None
+            return {"type": "http.request", "body": body, "more_body": False}
+        await self._hung_up.wait()
+        return {"type": "http.disconnect"}
+
+    async def _send(self, message: dict[str, Any]) -> None:
+        if message["type"] != "http.response.body":
+            return
+        self.received.extend(message.get("body", b""))
+        if self._stall:
+            # A client that stopped reading: the server's writes back up until it hangs up.
+            await self._hung_up.wait()
+
+
+class TestDroppedRequest:
+    @pytest.mark.asyncio
+    async def test_a_request_dropped_after_its_reply_holds_the_turn_slot_until_the_turn_is_settled(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """The client hangs up after ``reply.done`` while the corrections are still
+        being worked out: the request lives on until the turn is finished and settled
+        (complete, with its corrections), holding the user's turn slot, then frees it."""
+        fake_claude.create_gate = asyncio.Event()
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+            authorization = authed.headers["Authorization"]
+
+        request = _DroppableRequest(session_id, authorization)
+        running = request.start()
+        while b"event: reply.done" not in request.received or len(fake_claude.create_calls) < 2:
+            await asyncio.sleep(0.01)
+        request.disconnect()
+        await asyncio.sleep(0.1)
+
+        assert not running.done()
+        assert not turn_slots.try_acquire(user_id)  # still held
+        rows = await _fetch("SELECT status FROM tutor_turn WHERE session_id = :id", id=session_id)
+        assert rows == [("partial",)]
+
+        fake_claude.create_gate.set()
+        await asyncio.wait_for(running, timeout=5)
+        rows = await _fetch(
+            "SELECT status, corrections_json, cost_units FROM tutor_turn WHERE session_id = :id",
+            id=session_id,
+        )
+        assert rows[0][0] == "complete"
+        assert rows[0][1] is not None
+        assert rows[0][2] == _expected_units(fake_claude)
+        assert turn_slots.try_acquire(user_id)  # freed
+        turn_slots.release(user_id)
+
+    @pytest.mark.asyncio
+    async def test_a_request_dropped_while_its_writes_are_backed_up_is_settled_before_it_ends(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """A client that stopped reading mid-reply, then hung up: the stream is left
+        waiting at a ``yield`` rather than cancelled mid-await. It is still closed and
+        the turn settled before the request ends, not later by garbage collection."""
+        fake_claude.reply_chunks = [f"palabra{i} " for i in range(12)]
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+            authorization = authed.headers["Authorization"]
+
+        request = _DroppableRequest(session_id, authorization, stall=True)
+        running = request.start()
+        while b"event: turn.started" not in request.received:
+            await asyncio.sleep(0.01)
+        await asyncio.sleep(0.1)
+        request.disconnect()
+        finished, _ = await asyncio.wait([running], timeout=5)
+        assert finished
+        # FastAPI's SSE response itself errors on this hang-up (its keep-alive task
+        # writes to the stream it already closed); the turn is settled regardless.
+        running.exception()
+
+        rows = await _fetch("SELECT status, reply_text FROM tutor_turn WHERE session_id = :id", id=session_id)
+        assert rows[0][0] == "partial"
+        assert rows[0][1] is not None  # settled: a partial reply was stored
+
+
+class TestTurnStillFinishing:
+    @pytest.mark.asyncio
+    async def test_a_turn_is_refused_while_the_last_one_is_finishing_after_its_client_left(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """The learner left after a reply and sends the next turn on a connection that
+        reaches another worker, whose turn slot doesn't know the first is still being
+        finished: the unsettled turn refuses it until it is settled."""
+        fake_claude.create_gate = asyncio.Event()
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        stream = turn_service.stream_turn(prepared)
+        for _ in range(4):
+            await stream.__anext__()
+        waiting = asyncio.create_task(stream.__anext__())
+        while len(fake_claude.create_calls) < 2:
+            await asyncio.sleep(0)
+        waiting.cancel()
+        await asyncio.sleep(0)
+
+        async with await as_user(user) as authed:
+            refused = await _turn(authed, str(session_id))
+        assert refused.status_code == 429
+        assert refused.json()["detail"] == "turn_in_progress"
+        assert len(fake_claude.stream_calls) == 1
+
+        fake_claude.create_gate.set()
+        with pytest.raises(asyncio.CancelledError):
+            await waiting
+        fake_claude.create_gate = None
+        async with await as_user(user) as authed:
+            allowed = await _turn(authed, str(session_id))
+        assert allowed.status_code == 200
+        assert dict(_parse_sse(allowed.text))["done"]["status"] == "complete"
+
+    @pytest.mark.asyncio
+    async def test_a_turn_that_was_never_settled_stops_blocking_the_session_after_the_bound(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+        # Prepared, then its settlement never ran (the process died).
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        await _execute(
+            "UPDATE tutor_turn SET created_at = now() - make_interval(secs => :age) WHERE id = :id",
+            age=settings.ltutor_unsettled_turn_max_age_seconds + 1, id=prepared.turn_id,
+        )
+
+        async with await as_user(user) as authed:
+            resp = await _turn(authed, str(session_id))
+        assert resp.status_code == 200
+        assert dict(_parse_sse(resp.text))["done"]["status"] == "complete"
+
+    @pytest.mark.asyncio
+    async def test_settled_turns_without_a_reply_do_not_block_the_session(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """Every settled turn with no reply text is ``failed``, so it never looks unsettled."""
+        fake_claude.reply_error = _overloaded()
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            session_id = await _new_session(authed)
+            failed = await _turn(authed, session_id)
+            assert dict(_parse_sse(failed.text))["done"]["status"] == "failed"
+            fake_claude.reply_error = None
+            resp = await _turn(authed, session_id)
+        assert resp.status_code == 200
+        assert dict(_parse_sse(resp.text))["done"]["status"] == "complete"
+
+
+_TURN_REQUEST_CONSTANTS = Path(__file__).resolve().parents[2] / "api-client/src/constants/turnRequest.ts"
+
+
+def test_the_stream_is_heard_from_more_often_than_a_resumed_client_gives_up() -> None:
+    """While a turn's corrections are being worked out the stream is quiet but for
+    FastAPI's keep-alive pings, and a client back from the background gives up after
+    ``RESUMED_TURN_SILENCE_MS`` of silence. FastAPI has no public setting for the ping
+    interval, so this pins its value to the client's copy of it."""
+    source = _TURN_REQUEST_CONSTANTS.read_text()
+    keepalive = re.search(r"TURN_STREAM_KEEPALIVE_MS = ([\d_]+);", source)
+    silence = re.search(r"RESUMED_TURN_SILENCE_MS = TURN_STREAM_KEEPALIVE_MS \+ ([\d_]+);", source)
+    assert keepalive is not None and silence is not None
+    keepalive_ms = int(keepalive.group(1).replace("_", ""))
+    assert fastapi_routing._PING_INTERVAL * 1000 == keepalive_ms
+    assert int(silence.group(1).replace("_", "")) > 0

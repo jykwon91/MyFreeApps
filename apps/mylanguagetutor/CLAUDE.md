@@ -74,11 +74,21 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
 - **Disconnects.** A client that drops before the first reply token pays only
   for usage already known (the corrections call, if it finished) and the rest
   is released, the same as an upstream error before any token. Once a reply
-  token has streamed, a drop keeps the reservation charged. A turn whose `reply.done` was sent is saved `complete` (the learner has the
-  whole reply, so clients don't resend it); before that it is `partial` or
-  `failed`. Clients don't abort a turn after `reply.done`, and show a note if
-  its corrections never arrive. The phone, back from the background, waits
-  `CORRECTIONS_GRACE_MS` for them before giving up on a possibly dead socket.
+  token has streamed, a drop before `reply.done` keeps the reservation charged.
+  After `reply.done`, the corrections and translation run in their own task
+  that a disconnect doesn't cancel: the turn is saved `complete` with them and
+  charged its actual usage (the turn slot stays held until they finish; if
+  finishing fails, the turn is still `complete` and keeps the reservation).
+  The slot is per worker, so `prepare_turn` also refuses a new turn
+  (`turn_in_progress`) while the session has a `partial` turn with no reply
+  text younger than `ltutor_unsettled_turn_max_age_seconds`. The event stream
+  comes from the `_turn_events` dependency, which closes it before the slot is
+  released: FastAPI never closes a streaming route's generator itself.
+  Before `reply.done` a turn is `partial` or `failed`. Clients don't abort a
+  turn after `reply.done`, and show a note if its corrections never arrive.
+  The phone, back from the background, keeps waiting while any data (keep-
+  alives included) arrives and gives up after `RESUMED_TURN_SILENCE_MS` of
+  silence (longer than the server's keep-alive interval).
 - **Frontend.** Speech recognition and TTS are the browser's Web Speech API
   (no audio reaches our servers). The SSE body is read with `fetch` +
   `eventsource-parser` because `EventSource` can't POST or send a bearer token:

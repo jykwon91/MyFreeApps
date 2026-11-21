@@ -21,7 +21,7 @@ import {
   UNAUTHORIZED,
 } from "./constants/refusalDetails";
 import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
-import { LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING } from "./constants/practiceText";
+import { LEARNER_FOLLOW_UP, LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING, TUTOR_NAME_REPLY } from "./constants/practiceText";
 import { CORRECTIONS_MISSING, GOAL_MET, RECAST_LINE, REPLY_CUT_OFF, SUGGESTIONS_LABEL, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { CREATE_SESSION } from "./constants/stubbedEndpoints";
 import { TURN_RESPONSE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
@@ -146,6 +146,27 @@ test("a stream cut after the whole reply keeps the reply, notes the missing sugg
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   expect(api.turnRequests).toHaveLength(1);
+});
+
+test("a goal met in a turn whose stream was cut after the reply is ticked once the next reply's suggestions arrive", async ({ page }) => {
+  // The server finishes a turn whose whole reply went out even after the connection drops, so the
+  // next turn's suggestions carry the goal that turn met along with the new one.
+  const api = await signedInTutor(page, {
+    turns: [cutAfterReply(TUTOR_GREETING), completeTurn({ reply: TUTOR_NAME_REPLY, goalsMet: [0, 1] })],
+  });
+
+  await openPractice(page, GREETINGS.title);
+  await sendTyped(page, LEARNER_GREETING);
+  await expect(page.getByText(CORRECTIONS_MISSING)).toBeVisible();
+  await expect(goal(page, GREETINGS.goals[0])).not.toContainText(GOAL_MET);
+
+  await sendTyped(page, LEARNER_FOLLOW_UP);
+  await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+  await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
+  await expect(goal(page, GREETINGS.goals[1])).toContainText(GOAL_MET);
+  await expect(goal(page, GREETINGS.goals[2])).not.toContainText(GOAL_MET);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(api.turnRequests).toHaveLength(2);
 });
 
 test("a stream cut after the suggestions arrived shows them, with no missing-suggestions note, and isn't resent", async ({ page }) => {

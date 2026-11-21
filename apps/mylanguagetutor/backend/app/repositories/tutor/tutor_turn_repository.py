@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,3 +78,22 @@ async def list_recent_answered(
         .limit(limit)
     )
     return list(reversed(result.scalars().all()))
+
+
+async def has_unsettled_since(
+    db: AsyncSession, session_id: uuid.UUID, since: datetime,
+) -> bool:
+    """Whether the session has a turn created at or after ``since`` that is not
+    settled yet: still ``partial`` with no reply stored (every settled turn
+    without reply text is ``failed``)."""
+    result = await db.execute(
+        select(TutorTurn.id)
+        .where(
+            TutorTurn.session_id == session_id,
+            TutorTurn.status == TurnStatus.PARTIAL.value,
+            TutorTurn.reply_text.is_(None),
+            TutorTurn.created_at >= since,
+        )
+        .limit(1)
+    )
+    return result.first() is not None

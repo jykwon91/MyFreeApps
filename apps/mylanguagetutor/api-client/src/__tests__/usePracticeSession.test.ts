@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RESUMED_TURN_SILENCE_MS } from "../constants/turnRequest";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { usePracticeSession } from "../hooks/usePracticeSession";
 import { nextUtcMidnight } from "../utils/nextUtcMidnight";
@@ -102,6 +103,19 @@ describe("usePracticeSession", () => {
     usage = answered(BUDGET_LEFT, Date.now());
     createSession.mockReturnValue({ unwrap: () => Promise.resolve({ id: "s1" }) });
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Fakes the timers ``resume`` counts silence with; ``waitFor`` needs real ones back. */
+  function fakeSilenceClock() {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  }
+
+  function wait(ms: number) {
+    act(() => vi.advanceTimersByTime(ms));
+  }
 
   it("streams a turn: reply text, spoken sentences, corrections, goals", async () => {
     streamTurn.mockImplementation(emitting(COMPLETE_TURN));
@@ -407,11 +421,16 @@ describe("usePracticeSession", () => {
     expect(streamTurn.mock.calls[1][0].text).toBe("hola");
   });
 
-  /** Streams the whole reply, then holds the turn open for its corrections until `finish` or `drop`. */
+  /**
+   * Streams the whole reply, then holds the turn open for its corrections until `finish` or `drop`;
+   * `keepAlive` is the server's keep-alive arriving meanwhile.
+   */
   function replyThenHold() {
     let finish: () => void = () => {};
     let drop: (err?: Error) => void = () => {};
-    const stream = ({ onEvent, signal }: StreamTurnOptions) => {
+    let keepAlive: () => void = () => {};
+    const stream = ({ onEvent, onData, signal }: StreamTurnOptions) => {
+      keepAlive = () => onData?.();
       COMPLETE_TURN.slice(0, 4).forEach(onEvent);
       return new Promise<void>((resolve, reject) => {
         signal?.addEventListener("abort", () => reject(new Error("aborted")));
@@ -422,7 +441,7 @@ describe("usePracticeSession", () => {
         drop = (err) => (err ? reject(err) : resolve());
       });
     };
-    return { stream, finish: () => finish(), drop: (err?: Error) => drop(err) };
+    return { stream, finish: () => finish(), drop: (err?: Error) => drop(err), keepAlive: () => keepAlive() };
   }
 
   it("lets a turn whose whole reply has arrived finish when interrupted", async () => {
@@ -460,6 +479,16 @@ describe("usePracticeSession", () => {
     expect(result.current.failure).toBeNull();
   });
 
+  it("marks the corrections missing on a turn the server finished without them", async () => {
+    streamTurn.mockImplementationOnce(emitting([...COMPLETE_TURN.slice(0, 4), COMPLETE_TURN[5]]));
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({ replyText: "¡Hola! ¿Qué quieres?", status: "complete", correctionsMissing: true });
+    expect(result.current.failure).toBeNull();
+  });
+
   it("shows corrections that arrived before the stream dropped, without the missing-corrections note", async () => {
     streamTurn.mockImplementationOnce(emitting(COMPLETE_TURN.slice(0, 5)));
     const { result } = setup();
@@ -476,7 +505,7 @@ describe("usePracticeSession", () => {
     expect(result.current.failure).toBeNull();
   });
 
-  it("stops waiting on the interrupted turn's corrections when asked: complete, with them marked missing", async () => {
+  it("gives up on the interrupted turn once its stream has been silent a while after resume: complete, its corrections marked missing", async () => {
     const turn = replyThenHold();
     streamTurn.mockImplementationOnce(turn.stream);
     const { result } = setup();
@@ -484,12 +513,82 @@ describe("usePracticeSession", () => {
     act(() => result.current.send("hola"));
     await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
     act(() => result.current.interrupt());
-    act(() => result.current.stopWaitingForCorrections());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+    wait(1);
 
+    vi.useRealTimers();
     await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
     expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(true);
     expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: true });
     expect(result.current.failure).toBeNull();
+  });
+
+  it("keeps waiting after resume while the stream keeps sending, counting from its last data, and shows the corrections that follow", async () => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    act(() => turn.keepAlive());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+    act(() => turn.finish());
+
+    vi.useRealTimers();
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: false, translation: "Hi! What do you want?" });
+    expect(result.current.scenarioState).toEqual({ goals_met: [0], complete: false });
+  });
+
+  it("a silence after the stream's last data still ends the turn", async () => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    act(() => turn.keepAlive());
+    wait(RESUMED_TURN_SILENCE_MS);
+
+    vi.useRealTimers();
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: true });
+  });
+
+  it("doesn't count time away again: the silence starts over at the next resume", async () => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    act(() => result.current.interrupt());
+    wait(RESUMED_TURN_SILENCE_MS);
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS - 1);
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+    wait(1);
+    vi.useRealTimers();
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: true });
   });
 
   it("leaves a turn sent after the interrupt alone", async () => {
@@ -505,10 +604,13 @@ describe("usePracticeSession", () => {
     await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
     act(() => result.current.send("un café"));
     await waitFor(() => expect(result.current.entries[1]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
-    act(() => result.current.stopWaitingForCorrections());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS);
 
     expect(streamTurn.mock.calls[1][0].signal?.aborted).toBe(false);
     act(() => second.finish());
+    vi.useRealTimers();
     await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
     expect(result.current.entries[1]).toMatchObject({ status: "complete", correctionsMissing: false });
   });
@@ -519,7 +621,9 @@ describe("usePracticeSession", () => {
 
     act(() => result.current.send("hola"));
     await waitFor(() => expect(streamTurn).toHaveBeenCalledTimes(1));
-    act(() => result.current.stopWaitingForCorrections());
+    fakeSilenceClock();
+    act(() => result.current.resume());
+    wait(RESUMED_TURN_SILENCE_MS);
 
     expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
     expect(result.current.requestPhase).not.toBe("idle");
