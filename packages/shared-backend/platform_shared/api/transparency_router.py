@@ -27,21 +27,36 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
+import urllib3
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
 
 from platform_shared.schemas.common import StatusResponse
-from platform_shared.schemas.transparency import (
-    TransparencyDocument,
-    TransparencyResponse,
+from platform_shared.schemas.transparency import TransparencyResponse
+from platform_shared.services.transparency import (
+    donation_store,
+    kofi_service,
+    transparency_store,
 )
-from platform_shared.services.transparency import kofi_service, transparency_store
+from platform_shared.services.transparency.donation_outcome import DonationOutcome
 from platform_shared.services.transparency.transparency_store import (
     S3Error,
     StorageNotConfiguredError,
 )
 
 logger = logging.getLogger(__name__)
+
+# Failures reaching MinIO at all (as opposed to an S3 error response):
+# urllib3's MaxRetryError / ProtocolError etc., and socket-level OSErrors.
+_STORAGE_TRANSPORT_ERRORS: tuple[type[Exception], ...] = (urllib3.exceptions.HTTPError, OSError)
+
+# Webhook response status for each outcome. "ignored" is still a 200: the
+# payload is unusable, and a re-delivery would be just as unusable.
+_OUTCOME_STATUS: dict[DonationOutcome, str] = {
+    DonationOutcome.RECORDED: "ok",
+    DonationOutcome.DUPLICATE: "duplicate",
+    DonationOutcome.REFUSED: "ignored",
+}
 
 
 def build_transparency_router(settings: object) -> APIRouter:
@@ -60,20 +75,36 @@ def build_transparency_router(settings: object) -> APIRouter:
     async def get_transparency() -> TransparencyResponse:
         now = datetime.now(timezone.utc)
         try:
-            document = await asyncio.to_thread(transparency_store.load_document, settings)  # type: ignore[arg-type]
+            document, records = await asyncio.gather(
+                asyncio.to_thread(transparency_store.load_document, settings),  # type: ignore[arg-type]
+                asyncio.to_thread(
+                    donation_store.load_month_donations_cached,
+                    settings,  # type: ignore[arg-type]
+                    transparency_store.month_key(now),
+                ),
+            )
         except StorageNotConfiguredError:
             # MinIO unconfigured (local dev / before the operator sets it up).
             # Report "not configured" so the widget hides rather than erroring.
-            return transparency_store.project_response(None, now)
-        except (S3Error, ValidationError, ValueError) as exc:
-            # Present-but-unreadable (transient outage or corrupt object) is an
-            # honest "temporarily unavailable" — don't masquerade it as "not
-            # configured", which would silently hide a real backend problem.
-            logger.warning("transparency read failed: %s", exc)
+            return transparency_store.project_response(None, now, [])
+        except S3Error as exc:
+            # Present-but-unreadable is an honest "temporarily unavailable" —
+            # don't masquerade it as "not configured", which would silently
+            # hide a real backend problem.
+            logger.warning(
+                "transparency read failed: code=%s message=%s", exc.code, exc.message,
+            )
             raise HTTPException(
                 status_code=503, detail="transparency_unavailable",
             ) from exc
-        return transparency_store.project_response(document, now)
+        except (*_STORAGE_TRANSPORT_ERRORS, ValidationError, ValueError) as exc:
+            # MinIO unreachable (connection refused, retries exhausted) or a
+            # corrupt object: also "temporarily unavailable".
+            logger.warning("transparency read failed: %s: %s", type(exc).__name__, exc)
+            raise HTTPException(
+                status_code=503, detail="transparency_unavailable",
+            ) from exc
+        return transparency_store.project_response(document, now, records)
 
     @router.post("/donations/kofi-webhook", response_model=StatusResponse)
     async def kofi_webhook(request: Request) -> StatusResponse:
@@ -104,23 +135,35 @@ def build_transparency_router(settings: object) -> APIRouter:
             )
             raise HTTPException(status_code=401, detail="invalid_verification_token")
 
-        now = datetime.now(timezone.utc)
         try:
-            document = (
-                await asyncio.to_thread(transparency_store.load_document, settings)  # type: ignore[arg-type]
-                or TransparencyDocument()
+            outcome = await asyncio.to_thread(
+                kofi_service.record_donation, settings, payload,  # type: ignore[arg-type]
             )
-            newly_recorded = kofi_service.record_donation(document, payload, now)
-            if newly_recorded:
-                await asyncio.to_thread(transparency_store.save_document, settings, document)  # type: ignore[arg-type]
-        except (StorageNotConfiguredError, S3Error, ValidationError, ValueError) as exc:
+        except S3Error as exc:
             # Surface a 500 so Ko-fi retries — never silently drop a donation.
-            logger.error("Ko-fi webhook storage failure: %s", exc)
+            logger.error(
+                "Ko-fi webhook storage failure: message_id=%s code=%s message=%s",
+                payload.message_id,
+                exc.code,
+                exc.message,
+            )
+            raise HTTPException(
+                status_code=500, detail="transparency_store_error",
+            ) from exc
+        except (
+            *_STORAGE_TRANSPORT_ERRORS, StorageNotConfiguredError, ValidationError, ValueError,
+        ) as exc:
+            logger.error(
+                "Ko-fi webhook storage failure: message_id=%s error=%s: %s",
+                payload.message_id,
+                type(exc).__name__,
+                exc,
+            )
             raise HTTPException(
                 status_code=500, detail="transparency_store_error",
             ) from exc
 
-        return StatusResponse(status="ok" if newly_recorded else "duplicate")
+        return StatusResponse(status=_OUTCOME_STATUS[outcome])
 
     return router
 

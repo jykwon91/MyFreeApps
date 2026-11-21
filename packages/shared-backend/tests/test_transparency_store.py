@@ -17,6 +17,7 @@ from platform_shared.schemas.transparency import (
     MonthBucket,
     TransparencyDocument,
 )
+from platform_shared.schemas.transparency_donation_record import DonationRecord
 from platform_shared.services.transparency import transparency_store
 from tests.conftest import FakeStorageClient, make_s3_error
 
@@ -28,15 +29,6 @@ _SETTINGS = SimpleNamespace(
     minio_secure=False,
     transparency_shared_bucket="myfreeapps-shared",
 )
-
-
-@pytest.fixture
-def fake_storage(monkeypatch: pytest.MonkeyPatch) -> FakeStorageClient:
-    """Patch get_shared_storage to a fresh in-memory client + reset cache."""
-    fake = FakeStorageClient()
-    monkeypatch.setattr(transparency_store, "get_shared_storage", lambda settings: fake)
-    transparency_store.reset_shared_storage_cache()
-    return fake
 
 
 class TestLoadSaveRoundTrip:
@@ -95,7 +87,7 @@ class TestLoadSaveRoundTrip:
 
 class TestProjectResponse:
     def test_none_document_is_not_configured(self) -> None:
-        resp = transparency_store.project_response(None, _NOW)
+        resp = transparency_store.project_response(None, _NOW, [])
         assert resp.configured is False
         assert resp.costs_cents == 0
         assert resp.donations_cents == 0
@@ -107,7 +99,7 @@ class TestProjectResponse:
             updated_at=_NOW.isoformat(),
             months={"2026-06": MonthBucket(donations_cents=2500, costs_cents=10000)},
         )
-        resp = transparency_store.project_response(doc, _NOW)
+        resp = transparency_store.project_response(doc, _NOW, [])
         assert resp.configured is True
         assert resp.costs_cents == 10000
         assert resp.donations_cents == 2500
@@ -119,7 +111,7 @@ class TestProjectResponse:
         doc = TransparencyDocument(
             months={"2026-06": MonthBucket(donations_cents=2500, costs_cents=0)},
         )
-        resp = transparency_store.project_response(doc, _NOW)
+        resp = transparency_store.project_response(doc, _NOW, [])
         assert resp.configured is False
         assert resp.donations_cents == 2500
 
@@ -129,11 +121,57 @@ class TestProjectResponse:
             updated_at="2026-05-31T00:00:00+00:00",
             months={"2026-05": MonthBucket(donations_cents=999, costs_cents=10000)},
         )
-        resp = transparency_store.project_response(doc, _NOW)
+        resp = transparency_store.project_response(doc, _NOW, [])
         assert resp.configured is False
         assert resp.costs_cents == 0
         assert resp.donations_cents == 0
         assert resp.month == "June 2026"
+
+
+def _record(message_id: str, cents: int, *, month: str = "2026-06") -> DonationRecord:
+    return DonationRecord(message_id=message_id, month=month, amount_cents=cents)
+
+
+class TestDonationTotals:
+    def test_response_sums_the_month_records(self) -> None:
+        doc = TransparencyDocument(
+            updated_at=_NOW.isoformat(),
+            months={"2026-06": MonthBucket(costs_cents=10000)},
+        )
+        resp = transparency_store.project_response(doc, _NOW, [_record("a", 500), _record("b", 300)])
+        assert resp.model_dump() == {
+            "month": "June 2026",
+            "costs_cents": 10000,
+            "donations_cents": 800,
+            "updated_at": _NOW.isoformat(),
+            "configured": True,
+        }
+
+    def test_records_without_a_report_still_sum(self) -> None:
+        resp = transparency_store.project_response(None, _NOW, [_record("a", 500)])
+        assert resp.donations_cents == 500
+        assert resp.configured is False
+
+    def test_unmigrated_total_is_added_and_its_ids_not_counted_twice(self) -> None:
+        """Mid-migration: records for the old ids exist, but report.json still
+        holds their total. The total counts once; newer records add to it."""
+        doc = TransparencyDocument(
+            months={"2026-06": MonthBucket(donations_cents=900, donation_message_ids=["old1", "old2"])},
+        )
+        records = [_record("old1", 900), _record("old2", 0), _record("new", 200)]
+        assert transparency_store.month_donations_cents(doc, "2026-06", records) == 1100
+
+    def test_legacy_report_has_donation_checks_every_month(self) -> None:
+        doc = TransparencyDocument(
+            months={
+                "2026-05": MonthBucket(donation_message_ids=["may"]),
+                "2026-06": MonthBucket(donation_message_ids=["jun"]),
+            },
+        )
+        assert transparency_store.legacy_report_has_donation(doc, "may") is True
+        assert transparency_store.legacy_report_has_donation(doc, "jun") is True
+        assert transparency_store.legacy_report_has_donation(doc, "x") is False
+        assert transparency_store.legacy_report_has_donation(None, "may") is False
 
 
 class TestHelpers:

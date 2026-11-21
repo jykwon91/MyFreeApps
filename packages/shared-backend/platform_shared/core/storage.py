@@ -238,6 +238,14 @@ class StorageClient:
             failed.append(error.name)
         return failed
 
+    def list_keys(self, prefix: str) -> list[str]:
+        """Keys of every object under ``prefix``, at any depth."""
+        return [
+            obj.object_name
+            for obj in self._client.list_objects(self._bucket, prefix=prefix, recursive=True)
+            if obj.object_name is not None
+        ]
+
     def head_object(self, key: str) -> dict[str, Any] | None:
         """Return object metadata, or ``None`` if the object does not exist."""
         try:

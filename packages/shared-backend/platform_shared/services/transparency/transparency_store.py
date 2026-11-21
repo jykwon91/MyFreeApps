@@ -14,15 +14,14 @@ numbers with no cross-app DB coupling — one writer, N readers.
 This module owns:
 - a cached storage client bound to the SHARED bucket (separate from the
   app's own ``get_storage()`` which targets the app bucket),
-- ``load_document`` / ``save_document`` (read-modify-write helpers), and
-- ``project_response`` — turn the stored doc into the public
-  :class:`TransparencyResponse` for the current month.
+- ``load_document`` / ``save_document``, and
+- ``project_response`` — turn the stored doc plus the month's donation
+  records into the public :class:`TransparencyResponse`.
 
-Concurrency note: writes (rare webhook donations + one daily poll) are
-read-modify-write on a single object with no compare-and-set. The write
-rate is low enough (a handful of donations/day + one poll) that a lost
-update is improbable and self-heals on the next poll; we deliberately do
-NOT reach for object-locking infrastructure the scale doesn't warrant.
+Concurrency: ``report.json`` has ONE writer, the primary app's daily cost
+poll, so its read-change-write cannot lose an update. Ko-fi donations are
+not written here at all; each is its own object (``donation_store``), so
+concurrent donations never share an object either.
 """
 from __future__ import annotations
 
@@ -31,7 +30,6 @@ from datetime import datetime
 from typing import Protocol
 
 from minio.error import S3Error
-from pydantic import ValidationError
 
 from platform_shared.core.storage import (
     StorageClient,
@@ -45,6 +43,7 @@ from platform_shared.schemas.transparency import (
     TransparencyDocument,
     TransparencyResponse,
 )
+from platform_shared.schemas.transparency_donation_record import DonationRecord
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ logger = logging.getLogger(__name__)
 _NOT_FOUND_CODES = {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}
 
 
-class _StorageSettings(Protocol):
+class SharedStorageSettings(Protocol):
     """The settings fields the shared-bucket client needs.
 
     BaseAppSettings satisfies this; using a Protocol keeps this module
@@ -81,7 +80,7 @@ class _StorageSettings(Protocol):
 _shared_client: StorageClient | None = None
 
 
-def get_shared_storage(settings: _StorageSettings) -> StorageClient:
+def get_shared_storage(settings: SharedStorageSettings) -> StorageClient:
     """Return a cached storage client bound to the SHARED bucket.
 
     Raises :class:`StorageNotConfiguredError` (from ``build_storage_client``)
@@ -108,7 +107,7 @@ def reset_shared_storage_cache() -> None:
     _shared_client = None
 
 
-def load_document(settings: _StorageSettings) -> TransparencyDocument | None:
+def load_document(settings: SharedStorageSettings) -> TransparencyDocument | None:
     """Load the stored transparency document.
 
     Returns ``None`` when the shared object — or the shared bucket itself — does
@@ -134,8 +133,11 @@ def load_document(settings: _StorageSettings) -> TransparencyDocument | None:
     return TransparencyDocument.model_validate_json(raw)
 
 
-def save_document(settings: _StorageSettings, document: TransparencyDocument) -> None:
-    """Persist the transparency document, overwriting the single object."""
+def save_document(settings: SharedStorageSettings, document: TransparencyDocument) -> None:
+    """Persist the transparency document, overwriting the single object.
+
+    Only the cost poll calls this; it is the object's single writer.
+    """
     client = get_shared_storage(settings)
     payload = document.model_dump_json().encode("utf-8")
     client.upload_file(TRANSPARENCY_OBJECT_KEY, payload, "application/json")
@@ -154,7 +156,8 @@ def month_label(now: datetime) -> str:
 def prune_old_months(document: TransparencyDocument, now: datetime) -> None:
     """Drop all but the most recent ``MONTHS_RETAINED`` monthly buckets.
 
-    Keeps the object (and its per-month dedup id lists) bounded. Sorting by
+    Keeps the object bounded (donation records are pruned separately, by
+    ``donation_store.prune_old_donations``). Sorting by
     the ``"YYYY-MM"`` key is chronological because the format is
     zero-padded and fixed-width.
     """
@@ -165,11 +168,43 @@ def prune_old_months(document: TransparencyDocument, now: datetime) -> None:
     document.months = {k: v for k, v in document.months.items() if k in keep_set}
 
 
+def legacy_report_has_donation(document: TransparencyDocument | None, message_id: str) -> bool:
+    """Whether ``message_id`` is still listed in the old in-report dedup lists.
+
+    True only for donations counted before they became per-donation objects
+    and not yet moved out by the cost poll (any month).
+    """
+    if document is None:
+        return False
+    return any(message_id in bucket.donation_message_ids for bucket in document.months.values())
+
+
+def month_donations_cents(
+    document: TransparencyDocument | None,
+    month: str,
+    records: list[DonationRecord],
+) -> int:
+    """Total donations for ``month``: the per-donation records plus any
+    not-yet-migrated total still inside ``report.json``.
+
+    A record whose id is still listed in ``report.json`` is skipped: its
+    amount is already in that old total, and the migration is between writing
+    the records and saving the emptied report.
+    """
+    legacy = (document.months.get(month) if document is not None else None) or MonthBucket()
+    legacy_ids = set(legacy.donation_message_ids)
+    return legacy.donations_cents + sum(
+        record.amount_cents for record in records if record.message_id not in legacy_ids
+    )
+
+
 def project_response(
     document: TransparencyDocument | None,
     now: datetime,
+    records: list[DonationRecord],
 ) -> TransparencyResponse:
-    """Project the stored document into the public response for ``now``'s month.
+    """Project the stored document and ``now``'s month's donation records
+    into the public response.
 
     ``configured`` is ``costs_cents > 0`` — the operator has set up monthly
     costs (fixed constants and/or Anthropic spend), which is exactly the
@@ -177,20 +212,21 @@ def project_response(
     whether to render. A month with no bucket (object missing, or a brand-new
     month before the first poll) reports zeros + ``configured=False``.
     """
-    label = month_label(now)
+    key = month_key(now)
+    donations = month_donations_cents(document, key, records)
     if document is None:
         return TransparencyResponse(
-            month=label,
+            month=month_label(now),
             costs_cents=0,
-            donations_cents=0,
+            donations_cents=donations,
             updated_at=None,
             configured=False,
         )
-    bucket = document.months.get(month_key(now)) or MonthBucket()
+    bucket = document.months.get(key) or MonthBucket()
     return TransparencyResponse(
-        month=label,
+        month=month_label(now),
         costs_cents=bucket.costs_cents,
-        donations_cents=bucket.donations_cents,
+        donations_cents=donations,
         updated_at=document.updated_at,
         configured=bucket.costs_cents > 0,
     )
@@ -215,6 +251,9 @@ __all__ = [
     "month_label",
     "prune_old_months",
     "project_response",
+    "legacy_report_has_donation",
+    "month_donations_cents",
+    "SharedStorageSettings",
     "get_or_create_bucket",
     "StorageNotConfiguredError",
     "S3Error",
