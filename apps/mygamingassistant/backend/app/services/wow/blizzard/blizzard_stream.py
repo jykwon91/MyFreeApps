@@ -62,6 +62,12 @@ class _BodyReader:
             raise self._error_cls("answer is not a JSON object", status_code=200)
 
 
+async def _empty_rows() -> AsyncIterator[dict[str, Any]]:
+    """An async generator that yields nothing — used for 304 Not Modified responses."""
+    return
+    yield  # type: ignore[misc]  # makes this an async generator
+
+
 async def _rows(reader: _BodyReader, array_key: str, error_cls: type[E]) -> AsyncIterator[dict[str, Any]]:
     try:
         async for row in ijson.items_async(reader, f"{array_key}.item", use_float=True):
@@ -80,14 +86,20 @@ async def stream_array_rows(
     array_key: str,
     error_cls: type[E],
     max_bytes: int,
+    allow_not_modified: bool = False,
     **kwargs: Any,
 ) -> AsyncIterator[JsonArrayStream]:
     """One request; the rows of the answer's top-level ``array_key`` array, read as they arrive.
 
     A missing ``array_key`` is an answer with no rows. The connection closes when the block ends.
+    When ``allow_not_modified=True`` a 304 response yields an empty stream with ``not_modified=True``
+    instead of raising an error.
     """
     try:
         async with http.stream(method, url, **kwargs) as response:
+            if allow_not_modified and response.status_code == httpx.codes.NOT_MODIFIED:
+                yield JsonArrayStream(headers=response.headers, rows=_empty_rows(), not_modified=True)
+                return
             if response.status_code != httpx.codes.OK:
                 await response.aread()
                 raise error_from(response, error_cls)
