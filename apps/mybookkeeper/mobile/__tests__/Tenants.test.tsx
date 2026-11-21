@@ -341,7 +341,7 @@ describe("tenants", () => {
       await fireEvent.press(await screen.findByRole("button", { name: "New lease" }));
       expect(mockPush).toHaveBeenCalledWith("/leases/new?applicant_id=a1&parent_lease_id=l9");
       await fireEvent.press(screen.getByRole("button", { name: "Extend lease" }));
-      expect(await screen.findByText("New end date")).toBeTruthy();
+      expect(await screen.findByLabelText("New end date")).toBeTruthy();
     });
 
     it("follows an ended lease with a new one, and offers no extension", async () => {
