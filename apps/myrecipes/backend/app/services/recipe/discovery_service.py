@@ -32,8 +32,10 @@ import asyncio
 import hashlib
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 from platform_shared.extraction import (
+    AnthropicFailureKind,
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
@@ -42,6 +44,13 @@ from platform_shared.extraction import (
 from platform_shared.core.url_safety import UnsafeURLError, assert_url_safe
 
 from app.core.config import settings
+from app.core.discovery_failure_messages import (
+    DISCOVERY_BUSY_MESSAGE,
+    DISCOVERY_INPUT_REJECTED_MESSAGE,
+    DISCOVERY_NOT_CONFIGURED_MESSAGE,
+    DISCOVERY_UNAVAILABLE_MESSAGE,
+    DISCOVERY_UNPARSEABLE_MESSAGE,
+)
 from app.schemas.recipe.discovery_schemas import (
     DiscoveredDetail,
     DiscoveredRecipe,
@@ -203,32 +212,30 @@ async def read_recipe(url: str, title: str = "") -> DiscoveredDetail:
 
 
 async def _run(call, *, what: str):
-    """Run a research call, mapping provider failures onto typed app errors."""
+    """Run a research call, mapping provider failures onto typed app errors by kind."""
     if not _research.is_configured():
-        raise DiscoveryUnavailableError("Recipe discovery is not configured.")
+        raise DiscoveryUnavailableError(DISCOVERY_NOT_CONFIGURED_MESSAGE)
     try:
         return await call()
     except ExtractionNotConfiguredError as exc:
-        raise DiscoveryUnavailableError(str(exc)) from exc
+        raise DiscoveryUnavailableError(DISCOVERY_NOT_CONFIGURED_MESSAGE) from exc
     except ExtractionParseError as exc:
-        logger.warning("%s returned no usable payload: %s", what, exc)
-        raise DiscoveryFailedError("We couldn't make sense of the results.") from exc
+        logger.warning("%s returned no usable payload: type=%s", what, type(exc).__name__)
+        raise DiscoveryFailedError(DISCOVERY_UNPARSEABLE_MESSAGE) from exc
     except ExtractionError as exc:
-        # Log the provider error type/status, surface a retryable 503 — never
-        # leak provider internals. See rules/check-third-party-error-codes.md.
+        # Log the classified kind and provider type/status, never the provider's
+        # text. See rules/check-third-party-error-codes.md.
         logger.warning(
-            "%s API error: type=%s status=%s detail=%s",
-            what,
-            exc.error_type,
-            exc.status,
-            exc,
+            "%s API error: kind=%s type=%s status=%s",
+            what, exc.kind, exc.error_type, exc.status,
         )
-        raise DiscoveryUnavailableError("The discovery service errored.") from exc
+        if exc.kind is AnthropicFailureKind.INPUT_REJECTED:
+            raise DiscoveryFailedError(DISCOVERY_INPUT_REJECTED_MESSAGE) from exc
+        message = DISCOVERY_BUSY_MESSAGE if exc.is_transient else DISCOVERY_UNAVAILABLE_MESSAGE
+        raise DiscoveryUnavailableError(message) from exc
 
 
 def _host_of(url: str) -> str:
-    from urllib.parse import urlparse
-
     return urlparse(url).hostname or "?"
 
 
@@ -277,8 +284,6 @@ def _clean_http_url(value: Any) -> str | None:
     classification) happens at fetch time, since the answer can change
     between now and then.
     """
-    from urllib.parse import urlparse
-
     text = _clean_str(value, 2000)
     if text is None:
         return None

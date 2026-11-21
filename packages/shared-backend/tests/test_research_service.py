@@ -16,6 +16,7 @@ import httpx
 import pytest
 
 from platform_shared.extraction import (
+    AnthropicFailureKind,
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
@@ -318,7 +319,8 @@ class TestErrorWrapping:
                 await _service().search("sys", "q")
 
         assert caught.value.status == 529
-        assert isinstance(caught.value, ExtractionError)
+        assert caught.value.kind is AnthropicFailureKind.UPSTREAM
+        assert caught.value.is_transient is True
 
     async def test_connection_error_becomes_extraction_error(self) -> None:
         request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
@@ -328,7 +330,8 @@ class TestErrorWrapping:
         with patch("anthropic.AsyncAnthropic", return_value=client):
             with pytest.raises(ExtractionError) as caught:
                 await _service().search("sys", "q")
-        assert caught.value.error_type == "APIConnectionError"
+        assert caught.value.error_type == "connection_error"
+        assert caught.value.is_transient is True
 
 
 class TestClientReuse:

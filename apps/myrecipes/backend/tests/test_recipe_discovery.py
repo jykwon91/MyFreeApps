@@ -12,6 +12,7 @@ only URLs this app signed, and it refuses anything that is not an image.
 """
 from __future__ import annotations
 
+import logging
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -19,6 +20,7 @@ from httpx import AsyncClient
 
 from platform_shared.core.signed_url import sign_payload
 from platform_shared.extraction import (
+    AnthropicFailureKind,
     ExtractionError,
     ExtractionParseError,
     ResearchResponse,
@@ -26,6 +28,11 @@ from platform_shared.extraction import (
 )
 
 from app.core.config import settings
+from app.core.discovery_failure_messages import (
+    DISCOVERY_BUSY_MESSAGE,
+    DISCOVERY_INPUT_REJECTED_MESSAGE,
+    DISCOVERY_UNAVAILABLE_MESSAGE,
+)
 from app.services.recipe import discovery_service as ds
 
 _GOOD_RESULTS = {
@@ -246,18 +253,33 @@ class TestSearch:
             resp = await authed.post("/discovery/search", json={"query": "flan"})
         assert resp.status_code == 503
 
+    @pytest.mark.parametrize(
+        ("kind", "status", "detail"),
+        [
+            (AnthropicFailureKind.UPSTREAM, 503, DISCOVERY_BUSY_MESSAGE),
+            (AnthropicFailureKind.RATE_LIMITED, 503, DISCOVERY_BUSY_MESSAGE),
+            (AnthropicFailureKind.MISCONFIGURED, 503, DISCOVERY_UNAVAILABLE_MESSAGE),
+            (AnthropicFailureKind.INPUT_REJECTED, 422, DISCOVERY_INPUT_REJECTED_MESSAGE),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_upstream_error_returns_503(self, user_factory, as_user, monkeypatch) -> None:
+    async def test_upstream_error_is_answered_by_its_kind(
+        self, user_factory, as_user, monkeypatch, caplog, kind, status, detail,
+    ) -> None:
+        provider_text = "provider detail: org quota for claude-x exhausted"
         _mock_research(
             monkeypatch,
-            raises=ExtractionError("overloaded", error_type="overloaded_error", status=529),
+            raises=ExtractionError(provider_text, kind=kind, error_type="overloaded_error", status=529),
         )
         user = await user_factory()
-        async with await as_user(user) as authed:
-            resp = await authed.post("/discovery/search", json={"query": "flan"})
-        assert resp.status_code == 503
-        # The provider's internals never reach the user.
-        assert "overloaded_error" not in resp.text
+        with caplog.at_level(logging.WARNING, logger=ds.logger.name):
+            async with await as_user(user) as authed:
+                resp = await authed.post("/discovery/search", json={"query": "flan"})
+        assert resp.status_code == status
+        assert resp.json()["detail"] == detail
+        # The provider's text reaches neither the user nor the log.
+        assert provider_text not in resp.text
+        assert provider_text not in caplog.text
 
     @pytest.mark.asyncio
     async def test_unparseable_response_returns_422(

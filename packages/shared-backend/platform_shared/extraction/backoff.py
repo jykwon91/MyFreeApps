@@ -14,9 +14,9 @@ Rate-limit observability is delegated to an optional ``on_rate_limit``
 hook rather than hard-wired to one app's event log, so MyBookkeeper can
 keep recording its system event while other consumers stay decoupled.
 Per rules/check-third-party-error-codes.md, non-429 Anthropic API
-errors are logged at WARNING with the structured ``error.type`` /
-status and then re-raised unchanged (propagation is preserved — callers
-that categorised the raw SDK exception still see it).
+errors are logged at WARNING with the structured ``error.type``, HTTP
+status and request id, then re-raised unchanged; callers classify them
+with ``platform_shared.extraction.errors.extraction_error_from_anthropic``.
 """
 from __future__ import annotations
 
@@ -123,14 +123,15 @@ async def create_with_backoff(
             await asyncio.sleep(wait)
         except anthropic.APIStatusError as e:
             # Non-429 documented API error (auth, invalid_request,
-            # overloaded, ...). Capture the structured error type for
-            # log aggregation, then re-raise UNCHANGED so existing
-            # callers that categorise the raw SDK exception are
-            # unaffected. See rules/check-third-party-error-codes.md.
+            # overloaded, ...). Log the structured error type, the real HTTP
+            # status and Anthropic's request id (what support asks for),
+            # then re-raise unchanged for the caller to classify.
+            # See rules/check-third-party-error-codes.md.
             logger.warning(
-                "Anthropic API error: type=%s status=%s",
-                getattr(e, "type", None),
-                getattr(e, "status", None),
+                "Anthropic API error: type=%s status=%s request_id=%s",
+                e.type,
+                e.status_code,
+                e.request_id,
             )
             raise
     raise RuntimeError("unreachable")

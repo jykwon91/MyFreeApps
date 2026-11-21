@@ -18,7 +18,10 @@ For each queued job:
      history rows added or filled, skills added), refresh the embedding so
      Discover scores against the new profile.
 
-On any failure: mark the job ``failed`` with ``error_message=str(exc)[:1000]``.
+On a failure that clears on its own (Claude busy, timed out or unreachable —
+the shared ``ExtractionError.kind``): requeue with exponential backoff up to
+``RESUME_PARSE_MAX_RETRIES``. Any other failure marks the job ``failed``. A
+Claude failure is stored as our own copy, never the provider's error text.
 Idempotency: the atomic UPDATE in step 1 ensures only one worker instance
 processes a given job, even when multiple replicas run concurrently.
 """
@@ -28,19 +31,25 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+from platform_shared.extraction import is_transient_failure
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.models.profile.skill import Skill as _Skill
-
-import anthropic
-import sqlalchemy.exc
-
+from app.core import storage as storage_module
+from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
+from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
+from app.core.resume_parse_constants import (
+    RESUME_PARSE_MAX_RETRIES,
+    RESUME_PARSE_RETRY_BASE_SECONDS,
+)
+from app.core.retry_backoff import next_retry_at
+from app.core.transient_errors import TRANSIENT_WORKER_ERRORS
 from app.db.session import AsyncSessionLocal
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
+from app.models.profile.skill import Skill
+from app.services.extraction.ai_failure import user_failure_message
 from app.services.extraction.claude_service import MAX_TEXT_CHARS, extract_resume
 from app.services.jobs.parse_provenance import build_parse_provenance
 from app.services.discovery import discovery_embedding_service
@@ -50,26 +59,21 @@ from app.services.jobs.resume_text_extractor import (
 )
 from app.services.profile import profile_service
 from app.services.profile.resume_profile_merge_service import merge_parsed_profile_rows
+from app.workers.refinement_prepare_worker import process_one_session
 
 logger = logging.getLogger(__name__)
 
 POLL_INTERVAL_SECONDS = 5
 PARSER_VERSION = "2026-05-04-v1"
 
-# Transient errors trigger a retry on the next poll rather than
-# permanent failure. Everything else marks the job ``failed``.
-_TRANSIENT_ERROR_TYPES = (
-    anthropic.RateLimitError,
-    asyncio.TimeoutError,
-    ConnectionError,
-    TimeoutError,
-)
 
-
-def _is_transient(exc: Exception) -> bool:
-    if isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500:
-        return True
-    return isinstance(exc, _TRANSIENT_ERROR_TYPES)
+def _failure_message(exc: Exception) -> str:
+    """What the job row (and so the UI) says about a failure — never raw
+    exception text, except a text-extraction failure, which is already
+    written for the user ("the PDF may be image-only or scanned")."""
+    if isinstance(exc, ResumeTextExtractionFailed):
+        return str(exc)[:1000]
+    return user_failure_message(exc, fallback=RESUME_PARSE_FAILED_MESSAGE)
 
 
 async def process_one() -> bool:
@@ -101,23 +105,28 @@ async def process_one() -> bool:
         )
         logger.info("Completed resume job %s", job_id)
     except Exception as exc:
-        error_msg = str(exc)[:1000]
-        logger.exception("Failed to process resume job %s: %s", job_id, error_msg)
+        logger.exception("Failed to process resume job %s", job_id)
+        error_msg = _failure_message(exc)
 
-        if _is_transient(exc):
-            # Requeue: flip back to queued so the next poll retries.
-            async with AsyncSessionLocal() as db:
-                job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
-                if job:
-                    job.status = "queued"
-                    job.started_at = None
-                    job.error_message = f"Transient error — will retry: {error_msg}"
-                    await db.commit()
-        else:
-            async with AsyncSessionLocal() as db:
-                job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
-                if job:
-                    await resume_upload_job_repo.mark_failed(db, job, error_msg)
+        async with AsyncSessionLocal() as db:
+            job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
+            if (
+                job is not None
+                and is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
+                and job.retry_count < RESUME_PARSE_MAX_RETRIES
+            ):
+                await resume_upload_job_repo.schedule_retry(
+                    db,
+                    job,
+                    next_retry_at=next_retry_at(job.retry_count, RESUME_PARSE_RETRY_BASE_SECONDS),
+                    error_message=AI_RETRY_SCHEDULED_MESSAGE,
+                )
+                logger.info(
+                    "Resume job %s: transient failure, retry %d at %s",
+                    job_id, job.retry_count, job.next_retry_at,
+                )
+            elif job is not None:
+                await resume_upload_job_repo.mark_failed(db, job, error_msg)
     else:
         # Outside the try: the job is already committed as complete, so an
         # embedding error must not requeue it or mark it failed.
@@ -141,10 +150,8 @@ async def _run_extraction(
     embedding is built from (work history or skills), so the caller knows
     to refresh it. Education is not part of the embedding.
     """
-    from app.core.storage import get_storage  # noqa: PLC0415 — deferred to avoid startup cost
-
     # 1. Download from MinIO.
-    storage = get_storage()
+    storage = storage_module.get_storage()
     file_bytes = storage.download_file(file_path)
     logger.debug("Downloaded %d bytes for job %s", len(file_bytes), job_id)
 
@@ -233,14 +240,11 @@ async def _run_extraction(
     return merge_result.work_history_changed or skills_added > 0
 
 
-async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> bool:
+async def _upsert_skill_ignore_conflict(db: AsyncSession, skill: Skill) -> bool:
     """Add a skill row; silently ignore UNIQUE(user_id, lower(name)) violations.
 
     Returns True when a row was inserted, False when the skill already existed.
     """
-    from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: PLC0415
-    from app.models.profile.skill import Skill  # noqa: PLC0415
-
     now = datetime.now(timezone.utc)
     stmt = pg_insert(Skill).values(
         id=uuid.uuid4(),  # Generate a fresh UUID — ORM default doesn't fire on pg_insert
@@ -270,12 +274,6 @@ def _build_parsed_fields(claude_response: dict, *, provenance: dict | None = Non
 
 
 async def main() -> None:
-    # Deferred import: refinement_prepare_worker imports _is_transient
-    # from THIS module, so a top-level import here would be circular.
-    from app.workers.refinement_prepare_worker import (  # noqa: PLC0415
-        process_one_session,
-    )
-
     # Parses refresh the profile embedding, so load the model at boot: a
     # missing or corrupt model crashes the worker here (same as the
     # discovery scheduler) instead of on the first resume upload.

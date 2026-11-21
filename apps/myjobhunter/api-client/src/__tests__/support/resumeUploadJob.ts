@@ -9,6 +9,7 @@ export function resumeUploadJob(overrides: Partial<ResumeUploadJob> = {}): Resum
     file_content_type: "application/pdf",
     file_size_bytes: 1000,
     status: "complete",
+    retry_count: 0,
     error_message: null,
     result_parsed_fields: { summary: null, headline: null, work_history_count: 1, education_count: 0, skills_count: 12 },
     parser_version: null,

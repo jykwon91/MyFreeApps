@@ -26,8 +26,8 @@ into this module.
 
 Errors raised
 =============
-- ``JDFetchError`` — Claude API or parse failure (re-exported from
-  ``jd_url_fetcher`` so callers import only from the orchestrator).
+- ``JDAiExtractionError`` (a ``JDFetchError``) — Claude API failure or an
+  unreadable reply, carrying the shared failure ``kind``.
 """
 from __future__ import annotations
 
@@ -37,11 +37,13 @@ import re
 import uuid
 from dataclasses import dataclass
 
-import anthropic
 from bs4 import BeautifulSoup
+from platform_shared.extraction import ExtractionError
 
+from app.core.loggable_url import loggable_url
 from app.services.extraction import claude_service
-from app.services.extraction.jd_url_fetcher import JDFetchError
+from app.services.extraction.ai_failure import ai_failure_message
+from app.services.extraction.jd_ai_extraction_error import JDAiExtractionError
 from app.services.extraction.prompts.jd_parsing_prompt import JD_PARSING_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -206,7 +208,7 @@ async def claude_fallback(
             ``extraction_logs`` scoping.
 
     Raises:
-        JDFetchError: Claude API error or unexpected response shape.
+        JDAiExtractionError: Claude API error or unreadable reply.
     """
     try:
         parsed = await claude_service.call_claude(
@@ -216,9 +218,17 @@ async def claude_fallback(
             user_id=user_id,
             context_id=None,
         )
-    except (anthropic.APIError, ValueError) as exc:
-        logger.warning("Claude JD-URL fallback failed for %s: %s", source_url, exc)
-        raise JDFetchError(f"AI extraction failed: {exc}") from exc
+    except ExtractionError as exc:
+        logger.warning(
+            "Claude JD-URL fallback failed for %s: kind=%s type=%s status=%s",
+            loggable_url(source_url), exc.kind, exc.error_type, exc.status,
+        )
+        raise JDAiExtractionError(ai_failure_message(exc.kind), kind=exc.kind) from exc
+    except ValueError as exc:
+        logger.warning(
+            "Claude JD-URL fallback reply unreadable for %s: %s", loggable_url(source_url), exc,
+        )
+        raise JDAiExtractionError(ai_failure_message(None), kind=None) from exc
 
     title = _str_or_none(parsed.get("title"))
     company = _str_or_none(parsed.get("company"))

@@ -18,10 +18,11 @@ import logging
 import uuid
 from typing import Literal
 
-import anthropic
+from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
 from app.core.currency_code import normalize_currency_code
 from app.services.extraction import claude_service
+from app.services.extraction.ai_failure import ai_failure_message
 from app.services.extraction.prompts.jd_parsing_prompt import JD_PARSING_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -50,9 +51,14 @@ _MAX_LIST_ITEMS = 20
 class JdParseError(RuntimeError):
     """Raised when the Claude call fails or returns unparseable JSON.
 
-    The route handler converts this to HTTP 502 so the client gets a clear
-    signal that the upstream AI call failed — not a client-side mistake.
+    ``kind`` is the shared failure kind (``None``: the reply was unreadable);
+    the route handler turns it into the AI-failure HTTP answer. The message
+    is our own copy, never the provider's error text.
     """
+
+    def __init__(self, message: str, *, kind: AnthropicFailureKind | None = None) -> None:
+        super().__init__(message)
+        self.kind = kind
 
 
 class JdParseResult:
@@ -150,8 +156,10 @@ async def parse_jd(
             user_id=user_id,
             context_id=application_id,
         )
-    except (anthropic.APIError, ValueError) as exc:
-        raise JdParseError(f"Claude extraction failed: {exc}") from exc
+    except ExtractionError as exc:
+        raise JdParseError(ai_failure_message(exc.kind), kind=exc.kind) from exc
+    except ValueError as exc:
+        raise JdParseError(ai_failure_message(None), kind=None) from exc
 
     return _normalise(raw)
 

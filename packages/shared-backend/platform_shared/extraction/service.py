@@ -29,6 +29,7 @@ existing production cache entry continues to hit across this extraction.
 """
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from dataclasses import dataclass, field
@@ -38,6 +39,7 @@ from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
 from platform_shared.extraction.errors import (
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    extraction_error_from_anthropic,
 )
 from platform_shared.extraction.json_extract import find_json
 
@@ -47,6 +49,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_TOKENS = 16384
+_LOG_PREFIX = "extraction"
 
 
 @dataclass
@@ -111,10 +114,15 @@ class ExtractionService:
         max_tokens: int = DEFAULT_MAX_TOKENS,
         on_rate_limit: OnRateLimit | None = None,
     ) -> ExtractionResponse:
-        """Extract structured data from a plain-text document."""
+        """Extract structured data from a plain-text document.
+
+        Raises:
+            ExtractionError: the Anthropic call failed; ``kind`` / ``is_transient``
+                say whether to retry.
+            ExtractionParseError: the reply was not JSON.
+        """
         self._require_ready()
-        message = await create_with_backoff(
-            self._get_client(),
+        message = await self._create(
             on_rate_limit=on_rate_limit,
             model=self.model,
             max_tokens=max_tokens,
@@ -133,8 +141,6 @@ class ExtractionService:
         on_rate_limit: OnRateLimit | None = None,
     ) -> ExtractionResponse:
         """Extract structured data from an image or PDF document."""
-        import base64
-
         self._require_ready()
         file_b64 = base64.standard_b64encode(file_bytes).decode()
 
@@ -144,8 +150,7 @@ class ExtractionService:
             "source": {"type": "base64", "media_type": media_type, "data": file_b64},
         }
 
-        message = await create_with_backoff(
-            self._get_client(),
+        message = await self._create(
             on_rate_limit=on_rate_limit,
             model=self.model,
             max_tokens=max_tokens,
@@ -153,6 +158,24 @@ class ExtractionService:
             messages=[{"role": "user", "content": [source_block]}],
         )
         return _parse_message(message)
+
+    async def _create(
+        self,
+        *,
+        on_rate_limit: OnRateLimit | None,
+        **kwargs: Any,
+    ) -> "Message":
+        """``create_with_backoff`` with every SDK error raised as a classified ``ExtractionError``."""
+        import anthropic
+
+        try:
+            return await create_with_backoff(
+                self._get_client(), on_rate_limit=on_rate_limit, **kwargs
+            )
+        except anthropic.APIError as exc:
+            raise extraction_error_from_anthropic(
+                exc, log_prefix=_LOG_PREFIX, logger=logger
+            ) from exc
 
 
 def _parse_message(message: "Message") -> ExtractionResponse:

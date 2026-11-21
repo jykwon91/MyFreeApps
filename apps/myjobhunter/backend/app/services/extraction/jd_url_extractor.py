@@ -13,6 +13,7 @@ Re-exported for callers
 =======================
 - ``ExtractedJD``
 - ``JDFetchError``
+- ``JDAiExtractionError``
 - ``JDFetchTimeoutError``
 - ``JDFetchAuthRequiredError``
 """
@@ -23,6 +24,7 @@ import uuid
 
 from bs4 import BeautifulSoup
 
+from app.services.extraction.jd_ai_extraction_error import JDAiExtractionError
 from app.services.extraction.jd_url_fetcher import (
     JDFetchAuthRequiredError,
     JDFetchError,
@@ -43,6 +45,7 @@ from app.services.extraction.jd_url_parser import (
 # Re-export everything callers previously imported from this module.
 __all__ = [
     "ExtractedJD",
+    "JDAiExtractionError",
     "JDFetchAuthRequiredError",
     "JDFetchError",
     "JDFetchTimeoutError",
@@ -68,7 +71,8 @@ async def extract_from_url(url: str, *, user_id: uuid.UUID) -> ExtractedJD:
         ValueError: ``url`` is not a valid absolute http(s) URL.
         JDFetchAuthRequiredError: auth-walled domain or empty body.
         JDFetchTimeoutError: upstream fetch timed out.
-        JDFetchError: any other fetch / parse / Claude failure.
+        JDAiExtractionError: the Claude fallback failed (carries ``kind``).
+        JDFetchError: any other fetch / parse failure.
     """
     parsed = validate_url(url)
 

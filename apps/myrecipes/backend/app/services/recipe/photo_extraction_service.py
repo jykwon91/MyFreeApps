@@ -28,6 +28,7 @@ from typing import Any
 from PIL import Image, ImageOps
 
 from platform_shared.extraction import (
+    AnthropicFailureKind,
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
@@ -128,15 +129,18 @@ async def extract_recipe_from_photo(
         logger.warning("Recipe extraction returned unparseable output: %s", exc)
         raise PhotoNotReadableError("We couldn't read a recipe from that photo.") from exc
     except ExtractionError as exc:
-        # Genuine Anthropic API/transport failure. Log the provider error
-        # type/status (per rules/check-third-party-error-codes.md) and surface
-        # a retryable 503 rather than leaking provider internals to the user.
+        # Anthropic API/transport failure, already logged with its error.type
+        # by the shared service. A request Anthropic rejected (e.g. an image it
+        # can't take) is the photo's problem; anything else — busy, timed out,
+        # misconfigured — means "try again later", without provider internals.
         logger.warning(
-            "Recipe extraction API error: type=%s status=%s detail=%s",
+            "Recipe extraction API error: kind=%s type=%s status=%s",
+            exc.kind,
             exc.error_type,
             exc.status,
-            exc,
         )
+        if exc.kind is AnthropicFailureKind.INPUT_REJECTED:
+            raise PhotoNotReadableError("We couldn't read a recipe from that photo.") from exc
         raise PhotoExtractionUnavailableError("The extraction service errored.") from exc
 
     draft = _coerce_draft(resp.data)

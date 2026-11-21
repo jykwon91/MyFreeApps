@@ -9,7 +9,10 @@ focused unit test.
 from __future__ import annotations
 
 import io
+from unittest.mock import AsyncMock, MagicMock
 
+import anthropic
+import httpx2
 import pytest
 from httpx import AsyncClient
 from PIL import Image, UnidentifiedImageError
@@ -21,6 +24,7 @@ from platform_shared.extraction import (
     ExtractionError,
     ExtractionParseError,
     ExtractionResponse,
+    ExtractionService,
 )
 
 _GOOD_RECIPE = {
@@ -78,6 +82,26 @@ def _mock_extraction(
 ) -> None:
     """Replace the module-level ExtractionService so no real API call happens."""
     monkeypatch.setattr(pes, "_extraction", _FakeExtraction(configured, data, raises))
+
+
+_ANTHROPIC_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+def _anthropic_status_error(
+    cls: type[anthropic.APIStatusError], status: int, error_type: str
+) -> anthropic.APIStatusError:
+    response = httpx2.Response(status, request=_ANTHROPIC_REQUEST)
+    body = {"type": "error", "error": {"type": error_type, "message": "boom"}}
+    return cls("boom", response=response, body=body)
+
+
+def _real_service_raising(monkeypatch: pytest.MonkeyPatch, exc: Exception) -> None:
+    """The real shared ExtractionService, with only the SDK client faked to raise ``exc``."""
+    client = MagicMock()
+    client.messages.create = AsyncMock(side_effect=exc)
+    service = ExtractionService(api_key="sk-ant-test", model=pes._MODEL)
+    service._client = client  # the service reuses its cached client
+    monkeypatch.setattr(pes, "_extraction", service)
 
 
 def _files(name: str = "recipe.png", content: bytes | None = None, ctype: str = "image/png"):
@@ -178,6 +202,40 @@ class TestExtractRecipePhoto:
         async with await as_user(user) as authed:
             resp = await authed.post("/recipes/extract", files=_files())
         assert resp.status_code == 503
+
+    @pytest.mark.parametrize(
+        "provider_error",
+        [
+            anthropic.APITimeoutError(request=_ANTHROPIC_REQUEST),
+            anthropic.APIConnectionError(request=_ANTHROPIC_REQUEST),
+            _anthropic_status_error(anthropic.InternalServerError, 529, "overloaded_error"),
+            _anthropic_status_error(anthropic.AuthenticationError, 401, "authentication_error"),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_real_service_provider_failure_returns_try_again_later(
+        self, user_factory, as_user, monkeypatch, provider_error
+    ) -> None:
+        """Through the real shared service (only the SDK client is faked)."""
+        _real_service_raising(monkeypatch, provider_error)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/recipes/extract", files=_files())
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Photo import is not available right now."
+
+    @pytest.mark.asyncio
+    async def test_real_service_rejected_image_returns_422(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        _real_service_raising(
+            monkeypatch,
+            _anthropic_status_error(anthropic.BadRequestError, 400, "invalid_request_error"),
+        )
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/recipes/extract", files=_files())
+        assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_no_recipe_found_returns_422(self, user_factory, as_user, monkeypatch) -> None:

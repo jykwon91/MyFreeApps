@@ -5,16 +5,21 @@ not-configured error), the byte-exact request shape that keeps
 MyBookkeeper's production prompt cache hitting (system block with
 ephemeral cache_control, Document:\\n prefix, document-vs-image source
 block), token accounting, lazy+cached client construction, and the
-ExtractionParseError contract on unparseable output.
+ExtractionParseError contract on unparseable output, and the typed
+ExtractionError (with a retry-or-final ``kind``) on every provider failure.
 """
 from __future__ import annotations
 
 import base64
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anthropic
+import httpx2
 import pytest
 
 from platform_shared.extraction import (
+    AnthropicFailureKind,
+    ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
     ExtractionResponse,
@@ -254,3 +259,65 @@ class TestInheritance:
 
     def test_parse_error_is_runtime_error(self) -> None:
         assert issubclass(ExtractionParseError, RuntimeError)
+
+
+_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+def _status_error(cls: type[anthropic.APIStatusError], status: int, error_type: str) -> anthropic.APIStatusError:
+    response = httpx2.Response(status, request=_REQUEST, headers={"request-id": "req_abc"})
+    body = {"type": "error", "error": {"type": error_type, "message": "provider detail"}}
+    return cls("provider detail", response=response, body=body)
+
+
+def _failing_client(exc: Exception):
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(side_effect=exc)
+    return patch("anthropic.AsyncAnthropic", return_value=mock_client)
+
+
+class TestProviderErrorsAreClassified:
+    """Every SDK failure leaves as an ExtractionError whose ``kind`` callers route on."""
+
+    @pytest.mark.parametrize(
+        ("exc", "kind", "transient"),
+        [
+            (anthropic.APITimeoutError(request=_REQUEST), AnthropicFailureKind.UPSTREAM, True),
+            (anthropic.APIConnectionError(request=_REQUEST), AnthropicFailureKind.UPSTREAM, True),
+            (_status_error(anthropic.InternalServerError, 529, "overloaded_error"), AnthropicFailureKind.UPSTREAM, True),
+            (_status_error(anthropic.InternalServerError, 500, "api_error"), AnthropicFailureKind.UPSTREAM, True),
+            (_status_error(anthropic.AuthenticationError, 401, "authentication_error"), AnthropicFailureKind.MISCONFIGURED, False),
+            (_status_error(anthropic.NotFoundError, 404, "not_found_error"), AnthropicFailureKind.MISCONFIGURED, False),
+            (_status_error(anthropic.BadRequestError, 400, "invalid_request_error"), AnthropicFailureKind.INPUT_REJECTED, False),
+        ],
+    )
+    async def test_extract_text(self, exc: Exception, kind: AnthropicFailureKind, transient: bool) -> None:
+        with _failing_client(exc), pytest.raises(ExtractionError) as caught:
+            await _service().extract_text("s", "t")
+        assert caught.value.kind is kind
+        assert caught.value.is_transient is transient
+        assert caught.value.__cause__ is exc
+        assert "provider detail" not in str(caught.value)
+
+    async def test_extract_document_status_and_type(self) -> None:
+        exc = _status_error(anthropic.InternalServerError, 529, "overloaded_error")
+        with _failing_client(exc), pytest.raises(ExtractionError) as caught:
+            await _service().extract_document("s", b"IMG", "image/png")
+        assert caught.value.error_type == "overloaded_error"
+        assert caught.value.status == 529
+
+    async def test_rate_limit_after_backoff_is_transient(self) -> None:
+        response = httpx2.Response(429, request=_REQUEST, headers={"retry-after": "0"})
+        exc = anthropic.RateLimitError("slow down", response=response, body=None)
+        with _failing_client(exc), patch("asyncio.sleep", new=AsyncMock()):
+            with pytest.raises(ExtractionError) as caught:
+                await _service().extract_text("s", "t")
+        assert caught.value.kind is AnthropicFailureKind.RATE_LIMITED
+        assert caught.value.is_transient is True
+
+    async def test_parse_error_has_no_provider_kind(self) -> None:
+        ctx, _ = _patched_client(_message("not json"))
+        with ctx, pytest.raises(ExtractionParseError) as caught:
+            await _service().extract_text("s", "t")
+        assert caught.value.kind is None
+        assert caught.value.is_transient is False

@@ -13,14 +13,10 @@ Why a separate module rather than more methods on ``ExtractionService``:
   ``web_search_tool_result`` / ``web_fetch_tool_result``, and text blocks
   across *several* API round-trips (``stop_reason == "pause_turn"``), and
   the sources are part of the answer — callers want to attribute results.
-* **Different error contract.** ``ExtractionService.extract_*`` lets raw
-  ``anthropic`` exceptions propagate, because MyBookkeeper's upload worker
-  classifies them for its retry policy
-  (``apps/mybookkeeper/.../upload_processor_worker.py``). New surface, no
-  such consumer — so research wraps provider failures in the typed
-  :class:`ExtractionError` with ``error_type``/``status`` attached, per
-  rules/check-third-party-error-codes.md, and callers never import
-  ``anthropic`` to handle them.
+* **Same error contract.** Like ``ExtractionService``, provider failures
+  are raised as :class:`ExtractionError` carrying ``error_type``/``status``
+  and the shared failure ``kind`` (per rules/check-third-party-error-codes.md),
+  so callers never import ``anthropic`` to handle them.
 
 Like ``ExtractionService``, ``model`` has no default: the right model is a
 per-consumer decision, and a silent shared default would make it invisibly
@@ -40,9 +36,9 @@ from typing import TYPE_CHECKING, Any
 
 from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
 from platform_shared.extraction.errors import (
-    ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    extraction_error_from_anthropic,
 )
 from platform_shared.extraction.json_extract import find_json
 
@@ -161,7 +157,7 @@ class ResearchService:
         Raises:
             ExtractionNotConfiguredError: no API key.
             ExtractionError: provider/transport failure (typed, with
-                ``error_type``/``status``).
+                ``error_type``/``status``/``kind``).
             ExtractionParseError: no JSON payload in the final response.
         """
         if allowed_domains and blocked_domains:
@@ -316,20 +312,11 @@ class ResearchService:
             return await create_with_backoff(
                 client, on_rate_limit=on_rate_limit, **kwargs
             )
-        except anthropic.APIStatusError as exc:
-            # backoff.py already logged type+status; wrap so callers handle a
-            # platform error type instead of importing the SDK's exceptions.
-            raise ExtractionError(
-                f"Anthropic API error during web research: {exc}",
-                error_type=getattr(exc, "type", None),
-                status=getattr(exc, "status_code", None),
-            ) from exc
         except anthropic.APIError as exc:
-            # Connection/timeout errors carry no status.
-            logger.warning("Anthropic transport error during web research: %s", exc)
-            raise ExtractionError(
-                f"Could not reach the Anthropic API: {exc}",
-                error_type=type(exc).__name__,
+            # Classified so callers route on ``kind`` instead of importing
+            # the SDK's exceptions.
+            raise extraction_error_from_anthropic(
+                exc, log_prefix="web research", logger=logger
             ) from exc
 
 

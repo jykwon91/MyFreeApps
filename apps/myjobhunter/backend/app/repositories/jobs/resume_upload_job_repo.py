@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, text, update
+from sqlalchemy import or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.jobs.resume_upload_job import ResumeUploadJob
@@ -80,15 +80,19 @@ async def claim_next_queued(db: AsyncSession) -> ResumeUploadJob | None:
     Uses ``UPDATE ... WHERE id = (subquery) RETURNING *`` so only one worker
     process can claim a given job even when multiple replicas run concurrently.
     The subquery selects the oldest queued job via ``ORDER BY created_at LIMIT 1``
-    with ``FOR UPDATE SKIP LOCKED`` for safe concurrent access.
+    with ``FOR UPDATE SKIP LOCKED`` for safe concurrent access. A job waiting
+    out a retry backoff (``next_retry_at`` in the future) is not claimable yet.
 
-    Returns ``None`` when no queued jobs exist.
+    Returns ``None`` when no queued jobs are due.
     """
     now = datetime.now(timezone.utc)
-    # Subquery: pick the oldest queued job id, skip rows locked by other workers.
+    # Subquery: pick the oldest due queued job id, skip rows locked by other workers.
     subq = (
         select(ResumeUploadJob.id)
-        .where(ResumeUploadJob.status == "queued")
+        .where(
+            ResumeUploadJob.status == "queued",
+            or_(ResumeUploadJob.next_retry_at.is_(None), ResumeUploadJob.next_retry_at <= now),
+        )
         .order_by(ResumeUploadJob.created_at.asc())
         .limit(1)
         .with_for_update(skip_locked=True)
@@ -120,6 +124,25 @@ async def mark_complete(
     job.parser_version = parser_version
     job.completed_at = now
     job.error_message = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
+async def schedule_retry(
+    db: AsyncSession,
+    job: ResumeUploadJob,
+    *,
+    next_retry_at: datetime,
+    error_message: str,
+) -> ResumeUploadJob:
+    """Put a job that hit a temporary failure back on the queue, due at ``next_retry_at``."""
+    job.status = "queued"
+    job.started_at = None
+    job.retry_count += 1
+    job.next_retry_at = next_retry_at
+    job.error_message = error_message[:1000]
     await db.flush()
     await db.commit()
     await db.refresh(job)
