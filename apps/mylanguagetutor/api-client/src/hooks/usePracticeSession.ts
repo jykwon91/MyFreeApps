@@ -54,7 +54,8 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * attaches corrections, and turns refusals into retry / blocked states.
  * Today's usage, sized for this conversation's next turn, decides whether the learner can start a
  * turn; a daily-limit refusal stands in for it until a usage answer from after the next daily reset
- * arrives. A turn refused for the daily limit keeps the learner's words, to send after the reset.
+ * arrives. A turn refused for the daily limit keeps the learner's words, to send after the reset;
+ * one refused for the conversation's turn limit keeps them too, with no retry, as the conversation is over.
  * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
@@ -131,6 +132,13 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
       setLimitResetsAt(nextUtcMidnight(new Date()).getTime());
       patchEntry(key, (e) => ({ ...e, status: "failed" }));
       setFailure({ code, text, retryable: true, entryKey: key });
+      return;
+    }
+    if (blocked === "session_limit") {
+      // Only reached when the limit was hit in a race the up-front check couldn't see. The words
+      // stay on screen; nothing can send them in this conversation.
+      patchEntry(key, (e) => ({ ...e, status: "failed" }));
+      setTurnBlock(blocked);
       return;
     }
     removeEntry(key);

@@ -57,7 +57,7 @@ from app.schemas.tutor.turn_schemas import (
     TurnStartedEvent,
     TurnUsage,
 )
-from app.services.tutor import quota_service, turn_estimate
+from app.services.tutor import quota_service, session_limits, turn_estimate
 from app.services.tutor.claude_client import get_client
 from app.services.tutor.corrections_mapper import (
     CorrectionsResult,
@@ -164,7 +164,7 @@ async def prepare_turn(
             raise SessionNotFoundError("session not found")
         if session.status != SessionStatus.ACTIVE.value:
             raise SessionEndedError("session has ended")
-        if session.turn_count >= settings.ltutor_max_turns_per_session:
+        if session_limits.turn_limit_reached(session):
             raise SessionTurnLimitError("session turn limit reached")
 
         prompt = await turn_estimate.next_turn_prompt(db, session, text)

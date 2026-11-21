@@ -26,7 +26,7 @@ vi.mock("@platform/core/store/baseQuery", () => ({
       return { data: [{ code: "es", display_name: "Spanish", dialect_label: "Latin American", stt_locale: "es-MX", tts_locale: "es-MX" }] };
     }
     if (url === "/scenarios") return { data: [] };
-    if (url === "/usage/today") return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: true } };
+    if (url === "/usage/today") return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: true, session_limit_reached: false } };
     return { error: { status: 404, data: {} } };
   },
 }));

@@ -72,7 +72,7 @@ describe("useScenarioPath", () => {
     const { result, rerender } = renderHook(() => useScenarioPath(PROFILE));
     expect(result.current.isCapReached).toBe(false);
 
-    api.usage.data = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+    api.usage.data = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
     rerender();
     expect(result.current.isCapReached).toBe(true);
   });
