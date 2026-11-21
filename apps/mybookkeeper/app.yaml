@@ -21,6 +21,8 @@ serve_only_build_arg: false
 env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend
   python3 -m platform_shared.infra.seed_env --app mybookkeeper'
 csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# api drains tracked background tasks at shutdown; renders api stop_grace_period.
+drain_on_shutdown: true
 workers:
   # No mem_limit override: both keep the 512m worker default they have always
   # run under. Raising or lowering it needs a measured peak RSS (extraction of

@@ -1,15 +1,21 @@
 /**
- * Maps backend 409 detail codes from POST /admin/invites into operator-
+ * Maps backend 409 and 502 detail codes from POST /admin/invites into operator-
  * friendly hint messages. The admin route exposes specific codes (rather
  * than the single generic message used for non-admin callers) so the
  * operator can take the right action immediately.
  */
 
-const INVITE_409_MESSAGES: Record<string, string> = {
+const INVITE_EMAIL_UNCONFIRMED = "invite_email_unconfirmed";
+
+const INVITE_ERROR_MESSAGES: Record<string, string> = {
   user_already_exists:
     "User already exists — nothing to invite. They can log in directly.",
   invite_already_pending:
     "Invite already pending — cancel it from the row above to resend.",
+  [INVITE_EMAIL_UNCONFIRMED]:
+    "The email may have arrived, but we couldn't confirm it. The invite is in the list — cancel it and send again if the recipient says nothing came.",
+  invite_email_failed:
+    "The invite email couldn't be sent, so no invite was created. Try again in a few minutes.",
 };
 
 function extractDetailCode(err: unknown): string | undefined {
@@ -27,10 +33,15 @@ function extractDetailCode(err: unknown): string | undefined {
   return undefined;
 }
 
+/** True when the invite was kept because its email may have been delivered. */
+export function isInviteEmailUnconfirmed(err: unknown): boolean {
+  return extractDetailCode(err) === INVITE_EMAIL_UNCONFIRMED;
+}
+
 export function extractInviteCreateErrorMessage(err: unknown): string {
   const code = extractDetailCode(err);
-  if (code !== undefined && code in INVITE_409_MESSAGES) {
-    return INVITE_409_MESSAGES[code];
+  if (code !== undefined && code in INVITE_ERROR_MESSAGES) {
+    return INVITE_ERROR_MESSAGES[code];
   }
   return "Couldn't send invite — please try again.";
 }

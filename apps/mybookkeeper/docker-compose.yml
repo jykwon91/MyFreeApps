@@ -57,6 +57,10 @@ services:
   api:
     image: ghcr.io/jykwon91/myfreeapps-mybookkeeper-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    # uvicorn request wait + tracked-task drain + margin (see
+    # platform_shared.core.tracked_task_constants); compose's 10s default would
+    # SIGKILL the api mid-drain and lose in-flight background work.
+    stop_grace_period: 45s
     # Highest single consumer on the box (the busiest app's API steady-states
     # well under this); cap leaves headroom for request-handling spikes while
     # still bounding a runaway. See the postgres service for the full rationale.

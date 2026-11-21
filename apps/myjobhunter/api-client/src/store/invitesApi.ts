@@ -17,7 +17,8 @@ const invitesApi = apiWithTags.injectEndpoints({
     }),
     createInvite: build.mutation<Invite, InviteCreateRequest>({
       query: (data) => ({ url: "/admin/invites", method: "POST", data }),
-      invalidatesTags: ["Invite"],
+      // Also on failure: a 502 invite_email_unconfirmed leaves the invite in the list.
+      invalidatesTags: () => ["Invite"],
     }),
     cancelInvite: build.mutation<void, string>({
       query: (inviteId) => ({

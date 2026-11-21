@@ -33,6 +33,10 @@ Security shape (PR fix/myjobhunter-invite-security-hardening, 2026-05-05):
     first; if SMTP fails, the row stays and the admin can resend.
     Previously SMTP failures rolled back the row, opening a race where
     the email could land while the row didn't (orphan email).
+  * ``create_and_send_invite`` closes the other gap: when the send fails the
+    just-created row is deleted, so the admin's retry is not blocked by
+    ``invite_already_pending``. (Sending before the commit would bring back
+    the orphan-email race, which is why the row is compensated instead.)
 """
 from __future__ import annotations
 
@@ -46,6 +50,7 @@ from app.models.platform.invite import PlatformInvite
 from app.repositories.platform import invite_repo
 from app.repositories.user import user_repo
 from app.schemas.platform.invite_status import InviteStatus
+from app.services.email.email_sender import EmailNotConfiguredError, EmailSendError
 from app.services.platform.invite_email import send_invite_email
 from app.services.platform.invite_token import generate_token, hash_token
 from app.services.system.auth_event_service import log_auth_event
@@ -60,6 +65,8 @@ logger = logging.getLogger(__name__)
 INVITE_CREATED = "platform_invite.created"
 INVITE_ACCEPTED = "platform_invite.accepted"
 INVITE_CANCELLED = "platform_invite.cancelled"
+INVITE_SEND_FAILED = "platform_invite.send_failed"
+INVITE_SEND_UNCONFIRMED = "platform_invite.send_unconfirmed"
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +96,14 @@ class InviteEmailAlreadyRegisteredError(InviteRecipientUnavailableError):
 
 class InvitePendingAlreadyExistsError(InviteRecipientUnavailableError):
     """A pending (un-accepted) invite already exists for this email."""
+
+
+class InviteEmailSendFailedError(InviteError):
+    """The invite email could not be sent; the invite row was removed."""
+
+
+class InviteEmailUnconfirmedError(InviteError):
+    """The invite email may or may not have been delivered; the invite row was kept."""
 
 
 class InviteNotFoundError(InviteError):
@@ -181,8 +196,8 @@ async def create_invite(
       1. Open ``unit_of_work``, validate uniqueness, insert the row +
          audit log, and commit.
       2. Return the raw token; the caller (route layer) hands it to the
-         email sender. SMTP failures are surfaced to the admin via 5xx
-         but the row is already persisted, so the admin can resend.
+         email sender (see ``create_and_send_invite``, which removes the
+         row again if the send fails).
 
     Raises:
         InviteRecipientUnavailableError: the email already belongs to a
@@ -227,6 +242,74 @@ async def create_invite(
             invite.id, _email_domain(normalized), admin_id,
         )
         return CreateInviteResult(invite=invite, raw_token=raw_token)
+
+
+async def create_and_send_invite(
+    *,
+    email: str,
+    admin_id: uuid.UUID,
+) -> PlatformInvite:
+    """Create the invite and email it; leave no row behind if the email definitely failed.
+
+    Raises:
+        InviteRecipientUnavailableError: see ``create_invite``.
+        InviteEmailSendFailedError: the email was not sent (SMTP refused it, or
+            email is not configured). The row is deleted so the admin can retry
+            the same address straight away.
+        InviteEmailUnconfirmedError: SMTP timed out or dropped, so the email may
+            have arrived. The row is kept (deleting it would leave a working
+            link with no invite behind it); the admin can cancel and resend.
+    """
+    result = await create_invite(email=email, admin_id=admin_id)
+    invite = result.invite
+    try:
+        await send_invite_email(invite.email, result.raw_token)
+    except EmailNotConfiguredError as exc:
+        logger.error("Platform invite email not sent id=%s: email is not configured", invite.id)
+        await _discard_unsent_invite(invite.id, admin_id)
+        raise InviteEmailSendFailedError("Invite email could not be sent.") from exc
+    except EmailSendError as exc:
+        logger.error(
+            "Platform invite email failed id=%s kind=%s smtp_code=%s",
+            invite.id, exc.kind, exc.smtp_code,
+        )
+        if exc.delivery_unconfirmed:
+            await _record_unconfirmed_invite(invite, admin_id)
+            raise InviteEmailUnconfirmedError("Invite email delivery is unconfirmed.") from exc
+        await _discard_unsent_invite(invite.id, admin_id)
+        raise InviteEmailSendFailedError("Invite email could not be sent.") from exc
+    return invite
+
+
+async def _record_unconfirmed_invite(invite: PlatformInvite, admin_id: uuid.UUID) -> None:
+    async with unit_of_work() as db:
+        await log_auth_event(
+            db,
+            event_type=INVITE_SEND_UNCONFIRMED,
+            user_id=admin_id,
+            succeeded=False,
+            metadata={"invite_id": str(invite.id), "email_domain": _email_domain(invite.email)},
+        )
+
+
+async def _discard_unsent_invite(invite_id: uuid.UUID, admin_id: uuid.UUID) -> None:
+    async with unit_of_work() as db:
+        invite = await invite_repo.get_by_id(db, invite_id)
+        if invite is None:
+            return
+        if invite.accepted_at is not None:
+            # The recipient already used the link (the email did arrive): keep the row.
+            logger.warning("Platform invite id=%s was accepted before its send failure was handled", invite_id)
+            return
+        email_domain = _email_domain(invite.email)
+        await invite_repo.delete(db, invite)
+        await log_auth_event(
+            db,
+            event_type=INVITE_SEND_FAILED,
+            user_id=admin_id,
+            succeeded=False,
+            metadata={"email_domain": email_domain},
+        )
 
 
 async def list_pending_invites() -> list[PlatformInvite]:
@@ -367,9 +450,13 @@ __all__ = [
     "INVITE_ACCEPTED",
     "INVITE_CANCELLED",
     "INVITE_CREATED",
+    "INVITE_SEND_FAILED",
+    "INVITE_SEND_UNCONFIRMED",
     "InviteAlreadyAcceptedError",
     "InviteEmailAlreadyRegisteredError",
     "InviteEmailMismatchError",
+    "InviteEmailSendFailedError",
+    "InviteEmailUnconfirmedError",
     "InviteError",
     "InviteExpiredError",
     "InviteNotFoundError",
@@ -378,6 +465,7 @@ __all__ = [
     "accept_invite",
     "cancel_invite",
     "compute_status",
+    "create_and_send_invite",
     "create_invite",
     "get_invite_info",
     "list_pending_invites",

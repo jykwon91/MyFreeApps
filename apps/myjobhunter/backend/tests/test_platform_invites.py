@@ -45,14 +45,13 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
+from app.core.config import settings
+from app.services.email.email_sender import EmailNotConfiguredError, EmailSendError
+from app.services.platform.invite_token import hash_token
 from httpx import AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-
-from app.core.config import settings
-from app.services.platform.invite_token import hash_token
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -128,14 +127,9 @@ def captured_invites():
     def _record(recipient_email: str, token: str) -> None:
         captured.append((recipient_email, token))
 
-    # Patch in BOTH the module that defines it and the module that
-    # imports it for use, because Python resolves the name at the
-    # imported module's scope. The route layer uses
-    # ``app.services.platform.invite_email.send_invite_email`` via the
-    # ``app.api.admin_invites`` import; patching the source module is
-    # not enough.
+    # Patch the name where it is used: the invite service imports it.
     with patch(
-        "app.api.admin_invites.send_invite_email", side_effect=_record,
+        "app.services.platform.invite_service.send_invite_email", side_effect=_record,
     ):
         yield captured
 
@@ -208,6 +202,132 @@ async def test_admin_creates_invite_returns_201_without_token(
     sent_to, sent_token = captured_invites[0]
     assert sent_to == "newuser@example.com"
     assert sent_token  # non-empty
+
+
+async def _audit_events(event_type: str) -> list[tuple[bool, dict]]:
+    """(succeeded, metadata) of every audit row of ``event_type``."""
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as sess:
+        rows = (
+            await sess.execute(
+                text("SELECT succeeded, metadata FROM auth_events WHERE event_type = :t"),
+                {"t": event_type},
+            )
+        ).all()
+    await engine.dispose()
+    return [(row[0], row[1]) for row in rows]
+
+
+async def _post_invite_with_send_error(authed, error: Exception, email: str):
+    with patch(
+        "app.services.platform.invite_service.send_invite_email", side_effect=error,
+    ):
+        return await authed.post("/admin/invites", json={"email": email})
+
+
+@pytest.mark.asyncio
+async def test_a_refused_email_returns_502_and_leaves_no_invite_so_a_retry_works(
+    client: AsyncClient, user_factory, as_user, captured_invites,
+) -> None:
+    """A definite SMTP failure must not strand a pending row (retry would 409)."""
+    admin = await user_factory()
+    await _promote_to_superuser(admin["email"])
+    async with await as_user(admin) as authed:
+        failed = await _post_invite_with_send_error(
+            authed,
+            EmailSendError("recipient refused", kind="recipient_rejected", smtp_code=550),
+            "retry@example.com",
+        )
+        listed = await authed.get("/admin/invites")
+        retried = await authed.post("/admin/invites", json={"email": "retry@example.com"})
+
+    assert failed.status_code == 502
+    assert failed.json()["detail"] == "invite_email_failed"
+    assert listed.json() == []
+    assert retried.status_code == 201, retried.text
+    assert len(captured_invites) == 1
+    events = await _audit_events("platform_invite.send_failed")
+    assert events == [(False, {"email_domain": "example.com"})]
+    assert await _audit_events("platform_invite.send_unconfirmed") == []
+
+
+@pytest.mark.asyncio
+async def test_an_email_that_is_not_configured_is_a_definite_failure(
+    client: AsyncClient, user_factory, as_user, captured_invites,
+) -> None:
+    admin = await user_factory()
+    await _promote_to_superuser(admin["email"])
+    async with await as_user(admin) as authed:
+        failed = await _post_invite_with_send_error(
+            authed, EmailNotConfiguredError("no smtp creds"), "nocfg@example.com",
+        )
+        listed = await authed.get("/admin/invites")
+
+    assert failed.status_code == 502
+    assert failed.json()["detail"] == "invite_email_failed"
+    assert listed.json() == []
+
+
+@pytest.mark.asyncio
+async def test_an_smtp_timeout_keeps_the_invite_and_says_the_email_may_have_arrived(
+    client: AsyncClient, user_factory, as_user, captured_invites,
+) -> None:
+    """A timeout can strike after the server took the message, so deleting the row
+    would leave a working link with no invite behind it."""
+    admin = await user_factory()
+    await _promote_to_superuser(admin["email"])
+    async with await as_user(admin) as authed:
+        failed = await _post_invite_with_send_error(
+            authed, EmailSendError("timed out", kind="transient"), "maybe@example.com",
+        )
+        listed = await authed.get("/admin/invites")
+        again = await authed.post("/admin/invites", json={"email": "maybe@example.com"})
+
+    assert failed.status_code == 502
+    assert failed.json()["detail"] == "invite_email_unconfirmed"
+    assert [i["email"] for i in listed.json()] == ["maybe@example.com"]
+    assert again.status_code == 409
+    assert again.json()["detail"] == "invite_already_pending"
+    events = await _audit_events("platform_invite.send_unconfirmed")
+    assert len(events) == 1
+    assert events[0][0] is False
+    assert set(events[0][1]) == {"invite_id", "email_domain"}
+    assert events[0][1]["email_domain"] == "example.com"
+    assert await _audit_events("platform_invite.send_failed") == []
+
+
+@pytest.mark.asyncio
+async def test_a_failed_send_does_not_delete_an_invite_that_was_already_accepted(
+    client: AsyncClient, user_factory, as_user, captured_invites,
+) -> None:
+    from app.services.platform import invite_service
+
+    admin = await user_factory()
+    await _promote_to_superuser(admin["email"])
+    async with await as_user(admin) as authed:
+        created = await authed.post("/admin/invites", json={"email": "used@example.com"})
+    invite_id = uuid.UUID(created.json()["id"])
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as sess, sess.begin():
+        await sess.execute(
+            text("UPDATE platform_invites SET accepted_at = now() WHERE id = :id"),
+            {"id": invite_id},
+        )
+    await engine.dispose()
+
+    await invite_service._discard_unsent_invite(invite_id, uuid.uuid4())
+
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as sess:
+        remaining = (await sess.execute(
+            text("SELECT count(*) FROM platform_invites WHERE id = :id"), {"id": invite_id},
+        )).scalar_one()
+    await engine.dispose()
+    assert remaining == 1
+    assert await _audit_events("platform_invite.send_failed") == []
 
 
 @pytest.mark.asyncio

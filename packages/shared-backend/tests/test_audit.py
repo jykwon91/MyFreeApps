@@ -51,12 +51,6 @@ class _SecretBag(Base):
     payload: Mapped[str] = mapped_column(String(100))
 
 
-@pytest.fixture(autouse=True)
-def _reset() -> None:
-    """Each test starts with a clean registry — module state is global."""
-    reset_registry()
-
-
 @pytest_asyncio.fixture()
 async def db() -> AsyncIterator[AsyncSession]:
     """In-memory SQLite session with shared Base + AuditLog metadata."""

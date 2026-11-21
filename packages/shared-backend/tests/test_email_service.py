@@ -15,7 +15,6 @@ import ssl
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from platform_shared.services.email_service import (
     EmailNotConfiguredError,
     EmailSendError,
@@ -380,7 +379,8 @@ class TestConsoleBackend:
             self._console_service().send_or_raise(["a@example.com"], "Verify", "<p>Hi</p>")
         mock_smtp_cls.assert_not_called()
         assert "[email:console]" in caplog.text
-        assert "a@example.com" in caplog.text
+        assert "a@example.com" not in caplog.text
+        assert "1 recipient(s) at example.com" in caplog.text
         assert "'Verify'" in caplog.text
 
     def test_send_returns_true(self) -> None:

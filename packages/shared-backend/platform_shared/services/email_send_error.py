@@ -28,6 +28,16 @@ class EmailSendError(RuntimeError):
         self.smtp_code = smtp_code
         self.refused_recipients: dict[str, int] = dict(refused_recipients or {})
 
+    @property
+    def delivery_unconfirmed(self) -> bool:
+        """True when the email may have been delivered anyway.
+
+        A timeout or dropped connection (``transient`` with no SMTP reply code)
+        can strike after the server accepted the message, so the recipient may
+        have it. A reply code means the server answered, so the failure is definite.
+        """
+        return self.kind == "transient" and self.smtp_code is None
+
     def __reduce__(
         self,
     ) -> tuple[

@@ -14,7 +14,6 @@ from email.mime.multipart import MIMEMultipart
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
 from platform_shared.services.email_send_error import EmailSendError
 from platform_shared.services.email_service import EmailService
@@ -123,6 +122,21 @@ class TestClassification:
         server.close.assert_called_once()
 
 
+class TestRecipientsAreNotLogged:
+    def test_a_successful_send_logs_the_count_and_domain_only(self, caplog: pytest.LogCaptureFixture) -> None:
+        with patch("smtplib.SMTP", return_value=_server()), caplog.at_level(logging.INFO):
+            _service().send_or_raise(["a@example.com", "b@example.org"], "subj", "<p>b</p>")
+        assert "2 recipient(s) at example.com, example.org" in caplog.text
+        assert "a@example.com" not in caplog.text and "b@example.org" not in caplog.text
+
+    def test_a_best_effort_failure_logs_the_count_and_domain_only(self, caplog: pytest.LogCaptureFixture) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPRecipientsRefused({"x@example.com": (550, b"no")})
+        with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING):
+            assert _service().send(["x@example.com"], "subj", "<p>b</p>") is False
+        assert "x@example.com" not in caplog.text
+
+
 class TestRefusedRecipients:
     def test_every_recipient_refused(self) -> None:
         server = _server()
@@ -145,7 +159,10 @@ class TestRefusedRecipients:
         assert error.kind == "recipient_rejected"
         assert error.refused_recipients == {"b@example.com": 550}
         assert "delivered to the other 1" in str(error)
-        assert any("b@example.com" in r.getMessage() for r in caplog.records)
+        failure = next(r.getMessage() for r in caplog.records if "SMTP send failed" in r.getMessage())
+        assert "refused=1" in failure and "2 recipient(s) at example.com" in failure
+        assert "@example.com" not in failure.replace("at example.com", "")
+        assert "b@example.com" not in str(error)
 
     def test_partial_refusal_fails_a_best_effort_send(self) -> None:
         server = _server()

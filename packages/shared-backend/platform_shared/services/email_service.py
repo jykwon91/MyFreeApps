@@ -55,6 +55,7 @@ from typing import get_args
 
 from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
 from platform_shared.core.email_header_utils import strip_line_breaks
+from platform_shared.core.recipient_log import describe_recipients
 from platform_shared.core.settings import BaseAppSettings
 from platform_shared.services.email_attachment import EmailAttachment
 from platform_shared.services.email_backend import EmailBackend
@@ -168,7 +169,7 @@ class EmailService:
         if self.backend == "console":
             logger.info(
                 "[email:console] to=%s subject=%r body_chars=%d attachments=%d",
-                to, subject, len(body_html), len(attachments or ()),
+                describe_recipients(to), subject, len(body_html), len(attachments or ()),
             )
             return
         if not self.is_configured():
@@ -214,7 +215,7 @@ class EmailService:
             _log_send_failure(error, to, subject)
             raise error
 
-        logger.info("Email sent via SMTP to %s: %s", to, subject)
+        logger.info("Email sent via SMTP to %s: %s", describe_recipients(to), subject)
 
     def _deliver(self, sender: str, to: list[str], payload: str) -> dict[str, tuple[int, bytes]]:
         """Run one SMTP conversation; return the recipients the server refused.
@@ -284,12 +285,15 @@ class EmailService:
                 attachments=attachments, reply_to=reply_to,
             )
             return True
-        except (ValueError, EmailNotConfiguredError, EmailSendError):
+        except (ValueError, EmailNotConfiguredError, EmailSendError) as exc:
+            # No traceback: an EmailSendError chains the smtplib exception, whose
+            # text carries the recipient addresses.
             logger.warning(
-                "Best-effort email send failed to %s: %s",
-                to,
+                "Best-effort email send failed to %s: %s (%s: %s)",
+                describe_recipients(to),
                 subject,
-                exc_info=True,
+                type(exc).__name__,
+                exc,
             )
             return False
 
@@ -315,6 +319,6 @@ def _log_send_failure(error: EmailSendError, to: list[str], subject: str) -> Non
     level = logging.ERROR if error.kind == "misconfigured" else logging.WARNING
     logger.log(
         level,
-        "SMTP send failed: kind=%s smtp_code=%s refused=%s to=%s subject=%r: %s",
-        error.kind, error.smtp_code, error.refused_recipients, to, subject, error,
+        "SMTP send failed: kind=%s smtp_code=%s refused=%d to=%s subject=%r: %s",
+        error.kind, error.smtp_code, len(error.refused_recipients), describe_recipients(to), subject, error,
     )

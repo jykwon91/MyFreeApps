@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -15,6 +17,7 @@ from platform_shared.core.boot_guards import (
     TurnstileNotConfiguredError,
 )
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.core.tracked_task import drain_tracked, spawn_tracked
 
 
 def _settings(
@@ -697,3 +700,46 @@ class TestTransparencyGuard:
         )
         async with lifespan(app):
             pass
+
+
+class TestShutdownDrainsTrackedTasks:
+    """In-flight tracked work must be awaited before the app-specific shutdown."""
+
+    @pytest.mark.asyncio
+    async def test_pending_task_is_awaited_before_on_shutdown(self, app: FastAPI) -> None:
+        order: list[str] = []
+        gate = asyncio.Event()
+
+        async def work() -> None:
+            await gate.wait()
+            order.append("task-finished")
+
+        lifespan = create_app_lifespan(
+            settings=_settings(), on_shutdown=lambda: order.append("shutdown"),
+        )
+        async with lifespan(app):
+            spawn_tracked(work(), name="pending-at-shutdown")
+            asyncio.get_running_loop().call_later(0.05, gate.set)
+
+        assert order == ["task-finished", "shutdown"]
+
+    @pytest.mark.asyncio
+    async def test_task_still_pending_after_timeout_is_logged_at_error(
+        self, app: FastAPI, monkeypatch, caplog,
+    ) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.tracked_task.SHUTDOWN_DRAIN_TIMEOUT_SECONDS", 0.05,
+        )
+        never = asyncio.Event()
+
+        async def work() -> None:
+            await never.wait()
+
+        lifespan = create_app_lifespan(settings=_settings())
+        with caplog.at_level(logging.ERROR, logger="platform_shared.core.tracked_task"):
+            async with lifespan(app):
+                task = spawn_tracked(work(), name="stuck-reset-email")
+
+        assert "stuck-reset-email" in caplog.text
+        task.cancel()
+        await drain_tracked()

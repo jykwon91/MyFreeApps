@@ -1,6 +1,6 @@
 """Shared-backend test config — registers asyncio mode and a fresh in-memory DB."""
 import threading
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator
 
 import pytest
 import pytest_asyncio
@@ -9,6 +9,7 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from platform_shared.core.audit import reset_registry
 from platform_shared.db.base import Base
 from platform_shared.schemas.transparency import TRANSPARENCY_OBJECT_KEY, TransparencyDocument
 from platform_shared.services.transparency import donation_store, transparency_store
@@ -98,6 +99,21 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> FakeStorageClient:
 def anyio_backend() -> str:
     """Force ``anyio``-marked tests onto asyncio (no Trio in our test deps)."""
     return "asyncio"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_audit_registry() -> Iterator[None]:
+    """Give every test a clean audit registry and leave none behind.
+
+    The registry and the SQLAlchemy ``after_flush`` listener it attaches are
+    process-global. A test that registers a bogus field name, or runs the real
+    lifespan (which attaches the listener), would otherwise break later tests:
+    the lifespan validates leftover names, and a leftover listener writes
+    ``audit_logs`` rows in suites whose schema has no such table.
+    """
+    reset_registry()
+    yield
+    reset_registry()
 
 
 @pytest.fixture(autouse=True, scope="session")
