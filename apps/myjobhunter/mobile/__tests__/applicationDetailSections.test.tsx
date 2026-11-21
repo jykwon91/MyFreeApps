@@ -373,7 +373,7 @@ describe("uploading a file", () => {
 
     // Only the website's types are offered.
     pick({ name: "resume.pdf", mimeType: PDF, size: 20480 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith({
       type: ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"],
       copyToCacheDirectory: true,
@@ -404,9 +404,9 @@ describe("uploading a file", () => {
     await openUpload();
     jest.mocked(DocumentPicker.getDocumentAsync).mockResolvedValueOnce({ canceled: true, assets: null });
 
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
-    expect(await screen.findByRole("button", { name: DOCUMENTS.chooseFile })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: `${DOCUMENTS.chooseFile}, required` })).toBeEnabled();
     expect(screen.queryByTestId("upload-file")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(sent.some(({ route }) => route === "POST /documents/upload")).toBe(false);
@@ -427,7 +427,7 @@ describe("uploading a file", () => {
     expect(screen.queryByText(/Keep this to/, SHOWN)).toBeNull();
     jest.mocked(DocumentPicker.getDocumentAsync).mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
 
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
     expect(await screen.findByRole("button", { name: DOCUMENTS.choosing })).toBeDisabled();
     expect(screen.getByRole("button", { name: DOCUMENTS.cancel })).toBeDisabled();
@@ -452,7 +452,7 @@ describe("uploading a file", () => {
     await renderApplicationDetail(ID);
     await openUpload();
     pick({ name: "huge.pdf", mimeType: PDF, size: DOCUMENT_UPLOAD_MAX_BYTES + 1 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
     expect(await screen.findByText(DOCUMENTS.tooLarge)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
@@ -464,7 +464,7 @@ describe("uploading a file", () => {
     await renderApplicationDetail(ID);
     await openUpload();
     pick({ name: "blank.pdf", mimeType: PDF, size: 0 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
     expect(await screen.findByText(DOCUMENTS.emptyFile)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
@@ -476,14 +476,14 @@ describe("uploading a file", () => {
     await renderApplicationDetail(ID);
     await openUpload();
     pick({ name: "photo.png", mimeType: "application/octet-stream", size: 100 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
     expect(await screen.findByText(DOCUMENTS.badType)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
 
     // A Word file named for what it is goes through, even unlabelled.
     pick({ name: "letter.docx", mimeType: "application/octet-stream", size: 100 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     expect(await screen.findByText("letter.docx (100 B)")).toBeTruthy();
     expect(screen.queryByText(DOCUMENTS.badType)).toBeNull();
   });
@@ -493,7 +493,7 @@ describe("uploading a file", () => {
     await renderApplicationDetail(ID);
     await openUpload();
     pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
@@ -508,7 +508,7 @@ describe("uploading a file", () => {
     await openUpload();
     // The picker didn't know the size, so only the server can tell.
     pick({ name: "resume.pdf", mimeType: PDF });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
@@ -521,7 +521,7 @@ describe("uploading a file", () => {
     await openUpload();
     // The picker didn't know the size, so only the server can tell.
     pick({ name: "resume.pdf", mimeType: PDF });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 

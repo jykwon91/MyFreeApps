@@ -355,7 +355,7 @@ describe("a document's actions", () => {
     expect(await screen.findByRole("header", { name: DOCUMENTS.uploadTitle })).toBeTruthy();
 
     pick({ name: "resume.pdf", mimeType: PDF, size: 20480 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     expect(await screen.findByText("resume.pdf (20.0 KB)")).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`), "My resume");
     await fireEvent.press(screen.getByRole("radio", { name: "Tailored Resume" }));
@@ -376,7 +376,7 @@ describe("a document's actions", () => {
     await showScreen();
     await fireEvent.press(await screen.findByRole("button", { name: DOCUMENTS.upload }));
     pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
@@ -390,7 +390,7 @@ describe("a document's actions", () => {
     await showScreen();
     await fireEvent.press(await screen.findByRole("button", { name: DOCUMENTS.upload }));
     pick({ name: "resume.pdf", mimeType: PDF, size: 2048 });
-    await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));
+    await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 

@@ -47,7 +47,7 @@ async function renderRent(server: RentWritesServer) {
 }
 
 async function pickDate(label: string, date: Date) {
-  if (!screen.queryByTestId(`${label}-picker`)) await fireEvent.press(screen.getByLabelText(new RegExp(`^(Choose|Change) ${label.toLowerCase().replace(/[()]/g, "\\$&")}$`)));
+  if (!screen.queryByTestId(`${label}-picker`)) await fireEvent.press(screen.getByLabelText(new RegExp(`^(Choose|Change) ${label.toLowerCase().replace(/[()]/g, "\\$&")}(, required)?$`)));
   await act(async () => {
     screen.getByTestId(`${label}-picker`).props.onChange({ type: "set" }, date);
   });

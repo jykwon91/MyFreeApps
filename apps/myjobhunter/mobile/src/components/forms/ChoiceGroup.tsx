@@ -1,19 +1,16 @@
-import { FieldError, OptionRow, useTheme } from "@platform/mobile";
-import { Text, View } from "react-native";
+import { FieldError, FieldLabel, OptionRow, requiredFieldLabel, useTheme } from "@platform/mobile";
+import { View } from "react-native";
 import type { ChoiceGroupProps } from "../../types/ChoiceGroupProps";
 
 /** One choice from a short list, every option on screen: the phone's form of a select. */
 export default function ChoiceGroup<Value extends string>({ label, options, value, onChange, required = false, error, disabled = false }: ChoiceGroupProps<Value>) {
-  const { colors, spacing, radius, fontSize } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={{ fontSize: fontSize.xs, fontWeight: "500", color: colors.foreground }}>
-        {label}
-        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
-      </Text>
+      <FieldLabel label={label} required={required} />
       <View
         accessibilityHint={error}
-        accessibilityLabel={label}
+        accessibilityLabel={requiredFieldLabel(label, required)}
         accessibilityRole="radiogroup"
         style={{ borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.md, overflow: "hidden", opacity: disabled ? 0.5 : 1 }}
       >
