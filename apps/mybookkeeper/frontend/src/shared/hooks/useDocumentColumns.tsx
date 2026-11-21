@@ -11,10 +11,13 @@ import type { Document } from "@mybookkeeper/api-client/types/document/document"
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import { SELECTING_ALL_DOCUMENTS_LABEL } from "@/shared/lib/document-list-messages";
 import type { SelectAllControl } from "@/shared/types/select-all-control";
 
 interface ColumnActions {
+  /** Opens a document; its file name is the button that does it. */
+  onOpen: (doc: Document) => void;
   onDelete: (id: string) => void;
   onToggleEscrow?: (id: string, currentValue: boolean) => void;
   onReExtract?: (id: string) => void;
@@ -28,7 +31,7 @@ const columnHelper = createColumnHelper<AppTableFeatures, Document>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFeatures, Document, any>[] {
-  const { onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true, selectAll } = actions;
+  const { onOpen, onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true, selectAll } = actions;
 
   return useMemo(
     () => [
@@ -80,10 +83,14 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
         header: "File",
         enableSorting: true,
         enableColumnFilter: true,
-        cell: ({ getValue }) => (
-          <span className="block" title={getValue() ?? undefined}>
-            {getValue() ?? "\u2014"}
-          </span>
+        cell: ({ getValue, row }) => (
+          <RowPrimaryAction
+            onActivate={() => onOpen(row.original)}
+            aria-label={`Open ${getValue() ?? "document"}`}
+            className="block"
+          >
+            <span title={getValue() ?? undefined}>{getValue() ?? "\u2014"}</span>
+          </RowPrimaryAction>
         ),
       }),
       columnHelper.accessor("document_type", {
@@ -132,6 +139,6 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
         ),
       }),
     ],
-    [onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite, selectAll],
+    [onOpen, onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite, selectAll],
   );
 }

@@ -98,6 +98,7 @@ export default function Transactions() {
   }, [duplicatePairs]);
 
   const columns = useTransactionColumns(propertyMap, {
+    onOpen: setEditingTransaction,
     onDelete: handleDelete,
     onApprove: handleApprove,
     busyId,

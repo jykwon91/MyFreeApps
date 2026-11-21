@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import { Star } from "lucide-react";
 import { formatVendorLastUsed } from "@mybookkeeper/api-client/utils/formatVendorLastUsed";
 import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";
@@ -16,11 +17,12 @@ export interface VendorRowProps {
  */
 export default function VendorRow({ vendor, showCategoryBadge }: VendorRowProps) {
   const navigate = useNavigate();
+  const detailPath = `/vendors/${vendor.id}`;
 
   return (
     <tr
       data-testid={`vendor-row-${vendor.id}`}
-      onClick={() => navigate(`/vendors/${vendor.id}`)}
+      onClick={() => navigate(detailPath)}
       className="border-t cursor-pointer hover:bg-muted/30 transition-colors"
     >
       <td className="px-4 py-3 font-medium">
@@ -32,7 +34,7 @@ export default function VendorRow({ vendor, showCategoryBadge }: VendorRowProps)
               aria-label="Preferred vendor"
             />
           ) : null}
-          <span className="truncate">{vendor.name}</span>
+          <RowPrimaryAction to={detailPath} className="truncate">{vendor.name}</RowPrimaryAction>
         </span>
       </td>
       <td className="px-4 py-3">

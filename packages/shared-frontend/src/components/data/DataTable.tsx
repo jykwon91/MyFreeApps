@@ -65,7 +65,11 @@ export default function DataTable<T extends RowData>({
           {headerGroups.map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b">
               {headerGroup.headers.map((header) => (
-                <DataTableHeaderCell key={header.id} header={header} />
+                <DataTableHeaderCell
+                  key={header.id}
+                  column={header.column}
+                  label={header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                />
               ))}
             </tr>
           ))}

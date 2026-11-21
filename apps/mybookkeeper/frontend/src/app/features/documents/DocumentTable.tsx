@@ -4,7 +4,8 @@ import type { AppTableFeatures } from "@/shared/lib/table-features";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { SortIndicator, ColumnFilter } from "@/shared/components/table";
+import { DataTableHeaderCell } from "@platform/ui";
+import { ColumnFilter } from "@/shared/components/table";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import { timeSince } from "@platform/core/utils/timeSince";
@@ -115,24 +116,19 @@ export default function DocumentTable({
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => {
-                  const canSort = header.column.getCanSort();
                   return (
-                    <th
+                    <DataTableHeaderCell
                       key={header.id}
-                      className={`text-left px-4 py-2 font-medium ${canSort ? "cursor-pointer select-none hover:text-foreground" : ""}`}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      column={header.column}
+                      label={header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     >
-                      <div className="flex items-center gap-1">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        <SortIndicator header={header} />
-                        {header.column.getCanFilter() && filterOptions[header.column.id] ? (
-                          <ColumnFilter
-                            column={header.column}
-                            options={filterOptions[header.column.id]}
-                          />
-                        ) : null}
-                      </div>
-                    </th>
+                      {header.column.getCanFilter() && filterOptions[header.column.id] ? (
+                        <ColumnFilter
+                          column={header.column}
+                          options={filterOptions[header.column.id]}
+                        />
+                      ) : null}
+                    </DataTableHeaderCell>
                   );
                 })}
               </tr>

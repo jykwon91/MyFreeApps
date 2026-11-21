@@ -14,6 +14,7 @@ import { useFailedDocuments } from "@mybookkeeper/api-client/hooks/useFailedDocu
 import { runBulkDelete } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
 import { errorDetail } from "@mybookkeeper/api-client/utils/errorDetail";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { useDocumentListControls } from "@/app/features/documents/hooks/useDocumentListControls";
 import { useDocumentSelection } from "@/app/features/documents/hooks/useDocumentSelection";
 import { pagedListView } from "@/shared/lib/paged-list-view";
@@ -150,7 +151,10 @@ export default function Documents() {
     }
   }, [reExtract, showSuccess, showError]);
 
+  const openDocument = useCallback((doc: Document) => setViewingDocId(doc.id), []);
+
   const columns = useDocumentColumns({
+    onOpen: openDocument,
     onDelete: handleDelete,
     onToggleEscrow: handleToggleEscrow,
     onReExtract: handleReExtract,
@@ -286,7 +290,7 @@ export default function Documents() {
           table={table}
           colCount={colCount}
           filterOptions={filterOptions}
-          onRowClick={(doc) => setViewingDocId(doc.id)}
+          onRowClick={openDocument}
           onDelete={handleDelete}
           onToggleEscrow={handleToggleEscrow}
           onReExtract={handleReExtract}

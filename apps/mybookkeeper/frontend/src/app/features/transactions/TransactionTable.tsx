@@ -11,7 +11,8 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { FilterOptions } from "@/shared/types/transaction/filter-options";
 import { PAGE_SIZE_OPTIONS, TAG_COLORS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { SortIndicator, ColumnFilter } from "@/shared/components/table";
+import { DataTableHeaderCell } from "@platform/ui";
+import { ColumnFilter } from "@/shared/components/table";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
 import { formatCurrency } from "@/shared/utils/currency";
@@ -119,26 +120,21 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => {
-                  const canSort = header.column.getCanSort();
                   return (
-                    <th
+                    <DataTableHeaderCell
                       key={header.id}
-                      className={`text-left px-4 py-2 font-medium ${canSort ? "cursor-pointer select-none hover:text-foreground" : ""}`}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      column={header.column}
+                      label={header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     >
-                      <div className="flex items-center gap-1">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        <SortIndicator header={header} />
-                        {header.column.getCanFilter() && filterOptions?.[header.column.id] ? (
-                          <ColumnFilter
-                            column={header.column}
-                            options={filterOptions[header.column.id]}
-                          />
-                        ) : header.column.id === "transaction_date" && header.column.getCanFilter() ? (
-                          <ColumnFilter column={header.column} enableDateRange />
-                        ) : null}
-                      </div>
-                    </th>
+                      {header.column.getCanFilter() && filterOptions?.[header.column.id] ? (
+                        <ColumnFilter
+                          column={header.column}
+                          options={filterOptions[header.column.id]}
+                        />
+                      ) : header.column.id === "transaction_date" && header.column.getCanFilter() ? (
+                        <ColumnFilter column={header.column} enableDateRange />
+                      ) : null}
+                    </DataTableHeaderCell>
                   );
                 })}
               </tr>

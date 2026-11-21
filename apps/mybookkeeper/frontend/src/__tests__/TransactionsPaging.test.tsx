@@ -109,10 +109,10 @@ describe("Transactions paging", () => {
     await screen.findByText(`1–25 of ${TOTAL}`);
     expect(lastPageQuery().getAll("sort")).toEqual(["transaction_date:desc"]);
 
-    await user.click(screen.getByRole("columnheader", { name: /Property/ }));
+    await user.click(within(screen.getByRole("columnheader", { name: /Property/ })).getByRole("button", { name: /Property/ }));
     await waitFor(() => expect(lastPageQuery().getAll("sort")[0]).toMatch(/^property_id:/));
 
-    await user.click(screen.getByRole("columnheader", { name: /Tax/ }));
+    await user.click(within(screen.getByRole("columnheader", { name: /Tax/ })).getByRole("button", { name: /Tax/ }));
     await waitFor(() => expect(lastPageQuery().getAll("sort")).toHaveLength(1));
     expect(lastPageQuery().getAll("sort")[0]).toMatch(/^tax_relevant:/);
   });
@@ -122,11 +122,11 @@ describe("Transactions paging", () => {
     renderPage();
     await screen.findByText(`1–25 of ${TOTAL}`);
 
-    await user.click(screen.getByRole("columnheader", { name: /Property/ }));
+    await user.click(within(screen.getByRole("columnheader", { name: /Property/ })).getByRole("button", { name: /Property/ }));
     await waitFor(() => expect(lastPageQuery().getAll("sort")[0]).toMatch(/^property_id:/));
     const propertyKey = lastPageQuery().getAll("sort")[0];
     await user.keyboard("{Shift>}");
-    await user.click(screen.getByRole("columnheader", { name: /Amount/ }));
+    await user.click(within(screen.getByRole("columnheader", { name: /Amount/ })).getByRole("button", { name: /Amount/ }));
     await user.keyboard("{/Shift}");
 
     await waitFor(() => expect(lastPageQuery().getAll("sort")).toHaveLength(2));
@@ -253,7 +253,7 @@ describe("Transactions paging", () => {
     await screen.findByText(`26–50 of ${TOTAL}`);
     await user.selectOptions(screen.getByRole("combobox", { name: "Rows per page" }), "50");
     await screen.findByText(`1–50 of ${TOTAL}`);
-    await user.click(screen.getByRole("columnheader", { name: /Property/ }));
+    await user.click(within(screen.getByRole("columnheader", { name: /Property/ })).getByRole("button", { name: /Property/ }));
     await waitFor(() => expect(lastPageQuery().getAll("sort")[0]).toMatch(/^property_id:/));
 
     expect(screen.getByText("1 selected")).toBeInTheDocument();

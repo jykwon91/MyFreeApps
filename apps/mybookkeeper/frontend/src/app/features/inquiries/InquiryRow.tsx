@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
 import {
   formatDesiredDates,
@@ -15,15 +16,15 @@ export interface InquiryRowProps {
 }
 
 /**
- * Desktop table row for an inquiry. The whole row is clickable
- * (programmatic navigation) and exposes a keyboard-accessible button via
- * ``tabIndex`` + Enter/Space handlers — same pattern as ``ListingTableRow``.
+ * Desktop table row for an inquiry. A click anywhere on the row opens the
+ * inquiry; the inquirer's name is the link keyboard and screen-reader users
+ * reach, same pattern as ``ListingTableRow``.
  *
  * Columns: Inquirer | Source | Desired Dates | Employer | Listing | Received | Stage | Quality.
  */
 export default function InquiryRow({ inquiry, listingTitle }: InquiryRowProps) {
   const navigate = useNavigate();
-  const goToDetail = () => navigate(`/inquiries/${inquiry.id}`);
+  const detailPath = `/inquiries/${inquiry.id}`;
 
   const desiredDates = formatDesiredDates(
     inquiry.desired_start_date,
@@ -36,21 +37,13 @@ export default function InquiryRow({ inquiry, listingTitle }: InquiryRowProps) {
 
   return (
     <tr
-      role="link"
-      tabIndex={0}
+      onClick={() => navigate(detailPath)}
       data-testid={`inquiry-row-${inquiry.id}`}
-      onClick={goToDetail}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          goToDetail();
-        }
-      }}
-      className="border-t cursor-pointer hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary"
+      className="border-t cursor-pointer hover:bg-muted/40"
     >
       <td className="px-4 py-3 font-medium">
         <div className="flex items-center gap-2">
-          <span>{inquirerName}</span>
+          <RowPrimaryAction to={detailPath}>{inquirerName}</RowPrimaryAction>
           <InquirySpamBadge status={inquiry.spam_status} score={inquiry.spam_score} />
         </div>
       </td>
