@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirror of the loaded WelcomeManualDetail layout: header card (title +
@@ -9,7 +9,7 @@ export default function WelcomeManualDetailSkeleton() {
   const sections = [0, 1, 2];
 
   return (
-    <div data-testid="welcome-manual-detail-skeleton" className="space-y-6">
+    <LoadingRegion label="Loading welcome manual detail…" data-testid="welcome-manual-detail-skeleton" className="space-y-6">
       {/* Header card */}
       <section className="border rounded-lg p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -41,6 +41,6 @@ export default function WelcomeManualDetailSkeleton() {
           </div>
         </section>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export interface WelcomeManualsSkeletonProps {
   count?: number;
@@ -13,7 +13,7 @@ export default function WelcomeManualsSkeleton({ count = 4 }: WelcomeManualsSkel
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <div data-testid="welcome-manuals-skeleton">
+    <LoadingRegion label="Loading welcome manuals…" data-testid="welcome-manuals-skeleton">
       {/* Mobile: card list */}
       <ul className="md:hidden space-y-3">
         {rows.map((i) => (
@@ -51,6 +51,6 @@ export default function WelcomeManualsSkeleton({ count = 4 }: WelcomeManualsSkel
           </tbody>
         </table>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

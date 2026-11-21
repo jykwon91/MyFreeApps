@@ -152,7 +152,7 @@ export default function FileUploadDropzone({
         {uploading ? (
           <>
             <Spinner className="w-8 h-8 text-primary" />
-            <span className="text-sm text-muted-foreground">Uploading...</span>
+            <span role="status" className="text-sm text-muted-foreground">Uploading...</span>
           </>
         ) : (
           <>

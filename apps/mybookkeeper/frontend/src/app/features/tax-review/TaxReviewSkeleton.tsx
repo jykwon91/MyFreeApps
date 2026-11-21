@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function TaxReviewSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <LoadingRegion label="Loading tax review…" className="max-w-3xl mx-auto space-y-6">
       {/* Summary card */}
       <div className="border rounded-lg p-5 sm:p-6">
         <div className="flex items-start gap-3">
@@ -37,6 +37,6 @@ export default function TaxReviewSkeleton() {
 
       {/* Footer action */}
       <Skeleton className="h-9 w-36 rounded-md" />
-    </div>
+    </LoadingRegion>
   );
 }

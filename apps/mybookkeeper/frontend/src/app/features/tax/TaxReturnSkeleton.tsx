@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function TaxReturnSkeleton() {
   return (
-    <div className="space-y-6" data-testid="tax-return-skeleton">
+    <LoadingRegion label="Loading tax return…" className="space-y-6" data-testid="tax-return-skeleton">
       {/* Back nav + SectionHeader */}
       <div className="space-y-3">
         <Skeleton className="h-4 w-36" />
@@ -57,6 +57,6 @@ export default function TaxReturnSkeleton() {
           <Skeleton className="h-4 w-3/4" />
         </div>
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

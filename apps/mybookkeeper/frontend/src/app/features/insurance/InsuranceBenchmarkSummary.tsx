@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import { format, parseISO } from "date-fns";
 import {
   formatAnnualPremium,
@@ -24,9 +25,9 @@ export default function InsuranceBenchmarkSummary({
 
   if (isLoading) {
     return (
-      <div
+      <LoadingRegion
+        label="Loading premium benchmark…"
         className="h-9 bg-muted rounded animate-pulse"
-        aria-busy="true"
         data-testid="insurance-benchmark-summary-loading"
       />
     );

@@ -43,7 +43,7 @@ export default function AttachmentViewerPdfBody({
         className="h-full bg-white rounded-b-lg flex items-center justify-center"
         data-testid="attachment-viewer-pdf-loading"
       >
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div role="status" className="text-sm text-muted-foreground">Loading…</div>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
 import LoadMoreButton from "@/shared/components/ui/LoadMoreButton";

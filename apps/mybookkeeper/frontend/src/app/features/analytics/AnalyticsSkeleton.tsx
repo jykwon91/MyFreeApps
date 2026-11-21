@@ -1,9 +1,9 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 
 export default function AnalyticsSkeleton() {
   return (
-    <div className="space-y-6" data-testid="analytics-skeleton">
+    <LoadingRegion label="Loading analytics…" className="space-y-6" data-testid="analytics-skeleton">
       {/* Summary cards row: the total plus one card per utility type */}
       <section
         className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3"
@@ -42,6 +42,6 @@ export default function AnalyticsSkeleton() {
           ))}
         </div>
       </Card>
-    </div>
+    </LoadingRegion>
   );
 }

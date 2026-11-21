@@ -18,7 +18,7 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { cn } from "@/shared/utils/cn";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingStatus, Skeleton } from "@platform/ui";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import TransactionSkeletonRows from "@/app/features/transactions/TransactionSkeletonRows";
 
@@ -111,6 +111,8 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
           })
         )}
       </div>
+
+      {mode === "loading" ? <LoadingStatus label="Loading transactions…" /> : null}
 
       {/* Desktop table */}
       <div className="hidden md:block flex-1 overflow-auto">

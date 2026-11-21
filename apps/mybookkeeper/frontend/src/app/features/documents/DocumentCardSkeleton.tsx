@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 
 // Mirrors one phone card in DocumentTable: name + source, status · type · age, then the row actions.
 interface DocumentCardSkeletonProps {

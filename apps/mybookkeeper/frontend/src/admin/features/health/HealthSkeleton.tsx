@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function HealthSkeleton() {
   return (
-    <div className="space-y-4">
+    <LoadingRegion label="Loading health…" className="space-y-4">
       {/* SectionHeader */}
       <div className="flex items-center justify-between">
         <div className="space-y-1.5">
@@ -61,6 +61,6 @@ export default function HealthSkeleton() {
           </table>
         </div>
       </section>
-    </div>
+    </LoadingRegion>
   );
 }

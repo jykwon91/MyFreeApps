@@ -1,8 +1,9 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function ScreeningProviderGridSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading screening provider grid…"
       data-testid="screening-provider-grid-skeleton"
       className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       aria-hidden="true"
@@ -21,6 +22,6 @@ export default function ScreeningProviderGridSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

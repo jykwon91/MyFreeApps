@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingStatus, Skeleton } from "@platform/ui";
 import FinancialsSection from "@/features/financials/FinancialsSection";
 import FinancialsStack from "@/features/financials/FinancialsStack";
 
@@ -20,6 +20,7 @@ export default function FinancialsBodySkeleton() {
         </div>
         <Skeleton className="h-10 w-full" />
       </FinancialsSection>
+      <LoadingStatus label="Loading financials…" />
     </FinancialsStack>
   );
 }

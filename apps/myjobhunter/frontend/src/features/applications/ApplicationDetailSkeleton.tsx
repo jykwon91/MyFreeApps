@@ -1,11 +1,10 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function ApplicationDetailSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading application detail…"
       className="flex gap-6 p-6"
-      aria-label="Loading application detail"
-      aria-busy="true"
     >
       {/* Left sidebar */}
       <aside className="w-64 shrink-0 space-y-6">
@@ -50,6 +49,6 @@ export default function ApplicationDetailSkeleton() {
           <Skeleton className="h-4 w-3/4" />
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

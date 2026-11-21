@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function DuplicateReviewSkeleton() {
   return (
-    <div className="space-y-4">
+    <LoadingRegion label="Loading duplicate review…" className="space-y-4">
       {Array.from({ length: 3 }, (_, i) => (
         <div key={i} className="border rounded-lg overflow-hidden">
           <div className="px-4 py-2 bg-muted/50 border-b">
@@ -34,6 +34,6 @@ export default function DuplicateReviewSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

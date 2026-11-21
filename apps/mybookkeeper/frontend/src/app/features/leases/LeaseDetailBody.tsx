@@ -14,8 +14,7 @@ import {
 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Badge from "@/shared/components/ui/Badge";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Button, LoadingButton, showError, showSuccess, Skeleton } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
   useEmailSignedLeaseToTenantMutation,

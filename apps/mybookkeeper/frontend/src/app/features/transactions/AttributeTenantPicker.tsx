@@ -9,7 +9,7 @@
  */
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
-import { LoadingButton, showError, showSuccess } from "@platform/ui";
+import { LoadingButton, LoadingRegion, showError, showSuccess } from "@platform/ui";
 import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { attributionSourceLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import ListPagesErrorAlert from "@/shared/components/ui/ListPagesErrorAlert";
@@ -47,7 +47,7 @@ export default function AttributeTenantPicker({
 
   if (mode === "loading") {
     return (
-      <div className="h-8 w-48 animate-pulse rounded bg-muted" aria-busy="true" />
+      <LoadingRegion label="Loading tenants…" className="h-8 w-48 animate-pulse rounded bg-muted" />
     );
   }
 

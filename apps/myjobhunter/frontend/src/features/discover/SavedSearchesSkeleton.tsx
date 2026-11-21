@@ -1,4 +1,4 @@
-import { Card, Skeleton } from "@platform/ui";
+import { Card, LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Loading skeleton for the saved-searches panel.
@@ -9,7 +9,7 @@ import { Card, Skeleton } from "@platform/ui";
  */
 export default function SavedSearchesSkeleton({ rows = 1 }: { rows?: number }) {
   return (
-    <div className="space-y-2" aria-busy="true">
+    <LoadingRegion label="Loading saved searches…" className="space-y-2">
       <Skeleton className="h-4 w-28" />
       {Array.from({ length: rows }).map((_, i) => (
         <Card key={i} className="p-3 flex items-center justify-between gap-3">
@@ -26,6 +26,6 @@ export default function SavedSearchesSkeleton({ rows = 1 }: { rows?: number }) {
           </div>
         </Card>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

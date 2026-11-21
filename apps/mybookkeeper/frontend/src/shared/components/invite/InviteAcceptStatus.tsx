@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { LoadingButton } from "@platform/ui";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingButton, Skeleton } from "@platform/ui";
 
 interface InviteAcceptStatusProps {
   orgName: string;

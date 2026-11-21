@@ -4,7 +4,7 @@
  * accordion bar; on a phone the stage-by-stage list. Same wrapper classes as
  * KanbanBoard so nothing shifts when the board arrives.
  */
-import { Skeleton, useMediaQuery } from "@platform/ui";
+import { LoadingRegion, Skeleton, useMediaQuery } from "@platform/ui";
 import { KANBAN_ACTIVE_COLUMNS } from "@myjobhunter/api-client/constants/kanbanActiveColumns";
 import DashboardColumnSkeleton from "./DashboardColumnSkeleton";
 import DashboardMobileSkeleton from "./DashboardMobileSkeleton";
@@ -14,17 +14,16 @@ export default function DashboardSkeleton() {
 
   if (isMobile) {
     return (
-      <div className="p-4 space-y-6" aria-label="Loading dashboard" aria-busy="true">
+      <LoadingRegion label="Loading dashboard…" className="p-4 space-y-6">
         <DashboardMobileSkeleton />
-      </div>
+      </LoadingRegion>
     );
   }
 
   return (
-    <div
+    <LoadingRegion
+      label="Loading dashboard…"
       className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0"
-      aria-label="Loading dashboard"
-      aria-busy="true"
     >
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Pipeline</h1>
@@ -38,6 +37,6 @@ export default function DashboardSkeleton() {
       <div className="mt-4 rounded-lg border bg-muted/30 px-3 py-2">
         <Skeleton className="h-5 w-24" />
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

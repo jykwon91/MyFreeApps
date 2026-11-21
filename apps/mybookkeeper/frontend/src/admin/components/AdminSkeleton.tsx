@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function AdminSkeleton() {
   return (
-    <div className="min-h-screen flex">
+    <LoadingRegion label="Loading admin…" className="min-h-screen flex">
       {/* Mobile header skeleton */}
       <div className="fixed top-0 left-0 right-0 h-14 bg-card border-b z-30 flex items-center px-4 md:hidden">
         <Skeleton className="h-5 w-5" />
@@ -73,6 +73,6 @@ export default function AdminSkeleton() {
           ))}
         </div>
       </main>
-    </div>
+    </LoadingRegion>
   );
 }

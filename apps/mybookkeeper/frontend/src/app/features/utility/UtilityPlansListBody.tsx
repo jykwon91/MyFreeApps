@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@platform/ui";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import UtilityPlanRow from "./UtilityPlanRow";
@@ -29,9 +30,9 @@ export default function UtilityPlansListBody({
         // edit/delete actions on the right, so nothing shifts when the data
         // lands. Only the badge placeholder is a pill — the action slots are
         // square, matching the icon buttons they stand in for.
-        <div
+        <LoadingRegion
+          label="Loading utility plans…"
           className="space-y-2 animate-pulse"
-          aria-busy="true"
           data-testid="utility-plans-loading"
         >
           {[1, 2, 3].map((i) => (
@@ -50,7 +51,7 @@ export default function UtilityPlansListBody({
               </div>
             </div>
           ))}
-        </div>
+        </LoadingRegion>
       );
     case "empty":
       return (

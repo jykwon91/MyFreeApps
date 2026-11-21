@@ -1,8 +1,8 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export default function TaxReturnsListSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <LoadingRegion label="Loading tax returns list…" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {Array.from({ length: 3 }, (_, i) => (
         <div key={i} className="border rounded-lg p-6 space-y-3">
           <Skeleton className="h-6 w-24" />
@@ -10,6 +10,6 @@ export default function TaxReturnsListSkeleton() {
           <Skeleton className="h-5 w-16" />
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

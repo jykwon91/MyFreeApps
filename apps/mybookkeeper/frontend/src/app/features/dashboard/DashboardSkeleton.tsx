@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 import DashboardSummaryCardsSkeleton from "@/app/features/dashboard/DashboardSummaryCardsSkeleton";
 import MonthlyAverageCardSkeleton from "@/app/features/dashboard/MonthlyAverageCardSkeleton";
@@ -7,7 +7,7 @@ import InsurancePremiumComparisonCardSkeleton from "@/app/features/insurance/Ins
 
 export default function DashboardSkeleton() {
   return (
-    <div className="space-y-6 sm:space-y-8" data-testid="dashboard-skeleton">
+    <LoadingRegion label="Loading dashboard…" className="space-y-6 sm:space-y-8" data-testid="dashboard-skeleton">
       {/* SectionHeader: "Dashboard" + subtitle */}
       <div>
         <Skeleton className="h-8 w-36" />
@@ -119,6 +119,6 @@ export default function DashboardSkeleton() {
         <Skeleton className="h-5 w-28 mb-4" />
         <Skeleton className="h-48 w-full rounded" />
       </Card>
-    </div>
+    </LoadingRegion>
   );
 }

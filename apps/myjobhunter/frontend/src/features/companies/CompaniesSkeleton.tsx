@@ -1,4 +1,4 @@
-import { Skeleton } from "@platform/ui";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 // Column widths mirror the Companies page DataTable columns:
 // name (w-1/3), primary_domain (w-1/4), industry (w-1/5), hq_location (w-1/5)
@@ -6,10 +6,9 @@ const COLUMN_WIDTHS = ["w-1/3", "w-1/4", "w-1/5", "w-1/5"] as const;
 
 export default function CompaniesSkeleton() {
   return (
-    <div
+    <LoadingRegion
+      label="Loading companies…"
       className="w-full overflow-x-auto"
-      aria-label="Loading companies"
-      aria-busy="true"
     >
       <table role="table" className="w-full text-sm border-collapse">
         <thead>
@@ -37,6 +36,6 @@ export default function CompaniesSkeleton() {
           ))}
         </tbody>
       </table>
-    </div>
+    </LoadingRegion>
   );
 }

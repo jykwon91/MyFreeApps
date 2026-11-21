@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 export interface LeaseGenerateFormFieldsSkeletonProps {
   fieldCount: number;
@@ -7,7 +7,8 @@ export interface LeaseGenerateFormFieldsSkeletonProps {
 /** Mirrors the loaded field grid: same columns, one label + input per field. */
 export default function LeaseGenerateFormFieldsSkeleton({ fieldCount }: LeaseGenerateFormFieldsSkeletonProps) {
   return (
-    <div
+    <LoadingRegion
+      label="Loading lease generate form fields…"
       className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       data-testid="lease-generate-fields-skeleton"
     >
@@ -17,6 +18,6 @@ export default function LeaseGenerateFormFieldsSkeleton({ fieldCount }: LeaseGen
           <Skeleton className="h-10 w-full" />
         </div>
       ))}
-    </div>
+    </LoadingRegion>
   );
 }

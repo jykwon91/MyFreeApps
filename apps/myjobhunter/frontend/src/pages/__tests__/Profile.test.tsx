@@ -258,7 +258,7 @@ describe("Profile page", () => {
 
       renderProfile();
 
-      expect(screen.getByLabelText("Loading profile")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading profile…");
     });
   });
 
@@ -498,9 +498,8 @@ describe("Profile page", () => {
 
       renderProfile();
 
-      const skeleton = screen.getByLabelText("Loading profile");
-      expect(skeleton).toBeInTheDocument();
-      expect(skeleton).toHaveAttribute("aria-busy", "true");
+      expect(screen.getByRole("status")).toHaveTextContent("Loading profile…");
+      expect(screen.getByLabelText("Loading profile…")).toHaveAttribute("aria-busy", "true");
     });
   });
 });

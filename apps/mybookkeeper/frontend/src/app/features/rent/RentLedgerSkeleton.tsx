@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { LoadingRegion, Skeleton } from "@platform/ui";
 
 /**
  * Mirrors the loaded panel: schedule line, current-period card (label, big
@@ -8,7 +8,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
  */
 export default function RentLedgerSkeleton() {
   return (
-    <div className="space-y-4" data-testid="rent-ledger-skeleton" aria-busy="true">
+    <LoadingRegion label="Loading rent ledger…" className="space-y-4" data-testid="rent-ledger-skeleton">
       {/* Schedule summary */}
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-5 w-56" />
@@ -47,6 +47,6 @@ export default function RentLedgerSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   );
 }

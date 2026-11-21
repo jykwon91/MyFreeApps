@@ -1,4 +1,4 @@
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { Skeleton } from "@platform/ui";
 
 export interface CalendarAgendaSkeletonProps {
   rows?: number;
