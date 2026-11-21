@@ -5,7 +5,7 @@
  */
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Applicants from "@/app/pages/Applicants";
 import Inquiries from "@/app/pages/Inquiries";
@@ -23,8 +23,12 @@ import { renderWithStore } from "@/test/render-with-store";
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
 
 const PAGE_SIZE = 25;
-/** More rows than the server answers in one request, so reaching the last needs offset paging. */
-const ROW_COUNT = SERVER_LIMIT_CAP + 30;
+/**
+ * One row more than the server answers in one request, so reaching the last needs offset paging past the
+ * cap. No more than that: every extra page is re-rendered in full on each "Load more", so extra rows only
+ * slow the test on a busy CI runner without proving anything further.
+ */
+const ROW_COUNT = SERVER_LIMIT_CAP + 1;
 const CREATED = "2026-04-25T10:00:00Z";
 
 function applicant(id: string, name: string): ApplicantSummary {
@@ -176,8 +180,13 @@ function answerOther(path: string): unknown {
   return path === "/properties" ? [] : { items: [], total: 0, has_more: false };
 }
 
+/**
+ * Waits until the rendered list shows the row `name`. Reads the page's text once per check rather than
+ * running a text query over every element, which gets slow as "Load more" grows the list.
+ */
 async function expectRow(name: string): Promise<void> {
-  expect((await screen.findAllByText(name)).length).toBeGreaterThan(0);
+  const shown = new RegExp(`${name}(?!\\d)`);
+  await waitFor(() => expect(document.body.textContent).toMatch(shown));
 }
 
 async function clickLoadMore(): Promise<void> {
@@ -210,7 +219,7 @@ describe.each(CASES)("$name paging", (c) => {
 
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
     expect(screen.queryByText(new RegExp(`couldn't load`, "i"))).not.toBeInTheDocument();
-    expect(requests.map((params) => Number(params.offset))).toEqual([0, 25, 50, 75, 100, 125]);
+    expect(requests.map((params) => Number(params.offset))).toEqual([0, 25, 50, 75, 100]);
     expect(requests.every((params) => Number(params.limit) === PAGE_SIZE)).toBe(true);
   });
 
