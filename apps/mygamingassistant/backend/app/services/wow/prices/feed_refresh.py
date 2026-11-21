@@ -10,6 +10,8 @@ OUTCOME_EMPTY: Final = "empty"
 OUTCOME_FAILED: Final = "failed"
 # Another worker holds the refresh lock.
 OUTCOME_LOCKED: Final = "locked"
+# Blizzard confirmed the house's prices have not changed since the last stored snapshot.
+OUTCOME_NOT_MODIFIED: Final = "not_modified"
 
 
 @dataclass(frozen=True)

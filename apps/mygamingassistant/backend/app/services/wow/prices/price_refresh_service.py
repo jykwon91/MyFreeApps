@@ -31,11 +31,12 @@ from app.db.session import unit_of_work
 from app.models.wow.price_feed import WowPriceFeed
 from app.repositories.game.game_repo import get_game_by_slug
 from app.repositories.wow import item_price_repo, price_feed_repo
-from app.services.wow.prices.blizzard_price_fetch import PriceFetch, fetch_house_prices
+from app.services.wow.prices.blizzard_price_fetch import HouseNotModified, PriceFetch, fetch_house_prices
 from app.services.wow.prices.feed_refresh import (
     OUTCOME_EMPTY,
     OUTCOME_FAILED,
     OUTCOME_LOCKED,
+    OUTCOME_NOT_MODIFIED,
     OUTCOME_UPDATED,
     FeedRefresh,
 )
@@ -66,13 +67,20 @@ async def store_house(
     db: AsyncSession,
     game_id: uuid.UUID,
     house: MappedHouse,
-    result: HousePrices | PriceFetchError,
+    result: HousePrices | PriceFetchError | HouseNotModified,
     at: datetime,
 ) -> FeedRefresh:
     """Store one house's fetch result inside the caller's transaction."""
     region = PRICE_REGION
     label = f"{region}/{house.label}"
     feed = await price_feed_repo.get_or_create(db, game_id, region, house.house_id, house.faction)
+
+    if isinstance(result, HouseNotModified):
+        # Blizzard confirmed prices are current: advance checked_at and clear any stale error.
+        price_feed_repo.update(feed, {"checked_at": at, "last_error": None, "last_error_at": None})
+        await price_feed_repo.flush(db)
+        logger.info("wow prices: %s not modified — %d stored prices kept", label, feed.item_count)
+        return _outcome(house, OUTCOME_NOT_MODIFIED, feed.item_count)
 
     if isinstance(result, PriceFetchError):
         logger.warning(
@@ -128,7 +136,13 @@ async def _refresh_houses(
             if not await price_feed_repo.try_refresh_lock(db, game_id):
                 logger.info("wow prices: another worker is refreshing — skipped")
                 return [_outcome(house, OUTCOME_LOCKED, 0) for house in houses]
-            results = await fetch()
+            # Read existing timestamps so the fetcher can send If-Modified-Since per house.
+            if_modified_since: dict[int, datetime] = {}
+            for house in houses:
+                feed = await price_feed_repo.get(db, game_id, PRICE_REGION, house.house_id)
+                if feed is not None and feed.source_updated_at is not None:
+                    if_modified_since[house.house_id] = feed.source_updated_at
+            results = await fetch(if_modified_since=if_modified_since or None)
             at = now or _now()
             return [await store_house(db, game_id, house, results[house.house_id], at) for house in houses]
     except Exception:

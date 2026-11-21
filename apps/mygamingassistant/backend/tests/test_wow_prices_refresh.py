@@ -33,6 +33,8 @@ from app.repositories.game.game_repo import get_game_by_slug
 from app.repositories.wow import item_price_repo, price_feed_repo
 from app.services.wow.prices import price_refresh_service
 from app.services.wow.prices.auction_item_price import AuctionItemPrice
+from typing import Any
+
 from app.services.wow.prices.blizzard_price_fetch import HouseResults
 from app.services.wow.prices.house_prices import HousePrices
 from app.services.wow.prices.feed_refresh import OUTCOME_EMPTY, OUTCOME_FAILED, OUTCOME_LOCKED, OUTCOME_UPDATED
@@ -70,7 +72,7 @@ class FakeBlizzard:
         self._results = results
         self.calls = 0
 
-    async def __call__(self) -> HouseResults:
+    async def __call__(self, **_kwargs: Any) -> HouseResults:
         self.calls += 1
         return {PVP[faction]: self._results.get(faction, _set()) for faction in PRICE_FACTIONS}
 
@@ -174,7 +176,7 @@ async def test_a_refresh_another_worker_is_running_is_skipped_before_fetching(
 
 
 async def test_a_crash_reports_every_house_failed(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
-    async def broken() -> HouseResults:
+    async def broken(**_kwargs: Any) -> HouseResults:
         raise RuntimeError("boom")
 
     outcomes = await price_refresh_service.refresh_all(broken, now=NOW)

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.config import settings
@@ -27,21 +28,41 @@ from app.services.wow.prices.mapped_house import MappedHouse
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 from app.services.wow.prices.price_houses import mapped_houses
 
-# House id -> its prices, or the error that stopped it.
-HouseResults = dict[int, HousePrices | PriceFetchError]
-PriceFetch = Callable[[], Awaitable[HouseResults]]
+
+@dataclass(frozen=True)
+class HouseNotModified:
+    """Blizzard confirmed the house's prices have not changed since ``source_updated_at``."""
+    house_id: int
 
 
-async def read_house_prices(client: BlizzardAuctionClient, house_id: int) -> HousePrices:
-    """One house's prices over its commodities and item listings.
+# House id -> its prices, the error that stopped it, or a not-modified confirmation.
+HouseResults = dict[int, HousePrices | PriceFetchError | HouseNotModified]
+# ``**kwargs`` allows callers to pass ``if_modified_since`` without breaking test stubs.
+PriceFetch = Callable[..., Awaitable[HouseResults]]
 
-    Each answer is folded row by row as it streams in, so no answer's rows are ever held.
+
+async def read_house_prices(
+    client: BlizzardAuctionClient,
+    house_id: int,
+    *,
+    if_modified_since: datetime | None = None,
+) -> HousePrices | HouseNotModified:
+    """One house's prices over its item and commodity listings.
+
+    Checks the item-listings endpoint first so a 304 (``if_modified_since`` set and data unchanged)
+    short-circuits before the commodities download. Each answer is folded row by row as it streams in.
     """
     aggregator = AuctionAggregator()
     snapshot_at: datetime | None = None
-    for commodities in (True, False):
+    # Items first: a 304 on items means the full snapshot is unchanged — skip commodities too.
+    for commodities in (False, True):
         parse = commodity_listing if commodities else item_listing
-        async with client.house_auctions(house_id, commodities=commodities) as answer:
+        async with client.house_auctions(
+            house_id, commodities=commodities,
+            if_modified_since=if_modified_since if not commodities else None,
+        ) as answer:
+            if answer.not_modified:
+                return HouseNotModified(house_id=house_id)
             async for raw in answer.auctions:
                 listing: AuctionListing | None = parse(raw)
                 if listing is not None:
@@ -53,8 +74,13 @@ async def read_house_prices(client: BlizzardAuctionClient, house_id: int) -> Hou
     return HousePrices(prices=await asyncio.to_thread(aggregator.prices), snapshot_at=snapshot_at)
 
 
-async def fetch_with_client(client: BlizzardAuctionClient, houses: list[MappedHouse]) -> HouseResults:
-    """Each mapped house's prices, or the error that stopped it."""
+async def fetch_with_client(
+    client: BlizzardAuctionClient,
+    houses: list[MappedHouse],
+    *,
+    if_modified_since: dict[int, datetime] | None = None,
+) -> HouseResults:
+    """Each mapped house's prices, a not-modified confirmation, or the error that stopped it."""
     listed = {house.id: house.faction for house in await client.houses()}
     results: HouseResults = {}
     for house in houses:
@@ -66,18 +92,23 @@ async def fetch_with_client(client: BlizzardAuctionClient, houses: list[MappedHo
             )
             continue
         try:
-            results[house.house_id] = await read_house_prices(client, house.house_id)
+            since = (if_modified_since or {}).get(house.house_id)
+            results[house.house_id] = await read_house_prices(client, house.house_id, if_modified_since=since)
         except PriceFetchError as exc:
             results[house.house_id] = exc
     return results
 
 
-async def fetch_house_prices(houses: list[MappedHouse] | None = None) -> HouseResults:
+async def fetch_house_prices(
+    houses: list[MappedHouse] | None = None,
+    *,
+    if_modified_since: dict[int, datetime] | None = None,
+) -> HouseResults:
     """Take a token and read the given houses (default: every mapped house). Any failure before
     the houses (no credentials, a refused token, the index) is every house's error."""
     houses = mapped_houses() if houses is None else houses
     try:
         async with BlizzardAuctionClient(settings.blizzard_client_id, settings.blizzard_client_secret) as client:
-            return await fetch_with_client(client, houses)
+            return await fetch_with_client(client, houses, if_modified_since=if_modified_since)
     except PriceFetchError as exc:
         return {house.house_id: exc for house in houses}

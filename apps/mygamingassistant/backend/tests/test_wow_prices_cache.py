@@ -14,6 +14,7 @@ correctness behaviours from the AH prices cache PR:
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -53,7 +54,7 @@ class FakeBlizzard:
     def __init__(self, results: dict[str, HousePrices]) -> None:
         self._results = results
 
-    async def __call__(self) -> dict[int, HousePrices]:
+    async def __call__(self, **_kwargs: Any) -> dict[int, HousePrices]:
         return {PVP[f]: self._results.get(f, _set()) for f in PRICE_FACTIONS}
 
 

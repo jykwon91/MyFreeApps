@@ -11,3 +11,5 @@ class HouseAuctions:
     auctions: AsyncIterator[dict[str, Any]]
     # The response's Last-Modified; None when Blizzard didn't send one.
     snapshot_at: datetime | None
+    # True when Blizzard returned 304 Not Modified; auctions is empty.
+    not_modified: bool = False

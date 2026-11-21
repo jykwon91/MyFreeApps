@@ -11,3 +11,5 @@ class JsonArrayStream:
     headers: httpx.Headers
     # The array's object rows, parsed one at a time as the bytes arrive; non-object rows are skipped.
     rows: AsyncIterator[dict[str, Any]]
+    # True when the server returned 304 Not Modified; rows is empty.
+    not_modified: bool = False

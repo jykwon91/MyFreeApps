@@ -19,7 +19,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from email.utils import parsedate_to_datetime
+from email.utils import format_datetime as format_http_date, parsedate_to_datetime
 from types import TracebackType
 from typing import Any
 
@@ -139,19 +139,42 @@ class BlizzardAuctionClient:
         return houses
 
     @asynccontextmanager
-    async def house_auctions(self, house_id: int, *, commodities: bool) -> AsyncIterator[HouseAuctions]:
+    async def house_auctions(
+        self,
+        house_id: int,
+        *,
+        commodities: bool,
+        if_modified_since: datetime | None = None,
+    ) -> AsyncIterator[HouseAuctions]:
         """``async with client.house_auctions(...) as answer:`` then ``async for row in answer.auctions``.
 
         Up to BLIZZARD_MAX_BYTES of JSON, parsed row by row as it arrives and never held whole;
         the connection closes when the block ends.
+
+        When ``if_modified_since`` is set (and ``commodities=False``), sends ``If-Modified-Since``
+        and allows a 304 response — yielded as a ``HouseAuctions`` with ``not_modified=True``
+        and an empty ``auctions`` iterator.
         """
         if self._http is None:
             raise RuntimeError("BlizzardAuctionClient used outside `async with`")
         path = f"/data/wow/ruleset/{BLIZZARD_RULESET_ID}/auctions/{house_id}"
         url = f"{BLIZZARD_API_BASE}{path}/commodities" if commodities else f"{BLIZZARD_API_BASE}{path}"
+        # Merge conditional-GET header into request kwargs (items endpoint only; commodities untested).
+        request_kwargs = self._request_kwargs()
+        use_conditional = if_modified_since is not None and not commodities
+        if use_conditional:
+            request_kwargs["headers"] = {
+                **request_kwargs["headers"],
+                "If-Modified-Since": format_http_date(if_modified_since, usegmt=True),
+            }
         async with stream_array_rows(
             self._http, "GET", url,
             array_key="auctions", error_cls=PriceFetchError, max_bytes=BLIZZARD_MAX_BYTES,
-            **self._request_kwargs(),
+            allow_not_modified=use_conditional,
+            **request_kwargs,
         ) as stream:
-            yield HouseAuctions(auctions=stream.rows, snapshot_at=_snapshot_time(stream.headers))
+            yield HouseAuctions(
+                auctions=stream.rows,
+                snapshot_at=_snapshot_time(stream.headers),
+                not_modified=stream.not_modified,
+            )
