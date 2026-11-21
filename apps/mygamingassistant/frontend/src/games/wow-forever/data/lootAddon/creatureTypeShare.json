@@ -1,0 +1,64 @@
+{
+  "source": "cmangos/classic-db@ec4f596146be6467ea93c57397858e329e2db852",
+  "note": "Share of spawned mobs (no NPC role) of each creature type, by ten-level band of minimum level.",
+  "bandSize": 10,
+  "bands": {
+    "0": {
+      "BEAST": 0.52,
+      "DEMON": 0.05,
+      "DRAGONKIN": 0.0,
+      "ELEMENTAL": 0.01,
+      "HUMANOID": 0.34,
+      "MECHANICAL": 0.01,
+      "UNDEAD": 0.08
+    },
+    "10": {
+      "BEAST": 0.44,
+      "DEMON": 0.0,
+      "DRAGONKIN": 0.01,
+      "ELEMENTAL": 0.02,
+      "HUMANOID": 0.49,
+      "MECHANICAL": 0.01,
+      "UNDEAD": 0.04
+    },
+    "20": {
+      "BEAST": 0.38,
+      "DEMON": 0.03,
+      "DRAGONKIN": 0.01,
+      "ELEMENTAL": 0.04,
+      "GIANT": 0.0,
+      "HUMANOID": 0.47,
+      "MECHANICAL": 0.02,
+      "UNDEAD": 0.05
+    },
+    "30": {
+      "BEAST": 0.39,
+      "DEMON": 0.02,
+      "DRAGONKIN": 0.0,
+      "ELEMENTAL": 0.05,
+      "GIANT": 0.0,
+      "HUMANOID": 0.48,
+      "MECHANICAL": 0.0,
+      "UNDEAD": 0.05
+    },
+    "40": {
+      "BEAST": 0.44,
+      "DEMON": 0.04,
+      "DRAGONKIN": 0.04,
+      "ELEMENTAL": 0.05,
+      "GIANT": 0.01,
+      "HUMANOID": 0.41,
+      "MECHANICAL": 0.0,
+      "UNDEAD": 0.02
+    },
+    "50": {
+      "BEAST": 0.24,
+      "DEMON": 0.05,
+      "DRAGONKIN": 0.06,
+      "ELEMENTAL": 0.07,
+      "GIANT": 0.01,
+      "HUMANOID": 0.41,
+      "UNDEAD": 0.16
+    }
+  }
+}

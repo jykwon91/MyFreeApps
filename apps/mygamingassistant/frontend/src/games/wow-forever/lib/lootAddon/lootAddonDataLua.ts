@@ -6,6 +6,7 @@ import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import { LEVELING_WEIGHTS } from "@/games/wow-forever/data/weights/levelingWeights";
 import { PAWN_CLASSIC_WEIGHTS } from "@/games/wow-forever/data/weights/pawnClassicWeights";
 import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
+import creatureTypeShare from "@/games/wow-forever/data/lootAddon/creatureTypeShare.json";
 
 const luaList = (items: readonly string[]): string => `{${items.map(luaString).join(", ")}}`;
 
@@ -44,10 +45,25 @@ function classLua(wowClass: WowClass): string[] {
   ];
 }
 
+/** `MGALootCreatureShare[band][TYPE]`: the share of mobs in each ten-level band of each creature type. */
+function creatureShareLua(): string[] {
+  const bands = Object.entries(creatureTypeShare.bands).sort(([a], [b]) => Number(a) - Number(b));
+  const top = Math.max(...bands.map(([band]) => Number(band)));
+  return [
+    "MGALootCreatureShare = {",
+    ...bands.map(([band, shares]) => {
+      const list = Object.entries(shares).map(([kind, share]) => `${kind} = ${share}`).join(", ");
+      return `  [${band}] = {${list}},`;
+    }),
+    "}",
+    `MGALootCreatureShareTop = ${top}`,
+  ];
+}
+
 /**
  * MGA Loot's `Data.lua`: per class, the leveling weights, each spec's Pawn
  * Classic level-60 weights and talent tab, and what the class can equip — the
- * same tables Item compare scores with. `addon/MGALoot/Data.lua` is this text,
+ * same tables Item compare scores with — and the creature-type shares it counts "vs Humanoids" stats at. `addon/MGALoot/Data.lua` is this text,
  * kept in step by a file snapshot test (`npx vitest run -u` rewrites it).
  */
 export function lootAddonDataLua(): string {
@@ -57,6 +73,7 @@ export function lootAddonDataLua(): string {
     "MGALootData = {",
     ...WOW_CLASSES.flatMap(classLua),
     "}",
+    ...creatureShareLua(),
     "",
   ].join("\n");
 }

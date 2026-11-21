@@ -66,6 +66,28 @@ local STAT = {
   RESISTANCE5_NAME = "shadow_resistance",
   RESISTANCE6_NAME = "arcane_resistance",
 }
+-- Classic's hit, crit, dodge, parry and block chance: GetItemStats may give it as a "rating" of 1 per 1%.
+local CHANCE_STAT = {
+  ITEM_MOD_HIT_RATING_SHORT = "hit_pct",
+  ITEM_MOD_CRIT_RATING_SHORT = "crit_pct",
+  ITEM_MOD_HIT_SPELL_RATING_SHORT = "spell_hit_pct",
+  ITEM_MOD_CRIT_SPELL_RATING_SHORT = "spell_crit_pct",
+  ITEM_MOD_DODGE_RATING_SHORT = "dodge_pct",
+  ITEM_MOD_PARRY_RATING_SHORT = "parry_pct",
+  ITEM_MOD_BLOCK_RATING_SHORT = "block_pct",
+}
+-- The same chances as the tooltip writes them. Spell lines come first: "to hit with spells" also starts "to hit".
+local CHANCE_TEXT = {
+  { "^Equip: Improves your chance to hit with spells by (%d+)%%%.$", "spell_hit_pct" },
+  { "^Equip: Improves your chance to get a critical strike with spells by (%d+)%%%.$", "spell_crit_pct" },
+  { "^Equip: Improves your chance to hit by (%d+)%%%.$", "hit_pct" },
+  { "^Equip: Improves your chance to get a critical strike by (%d+)%%%.$", "crit_pct" },
+  { "^Equip: Increases your chance to dodge an attack by (%d+)%%%.$", "dodge_pct" },
+  { "^Equip: Increases your chance to parry an attack by (%d+)%%%.$", "parry_pct" },
+  { "^Equip: Increases your chance to block attacks with a shield by (%d+)%%%.$", "block_pct" },
+}
+-- "Spell Damage Vs Humanoids" and the like: the stat it is, against one creature type.
+local VS_BASE = { SPELL_DAMAGE = "spell_damage", ATTACK_POWER = "attack_power" }
 local DPS_KEY = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
 local ARMOR_KEY = "RESISTANCE0_NAME"
 
@@ -96,8 +118,6 @@ local WEAPON_TYPE = {
 local TWO_HANDED = { [1] = true, [5] = true, [6] = true, [8] = true, [10] = true }
 local RANGED_WEAPON = { [2] = true, [3] = true, [16] = true, [18] = true, [19] = true }
 local BIND_TEXT = { [1] = "binds on pickup", [2] = "binds when equipped" }
--- Classic writes hit, crit, dodge, parry and block chance as "Equip: Improves (or Increases) your chance to ... by 1%.".
-local CHANCE_LINES = { "^Equip: Improves your chance to", "^Equip: Increases your chance to" }
 -- Equip lines that are a plain number come through GetItemStats: "+40 Attack Power.", "Increased Defense +7.",
 -- "Increases healing done ... by up to 22.", "Increases the block value of your shield by 10.", "Restores 4 mana per 5 sec.".
 local STAT_LINES = {
@@ -235,24 +255,64 @@ local function cantUse(info, me)
   return nil
 end
 
--- Score with these weights; also the names of stats it couldn't score.
-local function score(link, equipLoc, w)
+-- The share of mobs at this level of a creature type ("HUMANOID"), from MGALootCreatureShare.
+local function creatureShare(level, kind)
+  local shares = MGALootCreatureShare or {}
+  local band = math.min(math.floor(level / 10) * 10, MGALootCreatureShareTop or 50)
+  return (shares[band] or {})[kind] or 0
+end
+
+local function plural(kind)
+  local word = kind:sub(1, 1) .. kind:sub(2):lower()
+  if word == "Undead" or word == "Mechanical" then return word end
+  return word .. "s"
+end
+
+-- Score with these weights. Also returns what on the item it couldn't score (stat names and
+-- tooltip lines) and notes on how it counted creature-type stats.
+local function score(link, equipLoc, w, level)
   -- The client has the item by now (judge checks GetItemInfo first); no stats table means no stats.
   local stats = statsApi()(link) or {}
-  local total, unscored = 0, {}
+  local total, unscored, notes = 0, {}, {}
+  local chance = {}
   for key, amount in pairs(stats) do
+    local vsStat, vsKind = key:match("^ITEM_MOD_(%u+_%u+)_VS_(%u+)_SHORT$")
     if key == DPS_KEY then
       total = total + amount * (RANGED_LOC[equipLoc] and w.ranged or w.melee)
     elseif key == ARMOR_KEY then
       total = total + amount * w.armor
     elseif STAT[key] then
       total = total + amount * (w.stats[STAT[key]] or 0)
+    elseif CHANCE_STAT[key] then
+      chance[CHANCE_STAT[key]] = math.max(chance[CHANCE_STAT[key]] or 0, amount)
+    elseif vsStat and VS_BASE[vsStat] then
+      local share = creatureShare(level, vsKind)
+      total = total + amount * (w.stats[VS_BASE[vsStat]] or 0) * share
+      table.insert(notes, (_G[key] or key) .. " counted at " .. floor(share * 100 + 0.5) .. "% (" .. plural(vsKind):lower() .. " among mobs your level)")
     else
       table.insert(unscored, _G[key] or key)
     end
   end
+  for _, line in ipairs(tooltipLines(link) or {}) do
+    local matched = false
+    for _, c in ipairs(CHANCE_TEXT) do
+      local n = line:match(c[1])
+      if n then
+        chance[c[2]] = math.max(chance[c[2]] or 0, tonumber(n))
+        matched = true
+        break
+      end
+    end
+    if not matched and matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
+      table.insert(unscored, '"' .. line .. '"')
+    end
+  end
+  for stat, pct in pairs(chance) do
+    total = total + pct * (w.stats[stat] or 0)
+  end
   table.sort(unscored)
-  return total, unscored
+  table.sort(notes)
+  return total, unscored, notes
 end
 
 local function equipped(slot)
@@ -282,15 +342,20 @@ local function replaced(info, w, me, link)
   if info.equipLoc == "INVTYPE_2HWEAPON" then
     local off = equipped(OFF_HAND)
     if not main and not off then return { link = nil } end
-    local total = 0
+    local total, unscored = 0, {}
     for _, item in ipairs({ main or false, off or false }) do
-      if item then total = total + (score(item.link, item.loc, w) or 0) end
+      if item then
+        local s, u = score(item.link, item.loc, w, me.level)
+        total = total + s
+        for _, name in ipairs(u) do table.insert(unscored, name) end
+      end
     end
-    return { link = (main or off).link, score = total }
+    return { link = (main or off).link, score = total, unscored = unscored }
   end
   if inHands and main and main.loc == "INVTYPE_2HWEAPON" then
     if slots[1] == OFF_HAND then return { blocked = "you use a two-hander" } end
-    return { link = main.link, score = score(main.link, main.loc, w) or 0 }
+    local s, u = score(main.link, main.loc, w, me.level)
+    return { link = main.link, score = s, unscored = u }
   end
   local held = {}
   for _, slot in ipairs(slots) do
@@ -302,8 +367,8 @@ local function replaced(info, w, me, link)
   local weakest, other
   for _, item in ipairs(held) do
     if itemId(item.link) == newId and isUnique(link) then return { blocked = "it's unique and you wear one" } end
-    local s = score(item.link, item.loc, w) or 0
-    local this = { link = item.link, score = s }
+    local s, u = score(item.link, item.loc, w, me.level)
+    local this = { link = item.link, score = s, unscored = u }
     if not weakest or s < weakest.score then
       other, weakest = weakest, this
     else
@@ -312,22 +377,6 @@ local function replaced(info, w, me, link)
   end
   weakest.other = other
   return weakest
-end
-
--- What the tooltip has that the score leaves out; empty when the client can't give the tooltip.
-local function effectTags(link)
-  local chance, effect = false, false
-  for _, line in ipairs(tooltipLines(link) or {}) do
-    if matchesAny(line, CHANCE_LINES) then
-      chance = true
-    elseif matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
-      effect = true
-    end
-  end
-  local tags = {}
-  if chance then table.insert(tags, "hit/crit/dodge chances not scored") end
-  if effect then table.insert(tags, "has effects it can't score: read the tooltip") end
-  return tags
 end
 
 local function percentText(new, old)
@@ -360,19 +409,24 @@ local function judge(link, brief)
   if not statsApi() then return { text = GREY .. "Can't compare: this client doesn't give addons item stats|r" } end
 
   local w, label = weightsFor(me)
-  for _, tag in ipairs(effectTags(link)) do table.insert(tags, tag) end
   local text, kind, pct
   if info.equipLoc == "INVTYPE_TRINKET" then
     text = YELLOW .. "Trinket: judge it by its effect|r"
   else
-    local new, unscored = score(link, info.equipLoc, w)
-    if #unscored > 0 then table.insert(tags, "not scored: " .. table.concat(unscored, ", ")) end
+    local new, unscored, notes = score(link, info.equipLoc, w, me.level)
     table.insert(tags, 1, label)
+    for _, note in ipairs(notes) do table.insert(tags, note) end
     local old = replaced(info, w, me, link)
     if old.blocked then
       text = GREY .. "Can't compare: " .. old.blocked .. "|r"
     elseif not old.link then
       text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
+    elseif #unscored > 0 or #old.unscored > 0 then
+      -- A verdict that leaves part of either item out would mislead: say what it can't count instead.
+      local whose = #unscored > 0 and ("this item has " .. table.concat(unscored, ", "))
+        or (old.link .. " has " .. table.concat(old.unscored, ", "))
+      text = YELLOW .. "Can't judge:|r " .. whose .. YELLOW .. ", which MGA Loot can't count|r"
+      if old.score > 0 then text = text .. "\n" .. GREY .. "stats alone: " .. select(2, percentText(new, old.score)) .. " vs|r " .. old.link end
     elseif old.score <= 0 then
       if new > 0 then
         text, kind, pct = GREEN .. "Upgrade over|r " .. old.link, "upgrade", EMPTY_SLOT_PCT
@@ -391,11 +445,15 @@ local function judge(link, brief)
       end
     end
     -- Two rings: the verdict is against the one you'd swap out; this line shows the other too.
-    local other = old.link and old.other
+    local other = kind and old.link and old.other
     if other and other.score > 0 and new > 0 then
-      local otherPct, otherShown = percentText(new, other.score)
-      local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
-      text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
+      if #other.unscored > 0 then
+        text = text .. "\n" .. YELLOW .. "Can't judge vs|r " .. other.link .. GREY .. " (your other one has " .. table.concat(other.unscored, ", ") .. ")|r"
+      else
+        local otherPct, otherShown = percentText(new, other.score)
+        local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
+        text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
+      end
     end
   end
   if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end

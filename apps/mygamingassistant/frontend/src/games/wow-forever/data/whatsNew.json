@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot counts every stat, or says it can't judge",
+    "summary": "MGA Loot now counts hit, crit, dodge, parry and block chance, and damage against one creature type (like Spell Damage Vs Humanoids, counted at the share of mobs your level that are that type). When an item, or the one you wear, has an effect it can't count (a Use: or Chance on hit: line), it says Can't judge and shows the stats-only number instead of calling an upgrade or downgrade.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Dungeon Quests: dungeon focus",
     "summary": "Inside a dungeon the addon now tracks only that dungeon's quests: each objective as you finish it, what's done, and anything you never picked up. Your quest tracker shows just those until you leave, and after a boss dies, or if you walk out, it tells you what's still left so you don't have to run it again.",
     "to": "/wow-forever/dungeons?addon=open"

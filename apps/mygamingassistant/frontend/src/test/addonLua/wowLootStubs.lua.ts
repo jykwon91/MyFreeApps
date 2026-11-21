@@ -19,6 +19,7 @@ rolls = {}
 talents = { 0, 0, 0 }
 me = { class = "WARRIOR", level = 60 }
 ITEM_MOD_HIT_RATING_SHORT = "Hit Rating"
+ITEM_MOD_SPELL_DAMAGE_VS_HUMANOID_SHORT = "Spell Damage Vs Humanoids"
 
 function link(id) return "|cff1eff00|Hitem:" .. id .. "::::::::60:::::|h[Item " .. id .. "]|h|r" end
 local function idOf(l) return tonumber(tostring(l):match("item:(%d+)")) end

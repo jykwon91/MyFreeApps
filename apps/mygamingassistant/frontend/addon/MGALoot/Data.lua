@@ -2,7 +2,7 @@
 -- Do not edit: run `npx vitest run src/__tests__/wowLootAddon.test.ts -u` from apps/mygamingassistant/frontend.
 MGALootData = {
   druid = {
-    leveling = {melee = 0, ranged = 0, armor = 0.01, stats = {agility = 0.8, attack_power = 0.4, crit_pct = 5, feral_attack_power = 0.4, hit_pct = 5, intellect = 0.5, mp5 = 0.5, spell_power = 0.5, spirit = 0.3, stamina = 0.6, strength = 0.8}},
+    leveling = {melee = 0, ranged = 0, armor = 0.01, stats = {agility = 0.8, attack_power = 0.4, crit_pct = 5, feral_attack_power = 0.4, hit_pct = 5, intellect = 0.5, mp5 = 0.5, spell_damage = 0.5, spell_power = 0.5, spirit = 0.3, stamina = 0.6, strength = 0.8}},
     armor = {"Cloth", "Leather"}, heavy = nil,
     oneHand = {"Dagger", "Mace", "Fist Weapon"},
     twoHand = {"Mace", "Staff"},
@@ -42,7 +42,7 @@ MGALootData = {
     },
   },
   paladin = {
-    leveling = {melee = 3.5, ranged = 0, armor = 0.01, stats = {agility = 0.3, attack_power = 0.5, crit_pct = 5, hit_pct = 5, intellect = 0.35, mp5 = 0.5, spell_power = 0.3, spirit = 0.1, stamina = 0.6, strength = 1}},
+    leveling = {melee = 3.5, ranged = 0, armor = 0.01, stats = {agility = 0.3, attack_power = 0.5, crit_pct = 5, hit_pct = 5, intellect = 0.35, mp5 = 0.5, spell_damage = 0.3, spell_power = 0.3, spirit = 0.1, stamina = 0.6, strength = 1}},
     armor = {"Cloth", "Leather", "Mail"}, heavy = {type = "Plate", level = 40},
     oneHand = {"Sword", "Axe", "Mace"},
     twoHand = {"Sword", "Axe", "Mace", "Polearm"},
@@ -81,7 +81,7 @@ MGALootData = {
     },
   },
   shaman = {
-    leveling = {melee = 3.5, ranged = 0, armor = 0.01, stats = {agility = 0.5, attack_power = 0.5, crit_pct = 5, hit_pct = 5, intellect = 0.4, mp5 = 0.5, spell_power = 0.3, spirit = 0.1, stamina = 0.6, strength = 1}},
+    leveling = {melee = 3.5, ranged = 0, armor = 0.01, stats = {agility = 0.5, attack_power = 0.5, crit_pct = 5, hit_pct = 5, intellect = 0.4, mp5 = 0.5, spell_damage = 0.3, spell_power = 0.3, spirit = 0.1, stamina = 0.6, strength = 1}},
     armor = {"Cloth", "Leather"}, heavy = {type = "Mail", level = 40},
     oneHand = {"Dagger", "Axe", "Mace", "Fist Weapon"},
     twoHand = {"Axe", "Mace", "Staff"},
@@ -120,3 +120,12 @@ MGALootData = {
     },
   },
 }
+MGALootCreatureShare = {
+  [0] = {BEAST = 0.52, DEMON = 0.05, DRAGONKIN = 0, ELEMENTAL = 0.01, HUMANOID = 0.34, MECHANICAL = 0.01, UNDEAD = 0.08},
+  [10] = {BEAST = 0.44, DEMON = 0, DRAGONKIN = 0.01, ELEMENTAL = 0.02, HUMANOID = 0.49, MECHANICAL = 0.01, UNDEAD = 0.04},
+  [20] = {BEAST = 0.38, DEMON = 0.03, DRAGONKIN = 0.01, ELEMENTAL = 0.04, GIANT = 0, HUMANOID = 0.47, MECHANICAL = 0.02, UNDEAD = 0.05},
+  [30] = {BEAST = 0.39, DEMON = 0.02, DRAGONKIN = 0, ELEMENTAL = 0.05, GIANT = 0, HUMANOID = 0.48, MECHANICAL = 0, UNDEAD = 0.05},
+  [40] = {BEAST = 0.44, DEMON = 0.04, DRAGONKIN = 0.04, ELEMENTAL = 0.05, GIANT = 0.01, HUMANOID = 0.41, MECHANICAL = 0, UNDEAD = 0.02},
+  [50] = {BEAST = 0.24, DEMON = 0.05, DRAGONKIN = 0.06, ELEMENTAL = 0.07, GIANT = 0.01, HUMANOID = 0.41, UNDEAD = 0.16},
+}
+MGALootCreatureShareTop = 50
