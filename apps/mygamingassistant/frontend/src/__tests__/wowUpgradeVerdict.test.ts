@@ -112,6 +112,19 @@ describe("verdicts on the equipped comparisons", () => {
     expect(result[0]).toMatchObject({ kind: "known", verdict: null });
   });
 
+  it("gives no verdict when either item's spell power isn't in the game files (Zum'rah's Vexing Cane)", () => {
+    const cane = item({ id: 13, slot: "two_hand", itemType: "Staff", stats: { stamina: 10 }, spellPowerUnknown: true });
+    const staff = item({ id: 14, slot: "two_hand", itemType: "Staff", stats: { stamina: 21 } });
+    const caneById = new Map([cane, staff, sword, shield].map((i) => [i.id, i]));
+    const wornCane = [worn("MAIN_HAND", 13, "TWOHWEAPON")];
+    expect(equippedComparisons(staff, wornCane, caneById, byStamina)[0]).toMatchObject({ kind: "known", verdict: null });
+    expect(equippedComparisons(cane, [worn("MAIN_HAND", 14, "TWOHWEAPON")], caneById, byStamina)[0]).toMatchObject({
+      kind: "known",
+      verdict: null,
+    });
+    expect(equippedComparisons(cane, hands, caneById, byStamina)[0]).toMatchObject({ kind: "known", verdict: null });
+  });
+
   it("gives an off-hand item no verdict against a worn two-hander", () => {
     const result = equippedComparisons(shield, [worn("MAIN_HAND", 12, "TWOHWEAPON")], byId, byStamina);
     expect(result[0]).toMatchObject({ kind: "known", replacesTwoHander: true, verdict: null });

@@ -307,6 +307,7 @@ describe("Auction house item tooltip", () => {
     const block = screen.getByTestId("item-compare-block");
     expect(block).toHaveTextContent("Spell power isn't in the game files for one of these items, so it isn't counted");
     expect(block).not.toHaveTextContent("No stat changes");
+    expect(screen.queryByTestId("item-compare-verdict")).not.toBeInTheDocument();
   });
 
   it("notes that enchants are not counted only when a compared worn item has some", () => {

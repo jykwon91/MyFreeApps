@@ -17,6 +17,10 @@ interface Compared {
   delta: ItemDelta | null;
 }
 
+function hidesSpellPower(delta: ItemDelta | null): boolean {
+  return delta !== null && delta.spellPowerUnknown;
+}
+
 function countsOnlyStats(delta: ItemDelta | null): boolean {
   return delta !== null && (delta.otherEffects || delta.damageNotCompared);
 }
@@ -30,6 +34,8 @@ function countsOnlyStats(delta: ItemDelta | null): boolean {
  * With `score`, known comparisons also say whether the candidate is an upgrade. A two-hander is
  * judged once, on the first block, against both hands together (none if either is unknown); an
  * off-hand item against a worn two-hander gets none, since that swap also needs a main hand.
+ * Nor does a pair where either item is a caster weapon whose spell power the game files leave out:
+ * that spell power is often most of the item's worth, so a verdict without it points the wrong way.
  */
 export function equippedComparisons(
   candidate: ClientItem,
@@ -49,8 +55,8 @@ export function equippedComparisons(
 
   function verdictFor(entry: Compared, index: number): UpgradeVerdict | null {
     if (!score || !entry.known || entry.replacesTwoHander) return null;
-    if (!bothHands) return upgradeVerdict(score(candidate), score(entry.known), countsOnlyStats(entry.delta));
-    if (index > 0 || compared.some((c) => c.known === null)) return null;
+    if (!bothHands) return hidesSpellPower(entry.delta) ? null : upgradeVerdict(score(candidate), score(entry.known), countsOnlyStats(entry.delta));
+    if (index > 0 || compared.some((c) => c.known === null || hidesSpellPower(c.delta))) return null;
     const wornScore = compared.reduce((sum, c) => sum + (c.known ? score(c.known) : 0), 0);
     return upgradeVerdict(score(candidate), wornScore, compared.some((c) => countsOnlyStats(c.delta)), true);
   }
