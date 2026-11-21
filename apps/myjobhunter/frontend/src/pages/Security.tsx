@@ -5,7 +5,7 @@ import { AlertBox } from "@platform/ui";
 import { SECURITY_INTRO_DISMISSED_STORAGE_KEY } from "@/constants/account-preference-storage";
 import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
-import DisplayNameSetting from "@/features/security/DisplayNameSetting";
+import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 
@@ -46,7 +46,7 @@ export default function Security() {
       )}
 
       <div className="bg-card border rounded-lg p-6">
-        <DisplayNameSetting />
+        <DisplayNameSetting description="Shown in your profile and on exported data. Use the name you want employers and contacts to see." />
       </div>
 
       <div className="bg-card border rounded-lg p-6">

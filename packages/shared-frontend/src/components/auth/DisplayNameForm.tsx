@@ -2,13 +2,11 @@ import { useId, useState } from "react";
 import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FieldFeedback, fieldFeedbackAria, showError, showSuccess } from "@platform/ui";
-import { useUpdateCurrentUserMutation } from "@platform/ui/store/userApi";
-
-export interface DisplayNameFormProps {
-  initialName: string;
-  disabled?: boolean;
-}
+import FieldFeedback from "../ui/FieldFeedback";
+import { fieldFeedbackAria } from "../ui/fieldFeedbackAria";
+import { showError, showSuccess } from "../../lib/toast-store";
+import { useUpdateCurrentUserMutation } from "../../store/userApi";
+import type { DisplayNameFormProps } from "../../types/display-name-form-props";
 
 export default function DisplayNameForm({ initialName, disabled = false }: DisplayNameFormProps) {
   const [updateCurrentUser, { isLoading: isSaving }] = useUpdateCurrentUserMutation();

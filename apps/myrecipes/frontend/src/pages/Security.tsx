@@ -4,7 +4,7 @@ import { AlertBox } from "@platform/ui";
 
 import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
-import DisplayNameSetting from "@/features/security/DisplayNameSetting";
+import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 
