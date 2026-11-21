@@ -466,6 +466,133 @@ if hooksecurefunc and FCF_OpenTemporaryWindow then
   end)
 end
 
+-- ── Quest item helpers ───────────────────────────────────────────────────────
+-- Shows a compact block under the objectives when the player views a quest whose
+-- item objectives are on sale at their faction's auction house, so they can skip
+-- farming and just buy them.
+
+local function questItemsForHouse(questId, house)
+  if not MGAPricesData or not MGAPricesData.questItems then return {} end
+  local objectives = MGAPricesData.questItems[questId]
+  if not objectives then return {} end
+  local houseData = MGAPricesData.houses and MGAPricesData.houses[house]
+  local result = {}
+  for _, obj in ipairs(objectives) do
+    local itemId, needed = obj[1], obj[2]
+    local row = houseData and houseData.items and houseData.items[itemId]
+    if row then
+      local name = getItemInfo and select(1, getItemInfo(itemId)) or nil
+      table.insert(result, {
+        name     = name or ("item:" .. itemId),
+        needed   = needed,
+        cheapest = row[2],
+        quantity = row[3],
+      })
+    end
+  end
+  return result
+end
+
+local function questAHText(questId)
+  local house = playerHouse()
+  local items = questItemsForHouse(questId, house)
+  if #items == 0 then return nil, nil end
+  local lines = {}
+  for _, item in ipairs(items) do
+    table.insert(lines,
+      item.name .. " — needs " .. item.needed
+      .. " · " .. item.quantity .. " listed · cheapest " .. money(item.cheapest)
+    )
+  end
+  return "|cff33aaff[MGA]|r  On sale at auction (" .. HOUSE_LABEL[house] .. "):",
+         table.concat(lines, "\n")
+end
+
+local function showQuestAH(label, text, header, body)
+  if header then
+    label:SetText(header)
+    text:SetText(body)
+    label:Show(); text:Show()
+  else
+    label:Hide(); text:Hide()
+  end
+end
+
+-- Quest log details pane.
+local questLogAHLabel, questLogAHText
+
+local function ensureQuestLogAH()
+  if questLogAHLabel then return end
+  if not QuestLogDetailScrollChildFrame or not QuestObjectivesText then return end
+  local w = (QuestLogDetailScrollChildFrame:GetWidth() or 300) - 20
+  questLogAHLabel = QuestLogDetailScrollChildFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  questLogAHLabel:SetJustifyH("LEFT")
+  questLogAHLabel:SetWidth(w)
+  questLogAHLabel:SetTextColor(LABEL[1], LABEL[2], LABEL[3])
+  questLogAHLabel:SetPoint("TOPLEFT", QuestObjectivesText, "BOTTOMLEFT", 0, -8)
+  questLogAHText = QuestLogDetailScrollChildFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  questLogAHText:SetJustifyH("LEFT")
+  questLogAHText:SetWidth(w)
+  questLogAHText:SetPoint("TOPLEFT", questLogAHLabel, "BOTTOMLEFT", 0, -4)
+end
+
+local function updateQuestLogAH()
+  ensureQuestLogAH()
+  if not questLogAHLabel then return end
+  local questId
+  if C_QuestLog and C_QuestLog.GetQuestIDForLogIndex and GetQuestLogSelection then
+    local idx = GetQuestLogSelection()
+    if idx and idx > 0 then questId = C_QuestLog.GetQuestIDForLogIndex(idx) end
+  end
+  if questId and questId > 0 then
+    local header, body = questAHText(questId)
+    showQuestAH(questLogAHLabel, questLogAHText, header, body)
+  else
+    showQuestAH(questLogAHLabel, questLogAHText, nil, nil)
+  end
+end
+
+if hooksecurefunc then
+  if QuestLog_UpdateQuestDetails then
+    hooksecurefunc("QuestLog_UpdateQuestDetails", updateQuestLogAH)
+  elseif SelectQuestLogEntry then
+    hooksecurefunc("SelectQuestLogEntry", updateQuestLogAH)
+  end
+end
+
+-- Quest giver detail pane (fires when a quest giver shows their offer or details).
+local questDetailAHLabel, questDetailAHText
+
+local function ensureQuestDetailAH()
+  if questDetailAHLabel then return end
+  if not QuestFrameDetailPanel or not QuestDetailObjectivesText then return end
+  local w = (QuestFrameDetailPanel:GetWidth() or 300) - 20
+  questDetailAHLabel = QuestFrameDetailPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  questDetailAHLabel:SetJustifyH("LEFT")
+  questDetailAHLabel:SetWidth(w)
+  questDetailAHLabel:SetTextColor(LABEL[1], LABEL[2], LABEL[3])
+  questDetailAHLabel:SetPoint("TOPLEFT", QuestDetailObjectivesText, "BOTTOMLEFT", 0, -8)
+  questDetailAHText = QuestFrameDetailPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  questDetailAHText:SetJustifyH("LEFT")
+  questDetailAHText:SetWidth(w)
+  questDetailAHText:SetPoint("TOPLEFT", questDetailAHLabel, "BOTTOMLEFT", 0, -4)
+end
+
+local questDetailEvents = CreateFrame("Frame")
+questDetailEvents:RegisterEvent("QUEST_DETAIL")
+questDetailEvents:SetScript("OnEvent", function(_, event)
+  if event ~= "QUEST_DETAIL" then return end
+  ensureQuestDetailAH()
+  if not questDetailAHLabel then return end
+  local questId = GetQuestID and GetQuestID()
+  if questId and questId > 0 then
+    local header, body = questAHText(questId)
+    showQuestAH(questDetailAHLabel, questDetailAHText, header, body)
+  else
+    showQuestAH(questDetailAHLabel, questDetailAHText, nil, nil)
+  end
+end)
+
 SLASH_MGAPRICES1 = "/mgaprices"
 SlashCmdList.MGAPRICES = function(message)
   local command = (message or ""):lower():match("^%s*(.-)%s*$")

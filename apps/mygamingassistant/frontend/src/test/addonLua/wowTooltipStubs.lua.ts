@@ -88,4 +88,68 @@ function hover(t, id)
   if t.scripts.OnTooltipCleared then t.scripts.OnTooltipCleared(t) end
   for _, f in ipairs(postcalls) do f(t, { id = id }) end
 end
+-- Quest frame stubs: allow the addon's quest-log and quest-giver AH blocks to run.
+-- FontStrings created on the quest scroll frames insert their text into \`out\` on Show().
+local function questFontString(prefix)
+  local fs = { _text = "" }
+  function fs:SetText(t) self._text = t end
+  function fs:SetPoint() end
+  function fs:SetWidth() end
+  function fs:SetTextColor() end
+  function fs:SetJustifyH() end
+  function fs:Show()
+    if self._text ~= "" then
+      for line in (self._text .. "\\n"):gmatch("(.-)[\\n]") do
+        if line ~= "" then table.insert(out, prefix .. ": " .. line) end
+      end
+    end
+  end
+  function fs:Hide() self._text = "" end
+  return fs
+end
+local function makeQuestScrollFrame(prefix)
+  local f = {}
+  function f:GetWidth() return 320 end
+  function f:CreateFontString() return questFontString(prefix) end
+  return f
+end
+QuestLogDetailScrollChildFrame = makeQuestScrollFrame("qlog")
+QuestObjectivesText = { SetPoint = function() end }
+QuestFrameDetailPanel = makeQuestScrollFrame("qdetail")
+QuestDetailObjectivesText = { SetPoint = function() end }
+-- Override CreateFrame to track event handlers so fire() can dispatch to them.
+-- The existing MODIFIER_STATE_CHANGED frame was already created above with the old no-op
+-- CreateFrame; this override only affects future CreateFrame calls (from the addon).
+local _eventFrames = {}
+CreateFrame = function()
+  local f = { _events = {}, _script = nil }
+  function f:RegisterEvent(e) self._events[e] = true end
+  function f:SetScript(k, fn) if k == "OnEvent" then self._script = fn end end
+  table.insert(_eventFrames, f)
+  return f
+end
+function fire(event, ...)
+  for _, f in ipairs(_eventFrames) do
+    if f._events[event] and f._script then f._script(f, event, ...) end
+  end
+end
+-- Quest log state: the addon reads GetQuestLogSelection() + C_QuestLog.GetQuestIDForLogIndex().
+local _logQuestId = 0
+GetQuestLogSelection = function() return _logQuestId > 0 and 1 or 0 end
+C_QuestLog = { GetQuestIDForLogIndex = function(_idx) return _logQuestId end }
+-- Quest giver state: the addon calls GetQuestID() inside the QUEST_DETAIL handler.
+local _detailQuestId = 0
+GetQuestID = function() return _detailQuestId end
+-- Hookable no-ops for the quest log panel update functions.
+QuestLog_UpdateQuestDetails = function() end
+SelectQuestLogEntry = function() end
+-- Test helpers.
+function triggerQuestLog(questId)
+  _logQuestId = questId
+  QuestLog_UpdateQuestDetails()
+end
+function triggerQuestDetail(questId)
+  _detailQuestId = questId
+  fire("QUEST_DETAIL")
+end
 `;

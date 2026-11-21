@@ -477,3 +477,92 @@ describe("disenchant verdict", () => {
     expect(lines).toEqual(["Vendor it | vendor 20c", "Disenchant | need Enchanting"]);
   });
 });
+
+// ── Quest item AH display ─────────────────────────────────────────────────────
+
+const QUEST_ID = 10;
+const QUEST_ITEM_A = 1260; // quest item on sale at alliance AH
+const QUEST_ITEM_B = 2589; // second item also on sale
+const QUEST_ITEMS_MAP = new Map<number, readonly { itemId: number; count: number }[]>([
+  [QUEST_ID, [
+    { itemId: QUEST_ITEM_A, count: 1 },
+    { itemId: QUEST_ITEM_B, count: 5 },
+  ]],
+  [99, [{ itemId: 9999, count: 3 }]], // item 9999 not in any house → filtered out
+]);
+const QUEST_HOUSES = [
+  house("alliance", ALLIANCE_AT, [
+    [QUEST_ITEM_A, 200, 100, 20, 5, "Worn Mace"],
+    [QUEST_ITEM_B, 30, 25, 8109, 358, "Linen Cloth"],
+  ]),
+  house("horde", HORDE_AT, [[QUEST_ITEM_A, 150, 90, 10, 3, "Worn Mace"]]),
+  house("neutral", null, []),
+];
+const QUEST_DATA = addonPriceLua(QUEST_HOUSES, NO_CRAFTING, undefined, QUEST_ITEMS_MAP);
+
+function qTooltip(scenario: string, data = QUEST_DATA): string[] {
+  return runAddonLua([
+    ["Data.lua", data],
+    ["MGAPrices.lua", addonLua],
+    ["scenario", `NOW = ${ALLIANCE_EPOCH + 2 * HOUR}\n${scenario}`],
+  ]);
+}
+
+describe("addonPriceLua questItems section", () => {
+  it("writes questItems section with on-sale objectives, ordered by quest id, skipping quests with no on-sale items", () => {
+    // Quest 10 has items 1260 and 2589, both on sale in alliance house.
+    expect(QUEST_DATA).toContain(`    [${QUEST_ID}] = {{${QUEST_ITEM_A}, 1}, {${QUEST_ITEM_B}, 5}},`);
+    // Quest 99 has item 9999 which is not in any house → omitted.
+    expect(QUEST_DATA).not.toContain("[99]");
+    // Quests with no on-sale items → section still present (quest 10 is in it).
+    expect(QUEST_DATA).toContain("  questItems = {");
+  });
+
+  it("omits the questItems section entirely when no quests have on-sale items", () => {
+    const noSale = addonPriceLua(QUEST_HOUSES, NO_CRAFTING, undefined, new Map([[QUEST_ID, [{ itemId: 9999, count: 1 }]]]));
+    expect(noSale).not.toContain("questItems");
+  });
+
+  it("omits the questItems section when questItems is not provided", () => {
+    expect(addonPriceLua(QUEST_HOUSES, NO_CRAFTING)).not.toContain("questItems");
+  });
+});
+
+describe("quest log AH block", () => {
+  it("shows items on sale for the selected quest in the quest log", () => {
+    const lines = qTooltip(`triggerQuestLog(${QUEST_ID})`);
+    // The stub's getItemInfo returns "x" for all items.
+    expect(lines.some((l) => l.startsWith("qlog: |cff33aaff[MGA]|r"))).toBe(true);
+    expect(lines.some((l) => l.includes("needs 1"))).toBe(true);
+    expect(lines.some((l) => l.includes("20 listed"))).toBe(true);
+    expect(lines.some((l) => l.includes("cheapest 100c"))).toBe(true);
+  });
+
+  it("shows nothing when the quest has no items on sale", () => {
+    // Quest 55 has no entry in questItems → no qlog: lines.
+    const lines = qTooltip(`triggerQuestLog(55)`);
+    expect(lines.filter((l) => l.startsWith("qlog:"))).toHaveLength(0);
+  });
+
+  it("clears the block when switching to a quest with no items on sale", () => {
+    // Trigger quest 10 (has items), then quest 55 (no items) → no extra qlog: lines.
+    const withItems = qTooltip(`triggerQuestLog(${QUEST_ID})`).filter((l) => l.startsWith("qlog:"));
+    const afterSwitch = qTooltip(`triggerQuestLog(${QUEST_ID})\ntriggerQuestLog(55)`).filter((l) => l.startsWith("qlog:"));
+    // Second trigger produces no additional qlog: output — same set as first trigger only.
+    expect(afterSwitch).toEqual(withItems);
+  });
+});
+
+describe("quest giver detail AH block (QUEST_DETAIL event)", () => {
+  it("shows items on sale when the QUEST_DETAIL event fires", () => {
+    const lines = qTooltip(`triggerQuestDetail(${QUEST_ID})`);
+    expect(lines.some((l) => l.startsWith("qdetail: |cff33aaff[MGA]|r"))).toBe(true);
+    expect(lines.some((l) => l.includes("needs 1"))).toBe(true);
+    expect(lines.some((l) => l.includes("cheapest 100c"))).toBe(true);
+  });
+
+  it("shows nothing for a quest with no items on sale at the quest giver", () => {
+    const lines = qTooltip(`triggerQuestDetail(55)`);
+    expect(lines.filter((l) => l.startsWith("qdetail:"))).toHaveLength(0);
+  });
+});

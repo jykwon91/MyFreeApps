@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Prices shows auction house items in your quest log",
+    "summary": "When you open a quest in the log or at a quest giver, MGA Prices now adds a small block under the objectives listing any item you need that's on sale at your faction's auction house — item name, how many are listed, and the cheapest price. If nothing is on sale, the block stays hidden. Saves farming runs for items you can just buy.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot counts every stat, or says it can't judge",
     "summary": "MGA Loot now counts hit, crit, dodge, parry and block chance, and damage against one creature type (like Spell Damage Vs Humanoids, counted at the share of mobs your level that are that type). When an item, or the one you wear, has an effect it can't count (a Use: or Chance on hit: line), it says Can't judge and shows the stats-only number instead of calling an upgrade or downgrade.",
     "to": "/wow-forever/compare"

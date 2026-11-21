@@ -1,5 +1,6 @@
 import { AUCTION_CUT } from "@/games/wow-forever/data/auctionHouse/reagentDemandRules";
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
+import type { QuestItemObjective } from "@/games/wow-forever/lib/auctionHouse/loadQuestItemObjectives";
 import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
@@ -51,6 +52,36 @@ function reagentLines(crafting: CraftingByProfession): string[] {
 }
 
 /**
+ * `questItems[questId] = {{itemId, count}, ...}` for every quest whose item objectives are on sale in
+ * at least one (non-neutral) house. The addon uses this to show a buy-at-AH block when the player
+ * views a quest whose items they can skip farming. Only written when `questItems` is provided and
+ * at least one entry survives the on-sale filter.
+ */
+function questItemsLines(
+  houses: readonly PriceListResponse[],
+  questItems: ReadonlyMap<number, readonly QuestItemObjective[]>,
+): string[] {
+  // playerHouse() in the addon never returns "neutral", so only count alliance/horde.
+  const inAnyHouse = new Set<number>();
+  for (const response of houses) {
+    if (response.faction === "neutral") continue;
+    for (const id of mapPriceList(response).byId.keys()) inAnyHouse.add(id);
+  }
+
+  const lines: string[] = ["  questItems = {"];
+  let hasAny = false;
+  for (const [questId, objectives] of [...questItems].sort((a, b) => a[0] - b[0])) {
+    const onSale = objectives.filter((o) => inAnyHouse.has(o.itemId));
+    if (onSale.length === 0) continue;
+    hasAny = true;
+    const entries = onSale.map((o) => `{${o.itemId}, ${o.count}}`).join(", ");
+    lines.push(`    [${questId}] = {${entries}},`);
+  }
+  lines.push("  },");
+  return hasAny ? lines : [];
+}
+
+/**
  * The MGA Prices addon's `Data.lua`: each house's prices as
  * `items[itemId] = { market value, cheapest, on sale }` in copper, with when
  * Blizzard listed them, the house's cut of a sale (so the addon can say
@@ -65,11 +96,16 @@ function reagentLines(crafting: CraftingByProfession): string[] {
  * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = { [resultId] = {min, max, chance} }`
  * carry the disenchant loot tables for the three-way Disenchant/AH/Vendor verdict. Only written
  * when `disenchant` is provided and non-empty.
+ *
+ * `questItems[questId] = {{itemId, count}, ...}` for quests whose item objectives are on sale in at
+ * least one house. The addon shows a "buy at AH" block in the quest log and quest giver panels.
+ * Only written when `questItems` is provided and at least one quest has on-sale items.
  */
 export function addonPriceLua(
   houses: readonly PriceListResponse[],
   crafting: CraftingByProfession,
   disenchant?: DisenchantTables,
+  questItems?: ReadonlyMap<number, readonly QuestItemObjective[]>,
 ): string {
   const out = [
     "-- MGA Prices data, from the MyGamingAssistant Auction house page (US).",
@@ -98,6 +134,7 @@ export function addonPriceLua(
   if (stamps.length > 0) out.push(`  updated = ${Math.min(...stamps)},`);
   out.push(...reagentLines(crafting));
   if (disenchant) out.push(...disenchantLines(disenchant));
+  if (questItems && questItems.size > 0) out.push(...questItemsLines(houses, questItems));
   out.push("  houses = {", ...houseLines, "  },", "}", "");
   return out.join("\n");
 }
