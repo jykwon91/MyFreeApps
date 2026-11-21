@@ -48,6 +48,13 @@ local STAT = {
   ITEM_MOD_SPELL_POWER_SHORT = "spell_power",
   ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "spell_damage",
   ITEM_MOD_SPELL_HEALING_DONE_SHORT = "healing",
+  -- Forever's school spell damage (client stat ids 84-89; key names from its GlobalStrings).
+  ITEM_MOD_HOLY_DAMAGE_DONE_SHORT = "holy_spell_damage",
+  ITEM_MOD_FIRE_DAMAGE_DONE_SHORT = "fire_spell_damage",
+  ITEM_MOD_NATURE_DAMAGE_DONE_SHORT = "nature_spell_damage",
+  ITEM_MOD_FROST_DAMAGE_DONE_SHORT = "frost_spell_damage",
+  ITEM_MOD_SHADOW_DAMAGE_DONE_SHORT = "shadow_spell_damage",
+  ITEM_MOD_ARCANE_DAMAGE_DONE_SHORT = "arcane_spell_damage",
   ITEM_MOD_MANA_REGENERATION_SHORT = "mp5",
   ITEM_MOD_POWER_REGEN0_SHORT = "mp5",
   ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "defense",

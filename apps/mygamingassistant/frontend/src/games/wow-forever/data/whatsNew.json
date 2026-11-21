@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-21",
+    "title": "MGA Loot: school spell damage now counts",
+    "summary": "The MGA Loot addon left Shadow, Fire, Frost, Nature, Arcane and Holy damage out of its score, so gear like the Twisted Shadow Staff read as a big downgrade. It now scores them with your class's weights. Download the addon from Item compare to get the fix.",
+    "to": "/wow-forever/compare"
+  },
+  {
     "date": "2026-11-20",
     "title": "MGA Prices: Disenchant verdict in tooltips",
     "summary": "The MGA Prices addon now tells you whether to disenchant, sell on the auction house, or vendor an item — whichever nets the most. For bind-on-pickup gear you can't sell, it compares disenchanting against vendoring directly. Download the addon to get the update.",
