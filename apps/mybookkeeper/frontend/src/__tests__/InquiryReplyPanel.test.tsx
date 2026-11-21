@@ -116,6 +116,23 @@ describe("InquiryReplyPanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("works like a tab set: arrow keys switch tabs and the body is the labelled tab panel", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const template = screen.getByTestId("reply-tab-template");
+    const custom = screen.getByTestId("reply-tab-custom");
+    expect(template).toHaveAttribute("tabindex", "0");
+    expect(custom).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", template.id);
+    expect(template).toHaveAttribute("aria-controls", screen.getByRole("tabpanel").id);
+
+    template.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(custom).toHaveFocus();
+    expect(custom).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", custom.id);
+  });
+
   it("selecting a template fires the render query and populates the editor", async () => {
     const user = userEvent.setup();
     renderPanel();

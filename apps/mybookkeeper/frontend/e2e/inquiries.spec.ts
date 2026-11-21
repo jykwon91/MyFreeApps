@@ -191,7 +191,7 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "Inquiries" })).toBeVisible();
     await expect(page.getByTestId("inquiry-filter-screening_requested")).toHaveAttribute(
-      "aria-selected",
+      "aria-pressed",
       "true",
     );
 

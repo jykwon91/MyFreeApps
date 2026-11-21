@@ -242,8 +242,8 @@ describe("Inquiries page", () => {
     const user = userEvent.setup();
     renderInquiries();
     await user.click(screen.getByTestId("inquiry-filter-triaged"));
-    // After click, the chip should be aria-selected
-    expect(screen.getByTestId("inquiry-filter-triaged")).toHaveAttribute("aria-selected", "true");
+    // After click, the chip should be aria-pressed
+    expect(screen.getByTestId("inquiry-filter-triaged")).toHaveAttribute("aria-pressed", "true");
   });
 });
 

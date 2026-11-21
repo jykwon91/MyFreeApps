@@ -109,6 +109,22 @@ describe('Analytics page shell', () => {
     expect(screen.getByRole('tab', { name: 'Utility Trends' })).toHaveAttribute('aria-selected', 'false');
   });
 
+  it('works like a tab set: roving tab index, arrow keys, and a labelled tab panel', async () => {
+    renderWithProviders(<Analytics />);
+    const roi = screen.getByRole('tab', { name: 'Rental ROI' });
+    const utility = screen.getByRole('tab', { name: 'Utility Trends' });
+    expect(roi).toHaveAttribute('tabindex', '0');
+    expect(utility).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', roi.id);
+    expect(roi).toHaveAttribute('aria-controls', screen.getByRole('tabpanel').id);
+
+    roi.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(utility).toHaveFocus();
+    expect(utility).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', utility.id);
+  });
+
   it('falls back to Rental ROI for an unknown tab', () => {
     renderWithProviders(<Analytics />, ['/?tab=nope']);
     expect(screen.getByRole('tab', { name: 'Rental ROI' })).toHaveAttribute('aria-selected', 'true');

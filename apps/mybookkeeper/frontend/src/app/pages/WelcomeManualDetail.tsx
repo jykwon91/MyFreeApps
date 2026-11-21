@@ -13,9 +13,9 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Markdown from "@/shared/components/ui/Markdown";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, showError, showSuccess, Tabs, TabPanel } from "@platform/ui";
 import { SHARED_ROOM_OPTION, WELCOME_MANUAL_MAX_SECTIONS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
-import { NEW_SECTION_DEFAULT_TITLE, WELCOME_MANUAL_VIEW_MODE, type WelcomeManualViewMode } from "@/shared/lib/welcome-manual-constants";
+import { NEW_SECTION_DEFAULT_TITLE, WELCOME_MANUAL_VIEW_MODE, WELCOME_MANUAL_VIEW_OPTIONS, type WelcomeManualViewMode } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateSectionMutation,
   useDeleteWelcomeManualMutation,
@@ -167,48 +167,32 @@ export default function WelcomeManualDetail() {
 
       {manual ? (
         <>
-          <div
+          <Tabs
+            tabs={WELCOME_MANUAL_VIEW_OPTIONS}
+            value={mobileView}
+            onChange={setMobileView}
+            idPrefix="welcome-manual-view"
+            panelPerTab
+            ariaLabel="Editor and guest preview"
             className="flex rounded-lg border p-1 lg:hidden"
-            role="tablist"
-            aria-label="Editor and guest preview"
-            data-testid="welcome-manual-view-toggle"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT}
-              onClick={() => setMobileView(WELCOME_MANUAL_VIEW_MODE.EDIT)}
-              className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
-                mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT
+            testId="welcome-manual-view-toggle"
+            tabClassName={(selected) =>
+              `flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
+                selected
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              data-testid="welcome-manual-view-toggle-edit"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW}
-              onClick={() => setMobileView(WELCOME_MANUAL_VIEW_MODE.PREVIEW)}
-              className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
-                mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="welcome-manual-view-toggle-preview"
-            >
-              Preview
-            </button>
-          </div>
+          />
 
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-            <div
+            <TabPanel
+              idPrefix="welcome-manual-view"
+              panelPerTab
+              value={WELCOME_MANUAL_VIEW_MODE.EDIT}
               className={`space-y-6 lg:block ${
                 mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT ? "block" : "hidden"
               }`}
-              data-testid="welcome-manual-editor-column"
+              testId="welcome-manual-editor-column"
             >
               <section
                 className="border rounded-lg p-4 space-y-3"
@@ -346,13 +330,16 @@ export default function WelcomeManualDetail() {
               >
                 <WelcomeManualPlaceManager manualId={manual.id} places={manual.places ?? []} />
               </section>
-            </div>
+            </TabPanel>
 
-            <div
+            <TabPanel
+              idPrefix="welcome-manual-view"
+              panelPerTab
+              value={WELCOME_MANUAL_VIEW_MODE.PREVIEW}
               className={`lg:block ${
                 mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW ? "block" : "hidden"
               }`}
-              data-testid="welcome-manual-preview-column"
+              testId="welcome-manual-preview-column"
             >
               <div className="lg:sticky lg:top-8 space-y-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -383,7 +370,7 @@ export default function WelcomeManualDetail() {
                   places={manual.places ?? []}
                 />
               </div>
-            </div>
+            </TabPanel>
           </div>
 
           {showEditForm ? (

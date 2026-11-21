@@ -1,7 +1,7 @@
 import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 
 /**
- * Tab filter above the inquiry inbox — Inbox / All / Flagged / Spam.
+ * Filter chips above the inquiry inbox — Inbox / All / Flagged / Spam.
  *
  * "Inbox" is the default tab so the operator's primary view excludes spam by
  * default. It also shows email inquiries, which are never scored, and those
@@ -31,19 +31,17 @@ export default function InquirySpamTabFilter({ value, onChange }: InquirySpamTab
   return (
     <div
       className="flex flex-wrap gap-2 border-b pb-2"
-      role="tablist"
+      role="group"
+      aria-label="Filter inquiries by spam status"
       data-testid="inquiry-spam-tabs"
     >
       {TABS.map((tab) => {
-        const active =
-          tab.value === value
-          || (tab.value === null && value === null);
+        const active = tab.value === value;
         return (
           <button
             key={tab.key}
             type="button"
-            role="tab"
-            aria-selected={active}
+            aria-pressed={active}
             onClick={() => onChange(tab.value)}
             data-testid={`inquiry-spam-tab-${tab.key}`}
             className={`px-3 min-h-[44px] text-sm rounded-md border transition-colors ${

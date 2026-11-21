@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { AlertBox, useLiveSearchParams } from "@platform/ui";
+import { AlertBox, useLiveSearchParams, Tabs, TabPanel } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import RentalRoi from "@/app/features/analytics/RentalRoi";
 import UtilityTrends from "@/app/features/analytics/UtilityTrends";
@@ -43,28 +43,24 @@ export default function Analytics() {
         </AlertBox>
       )}
 
-      <div className="flex gap-1 border-b" role="tablist">
-        {ANALYTICS_TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={activeTab === key}
-            onClick={() => setTab(key)}
-            className={`px-4 py-2 min-h-[44px] text-sm font-medium border-b-2 transition-colors ${
-              activeTab === key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={ANALYTICS_TABS.map(({ key, label }) => ({ value: key, label }))}
+        value={activeTab}
+        onChange={setTab}
+        idPrefix="analytics"
+        className="flex gap-1 border-b"
+        tabClassName={(selected) =>
+          `px-4 py-2 min-h-[44px] text-sm font-medium border-b-2 transition-colors ${
+            selected
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+      />
 
-      <div className="md:flex-1 md:overflow-auto">
+      <TabPanel idPrefix="analytics" value={activeTab} className="md:flex-1 md:overflow-auto">
         {activeTab === "rental-roi" && <RentalRoi />}
         {activeTab === "utility-trends" && <UtilityTrends />}
-      </div>
+      </TabPanel>
     </div>
   );
 }

@@ -186,7 +186,7 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "Vendors" })).toBeVisible();
     await expect(page.getByTestId("vendor-filter-locksmith")).toHaveAttribute(
-      "aria-selected",
+      "aria-pressed",
       "true",
     );
 
