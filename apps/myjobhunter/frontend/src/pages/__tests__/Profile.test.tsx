@@ -299,6 +299,12 @@ describe("Profile page", () => {
       setupAllMocks();
     });
 
+    it("has exactly one main heading naming the page", () => {
+      renderProfile();
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole("heading", { level: 1, name: "Profile" })).toBeInTheDocument();
+    });
+
     it("renders the salary preferences section", () => {
       renderProfile();
       expect(screen.getByText("Salary preferences")).toBeInTheDocument();
