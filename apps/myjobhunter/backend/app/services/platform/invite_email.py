@@ -80,7 +80,7 @@ def _build_invite_html(accept_url: str) -> str:
 </div>"""
 
 
-def send_invite_email(recipient_email: str, token: str) -> None:
+async def send_invite_email(recipient_email: str, token: str) -> None:
     """Send the invite email with a tokenized accept link.
 
     Critical-path transactional email — uses ``send_email_or_raise`` so a
@@ -98,7 +98,7 @@ def send_invite_email(recipient_email: str, token: str) -> None:
     accept_url = f"{base_url}/register?invite={token}"
     html = _build_invite_html(accept_url)
     subject = "You've been invited to MyJobHunter"
-    send_email_or_raise([recipient_email], subject, html)
+    await send_email_or_raise([recipient_email], subject, html)
     # Log only the email domain, never the full address. The recipient
     # is by definition not yet a user, so per the auth-events policy
     # for unknown-user events we keep PII out of operator logs.

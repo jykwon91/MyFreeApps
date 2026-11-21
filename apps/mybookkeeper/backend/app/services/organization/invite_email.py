@@ -95,7 +95,7 @@ def _build_invite_html(
 </div>"""
 
 
-def send_invite_email(
+async def send_invite_email(
     recipient_email: str,
     org_name: str,
     org_role: str,
@@ -106,7 +106,7 @@ def send_invite_email(
     accept_url = f"{base_url}/invite/{invite_token}"
     html = _build_invite_html(org_name, org_role, inviter_name, accept_url)
     subject = f"You've been invited to join {org_name} on MyBookkeeper"
-    success = email_service.send_email([recipient_email], subject, html)
+    success = await email_service.send_email([recipient_email], subject, html)
     if success:
         logger.info(
             "Organization invite email sent to %s for org %s",

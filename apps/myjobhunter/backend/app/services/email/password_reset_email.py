@@ -14,7 +14,7 @@ def _build_reset_html(reset_url: str) -> str:
     return build_password_reset_html(reset_url=reset_url, branding=MJH_BRANDING)
 
 
-def send_password_reset_email(recipient_email: str, token: str) -> None:
+async def send_password_reset_email(recipient_email: str, token: str) -> None:
     """Send the password-reset message to a user who initiated forgot-password.
 
     Critical-path transactional email — raises rather than returning a
@@ -33,4 +33,4 @@ def send_password_reset_email(recipient_email: str, token: str) -> None:
     reset_url = f"{base_url}/reset-password?token={token}"
     html = _build_reset_html(reset_url)
     subject = "Reset your MyJobHunter password"
-    send_email_or_raise([recipient_email], subject, html)
+    await send_email_or_raise([recipient_email], subject, html)

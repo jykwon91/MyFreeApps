@@ -238,7 +238,7 @@ async def send_manual_to_guest(
         content=pdf_bytes,
         content_type="application/pdf",
     )
-    sent = email_service.send_email(
+    sent = await email_service.send_email(
         [recipient_email],
         build_subject(manual_title=manual_title, room_name=room_name),
         build_body_html(manual_title=manual_title, recipient_name=recipient_name),

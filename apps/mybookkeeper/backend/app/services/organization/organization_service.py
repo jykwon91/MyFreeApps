@@ -224,7 +224,7 @@ async def create_invite(
         )
         org_name = org.name if org else "your organization"
 
-        email_sent = send_invite_email(
+        email_sent = await send_invite_email(
             recipient_email=email,
             org_name=org_name,
             org_role=org_role,

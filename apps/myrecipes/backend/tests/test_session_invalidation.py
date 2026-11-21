@@ -29,7 +29,11 @@ async def _status_of_me(token: str) -> int:
 
 async def _reset_password(email: str, new_password: str, monkeypatch: pytest.MonkeyPatch) -> None:
     sent: list[str] = []
-    monkeypatch.setattr(auth_module, "send_password_reset_email", lambda _email, token: sent.append(token))
+
+    async def capture_reset_email(_email: str, token: str) -> None:
+        sent.append(token)
+
+    monkeypatch.setattr(auth_module, "send_password_reset_email", capture_reset_email)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anonymous:
         await anonymous.post("/auth/forgot-password", json={"email": email})
         resp = await anonymous.post("/auth/reset-password", json={"token": sent[0], "password": new_password})

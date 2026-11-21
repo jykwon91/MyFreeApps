@@ -12,12 +12,12 @@ from platform_shared.services.email_service import (
 from app.core.config import settings
 
 
-def send_email(to: list[str], subject: str, body_html: str) -> bool:
-    return EmailService.from_settings(settings).send(to, subject, body_html)
+async def send_email(to: list[str], subject: str, body_html: str) -> bool:
+    return await EmailService.from_settings(settings).send_async(to, subject, body_html)
 
 
-def send_email_or_raise(to: list[str], subject: str, body_html: str) -> None:
-    EmailService.from_settings(settings).send_or_raise(to, subject, body_html)
+async def send_email_or_raise(to: list[str], subject: str, body_html: str) -> None:
+    await EmailService.from_settings(settings).send_or_raise_async(to, subject, body_html)
 
 
 __all__ = [

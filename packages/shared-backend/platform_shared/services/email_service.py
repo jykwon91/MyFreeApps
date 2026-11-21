@@ -10,24 +10,37 @@ Usage:
 
     # Critical-path emails (verification, password reset, account
     # recovery) — caller MUST know if delivery failed:
-    mailer.send_or_raise(["user@example.com"], "Verify", "<h1>Hi</h1>")
+    await mailer.send_or_raise_async(["user@example.com"], "Verify", "<h1>Hi</h1>")
 
     # Best-effort emails (cost alerts, demos) — caller continues on
     # failure:
-    ok = mailer.send(["admin@example.com"], "Cost Alert", "<h1>...</h1>")
+    ok = await mailer.send_async(["admin@example.com"], "Cost Alert", "<h1>...</h1>")
 
     # With attachments (e.g. lease PDFs):
     from platform_shared.services.email_attachment import EmailAttachment
-    mailer.send_or_raise(
+    await mailer.send_or_raise_async(
         ["tenant@example.com"], "Your lease", "<p>Attached.</p>",
         attachments=[EmailAttachment("lease.pdf", pdf_bytes, "application/pdf")],
     )
+
+The SMTP conversation is blocking network I/O. From ``async`` code always use
+the ``*_async`` methods: they run the send in a worker thread, so a slow or
+stalled SMTP server can't freeze the event loop (and with it every request on
+the worker, healthchecks included). The plain ``send`` / ``send_or_raise`` are
+for code that is already off the loop (scripts, worker threads). Every socket
+operation is capped by ``SMTP_TIMEOUT_SECONDS``.
+
+A failed send raises ``EmailSendError`` carrying ``kind`` (misconfigured /
+recipient_rejected / message_rejected / transient), the server's
+``smtp_code`` and any ``refused_recipients``, and is logged with them.
 
 The pre-2026-05-05 ``send()`` method silently returned False when
 SMTP creds were empty — that pattern caused the Kenneth verification-
 email outage. Use ``send_or_raise()`` for every critical-path email
 where the user has no other recovery path.
 """
+import asyncio
+import email.errors
 import logging
 import smtplib
 import ssl
@@ -40,9 +53,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import get_args
 
+from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
+from platform_shared.core.email_header_utils import strip_line_breaks
 from platform_shared.core.settings import BaseAppSettings
 from platform_shared.services.email_attachment import EmailAttachment
 from platform_shared.services.email_backend import EmailBackend
+from platform_shared.services.email_send_error import EmailSendError
+from platform_shared.services.smtp_failure import (
+    error_from_refused_recipients,
+    error_from_smtp_exception,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +74,6 @@ class EmailNotConfiguredError(RuntimeError):
     boot guard to surface this at lifespan startup so deploys fail
     loud instead of users seeing "registration succeeded but no email
     arrived".
-    """
-
-
-class EmailSendError(RuntimeError):
-    """Raised when SMTP send fails (network outage, auth rejection,
-    recipient rejected, etc.). Distinct from EmailNotConfiguredError —
-    this is a transient or addressee-specific failure, not a deploy
-    misconfiguration.
     """
 
 
@@ -148,7 +160,8 @@ class EmailService:
             ValueError: If ``to`` is empty.
             EmailNotConfiguredError: If SMTP creds are missing.
             EmailSendError: If SMTP send fails for any other reason
-                (network, auth, recipient rejected).
+                (network, timeout, auth, recipient rejected). Its ``kind``,
+                ``smtp_code`` and ``refused_recipients`` say which.
         """
         if not to:
             raise ValueError("Recipients list cannot be empty")
@@ -167,6 +180,10 @@ class EmailService:
                 "instance has empty creds."
             )
 
+        to = [strip_line_breaks(address) for address in to]
+        subject = strip_line_breaks(subject)
+        sender = strip_line_breaks(self.smtp_user)
+
         if attachments:
             # ``mixed`` so the body+alternative is the first part and
             # each attachment is a sibling part; matches RFC 2046 §5.1.
@@ -180,23 +197,66 @@ class EmailService:
             msg = MIMEMultipart("alternative")
             msg.attach(MIMEText(body_html, "html"))
 
-        msg["From"] = f"{self.from_name} <{self.smtp_user}>"
+        msg["From"] = f"{strip_line_breaks(self.from_name)} <{sender}>"
         msg["To"] = ", ".join(to)
         msg["Subject"] = subject
         if reply_to:
-            msg["Reply-To"] = reply_to
+            msg["Reply-To"] = strip_line_breaks(reply_to)
 
         try:
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls(context=ssl.create_default_context())
-                server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.smtp_user, to, msg.as_string())
-        except Exception as e:
-            raise EmailSendError(
-                f"SMTP send to {to} failed: {e}"
-            ) from e
+            refused = self._deliver(sender, to, msg.as_string())
+        except (smtplib.SMTPException, OSError, email.errors.MessageError, UnicodeError) as e:
+            error = error_from_smtp_exception(e, recipient_count=len(to))
+            _log_send_failure(error, to, subject)
+            raise error from e
+        if refused:
+            error = error_from_refused_recipients(refused, recipient_count=len(to))
+            _log_send_failure(error, to, subject)
+            raise error
 
         logger.info("Email sent via SMTP to %s: %s", to, subject)
+
+    def _deliver(self, sender: str, to: list[str], payload: str) -> dict[str, tuple[int, bytes]]:
+        """Run one SMTP conversation; return the recipients the server refused.
+
+        Raises ``smtplib.SMTPException`` / ``OSError`` / ``UnicodeError`` (a
+        non-ASCII address, which smtplib encodes as ASCII) only for failures
+        before the server accepted the message. Once ``sendmail`` returns the email is
+        out, so a failing QUIT afterwards is logged, not raised: reporting it
+        as a failed send would invite a resend and a duplicate email.
+        """
+        server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
+        try:
+            server.starttls(context=ssl.create_default_context())
+            server.login(self.smtp_user, self.smtp_password)
+            refused = server.sendmail(sender, to, payload)
+        except BaseException:
+            server.close()
+            raise
+        try:
+            server.quit()
+        except (smtplib.SMTPException, OSError) as e:
+            logger.warning(
+                "SMTP server accepted the email but closing the session failed; "
+                "treating the send as delivered: %r", e,
+            )
+            server.close()
+        return refused
+
+    async def send_or_raise_async(
+        self,
+        to: list[str],
+        subject: str,
+        body_html: str,
+        *,
+        attachments: Sequence[EmailAttachment] | None = None,
+        reply_to: str | None = None,
+    ) -> None:
+        """``send_or_raise`` run in a worker thread, for ``async`` callers. Same errors."""
+        await asyncio.to_thread(
+            self.send_or_raise, to, subject, body_html,
+            attachments=attachments, reply_to=reply_to,
+        )
 
     def send(
         self,
@@ -232,3 +292,29 @@ class EmailService:
                 exc_info=True,
             )
             return False
+
+    async def send_async(
+        self,
+        to: list[str],
+        subject: str,
+        body_html: str,
+        *,
+        attachments: Sequence[EmailAttachment] | None = None,
+        reply_to: str | None = None,
+    ) -> bool:
+        """``send`` run in a worker thread, for ``async`` callers."""
+        return await asyncio.to_thread(
+            self.send, to, subject, body_html,
+            attachments=attachments, reply_to=reply_to,
+        )
+
+
+def _log_send_failure(error: EmailSendError, to: list[str], subject: str) -> None:
+    """Log a failed send with its SMTP code. Config faults log at ERROR: an
+    operator has to act, and every later send will fail the same way."""
+    level = logging.ERROR if error.kind == "misconfigured" else logging.WARNING
+    logger.log(
+        level,
+        "SMTP send failed: kind=%s smtp_code=%s refused=%s to=%s subject=%r: %s",
+        error.kind, error.smtp_code, error.refused_recipients, to, subject, error,
+    )

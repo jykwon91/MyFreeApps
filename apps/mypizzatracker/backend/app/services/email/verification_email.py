@@ -10,10 +10,10 @@ from app.services.email.email_sender import send_email_or_raise
 logger = logging.getLogger(__name__)
 
 
-def send_verification_email(recipient_email: str, token: str) -> None:
+async def send_verification_email(recipient_email: str, token: str) -> None:
     """Send the email-verification message when the seed user is first created."""
     base_url = settings.frontend_url.rstrip("/")
     verify_url = f"{base_url}/verify-email?token={token}"
     html = build_verification_html(verify_url=verify_url, branding=APP_BRANDING)
-    send_email_or_raise([recipient_email], "Verify your MyPizzaTracker email", html)
+    await send_email_or_raise([recipient_email], "Verify your MyPizzaTracker email", html)
     logger.info("Verification email sent to %s", recipient_email)

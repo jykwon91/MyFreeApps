@@ -164,7 +164,7 @@ async def check_cost_alerts(organization_id=None) -> None:
                 organization_id, "cost_alert", "warning", msg,
                 {"daily_cost": today_cost, "budget": daily_budget},
             )
-            send_cost_alert("warning", msg, today_cost, daily_budget)
+            await send_cost_alert("warning", msg, today_cost, daily_budget)
 
         if month_cost >= monthly_budget:
             msg = f"Monthly API cost ${month_cost:.2f} exceeds budget ${monthly_budget:.2f}"
@@ -172,6 +172,6 @@ async def check_cost_alerts(organization_id=None) -> None:
                 organization_id, "cost_alert", "critical", msg,
                 {"monthly_cost": month_cost, "budget": monthly_budget},
             )
-            send_cost_alert("critical", msg, month_cost, monthly_budget)
+            await send_cost_alert("critical", msg, month_cost, monthly_budget)
     except Exception:
         logger.warning("Failed to check cost alerts", exc_info=True)

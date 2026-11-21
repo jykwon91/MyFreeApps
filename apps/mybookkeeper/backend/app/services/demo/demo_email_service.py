@@ -77,7 +77,7 @@ def _build_invite_html(
 </div>"""
 
 
-def send_demo_invite(
+async def send_demo_invite(
     recipient_email: str,
     display_name: str,
     login_email: str,
@@ -86,7 +86,7 @@ def send_demo_invite(
 ) -> bool:
     html = _build_invite_html(display_name, login_email, password, app_url)
     subject = "You're invited to try MyBookkeeper! \U0001f389"
-    success = email_service.send_email([recipient_email], subject, html)
+    success = await email_service.send_email([recipient_email], subject, html)
     if success:
         logger.info("Demo invite sent to %s for account %s", recipient_email, login_email)
     else:

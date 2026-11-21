@@ -364,7 +364,7 @@ async def _send_to_tenant(
     subject = subject_for(applicant_legal_name=applicant_legal_name)
     body_html = body_for(listing_title=listing_title)
 
-    sent = email_service.send_email(
+    sent = await email_service.send_email(
         [contact_email], subject, body_html, attachments=email_attachments,
     )
     if not sent:

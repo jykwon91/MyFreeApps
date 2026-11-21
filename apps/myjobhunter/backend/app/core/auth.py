@@ -75,7 +75,7 @@ class UserManager(PlatformBaseUserManager[User]):
         fails 5xx and the user retries — never returns a 2xx with the
         verification email lost.
         """
-        send_verification_email(user.email, token)
+        await send_verification_email(user.email, token)
         logger.info("Verification email sent to user_id=%s", user.id)
 
     async def on_after_forgot_password(
@@ -86,7 +86,7 @@ class UserManager(PlatformBaseUserManager[User]):
         Raises on any send failure so the forgot-password HTTP request
         fails 5xx and the user retries.
         """
-        send_password_reset_email(user.email, token)
+        await send_password_reset_email(user.email, token)
         logger.info("Password-reset email sent to user_id=%s", user.id)
 
     async def on_after_verify(

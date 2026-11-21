@@ -62,13 +62,13 @@ class UserManager(PlatformBaseUserManager[User]):
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None,
     ) -> None:
-        send_verification_email(user.email, token)
+        await send_verification_email(user.email, token)
         logger.info("Verification email sent to user_id=%s", user.id)
 
     async def on_after_forgot_password(
         self, user: User, token: str, request: Optional[Request] = None,
     ) -> None:
-        send_password_reset_email(user.email, token)
+        await send_password_reset_email(user.email, token)
         logger.info("Password-reset email sent to user_id=%s", user.id)
 
     async def on_after_verify(

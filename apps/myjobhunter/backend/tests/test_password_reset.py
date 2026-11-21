@@ -39,10 +39,10 @@ class TestPasswordResetEmailTemplate:
 class TestSendPasswordResetEmail:
     @patch("app.services.email.password_reset_email.send_email_or_raise")
     @patch("app.services.email.password_reset_email.settings")
-    def test_sends_email_with_correct_params(self, mock_settings, mock_send) -> None:
+    async def test_sends_email_with_correct_params(self, mock_settings, mock_send) -> None:
         mock_settings.frontend_url = "https://app.example.com"
 
-        result = send_password_reset_email("user@example.com", "token123")
+        result = await send_password_reset_email("user@example.com", "token123")
 
         assert result is None  # fail-loud contract: returns None on success
         mock_send.assert_called_once()
@@ -54,7 +54,7 @@ class TestSendPasswordResetEmail:
 
     @patch("app.services.email.password_reset_email.send_email_or_raise")
     @patch("app.services.email.password_reset_email.settings")
-    def test_raises_on_send_failure(self, mock_settings, mock_send) -> None:
+    async def test_raises_on_send_failure(self, mock_settings, mock_send) -> None:
         """Critical-path email — failures must propagate, never be swallowed.
 
         Without this contract, MJH's POST /auth/forgot-password would
@@ -62,17 +62,17 @@ class TestSendPasswordResetEmail:
         — the user can never recover their account.
         """
         mock_settings.frontend_url = "https://app.example.com"
-        mock_send.side_effect = EmailSendError("smtp connect failed")
+        mock_send.side_effect = EmailSendError("smtp connect failed", kind="transient")
 
         with pytest.raises(EmailSendError, match="smtp connect failed"):
-            send_password_reset_email("user@example.com", "token123")
+            await send_password_reset_email("user@example.com", "token123")
 
     @patch("app.services.email.password_reset_email.send_email_or_raise")
     @patch("app.services.email.password_reset_email.settings")
-    def test_reset_url_uses_frontend_url(self, mock_settings, mock_send) -> None:
+    async def test_reset_url_uses_frontend_url(self, mock_settings, mock_send) -> None:
         mock_settings.frontend_url = "https://myjobhunter.app/"
 
-        send_password_reset_email("user@example.com", "abc")
+        await send_password_reset_email("user@example.com", "abc")
 
         html = mock_send.call_args[0][2]
         assert "https://myjobhunter.app/reset-password?token=abc" in html
@@ -100,7 +100,7 @@ class TestOnAfterForgotPassword:
         fails 5xx and the user retries — never returns a 2xx with the
         reset email lost.
         """
-        mock_send.side_effect = EmailSendError("smtp down")
+        mock_send.side_effect = EmailSendError("smtp down", kind="transient")
         manager = UserManager.__new__(UserManager)
         manager.user_db = MagicMock()
 

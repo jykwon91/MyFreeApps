@@ -1,5 +1,5 @@
 """Tests for organization invite email template and sender."""
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from app.services.organization.invite_email import _build_invite_html, send_invite_email
 
@@ -73,13 +73,13 @@ class TestBuildInviteHtml:
 class TestSendInviteEmail:
     @patch("app.services.organization.invite_email.email_service")
     @patch("app.services.organization.invite_email.settings")
-    def test_constructs_accept_url_from_frontend_url(
+    async def test_constructs_accept_url_from_frontend_url(
         self, mock_settings, mock_email_svc
     ) -> None:
         mock_settings.frontend_url = "https://mybookkeeper.app"
-        mock_email_svc.send_email.return_value = True
+        mock_email_svc.send_email = AsyncMock(return_value=True)
 
-        result = send_invite_email(
+        result = await send_invite_email(
             recipient_email="user@example.com",
             org_name="Test Org",
             org_role="admin",
@@ -94,13 +94,13 @@ class TestSendInviteEmail:
 
     @patch("app.services.organization.invite_email.email_service")
     @patch("app.services.organization.invite_email.settings")
-    def test_returns_false_when_email_fails(
+    async def test_returns_false_when_email_fails(
         self, mock_settings, mock_email_svc
     ) -> None:
         mock_settings.frontend_url = "https://mybookkeeper.app"
-        mock_email_svc.send_email.return_value = False
+        mock_email_svc.send_email = AsyncMock(return_value=False)
 
-        result = send_invite_email(
+        result = await send_invite_email(
             recipient_email="user@example.com",
             org_name="Test Org",
             org_role="user",
@@ -112,13 +112,13 @@ class TestSendInviteEmail:
 
     @patch("app.services.organization.invite_email.email_service")
     @patch("app.services.organization.invite_email.settings")
-    def test_subject_includes_org_name(
+    async def test_subject_includes_org_name(
         self, mock_settings, mock_email_svc
     ) -> None:
         mock_settings.frontend_url = "https://example.com"
-        mock_email_svc.send_email.return_value = True
+        mock_email_svc.send_email = AsyncMock(return_value=True)
 
-        send_invite_email(
+        await send_invite_email(
             recipient_email="user@example.com",
             org_name="My Workspace",
             org_role="admin",
@@ -132,13 +132,13 @@ class TestSendInviteEmail:
 
     @patch("app.services.organization.invite_email.email_service")
     @patch("app.services.organization.invite_email.settings")
-    def test_strips_trailing_slash_from_frontend_url(
+    async def test_strips_trailing_slash_from_frontend_url(
         self, mock_settings, mock_email_svc
     ) -> None:
         mock_settings.frontend_url = "https://mybookkeeper.app/"
-        mock_email_svc.send_email.return_value = True
+        mock_email_svc.send_email = AsyncMock(return_value=True)
 
-        send_invite_email(
+        await send_invite_email(
             recipient_email="user@example.com",
             org_name="Test",
             org_role="user",

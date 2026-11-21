@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import update
@@ -85,7 +85,7 @@ async def _locks(user_id, org_id, lease_id) -> dict[uuid.UUID, bool]:
 async def test_an_addendum_email_does_not_lock_an_earlier_mistaken_signed_copy(db: AsyncSession) -> None:
     user_id, org_id, lease_id, _, real, mistaken = await _signed_lease_with_a_mistaken_copy(db)
     addendum = await _file(db, lease_id, user_id, kind="signed_addendum", at=T + 3 * HOUR)
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage_double(), send)
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:
@@ -111,7 +111,7 @@ async def test_the_documents_email_locks_exactly_the_files_it_sent(db: AsyncSess
     user_id, org_id, lease_id, original, real, mistaken = await _signed_lease_with_a_mistaken_copy(db)
     inspection = await _file(db, lease_id, user_id, kind="move_in_inspection", at=T + HOUR)
     assert (await _locks(user_id, org_id, lease_id))[mistaken] is False
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage_double(), send)
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:
@@ -142,7 +142,7 @@ async def test_a_failed_fetch_puts_every_files_stamp_back(db: AsyncSession) -> N
     await db.commit()
     storage = storage_double()
     storage.download_file.side_effect = [b"ok", RuntimeError("storage down")]
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     p = email_patches(storage, send)
 
     with p[0], p[1], p[2], p[3], p[4], p[5]:
@@ -168,7 +168,7 @@ async def test_a_failed_fetch_leaves_a_later_emails_stamps_alone(
     args = dict(lease_id=lease_id, user_id=user_id, organization_id=org_id)
     storage = storage_double()
     storage.download_file.side_effect = [RuntimeError("storage down"), b"ok", b"ok", b"ok"]
-    send = MagicMock(return_value=True)
+    send = AsyncMock(return_value=True)
     real_restore = lease_email_service.restore_email_stamps
     second: list[bool] = []
 
@@ -205,7 +205,7 @@ async def test_a_restore_that_fails_still_records_the_skip_and_raises(
         raise RuntimeError("database down")
 
     monkeypatch.setattr(f"{EMAIL}.restore_email_stamps", restore_fails)
-    p = email_patches(storage, MagicMock(return_value=True))
+    p = email_patches(storage, AsyncMock(return_value=True))
 
     with p[0], p[1], p[2], p[3], p[4], p[5] as recorded, pytest.raises(RuntimeError, match="database down"):
         await lease_email_service.send_lease_to_tenant(lease_id=lease_id, user_id=user_id, organization_id=org_id)
