@@ -64,7 +64,7 @@ function makeDocument(overrides: Partial<Document> = {}): Document {
 }
 
 function DocumentTypeCell({ doc }: { doc: Document }) {
-  const columns = useDocumentColumns({ onDelete: vi.fn(), selectAll: SELECT_ALL });
+  const columns = useDocumentColumns({ onOpen: vi.fn(), onDelete: vi.fn(), selectAll: SELECT_ALL });
   const table = useTable({
     features: appTableFeatures,
     data: [doc],
@@ -141,7 +141,7 @@ describe("useDocumentColumns — document_type column", () => {
 // ---------------------------------------------------------------------------
 
 function SelectHeader({ selectAll }: { selectAll: SelectAllControl }) {
-  const columns = useDocumentColumns({ onDelete: vi.fn(), selectAll });
+  const columns = useDocumentColumns({ onOpen: vi.fn(), onDelete: vi.fn(), selectAll });
   const table = useTable({
     features: appTableFeatures,
     data: [makeDocument()],
@@ -176,7 +176,7 @@ describe("useDocumentColumns — select all", () => {
 // ---------------------------------------------------------------------------
 
 function DocumentRow({ doc, onReExtract }: { doc: Document; onReExtract?: (id: string) => void }) {
-  const columns = useDocumentColumns({ onDelete: vi.fn(), onReExtract, canWrite: true, selectAll: SELECT_ALL });
+  const columns = useDocumentColumns({ onOpen: vi.fn(), onDelete: vi.fn(), onReExtract, canWrite: true, selectAll: SELECT_ALL });
   const table = useTable({
     features: appTableFeatures,
     data: [doc],

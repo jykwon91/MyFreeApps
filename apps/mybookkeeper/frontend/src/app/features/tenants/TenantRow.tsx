@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import { formatDesiredDates, formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import TenantStatusBadge from "./TenantStatusBadge";
@@ -15,6 +16,7 @@ export interface TenantRowProps {
  */
 export default function TenantRow({ tenant }: TenantRowProps) {
   const navigate = useNavigate();
+  const detailPath = `/tenants/${tenant.id}`;
   const legalName = tenant.legal_name ?? "Unnamed tenant";
   const contractDates = formatDesiredDates(tenant.contract_start, tenant.contract_end);
   const created = formatRelativeTime(tenant.created_at);
@@ -22,10 +24,12 @@ export default function TenantRow({ tenant }: TenantRowProps) {
   return (
     <tr
       data-testid={`tenant-row-${tenant.id}`}
-      onClick={() => navigate(`/tenants/${tenant.id}`)}
+      onClick={() => navigate(detailPath)}
       className="border-t cursor-pointer hover:bg-muted/30 transition-colors"
     >
-      <td className="px-4 py-3 font-medium">{legalName}</td>
+      <td className="px-4 py-3 font-medium">
+        <RowPrimaryAction to={detailPath}>{legalName}</RowPrimaryAction>
+      </td>
       <td className="px-4 py-3 text-muted-foreground">{contractDates}</td>
       <td className="px-4 py-3 text-muted-foreground">{created}</td>
       <td className="px-4 py-3">

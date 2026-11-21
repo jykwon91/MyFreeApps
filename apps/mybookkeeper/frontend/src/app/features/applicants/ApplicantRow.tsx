@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 import {
   formatDesiredDates,
   formatRelativeTime,
@@ -16,6 +17,7 @@ export interface ApplicantRowProps {
  */
 export default function ApplicantRow({ applicant }: ApplicantRowProps) {
   const navigate = useNavigate();
+  const detailPath = `/applicants/${applicant.id}`;
   const legalName = applicant.legal_name ?? "Unnamed applicant";
   const employer = applicant.employer_or_hospital ?? "—";
   const contractDates = formatDesiredDates(
@@ -27,10 +29,12 @@ export default function ApplicantRow({ applicant }: ApplicantRowProps) {
   return (
     <tr
       data-testid={`applicant-row-${applicant.id}`}
-      onClick={() => navigate(`/applicants/${applicant.id}`)}
+      onClick={() => navigate(detailPath)}
       className="border-t cursor-pointer hover:bg-muted/30 transition-colors"
     >
-      <td className="px-4 py-3 font-medium">{legalName}</td>
+      <td className="px-4 py-3 font-medium">
+        <RowPrimaryAction to={detailPath}>{legalName}</RowPrimaryAction>
+      </td>
       <td className="px-4 py-3 text-muted-foreground">{employer}</td>
       <td className="px-4 py-3 text-muted-foreground">{contractDates}</td>
       <td className="px-4 py-3 text-muted-foreground">{created}</td>

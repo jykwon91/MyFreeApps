@@ -18,8 +18,11 @@ import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBad
 import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
 import TransactionRowCheckbox from "@/app/features/transactions/TransactionRowCheckbox";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
+import RowPrimaryAction from "@/shared/components/ui/RowPrimaryAction";
 
 interface ColumnActions {
+  /** Opens a transaction for editing; its vendor is the button that does it. */
+  onOpen: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
   onApprove: (id: string) => void;
   busyId: string | null;
@@ -34,7 +37,7 @@ const columnHelper = createColumnHelper<AppTableFeatures, Transaction>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<AppTableFeatures, Transaction, any>[] {
-  const { onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll, onToggleRow } = actions;
+  const { onOpen, onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll, onToggleRow } = actions;
 
   return useMemo(() => [
     columnHelper.display({
@@ -91,7 +94,12 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
             {source === "airbnb" ? (
               <span title="Airbnb"><Home size={13} className="text-rose-500 shrink-0" /></span>
             ) : null}
-            <span>{vendor}</span>
+            <RowPrimaryAction
+              onActivate={() => onOpen(row.original)}
+              aria-label={`Open ${getValue() ?? "transaction"}`}
+            >
+              {vendor}
+            </RowPrimaryAction>
             {pending ? <Badge label="Pending" color="gray" /> : null}
           </div>
         );
@@ -175,5 +183,5 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         );
       },
     }),
-  ], [propertyMap, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll, onToggleRow]);
+  ], [propertyMap, onOpen, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll, onToggleRow]);
 }

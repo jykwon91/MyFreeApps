@@ -146,6 +146,8 @@ export { default as DataTable } from "./components/data/DataTable";
 export type { DataTableProps } from "./types/data-table-props";
 export type { ColumnDef } from "./types/data-table-column-def";
 export type { SortingState, PaginationState } from "@tanstack/react-table";
+export { default as DataTableHeaderCell } from "./components/data/DataTableHeaderCell";
+export type { DataTableHeaderCellProps } from "./types/data-table-header-cell-props";
 export { default as Pagination } from "./components/data/Pagination";
 export type { PaginationProps } from "./components/data/Pagination";
 
