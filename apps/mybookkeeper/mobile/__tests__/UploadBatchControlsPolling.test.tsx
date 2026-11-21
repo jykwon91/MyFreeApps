@@ -20,6 +20,7 @@ const pause = (ms: number) => act(() => new Promise<void>((resolve) => setTimeou
 let statusRequests = 0;
 
 beforeEach(() => {
+  jest.clearAllMocks();
   statusRequests = 0;
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
@@ -47,7 +48,6 @@ describe("UploadBatchControls polling", () => {
       </Provider>,
     );
     await waitFor(() => expect(statusRequests).toBeGreaterThanOrEqual(2));
-    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("1 of 4 read", { queue: true });
 
     await act(async () => {
       store.dispatch(baseApi.internalActions.onFocusLost());
@@ -61,5 +61,24 @@ describe("UploadBatchControls polling", () => {
       store.dispatch(baseApi.internalActions.onFocus());
     });
     await waitFor(() => expect(statusRequests).toBeGreaterThan(whileHidden));
+  });
+
+  it("reads out that the zip is being read and when it is done, not the count at every check", async () => {
+    const counts = [1, 2, 3, 4];
+    api.defaults.adapter = (config) => {
+      statusRequests += 1;
+      const completed = counts[Math.min(statusRequests - 1, counts.length - 1)];
+      const data = { batch_id: "batch-1", total: 4, completed, failed: 0, status: completed === 4 ? "done" : "processing" };
+      return Promise.resolve({ data, status: 200, statusText: "", headers: {}, config });
+    };
+    await render(
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <UploadBatchControls batchId="batch-1" name="receipts.zip" uri="cache:/receipts.zip" />
+        </ToastProvider>
+      </Provider>,
+    );
+    await waitFor(() => expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("4 of 4 read", { queue: true }));
+    expect(jest.mocked(AccessibilityInfo.announceForAccessibilityWithOptions).mock.calls.map(([line]) => line)).toEqual(["Reading 4 files", "4 of 4 read"]);
   });
 });

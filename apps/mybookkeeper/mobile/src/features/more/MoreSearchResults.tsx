@@ -1,13 +1,13 @@
-import { EmptyState, MoreRow, useAnnouncement, useTheme } from "@platform/mobile";
+import { EmptyState, MoreRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { MORE_ACCOUNT_HREF, MORE_SEARCH_MESSAGES } from "../../constants/moreSearch";
 import type { MoreSearchResultsProps } from "../../types/MoreSearchResultsProps";
 
+/** The count shown above the results; MoreScreen reads it out once typing pauses. */
 export default function MoreSearchResults({ query, results, onShowAccount }: MoreSearchResultsProps) {
   const { colors, fontSize } = useTheme();
   const count = MORE_SEARCH_MESSAGES.count(results.length);
-  useAnnouncement(count, "polite");
   return (
     <View>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{count}</Text>

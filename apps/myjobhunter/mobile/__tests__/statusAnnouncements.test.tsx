@@ -19,10 +19,12 @@ describe("status messages a screen reader hears on both platforms", () => {
     expect(announcePolitely).toHaveBeenCalledWith(COMPANY_RESEARCH_MESSAGES.runningNote("Acme"), POLITE);
   });
 
-  it("ResearchFailed reads why the research failed, as an alert", async () => {
+  it("ResearchFailed shows why the research failed without reading it a second time over the run's error toast", async () => {
     await render(<ResearchFailed failure={{ reason: "retryable", detail: null }} isRunning={false} onRun={jest.fn()} />);
-    expect(announce).toHaveBeenCalledWith(screen.getByRole("alert").props.children);
-    expect(announce).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(COMPANY_RESEARCH_MESSAGES.failedBody)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(announce).not.toHaveBeenCalled();
+    expect(announcePolitely).not.toHaveBeenCalled();
   });
 
   it("ReadingHint reads that a slow read is still going, and nothing before then", async () => {

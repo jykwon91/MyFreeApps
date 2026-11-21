@@ -21,15 +21,21 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
+/** The source with its comments taken out, so a hook named only in a comment doesn't count. `://` in a URL isn't a comment. */
+export function withoutComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
 /** True when the source sets a live region, which only Android reads. `useAnnouncement` reads on both, and the two together read twice on Android. */
 export function usesLiveRegion(source: string): boolean {
-  return /\b(?:accessibilityLiveRegion|aria-live)=/.test(source);
+  return /\b(?:accessibilityLiveRegion|aria-live)=/.test(withoutComments(source));
 }
 
 /** True when the source gives something the alert role, which says nothing on iOS, without calling `useAnnouncement` to have it read. */
 export function hasUnannouncedAlert(source: string): boolean {
-  const hasAlert = /\b(?:accessibilityRole|role)=(?:"alert"|\{[^}]*"alert"[^}]*\})/.test(source);
-  return hasAlert && !/\buseAnnouncement\(/.test(source);
+  const code = withoutComments(source);
+  const hasAlert = /\b(?:accessibilityRole|role)=(?:"alert"|\{[^}]*"alert"[^}]*\})/.test(code);
+  return hasAlert && !/\buseAnnouncement\(/.test(code);
 }
 
 const files = SOURCE_ROOTS.flatMap(sourceFiles).map((path) => ({ path: path.replace(`${REPO_ROOT}/`, ""), source: readFileSync(path, "utf8") }));
@@ -48,6 +54,9 @@ describe("status messages are announced on iOS too", () => {
     expect(hasUnannouncedAlert('<Text role="alert">x</Text>')).toBe(true);
     expect(hasUnannouncedAlert('useAnnouncement(message);\n<Text accessibilityRole="alert">{message}</Text>')).toBe(false);
     expect(hasUnannouncedAlert('<Text accessibilityRole="header">x</Text>')).toBe(false);
+    expect(hasUnannouncedAlert('// read with useAnnouncement(message)\n<Text accessibilityRole="alert">x</Text>')).toBe(true);
+    expect(hasUnannouncedAlert('/* useAnnouncement(message) */\n<Text accessibilityRole="alert">x</Text>')).toBe(true);
+    expect(hasUnannouncedAlert('const url = "https://x";\nuseAnnouncement(url);\n<Text accessibilityRole="alert">x</Text>')).toBe(false);
   });
 
   it("finds the source files to scan", () => {

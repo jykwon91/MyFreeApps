@@ -111,6 +111,7 @@ export { useTheme } from "./theme/useTheme";
 export { useToneColor } from "./theme/useToneColor";
 
 export type { AccountMessage } from "./types/AccountMessage";
+export type { AnnouncementOptions } from "./types/AnnouncementOptions";
 export type { AccountSettingsProps } from "./types/AccountSettingsProps";
 export type { AppTab } from "./types/AppTab";
 export type { ButtonVariant } from "./types/ButtonVariant";

@@ -31,6 +31,7 @@ jest.mock("react-native/Libraries/Modal/Modal", () => ({
 
 let alertSpy: jest.SpyInstance;
 beforeEach(() => {
+  jest.clearAllMocks();
   alertSpy = signInToWorkspace();
   resetFakeFiles();
   jest.mocked(preparePhoto).mockReset().mockImplementation(async (uri: string) => uri);
@@ -135,6 +136,11 @@ describe("adding photos", () => {
     expect(mockPreventRemove.active).toBe(true);
     await act(async () => finish[1]());
     await screen.findByText(MESSAGES.uploadedMany);
+    // Each batch is read out as it starts, not at every photo, so the lines don't pile up on iOS.
+    const spoken = jest.mocked(AccessibilityInfo.announceForAccessibilityWithOptions).mock.calls.map(([line]) => line);
+    expect(spoken.filter((line) => line.startsWith("Preparing"))).toEqual(["Preparing 1 of 2"]);
+    expect(spoken.some((line) => line.startsWith("Uploading 1 of"))).toBe(true);
+    expect(spoken).not.toContain("Uploading 2 of 2");
     expect(writesTo(server, "post", "/photos")).toHaveLength(2);
     expect(screen.queryByText(/^Preparing/)).toBeNull();
     expect(mockPreventRemove.active).toBe(false);

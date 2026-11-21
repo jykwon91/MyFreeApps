@@ -43,11 +43,15 @@ describe("LoadMoreFooter", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("reads the count politely and the failure as an alert, on iOS as well as Android", async () => {
+  it("reads a new count politely, not the one the list opens with, and the failure as an alert, on iOS as well as Android", async () => {
     const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     const announcePolitely = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
     await render(footer());
-    expect(announcePolitely).toHaveBeenCalledWith("Showing 50 of 120", { queue: true });
+    expect(announcePolitely).not.toHaveBeenCalled();
+
+    await screen.rerender(footer({ shown: 100 }));
+    expect(announcePolitely).toHaveBeenCalledWith("Showing 100 of 120", { queue: true });
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
     expect(announce).not.toHaveBeenCalled();
 
     await screen.rerender(footer({ isError: true }));

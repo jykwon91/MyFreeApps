@@ -8,7 +8,6 @@ import AiSuggestionsCard from "../src/features/leaseTemplates/AiSuggestionsCard"
 import ComparisonNotice from "../src/features/analyticsControls/ComparisonNotice";
 import DocumentLibraryPlaceholder from "../src/features/documentReader/DocumentLibraryPlaceholder";
 import ListingPhotoUploadRow from "../src/features/listings/ListingPhotoUploadRow";
-import MoreSearchResults from "../src/features/more/MoreSearchResults";
 import PropertyMultiSheet from "../src/features/analyticsControls/PropertyMultiSheet";
 import TransactionSelectionBar from "../src/features/transactions/TransactionSelectionBar";
 import WelcomeManualEmailOutcome from "../src/features/welcomeManuals/WelcomeManualEmailOutcome";
@@ -29,19 +28,31 @@ describe("status messages a screen reader hears on both platforms", () => {
     expect(announcePolitely).toHaveBeenCalledWith(MONEY_ANALYSIS_MESSAGES.loadingComparison, POLITE);
 
     await screen.rerender(notice({ isLoading: false, hasFailed: true }));
-    expect(announce).toHaveBeenCalledWith("No comparison this time.");
+    expect(announcePolitely).toHaveBeenCalledWith("No comparison this time.", POLITE);
     expect(screen.getByRole("alert")).toHaveTextContent("No comparison this time.");
     expect(screen.getByRole("button", { name: MONEY_ANALYSIS_MESSAGES.retryComparison })).toBeTruthy();
   });
 
-  it("PropertyMultiSheet reads the limit once the most properties are chosen", async () => {
+  it("PropertyMultiSheet reads the limit when a tap reaches it, and not when the sheet is opened at it", async () => {
     const properties = [{ id: "a", name: "Elm" }, { id: "b", name: "Oak" }];
-    await render(<PropertyMultiSheet isOpen maxSelected={1} onChange={jest.fn()} onClose={jest.fn()} properties={properties} selectedIds={["a"]} />);
-    expect(announce).toHaveBeenCalledWith(MONEY_ANALYSIS_MESSAGES.propertyLimit(1));
+    const sheet = (isOpen: boolean, selectedIds: string[]) => (
+      <PropertyMultiSheet isOpen={isOpen} maxSelected={1} onChange={jest.fn()} onClose={jest.fn()} properties={properties} selectedIds={selectedIds} />
+    );
+    await render(sheet(true, []));
+    await screen.rerender(sheet(true, ["a"]));
+    expect(announcePolitely).toHaveBeenCalledWith(MONEY_ANALYSIS_MESSAGES.propertyLimit(1), POLITE);
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+
+    await screen.rerender(sheet(false, ["a"]));
+    await screen.rerender(sheet(true, ["a"]));
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+    expect(announce).not.toHaveBeenCalled();
   });
 
-  it("PropertyMultiSheet says nothing while it is closed", async () => {
-    await render(<PropertyMultiSheet isOpen={false} maxSelected={1} onChange={jest.fn()} onClose={jest.fn()} properties={[{ id: "a", name: "Elm" }]} selectedIds={["a"]} />);
+  it("PropertyMultiSheet opened already at the limit shows it without reading it", async () => {
+    await render(<PropertyMultiSheet isOpen maxSelected={1} onChange={jest.fn()} onClose={jest.fn()} properties={[{ id: "a", name: "Elm" }, { id: "b", name: "Oak" }]} selectedIds={["a"]} />);
+    expect(screen.getByText(MONEY_ANALYSIS_MESSAGES.propertyLimit(1))).toBeTruthy();
+    expect(announcePolitely).not.toHaveBeenCalled();
     expect(announce).not.toHaveBeenCalled();
   });
 
@@ -74,11 +85,6 @@ describe("status messages a screen reader hears on both platforms", () => {
     expect(announcePolitely).toHaveBeenCalledWith("3 selected", POLITE);
   });
 
-  it("MoreSearchResults reads the result count", async () => {
-    await render(<MoreSearchResults onShowAccount={jest.fn()} query="zzz" results={[]} />);
-    expect(announcePolitely).toHaveBeenCalledWith("0 results", POLITE);
-  });
-
   it("AiSuggestionsCard reads its headline", async () => {
     await render(<AiSuggestionsCard onDismiss={jest.fn()} savedKeys={new Set()} suggestions={{ suggestions: [], truncated: false, pages_note: null }} />);
     expect(announcePolitely).toHaveBeenCalledWith(screen.getByRole("header").props.children, POLITE);
@@ -87,7 +93,7 @@ describe("status messages a screen reader hears on both platforms", () => {
   it("DocumentLibraryPlaceholder reads the failure through the shared SectionError", async () => {
     const messages = documentReaderMessages({ title: "t", hint: "h", takePhoto: "p", target: "form" });
     await render(<DocumentLibraryPlaceholder failed isFetching={false} messages={messages} onRetry={jest.fn()} />);
-    expect(announce).toHaveBeenCalledWith(messages.libraryFailed);
+    expect(announcePolitely).toHaveBeenCalledWith(messages.libraryFailed, POLITE);
     expect(screen.getByRole("button", { name: messages.libraryRetry })).toBeTruthy();
   });
 

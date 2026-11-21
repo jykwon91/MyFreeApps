@@ -8,7 +8,7 @@ import LoadingButton from "./LoadingButton";
 export default function LoadMoreFooter({ shown, total, isLoading, isError, onLoadMore, messages }: LoadMoreFooterProps) {
   const { colors, spacing, fontSize } = useTheme();
   const hasFailed = isError && !isLoading;
-  useAnnouncement(messages.showingCount(shown, total), "polite");
+  useAnnouncement(messages.showingCount(shown, total), "polite", { onChangeOnly: true });
   useAnnouncement(hasFailed ? messages.couldntLoadMore : undefined);
   return (
     <View style={{ gap: spacing.sm }}>

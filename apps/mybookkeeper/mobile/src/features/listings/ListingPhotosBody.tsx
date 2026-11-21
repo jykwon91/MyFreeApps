@@ -73,8 +73,9 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
   const preparingLine = picker.preparing ? preparingProgress(picker.preparing.done, picker.preparing.total) : undefined;
   const uploadLine = uploads.isSending ? uploadProgress(uploads.batch.done, uploads.batch.total) : undefined;
   const selectionLine = isSelecting ? (selected.size === 0 ? MESSAGES.noneSelected : selectedCount(selected.size)) : undefined;
-  useAnnouncement(preparingLine, "polite");
-  useAnnouncement(uploadLine, "polite");
+  // Each batch is read out as it starts, not at every photo; the done toast says when it has finished.
+  useAnnouncement(picker.preparing ? preparingProgress(0, picker.preparing.total) : undefined, "polite");
+  useAnnouncement(uploads.isSending ? uploadProgress(0, uploads.batch.total) : undefined, "polite");
   useAnnouncement(selectionLine, "polite");
 
   const isEmpty = photos.length === 0 && uploads.items.length === 0 && !picker.preparing;

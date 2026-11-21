@@ -45,6 +45,11 @@ export function batchReadProgressLabel(completed: number, total: number): string
   return `${completed} of ${total} read`;
 }
 
+/** Said once when a sent zip starts being read; the count on screen isn't read on every check. */
+export function batchReadingStartedMessage(total: number): string {
+  return total === 1 ? "Reading 1 file" : `Reading ${total} files`;
+}
+
 export function batchCancelledMessage(name: string): string {
   return `Stopped. I won't read the rest of ${name}.`;
 }

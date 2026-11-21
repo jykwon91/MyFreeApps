@@ -17,7 +17,8 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
   const { colors, spacing, fontSize } = useTheme();
   const isAtLimit = maxSelected !== undefined && selectedIds.length >= maxSelected;
   const limitNotice = isAtLimit ? MESSAGES.propertyLimit(maxSelected) : undefined;
-  useAnnouncement(isOpen ? limitNotice : undefined);
+  // Read when a tap reaches the limit, not each time the sheet is opened at it.
+  useAnnouncement(limitNotice, "polite", { onChangeOnly: true });
   const toggle = (id: string) => {
     if (selectedIds.includes(id)) onChange(selectedIds.filter((chosen) => chosen !== id));
     else if (!isAtLimit) onChange([...selectedIds, id]);

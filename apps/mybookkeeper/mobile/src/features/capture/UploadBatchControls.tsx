@@ -11,6 +11,7 @@ import {
   CANCELLING_BATCH_LABEL,
   batchCancelledMessage,
   batchReadProgressLabel,
+  batchReadingStartedMessage,
   cancelBatchAccessibilityLabel,
 } from "../../constants/capture";
 import type { AppDispatch } from "../../lib/store";
@@ -32,7 +33,9 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   const [cancelBatch, { isLoading: isCancelling }] = useCancelBatchMutation();
 
   const progress = batch ? batchReadProgressLabel(batch.completed, batch.total) : "";
-  useAnnouncement(progress, "polite");
+  // Only the start and the end are read out; a line for every check would pile up on iOS.
+  const isFinished = batch?.status === BATCH_STATUSES.DONE;
+  useAnnouncement(batch ? (isFinished ? progress : batchReadingStartedMessage(batch.total)) : undefined, "polite");
 
   useEffect(() => {
     if (batch?.status === BATCH_STATUSES.DONE) dispatch(uploadBatchRead(uri));

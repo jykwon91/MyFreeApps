@@ -365,7 +365,7 @@ describe("MoneyAnalysisScreen", () => {
       server.yearsStatus = 500;
       await show();
       expect(await screen.findByText(MESSAGES.yearsFailed)).toBeTruthy();
-      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(MESSAGES.yearsFailed);
+      expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(MESSAGES.yearsFailed, { queue: true });
       server.yearsStatus = undefined;
       await fireEvent.press(screen.getByRole("button", { name: MESSAGES.retryYears }));
       await waitFor(() => expect(screen.queryByText(MESSAGES.yearsFailed)).toBeNull());

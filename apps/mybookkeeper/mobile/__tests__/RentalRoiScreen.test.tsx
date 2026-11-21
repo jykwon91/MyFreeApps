@@ -102,6 +102,7 @@ function tree() {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks();
   mockPush.mockReset();
   store.dispatch(baseApi.util.resetApiState());
 });
@@ -115,7 +116,8 @@ describe("RentalRoiScreen", () => {
     serve();
     await render(tree());
     expect(await screen.findByTestId("rental-roi-headline")).toBeTruthy();
-    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(expect.stringContaining(screen.getByTestId("rental-roi-headline-title").props.children), { queue: true });
+    // The first headline is simply there when the screen opens; only a new one is read out.
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).not.toHaveBeenCalled();
     expect(screen.getByTestId("rental-roi-target-input")).toBeTruthy();
     expect(screen.getAllByTestId("rental-roi-property-card")).toHaveLength(1);
     expect(screen.getByTestId("rental-roi-total-card")).toBeTruthy();
@@ -162,10 +164,12 @@ describe("RentalRoiScreen", () => {
     expect(server.reads[0]).toMatchObject({ target_return_pct: 8 });
   });
 
-  it("debounces the target input and refetches with the new value", async () => {
+  it("debounces the target input, refetches with the new value, and reads out the new headline", async () => {
     const server = serve();
     await render(tree());
     await screen.findByTestId("rental-roi-headline");
+    const base = aResponse();
+    server.response = aResponse({ target_return_pct: "12", summary: { ...base.summary, total_target_monthly_cents: 300000 } });
     const input = screen.getByTestId("rental-roi-target-input");
     await act(async () => {
       fireEvent.changeText(input, "12");
@@ -173,6 +177,9 @@ describe("RentalRoiScreen", () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
     });
     await waitFor(() => expect(server.reads.at(-1)?.target_return_pct).toBe(12));
+    await waitFor(() => expect(screen.getByTestId("rental-roi-headline-title")).toHaveTextContent(/\$3,000/));
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledTimes(1);
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(expect.stringContaining(screen.getByTestId("rental-roi-headline-title").props.children), { queue: true });
   });
 
   it("shows the unassigned revenue note and links to transactions", async () => {
