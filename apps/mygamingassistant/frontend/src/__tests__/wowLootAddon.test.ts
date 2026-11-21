@@ -75,7 +75,7 @@ describe("MGA Loot verdicts", () => {
     );
     // Warlock leveling: staff 21 + 52 x 0.8 = 62.6 vs cane 10 + 7 + 54 x 0.9 = 65.6, -4.6%.
     expect(line).toContain("Downgrade -5% vs");
-    expect(line).not.toContain("not scored");
+    expect(line).not.toContain("Can't judge");
   });
 
   it("calls a downgrade and a sidegrade", () => {
@@ -163,10 +163,35 @@ describe("MGA Loot verdicts", () => {
     expect(vs100(95)).toContain("Downgrade -5% vs");
   });
 
-  it("counts Classic's dodge, parry and block chance lines as chance, not effects", () => {
-    const [line] = run(roll(`${CHEST}, ${strength(10)}, lines = { "Equip: Increases your chance to dodge an attack by 1%." }`));
-    expect(line).toContain("hit/crit/dodge chances not scored");
-    expect(line).not.toContain("has effects");
+  it("scores Classic's hit, crit, dodge, parry and block chance lines with the chance weights", () => {
+    const vsTen = (lines: string): string =>
+      run(roll(`${CHEST}, ${strength(10)}, lines = { ${lines} }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`))[0];
+    // Arms: 1% hit is worth about as much as 10 strength, so +1% hit roughly doubles a 10-strength chest.
+    expect(vsTen('"Equip: Improves your chance to hit by 1%."')).toMatch(/Upgrade \+\d+% over/);
+    expect(vsTen('"Equip: Improves your chance to get a critical strike by 1%."')).toMatch(/Upgrade \+\d+% over/);
+    expect(vsTen('"Equip: Increases your chance to dodge an attack by 1%."')).not.toContain("Can't judge");
+  });
+
+  it("counts a chance once when the game gives it as a stat and a tooltip line", () => {
+    const both = run(
+      roll(
+        `${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_HIT_RATING_SHORT = 1 }, lines = { "Equip: Improves your chance to hit by 1%." }`,
+        `items[5] = { ${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_HIT_RATING_SHORT = 1 } }; equipped[5] = 5`,
+      ),
+    )[0];
+    expect(both).toContain("About the same as");
+  });
+
+  it("counts spell damage vs humanoids at the share of mobs your level that are humanoids (Courier's Clasp)", () => {
+    const NECK = `loc = "INVTYPE_NECK", ${ARMOR}, subclassID = 0`;
+    const [line] = run(
+      roll(
+        `${NECK}, stats = { ITEM_MOD_INTELLECT_SHORT = 10, ITEM_MOD_SPIRIT_SHORT = 7, ITEM_MOD_SPELL_POWER_SHORT = 8, ITEM_MOD_SPELL_DAMAGE_VS_HUMANOID_SHORT = 10 }`,
+        `me.class = "MAGE"; me.level = 44; items[5] = { ${NECK}, stats = { ITEM_MOD_STAMINA_SHORT = 10, ITEM_MOD_INTELLECT_SHORT = 1, ITEM_MOD_SPELL_POWER_SHORT = 12 } }; equipped[2] = 5`,
+      ),
+    );
+    expect(line).toContain("Spell Damage Vs Humanoids counted at 41% (humanoids among mobs your level)");
+    expect(line).not.toContain("Can't judge");
   });
 
   it("scores an item the game gives no stats for as nothing", () => {
@@ -223,26 +248,30 @@ describe("MGA Loot verdicts", () => {
     expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain("leveling estimate");
   });
 
-  it("lists stats and effects it can't score", () => {
-    const [line] = run(
-      roll(`${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_HIT_RATING_SHORT = 1 }, lines = { "Equip: Improves your chance to hit by 1%." }`),
-    );
-    expect(line).toContain("hit/crit/dodge chances not scored");
-    expect(line).toContain("not scored: Hit Rating");
-    expect(line).not.toContain("has effects");
+  it("won't call an upgrade or downgrade when the item has an effect it can't count", () => {
+    const [line] = run(roll(`${CHEST}, ${strength(10)}, lines = { "Use: Restores 500 health." }`, `items[5] = { ${CHEST}, ${strength(20)} }; equipped[5] = 5`));
+    expect(line).toMatch(/^frame: Can't judge: this item has "Use: Restores 500 health\.", which MGA Loot can't count \/\/ stats alone: -50% vs .*\[Item 5\]/);
+    expect(line).not.toContain("Downgrade");
   });
 
-  it("flags Use and proc effects, but not Equip lines that are plain stats", () => {
-    expect(run(roll(`${CHEST}, ${strength(10)}, lines = { "Use: Restores 500 health." }`))[0]).toContain(
-      "has effects it can't score: read the tooltip",
-    );
+  it("won't judge against a worn item with an effect it can't count", () => {
+    const [line] = run(roll(`${CHEST}, ${strength(20)}`, `items[5] = { ${CHEST}, ${strength(10)}, lines = { "Chance on hit: Heals you for 50." } }; equipped[5] = 5`));
+    expect(line).toMatch(/Can't judge: .*\[Item 5\]\S* has "Chance on hit: Heals you for 50\."/);
+    expect(line).not.toContain("Upgrade");
+  });
+
+  it("won't judge an item with a stat it doesn't know", () => {
+    const [line] = run(roll(`${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_MYSTERY_SHORT = 3 }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`));
+    expect(line).toContain("Can't judge: this item has ITEM_MOD_MYSTERY_SHORT");
+  });
+
+  it("doesn't count Equip lines that are plain stats as effects", () => {
     const [line] = run(
       roll(
         `${CHEST}, ${strength(10)}, lines = { "Equip: +40 Attack Power.", "Equip: Increased Defense +7.", "Equip: Increases the block value of your shield by 10.", "Equip: Increases healing done by spells and effects by up to 22.", "Equip: Restores 4 mana per 5 sec." }`,
       ),
     );
-    expect(line).not.toContain("not scored");
-    expect(line).not.toContain("can't score");
+    expect(line).not.toContain("Can't judge");
   });
 
   it("leaves trinkets to their effect", () => {

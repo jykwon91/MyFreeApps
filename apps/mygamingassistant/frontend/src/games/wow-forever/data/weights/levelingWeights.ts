@@ -13,6 +13,8 @@ import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
  *   3. Stamina matters more than at 60 (less downtime, fewer deaths): ~0.5-0.8.
  *   4. Spirit is decent for mana users (between-fight regen), strong for Priests.
  *   5. Hit/crit percent are kept at roughly Level-60 relative values.
+ *   6. Spell damage counts as much as spell power for a class that casts damage
+ *      spells while leveling (spell power is damage and healing; leveling is damage).
  * Spec doesn't change these — pick a spec and the Level 60 bracket for spec
  * weights. Keyed by class id.
  */
@@ -58,6 +60,7 @@ export const LEVELING_WEIGHTS: Record<WowClassId, StatWeights> = {
       hit_pct: 5,
       crit_pct: 5,
       spell_power: 0.3,
+      spell_damage: 0.3,
       mp5: 0.5,
     },
   },
@@ -75,6 +78,7 @@ export const LEVELING_WEIGHTS: Record<WowClassId, StatWeights> = {
       hit_pct: 5,
       crit_pct: 5,
       spell_power: 0.3,
+      spell_damage: 0.3,
       mp5: 0.5,
     },
   },
@@ -93,6 +97,7 @@ export const LEVELING_WEIGHTS: Record<WowClassId, StatWeights> = {
       hit_pct: 5,
       crit_pct: 5,
       spell_power: 0.5,
+      spell_damage: 0.5,
       mp5: 0.5,
     },
   },
