@@ -212,10 +212,15 @@ export function useAddApplicationFlow() {
     setReview((current) => ({ sourceUrl: current?.sourceUrl ?? null, summary: current?.summary ?? null, company: added }));
   }
 
-  /** Back from the review step: the source step again, with the link or text still in it. */
+  /**
+   * Back from the review step: the source step again, with the link or text still in it. What the
+   * abandoned read filled in goes, so it can't be saved under whatever is chosen or read next.
+   */
   function backToSource(): void {
     setFailure(null);
     setReview(null);
+    setValues(emptyAddApplicationFormValues());
+    setSubmittedJdText("");
   }
 
   function edit<Field extends keyof AddApplicationFormValues>(field: Field, value: AddApplicationFormValues[Field]): void {

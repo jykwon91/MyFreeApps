@@ -487,6 +487,46 @@ describe("from pasted text", () => {
   });
 });
 
+describe("going back from the review", () => {
+  it("forgets the abandoned text's description when another posting is read and saved", async () => {
+    const sent = serveAdd({ "POST /applications/parse-jd": ok(parsed()), "POST /applications/extract-from-url": ok(extracted()) });
+    await openAddScreen({ fromList: true });
+    await chooseSource("Paste text");
+    await fireEvent.changeText(field(MESSAGES.textLabel), "Job A description.");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
+    expect(await screen.findByText(MESSAGES.companyTracked)).toBeTruthy();
+
+    await act(async () => router.back());
+    await chooseSource("Link");
+    await readLink();
+    expect(await screen.findByText(MESSAGES.companyTracked)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    await screen.findByText(MESSAGES.added);
+    expect(requestsTo(sent, "POST /applications").map(({ body }) => body)).toEqual([
+      expect.objectContaining({ role_title: "Staff Engineer", jd_text: null }),
+    ]);
+  });
+
+  it("starts the by-hand form empty rather than with the abandoned read's fields", async () => {
+    serveAdd({ "POST /applications/parse-jd": ok(parsed()) });
+    await openAddScreen({ fromList: true });
+    await chooseSource("Paste text");
+    await fireEvent.changeText(field(MESSAGES.textLabel), "Job A description.");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
+    expect(await screen.findByText(MESSAGES.companyTracked)).toBeTruthy();
+    expect(field(ROLE_FIELD).props.value).toBe("Senior Engineer");
+
+    await act(async () => router.back());
+    await chooseSource("Type it in");
+    await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.companyLabel}, ${MESSAGES.chooseCompany}` }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Stripe, stripe.com" }));
+
+    expect(await screen.findByText(MESSAGES.companyChosen)).toBeTruthy();
+    expect(field(ROLE_FIELD).props.value).toBe("");
+  });
+});
+
 describe("typed in", () => {
   it("picks a tracked company, searching by name or website, then saves the rest as typed", async () => {
     const sent = serveAdd();
