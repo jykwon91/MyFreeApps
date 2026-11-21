@@ -13,7 +13,8 @@ from app.core.config import settings
 from app.repositories.tutor import tutor_profile_repository
 from app.services.tutor import quota_service
 from app.schemas.tutor.turn_schemas import MAX_TURN_CHARS
-from app.services.tutor.turn_estimate import first_turn_units, next_turn_units
+from app.repositories.tutor import tutor_session_repository
+from app.services.tutor.turn_estimate import first_turn_units, session_next_turn_units
 
 
 class TestProfile:
@@ -152,7 +153,12 @@ class TestUsageToday:
         async with await as_user(user) as authed:
             resp = await authed.get("/usage/today")
         assert resp.status_code == 200
-        assert resp.json() == {"remaining_fraction": 1.0, "cap_reached": False, "tutor_available": True}
+        assert resp.json() == {
+            "remaining_fraction": 1.0,
+            "cap_reached": False,
+            "tutor_available": True,
+            "session_limit_reached": False,
+        }
 
     @pytest.mark.asyncio
     async def test_never_leaks_global_numbers(self, user_factory, as_user, fake_claude) -> None:
@@ -160,7 +166,9 @@ class TestUsageToday:
         user = await user_factory()
         async with await as_user(user) as authed:
             body = (await authed.get("/usage/today")).json()
-        assert set(body) == {"remaining_fraction", "cap_reached", "tutor_available"}
+        assert set(body) == {
+            "remaining_fraction", "cap_reached", "tutor_available", "session_limit_reached",
+        }
         assert body["remaining_fraction"] == 1.0
 
     @pytest.mark.asyncio
@@ -200,7 +208,9 @@ class TestUsageToday:
                     f"/sessions/{session_id}/turns", json={"text": "y" * MAX_TURN_CHARS},
                 )
                 assert turn.status_code == 200, turn.text
-            next_units = await next_turn_units(db, user_id, uuid.UUID(session_id))
+            session = await tutor_session_repository.get_by_id(db, uuid.UUID(session_id), user_id)
+            assert session is not None
+            next_units = await session_next_turn_units(db, session)
             first_units = first_turn_units()
             assert next_units > first_units
 
@@ -225,6 +235,29 @@ class TestUsageToday:
         assert refused.json()["detail"] == "daily_limit_reached"
         assert fits["cap_reached"] is False
         assert accepted.status_code == 200, accepted.text
+
+    @pytest.mark.asyncio
+    async def test_session_limit_reached_once_the_conversation_is_out_of_turns(
+        self, user_factory, as_user, fake_claude, monkeypatch,
+    ) -> None:
+        """The learner is told before they speak, not by a refusal that eats their answer."""
+        monkeypatch.setattr(settings, "ltutor_max_turns_per_session", 1)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            session_id = (
+                await authed.post(
+                    "/sessions",
+                    json={"language_code": "es", "scenario_slug": "cafe", "level": "beginner"},
+                )
+            ).json()["id"]
+            before = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+            turn = await authed.post(f"/sessions/{session_id}/turns", json={"text": "hola"})
+            assert turn.status_code == 200, turn.text
+            after = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+            without_session = (await authed.get("/usage/today")).json()
+        assert before["session_limit_reached"] is False
+        assert after["session_limit_reached"] is True
+        assert without_session["session_limit_reached"] is False
 
     @pytest.mark.asyncio
     async def test_another_users_session_is_404(self, user_factory, as_user, fake_claude) -> None:

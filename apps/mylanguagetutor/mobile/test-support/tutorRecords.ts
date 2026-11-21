@@ -20,8 +20,8 @@ export const SCENARIOS: Scenario[] = [
   { slug: "cafe", title: "At the cafe", goal: "Order a drink and a snack.", goals: ["Order"], order: 4 },
 ];
 
-export const USAGE_LEFT: UsageToday = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true };
-export const USAGE_USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
+export const USAGE_LEFT: UsageToday = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true, session_limit_reached: false };
+export const USAGE_USED_UP: UsageToday = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
 
 export const TUTOR_SESSION: TutorSession = {
   id: "conversation-1",
