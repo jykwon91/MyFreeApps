@@ -16,8 +16,15 @@ import { Provider } from "react-redux";
 import { MANAGE_RECIPE_MESSAGES as MESSAGES } from "../src/constants/manageRecipe";
 import { RECIPES_LIST_PATH } from "../src/constants/routes";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
+import { recipeSaved } from "../src/features/discovery/discoverySlice";
 import { makeStore } from "../src/lib/store";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+
+jest.mock("expo-notifications", () => ({
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  dismissNotificationAsync: jest.fn(() => Promise.resolve()),
+}));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
 const mockDismissTo = jest.fn();
 jest.mock("expo-router", () => ({
@@ -329,6 +336,17 @@ describe("deleting a recipe", () => {
     expect(mockDismissTo).toHaveBeenCalledWith(RECIPES_LIST_PATH);
     await waitFor(() => expect(listLoads()).toBe(loadsBefore + 1));
     list.unsubscribe();
+  });
+
+  it("forgets what the phone kept for the recipe once it is deleted", async () => {
+    await show(SOUP, { "DELETE /recipes/r1": () => reply(204, null) });
+    store.dispatch(recipeSaved({ resultId: "soup1", recipeId: "r1", generation: store.getState().discovery.generation }));
+    store.dispatch(recipeSaved({ resultId: "flan1", recipeId: "other", generation: store.getState().discovery.generation }));
+    await pressDelete();
+    await act(async () => alertButton(SHARED.deleteConfirm).onPress?.());
+
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith(RECIPES_LIST_PATH));
+    expect(store.getState().discovery.saved).toEqual({ flan1: "other" });
   });
 
   it("goes back to the list when it was already deleted", async () => {

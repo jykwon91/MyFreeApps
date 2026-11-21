@@ -2,8 +2,9 @@ import { useDeleteRecipeMutation, useGetRecipeQuery } from "@myrecipes/api-clien
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { EmptyState, LoadingButton, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ScrollView, View } from "react-native";
+import { useDispatch } from "react-redux";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { COOK_COPY_MESSAGES } from "../../constants/cook";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
@@ -11,7 +12,9 @@ import { cookHref } from "../../utils/cookHref";
 import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
 import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { recipeBackTitle } from "../../utils/recipeBackTitle";
+import type { AppStore } from "../../lib/store";
 import { loadCookCopy } from "../cook/cookCopies";
+import { forgetRecipe } from "../forgetRecipe/forgetRecipe";
 import RecipeContent from "./RecipeContent";
 import RecipeDetailSkeleton from "./RecipeDetailSkeleton";
 import RecipeTitleBlock from "./RecipeTitleBlock";
@@ -19,6 +22,7 @@ import RecipeTitleBlock from "./RecipeTitleBlock";
 export default function RecipeDetailScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
+  const dispatch = useDispatch<AppStore["dispatch"]>();
   // A deep link has only the id; the list passes the rest so the screen opens with them.
   const params = useLocalSearchParams<{ id: string; title?: string; owner?: string; from?: string }>();
   // Reopening always asks again, so a failure still in the cache can't stand in for the answer.
@@ -36,6 +40,9 @@ export default function RecipeDetailScreen() {
   const hasFailed = hasFailedSinceOpening && !isLeaving;
   const isGone = hasFailed && isNotFoundError(error);
   const isLoadFailed = hasFailed && !isGone && !recipe;
+  useEffect(() => {
+    if (isGone) dispatch(forgetRecipe(params.id));
+  }, [dispatch, isGone, params.id]);
   // Offline with a copy saved from the last cook, that copy can still be cooked.
   const isOffline = isLoadFailed && isNoResponse(error);
   const hasSavedCopy = useMemo(() => isOffline && loadCookCopy(params.id) !== null, [isOffline, params.id]);

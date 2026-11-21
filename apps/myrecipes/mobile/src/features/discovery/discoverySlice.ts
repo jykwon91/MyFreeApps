@@ -2,6 +2,7 @@ import { discoveryReadErrorMessage } from "@myrecipes/api-client/utils/discovery
 import { discoverySearchErrorMessage } from "@myrecipes/api-client/utils/discoverySearchErrorMessage";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { DiscoveryState } from "../../types/DiscoveryState";
+import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
 import { readDiscoveredRecipe } from "./readDiscoveredRecipe";
 import { searchDiscoveredRecipes } from "./searchDiscoveredRecipes";
 
@@ -21,6 +22,11 @@ const discoverySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(recipeForgotten, (state, { payload }) => {
+        for (const [resultId, recipeId] of Object.entries(state.saved)) {
+          if (recipeId === payload) delete state.saved[resultId];
+        }
+      })
       .addCase(searchDiscoveredRecipes.pending, (state, { meta }) => {
         state.search = { status: "searching", requestId: meta.requestId, query: meta.arg, startedAt: meta.startedAt };
       })

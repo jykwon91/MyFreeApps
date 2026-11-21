@@ -2,6 +2,7 @@ import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { Banner, EmptyState, LoadingRegion, Skeleton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
@@ -10,13 +11,16 @@ import type { OpenedCookRecipe } from "../../types/OpenedCookRecipe";
 import { hasCookSteps } from "../../utils/hasCookSteps";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
+import type { AppStore } from "../../lib/store";
+import { forgetRecipe } from "../forgetRecipe/forgetRecipe";
 import CookBarButton from "./CookBarButton";
 import CookSessionView from "./CookSessionView";
-import { deleteCookCopy, loadCookCopy, saveCookCopy } from "./cookCopies";
+import { loadCookCopy, saveCookCopy } from "./cookCopies";
 
 export default function CookScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const router = useRouter();
+  const dispatch = useDispatch<AppStore["dispatch"]>();
   const { id } = useLocalSearchParams<{ id: string }>();
   // No refetch on opening, so a recipe still in the cache opens without a connection. That cache is
   // in memory and short-lived, so a cold start or a link opens the copy saved on the last cook instead.
@@ -43,8 +47,8 @@ export default function CookScreen() {
   }, [cookable, id, recipe]);
 
   useEffect(() => {
-    if (isGone) deleteCookCopy(id);
-  }, [id, isGone]);
+    if (isGone) dispatch(forgetRecipe(id));
+  }, [dispatch, id, isGone]);
 
   useAnnouncement(isGone ? "Recipe not found" : isLoadFailed ? "Can't load this recipe" : undefined);
 

@@ -7,7 +7,8 @@ import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { AccessibilityInfo, AppState } from "react-native";
 import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
-import { saveCookCopy } from "../src/features/cook/cookCopies";
+import { loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
+import { recipeSaved } from "../src/features/discovery/discoverySlice";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import { makeStore } from "../src/lib/store";
@@ -38,6 +39,11 @@ jest.mock("expo-router", () => ({
   },
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, push: mockPush, replace: mockReplace }),
+}));
+
+jest.mock("expo-notifications", () => ({
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  dismissNotificationAsync: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -362,6 +368,22 @@ describe("RecipeDetailScreen", () => {
     await waitFor(() => expect(announce).toHaveBeenCalledWith("Recipe not found"));
     await fireEvent.press(screen.getByRole("button", { name: "Back to recipes" }));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("forgets what the phone kept for a recipe it finds gone", async () => {
+    saveCookCopy("r1", "Soup", VERSION as never);
+    reply = { status: 404, data: { detail: "nope" } };
+    const answer = holdResponses();
+    await show();
+    store.dispatch(pageChanged({ recipeId: "r1", versionId: "v1", pageIndex: 1, now: Date.now() }));
+    store.dispatch(recipeSaved({ resultId: "soup1", recipeId: "r1", generation: store.getState().discovery.generation }));
+
+    await act(async () => answer());
+    await screen.findByText("Recipe not found");
+
+    await waitFor(() => expect(loadCookCopy("r1")).toBeNull());
+    expect(store.getState().cookSessions.r1).toBeUndefined();
+    expect(store.getState().discovery.saved).toEqual({});
   });
 
   it("goes to the list when there's nothing to go back to", async () => {
