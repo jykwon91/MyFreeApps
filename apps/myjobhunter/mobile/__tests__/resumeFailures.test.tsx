@@ -70,6 +70,8 @@ describe("starting", () => {
     expect(await screen.findByText(MESSAGES.couldntLoadResumes)).toBeTruthy();
     expect(screen.getByText(MESSAGES.couldntLoadResumesBody)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.noResumeBody)).toBeNull();
+    // The panel re-reads the failed list as it opens; Try again only counts once that read has settled.
+    await waitFor(() => expect(screen.getByRole("button", { name: MESSAGES.tryAgain })).toBeEnabled());
     failing = false;
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
     expect(await screen.findByRole("radio", { name: /ada\.pdf/ })).toBeTruthy();
@@ -103,6 +105,8 @@ describe("loading the session", () => {
 
     expect(await screen.findByText(MESSAGES.couldntLoadSession)).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.startNew })).toBeTruthy();
+    // The panel re-reads the failed list as it opens; Try again only counts once that read has settled.
+    await waitFor(() => expect(screen.getByRole("button", { name: MESSAGES.tryAgain })).toBeEnabled());
     failing = false;
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
     expect(await screen.findByTestId("resume-suggestion")).toBeTruthy();

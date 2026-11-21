@@ -1,9 +1,8 @@
-import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
-import { resumesApi, useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
+import { useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
 import { useStartRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { completedResumeJobs } from "@myjobhunter/api-client/utils/completedResumeJobs";
 import { resumeJobsInFlight } from "@myjobhunter/api-client/utils/resumeJobsInFlight";
-import { EmptyState, LoadingButton, useScreenFocused, useTheme, useToast } from "@platform/mobile";
+import { EmptyState, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
@@ -23,11 +22,8 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const isFocused = useScreenFocused();
-  const cached = resumesApi.endpoints.listResumeJobs.useQueryState().data;
-  // Only while an upload is still being read, and only while it's on screen to see.
-  const isReading = isFocused && resumeJobsInFlight(cached ?? []).length > 0;
-  const jobs = useListResumeJobsQuery(undefined, { pollingInterval: isReading ? RESUME_JOBS_POLL_INTERVAL_MS : 0, skipPollingIfUnfocused: true });
+  // Kept current while an upload is being read by `useWatchResumeReads`, held by the signed-in layout.
+  const jobs = useListResumeJobsQuery();
   const [startSession, { isLoading: isStarting }] = useStartRefinementSessionMutation();
   const uploads = useResumeUpload();
   const [picked, setPicked] = useState<string | null>(null);
