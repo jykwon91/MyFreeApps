@@ -8,7 +8,6 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from app.core.rent_reminder_enums import RENT_REMINDER_CHANNELS
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_plan_repo, rent_reminder_send_repo
@@ -20,6 +19,7 @@ from app.schemas.rent.rent_reminder_send_response import RentReminderSendRespons
 from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
 from app.services.rent import rent_reminder_math as math
 from app.services.rent import rent_reminder_planner as planner
+from app.services.rent import rent_reminder_send_state as send_state
 from app.services.system import sms_service
 
 _HISTORY_LIMIT = 50
@@ -176,14 +176,9 @@ async def get_preview(
         due = await planner.next_due_for_plan(db, plan=plan, from_date=today)
         if due is None:
             return None
-        sent_channels: list[str] = []
-        for channel in RENT_REMINDER_CHANNELS:
-            row = await rent_reminder_send_repo.get_by_key(
-                db, plan_id=plan.id, due_date=due.due_date, channel=channel,
-            )
-            # A failed send stays retryable, so it does not count as sent.
-            if row is not None and row.status != "failed":
-                sent_channels.append(channel)
+        existing = await send_state.existing_rows(db, plan_id=plan.id, due_date=due.due_date)
+        # A failed send stays retryable, so it does not count as sent.
+        sent_channels = [channel for channel, row in existing.items() if row.status != "failed"]
         rendered = planner.render(
             plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
         )
@@ -198,6 +193,9 @@ async def get_preview(
                 plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
             ).body,
             sent_channels=sent_channels,
+            possibly_sent=send_state.possibly_sent(
+                existing, send_state.enabled_channels(plan),
+            ),
         )
 
 

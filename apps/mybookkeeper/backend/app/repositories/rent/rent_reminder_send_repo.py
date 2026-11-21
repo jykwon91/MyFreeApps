@@ -78,18 +78,33 @@ async def claim(
 
 
 async def requeue(
-    db: AsyncSession, *, row: RentReminderSend, amount: Decimal, message_body: str,
+    db: AsyncSession,
+    *,
+    row: RentReminderSend,
+    seen_attempt: int,
+    seen_error_code: str | None,
+    amount: Decimal,
+    message_body: str,
 ) -> RentReminderSend:
     """Reset a failed row for a retry (the unique key forbids a new row).
 
-    Conditional on the row still being failed, because two retries can both
-    have read it as failed, and only one of them may send.
+    Conditional on the row still being the failed try the caller judged safe
+    to retry (same try number and error code): two retries can both have read
+    it as failed, and one of them may have sent it again and ended unsure
+    since, so only a row nobody has touched may be sent. The try number goes
+    up, so webhooks about the earlier try no longer match the row.
     """
     result = await db.execute(
         update(RentReminderSend)
-        .where(RentReminderSend.id == row.id, RentReminderSend.status == "failed")
+        .where(
+            RentReminderSend.id == row.id,
+            RentReminderSend.status == "failed",
+            RentReminderSend.attempt == seen_attempt,
+            RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
+        )
         .values(
             status="queued",
+            attempt=RentReminderSend.attempt + 1,
             amount=amount,
             message_body=message_body,
             error_code=None,
@@ -172,39 +187,188 @@ async def list_unconfirmed(
     return result.scalars().all()
 
 
-async def mark_sent(db: AsyncSession, *, row: RentReminderSend) -> None:
-    row.status = "sent"
-    row.sent_at = _now()
-    await db.flush()
+async def _update_if_unchanged(
+    db: AsyncSession,
+    *,
+    row: RentReminderSend,
+    seen_status: str,
+    seen_error_code: str | None,
+    seen_attempt: int,
+    values: dict[str, object],
+) -> bool:
+    """Write ``values`` only if the row is still as the caller read it.
+
+    Every status change reads the row (or remembers what it sent), decides,
+    then writes; a webhook, the watchdog or a retry can change the row in
+    between. The write is skipped (``False``) rather than overwriting that,
+    and ``row`` is refreshed either way so the caller sees what is stored.
+    """
+    result = await db.execute(
+        update(RentReminderSend)
+        .where(
+            RentReminderSend.id == row.id,
+            RentReminderSend.status == seen_status,
+            RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
+            RentReminderSend.attempt == seen_attempt,
+        )
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    await db.refresh(row)
+    return result.rowcount == 1
 
 
-async def mark_sent_to_phone(
-    db: AsyncSession, *, row: RentReminderSend, provider_message_id: str,
-) -> None:
-    row.status = "sent_to_phone"
-    row.provider_message_id = provider_message_id[:64]
-    row.sent_at = _now()
-    await db.flush()
-
-
-async def mark_confirmed(db: AsyncSession, *, row: RentReminderSend, status: str) -> None:
+async def confirm_if_unchanged(
+    db: AsyncSession,
+    *,
+    row: RentReminderSend,
+    status: str,
+    seen_status: str,
+    seen_error_code: str | None,
+    seen_attempt: int,
+) -> bool:
     """Record a phone-side confirmation (``sent`` or ``delivered``).
 
     Clears any error: a confirmation arriving after the watchdog gave up means
     the text did go out after all.
     """
-    row.status = status
-    row.error_code = None
-    row.confirmed_at = _now()
-    await db.flush()
+    return await _update_if_unchanged(
+        db,
+        row=row,
+        seen_status=seen_status,
+        seen_error_code=seen_error_code,
+        seen_attempt=seen_attempt,
+        values={"status": status, "error_code": None, "confirmed_at": _now()},
+    )
 
 
-async def mark_failed(db: AsyncSession, *, row: RentReminderSend, error_code: str) -> None:
-    row.status = "failed"
-    row.error_code = error_code[:MAX_ERROR_CODE_LENGTH]
-    await db.flush()
+async def fail_if_unchanged(
+    db: AsyncSession,
+    *,
+    row: RentReminderSend,
+    error_code: str,
+    seen_status: str,
+    seen_error_code: str | None,
+    seen_attempt: int,
+) -> bool:
+    """Record a failure the phone reported.
+
+    A row already failed (we gave up without knowing) was alerted about as
+    "may already have gone out"; clearing ``operator_alerted_at`` lets the
+    follow-up "it definitely didn't" alert go out, once.
+    """
+    values: dict[str, object] = {
+        "status": "failed", "error_code": error_code[:MAX_ERROR_CODE_LENGTH],
+    }
+    if seen_status == "failed":
+        values["operator_alerted_at"] = None
+    return await _update_if_unchanged(
+        db,
+        row=row,
+        seen_status=seen_status,
+        seen_error_code=seen_error_code,
+        seen_attempt=seen_attempt,
+        values=values,
+    )
 
 
-async def mark_operator_alerted(db: AsyncSession, *, row: RentReminderSend) -> None:
-    row.operator_alerted_at = _now()
-    await db.flush()
+async def mark_sent(db: AsyncSession, *, row: RentReminderSend, attempt: int) -> bool:
+    """Record that this try's email went out, if the try is still queued."""
+    return await _update_if_unchanged(
+        db,
+        row=row,
+        seen_status="queued",
+        seen_error_code=None,
+        seen_attempt=attempt,
+        values={"status": "sent", "sent_at": _now()},
+    )
+
+
+async def mark_sent_to_phone(
+    db: AsyncSession, *, row: RentReminderSend, attempt: int, provider_message_id: str,
+) -> bool:
+    """Record that this try's text was handed to httpSMS, if still queued.
+
+    The phone's webhook can beat this write; a row it already confirmed (or
+    failed) is never stepped back to ``sent_to_phone``.
+    """
+    return await _update_if_unchanged(
+        db,
+        row=row,
+        seen_status="queued",
+        seen_error_code=None,
+        seen_attempt=attempt,
+        values={
+            "status": "sent_to_phone",
+            "provider_message_id": provider_message_id[:64],
+            "sent_at": _now(),
+        },
+    )
+
+
+async def mark_failed(
+    db: AsyncSession,
+    *,
+    row: RentReminderSend,
+    error_code: str,
+    seen_status: str,
+    seen_attempt: int,
+) -> bool:
+    """Record our own failure verdict on a try that has no outcome yet.
+
+    Used by the sender and the watchdog. If the phone confirmed or failed the
+    try meanwhile, or it was retried, that news is kept.
+    """
+    return await _update_if_unchanged(
+        db,
+        row=row,
+        seen_status=seen_status,
+        seen_error_code=None,
+        seen_attempt=seen_attempt,
+        values={"status": "failed", "error_code": error_code[:MAX_ERROR_CODE_LENGTH]},
+    )
+
+
+async def claim_operator_alert(
+    db: AsyncSession, *, row: RentReminderSend, attempt: int,
+) -> _dt.datetime | None:
+    """Reserve the one operator alert for this failed try, before sending it.
+
+    Returns the claim's timestamp, or ``None`` if the alert was already
+    claimed, the row moved on to another try, or it no longer failed. Two
+    alerts racing for the same try can't both win the update.
+    """
+    claimed_at = _now()
+    result = await db.execute(
+        update(RentReminderSend)
+        .where(
+            RentReminderSend.id == row.id,
+            RentReminderSend.status == "failed",
+            RentReminderSend.attempt == attempt,
+            RentReminderSend.operator_alerted_at.is_(None),
+        )
+        .values(operator_alerted_at=claimed_at)
+        .execution_options(synchronize_session=False)
+    )
+    await db.refresh(row)
+    return claimed_at if result.rowcount == 1 else None
+
+
+async def release_operator_alert(
+    db: AsyncSession, *, row: RentReminderSend, attempt: int, claimed_at: _dt.datetime,
+) -> None:
+    """Give back a claimed alert whose email couldn't be sent.
+
+    Only our own claim on that same try is cleared, never a newer one.
+    """
+    await db.execute(
+        update(RentReminderSend)
+        .where(
+            RentReminderSend.id == row.id,
+            RentReminderSend.attempt == attempt,
+            RentReminderSend.operator_alerted_at == claimed_at,
+        )
+        .values(operator_alerted_at=None)
+        .execution_options(synchronize_session=False)
+    )
+    await db.refresh(row)

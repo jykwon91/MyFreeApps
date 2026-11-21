@@ -1,4 +1,4 @@
-"""HTTP tuning for the Twilio client built in ``platform_shared.services.sms_service``.
+"""Shared SMS constants: Twilio HTTP tuning and the provider codes every sender uses.
 
 The Twilio SDK's own default is no timeout at all, so a stalled Twilio would
 block the calling thread forever. A healthy create-message call answers in
@@ -12,3 +12,20 @@ from typing import Final
 # (the ``requests`` timeout semantics). The send is not retried: a message
 # create is not idempotent, so a retry after a timeout could text twice.
 TWILIO_HTTP_TIMEOUT_SECONDS: Final = 10.0
+
+# ``SmsSendError.provider_code`` when the provider could not be reached at all
+# (DNS failure, connection refused, connect timeout). Nothing was sent, so a
+# resend is safe.
+SMS_PROVIDER_CODE_NETWORK_ERROR: Final = "network_error"
+
+# ``SmsSendError.provider_code`` when the request may have reached the provider
+# but no usable answer came back (a read or write failure, a timeout while
+# waiting for the reply). The text may have gone out, so a caller must never
+# resend it on its own. ``SmsSendError.outcome_unknown`` is set for this and
+# for the other unknown outcomes (a provider 5xx, an unreadable 2xx), so
+# callers check that flag rather than this code.
+SMS_PROVIDER_CODE_OUTCOME_UNKNOWN: Final = "outcome_unknown"
+
+# How much of a provider's error ``data`` goes into a log line (after phone
+# numbers in it are masked).
+SMS_PROVIDER_MAX_LOGGED_DETAIL_CHARS: Final = 500

@@ -1,6 +1,8 @@
 """Tunables for rent reminders."""
 import datetime as _dt
 
+from platform_shared.core.sms_constants import SMS_PROVIDER_CODE_NETWORK_ERROR
+
 DEFAULT_REMINDER_TIMEZONE = "America/Chicago"
 DEFAULT_REMINDER_SEND_TIME = _dt.time(18, 0)
 
@@ -34,6 +36,46 @@ ERROR_NO_RECIPIENT = "no_recipient"
 ERROR_INVALID_PHONE = "invalid_phone"
 ERROR_SMS_NOT_CONFIGURED = "sms_not_configured"
 ERROR_SMS_EXPIRED = "expired"
+# The server couldn't reach httpSMS at all, so the text was not sent.
+ERROR_SMS_NETWORK = f"sms_{SMS_PROVIDER_CODE_NETWORK_ERROR}"
+# httpSMS may have taken the text but never confirmed it (a timeout or broken
+# connection after the request went out, a 5xx, an unreadable reply). It may
+# already be on its way, so it is never retried automatically.
+ERROR_SMS_OUTCOME_UNKNOWN = "sms_outcome_unknown"
+ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
+ERROR_EMAIL_SEND_FAILED = "email_send_failed"
+ERROR_UNEXPECTED = "unexpected_error"
+# Codes with a fixed spelling, each of which the apps describe in words
+# (api-client ``rentReminderError.ts``). The others are prefixed: ``sms_<code>``
+# for a relay refusal and ``phone_failed: <detail>`` for the phone's own error.
+REMINDER_ERROR_CODES: frozenset[str] = frozenset({
+    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_SEND_INTERRUPTED,
+    ERROR_NO_RECIPIENT,
+    ERROR_INVALID_PHONE,
+    ERROR_SMS_NOT_CONFIGURED,
+    ERROR_SMS_EXPIRED,
+    ERROR_SMS_NETWORK,
+    ERROR_SMS_OUTCOME_UNKNOWN,
+    ERROR_EMAIL_NOT_CONFIGURED,
+    ERROR_EMAIL_SEND_FAILED,
+    ERROR_UNEXPECTED,
+})
+# Sending may have got further than we know, so a retry can double up. These
+# are never retried automatically, the operator is told to check first, and
+# Send now asks them to confirm (api-client ``rentReminderErrorCodes.ts``).
+MAY_STILL_ARRIVE_ERRORS: frozenset[str] = frozenset({
+    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_SEND_INTERRUPTED,
+    ERROR_SMS_OUTCOME_UNKNOWN,
+})
+# Send now's 409 when the last attempt may have gone out and the operator
+# didn't confirm sending again.
+REMINDER_MAY_HAVE_BEEN_SENT_CODE = "REMINDER_MAY_HAVE_BEEN_SENT"
+REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE = (
+    "The last try may already have reached the tenant, so nothing was sent. "
+    "Check the message log first, then confirm to send it again."
+)
 MAX_ERROR_CODE_LENGTH = 120
 
 # Webhook route as mounted behind the frontend origin. The httpSMS JWT's

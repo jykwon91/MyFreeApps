@@ -43,6 +43,7 @@ export function aReminderPreview(overrides: Partial<RentReminderPreview> = {}): 
     message: "Hi Dana, rent of $300 is due tomorrow (Sunday).",
     send_now_message: "Hi Dana, rent of $300 is due on Sunday, Nov 3.",
     sent_channels: [],
+    possibly_sent: [],
     ...overrides,
   };
 }

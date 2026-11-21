@@ -1071,17 +1071,23 @@
         "backend/app/api/rent_reminders.py",
         "backend/app/core/rent_reminder_enums.py",
         "backend/app/core/rent_reminder_constants.py",
+        "backend/app/core/rent_reminder_request_id.py",
         "backend/app/workers/scheduler_worker.py",
         "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",
+        "backend/alembic/versions/rentremattempt261121_add_rent_reminder_send_attempt.py",
         "frontend/src/app/features/rent/",
         "api-client/src/types/rent/",
         "api-client/src/store/rentRemindersApi.ts",
+        "api-client/src/constants/rentReminderErrorCodes.ts",
+        "api-client/src/utils/rentReminderError.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [
         "test_rent_reminder_math.py",
         "test_rent_reminder_dispatch.py",
         "test_rent_reminders_api.py",
+        "test_rent_reminder_codes_match_api_client.py",
+        "test_rent_reminder_request_id.py",
         "test_cross_org_isolation_http_2.py"
       ],
       "frontend_tests": [

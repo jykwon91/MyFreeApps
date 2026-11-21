@@ -16,6 +16,7 @@ from platform_shared.services.httpsms_service import HttpSmsWebhookAuthError
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write
 from app.core.rate_limit import RateLimiter
+from app.core.rent_reminder_constants import REMINDER_MAY_HAVE_BEEN_SENT_CODE
 from app.core.request_utils import get_client_ip
 from app.schemas.rent.rent_reminder_overview_response import RentReminderOverviewResponse
 from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
@@ -154,6 +155,7 @@ async def send_now(
             expected_amount=body.amount,
             expected_message=body.message,
             expected_channels=body.channels,
+            confirmed_possibly_sent=body.confirmed_possibly_sent,
         )
     except rent_reminder_service.TenantNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
@@ -167,6 +169,11 @@ async def send_now(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except rent_reminder_dispatch_service.ReminderAlreadySentError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except rent_reminder_dispatch_service.ReminderMayHaveBeenSentError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": REMINDER_MAY_HAVE_BEEN_SENT_CODE, "message": str(exc)},
+        ) from exc
     except rent_reminder_dispatch_service.ReminderChangedError as exc:
         raise HTTPException(status_code=412, detail=str(exc)) from exc
 

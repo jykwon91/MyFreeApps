@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +18,7 @@ from app.models.order.order import Order
 from app.repositories.customer import customer_repo
 from app.repositories.drop import drop_repo
 from app.services.service_dashboard.ready_text import ReadyText
+from app.services.service_dashboard.ready_text_outcome import ReadyTextOutcome
 from app.services.sms import sms_sender
 from app.services.sms.order_ready_notification import render_order_ready_body
 from platform_shared.services.sms_service import (
@@ -52,18 +52,18 @@ async def compose_ready_text(db: AsyncSession, order: Order, drop: Drop) -> Read
     )
 
 
-def send_ready_text(
-    ready_text: ReadyText, order_id: uuid.UUID,
-) -> tuple[bool, Optional[str]]:
-    """Dispatch the order-ready SMS. Returns (sent_ok, error_message).
+def send_ready_text(ready_text: ReadyText, order_id: uuid.UUID) -> ReadyTextOutcome:
+    """Dispatch the order-ready SMS.
 
-    Best-effort: every failure path returns ``(False, "<reason>")`` and
-    logs at WARNING; the caller surfaces ``error_message`` to the
-    operator. We never re-raise — the operator already advanced the
-    order and a Twilio outage shouldn't block the dashboard.
+    Best-effort: every failure path returns ``sent=False`` with a reason and
+    logs at WARNING; the caller surfaces it to the operator. We never
+    re-raise — the operator already advanced the order and a Twilio outage
+    shouldn't block the dashboard. A failure that may still have reached the
+    customer is flagged ``outcome_unknown`` so the operator checks before
+    texting them by hand.
     """
     if ready_text.skip_reason is not None:
-        return False, ready_text.skip_reason
+        return ReadyTextOutcome(sent=False, error=ready_text.skip_reason)
     try:
         sms_sender.send_sms_or_raise(ready_text.phone, ready_text.body)
     except SmsNotConfiguredError as e:
@@ -71,17 +71,17 @@ def send_ready_text(
             "Ready-text SMS skipped (Twilio not configured) for order %s: %s",
             order_id, e,
         )
-        return False, "SMS service is not configured"
+        return ReadyTextOutcome(sent=False, error="SMS service is not configured")
     except SmsSendError as e:
         logger.warning(
-            "Ready-text SMS rejected by Twilio for order %s: %s",
-            order_id, e,
+            "Ready-text SMS failed for order %s (outcome_unknown=%s): %s",
+            order_id, e.outcome_unknown, e,
         )
-        return False, str(e)
+        return ReadyTextOutcome(sent=False, error=str(e), outcome_unknown=e.outcome_unknown)
     except ValueError as e:
         logger.warning(
             "Ready-text SMS rejected (invalid args) for order %s: %s",
             order_id, e,
         )
-        return False, str(e)
-    return True, None
+        return ReadyTextOutcome(sent=False, error=str(e))
+    return ReadyTextOutcome(sent=True)

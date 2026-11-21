@@ -23,6 +23,7 @@ from app.core.permissions import current_org_member, reject_demo_org_write, requ
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.rent.rent_reminder_overview_response import RentReminderOverviewResponse
+from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
 from app.services.rent import rent_reminder_dispatch_service
@@ -144,6 +145,7 @@ class TestSendNow:
             assert send_now.call_args.kwargs["expected_amount"] == Decimal("300.00")
             assert send_now.call_args.kwargs["expected_message"] == _SHOWN["message"]
             assert send_now.call_args.kwargs["expected_channels"] == ["email", "sms"]
+            assert send_now.call_args.kwargs["confirmed_possibly_sent"] == []
         finally:
             app.dependency_overrides.clear()
 
@@ -224,6 +226,40 @@ class TestSendNow:
                     json=_SHOWN,
                 )
             assert response.status_code == 409
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_a_possibly_sent_reminder_is_409_with_its_code(self) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(side_effect=rent_reminder_dispatch_service.ReminderMayHaveBeenSentError("check")),
+            ):
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
+                )
+            assert response.status_code == 409
+            assert response.json()["detail"] == {"code": "REMINDER_MAY_HAVE_BEEN_SENT", "message": "check"}
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_confirming_a_possible_duplicate_is_passed_on(self) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(return_value=[]),
+            ) as send_now:
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json={**_SHOWN, "confirmed_possibly_sent": [{"channel": "sms", "attempt": 2}]},
+                )
+            assert response.status_code == 200
+            assert send_now.call_args.kwargs["confirmed_possibly_sent"] == [
+                RentReminderPossiblySent(channel="sms", attempt=2),
+            ]
         finally:
             app.dependency_overrides.clear()
 

@@ -27,6 +27,8 @@ export const REMINDER_MESSAGES = {
   sendHint: "Asks you to confirm first",
   send: "Send",
   confirmWarning: "This goes out right away, can't be unsent, and I can't send another for this due date.",
+  sendAgain: "Send again",
+  possiblySentRefused: "The last try may already have reached them, so I didn't send anything. Check first, then send again.",
   noSms: "Text reminders aren't set up on the server, so I can't send.",
   history: "History",
   noHistory: "No reminders sent yet.",
@@ -109,4 +111,29 @@ export function neitherWent(reason: string): string {
 
 export function oneFailed(channel: string, reason: string): string {
   return `The ${channel} didn't go out. ${reason}. You can try again once that's fixed.`;
+}
+
+export function channelWent(channel: string): string {
+  return `The ${channel} went out.`;
+}
+
+export function channelDidntGo(channel: string, reason: string): string {
+  return `The ${channel} didn't go out. ${reason}.`;
+}
+
+/** A failed send that may still have reached them: never "didn't go out", never "try again". */
+export function channelMayHaveGone(channel: string, reason: string): string {
+  return `I can't tell if the ${channel} went out. ${reason}.`;
+}
+
+/** Only texts go through httpSMS, so an email that may have gone out is checked with the tenant. */
+export function possiblySentWarning(channels: string, firstName: string | null, includesText: boolean, includesEmail: boolean): string {
+  const who = firstName ?? "them";
+  const check =
+    includesText && includesEmail
+      ? `Check the message log on httpsms.com for the text, and ask ${who} about the email, before sending them again.`
+      : includesText
+        ? `Check the message log on httpsms.com (or ask ${who}) before sending it again.`
+        : `Ask ${who} whether it arrived before sending it again.`;
+  return `The last ${channels} may already have reached ${who}. ${check}`;
 }

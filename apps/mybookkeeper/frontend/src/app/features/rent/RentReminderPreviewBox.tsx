@@ -1,3 +1,4 @@
+import { useId, useState } from "react";
 import { AlertBox, extractErrorMessage, LoadingButton, LoadingRegion, showError, showSuccess, Skeleton } from "@platform/ui";
 import {
   useGetRentReminderPreviewQuery,
@@ -6,10 +7,14 @@ import {
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
+import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
+import RentReminderPossiblySentWarning from "./RentReminderPossiblySentWarning";
+import { possiblySentAdvice, possiblySentKey } from "./rent-reminder-possibly-sent";
 
 export interface RentReminderPreviewBoxProps {
   applicantId: string;
@@ -29,9 +34,17 @@ function channelList(channels: RentReminderChannel[]): string {
 }
 
 function reportResults(results: RentReminderSend[]) {
-  const failed = results.filter((r) => r.status === "failed").map((r) => r.channel);
-  if (failed.length > 0) {
-    showError(`The ${channelList(failed)} didn't go out — see history below.`);
+  const failed = results.filter((r) => r.status === "failed");
+  const notSent = failed.filter((r) => !reminderMayStillArrive(r.error_code)).map((r) => r.channel);
+  const unsure = failed.filter((r) => reminderMayStillArrive(r.error_code)).map((r) => r.channel);
+  const problems = [
+    ...(notSent.length > 0 ? [`The ${channelList(notSent)} didn't go out.`] : []),
+    ...(unsure.length > 0
+      ? [`The ${channelList(unsure)} may already have been sent. ${possiblySentAdvice(unsure)}`]
+      : []),
+  ];
+  if (problems.length > 0) {
+    showError(`${problems.join(" ")} See history below.`);
     return;
   }
   showSuccess(`Reminder sent by ${channelList(results.map((r) => r.channel))}.`);
@@ -49,8 +62,14 @@ export default function RentReminderPreviewBox({
 }: RentReminderPreviewBoxProps) {
   const { data: preview, isLoading, isError } = useGetRentReminderPreviewQuery(applicantId);
   const [sendNow, { isLoading: isSending }] = useSendRentReminderNowMutation();
+  // The confirmation holds only for the reminder and tries it was given for:
+  // a new due date or a newer try clears it.
+  const [confirmedFor, setConfirmedFor] = useState<string | null>(null);
+  const warningId = useId();
 
   async function handleSend(shown: RentReminderPreview) {
+    const confirmed = confirmedFor === possiblySentKey(shown) ? shown.possibly_sent : [];
+    setConfirmedFor(null);
     try {
       reportResults(
         await sendNow({
@@ -59,10 +78,11 @@ export default function RentReminderPreviewBox({
           amount: shown.amount,
           message: shown.send_now_message,
           channels: enabledChannels(plan),
+          confirmed_possibly_sent: confirmed,
         }).unwrap(),
       );
     } catch (error) {
-      showError(extractErrorMessage(error));
+      showError(mayHaveBeenSentRefusalMessage(error) || extractErrorMessage(error));
     }
   }
 
@@ -90,6 +110,9 @@ export default function RentReminderPreviewBox({
 
   const channels = enabledChannels(plan);
   const alreadySent = preview.sent_channels.length > 0;
+  const possiblySentChannels = preview.possibly_sent.map((p) => p.channel);
+  const possiblySent = !alreadySent && possiblySentChannels.length > 0;
+  const confirmedResend = confirmedFor === possiblySentKey(preview);
 
   return (
     <div className="rounded-lg border p-4 space-y-3 bg-card" data-testid="rent-reminder-preview">
@@ -117,6 +140,16 @@ export default function RentReminderPreviewBox({
         </p>
       ) : null}
 
+      {canWrite && channels.length > 0 && possiblySent ? (
+        <RentReminderPossiblySentWarning
+          id={warningId}
+          channels={possiblySentChannels}
+          channelWords={channelList(possiblySentChannels)}
+          confirmed={confirmedResend}
+          onConfirmedChange={(checked) => setConfirmedFor(checked ? possiblySentKey(preview) : null)}
+        />
+      ) : null}
+
       {canWrite && channels.length > 0 ? (
         <LoadingButton
           type="button"
@@ -124,7 +157,8 @@ export default function RentReminderPreviewBox({
           size="sm"
           isLoading={isSending}
           loadingText="Sending..."
-          disabled={isSending || alreadySent}
+          disabled={isSending || alreadySent || (possiblySent && !confirmedResend)}
+          aria-describedby={canWrite && possiblySent ? warningId : undefined}
           onClick={() => void handleSend(preview)}
           className="min-h-[44px] w-full sm:w-auto"
           data-testid="rent-reminder-send-now"

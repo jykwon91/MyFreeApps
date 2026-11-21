@@ -1,3 +1,4 @@
+/** Every fixed code in ``REMINDER_ERROR_CODES`` (app/core/rent_reminder_constants.py) has a line here. */
 const ERROR_LABEL = new Map<string, string>(Object.entries({
   no_phone_confirmation:
     "The phone never confirmed it, so it may still arrive. Check it's on, online, and httpSMS isn't battery-optimized",
@@ -8,6 +9,10 @@ const ERROR_LABEL = new Map<string, string>(Object.entries({
   expired: "The phone didn't send it in time",
   email_not_configured: "Email isn't set up on the server",
   email_send_failed: "The mail server refused it",
+  sms_network_error: "The server couldn't reach the text relay, so it wasn't sent",
+  sms_outcome_unknown:
+    "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again",
+  unexpected_error: "Something went wrong sending it",
 }));
 
 const PHONE_FAILED_PREFIX = "phone_failed: ";

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentReminderCard from "@/app/features/rent/RentReminderCard";
@@ -21,6 +21,12 @@ vi.mock("@mybookkeeper/api-client/store/rentRemindersApi", () => ({
   useCreateRentReminderPlanMutation: () => [mockCreate, { isLoading: false }],
   useUpdateRentReminderPlanMutation: () => [vi.fn(), { isLoading: false }],
   useSendRentReminderNowMutation: () => [mockSendNow, sendNowState],
+}));
+
+const mockShowError = vi.fn();
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError: (message: string) => mockShowError(message),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({
@@ -74,6 +80,7 @@ const PREVIEW: RentReminderPreview = {
   send_now_message:
     "Hi Sonu, reminder: rent of $300 is due on Sunday, Nov 1. Pay via Zelle to jason@example.com.",
   sent_channels: ["email"],
+  possibly_sent: [],
 };
 
 const FAILED_TEXT: RentReminderSend = {
@@ -231,7 +238,118 @@ describe("RentReminderCard", () => {
       amount: "300.00",
       message: PREVIEW.send_now_message,
       channels: ["email", "sms"],
+      confirmed_possibly_sent: [],
     });
+  });
+
+  it("says a text the relay never confirmed may already have been sent", async () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({ data: { ...PREVIEW, sent_channels: [] }, isLoading: false, isError: false });
+    mockSendNow.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve([
+          { ...FAILED_TEXT, channel: "email", status: "failed", error_code: "email_send_failed" },
+          { ...FAILED_TEXT, error_code: "sms_outcome_unknown" },
+        ]),
+    });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+    const message = mockShowError.mock.calls[0][0] as string;
+    expect(message).toContain("The email didn't go out.");
+    expect(message).toContain("The text may already have been sent");
+    expect(message).toContain("httpsms.com");
+    expect(message).not.toContain("text didn't go out");
+  });
+
+  it("never sends the operator to httpsms.com about an email that may have gone out", async () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({
+      data: { ...PREVIEW, sent_channels: [], possibly_sent: [{ channel: "email", attempt: 1 }] },
+      isLoading: false,
+      isError: false,
+    });
+    mockSendNow.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve([
+          { ...FAILED_TEXT, channel: "email", error_code: "send_interrupted" },
+          { ...FAILED_TEXT, status: "sent_to_phone", error_code: null },
+        ]),
+    });
+    renderCard();
+    const warning = screen.getByTestId("rent-reminder-possibly-sent");
+    expect(warning).toHaveTextContent("The last email may already have reached the tenant");
+    expect(warning).toHaveTextContent("Ask the tenant whether the email arrived");
+    expect(warning).not.toHaveTextContent("httpsms.com");
+    fireEvent.click(screen.getByTestId("rent-reminder-confirm-possibly-sent"));
+    fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+    const message = mockShowError.mock.calls[0][0] as string;
+    expect(message).toContain("The email may already have been sent");
+    expect(message).not.toContain("httpsms.com");
+  });
+
+  it("won't resend a text that may have gone out until the operator confirms they checked", () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({
+      data: { ...PREVIEW, sent_channels: [], possibly_sent: [{ channel: "sms", attempt: 2 }] },
+      isLoading: false,
+      isError: false,
+    });
+    mockSendNow.mockReturnValue({ unwrap: () => Promise.resolve([{ ...FAILED_TEXT, status: "sent_to_phone" }]) });
+    renderCard();
+    const warning = screen.getByTestId("rent-reminder-possibly-sent");
+    expect(warning).toHaveTextContent("The last text may already have reached the tenant");
+    expect(warning).toHaveTextContent("httpsms.com");
+    const button = screen.getByTestId("rent-reminder-send-now");
+    expect(button).toBeDisabled();
+    const describedBy = button.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? "")).toHaveTextContent("may already have reached the tenant");
+    fireEvent.click(screen.getByTestId("rent-reminder-confirm-possibly-sent"));
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(mockSendNow).toHaveBeenCalledWith(
+      expect.objectContaining({ confirmed_possibly_sent: [{ channel: "sms", attempt: 2 }] }),
+    );
+  });
+
+  it("asks again when a newer try or another due date may have gone out", () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    const shown: RentReminderPreview = { ...PREVIEW, sent_channels: [], possibly_sent: [{ channel: "sms", attempt: 1 }] };
+    mockPreview.mockReturnValue({ data: shown, isLoading: false, isError: false });
+    const { rerender } = renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-confirm-possibly-sent"));
+    expect(screen.getByTestId("rent-reminder-send-now")).toBeEnabled();
+
+    for (const next of [
+      { ...shown, possibly_sent: [{ channel: "sms" as const, attempt: 2 }] },
+      { ...shown, due_date: "2026-11-08", possibly_sent: [{ channel: "sms" as const, attempt: 2 }] },
+    ]) {
+      mockPreview.mockReturnValue({ data: next, isLoading: false, isError: false });
+      rerender(
+        <Provider store={store}>
+          <RentReminderCard applicantId="app-1" />
+        </Provider>,
+      );
+      expect(screen.getByTestId("rent-reminder-confirm-possibly-sent")).not.toBeChecked();
+      expect(screen.getByTestId("rent-reminder-send-now")).toBeDisabled();
+      fireEvent.click(screen.getByTestId("rent-reminder-confirm-possibly-sent"));
+    }
+  });
+
+  it("explains a refusal to resend a reminder that may have gone out", async () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({ data: { ...PREVIEW, sent_channels: [] }, isLoading: false, isError: false });
+    mockSendNow.mockReturnValue({
+      unwrap: () =>
+        Promise.reject({ status: 409, data: { detail: { code: "REMINDER_MAY_HAVE_BEEN_SENT", message: "check" } } }),
+    });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
+    await waitFor(() =>
+      expect(mockShowError).toHaveBeenCalledWith("check"),
+    );
   });
 
   it("shows a retry on error", () => {
