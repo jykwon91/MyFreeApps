@@ -137,8 +137,9 @@ export default function CompanyConfirmStep({
             <FieldFeedback {...feedback("location")} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Remote</label>
+            <label htmlFor={`${uid}-remote_type`} className="block text-sm font-medium mb-1">Remote</label>
             <select
+              id={`${uid}-remote_type`}
               {...register("remote_type")}
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             >

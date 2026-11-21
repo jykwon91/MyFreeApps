@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/shared/lib/api";
 import { AuthPageFooter, describeAuthError, LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
@@ -6,6 +6,7 @@ import LegalFooter from "@/app/components/LegalFooter";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
 export default function Register() {
+  const uid = useId();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo");
 
@@ -78,8 +79,9 @@ export default function Register() {
           <h1 className="text-2xl font-semibold mb-6">Create an account</h1>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label htmlFor={`${uid}-name`} className="block text-sm font-medium mb-1">Name</label>
               <input
+                id={`${uid}-name`}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -89,8 +91,9 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor={`${uid}-email`} className="block text-sm font-medium mb-1">Email</label>
               <input
+                id={`${uid}-email`}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -99,8 +102,9 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label htmlFor={`${uid}-password`} className="block text-sm font-medium mb-1">Password</label>
               <input
+                id={`${uid}-password`}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

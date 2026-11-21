@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 import { login } from "@/shared/lib/auth";
@@ -14,6 +14,7 @@ import LegalFooter from "@/app/components/LegalFooter";
 const LOCKOUT_COOLDOWN_SECONDS = 30;
 
 export default function Login() {
+  const uid = useId();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -114,8 +115,9 @@ export default function Login() {
           {!needsTotp ? (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
+                <label htmlFor={`${uid}-email`} className="block text-sm font-medium mb-1">Email</label>
                 <input
+                  id={`${uid}-email`}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -125,8 +127,9 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Password</label>
+                <label htmlFor={`${uid}-password`} className="block text-sm font-medium mb-1">Password</label>
                 <input
+                  id={`${uid}-password`}
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -138,9 +141,10 @@ export default function Login() {
             </>
           ) : (
             <div>
-              <label className="block text-sm font-medium mb-1">Authentication code</label>
+              <label htmlFor={`${uid}-code`} className="block text-sm font-medium mb-1">Authentication code</label>
               <p className="text-xs text-muted-foreground mb-2">Enter the 6-digit code from your authenticator app, or a recovery code.</p>
               <input
+                id={`${uid}-code`}
                 type="text"
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 8))}

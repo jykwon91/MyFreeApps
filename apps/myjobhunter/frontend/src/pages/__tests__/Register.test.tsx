@@ -153,11 +153,10 @@ describe("Register page", () => {
     expect(emailField.readOnly).toBe(true);
     expect(emailField.type).toBe("email");
 
-    // PasswordPair renders two password-type inputs; assert both exist by
-    // counting them rather than label-matching (PasswordPair's labels
-    // aren't htmlFor-associated yet).
-    const passwordInputs = document.querySelectorAll('input[type="password"]');
-    expect(passwordInputs.length).toBe(2);
+    expect(screen.getByLabelText("Email")).toBe(emailField);
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Confirm password")).toHaveAttribute("type", "password");
+    expect(document.querySelectorAll('input[type="password"]').length).toBe(2);
     expect(screen.getByTestId("turnstile-stub")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign up/i })).toBeInTheDocument();
   });

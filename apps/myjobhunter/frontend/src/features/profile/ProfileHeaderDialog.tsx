@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
@@ -15,6 +15,7 @@ export interface ProfileHeaderDialogProps {
 }
 
 export default function ProfileHeaderDialog({ open, onOpenChange, profile }: ProfileHeaderDialogProps) {
+  const uid = useId();
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
 
   const { register, handleSubmit, reset } = useForm<FormValues>({
@@ -62,8 +63,9 @@ export default function ProfileHeaderDialog({ open, onOpenChange, profile }: Pro
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div>
-              <label className="block text-sm font-medium mb-1">Seniority level</label>
+              <label htmlFor={`${uid}-seniority`} className="block text-sm font-medium mb-1">Seniority level</label>
               <select
+                id={`${uid}-seniority`}
                 {...register("seniority")}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
@@ -76,8 +78,9 @@ export default function ProfileHeaderDialog({ open, onOpenChange, profile }: Pro
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Professional summary</label>
+              <label htmlFor={`${uid}-summary`} className="block text-sm font-medium mb-1">Professional summary</label>
               <textarea
+                id={`${uid}-summary`}
                 {...register("summary")}
                 rows={4}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"

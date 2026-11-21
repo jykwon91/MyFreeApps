@@ -73,6 +73,11 @@ function renderShell(initialPath = "/", navSections?: NavSection[], collapsible 
 }
 
 describe("AppShell — navSections", () => {
+  it("gives the header search input an accessible name", () => {
+    renderShell();
+    expect(screen.getByRole("searchbox", { name: "Search" })).toBeInTheDocument();
+  });
+
   it("renders a section's items when route matches the prefix", () => {
     renderShell("/wow-forever/macros", [WOW_SECTION]);
     expect(screen.getByText("WoW Forever")).toBeInTheDocument();

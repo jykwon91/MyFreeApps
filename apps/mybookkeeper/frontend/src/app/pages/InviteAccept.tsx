@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, signOut } from "@/shared/lib/auth";
@@ -17,6 +17,7 @@ function roleLabel(role: string): string {
 
 
 export default function InviteAccept() {
+  const uid = useId();
   const { token } = useParams<{ token: string }>();
   const { accept, acceptOnce, isAccepting, error: acceptError } = useAcceptInvite(token);
 
@@ -193,8 +194,9 @@ export default function InviteAccept() {
           {inviteHeader}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor={`${uid}-login-email`} className="block text-sm font-medium mb-1">Email</label>
               <input
+                id={`${uid}-login-email`}
                 type="email"
                 value={inviteInfo.email}
                 disabled
@@ -202,8 +204,9 @@ export default function InviteAccept() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label htmlFor={`${uid}-login-password`} className="block text-sm font-medium mb-1">Password</label>
               <input
+                id={`${uid}-login-password`}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -230,8 +233,9 @@ export default function InviteAccept() {
         {inviteHeader}
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+            <label htmlFor={`${uid}-name`} className="block text-sm font-medium mb-1">Name</label>
             <input
+              id={`${uid}-name`}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -242,8 +246,9 @@ export default function InviteAccept() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label htmlFor={`${uid}-email`} className="block text-sm font-medium mb-1">Email</label>
             <input
+              id={`${uid}-email`}
               type="email"
               value={inviteInfo.email}
               disabled
@@ -251,8 +256,9 @@ export default function InviteAccept() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label htmlFor={`${uid}-password`} className="block text-sm font-medium mb-1">Password</label>
             <input
+              id={`${uid}-password`}
               type="password"
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}

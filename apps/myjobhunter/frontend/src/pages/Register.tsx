@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import {
   AuthPageFooter,
@@ -45,6 +45,7 @@ interface RegisterWithInviteProps {
 }
 
 function RegisterWithInvite({ token }: RegisterWithInviteProps) {
+  const emailId = useId();
   const {
     data: invite,
     isLoading,
@@ -154,8 +155,9 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor={emailId} className="block text-sm font-medium mb-1">Email</label>
               <input
+                id={emailId}
                 type="email"
                 value={invite.email}
                 readOnly

@@ -31,6 +31,7 @@ export default function DisplayNameForm({ initialName, disabled = false }: Displ
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        aria-label="Display name"
         placeholder="e.g. Jane Smith"
         disabled={disabled}
         className="flex-1 px-3 py-2 text-sm border rounded-md disabled:opacity-50"

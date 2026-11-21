@@ -182,6 +182,8 @@ describe("InviteAccept", () => {
     renderWithToken("good-token");
 
     expect(screen.getByRole("button", { name: /Sign in & join Acme Co/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeDisabled();
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
   });
 
   it("shows the registration form when the invitee is new", () => {
@@ -193,6 +195,9 @@ describe("InviteAccept", () => {
     expect(
       screen.getByRole("button", { name: /Create account & join Acme Co/i })
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Email")).toBeDisabled();
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
   });
 
   describe("accepting", () => {
