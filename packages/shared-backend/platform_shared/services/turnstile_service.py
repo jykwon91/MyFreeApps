@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 TURNSTILE_TIMEOUT_S = 10
+# Synthetic code (Cloudflare never sends it): siteverify could not be reached or
+# did not return a usable answer, so the token was neither accepted nor rejected.
+TURNSTILE_PROVIDER_UNAVAILABLE_CODE = "provider-unavailable"
 
 
 async def verify_turnstile_token(
@@ -33,6 +36,10 @@ async def verify_turnstile_token(
     bind a token to the widget and site that produced it. A Cloudflare-valid token
     whose ``action`` or ``hostname`` differs fails with the synthetic error code
     ``action-mismatch`` / ``hostname-mismatch`` and is logged at WARNING.
+
+    A timeout, network error, non-2xx status or non-JSON body from Cloudflare
+    returns ``(False, [TURNSTILE_PROVIDER_UNAVAILABLE_CODE])`` and is logged at
+    ERROR, so callers can tell an outage from a rejected token.
     """
     if not secret_key:
         return True, []
@@ -44,9 +51,19 @@ async def verify_turnstile_token(
     if remote_ip:
         payload["remoteip"] = remote_ip
 
-    async with httpx.AsyncClient(timeout=TURNSTILE_TIMEOUT_S) as client:
-        resp = await client.post(TURNSTILE_VERIFY_URL, data=payload)
-        result = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=TURNSTILE_TIMEOUT_S) as client:
+            resp = await client.post(TURNSTILE_VERIFY_URL, data=payload)
+            resp.raise_for_status()
+            result = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.error(
+            "Turnstile siteverify unavailable: error_type=%s status=%s detail=%s",
+            type(exc).__name__,
+            exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None,
+            exc,
+        )
+        return False, [TURNSTILE_PROVIDER_UNAVAILABLE_CODE]
 
     success = bool(result.get("success", False))
     error_codes: list[str] = list(result.get("error-codes") or [])

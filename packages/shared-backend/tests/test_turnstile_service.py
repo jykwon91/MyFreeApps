@@ -11,6 +11,7 @@ import pytest
 
 from platform_shared.services import turnstile_service
 from platform_shared.services.turnstile_service import (
+    TURNSTILE_PROVIDER_UNAVAILABLE_CODE,
     TURNSTILE_VERIFY_URL,
     verify_turnstile_token,
 )
@@ -162,6 +163,32 @@ class TestVerification:
         success, error_codes = await verify_turnstile_token("abc", secret_key="real-secret")
         assert success is False
         assert error_codes == []
+
+
+class TestProviderOutage:
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "handler",
+        [
+            lambda _: httpx.Response(503, text="<html>Service Unavailable</html>"),
+            lambda _: httpx.Response(200, text="<html>not json</html>"),
+            lambda request: (_ for _ in ()).throw(httpx.ConnectTimeout("timed out", request=request)),
+            lambda request: (_ for _ in ()).throw(httpx.ConnectError("refused", request=request)),
+        ],
+        ids=["5xx", "non-json", "timeout", "connect-error"],
+    )
+    async def test_outage_returns_provider_unavailable_and_logs(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, handler,
+    ) -> None:
+        _install_mock_transport(monkeypatch, handler)
+        with caplog.at_level(logging.ERROR, logger="platform_shared.services.turnstile_service"):
+            result = await verify_turnstile_token("tok", secret_key="real-secret")
+
+        assert result == (False, [TURNSTILE_PROVIDER_UNAVAILABLE_CODE])
+        assert any(
+            r.levelno == logging.ERROR and "siteverify unavailable" in r.message
+            for r in caplog.records
+        )
 
 
 class TestActionAndHostnameBinding:

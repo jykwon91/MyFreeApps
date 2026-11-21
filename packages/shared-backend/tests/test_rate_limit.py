@@ -276,6 +276,16 @@ class TestMakeRequireTurnstile:
         assert exc_info.value.detail == "captcha_verification_failed"
 
     @pytest.mark.anyio
+    async def test_provider_outage_raises_503_unavailable(self) -> None:
+        verify = AsyncMock(return_value=(False, ["provider-unavailable"]))
+        dep = make_require_turnstile(lambda: "secret", verify=verify)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(_make_request(headers={"X-Turnstile-Token": "tok"}))
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "captcha_service_unavailable"
+
+    @pytest.mark.anyio
     async def test_dev_mode_passes_without_token(self) -> None:
         """Empty secret_key (dev / CI) skips the check entirely."""
         verify = AsyncMock(return_value=(True, []))

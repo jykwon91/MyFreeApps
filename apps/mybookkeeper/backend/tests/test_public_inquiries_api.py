@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -195,6 +195,22 @@ class TestPublicInquirySubmission:
         notify.assert_called_once_with(
             inquiry_id=inquiry_id, organization_id=organization_id, subject_prefix="",
         )
+
+    def test_captcha_provider_outage_returns_503_and_records_nothing(self) -> None:
+        submit = AsyncMock()
+        client = TestClient(app)
+        with (
+            patch.object(
+                public_inquiries,
+                "verify_turnstile_token",
+                new=AsyncMock(return_value=(False, ["provider-unavailable"])),
+            ),
+            patch.object(public_inquiry_service, "submit_public_inquiry", new=submit),
+        ):
+            r = client.post("/inquiries/public", json=_valid_body())
+        assert r.status_code == 503
+        assert "try again in a moment" in r.json()["detail"]
+        submit.assert_not_awaited()
 
     def test_invalid_email_returns_422_or_400(self) -> None:
         body = _valid_body()

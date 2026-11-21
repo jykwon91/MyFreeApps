@@ -39,7 +39,10 @@ from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.request_utils import get_client_ip
 from platform_shared.services.auth_event_service import log_auth_event
-from platform_shared.services.turnstile_service import verify_turnstile_token
+from platform_shared.services.turnstile_service import (
+    TURNSTILE_PROVIDER_UNAVAILABLE_CODE,
+    verify_turnstile_token,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +230,9 @@ def make_require_turnstile(
             if any(c in error_codes for c in ("invalid-input-secret", "missing-input-secret")):
                 logger.error("Turnstile misconfigured: %s", error_codes)
                 raise HTTPException(status_code=503, detail="captcha_service_misconfigured")
+            # Cloudflare unreachable: neither the user nor the config is at fault.
+            if TURNSTILE_PROVIDER_UNAVAILABLE_CODE in error_codes:
+                raise HTTPException(status_code=503, detail="captcha_service_unavailable")
             # User-recoverable: token reused or expired.
             if "timeout-or-duplicate" in error_codes:
                 raise HTTPException(status_code=400, detail="captcha_expired_please_retry")

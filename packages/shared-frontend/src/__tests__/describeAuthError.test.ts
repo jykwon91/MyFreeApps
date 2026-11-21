@@ -31,6 +31,9 @@ describe("describeAuthError", () => {
     expect(describeAuthError(axiosError("captcha_verification_failed"))).toBe(
       "We couldn't verify the captcha check. Please complete it again and retry.",
     );
+    expect(describeAuthError(axiosError("captcha_service_unavailable"))).toBe(
+      "The captcha check is unavailable right now. Please try again in a moment.",
+    );
     expect(describeAuthError(axiosError("captcha_service_misconfigured"))).toBe(
       "The captcha check is unavailable right now. Please try again later.",
     );
