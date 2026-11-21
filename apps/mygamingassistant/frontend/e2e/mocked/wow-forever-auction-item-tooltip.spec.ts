@@ -125,7 +125,9 @@ test("hovering a ring compares it with both worn rings: green gains, red losses;
   await saveCharacter(page);
   const character = await stubCharacter(page);
   const name = await rowName(page, "Ring of Precision");
-  expect(character.asked()).toBe(0);
+  // AuctionLookup now fetches the character eagerly to build the inline upgrade column,
+  // so the character may already have been fetched before the hover. Assert ≤ 1.
+  expect(character.asked()).toBeLessThanOrEqual(1);
 
   await name.hover();
   const tooltip = page.getByTestId("item-compare-tooltip");
