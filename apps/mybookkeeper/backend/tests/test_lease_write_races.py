@@ -14,7 +14,7 @@ import uuid
 from unittest.mock import patch
 
 import pytest
-from minio.error import S3Error
+from minio.error import InvalidResponseError, S3Error
 from sqlalchemy import update
 from urllib3.exceptions import HTTPError, MaxRetryError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -173,7 +173,7 @@ async def test_template_soft_deleted_during_render_is_not_linked(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure", ["upload", "download", "connection"])
+@pytest.mark.parametrize("failure", ["upload", "download", "connection", "non_xml_reply"])
 async def test_storage_outage_becomes_storage_unavailable_and_writes_nothing(
     db: AsyncSession, real_uow, failure: str,
 ) -> None:
@@ -184,6 +184,9 @@ async def test_storage_outage_becomes_storage_unavailable_and_writes_nothing(
         storage.upload_file.side_effect = HTTPError("minio down")
     elif failure == "connection":
         storage.download_file.side_effect = MaxRetryError(None, "http://minio", None)  # type: ignore[arg-type]
+    elif failure == "non_xml_reply":
+        # A 5xx whose body isn't S3 XML, e.g. from a proxy in front of MinIO.
+        storage.download_file.side_effect = InvalidResponseError(502, "text/html", "<html>Bad Gateway</html>")
     else:
         storage.download_file.side_effect = S3Error("_r", "InternalError", "boom", "", "", "")
 

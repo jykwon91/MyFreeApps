@@ -12,9 +12,12 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from minio.error import S3Error
+from platform_shared.core.storage import StorageClient
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import storage as _storage_module
 from app.models.email.email_filter_log import EmailFilterLog
 from app.models.leases.pending_rent_receipt import PendingRentReceipt
 from app.models.leases.rent_receipt_sequence import RentReceiptSequence
@@ -29,7 +32,7 @@ from app.services.email.exceptions import (
     GmailSendError,
     GmailSendOutcomeUnknownError,
 )
-from app.services.leases import receipt_send_service, receipt_service
+from app.services.leases import receipt_claim_settlement, receipt_send_service, receipt_service
 from app.services.leases.exceptions import (
     ReceiptAlreadySentError,
     ReceiptDismissedError,
@@ -501,3 +504,17 @@ async def test_stale_send_found_by_its_attachment_is_marked_sent(
     # Found in the connected account's Sent, so that's who it went out from.
     log = (await db.execute(select(EmailFilterLog))).scalar_one()
     assert log.message_id == "gmail-late" and log.from_address == "host@gmail.com"
+
+
+@pytest.mark.asyncio
+async def test_a_receipt_pdf_minio_refuses_to_delete_is_logged_with_its_s3_code(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    minio = MagicMock()
+    minio.remove_object.side_effect = S3Error(None, "AccessDenied", "Access Denied.", "", "", "")
+    monkeypatch.setattr(_storage_module, "get_storage", lambda: StorageClient(minio, "bucket"))
+
+    await receipt_claim_settlement.delete_stored_pdf("receipts/r1.pdf")
+
+    assert "Could not clean up orphaned receipt PDF at receipts/r1.pdf" in caplog.text
+    assert "AccessDenied" in caplog.text

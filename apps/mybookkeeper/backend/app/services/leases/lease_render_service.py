@@ -15,9 +15,6 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from minio.error import S3Error
-from urllib3.exceptions import HTTPError
-
 from app.core.lease_template_constants import STORAGE_UNAVAILABLE_MESSAGE
 from app.core.storage import StorageClient
 from app.schemas.leases.rendered_lease_file import RenderedLeaseFile
@@ -32,6 +29,7 @@ from app.services.leases.renderer import (
     render_pdf_from_text,
 )
 from app.services.storage.stored_file import load_stored_file
+from platform_shared.core.storage import STORAGE_UNAVAILABLE_ERRORS
 from platform_shared.schemas.storage.new_stored_object import NewStoredObject
 from platform_shared.services.storage.object_upload import upload_objects
 
@@ -65,11 +63,14 @@ def build_substitutions(
 
 @contextmanager
 def _storage_outage_as_unavailable() -> Iterator[None]:
-    """Only storage calls are wrapped: a render failure (even an ``OSError`` from
-    the converter or a full temp disk) must not read as a storage outage."""
+    """Report a storage failure as ``TemplateStorageUnavailableError``.
+
+    Only storage calls are wrapped: a render failure (even an ``OSError`` from
+    the converter or a full temp disk) must not read as a storage outage.
+    """
     try:
         yield
-    except (S3Error, HTTPError) as exc:
+    except STORAGE_UNAVAILABLE_ERRORS as exc:
         raise TemplateStorageUnavailableError(STORAGE_UNAVAILABLE_MESSAGE) from exc
 
 

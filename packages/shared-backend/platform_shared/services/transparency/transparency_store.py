@@ -36,6 +36,7 @@ from platform_shared.core.storage import (
     StorageNotConfiguredError,
     build_storage_client,
 )
+from platform_shared.core.storage_constants import STORAGE_MISSING_OBJECT_CODES
 from platform_shared.schemas.transparency import (
     MONTHS_RETAINED,
     TRANSPARENCY_OBJECT_KEY,
@@ -55,7 +56,7 @@ logger = logging.getLogger(__name__)
 # operational migration — and the steady state for any app not on the shared
 # MinIO at all, e.g. MGA serving from Cloudflare R2). Transient / auth failures
 # carry a different code and still raise → 503 ("temporarily unavailable").
-_NOT_FOUND_CODES = {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}
+_NOT_FOUND_CODES = STORAGE_MISSING_OBJECT_CODES | {"NoSuchBucket"}
 
 
 class SharedStorageSettings(Protocol):
