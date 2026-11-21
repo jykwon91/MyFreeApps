@@ -692,7 +692,8 @@
         "test_image_cleaning_off_event_loop.py",
         "test_blackout_attachment_metadata.py",
         "test_lease_insurance_attachment_metadata.py",
-        "test_strip_metadata_phone_photos.py"
+        "test_strip_metadata_phone_photos.py",
+        "test_cross_org_isolation_http_2.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",
@@ -1075,7 +1076,8 @@
       "backend_tests": [
         "test_rent_reminder_math.py",
         "test_rent_reminder_dispatch.py",
-        "test_rent_reminders_api.py"
+        "test_rent_reminders_api.py",
+        "test_cross_org_isolation_http_2.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx"
@@ -1859,7 +1861,8 @@
         "test_health_dashboard.py",
         "test_sql_in_list.py",
         "test_system_event_types.py",
-        "test_cost_thresholds_schema.py"
+        "test_cost_thresholds_schema.py",
+        "test_cross_org_isolation_http_2.py"
       ],
       "frontend_tests": [
         "frontendErrorReporting.test.ts",
