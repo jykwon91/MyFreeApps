@@ -42,6 +42,8 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from platform_shared.core.sms_constants import TWILIO_HTTP_TIMEOUT_SECONDS
+
 if TYPE_CHECKING:
     # twilio is an optional import — apps that don't use SMS don't need
     # to install it, and platform_shared.services.sms_service stays
@@ -123,9 +125,14 @@ class SmsService:
         # Imports happen lazily so the twilio package is only required
         # by apps that actually use SMS.
         from twilio.base.exceptions import TwilioRestException
+        from twilio.http.http_client import TwilioHttpClient
         from twilio.rest import Client
 
-        client: _TwilioClient = Client(self.account_sid, self.auth_token)
+        client: _TwilioClient = Client(
+            self.account_sid,
+            self.auth_token,
+            http_client=TwilioHttpClient(timeout=TWILIO_HTTP_TIMEOUT_SECONDS),
+        )
         try:
             msg = client.messages.create(
                 to=to,
@@ -144,10 +151,12 @@ class SmsService:
             ) from e
         except Exception as e:
             # Network errors, timeouts, malformed responses — not
-            # specifically Twilio-codeable but still a send failure.
+            # specifically Twilio-codeable but still a send failure. A timeout
+            # is ambiguous: Twilio may still have accepted the message.
             logger.warning(
-                "Twilio send failed (non-Twilio exception): to=%s body_chars=%d err=%r",
-                to, len(body), e,
+                "Twilio send failed (non-Twilio exception): to=%s body_chars=%d "
+                "err_type=%s err=%r",
+                to, len(body), type(e).__name__, e,
             )
             raise SmsSendError(f"Twilio send failed: {e}") from e
 

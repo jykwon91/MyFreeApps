@@ -33,6 +33,7 @@ service is over, history is frozen.
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -266,7 +267,11 @@ async def advance_order_status(
 
     # The status change is committed, so the text can't be undone by a
     # rollback; a Twilio outage can't undo the operator's intent either.
-    sms_dispatched, sms_error = send_ready_text(ready_text, order_id)
+    # The Twilio client is synchronous; run it in a thread so a slow send
+    # can't freeze the event loop for every other request.
+    sms_dispatched, sms_error = await asyncio.to_thread(
+        send_ready_text, ready_text, order_id,
+    )
     return AdvanceOrderResult(
         order=refreshed,
         sms_dispatched=sms_dispatched,

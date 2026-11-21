@@ -391,6 +391,44 @@ async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
 
 
 @pytest.mark.asyncio
+async def test_advance_to_ready_text_sent_sends_off_the_event_loop(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    """The Twilio client is synchronous, so the send must run in a worker
+    thread; on the loop thread a slow Twilio would freeze every request."""
+    import threading
+
+    from app.services.sms import sms_sender
+
+    drop_id, slot_id = await _create_active_drop(auth_client)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+    order_id = await _place_order(
+        client, drop_id=drop_id, slot_id=slot_id, pizza_ids=[pizza_id],
+    )
+    await auth_client.post(
+        f"/service/orders/{order_id}/advance", json={"target_status": "cooking"},
+    )
+
+    loop_thread = threading.get_ident()
+    send_threads: list[int] = []
+
+    def _record(*args, **kwargs):
+        send_threads.append(threading.get_ident())
+        return None
+
+    monkeypatch.setattr(sms_sender, "send_sms_or_raise", _record)
+
+    r = await auth_client.post(
+        f"/service/orders/{order_id}/advance",
+        json={"target_status": "ready_text_sent"},
+    )
+    assert r.status_code == 200
+    assert r.json()["sms_dispatched"] is True
+    assert len(send_threads) == 1
+    assert send_threads[0] != loop_thread
+
+
+@pytest.mark.asyncio
 async def test_advance_to_ready_text_sent_handles_unconfigured_twilio(
     client: AsyncClient, auth_client: AsyncClient, monkeypatch,
 ):

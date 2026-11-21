@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from platform_shared.core.sms_constants import TWILIO_HTTP_TIMEOUT_SECONDS
 from platform_shared.services.sms_service import (
     SmsNotConfiguredError,
     SmsSendError,
@@ -76,7 +77,10 @@ class TestSendOrRaise:
         with patch("twilio.rest.Client", return_value=mock_client) as mock_cls:
             sid = service.send_or_raise("+15559876543", "Your pizza is ready!")
 
-        mock_cls.assert_called_once_with(service.account_sid, service.auth_token)
+        args, kwargs = mock_cls.call_args
+        assert args == (service.account_sid, service.auth_token)
+        # Twilio's SDK default is no timeout; the client must carry ours.
+        assert kwargs["http_client"].timeout == TWILIO_HTTP_TIMEOUT_SECONDS
         mock_client.messages.create.assert_called_once_with(
             to="+15559876543",
             from_=service.from_number,
@@ -126,6 +130,22 @@ class TestSendOrRaise:
 
         assert "connection refused" in str(exc.value)
         assert exc.value.__cause__ is underlying
+
+
+    def test_http_timeout_is_applied_to_the_real_request(self) -> None:
+        """The timeout reaches the underlying ``requests`` call, and a timeout
+        surfaces as SmsSendError with the exception type in the log."""
+        import requests
+
+        service = _configured_service()
+        with patch(
+            "requests.Session.send", side_effect=requests.exceptions.ReadTimeout("slow"),
+        ) as send:
+            with pytest.raises(SmsSendError) as exc:
+                service.send_or_raise("+15559876543", "body")
+
+        assert send.call_args.kwargs["timeout"] == TWILIO_HTTP_TIMEOUT_SECONDS
+        assert isinstance(exc.value.__cause__, requests.exceptions.ReadTimeout)
 
 
 class TestSend:
