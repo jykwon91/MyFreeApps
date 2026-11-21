@@ -63,6 +63,12 @@ it("says what goes, and waits for the email, password and code", async () => {
   expect(isDisabled()).toBe(false);
 });
 
+it("lets the phone fill in the owner's own email", async () => {
+  await open();
+  const email = screen.getByLabelText("Type your email to confirm");
+  expect(email.props).toMatchObject({ keyboardType: "email-address", autoComplete: "email", textContentType: "emailAddress", autoCorrect: false });
+});
+
 it("moves through the fields from the keyboard, but never deletes from it", async () => {
   await open({ twoFactor: true });
   await fireEvent(screen.getByLabelText("Type your email to confirm"), "submitEditing");

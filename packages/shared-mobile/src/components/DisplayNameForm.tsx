@@ -4,6 +4,7 @@ import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { useState } from "react";
 import { View } from "react-native";
+import { FIELD_PRESETS } from "../constants/fieldPresets";
 import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
 import { useToast } from "../hooks/useToast";
 import { useTheme } from "../theme/useTheme";
@@ -46,8 +47,7 @@ export default function DisplayNameForm({ initialName, source }: DisplayNameForm
   return (
     <View style={{ gap: spacing.sm }}>
       <FormField
-        autoCapitalize="words"
-        autoComplete="name"
+        {...FIELD_PRESETS.ownName}
         counter={characterCounter(trimmed, maxLength)}
         editable={!isSaving}
         error={problem}

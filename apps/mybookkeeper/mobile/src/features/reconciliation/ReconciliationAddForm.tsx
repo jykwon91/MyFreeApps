@@ -4,7 +4,7 @@ import {
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
-import { Banner, confirmDiscard, deviceDecimalSeparator, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Text } from "react-native";
@@ -75,9 +75,9 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
         <PickerField label={MESSAGES.type} onPress={() => setIsChoosingType(true)} value={sourceTypeLabel(sourceType)} />
         <FormField {...fields.field("issuer")} hint={MESSAGES.issuerHint} label={MESSAGES.issuer} maxLength={ISSUER_MAX_LENGTH} onChangeText={setIssuer} value={issuer} />
         <FormField
+          {...FIELD_PRESETS.decimal}
           {...fields.field("amount")}
           error={hasTried ? amountProblem : undefined}
-          keyboardType="decimal-pad"
           label={MESSAGES.amount}
           onChangeText={setAmount}
           value={amount}

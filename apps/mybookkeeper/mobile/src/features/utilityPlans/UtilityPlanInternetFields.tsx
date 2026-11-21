@@ -1,4 +1,4 @@
-import { useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, useTheme } from "@platform/mobile";
 import { Text } from "react-native";
 import { UTILITY_PLAN_FORM_MESSAGES as MESSAGES } from "../../constants/utilityPlanForm";
 import type { UtilityPlanFieldsProps } from "../../types/UtilityPlanFieldsProps";
@@ -10,8 +10,8 @@ import UtilityPlanTextField from "./UtilityPlanTextField";
  */
 export default function UtilityPlanInternetFields(props: UtilityPlanFieldsProps) {
   const { colors, fontSize } = useTheme();
-  const money = { ...props, keyboardType: "decimal-pad" as const };
-  const whole = { ...props, keyboardType: "number-pad" as const };
+  const money = { ...props, preset: FIELD_PRESETS.decimal };
+  const whole = { ...props, preset: FIELD_PRESETS.wholeNumber };
   return (
     <>
       <UtilityPlanTextField {...money} field="postPromoMonthly" label={MESSAGES.postPromo} />

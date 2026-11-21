@@ -10,7 +10,7 @@ import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
 import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
-import { deviceDecimalSeparator, FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FIELD_PRESETS, FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { EDUCATION_MESSAGES as MESSAGES } from "../../constants/profileEducation";
@@ -87,30 +87,30 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.field}
       />
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("startYear")}
         editable={!isSaving}
         error={problems.start_year}
-        keyboardType="number-pad"
         label={MESSAGES.startYearLabel}
         onChangeText={change("start_year")}
         placeholder={MESSAGES.yearPlaceholder}
         value={values.start_year}
       />
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("endYear")}
         editable={!isSaving}
         error={problems.end_year}
-        keyboardType="number-pad"
         label={MESSAGES.endYearLabel}
         onChangeText={change("end_year")}
         placeholder={MESSAGES.yearPlaceholder}
         value={values.end_year}
       />
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("gpa")}
         editable={!isSaving}
         error={problems.gpa}
-        keyboardType="decimal-pad"
         label={MESSAGES.gpaLabel}
         onChangeText={change("gpa")}
         placeholder={MESSAGES.gpaPlaceholder}

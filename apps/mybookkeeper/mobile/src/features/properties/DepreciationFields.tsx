@@ -1,5 +1,5 @@
 import { DEPRECIATION_INPUT_MESSAGES as MESSAGES } from "@mybookkeeper/api-client/constants/depreciationInputs";
-import { type FieldChainProps, FormField, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, type FieldChainProps, FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import OptionalDateField from "../shell/OptionalDateField";
 
@@ -29,12 +29,11 @@ export default function DepreciationFields({
   return (
     <View style={{ gap: spacing.lg }}>
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...chain}
         editable={!disabled}
         error={landValueError}
         hint={MESSAGES.landValueHint}
-        inputMode="decimal"
-        keyboardType="decimal-pad"
         label={MESSAGES.landValue}
         onChangeText={onLandValueChange}
         placeholder={MESSAGES.landValuePlaceholder}

@@ -1,6 +1,6 @@
 import { JOB_URL_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, LoadingButton } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, LoadingButton } from "@platform/mobile";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { LinkSourceFieldsProps } from "../../types/LinkSourceFieldsProps";
 import ReadingHint from "./ReadingHint";
@@ -11,18 +11,15 @@ export default function LinkSourceFields({ value, onChange, onRead, onPaste, isR
   return (
     <>
       <FormField
-        autoCapitalize="none"
-        autoCorrect={false}
+        {...FIELD_PRESETS.url}
         counter={characterCounter(value.trim(), JOB_URL_MAX_LENGTH)}
         editable={!locked}
         hint={MESSAGES.linkHint}
-        keyboardType="url"
         label={MESSAGES.linkLabel}
         onChangeText={onChange}
         onSubmitEditing={() => void onRead()}
         placeholder={MESSAGES.linkPlaceholder}
         returnKeyType="go"
-        textContentType="URL"
         value={value}
       />
       <LoadingButton disabled={locked} onPress={onPaste} variant="secondary">

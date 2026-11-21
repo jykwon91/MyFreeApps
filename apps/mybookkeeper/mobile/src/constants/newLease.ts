@@ -1,15 +1,18 @@
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
-import type { KeyboardTypeOptions } from "react-native";
+import { FIELD_PRESETS, type FieldPreset } from "@platform/mobile";
 
 export const NEW_LEASE_SKELETON_FIELDS = ["a", "b", "c", "d", "e"];
 /** Route names of the flow's screens, for leaving all of them at once. */
 export const NEW_LEASE_SCREEN_PREFIX = "leases/new/";
 
-/** Keyed by the input type as the server names it; one it doesn't know gets the plain keyboard. */
-export const PLACEHOLDER_KEYBOARDS: Readonly<Record<string, KeyboardTypeOptions | undefined>> = {
-  email: "email-address",
-  phone: "phone-pad",
-  number: "decimal-pad",
+/**
+ * Keyed by the input type as the server names it; one it doesn't know gets the plain keyboard. A lease's email
+ * and phone are the tenant's, so the phone doesn't offer to fill in the owner's own.
+ */
+export const PLACEHOLDER_PRESETS: Readonly<Record<string, FieldPreset | undefined>> = {
+  email: FIELD_PRESETS.otherEmail,
+  phone: FIELD_PRESETS.otherPhone,
+  number: FIELD_PRESETS.decimal,
 };
 
 export const NEW_LEASE_MESSAGES = {

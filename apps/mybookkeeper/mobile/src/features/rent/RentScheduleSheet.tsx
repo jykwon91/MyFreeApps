@@ -10,7 +10,7 @@ import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
 import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FIELD_PRESETS, FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { RENT_MANAGE_MESSAGES, scheduleFixedTerms } from "../../constants/rentManage";
@@ -103,11 +103,11 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
       ) : (
         <>
           <FormField
+            {...FIELD_PRESETS.decimal}
             {...fields.field("amount")}
             editable={!busy}
             error={amountProblem}
             hint={RENT_MANAGE_MESSAGES.amountHint}
-            keyboardType="decimal-pad"
             label={RENT_MANAGE_MESSAGES.amount}
             onChangeText={setAmount}
             required
@@ -130,11 +130,11 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{RENT_MANAGE_MESSAGES.endHint}</Text>
 
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("grace")}
         editable={!busy}
         error={isGraceValid ? undefined : RENT_MANAGE_MESSAGES.graceInvalid}
         hint={RENT_MANAGE_MESSAGES.graceHint}
-        keyboardType="number-pad"
         label={RENT_MANAGE_MESSAGES.grace}
         onChangeText={setGraceDays}
         value={graceDays}

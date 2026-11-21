@@ -1,5 +1,5 @@
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
-import { type FieldChain, FormField } from "@platform/mobile";
+import { FIELD_PRESETS, type FieldChain, FormField } from "@platform/mobile";
 
 interface MortgageMoneyFieldProps {
   field: keyof MortgageFormValues;
@@ -13,5 +13,5 @@ interface MortgageMoneyFieldProps {
 }
 
 export default function MortgageMoneyField({ field, label, value, onChange, isBusy, error, hint, fields }: MortgageMoneyFieldProps) {
-  return <FormField {...fields.field(field)} editable={!isBusy} error={error} hint={hint} keyboardType="decimal-pad" label={label} onChangeText={(text) => onChange(field, text)} value={value} />;
+  return <FormField {...FIELD_PRESETS.decimal} {...fields.field(field)} editable={!isBusy} error={error} hint={hint} label={label} onChangeText={(text) => onChange(field, text)} value={value} />;
 }

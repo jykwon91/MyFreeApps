@@ -1,6 +1,6 @@
 import { SALARY_PERIOD_OPTIONS } from "@myjobhunter/api-client/constants/salaryPeriodOptions";
 import type { SalaryPeriod } from "@myjobhunter/api-client/types/application/salary-period";
-import { FormField, OptionSheet, PickerField } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, OptionSheet, PickerField } from "@platform/mobile";
 import { useState } from "react";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { PostedSalaryFieldsProps } from "../../types/PostedSalaryFieldsProps";
@@ -14,20 +14,20 @@ export default function PostedSalaryFields({ values, errors, onEdit, disabled, f
   return (
     <>
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("posted_salary_min")}
         editable={!disabled}
         error={errors.posted_salary_min}
-        keyboardType="decimal-pad"
         label={`${MESSAGES.salaryFromLabel} (${currency})`}
         onChangeText={(text) => onEdit("posted_salary_min", text)}
         placeholder={MESSAGES.salaryFromPlaceholder}
         value={values.posted_salary_min}
       />
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("posted_salary_max")}
         editable={!disabled}
         error={errors.posted_salary_max}
-        keyboardType="decimal-pad"
         label={`${MESSAGES.salaryToLabel} (${currency})`}
         onChangeText={(text) => onEdit("posted_salary_max", text)}
         placeholder={MESSAGES.salaryToPlaceholder}

@@ -8,7 +8,7 @@ import { contactFormErrors } from "@myjobhunter/api-client/utils/contactFormErro
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
 import { hasContactFormErrors } from "@myjobhunter/api-client/utils/hasContactFormErrors";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
-import { FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
@@ -64,8 +64,8 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_CONTACT_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.addIntro}</Text>
       <FormField
+        {...FIELD_PRESETS.otherName}
         {...fields.field("name")}
-        autoCapitalize="words"
         editable={!isLoading}
         counter={counters.name}
         error={contactFieldMessage(errors, serverErrors, "name")}
@@ -75,14 +75,11 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
         value={values.name}
       />
       <FormField
+        {...FIELD_PRESETS.otherEmail}
         {...fields.field("email")}
-        autoCapitalize="none"
-        autoComplete="off"
-        autoCorrect={false}
         editable={!isLoading}
         counter={counters.email}
         error={contactFieldMessage(errors, serverErrors, "email")}
-        keyboardType="email-address"
         label={MESSAGES.emailLabel}
         onChangeText={change("email")}
         placeholder={MESSAGES.emailPlaceholder}
@@ -90,13 +87,11 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
       />
       <ChoiceGroup disabled={isLoading} label={MESSAGES.roleLabel} onChange={change("role")} options={CONTACT_ROLE_CHOICES} value={values.role} />
       <FormField
+        {...FIELD_PRESETS.url}
         {...fields.field("linkedIn")}
-        autoCapitalize="none"
-        autoCorrect={false}
         editable={!isLoading}
         counter={counters.linkedin_url}
         error={contactFieldMessage(errors, serverErrors, "linkedin_url")}
-        keyboardType="url"
         label={MESSAGES.linkedInLabel}
         onChangeText={change("linkedin_url")}
         placeholder={MESSAGES.linkedInPlaceholder}

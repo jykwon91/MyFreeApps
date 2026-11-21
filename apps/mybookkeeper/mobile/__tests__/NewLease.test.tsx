@@ -352,6 +352,13 @@ describe("what goes in the lease", () => {
     expect(screen.getByLabelText("Rent").props.keyboardType).toBe("decimal-pad");
   });
 
+  it("asks the phone not to autofill the owner's own email or phone for the tenant's", async () => {
+    startServer({ fields: [aField("Email", { type: "email" }), aField("Phone", { type: "phone" })] });
+    await openDetails();
+    expect((await screen.findByLabelText("Email")).props).toMatchObject({ autoComplete: "off", textContentType: "none", autoCorrect: false });
+    expect(screen.getByLabelText("Phone").props).toMatchObject({ autoComplete: "off", textContentType: "none" });
+  });
+
   it("picks dates as dates and sends them the way the server reads them", async () => {
     const server = startServer({ fields: [aField("MOVE-IN DATE", { type: "date", value: "2027-01-15", provenance: "inquiry" })] });
     await openDetails();

@@ -3,7 +3,7 @@ import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyF
 import { POLICY_CARRIER_MAX, POLICY_NAME_MAX, POLICY_NOTES_MAX, POLICY_NUMBER_MAX } from "@mybookkeeper/api-client/constants/insurancePolicyFieldLimits";
 import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/constants/insurancePremiumFrequencies";
 import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
-import { Banner, FormField, OptionSheet, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, FIELD_PRESETS, FormField, OptionSheet, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
@@ -41,30 +41,30 @@ export default function PolicyFormFields({ values, errors, onChange }: PolicyFor
         value={values.policyName}
       />
       <FormField {...fields.field("carrier")} label={POLICY_FORM_MESSAGES.carrier} maxLength={POLICY_CARRIER_MAX} onChangeText={(carrier) => onChange({ carrier })} placeholder={POLICY_FORM_MESSAGES.carrierPlaceholder} value={values.carrier} />
-      <FormField {...fields.field("policyNumber")} label={POLICY_FORM_MESSAGES.policyNumber} maxLength={POLICY_NUMBER_MAX} onChangeText={(policyNumber) => onChange({ policyNumber })} value={values.policyNumber} />
+      <FormField {...FIELD_PRESETS.code} {...fields.field("policyNumber")} label={POLICY_FORM_MESSAGES.policyNumber} maxLength={POLICY_NUMBER_MAX} onChangeText={(policyNumber) => onChange({ policyNumber })} value={values.policyNumber} />
       <OptionalDateField label={POLICY_FORM_MESSAGES.effectiveDate} onChange={(iso) => onChange({ effectiveDate: iso ?? "" })} startsAt={new Date()} value={values.effectiveDate || null} />
       <OptionalDateField error={errors.expirationDate} label={POLICY_FORM_MESSAGES.expirationDate} onChange={(iso) => onChange({ expirationDate: iso ?? "" })} startsAt={dateStart} value={values.expirationDate || null} />
-      <FormField {...fields.field("coverage")} error={errors.coverageDollars} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.coverage} onChangeText={(coverageDollars) => onChange({ coverageDollars })} value={values.coverageDollars} />
+      <FormField {...FIELD_PRESETS.decimal} {...fields.field("coverage")} error={errors.coverageDollars} label={POLICY_FORM_MESSAGES.coverage} onChangeText={(coverageDollars) => onChange({ coverageDollars })} value={values.coverageDollars} />
 
       <View style={{ gap: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {POLICY_FORM_MESSAGES.costHeading}
         </Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{POLICY_FORM_MESSAGES.costBlurb}</Text>
-        <FormField {...fields.field("premium")} error={errors.premiumDollars} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.premium} onChangeText={(premiumDollars) => onChange({ premiumDollars })} value={values.premiumDollars} />
+        <FormField {...FIELD_PRESETS.decimal} {...fields.field("premium")} error={errors.premiumDollars} label={POLICY_FORM_MESSAGES.premium} onChangeText={(premiumDollars) => onChange({ premiumDollars })} value={values.premiumDollars} />
         <PickerField hint={POLICY_FORM_MESSAGES.billedHint} label={POLICY_FORM_MESSAGES.billed} onPress={() => setIsBilledOpen(true)} value={billed} />
         {errors.premiumFrequency ? <Banner message={errors.premiumFrequency} /> : null}
         <FormField
+          {...FIELD_PRESETS.decimal}
           {...fields.field("feesAndTaxes")}
           error={errors.feesAndTaxesDollars}
           hint={POLICY_FORM_MESSAGES.feesAndTaxesHint}
-          keyboardType="decimal-pad"
           label={POLICY_FORM_MESSAGES.feesAndTaxes}
           onChangeText={(feesAndTaxesDollars) => onChange({ feesAndTaxesDollars })}
           value={values.feesAndTaxesDollars}
         />
-        <FormField {...fields.field("deductible")} error={errors.deductibleDollars} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.deductible} onChangeText={(deductibleDollars) => onChange({ deductibleDollars })} value={values.deductibleDollars} />
-        <FormField {...fields.field("windHail")} error={errors.windHailPct} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.windHail} onChangeText={(windHailPct) => onChange({ windHailPct })} value={values.windHailPct} />
+        <FormField {...FIELD_PRESETS.decimal} {...fields.field("deductible")} error={errors.deductibleDollars} label={POLICY_FORM_MESSAGES.deductible} onChangeText={(deductibleDollars) => onChange({ deductibleDollars })} value={values.deductibleDollars} />
+        <FormField {...FIELD_PRESETS.decimal} {...fields.field("windHail")} error={errors.windHailPct} label={POLICY_FORM_MESSAGES.windHail} onChangeText={(windHailPct) => onChange({ windHailPct })} value={values.windHailPct} />
       </View>
 
       <FormField

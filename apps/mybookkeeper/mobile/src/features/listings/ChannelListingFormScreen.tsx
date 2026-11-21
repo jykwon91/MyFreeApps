@@ -3,7 +3,7 @@ import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import type { ChannelListingFormValues } from "@mybookkeeper/api-client/types/listing/channel-listing-form-values";
 import { channelListingFormProblems, channelListingToFormValues, emptyChannelListingForm, sameChannelListingForm } from "@mybookkeeper/api-client/utils/channelListingForm";
-import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FIELD_PRESETS, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { copyOutboundLabel, LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
@@ -58,11 +58,10 @@ export default function ChannelListingFormScreen({ listingId, available, origina
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} label={MESSAGES.channel} onPress={() => setIsPicking(true)} valueLabel={channelName} />
         <FormField
+          {...FIELD_PRESETS.url}
           {...fields.field("externalUrl")}
-          autoCapitalize="none"
           editable={!locked}
           error={errorFor("external_url")}
-          keyboardType="url"
           label={MESSAGES.externalUrl}
           maxLength={CHANNEL_EXTERNAL_URL_MAX_LENGTH}
           onChangeText={(text) => edit("external_url", text)}
@@ -70,15 +69,14 @@ export default function ChannelListingFormScreen({ listingId, available, origina
           required
           value={values.external_url}
         />
-        <FormField {...fields.field("externalId")} editable={!locked} label={MESSAGES.externalId} maxLength={CHANNEL_EXTERNAL_ID_MAX_LENGTH} onChangeText={(text) => edit("external_id", text)} value={values.external_id} />
+        <FormField {...FIELD_PRESETS.code} {...fields.field("externalId")} editable={!locked} label={MESSAGES.externalId} maxLength={CHANNEL_EXTERNAL_ID_MAX_LENGTH} onChangeText={(text) => edit("external_id", text)} value={values.external_id} />
         {supportsImport ? (
           <FormField
+            {...FIELD_PRESETS.url}
             {...fields.field("icalImportUrl")}
-            autoCapitalize="none"
             editable={!locked}
             error={errorFor("ical_import_url")}
             hint={MESSAGES.icalImportHint}
-            keyboardType="url"
             label={MESSAGES.icalImportUrl}
             maxLength={CHANNEL_ICAL_URL_MAX_LENGTH}
             onChangeText={(text) => edit("ical_import_url", text)}

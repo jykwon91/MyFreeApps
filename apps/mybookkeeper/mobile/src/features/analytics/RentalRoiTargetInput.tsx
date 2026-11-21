@@ -3,7 +3,7 @@ import {
   RENTAL_ROI_TARGET_DEBOUNCE_MS,
 } from "@mybookkeeper/api-client/constants/rentalRoi";
 import { parseTargetReturnPct } from "@mybookkeeper/api-client/utils/rentalRoi";
-import { LoadingRegion, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, LoadingRegion, useTheme } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, TextInput, View } from "react-native";
 import { RENTAL_ROI_MESSAGES as MESSAGES } from "../../constants/rentalRoi";
@@ -57,11 +57,10 @@ export default function RentalRoiTargetInput({ value, onChange, isUpdating }: Re
           {MESSAGES.targetLabel}
         </Text>
         <TextInput
+          {...FIELD_PRESETS.decimal}
           accessibilityLabel={MESSAGES.targetLabel}
           accessibilityValue={{ text: draft, min: 0, max: 100, now: parseTargetReturnPct(draft) }}
           editable
-          inputMode="decimal"
-          keyboardType="decimal-pad"
           onBlur={handleBlur}
           onChangeText={handleChange}
           placeholder={String(RENTAL_ROI_DEFAULT_TARGET_PCT)}

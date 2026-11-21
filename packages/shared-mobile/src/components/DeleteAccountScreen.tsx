@@ -5,6 +5,7 @@ import { useFieldChain } from "../hooks/useFieldChain";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
 import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
+import { FIELD_PRESETS } from "../constants/fieldPresets";
 import { SECURITY_MESSAGES } from "../constants/security";
 import { useTheme } from "../theme/useTheme";
 import Banner from "./Banner";
@@ -124,13 +125,10 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
         </Text>
         <Text style={{ color: colors.foreground, fontSize: fontSize.sm }}>{warning}</Text>
         <FormField
+          {...FIELD_PRESETS.ownEmail}
           {...fields.field("email")}
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
           autoFocus
           error={fieldErrors.email}
-          keyboardType="email-address"
           label="Type your email to confirm"
           onChangeText={setEmail}
           value={email}

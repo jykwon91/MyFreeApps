@@ -4,7 +4,7 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
@@ -45,6 +45,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
       <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
+          {...FIELD_PRESETS.otherName}
           {...fields.field("name")}
           editable={!locked}
           error={errorFor("name")}
@@ -56,27 +57,26 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
         />
         <PickerField disabled={locked} label={MESSAGES.category} onPress={() => setIsPickerOpen(true)} valueLabel={VENDOR_CATEGORY_LABELS[values.category]} />
         <FormField
+          {...FIELD_PRESETS.otherPhone}
           {...fields.field("phone")}
           editable={!locked}
-          keyboardType="phone-pad"
           label={MESSAGES.phone}
           maxLength={VENDOR_PHONE_MAX_LENGTH}
           onChangeText={(text) => edit("phone", text)}
           value={values.phone}
         />
         <FormField
+          {...FIELD_PRESETS.otherEmail}
           {...fields.field("email")}
-          autoCapitalize="none"
-          autoComplete="email"
           editable={!locked}
           error={errorFor("email")}
-          keyboardType="email-address"
           label={MESSAGES.email}
           maxLength={VENDOR_EMAIL_MAX_LENGTH}
           onChangeText={(text) => edit("email", text)}
           value={values.email}
         />
         <FormField
+          {...FIELD_PRESETS.otherAddress}
           {...fields.field("address")}
           editable={!locked}
           label={MESSAGES.address}
@@ -85,10 +85,10 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
           value={values.address}
         />
         <FormField
+          {...FIELD_PRESETS.decimal}
           {...fields.field("hourlyRate")}
           editable={!locked}
           error={errorFor("hourly_rate")}
-          keyboardType="decimal-pad"
           label={MESSAGES.hourlyRate}
           onChangeText={(text) => edit("hourly_rate", text)}
           placeholder={MESSAGES.hourlyRatePlaceholder}

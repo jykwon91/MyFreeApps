@@ -84,6 +84,16 @@ describe("the contacts' empty state", () => {
 });
 
 describe("adding a contact", () => {
+  it("asks the phone not to autofill the owner's own name or email for the contact, and keeps the right keyboards", async () => {
+    serveContacts([]);
+    await renderApplicationDetail(ID);
+    await openSheet();
+    const noAutofill = { autoComplete: "off", textContentType: "none" };
+    expect(screen.getByLabelText(CONTACTS.nameLabel).props).toMatchObject({ ...noAutofill, autoCapitalize: "words" });
+    expect(screen.getByLabelText(CONTACTS.emailLabel).props).toMatchObject({ ...noAutofill, keyboardType: "email-address", autoCapitalize: "none" });
+    expect(screen.getByLabelText(CONTACTS.linkedInLabel).props).toMatchObject({ inputMode: "url", autoCapitalize: "none", autoCorrect: false });
+  });
+
   it("sends the trimmed fields for this application, says so, and shows them", async () => {
     const sent = serveContacts([]);
     await renderApplicationDetail(ID);

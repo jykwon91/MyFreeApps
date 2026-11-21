@@ -5,7 +5,7 @@ import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { isFlatService, marketRateFormProblems, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { localToday } from "@platform/core/utils/localToday";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
@@ -48,11 +48,11 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
     <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("figure")}
         editable={!locked}
         error={problems.figure}
         hint={flat ? MESSAGES.figureFlatHint : MESSAGES.figureMeteredHint}
-        keyboardType="decimal-pad"
         label={flat ? MESSAGES.figureFlat : MESSAGES.figureMetered}
         onChangeText={(text) => set("figure", text)}
         required

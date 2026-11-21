@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -127,9 +127,9 @@ export default function NewTransactionForm() {
             value={values.type}
           />
           <FormField
+            {...FIELD_PRESETS.decimal}
             {...fields.field("amount")}
             error={amountProblem}
-            keyboardType="decimal-pad"
             label="Amount (USD)"
             onChangeText={(amount) => update({ amount })}
             placeholder="0.00"

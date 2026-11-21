@@ -1,6 +1,6 @@
 import { INTERVIEW_LOCATION_MAX_LENGTH } from "@myjobhunter/api-client/constants/interviewDetailLimits";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, useFieldChain, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
 import { INTERVIEW_TYPE_OPTIONS } from "../../constants/eventOptions";
@@ -28,10 +28,10 @@ export default function InterviewDetailsFields({ values, onChange, errors, disab
       />
       <DateTimeField disabled={disabled} label={MESSAGES.scheduledLabel} onChange={(next) => onChange("interview_scheduled_at", next)} value={values.interview_scheduled_at} />
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("duration")}
         editable={!disabled}
         error={errors.interview_duration_minutes}
-        keyboardType="number-pad"
         label={MESSAGES.durationLabel}
         onChangeText={(next) => onChange("interview_duration_minutes", next)}
         placeholder={MESSAGES.durationPlaceholder}

@@ -90,6 +90,15 @@ describe("adding a utility plan", () => {
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 
+  it("types the account number exactly, and brings up number pads for money and months", async () => {
+    startUtilityServer();
+    await show(<UtilityPlanFormScreen />);
+    const account = await screen.findByLabelText(MESSAGES.accountNumber);
+    expect(account.props).toMatchObject({ autoCapitalize: "none", autoCorrect: false, autoComplete: "off", textContentType: "none" });
+    expect(screen.getByLabelText(new RegExp(`^${MESSAGES.monthlyBase.replace(/[()$]/g, "\\$&")}`)).props.keyboardType).toBe("decimal-pad");
+    expect(screen.getByLabelText(new RegExp(`^${MESSAGES.termMonths.replace(/[()]/g, "\\$&")}`)).props.keyboardType).toBe("number-pad");
+  });
+
   it("adds the plan with money in cents and rates as typed, then leaves", async () => {
     const server = startUtilityServer();
     await show(<UtilityPlanFormScreen />);

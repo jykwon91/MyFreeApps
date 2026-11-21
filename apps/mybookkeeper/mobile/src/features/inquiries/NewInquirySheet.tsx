@@ -11,7 +11,7 @@ import {
   inquiryFormToCreateRequest,
   needsExternalInquiryId,
 } from "@mybookkeeper/api-client/utils/inquiryForm";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
@@ -82,8 +82,8 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           />
         ) : null}
         <FormField
+          {...FIELD_PRESETS.otherName}
           {...fields.field("name")}
-          autoComplete="name"
           editable={!isBusy}
           error={problems.inquirer_name}
           label={LABELS.name}
@@ -93,28 +93,25 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           value={values.inquirer_name}
         />
         <FormField
+          {...FIELD_PRESETS.otherEmail}
           {...fields.field("email")}
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
           editable={!isBusy}
-          keyboardType="email-address"
           label={LABELS.email}
           maxLength={MAX_LENGTH.email}
           onChangeText={(inquirer_email) => update({ inquirer_email })}
           value={values.inquirer_email}
         />
         <FormField
+          {...FIELD_PRESETS.otherPhone}
           {...fields.field("phone")}
-          autoComplete="tel"
           editable={!isBusy}
-          keyboardType="phone-pad"
           label={LABELS.phone}
           maxLength={MAX_LENGTH.phone}
           onChangeText={(inquirer_phone) => update({ inquirer_phone })}
           value={values.inquirer_phone}
         />
         <FormField
+          {...FIELD_PRESETS.otherDetails}
           {...fields.field("employer")}
           editable={!isBusy}
           label={LABELS.employer}
