@@ -1,4 +1,5 @@
 import { Thumbnail } from "@platform/mobile";
+import { useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
 import { photoViewerPageLabel, WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES, WELCOME_MANUAL_PHOTO_VIEWER_STYLE as STYLE } from "../../constants/welcomeManualPhotoViewer";
 import type { WelcomeManualPhotoViewerPageProps } from "../../types/WelcomeManualPhotoViewerPageProps";
@@ -7,15 +8,19 @@ import type { WelcomeManualPhotoViewerPageProps } from "../../types/WelcomeManua
 export default function WelcomeManualPhotoViewerPage({ image, index, total, width, onRetry }: WelcomeManualPhotoViewerPageProps) {
   const { height } = useWindowDimensions();
   const isAvailable = Boolean(image.presigned_url) && image.is_available !== false;
-  const label = photoViewerPageLabel(index, total, image.caption);
+  const [hasFailed, setHasFailed] = useState(false);
+  const label = photoViewerPageLabel(index, total, image.caption, hasFailed);
   return (
-    <View accessible accessibilityLabel={label} style={{ width, height, justifyContent: "center" }}>
+    <View style={{ width, height, justifyContent: "center" }}>
       {isAvailable ? (
-        <Thumbnail accessibilityIgnoresInvertColors failedMessage={MESSAGES.couldntLoad} failedColors={{ text: STYLE.mutedOnBackdrop, background: STYLE.backdrop }} onRetry={onRetry} resizeMode="contain" source={{ uri: image.presigned_url ?? undefined }} testID="welcome-manual-photo-image" style={{ width, height: height * 0.7 }} />
+        <Thumbnail accessibilityIgnoresInvertColors failedMessage={MESSAGES.couldntLoad} failedColors={{ text: STYLE.mutedOnBackdrop, background: STYLE.backdrop }} onFailedChange={setHasFailed} onRetry={onRetry} resizeMode="contain" source={{ uri: image.presigned_url ?? undefined }} testID="welcome-manual-photo-image" style={{ width, height: height * 0.7 }} />
       ) : (
         <Text style={{ textAlign: "center", color: STYLE.mutedOnBackdrop }}>{MESSAGES.unavailable}</Text>
       )}
-      <Text style={{ padding: 16, textAlign: "center", color: image.caption ? STYLE.onBackdrop : STYLE.mutedOnBackdrop }}>{image.caption ?? MESSAGES.noCaption}</Text>
+      {/* Only this block is labelled: the failed photo's "Try again" button stays its own stop. */}
+      <View accessible accessibilityLabel={label}>
+        <Text style={{ padding: 16, textAlign: "center", color: image.caption ? STYLE.onBackdrop : STYLE.mutedOnBackdrop }}>{image.caption ?? MESSAGES.noCaption}</Text>
+      </View>
     </View>
   );
 }

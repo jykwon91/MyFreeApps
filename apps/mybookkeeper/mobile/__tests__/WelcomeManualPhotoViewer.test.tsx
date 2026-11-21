@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { Dimensions } from "react-native";
 import { WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES, pageAtOffset, photoViewerCounter } from "../src/constants/welcomeManualPhotoViewer";
 import WelcomeManualPhotoViewer from "../src/features/welcomeManuals/WelcomeManualPhotoViewer";
+import { isInsideAccessibleElement } from "../test-support/isInsideAccessibleElement";
 import { anImage } from "../test-support/aWelcomeManual";
 
 jest.mock("expo-status-bar", () => ({ StatusBar: jest.fn(() => null) }));
@@ -93,5 +94,13 @@ describe("the photo viewer", () => {
     await fireEvent.press(button(MESSAGES.couldntLoad));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the retry button of a failed photo reachable, and says in the page label that it failed", async () => {
+    await render(<WelcomeManualPhotoViewer images={images} onClose={jest.fn()} onRetry={jest.fn()} startIndex={0} />);
+    await fireEvent(screen.getAllByTestId("welcome-manual-photo-image")[0], "error", { nativeEvent: { error: "expired" } });
+
+    expect(isInsideAccessibleElement(button(MESSAGES.couldntLoad))).toBe(false);
+    expect(screen.getByLabelText(`Photo 1 of 3, The router, ${MESSAGES.couldntLoad}`)).toBeTruthy();
   });
 });
