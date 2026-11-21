@@ -5,7 +5,7 @@ import type { DocumentKind } from "@myjobhunter/api-client/types/document/docume
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { documentChangesRequest } from "@myjobhunter/api-client/utils/documentChangesRequest";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
-import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
@@ -31,6 +31,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
   const hasFile = document?.has_file ?? false;
   const titleTooLong = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
   const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : titleTooLong;
+  const fields = useFieldChain(["title", !hasFile && "body"]);
   const bodyError = hasTried && !document && body.trim() === "" ? MESSAGES.contentRequired : undefined;
 
   async function save(): Promise<void> {
@@ -60,12 +61,13 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
 
   return (
     <FormSheet failure={failure} hasUnsavedChanges={hasUnsavedChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={document ? MESSAGES.editTitle : MESSAGES.addTitle}>
-      <FormField counter={characterCounter(title, DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
+      <FormField {...fields.field("title")} counter={characterCounter(title, DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />
       {hasFile ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${document?.filename ?? ""} — ${MESSAGES.fileContent}`}</Text>
       ) : (
         <FormField
+          {...fields.target("body")}
           editable={!isBusy}
           error={bodyError}
           label={MESSAGES.contentLabel}

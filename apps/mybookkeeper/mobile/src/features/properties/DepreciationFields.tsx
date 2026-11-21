@@ -1,10 +1,11 @@
 import { DEPRECIATION_INPUT_MESSAGES as MESSAGES } from "@mybookkeeper/api-client/constants/depreciationInputs";
-import { FormField, useTheme } from "@platform/mobile";
+import { type FieldChainProps, FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import OptionalDateField from "../shell/OptionalDateField";
 
 /** A rental's land value and date placed in service, which its Form 4562 depreciation is computed from. */
 export default function DepreciationFields({
+  chain,
   disabled,
   landValue,
   landValueError,
@@ -13,6 +14,8 @@ export default function DepreciationFields({
   placedInService,
   placedInServiceError,
 }: {
+  /** Where Return goes from the land value, as the form's last typed field. */
+  chain: FieldChainProps;
   disabled: boolean;
   landValue: string;
   landValueError: string | undefined;
@@ -26,6 +29,7 @@ export default function DepreciationFields({
   return (
     <View style={{ gap: spacing.lg }}>
       <FormField
+        {...chain}
         editable={!disabled}
         error={landValueError}
         hint={MESSAGES.landValueHint}
@@ -34,7 +38,6 @@ export default function DepreciationFields({
         label={MESSAGES.landValue}
         onChangeText={onLandValueChange}
         placeholder={MESSAGES.landValuePlaceholder}
-        returnKeyType="done"
         value={landValue}
       />
       <OptionalDateField

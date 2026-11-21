@@ -1,6 +1,7 @@
-import { type ComponentRef, useRef, useState } from "react";
-import { Text, type TextInput, View } from "react-native";
+import { useState } from "react";
+import { Text, View } from "react-native";
 import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
+import { useFieldChain } from "../hooks/useFieldChain";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
 import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
@@ -31,14 +32,13 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
   const [needsCode, setNeedsCode] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [isUnconfirmed, setIsUnconfirmed] = useState(false);
-  const emailInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const codeInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const showsCode = twoFactor.enabled === true || needsCode;
+  // Return on the last field never submits: this can't be undone, so it takes a press.
+  const fields = useFieldChain(["email", "password", showsCode && "code"]);
 
   if (state.status !== "signedIn") return null;
   const accountEmail = state.email;
 
-  const showsCode = twoFactor.enabled === true || needsCode;
   const canSubmit =
     twoFactor.enabled !== null &&
     !isUnconfirmed &&
@@ -75,21 +75,21 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
       case "wrong_password":
         setPassword("");
         setFieldErrors({ password: "That password isn't right." });
-        passwordInput.current?.focus();
+        fields.focus("password");
         return;
       case "email_mismatch":
         setFieldErrors({ email: "That isn't the email on this account." });
-        emailInput.current?.focus();
+        fields.focus("email");
         return;
       case "code_required":
         setNeedsCode(true);
         setFieldErrors({ code: "Enter your code." });
-        codeInput.current?.focus();
+        fields.focus("code");
         return;
       case "invalid_code":
         secondFactor.clear();
         setFieldErrors({ code: "That code didn't work. Enter a new one." });
-        codeInput.current?.focus();
+        fields.focus("code");
         return;
       case "rate_limited":
         setBanner(`${NOT_DELETED} Too many attempts. Please try again later.`);
@@ -124,6 +124,7 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
         </Text>
         <Text style={{ color: colors.foreground, fontSize: fontSize.sm }}>{warning}</Text>
         <FormField
+          {...fields.field("email")}
           autoCapitalize="none"
           autoComplete="email"
           autoCorrect={false}
@@ -132,27 +133,21 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
           keyboardType="email-address"
           label="Type your email to confirm"
           onChangeText={setEmail}
-          onSubmitEditing={() => passwordInput.current?.focus()}
-          ref={emailInput}
-          returnKeyType="next"
-          submitBehavior="submit"
           value={email}
         />
         <FormField
+          {...fields.field("password")}
           autoCapitalize="none"
           autoComplete="current-password"
           autoCorrect={false}
           error={fieldErrors.password}
           label="Password"
           onChangeText={setPassword}
-          onSubmitEditing={() => (showsCode ? codeInput.current?.focus() : undefined)}
-          ref={passwordInput}
-          returnKeyType={showsCode ? "next" : "done"}
           secureTextEntry
           textContentType="password"
           value={password}
         />
-        {showsCode ? <SecondFactorCodeField error={fieldErrors.code} ref={codeInput} secondFactor={secondFactor} /> : null}
+        {showsCode ? <SecondFactorCodeField {...fields.target("code")} error={fieldErrors.code} secondFactor={secondFactor} /> : null}
         {twoFactor.enabled === null && twoFactor.failure === null ? (
           <LoadingRegion label={SECURITY_MESSAGES.loadingTwoStep}>
             <Skeleton height={48} testID="two-factor-skeleton" />

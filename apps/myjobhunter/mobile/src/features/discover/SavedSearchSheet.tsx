@@ -26,7 +26,7 @@ import { savedSearchFormValues } from "@myjobhunter/api-client/utils/savedSearch
 import { savedSearchNameProblem } from "@myjobhunter/api-client/utils/savedSearchNameProblem";
 import { savedSearchPatch } from "@myjobhunter/api-client/utils/savedSearchPatch";
 import { savedSearchProblem } from "@myjobhunter/api-client/utils/savedSearchProblem";
-import { FormField, FormSheet, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { FormField, FormSheet, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
@@ -36,6 +36,7 @@ import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSe
 import { withChipDrafts } from "../../lib/withChipDrafts";
 import type { ChipDraftField } from "../../types/ChipDraftField";
 import type { ChipDrafts } from "../../types/ChipDrafts";
+import type { SavedSearchChainField } from "../../types/SavedSearchChainField";
 import type { SavedSearchSheetProps } from "../../types/SavedSearchSheetProps";
 import BoardFields from "./BoardFields";
 import BoldText from "./BoldText";
@@ -68,6 +69,14 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
   const isBusy = isCreating || isChecking || isUpdatingProfile || isUpdating;
   // An edit keeps the saved search's own source, even one this build doesn't know.
   const kind = source ? source.source : values.source;
+  const isJSearch = kind === "jsearch";
+  const fields = useFieldChain<SavedSearchChainField>([
+    "name",
+    (kind === "greenhouse" || kind === "lever") && "board",
+    isJSearch && "roles",
+    isJSearch && !values.jsearch.remoteOnly && "location",
+    isJSearch && "minSalary",
+  ]);
 
   function update(patch: Partial<SavedSearchFormValues>): void {
     setValues((current) => ({ ...current, ...patch }));
@@ -157,6 +166,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
     <FormSheet failure={failure} hasUnsavedChanges={hasUnsavedChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={source ? MESSAGES.editTitle : MESSAGES.newTitle}>
       <Text style={mutedText}>{description}</Text>
       <FormField
+        {...fields.field("name")}
         counter={characterCounter(values.name.trim(), SAVED_SEARCH_NAME_MAX_LENGTH)}
         editable={!isBusy}
         error={savedSearchNameProblem(values.name)}
@@ -181,6 +191,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
       {source ? null : <Text style={mutedText}>{MESSAGES.frequencyHint}</Text>}
       {kind === "greenhouse" ? (
         <BoardFields
+          chain={fields.field("board")}
           disabled={isBusy}
           hint={isTypedBoardTokenInvalid(values.boardToken) ? HINTS.badBoardToken : HINTS.boardToken}
           isInvalid={isTypedBoardTokenInvalid(values.boardToken)}
@@ -197,6 +208,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
       ) : null}
       {kind === "lever" ? (
         <BoardFields
+          chain={fields.field("board")}
           disabled={isBusy}
           hint={isTypedCompanySlugInvalid(values.companySlug) ? HINTS.badCompanySlug : HINTS.companySlug}
           isInvalid={isTypedCompanySlugInvalid(values.companySlug)}
@@ -218,6 +230,7 @@ export default function SavedSearchSheet({ source, onClose }: SavedSearchSheetPr
           <JSearchFields
             disabled={isBusy}
             drafts={drafts}
+            fields={fields}
             onChange={updateJSearch}
             onDraftChange={updateDraft}
             roleSuggestions={prefill.recentRoleSuggestions}

@@ -4,7 +4,7 @@ import type { WelcomeManualFieldFormValues } from "@mybookkeeper/api-client/type
 import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
 import { fieldProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { fieldCreateRequest, fieldUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
-import { FormField } from "@platform/mobile";
+import { FormField, useFieldChain } from "@platform/mobile";
 import { WELCOME_MANUAL_FIELD_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEditSheet from "./WelcomeManualEditSheet";
@@ -26,6 +26,7 @@ export default function WelcomeManualFieldSheet({ manualId, sectionId, field, on
   const [deleteField] = useDeleteSectionFieldMutation();
   const form = useSnapshotForm<WelcomeManualFieldFormValues>(() => ({ label: field?.label ?? "", value: field?.value ?? "" }), fieldProblems);
   const { values, edit } = form;
+  const fields = useFieldChain(["label", "value"]);
   const writes = useWelcomeManualItemWrites({
     words: FIELD_WORDS,
     isNew: field === null,
@@ -52,8 +53,8 @@ export default function WelcomeManualFieldSheet({ manualId, sectionId, field, on
       onSave={() => { if (form.validate()) void writes.save(); }}
       title={field ? MESSAGES.edit : MESSAGES.add}
     >
-      <FormField editable={!writes.isBusy} error={form.errorFor("label")} label={MESSAGES.labelLabel} maxLength={WELCOME_MANUAL_FIELD_LABEL_MAX_LENGTH} onChangeText={(text) => edit("label", text)} required value={values.label} />
-      <FormField editable={!writes.isBusy} error={form.errorFor("value")} label={MESSAGES.valueLabel} maxLength={WELCOME_MANUAL_FIELD_VALUE_MAX_LENGTH} onChangeText={(text) => edit("value", text)} value={values.value} />
+      <FormField {...fields.field("label")} editable={!writes.isBusy} error={form.errorFor("label")} label={MESSAGES.labelLabel} maxLength={WELCOME_MANUAL_FIELD_LABEL_MAX_LENGTH} onChangeText={(text) => edit("label", text)} required value={values.label} />
+      <FormField {...fields.field("value")} editable={!writes.isBusy} error={form.errorFor("value")} label={MESSAGES.valueLabel} maxLength={WELCOME_MANUAL_FIELD_VALUE_MAX_LENGTH} onChangeText={(text) => edit("value", text)} value={values.value} />
     </WelcomeManualEditSheet>
   );
 }

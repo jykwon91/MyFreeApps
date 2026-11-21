@@ -71,6 +71,19 @@ describe("skills", () => {
     expect(within(await screen.findByTestId(`skill-${NEW_IDS.skill}`)).getByText("Rust")).toBeTruthy();
   });
 
+  it("adds the skill from the name field's Done key", async () => {
+    const sent = serve(profileRoutes());
+    await renderProfile();
+    await fireEvent.press(await screen.findByRole("button", { name: SKILLS.add }));
+    const name = screen.getByLabelText(`${SKILLS.nameLabel}, required`);
+    expect(name.props.returnKeyType).toBe("done");
+    await fireEvent.changeText(name, "Rust");
+    await fireEvent(name, "submitEditing");
+
+    expect(await screen.findByText(SKILLS.created)).toBeTruthy();
+    expect(sentTo(sent, "POST /skills")).toEqual([{ name: "Rust", years_experience: null, category: null }]);
+  });
+
   it("asks for a name, and catches a skill already there whatever its case, before sending", async () => {
     const sent = serve(profileRoutes({ skills: [TYPESCRIPT] }));
     await renderProfile();

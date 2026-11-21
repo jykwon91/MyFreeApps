@@ -6,9 +6,11 @@ import {
 import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
 import type { IngredientRowProblems } from "@myrecipes/api-client/types/recipe/ingredient-row-problems";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, useTheme } from "@platform/mobile";
+import { type FieldChain, FormField, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import type { IngredientFieldKey } from "../../types/IngredientFieldKey";
+import { ingredientFieldKey } from "../../utils/ingredientFieldKey";
 import RowControls from "./RowControls";
 
 interface IngredientRowEditorProps {
@@ -21,10 +23,12 @@ interface IngredientRowEditorProps {
   onChange: (key: string, patch: Partial<EditableIngredientRow>) => void;
   onMove: (key: string, direction: -1 | 1) => void;
   onRemove: (key: string) => void;
+  /** Every ingredient's fields, so Return moves through this row and on to the next. */
+  fields: FieldChain<IngredientFieldKey>;
 }
 
 /** One ingredient: its name, then amount and unit side by side, a note, and its controls. */
-export default function IngredientRowEditor({ row, number, isLast, isNew, disabled, problems, onChange, onMove, onRemove }: IngredientRowEditorProps) {
+export default function IngredientRowEditor({ row, number, isLast, isNew, disabled, problems, onChange, onMove, onRemove, fields }: IngredientRowEditorProps) {
   const { colors, spacing, radius } = useTheme();
   const label = MESSAGES.ingredientLabel(number);
 
@@ -34,6 +38,7 @@ export default function IngredientRowEditor({ row, number, isLast, isNew, disabl
       testID={`ingredient-${number}`}
     >
       <FormField
+        {...fields.field(ingredientFieldKey(row.key, "name"))}
         autoFocus={isNew}
         editable={!disabled}
         error={problems?.name}
@@ -45,6 +50,7 @@ export default function IngredientRowEditor({ row, number, isLast, isNew, disabl
       />
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <FormField
+          {...fields.field(ingredientFieldKey(row.key, "quantity"))}
           accessibilityLabel={`${label} ${MESSAGES.quantityLabel.toLowerCase()}`}
           editable={!disabled}
           error={problems?.quantity}
@@ -56,6 +62,7 @@ export default function IngredientRowEditor({ row, number, isLast, isNew, disabl
           value={row.quantity}
         />
         <FormField
+          {...fields.field(ingredientFieldKey(row.key, "unit"))}
           accessibilityLabel={`${label} ${MESSAGES.unitLabel.toLowerCase()}`}
           counter={characterCounter(row.unit.trim(), INGREDIENT_UNIT_MAX_LENGTH)}
           editable={!disabled}
@@ -68,6 +75,7 @@ export default function IngredientRowEditor({ row, number, isLast, isNew, disabl
         />
       </View>
       <FormField
+        {...fields.field(ingredientFieldKey(row.key, "note"))}
         accessibilityLabel={`${label} ${MESSAGES.noteLabel.toLowerCase()}`}
         counter={characterCounter(row.note.trim(), INGREDIENT_NOTE_MAX_LENGTH)}
         editable={!disabled}

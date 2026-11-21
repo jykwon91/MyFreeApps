@@ -8,7 +8,7 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FormField, LoadingButton, PinnedBar, ScrollWithPinnedBar, SegmentedControl, useConfirmLeave, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, PinnedBar, ScrollWithPinnedBar, SegmentedControl, useConfirmLeave, useFieldChain, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
@@ -30,6 +30,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const isSubmitting = useRef(false);
   const scroller = useRef<KeyboardAwareScrollRef>(null);
+  const fields = useFieldChain(["legalName", "employer", "vehicle", "pets", "referredBy"]);
 
   const today = new Date();
   const isTooYoung = values.dob !== null && !isOldEnough(values.dob, today);
@@ -109,7 +110,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
     >
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>I filled in what I could from the inquiry. Everything's optional, but if you clear something the inquiry has, I'll use the inquiry's.</Text>
       {failure ? <Banner message={failure} /> : null}
-      <FormField autoCapitalize="words" label="Legal name" maxLength={APPLICANT_LEGAL_NAME_MAX} onChangeText={(legalName) => update({ legalName })} value={values.legalName} />
+      <FormField {...fields.field("legalName")} autoCapitalize="words" label="Legal name" maxLength={APPLICANT_LEGAL_NAME_MAX} onChangeText={(legalName) => update({ legalName })} value={values.legalName} />
       <OptionalDateField
         error={isTooYoung ? PROMOTE_MESSAGES.tooYoung : undefined}
         label="Date of birth"
@@ -118,14 +119,15 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
         startsAt={new Date(today.getFullYear() - DOB_PICKER_STARTS_YEARS_AGO, 0, 1)}
         value={values.dob}
       />
-      <FormField label="Employer or hospital" maxLength={APPLICANT_EMPLOYER_MAX} onChangeText={(employer) => update({ employer })} value={values.employer} />
+      <FormField {...fields.field("employer")} label="Employer or hospital" maxLength={APPLICANT_EMPLOYER_MAX} onChangeText={(employer) => update({ employer })} value={values.employer} />
       <OptionalDateField label="Contract start" onChange={(contractStart) => update({ contractStart })} startsAt={today} value={values.contractStart} />
-      <FormField label="Vehicle" maxLength={APPLICANT_VEHICLE_MAX} onChangeText={(vehicle) => update({ vehicle })} value={values.vehicle} />
+      <FormField {...fields.field("vehicle")} label="Vehicle" maxLength={APPLICANT_VEHICLE_MAX} onChangeText={(vehicle) => update({ vehicle })} value={values.vehicle} />
       <View style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>Smoker</Text>
         <SegmentedControl accessibilityLabel="Smoker" onChange={(smoker) => update({ smoker })} segments={SMOKER_SEGMENTS} value={values.smoker} />
       </View>
       <FormField
+        {...fields.target("pets")}
         inputStyle={{ minHeight: 72 }}
         label="Pets"
         maxLength={APPLICANT_PETS_MAX}
@@ -133,7 +135,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
         onChangeText={(pets) => update({ pets })}
         value={values.pets}
       />
-      <FormField label="Referred by" maxLength={APPLICANT_REFERRED_BY_MAX} onChangeText={(referredBy) => update({ referredBy })} value={values.referredBy} />
+      <FormField {...fields.field("referredBy")} label="Referred by" maxLength={APPLICANT_REFERRED_BY_MAX} onChangeText={(referredBy) => update({ referredBy })} value={values.referredBy} />
     </ScrollWithPinnedBar>
   );
 }

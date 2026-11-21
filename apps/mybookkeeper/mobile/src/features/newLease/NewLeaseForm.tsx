@@ -1,6 +1,6 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, confirmDiscard, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useConfirmLeave, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useConfirmLeave, useFieldChain, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, Text, View } from "react-native";
@@ -45,6 +45,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   const isDirty = hasChanges(fields, edits);
   const missing = missingRequired(fields, edits);
   const unreadable = unreadableNumbers(fields, edits, decimalSeparator);
+  const inputs = useFieldChain(fields.filter((field) => field.placeholder.input_type !== "date").map((field) => field.placeholder.key));
   const problems = fields.filter((field) => missing.includes(field) || unreadable.includes(field));
 
   const isBusy = isLoading || isFindingNewer;
@@ -176,6 +177,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
           >
             <PlaceholderField
               caption={captionFor(field)}
+              chain={inputs.field(key)}
               error={showMissing ? fieldProblem(field) : undefined}
               isDisabled={isBusy}
               onChange={(value) => setEdits((current) => ({ ...current, [key]: value }))}

@@ -16,6 +16,7 @@ import { Provider } from "react-redux";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../src/constants/newRecipe";
 import NewRecipeScreen from "../src/features/newRecipe/NewRecipeScreen";
 import { makeStore } from "../src/lib/store";
+import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
 
@@ -254,6 +255,32 @@ describe("length limits", () => {
     // On the field, and toasted, once each.
     expect(screen.getAllByText(tooLong, SHOWN)).toHaveLength(2);
     expect(sent).toHaveLength(0);
+  });
+});
+
+describe("the keyboard's Next key", () => {
+  it("moves from the title to the description, and from the source through servings and times", async () => {
+    await show();
+    forgetFocusedFields();
+    await fireEvent(screen.getByLabelText("Title, required"), "submitEditing");
+    expect(lastFocusedField()).toBe("Description");
+    const labels = ["Source", "Servings", "Prep (min)", "Cook (min)"];
+    for (let step = 0; step < 3; step += 1) {
+      await fireEvent(screen.getByLabelText(labels[step]), "submitEditing");
+      expect(lastFocusedField()).toBe(labels[step + 1]);
+    }
+  });
+
+  it("moves through an ingredient's fields, then on to the next ingredient's name, ending on Done", async () => {
+    await show();
+    await press(MESSAGES.addIngredient);
+    forgetFocusedFields();
+    const labels = ["Ingredient 1", "Ingredient 1 amount", "Ingredient 1 unit", "Ingredient 1 note", "Ingredient 2"];
+    for (let step = 0; step < 4; step += 1) {
+      await fireEvent(screen.getByLabelText(labels[step]), "submitEditing");
+      expect(lastFocusedField()).toBe(labels[step + 1]);
+    }
+    expect(screen.getByLabelText("Ingredient 2 note").props.returnKeyType).toBe("done");
   });
 });
 

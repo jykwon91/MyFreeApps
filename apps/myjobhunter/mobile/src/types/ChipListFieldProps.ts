@@ -1,3 +1,5 @@
+import type { FieldChainTargetProps } from "@platform/mobile";
+
 export interface ChipListFieldProps {
   label: string;
   values: readonly string[];
@@ -11,4 +13,6 @@ export interface ChipListFieldProps {
   suggestions?: readonly string[];
   required?: boolean;
   disabled?: boolean;
+  /** Lets the field before it move here on Return; Return here still adds the entry. */
+  inputRef?: FieldChainTargetProps["ref"];
 }

@@ -1,6 +1,6 @@
 import { LEASE_TEMPLATE_NAME_MAX_LENGTH, LEASE_TEMPLATE_UPLOAD_PROBLEMS } from "@mybookkeeper/api-client/constants/leaseTemplateUpload";
 import { leaseTemplateUploadProblems } from "@mybookkeeper/api-client/utils/leaseTemplateUploadForm";
-import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, LEASE_TEMPLATE_FORM_MESSAGES as MESSAGES, LEASE_TEMPLATE_PICKER_TYPES } from "../../constants/leaseTemplateForm";
@@ -24,6 +24,7 @@ export default function LeaseTemplateFormScreen() {
   const problems = leaseTemplateUploadProblems(name, files);
   const isDirty = name !== "" || description !== "" || files.length > 0;
   const locked = isBusy || isReading || isLeaving;
+  const fields = useFieldChain(["name", "description"]);
 
   useUploadLeaveGuard({ isDirty, isUploading: isBusy, isReading, isLeaving, openNow });
 
@@ -43,6 +44,7 @@ export default function LeaseTemplateFormScreen() {
     <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <FormField
+        {...fields.field("name")}
         editable={!locked}
         error={nameProblem}
         label={MESSAGES.name}
@@ -53,6 +55,7 @@ export default function LeaseTemplateFormScreen() {
         value={name}
       />
       <FormField
+        {...fields.target("description")}
         editable={!locked}
         hint={MESSAGES.descriptionHint}
         inputStyle={{ minHeight: LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT }}

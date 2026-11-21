@@ -10,7 +10,7 @@ import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
 import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
-import { deviceDecimalSeparator, FormField, FormSheet, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { EDUCATION_MESSAGES as MESSAGES } from "../../constants/profileEducation";
@@ -30,6 +30,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
   const [failure, setFailure] = useState<string | null>(null);
   const [decimalSeparator] = useState(deviceDecimalSeparator);
   const problems = hasTried ? educationFormProblems(values, decimalSeparator) : {};
+  const fields = useFieldChain(["school", "degree", "field", "startYear", "endYear", "gpa"]);
 
   function change(field: keyof EducationFormValues) {
     return (value: string) => setValues((current) => ({ ...current, [field]: value }));
@@ -53,6 +54,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
   return (
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, initial)} isBusy={isSaving} isOpen onRequestClose={onClose} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
       <FormField
+        {...fields.field("school")}
         autoCapitalize="words"
         counter={characterCounter(values.school.trim(), EDUCATION_SCHOOL_MAX_LENGTH)}
         editable={!isSaving}
@@ -64,6 +66,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.school}
       />
       <FormField
+        {...fields.field("degree")}
         counter={characterCounter(values.degree.trim(), EDUCATION_DEGREE_MAX_LENGTH)}
         editable={!isSaving}
         error={problems.degree}
@@ -73,6 +76,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.degree}
       />
       <FormField
+        {...fields.field("field")}
         autoCapitalize="words"
         counter={characterCounter(values.field.trim(), EDUCATION_FIELD_MAX_LENGTH)}
         editable={!isSaving}
@@ -83,6 +87,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.field}
       />
       <FormField
+        {...fields.field("startYear")}
         editable={!isSaving}
         error={problems.start_year}
         keyboardType="number-pad"
@@ -92,6 +97,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.start_year}
       />
       <FormField
+        {...fields.field("endYear")}
         editable={!isSaving}
         error={problems.end_year}
         keyboardType="number-pad"
@@ -101,6 +107,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
         value={values.end_year}
       />
       <FormField
+        {...fields.field("gpa")}
         editable={!isSaving}
         error={problems.gpa}
         keyboardType="decimal-pad"

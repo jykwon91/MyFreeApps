@@ -1,5 +1,5 @@
 import { useUpdateGmailLabelMutation } from "@mybookkeeper/api-client/store/integrationsApi";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import { useWrite } from "../../lib/useWrite";
@@ -21,6 +21,7 @@ export default function GmailLabelSheet({ saved, onClose }: GmailLabelSheetProps
   const [text, setText] = useState(saved);
   const label = text.trim();
   const isDirty = label !== saved;
+  const fields = useFieldChain(["label"], { onLast: save, isLastBlocked: !isDirty || write.isBusy, lastReturnKey: "done" });
 
   async function save(): Promise<void> {
     const result = await write.run(() => updateLabel({ label }).unwrap());
@@ -32,6 +33,7 @@ export default function GmailLabelSheet({ saved, onClose }: GmailLabelSheetProps
   return (
     <FormSheet failure={write.failure ? COPY[write.failure] : null} hasUnsavedChanges={isDirty} isBusy={write.isBusy} isOpen onRequestClose={onClose} title={MESSAGES.labelSheetTitle}>
       <FormField
+        {...fields.field("label")}
         autoCapitalize="none"
         editable={!write.isBusy}
         hint={MESSAGES.labelEmptyHint}

@@ -6,7 +6,7 @@ import type { WelcomeManualPlaceFormValues } from "@mybookkeeper/api-client/type
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import { placeProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { placeCreateRequest, placeUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
-import { FormField, SegmentedControl } from "@platform/mobile";
+import { FormField, SegmentedControl, useFieldChain } from "@platform/mobile";
 import { WELCOME_MANUAL_PLACE_MESSAGES as MESSAGES, DELETE_PLACE_BODY, deletePlaceTitle } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { cuisineSuggestions } from "@mybookkeeper/api-client/utils/welcomeManualPlaces";
@@ -34,6 +34,7 @@ export default function WelcomeManualPlaceSheet({ manualId, places, place, onClo
     placeProblems,
   );
   const { values, edit } = form;
+  const fields = useFieldChain(["name", "cuisine", "note", "mapUrl"]);
   const writes = useWelcomeManualItemWrites({
     words: PLACE_WORDS,
     isNew: place === null,
@@ -61,12 +62,12 @@ export default function WelcomeManualPlaceSheet({ manualId, places, place, onClo
       onSave={() => { if (form.validate()) void writes.save(); }}
       title={place ? MESSAGES.edit : MESSAGES.add}
     >
-      <FormField editable={editable} error={form.errorFor("name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_PLACE_NAME_MAX_LENGTH} onChangeText={(text) => edit("name", text)} required value={values.name} />
-      <FormField editable={editable} error={form.errorFor("cuisine")} label={MESSAGES.cuisineLabel} maxLength={WELCOME_MANUAL_PLACE_CUISINE_MAX_LENGTH} onChangeText={(text) => edit("cuisine", text)} required value={values.cuisine} />
+      <FormField {...fields.field("name")} editable={editable} error={form.errorFor("name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_PLACE_NAME_MAX_LENGTH} onChangeText={(text) => edit("name", text)} required value={values.name} />
+      <FormField {...fields.field("cuisine")} editable={editable} error={form.errorFor("cuisine")} label={MESSAGES.cuisineLabel} maxLength={WELCOME_MANUAL_PLACE_CUISINE_MAX_LENGTH} onChangeText={(text) => edit("cuisine", text)} required value={values.cuisine} />
       <WelcomeManualCuisineSuggestions onPick={(cuisine) => edit("cuisine", cuisine)} suggestions={editable ? cuisineSuggestions(places, values.cuisine) : []} />
       <SegmentedControl accessibilityLabel={MESSAGES.priceLabel} disabled={!editable} onChange={(tier) => edit("price_tier", tier)} segments={PRICE_SEGMENTS} value={values.price_tier} />
-      <FormField editable={editable} error={form.errorFor("note")} label={MESSAGES.noteLabel} maxLength={WELCOME_MANUAL_PLACE_NOTE_MAX_LENGTH} multiline onChangeText={(text) => edit("note", text)} value={values.note} />
-      <FormField autoCapitalize="none" editable={editable} error={form.errorFor("map_url")} keyboardType="url" label={MESSAGES.mapLabel} maxLength={WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH} onChangeText={(text) => edit("map_url", text)} placeholder={MESSAGES.mapPlaceholder} value={values.map_url} />
+      <FormField {...fields.target("note")} editable={editable} error={form.errorFor("note")} label={MESSAGES.noteLabel} maxLength={WELCOME_MANUAL_PLACE_NOTE_MAX_LENGTH} multiline onChangeText={(text) => edit("note", text)} value={values.note} />
+      <FormField {...fields.field("mapUrl")} autoCapitalize="none" editable={editable} error={form.errorFor("map_url")} keyboardType="url" label={MESSAGES.mapLabel} maxLength={WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH} onChangeText={(text) => edit("map_url", text)} placeholder={MESSAGES.mapPlaceholder} value={values.map_url} />
     </WelcomeManualEditSheet>
   );
 }

@@ -6,7 +6,7 @@ import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplica
 import type { PostedSalaryFieldsProps } from "../../types/PostedSalaryFieldsProps";
 
 /** The posted salary range, as on the website: from, to and what it's per, in the currency the posting named. */
-export default function PostedSalaryFields({ values, errors, onEdit, disabled }: PostedSalaryFieldsProps) {
+export default function PostedSalaryFields({ values, errors, onEdit, disabled, fields }: PostedSalaryFieldsProps) {
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const periodLabel = SALARY_PERIOD_OPTIONS.find((option) => option.value === values.posted_salary_period)?.label ?? "";
   const currency = values.posted_salary_currency;
@@ -14,6 +14,7 @@ export default function PostedSalaryFields({ values, errors, onEdit, disabled }:
   return (
     <>
       <FormField
+        {...fields.field("posted_salary_min")}
         editable={!disabled}
         error={errors.posted_salary_min}
         keyboardType="decimal-pad"
@@ -23,6 +24,7 @@ export default function PostedSalaryFields({ values, errors, onEdit, disabled }:
         value={values.posted_salary_min}
       />
       <FormField
+        {...fields.field("posted_salary_max")}
         editable={!disabled}
         error={errors.posted_salary_max}
         keyboardType="decimal-pad"
