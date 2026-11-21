@@ -1,4 +1,4 @@
-"""Recipe list service: one page of the recipe library with its rollups and a true total.
+"""Recipe list service: one page of the recipe library with its rollups, a true total and the next page's cursor.
 
 Public read (not tenant-scoped) unless ``owner_me``, which scopes to the viewer.
 Split from ``recipe_service`` so the list's paging lives on its own.
@@ -9,6 +9,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.recipe_list_cursor import RecipeListCursor
 from app.repositories.recipe import (
     cook_log_repository,
     recipe_repository,
@@ -25,7 +26,7 @@ async def list_public_recipes(
     *,
     search: str | None = None,
     limit: int,
-    offset: int = 0,
+    cursor: str | None = None,
     owner_me: bool = False,
 ) -> RecipeListPage:
     """One page of the public library (or the viewer's own with owner_me), and how many match in all.
@@ -34,23 +35,37 @@ async def list_public_recipes(
     result is scoped to the viewer's recipes (the route rejects anonymous
     ``owner=me`` with 401 before we get here). Otherwise every non-deleted
     recipe is paged. ``total`` is a COUNT with the same filters as the page,
-    so a client knows whether there is another page to load.
+    so a client can show how many there are.
+
+    ``cursor`` is a ``next_cursor`` from an earlier page; the page starts after
+    that row's sort key, so rows moved to the top or deleted in between never
+    make the next page skip one. A cursor the list didn't hand out raises
+    ``InvalidRecipeCursorError``. One extra row is read to tell whether another
+    page follows.
 
     ``is_owner`` is computed per row; ``user_id`` is never returned. Cook-log
     rollups are populated only for recipes the viewer owns — the rollup query
     is issued for owned ids only, so another user's cook data is never read.
     """
+    after = RecipeListCursor.decode(cursor) if cursor is not None else None
     if owner_me:
         assert viewer_id is not None  # route guarantees this
-        recipes = await recipe_repository.list_by_user(
-            db, viewer_id, search=search, limit=limit, offset=offset,
+        rows = await recipe_repository.list_by_user(
+            db, viewer_id, search=search, limit=limit + 1, after=after,
         )
         total = await recipe_repository.count_by_user(db, viewer_id, search=search)
     else:
-        recipes = await recipe_repository.list_public(
-            db, search=search, limit=limit, offset=offset,
+        rows = await recipe_repository.list_public(
+            db, search=search, limit=limit + 1, after=after,
         )
         total = await recipe_repository.count_public(db, search=search)
+    has_more = len(rows) > limit
+    recipes = rows[:limit]
+    next_cursor = (
+        RecipeListCursor(updated_at=recipes[-1].updated_at, id=recipes[-1].id).encode()
+        if has_more
+        else None
+    )
 
     recipe_ids = [r.id for r in recipes]
     counts = await recipe_version_repository.counts_and_latest_by_recipe(db, recipe_ids)
@@ -82,4 +97,4 @@ async def list_public_recipes(
                 last_cooked_at=last_cooked,
             )
         )
-    return RecipeListPage(items=summaries, total=total, has_more=offset + len(summaries) < total)
+    return RecipeListPage(items=summaries, total=total, has_more=has_more, next_cursor=next_cursor)

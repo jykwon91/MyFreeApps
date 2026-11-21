@@ -13,8 +13,7 @@ import type { CookLogCreateRequest } from "../types/recipe/cook-log";
 import type { RecipeExtractionDraft } from "../types/recipe/extraction";
 import type { ListRecipesArgs } from "../types/recipe/list-recipes-args";
 import type { RecipeListPage } from "../types/recipe/recipe-list-page";
-import { FIRST_RECIPES_OFFSET, RECIPES_PAGE_SIZE } from "../constants/recipesPaging";
-import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
+import { FIRST_RECIPES_CURSOR, RECIPES_PAGE_SIZE } from "../constants/recipesPaging";
 
 /**
  * Cache tags scoped to one recipe id so a tweak / cook / metadata edit
@@ -37,15 +36,17 @@ export const recipesApi = apiWithTags.injectEndpoints({
   endpoints: (build) => ({
     // ---- Recipes -------------------------------------------------------
     /**
-     * GET /recipes, one page per offset, ordered on the server so the order
-     * holds across pages. The filters key the cache, so a new search or owner
-     * filter starts again from the first page. Refetching (invalidation, pull
-     * to refresh) reloads every loaded page.
+     * GET /recipes, ordered on the server so the order holds across pages. Each
+     * page asks for the rows after the previous page's `next_cursor`, not for an
+     * offset, so a recipe tweaked, restored or deleted between page loads never
+     * makes "Load more" skip one; a null `next_cursor` ends the list. The filters
+     * key the cache, so a new search or owner filter starts again from the first
+     * page. Refetching (invalidation, pull to refresh) reloads every loaded page.
      */
-    listRecipes: build.infiniteQuery<RecipeListPage, ListRecipesArgs, number>({
+    listRecipes: build.infiniteQuery<RecipeListPage, ListRecipesArgs, string | null>({
       infiniteQueryOptions: {
-        initialPageParam: FIRST_RECIPES_OFFSET,
-        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextPageOffset(lastPage, lastOffset),
+        initialPageParam: FIRST_RECIPES_CURSOR,
+        getNextPageParam: (lastPage) => lastPage.next_cursor,
       },
       query: ({ queryArg, pageParam }) => ({
         url: "/recipes",
@@ -54,7 +55,7 @@ export const recipesApi = apiWithTags.injectEndpoints({
           search: queryArg.search || undefined,
           owner: queryArg.owner,
           limit: RECIPES_PAGE_SIZE,
-          offset: pageParam,
+          cursor: pageParam ?? undefined,
         },
       }),
       providesTags: (result) =>

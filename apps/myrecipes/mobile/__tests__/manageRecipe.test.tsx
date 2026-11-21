@@ -86,7 +86,7 @@ function held() {
 }
 
 async function show(recipe: RecipeDetailResponse = SOUP, routes: Parameters<typeof serve>[0] = {}) {
-  sent = serve({ "GET /recipes/r1": () => reply(200, recipe), "GET /recipes": () => reply(200, { items: [], total: 0, has_more: false }), ...routes });
+  sent = serve({ "GET /recipes/r1": () => reply(200, recipe), "GET /recipes": () => reply(200, { items: [], total: 0, has_more: false, next_cursor: null }), ...routes });
   store = makeStore();
   await render(
     <Provider store={store}>

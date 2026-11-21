@@ -81,9 +81,9 @@ export function summaryOf(id: string, title: string, overrides: Partial<RecipeSu
   };
 }
 
-/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default). */
-export function listPageOf(items: RecipeSummary[], total = items.length, offset = 0): RecipeListPage {
-  return { items, total, has_more: offset + items.length < total };
+/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default); `nextCursor` null on the last page. */
+export function listPageOf(items: RecipeSummary[], total = items.length, nextCursor: string | null = null): RecipeListPage {
+  return { items, total, has_more: nextCursor !== null, next_cursor: nextCursor };
 }
 
 export function detailOf(id: string, overrides: Partial<RecipeDetailResponse> = {}): RecipeDetailResponse {

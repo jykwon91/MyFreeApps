@@ -32,11 +32,16 @@ function summary(n: number): RecipeSummary {
   };
 }
 
-/** The recipes at `offset` out of `total`, numbered from 1, one page's worth at most. */
-function pageAt(offset: number, total: number): RecipeListPage {
-  const count = Math.max(0, Math.min(RECIPES_PAGE_SIZE, total - offset));
-  const items = Array.from({ length: count }, (_, i) => summary(offset + i + 1));
-  return { items, total, has_more: offset + count < total };
+/** This fake server's cursor names the last recipe a page held. */
+const cursorAfter = (n: number) => `after-r${n}`;
+
+/** The page after `cursor` (from the top when it's absent) out of `total`, numbered from 1, one page's worth at most. */
+function pageAfter(cursor: string | undefined, total: number): RecipeListPage {
+  const start = cursor === undefined ? 0 : Number(cursor.replace("after-r", ""));
+  const count = Math.max(0, Math.min(RECIPES_PAGE_SIZE, total - start));
+  const items = Array.from({ length: count }, (_, i) => summary(start + i + 1));
+  const hasMore = start + count < total;
+  return { items, total, has_more: hasMore, next_cursor: hasMore ? cursorAfter(start + count) : null };
 }
 
 function makeStore() {
@@ -74,7 +79,7 @@ beforeEach(() => {
   sent.length = 0;
   respond = (config) =>
     config.method === "get" && config.url === "/recipes"
-      ? { status: 200, data: pageAt(Number(config.params?.offset ?? 0), 60) }
+      ? { status: 200, data: pageAfter(config.params?.cursor, 60) }
       : { status: 200, data: {} };
 });
 
@@ -82,26 +87,39 @@ describe("the paged recipes list", () => {
   it("asks for the first page, with only the filters it was given", async () => {
     const store = makeStore();
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}));
-    expect(api.getUri(listGets()[0])).toBe(`https://api.test/recipes?limit=${RECIPES_PAGE_SIZE}&offset=0`);
+    expect(api.getUri(listGets()[0])).toBe(`https://api.test/recipes?limit=${RECIPES_PAGE_SIZE}`);
 
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({ search: "soup", owner: "me" }));
-    expect(listGets()[1]?.params).toEqual({ search: "soup", owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 });
+    expect(listGets()[1]?.params).toEqual({ search: "soup", owner: "me", limit: RECIPES_PAGE_SIZE, cursor: undefined });
   });
 
-  it("loads the second page where the first ended, so recipe 51 and on show", async () => {
+  it("asks for the second page after the first page's cursor, so recipe 51 and on show", async () => {
     const store = makeStore();
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}));
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}, { direction: "forward" }));
 
-    expect(listGets().map((config) => config.params?.offset)).toEqual([0, RECIPES_PAGE_SIZE]);
+    expect(listGets().map((config) => config.params?.cursor)).toEqual([undefined, cursorAfter(RECIPES_PAGE_SIZE)]);
     const ids = loadedIds(store, {});
     expect(ids).toHaveLength(60);
     expect(ids.slice(RECIPES_PAGE_SIZE, RECIPES_PAGE_SIZE + 1)).toEqual(["r51"]);
     expect(ids[ids.length - 1]).toBe("r60");
   });
 
+  it("sends the server's next_cursor back as it came, never an offset", async () => {
+    respond = (config) =>
+      config.params?.cursor === undefined
+        ? { status: 200, data: { ...pageAfter(undefined, 60), next_cursor: "eyJ1IjoiMjAyNi0xMS0wMSJ9" } }
+        : { status: 200, data: pageAfter(cursorAfter(RECIPES_PAGE_SIZE), 60) };
+    const store = makeStore();
+    await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}));
+    await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}, { direction: "forward" }));
+
+    expect(listGets()[1]?.params).toEqual({ limit: RECIPES_PAGE_SIZE, cursor: "eyJ1IjoiMjAyNi0xMS0wMSJ9" });
+    expect(listGets().some((config) => "offset" in (config.params ?? {}))).toBe(false);
+  });
+
   it("asks for no further page once every recipe is loaded", async () => {
-    respond = () => ({ status: 200, data: pageAt(0, 3) });
+    respond = () => ({ status: 200, data: pageAfter(undefined, 3) });
     const store = makeStore();
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}));
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}, { direction: "forward" }));
@@ -116,7 +134,7 @@ describe("the paged recipes list", () => {
 
     await store.dispatch(recipesApi.endpoints.listRecipes.initiate({ search: "soup" }));
     expect(listGets().map((config) => config.params)).toEqual([
-      { search: "soup", owner: undefined, limit: RECIPES_PAGE_SIZE, offset: 0 },
+      { search: "soup", owner: undefined, limit: RECIPES_PAGE_SIZE, cursor: undefined },
     ]);
     expect(loadedIds(store, { search: "soup" })).toHaveLength(RECIPES_PAGE_SIZE);
   });
@@ -152,7 +170,7 @@ describe("the paged recipes list", () => {
     await mutate(store.dispatch);
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
 
-    expect(listGets().map((config) => config.params?.offset)).toEqual([0, RECIPES_PAGE_SIZE]);
+    expect(listGets().map((config) => config.params?.cursor)).toEqual([undefined, cursorAfter(RECIPES_PAGE_SIZE)]);
     list.unsubscribe();
   });
 });

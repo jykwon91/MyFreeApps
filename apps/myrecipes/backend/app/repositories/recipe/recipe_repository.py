@@ -11,10 +11,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.recipe_list_constants import DEFAULT_RECIPE_PAGE_SIZE
+from app.core.recipe_list_cursor import RecipeListCursor
 from app.models.recipe.recipe import Recipe
 
 # Columns a PATCH may touch. Tenant + server-managed columns are excluded
@@ -68,16 +69,21 @@ def _owned_conditions(user_id: uuid.UUID, search: str | None) -> list[ColumnElem
 
 
 async def _list_page(
-    db: AsyncSession, conditions: list[ColumnElement[bool]], *, limit: int, offset: int,
+    db: AsyncSession,
+    conditions: list[ColumnElement[bool]],
+    *,
+    limit: int,
+    after: RecipeListCursor | None,
 ) -> list[Recipe]:
-    # ``id`` breaks ``updated_at`` ties so OFFSET / LIMIT pages never repeat or skip a row.
-    stmt = (
-        select(Recipe)
-        .where(*conditions)
-        .order_by(Recipe.updated_at.desc(), Recipe.id.desc())
-        .limit(limit)
-        .offset(offset)
-    )
+    # ``id`` breaks ``updated_at`` ties so the order is total. A page starts strictly after
+    # the previous page's last (updated_at, id), so a row moved or removed between page loads
+    # never shifts the rows behind it, as an OFFSET would.
+    stmt = select(Recipe).where(*conditions)
+    if after is not None:
+        stmt = stmt.where(
+            tuple_(Recipe.updated_at, Recipe.id) < tuple_(after.updated_at, after.id),
+        )
+    stmt = stmt.order_by(Recipe.updated_at.desc(), Recipe.id.desc()).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -93,16 +99,17 @@ async def list_by_user(
     *,
     search: str | None = None,
     limit: int = DEFAULT_RECIPE_PAGE_SIZE,
-    offset: int = 0,
+    after: RecipeListCursor | None = None,
 ) -> list[Recipe]:
     """One page of a user's non-deleted recipes, most-recently-updated first.
 
     Tenant-scoped: always filters by ``user_id``. Backs the authenticated
     ``owner=me`` view on the public list route. Optional ``search``:
     case-insensitive substring on ``title``. ``count_by_user`` with the same
-    filters gives the total across pages.
+    filters gives the total across pages. ``after`` starts the page past that
+    row's sort key; None starts at the top.
     """
-    return await _list_page(db, _owned_conditions(user_id, search), limit=limit, offset=offset)
+    return await _list_page(db, _owned_conditions(user_id, search), limit=limit, after=after)
 
 
 async def count_by_user(
@@ -117,7 +124,7 @@ async def list_public(
     *,
     search: str | None = None,
     limit: int = DEFAULT_RECIPE_PAGE_SIZE,
-    offset: int = 0,
+    after: RecipeListCursor | None = None,
 ) -> list[Recipe]:
     """One page of every non-deleted recipe, most-recently-updated first.
 
@@ -127,8 +134,9 @@ async def list_public(
     fall through to an unscoped query.
 
     Optional ``search``: case-insensitive substring on ``title`` (bind param).
+    ``after`` starts the page past that row's sort key; None starts at the top.
     """
-    return await _list_page(db, _library_conditions(search), limit=limit, offset=offset)
+    return await _list_page(db, _library_conditions(search), limit=limit, after=after)
 
 
 async def count_public(db: AsyncSession, *, search: str | None = None) -> int:
