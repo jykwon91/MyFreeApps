@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { CookSession } from "../../types/CookSession";
 import type { CookSessionTarget } from "../../types/CookSessionTarget";
 import { resumableCookSession } from "../../utils/resumableCookSession";
+import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
 
 const initialState: Record<string, CookSession> = {};
 
@@ -38,6 +39,11 @@ const cookSessionsSlice = createSlice({
     sessionsCleared() {
       return initialState;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(recipeForgotten, (state, { payload }) => {
+      delete state[payload];
+    });
   },
 });
 

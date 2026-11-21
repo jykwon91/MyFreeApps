@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
 import type { CookTimer } from "../../types/CookTimer";
 import type { CookTimerAlert } from "../../types/CookTimerAlert";
 
@@ -30,6 +31,11 @@ const cookTimersSlice = createSlice({
       const restored = payload.filter((timer) => !known.has(timer.id)).map((timer) => ({ ...timer, alert: "scheduled" as const }));
       state.items.push(...restored);
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(recipeForgotten, (state, { payload }) => {
+      state.items = state.items.filter((timer) => timer.recipeId !== payload);
+    });
   },
 });
 
