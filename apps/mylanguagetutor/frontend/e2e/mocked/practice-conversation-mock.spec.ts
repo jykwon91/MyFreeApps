@@ -113,6 +113,39 @@ test("a reply can be replayed at the normal pace and slowly, and its translation
   ]);
 });
 
+test("Replay is off while the next reply is on its way, and back on once the tutor has answered", async ({ page }) => {
+  let held: Promise<void> = Promise.resolve();
+  let release: () => void = () => undefined;
+  const gate = { get wait() { return held; }, release: () => release() };
+  await signedInTutor(page, {
+    holdTurns: gate,
+    turns: [completeTurn({ reply: TUTOR_GREETING }), completeTurn({ reply: TUTOR_NAME_REPLY })],
+  });
+
+  try {
+    await openPractice(page, GREETINGS.title);
+    await sendTyped(page, LEARNER_GREETING);
+    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replay", exact: true })).toBeEnabled();
+
+    held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await sendTyped(page, LEARNER_FOLLOW_UP);
+    await expect(page.getByRole("status", { name: TUTOR_THINKING })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replay", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Slow", exact: true })).toBeDisabled();
+
+    release();
+    await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replay", exact: true })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Replay", exact: true }).first()).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Replay", exact: true }).last()).toBeEnabled();
+  } finally {
+    release();
+  }
+});
+
 test("corrections and the say-it-again prompt follow the reply; later turns reuse the session", async ({ page }) => {
   const api = await signedInTutor(page, {
     turns: [

@@ -37,8 +37,8 @@ describe("TutorBubble", () => {
     const slow = screen.getByRole("button", { name: "Slow" });
     expect(replay).toBeDisabled();
     expect(slow).toBeDisabled();
-    expect(replay).toHaveAccessibleDescription("Unavailable while the microphone is listening");
-    expect(slow).toHaveAccessibleDescription("Unavailable while the microphone is listening");
+    expect(replay).toHaveAccessibleDescription("Unavailable while the microphone is listening or the tutor is replying");
+    expect(slow).toHaveAccessibleDescription("Unavailable while the microphone is listening or the tutor is replying");
 
     fireEvent.click(replay);
     fireEvent.click(slow);

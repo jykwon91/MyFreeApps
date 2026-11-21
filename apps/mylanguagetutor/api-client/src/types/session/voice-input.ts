@@ -6,7 +6,7 @@ export interface VoiceInput {
   mode: InputMode;
   phase: VoicePhase;
   view: ComposerView;
-  /** Replaying a reply is safe: false while listening, when the tutor's voice would be heard as the answer. */
+  /** Replaying a reply is safe: false while listening (the tutor's voice would be heard as the answer) or while a reply is arriving. */
   canReplay: boolean;
   /** Opens the microphone, stopping the tutor's voice first. Does nothing while a turn is in flight or blocked. */
   startListening: () => void;

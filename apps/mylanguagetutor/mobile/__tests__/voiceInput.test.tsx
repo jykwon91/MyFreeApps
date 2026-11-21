@@ -138,7 +138,7 @@ describe("speaking an answer", () => {
     expect(sent.map((request) => request.text)).toEqual(["Quiero un café", "Y un pan"]);
   });
 
-  it("disables Replay and Slow while listening, and enables them again once the answer is sent", async () => {
+  it("disables Replay and Slow while listening and while the next reply is on its way, and enables them once it is in", async () => {
     installRecognizer();
     storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
     const { streams } = await openCafeConversation();
@@ -146,8 +146,8 @@ describe("speaking an answer", () => {
     await phone(() => goQuiet("Quiero un café"));
     await tutorReplies(streams[0]);
     await act(async () => finishSpeaking());
-    const replay = () => screen.getByRole("button", { name: PRACTICE_COPY.replay });
-    const slow = () => screen.getByRole("button", { name: PRACTICE_COPY.replaySlow });
+    const replay = () => screen.getAllByRole("button", { name: PRACTICE_COPY.replay })[0];
+    const slow = () => screen.getAllByRole("button", { name: PRACTICE_COPY.replaySlow })[0];
     expect(replay().props.accessibilityState?.disabled).toBeFalsy();
 
     await tapToSpeak();
@@ -160,7 +160,12 @@ describe("speaking an answer", () => {
     await fireEvent.press(slow());
     expect(spoken).toHaveLength(spokenBefore);
 
+    // The answer is sent: the tutor's next reply is on its way, so the earlier reply can't be replayed over it.
     await phone(() => goQuiet("Y un pan"));
+    expect(replay().props.accessibilityState).toMatchObject({ disabled: true });
+    expect(replay().props.accessibilityHint).toBe(PRACTICE_COPY.replayUnavailableHint);
+
+    await tutorReplies(streams[1]);
     expect(replay().props.accessibilityState?.disabled).toBeFalsy();
     expect(replay().props.accessibilityHint).toBe(PRACTICE_COPY.replayHint);
   });
@@ -191,6 +196,30 @@ describe("speaking an answer", () => {
     expect(micButton(VOICE_COPY.micLabels.replying).props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.press(micButton(VOICE_COPY.micLabels.replying));
     expect(started).toHaveLength(1);
+  });
+
+  it("disables Replay and Slow while a reply is arriving, so they can't cut it off, and enables them once it has finished", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { streams } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => goQuiet("Hola"));
+    await serverWrites(() => streams[0].emit("reply.delta", { text: "¡Hola!" }));
+
+    const spokenBefore = spoken.length;
+    for (const name of [PRACTICE_COPY.replay, PRACTICE_COPY.replaySlow]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+      expect(button.props.accessibilityHint).toBe(PRACTICE_COPY.replayUnavailableHint);
+      await fireEvent.press(button);
+    }
+    expect(spoken).toHaveLength(spokenBefore);
+
+    await finish(streams[0]);
+    for (const name of [PRACTICE_COPY.replay, PRACTICE_COPY.replaySlow]) {
+      expect(screen.getByRole("button", { name }).props.accessibilityState?.disabled).toBeFalsy();
+    }
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.replay }).props.accessibilityHint).toBe(PRACTICE_COPY.replayHint);
   });
 
   it("says it didn't catch anything when the learner says nothing, and sends nothing", async () => {
