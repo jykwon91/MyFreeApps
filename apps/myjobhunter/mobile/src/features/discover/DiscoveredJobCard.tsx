@@ -68,6 +68,9 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
   }
 
   async function undo(): Promise<void> {
+    // The Undo toast closes on tap, and this card may already be gone, so progress goes in a toast.
+    // The Undo button is gone with it, so the undo can't be fired twice.
+    showToast(ACTIONS.undoing);
     try {
       await dispatch(undoDismissDiscoveredJob(job.id));
       showToast(ACTIONS.undone);

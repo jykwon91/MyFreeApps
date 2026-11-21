@@ -68,4 +68,39 @@ describe("useScoringWindow", () => {
 
     expect(result.current.isOpen).toBe(true);
   });
+
+  it("judges a refresh against the filter as it is when the refresh finishes, not when it was tapped", () => {
+    const { result, rerender } = renderHook(({ filter }) => useScoringWindow(filter), { initialProps: { filter: "src-a" as string | null } });
+    const { open } = result.current; // captured at tap time, as SavedSearchRow does
+
+    rerender({ filter: "src-b" }); // the user switches the filter while the refresh runs
+    act(() => open("src-a")); // refresh of src-a finishes
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.pollingInterval).toBe(0);
+
+    rerender({ filter: "src-a" }); // and back to the refreshed saved search
+    expect(result.current.isOpen).toBe(true);
+  });
+
+  it("opens when the filter changes to the refreshed saved search while the refresh runs", () => {
+    const { result, rerender } = renderHook(({ filter }) => useScoringWindow(filter), { initialProps: { filter: "src-b" as string | null } });
+    const { open } = result.current;
+
+    rerender({ filter: "src-a" });
+    act(() => open("src-a"));
+
+    expect(result.current.isOpen).toBe(true);
+  });
+
+  it("stops marking cards as scoring once the filter moves to another saved search", () => {
+    const { result, rerender } = renderHook(({ filter }) => useScoringWindow(filter), { initialProps: { filter: null as string | null } });
+    act(() => result.current.open("src-a"));
+    expect(result.current.isOpen).toBe(true);
+
+    rerender({ filter: "src-b" });
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.pollingInterval).toBe(0);
+  });
 });
