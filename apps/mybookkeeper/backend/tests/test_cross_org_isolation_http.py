@@ -38,8 +38,8 @@ from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.booking_statement import BookingStatement
 from app.models.user.user import User
 from app.repositories import organization_repo
+from tests.utc_today import utc_today
 
-_TODAY = _dt.date.today().isoformat()
 _SESSION_PATCH_TARGETS = (
     "app.services.rent.rent_ledger_service.unit_of_work",
     "app.services.rent.rent_schedule_service.unit_of_work",
@@ -198,7 +198,7 @@ class TestRentLedgerIsolation:
         self, client_b: AsyncClient, org_a_data: OrgAData,
     ) -> None:
         resp = await client_b.get(
-            f"/rent-ledger/tenants/{org_a_data.applicant_id}", params={"as_of": _TODAY},
+            f"/rent-ledger/tenants/{org_a_data.applicant_id}", params={"as_of": utc_today().isoformat()},
         )
         assert resp.status_code == 404
 
@@ -210,7 +210,7 @@ class TestRentLedgerIsolation:
             "/rent-ledger/schedules",
             json={
                 "applicant_id": str(org_a_data.applicant_id), "amount": "900.00",
-                "cadence": "monthly", "start_date": "2027-01-01", "today": _TODAY,
+                "cadence": "monthly", "start_date": "2027-01-01", "today": utc_today().isoformat(),
             },
         )
         assert resp.status_code == 404
@@ -235,7 +235,7 @@ class TestRentLedgerIsolation:
     ) -> None:
         resp = await client_b.patch(
             f"/rent-ledger/schedules/{org_a_data.schedule_id}",
-            json={"notes": "hijacked", "today": _TODAY},
+            json={"notes": "hijacked", "today": utc_today().isoformat()},
         )
         assert resp.status_code == 404
         schedule = await db.get(RentSchedule, org_a_data.schedule_id)
