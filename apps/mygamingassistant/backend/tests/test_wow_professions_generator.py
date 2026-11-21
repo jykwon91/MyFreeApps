@@ -552,7 +552,7 @@ class TestDisenchantSources:
                 assert len(counts) == 3, f"table {table_id} result {result_id} wrong: {counts}"
                 min_c, max_c, chance = counts
                 assert 1 <= min_c <= max_c
-                assert 1 <= chance <= 100
+                assert 0 < chance <= 100
         # Items reference only table IDs that exist in the tables section.
         for entry in data["items"].values():
             assert str(entry[0]) in data["tables"], f"item references unknown table {entry[0]}"

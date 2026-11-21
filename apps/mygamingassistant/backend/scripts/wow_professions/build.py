@@ -333,7 +333,7 @@ def _result_counts(row: dict) -> tuple[int, int]:
     return min_count, max_count
 
 
-def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[int, dict[int, tuple[int, int, int]]]]:
+def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[int, dict[int, tuple[int, int, float]]]]:
     """Disenchant data for the MGA Prices addon's three-way verdict.
 
     Returns ``(items, tables)``:
@@ -341,7 +341,7 @@ def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[in
     * ``items``: ``{item_id: (table_id, required_enchanting_skill)}`` for every
       item with a ``DisenchantID`` in ``item_template``.
     * ``tables``: ``{table_id: {result_item_id: (min_count, max_count, chance_pct)}}``
-      where ``chance_pct`` is an integer 0-100.
+      where ``chance_pct`` is a percent to one decimal (Nexus Crystal drops 0.5% of the time).
 
     Reads ``disenchant_loot_template`` joined to ``item_template.DisenchantID`` and
     ``item_template.RequiredDisenchantSkill`` from the cmangos classic-db dump.
@@ -355,15 +355,16 @@ def build_addon_disenchant_tables() -> tuple[dict[int, tuple[int, int]], dict[in
             raw_rows[int(r["entry"] or 0)].append(r)
 
     # Compute per-table chance distributions, then build loot tables.
-    result_tables: dict[int, dict[int, tuple[int, int, int]]] = {}
+    result_tables: dict[int, dict[int, tuple[int, int, float]]] = {}
     for table_id, rows in raw_rows.items():
         chances = _roll_chances(rows)
-        results: dict[int, tuple[int, int, int]] = {}
+        results: dict[int, tuple[int, int, float]] = {}
         for row in rows:
             result_id = int(row["item"] or 0)
             if result_id and result_id in chances:
                 min_c, max_c = _result_counts(row)
-                results[result_id] = (min_c, max_c, round(chances[result_id]))
+                chance = round(chances[result_id], 1)
+                results[result_id] = (min_c, max_c, int(chance) if chance.is_integer() else chance)
         if results:
             result_tables[table_id] = results
 
