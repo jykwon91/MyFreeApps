@@ -25,11 +25,17 @@ describe("triageFailureMessage", () => {
   });
 
   it("passes on the server's reason for any other failure, an uncoded 409 included", () => {
-    expect(triageFailureMessage({ status: 404, data: { detail: "Discovery resource not found" } }, DISCOVER_ACTION_MESSAGES.dismissFailed)).toBe(
-      "Discovery resource not found",
+    expect(triageFailureMessage({ status: 500, data: { detail: "Something broke upstream" } }, DISCOVER_ACTION_MESSAGES.dismissFailed)).toBe(
+      "Something broke upstream",
     );
     expect(triageFailureMessage({ status: 409, data: { detail: "Try again in a moment" } }, DISCOVER_ACTION_MESSAGES.saveFailed)).toBe(
       "Try again in a moment",
+    );
+  });
+
+  it("says the posting is gone on a 404, not the server's generic \"not found\"", () => {
+    expect(triageFailureMessage({ status: 404, data: { detail: "Discovery resource not found" } }, DISCOVER_ACTION_MESSAGES.dismissFailed)).toBe(
+      DISCOVER_ACTION_MESSAGES.gone,
     );
   });
 
