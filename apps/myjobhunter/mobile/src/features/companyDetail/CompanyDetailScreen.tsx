@@ -39,8 +39,10 @@ export default function CompanyDetailScreen({ id }: CompanyDetailScreenProps) {
   }, [isLeaving]);
 
   if (!company && (isFetching || !error)) return <CompanyDetailSkeleton />;
-  if (!company) {
-    const isGone = isNotFound(error);
+  const isGone = isNotFound(error);
+  // A 404 means it was deleted (on another device, say), even after it loaded: what's on screen
+  // can't be acted on, so it isn't kept under the offline banner. Not while leaving after a delete here.
+  if (!company || (isGone && !isLeaving)) {
     return (
       <EmptyState
         action={
