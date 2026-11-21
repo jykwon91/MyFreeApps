@@ -59,6 +59,7 @@ export default function PropertyOccupancyFixer({ propertyId, onFixed }: Property
       <View accessibilityLabel={MESSAGES.occupancyUse} accessibilityRole="radiogroup">
         {CHOICES.map((option) => (
           <OptionRow
+            disabled={isBusy}
             isSelected={choice === option.value}
             key={option.value}
             label={option.label}
@@ -73,6 +74,7 @@ export default function PropertyOccupancyFixer({ propertyId, onFixed }: Property
           <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{MESSAGES.occupancyRentalType}</Text>
           {RENTAL_TYPE_CHOICES.map((option) => (
             <OptionRow
+              disabled={isBusy}
               isSelected={rentalType === option.value}
               key={option.value}
               label={option.label}

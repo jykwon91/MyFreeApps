@@ -19,6 +19,7 @@ export default function ChoiceGroup<Value extends string>({ label, options, valu
       >
         {options.map((option) => (
           <OptionRow
+            disabled={disabled}
             isSelected={option.value === value}
             key={option.value}
             label={option.label}
