@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
 import { X } from "lucide-react";
 import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
@@ -87,14 +87,13 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
               <input
                 id="ed-school"
                 type="text"
+                {...fieldFeedbackAria({ id: "ed-school", error: errors.school?.message })}
                 {...register("school")}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 placeholder="e.g. State University"
                 autoFocus
               />
-              {errors.school ? (
-                <p className="text-xs text-destructive mt-1">{errors.school.message}</p>
-              ) : null}
+              <FieldFeedback id="ed-school" error={errors.school?.message} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -103,26 +102,24 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
                 <input
                   id="ed-degree"
                   type="text"
+                  {...fieldFeedbackAria({ id: "ed-degree", error: errors.degree?.message })}
                   {...register("degree")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. B.S."
                 />
-                {errors.degree ? (
-                  <p className="text-xs text-destructive mt-1">{errors.degree.message}</p>
-                ) : null}
+                <FieldFeedback id="ed-degree" error={errors.degree?.message} />
               </div>
               <div>
                 <label htmlFor="ed-field" className="block text-sm font-medium mb-1">Field</label>
                 <input
                   id="ed-field"
                   type="text"
+                  {...fieldFeedbackAria({ id: "ed-field", error: errors.field?.message })}
                   {...register("field")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Computer Science"
                 />
-                {errors.field ? (
-                  <p className="text-xs text-destructive mt-1">{errors.field.message}</p>
-                ) : null}
+                <FieldFeedback id="ed-field" error={errors.field?.message} />
               </div>
             </div>
 
@@ -132,26 +129,24 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
                 <input
                   id="ed-start-year"
                   type="number"
+                  {...fieldFeedbackAria({ id: "ed-start-year", error: errors.start_year?.message })}
                   {...register("start_year")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="2018"
                 />
-                {errors.start_year ? (
-                  <p className="text-xs text-destructive mt-1">{errors.start_year.message}</p>
-                ) : null}
+                <FieldFeedback id="ed-start-year" error={errors.start_year?.message} />
               </div>
               <div>
                 <label htmlFor="ed-end-year" className="block text-sm font-medium mb-1">End year</label>
                 <input
                   id="ed-end-year"
                   type="number"
+                  {...fieldFeedbackAria({ id: "ed-end-year", error: errors.end_year?.message })}
                   {...register("end_year")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="2022"
                 />
-                {errors.end_year ? (
-                  <p className="text-xs text-destructive mt-1">{errors.end_year.message}</p>
-                ) : null}
+                <FieldFeedback id="ed-end-year" error={errors.end_year?.message} />
               </div>
               <div>
                 <label htmlFor="ed-gpa" className="block text-sm font-medium mb-1">GPA</label>
@@ -159,13 +154,12 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
                   id="ed-gpa"
                   type="number"
                   step="0.01"
+                  {...fieldFeedbackAria({ id: "ed-gpa", error: errors.gpa?.message })}
                   {...register("gpa")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="3.80"
                 />
-                {errors.gpa ? (
-                  <p className="text-xs text-destructive mt-1">{errors.gpa.message}</p>
-                ) : null}
+                <FieldFeedback id="ed-gpa" error={errors.gpa?.message} />
               </div>
             </div>
 

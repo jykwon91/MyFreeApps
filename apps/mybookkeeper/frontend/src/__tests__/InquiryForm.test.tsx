@@ -87,6 +87,9 @@ describe("InquiryForm", () => {
     // The required-field error should surface and the mutation should NOT fire.
     expect(createInquiryMock).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+    const name = screen.getByTestId("inquiry-form-name");
+    expect(name).toBeInvalid();
+    expect(name).toHaveAccessibleDescription(/\S/);
   });
 
   it("requires external_inquiry_id when source is FF", async () => {
@@ -98,6 +101,9 @@ describe("InquiryForm", () => {
     await user.click(screen.getByTestId("inquiry-form-submit"));
     expect(createInquiryMock).not.toHaveBeenCalled();
     expect(screen.getByText(/Required for non-direct/i)).toBeInTheDocument();
+    const externalId = screen.getByTestId("inquiry-form-external-id");
+    expect(externalId).toBeInvalid();
+    expect(externalId).toHaveAccessibleDescription(/Required for non-direct/i);
   });
 
   it("blocks submit when end-date is before start-date", async () => {
@@ -109,6 +115,9 @@ describe("InquiryForm", () => {
     await user.click(screen.getByTestId("inquiry-form-submit"));
     expect(createInquiryMock).not.toHaveBeenCalled();
     expect(screen.getByText(/End date must be on or after start date/i)).toBeInTheDocument();
+    const endDate = screen.getByTestId("inquiry-form-end-date");
+    expect(endDate).toBeInvalid();
+    expect(endDate).toHaveAccessibleDescription(/End date must be on or after start date/i);
   });
 
   it("submits via createInquiry mutation on a happy path (direct source)", async () => {

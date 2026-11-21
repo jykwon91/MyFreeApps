@@ -54,6 +54,8 @@ describe("FormFieldsTable", () => {
     await userEvent.type(screen.getByPlaceholderText("Reason for override..."), "Typo");
     await userEvent.click(screen.getByText("Save"));
     expect(screen.getByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(NUMBER_INPUT_DECIMAL_SEPARATOR))).toBeInTheDocument();
+    expect(input).toBeInvalid();
+    expect(input).toHaveAccessibleDescription(TAX_FIELD_OVERRIDE_PROBLEMS.number(NUMBER_INPUT_DECIMAL_SEPARATOR));
     expect(onOverride).not.toHaveBeenCalled();
   });
 

@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import {
   ADVERSE_OUTCOMES,
   SCREENING_STATUS_LABELS,
+  SCREENING_UPLOAD_ERRORS,
   SCREENING_UPLOAD_OUTCOMES,
 } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
@@ -135,10 +136,9 @@ export default function UploadScreeningResultModal({
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                     className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                     {...field}
+                    {...fieldFeedbackAria({ id: field.id, error: submitAttempted && !file ? SCREENING_UPLOAD_ERRORS.file : undefined })}
                   />
-                  {submitAttempted && !file ? (
-                    <p className="text-xs text-red-500 mt-1">A PDF is required.</p>
-                  ) : null}
+                  <FieldFeedback id={field.id} error={submitAttempted && !file ? SCREENING_UPLOAD_ERRORS.file : undefined} />
                 </>
               )}
             </FormField>
@@ -152,6 +152,7 @@ export default function UploadScreeningResultModal({
                     onChange={(e) => setStatus(e.target.value as ScreeningStatus | "")}
                     className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[44px]"
                     {...field}
+                    {...fieldFeedbackAria({ id: field.id, error: submitAttempted && !status ? SCREENING_UPLOAD_ERRORS.status : undefined })}
                   >
                     <option value="">— Choose outcome —</option>
                     {SCREENING_UPLOAD_OUTCOMES.map((s) => (
@@ -160,9 +161,7 @@ export default function UploadScreeningResultModal({
                       </option>
                     ))}
                   </select>
-                  {submitAttempted && !status ? (
-                    <p className="text-xs text-red-500 mt-1">Please choose an outcome.</p>
-                  ) : null}
+                  <FieldFeedback id={field.id} error={submitAttempted && !status ? SCREENING_UPLOAD_ERRORS.status : undefined} />
                 </>
               )}
             </FormField>
@@ -180,12 +179,9 @@ export default function UploadScreeningResultModal({
                       placeholder="Short summary used on the FCRA adverse-action notice (e.g. 'Credit score below threshold')."
                       className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       {...field}
+                      {...fieldFeedbackAria({ id: field.id, error: submitAttempted && !adverseSnippet.trim() ? SCREENING_UPLOAD_ERRORS.snippet : undefined })}
                     />
-                    {submitAttempted && !adverseSnippet.trim() ? (
-                      <p className="text-xs text-red-500 mt-1">
-                        Required for declined / inconclusive outcomes.
-                      </p>
-                    ) : null}
+                    <FieldFeedback id={field.id} error={submitAttempted && !adverseSnippet.trim() ? SCREENING_UPLOAD_ERRORS.snippet : undefined} />
                   </>
                 )}
               </FormField>

@@ -211,6 +211,8 @@ describe("LogEventDialog — interview_details", () => {
     fireEvent.change(when, { target: { value: nextWeek } });
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(await screen.findByText(OCCURRED_AT_IN_FUTURE_MESSAGE)).toBeInTheDocument();
+    expect(when).toBeInvalid();
+    expect(when).toHaveAccessibleDescription(OCCURRED_AT_IN_FUTURE_MESSAGE);
     expect(logEventMock).not.toHaveBeenCalled();
   });
 

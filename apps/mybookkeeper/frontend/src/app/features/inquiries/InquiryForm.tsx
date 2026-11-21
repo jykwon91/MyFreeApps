@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import ListingSelect from "@/app/features/listings/ListingSelect";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
@@ -111,12 +111,9 @@ export default function InquiryForm({ onClose, onCreated }: InquiryFormProps) {
                     placeholder={PLACEHOLDERS.externalId}
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     {...field}
+                    {...fieldFeedbackAria({ id: field.id, error: errors.external_inquiry_id?.message })}
                   />
-                  {errors.external_inquiry_id ? (
-                    <p className="text-xs text-red-600 mt-1">
-                      {errors.external_inquiry_id.message}
-                    </p>
-                  ) : null}
+                  <FieldFeedback id={field.id} error={errors.external_inquiry_id?.message} />
                 </>
               )}
             </FormField>
@@ -131,10 +128,9 @@ export default function InquiryForm({ onClose, onCreated }: InquiryFormProps) {
                   maxLength={MAX_LENGTH.name}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.inquirer_name?.message })}
                 />
-                {errors.inquirer_name ? (
-                  <p className="text-xs text-red-600 mt-1">{errors.inquirer_name.message}</p>
-                ) : null}
+                <FieldFeedback id={field.id} error={errors.inquirer_name?.message} />
               </>
             )}
           </FormField>
@@ -200,12 +196,9 @@ export default function InquiryForm({ onClose, onCreated }: InquiryFormProps) {
                     data-testid="inquiry-form-end-date"
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     {...field}
+                    {...fieldFeedbackAria({ id: field.id, error: errors.desired_end_date?.message })}
                   />
-                  {errors.desired_end_date ? (
-                    <p className="text-xs text-red-600 mt-1">
-                      {errors.desired_end_date.message}
-                    </p>
-                  ) : null}
+                  <FieldFeedback id={field.id} error={errors.desired_end_date?.message} />
                 </>
               )}
             </FormField>
@@ -232,10 +225,9 @@ export default function InquiryForm({ onClose, onCreated }: InquiryFormProps) {
                   data-testid="inquiry-form-received-at"
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.received_at?.message })}
                 />
-                {errors.received_at ? (
-                  <p className="text-xs text-red-600 mt-1">{errors.received_at.message}</p>
-                ) : null}
+                <FieldFeedback id={field.id} error={errors.received_at?.message} />
               </>
             )}
           </FormField>

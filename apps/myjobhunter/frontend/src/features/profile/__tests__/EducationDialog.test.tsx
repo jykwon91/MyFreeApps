@@ -10,7 +10,9 @@ vi.mock("@myjobhunter/api-client/store/educationApi", () => ({
 }));
 
 // Mock @platform/ui completely — avoids importing React 19 code into a React 18 test environment.
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  FieldFeedback: (await importOriginal<typeof import("@platform/ui")>()).FieldFeedback,
+  fieldFeedbackAria: (await importOriginal<typeof import("@platform/ui")>()).fieldFeedbackAria,
   showSuccess: vi.fn(),
   showError: vi.fn(),
   extractErrorMessage: (err: unknown) => String(err),
@@ -63,6 +65,9 @@ describe("EducationDialog — shared validation", () => {
     await submitWithGpa("3.855");
 
     expect(await screen.findByText(PROFILE_FORM_PROBLEMS.gpa("."))).toBeInTheDocument();
+    const gpa = screen.getByLabelText("GPA");
+    expect(gpa).toBeInvalid();
+    expect(gpa).toHaveAccessibleDescription(PROFILE_FORM_PROBLEMS.gpa("."));
     expect(createTrigger).not.toHaveBeenCalled();
   });
 

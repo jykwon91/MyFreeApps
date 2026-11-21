@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
-import { LoadingButton } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import { ORGANIZATION_NAME_MAX_LENGTH, ORGANIZATION_NAME_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/organizationName";
 import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
@@ -8,6 +8,7 @@ import { CREATE_ORGANIZATION_MESSAGES } from "@/shared/lib/organization-messages
 
 export default function CreateOrgPrompt() {
   const [name, setName] = useState("");
+  const nameId = useId();
   const [nameError, setNameError] = useState<string | null>(null);
   const [createOrg, { isLoading, error }] = useCreateOrganizationMutation();
 
@@ -30,8 +31,9 @@ export default function CreateOrgPrompt() {
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Organization name</label>
+            <label htmlFor={nameId} className="block text-sm font-medium mb-1">Organization name</label>
             <input
+              id={nameId}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -39,8 +41,9 @@ export default function CreateOrgPrompt() {
               maxLength={ORGANIZATION_NAME_MAX_LENGTH}
               className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               required
+              {...fieldFeedbackAria({ id: nameId, error: nameError ?? undefined })}
             />
-            {nameError ? <p className="text-destructive text-sm mt-1">{nameError}</p> : null}
+            <FieldFeedback id={nameId} error={nameError ?? undefined} />
           </div>
           {errorMessage ? <p className="text-destructive text-sm">{errorMessage}</p> : null}
           <LoadingButton type="submit" isLoading={isLoading} loadingText="Creating..." className="w-full">

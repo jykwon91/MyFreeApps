@@ -89,6 +89,9 @@ describe("VendorForm", () => {
       await waitFor(() => {
         expect(createVendor).not.toHaveBeenCalled();
       });
+      const name = screen.getByTestId("vendor-form-name");
+      expect(name).toBeInvalid();
+      expect(name).toHaveAccessibleDescription("Name is required");
     });
 
     it("submits the create payload with trimmed strings and null for blank optionals", async () => {

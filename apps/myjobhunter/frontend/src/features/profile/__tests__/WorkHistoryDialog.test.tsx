@@ -24,7 +24,9 @@ vi.mock("@myjobhunter/api-client/store/workHistoryApi", () => ({
 
 // Mock @platform/ui completely — avoids importing React 19 code from
 // packages/shared-frontend into a React 18 test environment (two-copies crash).
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  FieldFeedback: (await importOriginal<typeof import("@platform/ui")>()).FieldFeedback,
+  fieldFeedbackAria: (await importOriginal<typeof import("@platform/ui")>()).fieldFeedbackAria,
   showSuccess: vi.fn(),
   showError: vi.fn(),
   extractErrorMessage: (err: unknown) => String(err),
@@ -184,6 +186,13 @@ describe("WorkHistoryDialog — shared validation", () => {
     expect(await screen.findByText(PROFILE_FORM_PROBLEMS.companyRequired)).toBeInTheDocument();
     expect(screen.getByText(PROFILE_FORM_PROBLEMS.titleRequired)).toBeInTheDocument();
     expect(screen.getByText(PROFILE_FORM_PROBLEMS.startDateRequired)).toBeInTheDocument();
+    const company = screen.getByLabelText(/Company/);
+    expect(company).toBeInvalid();
+    expect(company).toHaveAccessibleDescription(PROFILE_FORM_PROBLEMS.companyRequired);
+    expect(screen.getByLabelText(/Title/)).toHaveAccessibleDescription(PROFILE_FORM_PROBLEMS.titleRequired);
+    expect(screen.getByLabelText(/Start date/)).toHaveAccessibleDescription(PROFILE_FORM_PROBLEMS.startDateRequired);
+    expect(screen.getByLabelText("Bullets")).not.toBeInvalid();
+    expect(screen.getByLabelText("Bullets")).toHaveAccessibleDescription("One achievement per line");
     expect(createTrigger).not.toHaveBeenCalled();
   });
 });

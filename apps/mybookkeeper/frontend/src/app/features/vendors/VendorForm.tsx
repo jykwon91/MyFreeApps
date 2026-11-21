@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABELS,
@@ -139,12 +139,9 @@ export default function VendorForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="vendor-form-name"
                   {...field}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.name?.message })}
                 />
-                {errors.name ? (
-                  <p className="text-xs text-red-600 mt-1">
-                    {errors.name.message}
-                  </p>
-                ) : null}
+                <FieldFeedback id={field.id} error={errors.name?.message} />
               </>
             )}
           </FormField>

@@ -103,6 +103,13 @@ describe("ListingForm", () => {
       await user.click(screen.getByTestId("listing-form-submit"));
       expect(screen.getByText(LISTING_FORM_PROBLEMS.titleRequired)).toBeInTheDocument();
       expect(screen.getByText(LISTING_FORM_PROBLEMS.monthlyRequired)).toBeInTheDocument();
+      const title = screen.getByTestId("listing-form-title");
+      expect(title).toBeInvalid();
+      expect(title).toHaveAccessibleDescription(LISTING_FORM_PROBLEMS.titleRequired);
+      const monthly = screen.getByTestId("listing-form-monthly-rate");
+      expect(monthly).toBeInvalid();
+      expect(monthly).toHaveAccessibleDescription(LISTING_FORM_PROBLEMS.monthlyRequired);
+      expect(screen.getByTestId("listing-form-room-type")).not.toHaveAttribute("aria-invalid");
       expect(createMock).not.toHaveBeenCalled();
     });
 

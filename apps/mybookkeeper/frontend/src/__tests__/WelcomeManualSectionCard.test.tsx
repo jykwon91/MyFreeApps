@@ -93,6 +93,16 @@ describe("WelcomeManualSectionCard", () => {
     expect(screen.getByTestId("welcome-manual-section-save")).toBeDisabled();
   });
 
+  it("links the title error to the section title", async () => {
+    renderCard(makeSection({}));
+    await userEvent.clear(screen.getByTestId("welcome-manual-section-title"));
+    await userEvent.click(screen.getByTestId("welcome-manual-section-save"));
+    const title = await screen.findByRole("textbox", { name: "Section title" });
+    await waitFor(() => expect(title).toBeInvalid());
+    expect(title).toHaveAccessibleDescription("Title is required");
+    expect(updateSectionMock).not.toHaveBeenCalled();
+  });
+
   it("enables Save after editing the body and sends a dirty-only PATCH", async () => {
     updateSectionMock.mockReturnValue({ unwrap: () => Promise.resolve(makeSection({})) });
     renderCard(makeSection({}));
