@@ -157,4 +157,25 @@ describe("jobAnalysisSlice", () => {
     expect(state.lastResult?.applied_application_id).toBeNull();
     expect(after(markLastAnalysisApplied({ analysisId: "a1", applicationId: "app-1" })).lastResult).toBeNull();
   });
+
+  const deleted = (applicationId: string) => ({
+    type: "api/executeMutation/fulfilled",
+    payload: undefined,
+    meta: {
+      requestId: "d1",
+      requestStatus: "fulfilled",
+      arg: { type: "mutation", endpointName: "deleteApplication", originalArgs: applicationId },
+    },
+  });
+
+  it("takes the saved mark off when its application is deleted", () => {
+    const saved = after(started("r1"), finished("r1", "a1"), markLastAnalysisApplied({ analysisId: "a1", applicationId: "app-1" }));
+    expect(reducer(saved, deleted("app-1")).lastResult?.applied_application_id).toBeNull();
+  });
+
+  it("keeps the saved mark when a different application is deleted", () => {
+    const saved = after(started("r1"), finished("r1", "a1"), markLastAnalysisApplied({ analysisId: "a1", applicationId: "app-1" }));
+    expect(reducer(saved, deleted("app-2")).lastResult?.applied_application_id).toBe("app-1");
+    expect(reducer(after(started("r1"), finished("r1", "a1")), deleted("app-1")).lastResult?.applied_application_id).toBeNull();
+  });
 });
