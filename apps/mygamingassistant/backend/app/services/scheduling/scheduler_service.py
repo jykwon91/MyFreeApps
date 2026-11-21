@@ -16,6 +16,10 @@ Scheduled jobs (bodies in ``scheduled_jobs``):
   refresh_wow_prices — every WOW_PRICE_REFRESH_INTERVAL_HOURS hours (default
                       3). WoW Forever auction-house prices from Blizzard
                       (``app/services/wow/prices/``).
+  run_wow_price_refresh_requests — on request (the API's "Refresh now" asks for it through
+                      ``scheduler_job``) and hourly. Refreshes the houses clicked for, so the
+                      API never downloads Blizzard's auction data itself
+                      (``price_refresh_now_service.run_requested``).
   purge_wow_feature_submissions — every 24 hours. WoW feature-request
                       retention (``feature_retention_service``).
   record_wow_server_status — every 5 minutes. WoW Forever server status
@@ -30,7 +34,7 @@ Scheduled jobs (bodies in ``scheduled_jobs``):
 Switches: the purges and refresh_wow_guild_rosters always run (it does nothing
 until someone looks up a guild member). SCHEDULER_ENABLED gates sync_all_sources,
 cleanup_ingestion_downloads and raid_notifications (serve-only prod turns it
-off). WOW_PRICE_REFRESH_ENABLED gates refresh_wow_prices.
+off). WOW_PRICE_REFRESH_ENABLED gates refresh_wow_prices and run_wow_price_refresh_requests.
 WOW_SERVER_STATUS_RECORDING_ENABLED gates record_wow_server_status.
 
 Jobs are in memory and re-registered at every start. Each job's first run
@@ -67,7 +71,9 @@ from app.core.scheduler_constants import (
     JOB_RECORD_SERVER_STATUS,
     JOB_REFRESH_GUILD_ROSTERS,
     JOB_REFRESH_WOW_PRICES,
+    JOB_RUN_PRICE_REFRESH_REQUESTS,
     JOB_SYNC_ALL_SOURCES,
+    PRICE_REFRESH_REQUESTS_INTERVAL_HOURS,
     RAID_NOTIFICATIONS_INTERVAL_SECONDS,
 )
 from app.core.wow_character import CHARACTER_METRIC_PURGE_INTERVAL_HOURS
@@ -172,6 +178,8 @@ def start_scheduler(
     if price_refresh:
         add(JOB_REFRESH_WOW_PRICES, scheduled_jobs.run_refresh_wow_prices,
             timedelta(hours=price_refresh_interval_hours), 3600)
+        add(JOB_RUN_PRICE_REFRESH_REQUESTS, scheduled_jobs.run_price_refresh_requests,
+            timedelta(hours=PRICE_REFRESH_REQUESTS_INTERVAL_HOURS), 3600)
     if server_status_recording:
         add(JOB_RECORD_SERVER_STATUS, scheduled_jobs.run_record_server_status,
             SERVER_STATUS_RECORD_INTERVAL, int(SERVER_STATUS_RECORD_INTERVAL.total_seconds()))

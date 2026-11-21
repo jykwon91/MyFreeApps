@@ -35,6 +35,7 @@ from app.core.scheduler_constants import (
     JOB_PURGE_SERVER_STATUS,
     JOB_RECORD_SERVER_STATUS,
     JOB_REFRESH_WOW_PRICES,
+    JOB_RUN_PRICE_REFRESH_REQUESTS,
     JOB_SYNC_ALL_SOURCES,
 )
 from app.repositories.system import scheduler_job_repo
@@ -45,6 +46,7 @@ _JOB_BODIES = (
     "run_sync_all_sources",
     "run_raid_notifications",
     "run_refresh_wow_prices",
+    "run_price_refresh_requests",
     "run_record_server_status",
     "run_purge_server_status_history",
     "run_purge_character_metrics",
@@ -126,7 +128,7 @@ async def test_worker_boots_registers_jobs_reports_and_stops(
     assert {j.id for j in scheduler.get_jobs()} == {
         JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS,
         JOB_SYNC_ALL_SOURCES,
-        JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS,
+        JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES, JOB_RUN_PRICE_REFRESH_REQUESTS, JOB_RECORD_SERVER_STATUS,
     }
     # First boot: every job runs once now.
     await _wait_for(lambda: all(body.await_count for name, body in worker.items() if name != "run_raid_notifications"))
@@ -156,7 +158,7 @@ async def test_switches_and_discord_choose_the_jobs(
     assert scheduler is not None
     assert {j.id for j in scheduler.get_jobs()} == {
         JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS,
-        JOB_REFRESH_WOW_PRICES,
+        JOB_REFRESH_WOW_PRICES, JOB_RUN_PRICE_REFRESH_REQUESTS,
     }
     stop.set()
     await asyncio.wait_for(task, timeout=5)

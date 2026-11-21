@@ -15,8 +15,9 @@ refresh can log why. The credentials are never logged or put in an error.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 from types import TracebackType
@@ -34,14 +35,15 @@ from app.core.wow_prices import (
     HOUSE_NAME_FACTIONS,
 )
 from app.services.wow.blizzard.blizzard_http import USER_AGENT, fetch_client_token, json_object, send
+from app.services.wow.blizzard.blizzard_stream import stream_array_rows
 from app.services.wow.prices.auction_house import AuctionHouse
 from app.services.wow.prices.house_auctions import HouseAuctions
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 
 logger = logging.getLogger(__name__)
 
-def _snapshot_time(response: httpx.Response) -> datetime | None:
-    raw = response.headers.get("Last-Modified")
+def _snapshot_time(headers: httpx.Headers) -> datetime | None:
+    raw = headers.get("Last-Modified")
     if not raw:
         return None
     try:
@@ -110,13 +112,14 @@ class BlizzardAuctionClient:
         )
         return token.value
 
+    def _request_kwargs(self) -> dict[str, Any]:
+        return {
+            "params": {"namespace": BLIZZARD_NAMESPACE, "locale": BLIZZARD_LOCALE},
+            "headers": {"Authorization": f"Bearer {self._token}"},
+        }
+
     async def _get(self, path: str) -> httpx.Response:
-        return await self._send(
-            "GET",
-            f"{BLIZZARD_API_BASE}{path}",
-            params={"namespace": BLIZZARD_NAMESPACE, "locale": BLIZZARD_LOCALE},
-            headers={"Authorization": f"Bearer {self._token}"},
-        )
+        return await self._send("GET", f"{BLIZZARD_API_BASE}{path}", **self._request_kwargs())
 
     async def houses(self) -> list[AuctionHouse]:
         """Every house in the index whose name says its faction. An unknown name is logged and left out."""
@@ -135,17 +138,20 @@ class BlizzardAuctionClient:
             houses.append(AuctionHouse(id=row["id"], faction=faction))
         return houses
 
-    async def house_auctions(self, house_id: int, *, commodities: bool) -> HouseAuctions:
-        path = f"/data/wow/ruleset/{BLIZZARD_RULESET_ID}/auctions/{house_id}"
-        response = await self._get(f"{path}/commodities" if commodities else path)
-        # Up to BLIZZARD_MAX_BYTES of JSON: parse it off the event loop so the
-        # scheduler's tick and heartbeat keep running meanwhile.
-        rows = await asyncio.to_thread(self._auction_rows, house_id, response)
-        return HouseAuctions(auctions=rows, snapshot_at=_snapshot_time(response))
+    @asynccontextmanager
+    async def house_auctions(self, house_id: int, *, commodities: bool) -> AsyncIterator[HouseAuctions]:
+        """``async with client.house_auctions(...) as answer:`` then ``async for row in answer.auctions``.
 
-    @classmethod
-    def _auction_rows(cls, house_id: int, response: httpx.Response) -> list[dict[str, Any]]:
-        rows = cls._json(response).get("auctions", [])
-        if not isinstance(rows, list):
-            raise PriceFetchError(f"house {house_id} answer has no auctions list", status_code=200)
-        return [r for r in rows if isinstance(r, dict)]
+        Up to BLIZZARD_MAX_BYTES of JSON, parsed row by row as it arrives and never held whole;
+        the connection closes when the block ends.
+        """
+        if self._http is None:
+            raise RuntimeError("BlizzardAuctionClient used outside `async with`")
+        path = f"/data/wow/ruleset/{BLIZZARD_RULESET_ID}/auctions/{house_id}"
+        url = f"{BLIZZARD_API_BASE}{path}/commodities" if commodities else f"{BLIZZARD_API_BASE}{path}"
+        async with stream_array_rows(
+            self._http, "GET", url,
+            array_key="auctions", error_cls=PriceFetchError, max_bytes=BLIZZARD_MAX_BYTES,
+            **self._request_kwargs(),
+        ) as stream:
+            yield HouseAuctions(auctions=stream.rows, snapshot_at=_snapshot_time(stream.headers))

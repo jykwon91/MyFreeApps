@@ -17,7 +17,7 @@ from app.services.wow import raid_notification_worker
 from app.services.wow.character import character_store_service
 from app.services.wow.guild import guild_roster_service
 from app.services.wow.feature_requests import feature_retention_service
-from app.services.wow.prices import price_refresh_service
+from app.services.wow.prices import price_refresh_now_service, price_refresh_service
 from app.services.wow.server_status import server_status_history_service
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,16 @@ async def run_refresh_wow_prices() -> None:
         "scheduler_service: refresh_wow_prices: %s",
         ", ".join(f"{o.label}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
     )
+
+
+async def run_price_refresh_requests() -> None:
+    """Refresh the houses "Refresh now" was clicked for (the API only records the click)."""
+    try:
+        refreshed = await price_refresh_now_service.run_requested()
+    except Exception:
+        logger.exception("scheduler_service: run_wow_price_refresh_requests: run failed")
+        return
+    logger.info("scheduler_service: run_wow_price_refresh_requests: %d house(s) handled", refreshed)
 
 
 async def run_record_server_status() -> None:

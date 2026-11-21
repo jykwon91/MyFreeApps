@@ -35,6 +35,8 @@ dependencies = [
     # IANA timezone database for zoneinfo — the Discord raid bot resolves
     # guild timezones; python:slim images don't guarantee /usr/share/zoneinfo.
     "tzdata==2026.4",
+    # Streams the Blizzard auction payloads (tens of MB) instead of parsing them whole.
+    "ijson==3.4.0.post0",
 ]
 
 [tool.uv]

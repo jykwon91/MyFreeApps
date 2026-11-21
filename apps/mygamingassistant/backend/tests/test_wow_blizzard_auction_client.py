@@ -5,14 +5,14 @@ error codes (API ``type`` and OAuth ``error``) captured on the error, network
 failures, missing credentials, each mapped house kept apart (never pooled
 with its faction's other houses), one failing house failing only itself, and
 a mapped house the index lists under another faction or not at all, and the
-CPU-heavy parse + fold running off the event loop.
+answers being streamed row by row (never held whole) while the event loop keeps turning.
 """
 from __future__ import annotations
 
 import asyncio
 import base64
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 
 import httpx
@@ -100,8 +100,9 @@ async def test_houses_take_their_faction_from_their_name_and_skip_unknown_names(
 async def test_a_house_answer_carries_its_snapshot_time() -> None:
     answers = {"110/commodities": _json({"auctions": [_commodity(2589, 24, 20)]})}
     async with _client(_blizzard(answers)) as client:
-        answer = await client.house_auctions(110, commodities=True)
-    assert answer.auctions == [_commodity(2589, 24, 20)]
+        async with client.house_auctions(110, commodities=True) as answer:
+            rows = [row async for row in answer.auctions]
+    assert rows == [_commodity(2589, 24, 20)]
     assert answer.snapshot_at == datetime(2026, 11, 9, 17, 16, 22, tzinfo=timezone.utc)
 
 
@@ -109,7 +110,8 @@ async def test_a_blizzard_api_error_keeps_its_status_and_code() -> None:
     answers = {"110": _json({"code": 404, "type": "BLZWEBAPI00000404", "detail": "Not Found"}, status=404)}
     async with _client(_blizzard(answers)) as client:
         with pytest.raises(PriceFetchError) as caught:
-            await client.house_auctions(110, commodities=False)
+            async with client.house_auctions(110, commodities=False):
+                pass
     assert caught.value.status_code == 404
     assert caught.value.code == "BLZWEBAPI00000404"
     assert caught.value.summary() == "HTTP 404 BLZWEBAPI00000404: Not Found"
@@ -139,8 +141,9 @@ async def test_a_network_failure_is_a_fetch_error() -> None:
 async def test_a_non_json_answer_is_a_fetch_error() -> None:
     answers = {"110": httpx.Response(200, content=b"<html>maintenance</html>")}
     async with _client(_blizzard(answers)) as client:
-        with pytest.raises(PriceFetchError, match="not JSON"):
-            await client.house_auctions(110, commodities=False)
+        with pytest.raises(PriceFetchError, match="not a JSON object"):
+            async with client.house_auctions(110, commodities=False) as answer:
+                [row async for row in answer.auctions]
 
 
 def test_missing_credentials_fail_before_any_request() -> None:
@@ -225,20 +228,34 @@ async def test_a_mapped_house_the_index_lists_under_another_faction_or_not_at_al
     assert isinstance(missing, PriceFetchError) and "lists it as missing" in missing.reason
 
 
-async def test_the_parse_and_the_fold_run_off_the_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A house answer can be 64MB of JSON: parsing and folding it on the loop
-    would stall the scheduler's tick and heartbeat for seconds."""
-    offloaded: list[str] = []
-    real_to_thread = asyncio.to_thread
+async def test_a_big_answer_is_folded_while_the_event_loop_keeps_turning() -> None:
+    """A house answer can be 64MB of JSON: reading it must hand control back between chunks so the
+    scheduler's tick and heartbeat keep running."""
+    rows = [_commodity(4611, 3980 + n, 2) for n in range(20_000)]
+    body = json.dumps({"auctions": rows}).encode()
 
-    async def _to_thread(func: Callable[..., object], /, *args: object, **kwargs: object) -> object:
-        offloaded.append(func.__name__)
-        return await real_to_thread(func, *args, **kwargs)
+    async def chunks() -> AsyncIterator[bytes]:
+        for start in range(0, len(body), 8192):
+            yield body[start:start + 8192]
 
-    monkeypatch.setattr(asyncio, "to_thread", _to_thread)
-    answers = {"110/commodities": _json({"auctions": [_commodity(4611, 3980, 2)]})}
+    answers = {"110/commodities": httpx.Response(200, headers={"Last-Modified": SNAPSHOT}, content=chunks())}
+    turns = 0
+    done = asyncio.Event()
+
+    async def ticker() -> None:
+        nonlocal turns
+        while not done.is_set():
+            turns += 1
+            await asyncio.sleep(0)
+
     async with _client(_blizzard(answers)) as client:
+        watcher = asyncio.create_task(ticker())
         results = await fetch_with_client(client, [MappedHouse("pvp", "alliance", 110)])
+        done.set()
+        await watcher
 
-    assert isinstance(results[110], HousePrices)
-    assert offloaded == ["_auction_rows", "_fold", "_auction_rows", "_fold", "prices"]
+    house = results[110]
+    assert isinstance(house, HousePrices)
+    assert house.prices[0].listing_count == 20_000
+    # At least one turn per 8KB chunk (~60 of them): a whole-body parse would leave the ticker no turns.
+    assert turns > 20

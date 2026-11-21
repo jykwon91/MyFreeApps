@@ -25,6 +25,7 @@ from app.services.scheduling import scheduled_jobs
     ("body", "target", "attr"),
     [
         ("run_refresh_wow_prices", scheduled_jobs.price_refresh_service, "refresh_all"),
+        ("run_price_refresh_requests", scheduled_jobs.price_refresh_now_service, "run_requested"),
         ("run_record_server_status", scheduled_jobs.server_status_history_service, "record_all"),
         ("run_purge_server_status_history", scheduled_jobs.server_status_history_service, "purge_old"),
         ("run_purge_character_metrics", scheduled_jobs.character_store_service, "purge_old_metrics"),

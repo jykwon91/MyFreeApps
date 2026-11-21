@@ -2,9 +2,9 @@
 
 Every Blizzard house is its own server market, so houses are never pooled:
 each mapped house (``PRICE_SERVER_HOUSES``) gets its own aggregator over its
-commodities and item listings. A house is read one answer at a time (each is
-up to ~10 MB) and folded as it arrives, so only one answer's rows are in
-memory at once.
+commodities and item listings. A house is read one answer at a time and each
+answer is streamed: its rows are folded as they arrive, so no listing list is
+ever in memory.
 
 A house is all or nothing: if either of its answers fails, the house gets
 the error and its stored prices stay. A mapped house the index no longer
@@ -22,7 +22,6 @@ from app.services.wow.prices.auction_aggregator import AuctionAggregator
 from app.services.wow.prices.auction_listing import AuctionListing
 from app.services.wow.prices.auction_listing_parser import commodity_listing, item_listing
 from app.services.wow.prices.blizzard_auction_client import BlizzardAuctionClient
-from app.services.wow.prices.house_auctions import HouseAuctions
 from app.services.wow.prices.house_prices import HousePrices
 from app.services.wow.prices.mapped_house import MappedHouse
 from app.services.wow.prices.price_fetch_error import PriceFetchError
@@ -33,22 +32,20 @@ HouseResults = dict[int, HousePrices | PriceFetchError]
 PriceFetch = Callable[[], Awaitable[HouseResults]]
 
 
-def _fold(aggregator: AuctionAggregator, answer: HouseAuctions, *, commodities: bool) -> None:
-    parse = commodity_listing if commodities else item_listing
-    for raw in answer.auctions:
-        listing: AuctionListing | None = parse(raw)
-        if listing is not None:
-            aggregator.add(listing)
-
-
 async def read_house_prices(client: BlizzardAuctionClient, house_id: int) -> HousePrices:
-    """One house's prices over its commodities and item listings."""
+    """One house's prices over its commodities and item listings.
+
+    Each answer is folded row by row as it streams in, so no answer's rows are ever held.
+    """
     aggregator = AuctionAggregator()
     snapshot_at: datetime | None = None
     for commodities in (True, False):
-        answer = await client.house_auctions(house_id, commodities=commodities)
-        # Hundreds of thousands of listings: fold them off the event loop.
-        await asyncio.to_thread(_fold, aggregator, answer, commodities=commodities)
+        parse = commodity_listing if commodities else item_listing
+        async with client.house_auctions(house_id, commodities=commodities) as answer:
+            async for raw in answer.auctions:
+                listing: AuctionListing | None = parse(raw)
+                if listing is not None:
+                    aggregator.add(listing)
         if answer.snapshot_at is not None and (snapshot_at is None or answer.snapshot_at > snapshot_at):
             snapshot_at = answer.snapshot_at
     if snapshot_at is None:
