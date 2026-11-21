@@ -1,5 +1,7 @@
 import { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Settings } from "lucide-react";
+import { ModalDialog } from "@platform/ui";
 import {
   useGetCostSummaryQuery,
   useGetCostByUserQuery,
@@ -168,19 +170,28 @@ export default function CostMonitoring() {
       </div>
 
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSettings(false)}>
-          <div className="bg-card border rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="text-lg font-semibold">Alert Thresholds</h2>
-              <button onClick={() => setShowSettings(false)} className="text-muted-foreground hover:text-foreground">
-                &times;
-              </button>
-            </div>
-            <div className="p-6">
-              <ThresholdSettings onSaved={() => setShowSettings(false)} />
-            </div>
+        <ModalDialog
+          testId="cost-thresholds-dialog"
+          onClose={() => setShowSettings(false)}
+          closeOnBackdropClick
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          panelClassName="bg-card border rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-auto"
+        >
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <Dialog.Title className="text-lg font-semibold">Alert Thresholds</Dialog.Title>
+            <button
+              type="button"
+              onClick={() => setShowSettings(false)}
+              aria-label="Close alert thresholds"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
-        </div>
+          <div className="p-6">
+            <ThresholdSettings onSaved={() => setShowSettings(false)} />
+          </div>
+        </ModalDialog>
       )}
     </div>
   );

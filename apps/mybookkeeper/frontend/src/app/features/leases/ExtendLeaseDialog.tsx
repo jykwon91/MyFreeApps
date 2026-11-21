@@ -2,8 +2,7 @@ import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefu
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 const NOTES_MAX_LENGTH = 2000;

@@ -1,5 +1,6 @@
 /**
- * Tests for DocumentEditDialog's title: one over the backend's limit is kept, explained and not saved.
+ * Tests for DocumentEditDialog: a title over the backend's limit is kept, explained and not saved;
+ * Escape closes it.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -35,7 +36,7 @@ const DOCUMENT: Document = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
-describe("DocumentEditDialog title", () => {
+describe("DocumentEditDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updateMock.mockReturnValue({ unwrap: () => Promise.resolve(DOCUMENT) });
@@ -57,5 +58,17 @@ describe("DocumentEditDialog title", () => {
     fireEvent.change(title, { target: { value: "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH) } });
     await user.click(screen.getByRole("button", { name: /save changes/i }));
     await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("is a dialog named Edit Document that closes on Escape", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(<DocumentEditDialog document={DOCUMENT} open onOpenChange={onOpenChange} />);
+
+    expect(screen.getByRole("dialog", { name: "Edit Document" })).toContainElement(document.activeElement as HTMLElement);
+    await user.keyboard("{Escape}");
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

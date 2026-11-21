@@ -112,7 +112,43 @@ describe("TransactionForm source document and review reason", () => {
     resolve({ data: new Blob(["png"], { type: "image/png" }) });
     expect(await screen.findByRole("img", { name: "Source document" })).toBeInTheDocument();
     expect(button).toHaveAttribute("aria-disabled", "false");
-    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    // The open preview is a modal, so the form behind it is hidden from screen readers.
+    expect(screen.getByRole("status", { hidden: true })).toBeEmptyDOMElement();
+  });
+
+  it("shows the source document in a dialog named by its file that Escape closes, giving focus back", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.get).mockResolvedValue({ data: new Blob(["png"], { type: "image/png" }) });
+    renderForm(FLAGGED);
+    const button = screen.getByRole("button", { name: "Open source document roof-receipt.png" });
+
+    await user.click(button);
+    const dialog = await screen.findByRole("dialog", { name: "roof-receipt.png" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    expect(screen.getByRole("button", { name: "Close source document" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:source");
+    expect(button).toHaveFocus();
+  });
+
+  it("closes the source document on its close button or a click on the backdrop", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.get).mockResolvedValue({ data: new Blob(["png"], { type: "image/png" }) });
+    renderForm(FLAGGED);
+    const button = screen.getByRole("button", { name: "Open source document roof-receipt.png" });
+
+    await user.click(button);
+    await user.click(await screen.findByRole("button", { name: "Close source document" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(button);
+    await user.click(await screen.findByRole("img", { name: "Source document" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.click(screen.getByTestId("source-preview-backdrop"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("opens a PDF source document as a PDF", async () => {

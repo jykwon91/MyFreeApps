@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { useUndoSignedLeaseExtensionMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
 
 export interface UndoExtensionDialogProps {
   leaseId: string;

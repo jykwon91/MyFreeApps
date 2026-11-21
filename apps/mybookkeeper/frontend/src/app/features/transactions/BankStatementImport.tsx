@@ -6,8 +6,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
 import { bankImportSummary } from "@mybookkeeper/api-client/utils/bankImportSummary";
-import { Button } from "@platform/ui";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
+import { Button, ModalDialog } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 
 export interface BankStatementImportProps {

@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import ModalDialog from "./ModalDialog";
+import { ModalDialog } from "@platform/ui";
 import { FORM_DIALOG_WIDTH_CLASS } from "./form-dialog-width-class";
 import type { FormDialogWidth } from "@/shared/types/ui/form-dialog-width";
 

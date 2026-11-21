@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useNavigate } from "react-router-dom";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
 import ListingSelect from "@/app/features/listings/ListingSelect";
 import PagedSelect from "@/shared/components/ui/PagedSelect";
@@ -9,7 +9,6 @@ import { pagedListView } from "@/shared/lib/paged-list-view";
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
 import { LEASE_IMPORT_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
 import { leaseImportForm } from "@/shared/lib/lease-upload-form";
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";

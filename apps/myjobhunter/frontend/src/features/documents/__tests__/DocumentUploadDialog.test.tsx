@@ -7,6 +7,7 @@
  * - Mode toggle switches between file and text
  * - Text mode: calls createDocument mutation on submit
  * - Cancel: calls onOpenChange(false) and does NOT call mutation
+ * - Escape: calls onOpenChange(false)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -173,6 +174,17 @@ describe("DocumentUploadDialog", () => {
       expect(mockShowSuccess).toHaveBeenCalledWith("Document created");
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
+  });
+
+  it("is a dialog named Add Document that closes on Escape", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    renderDialog({ onOpenChange });
+
+    expect(screen.getByRole("dialog", { name: "Add Document" })).toContainElement(document.activeElement as HTMLElement);
+    await user.keyboard("{Escape}");
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it("does not call mutation when cancel is clicked without filling the form", async () => {

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import ModalDialog from "@/shared/components/ui/ModalDialog";
-import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/shared/lib/api";
