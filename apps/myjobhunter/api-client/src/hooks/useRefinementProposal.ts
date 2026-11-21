@@ -3,10 +3,12 @@ import { REFINEMENT_TOASTS } from "../constants/refinementToasts";
 import {
   useAcceptFlaggedMutation,
   useAcceptPendingMutation,
+  useNavigateRefinementMutation,
   useRequestAlternativeMutation,
   useSkipTargetMutation,
   useSupplyCustomRewriteMutation,
 } from "../store/resumeRefinementApi";
+import type { NavDirection } from "../types/resume-refinement/nav-direction";
 import type { RefinementProposalControls } from "../types/resume-refinement/refinement-proposal-controls";
 import type { RefinementProposalOptions } from "../types/resume-refinement/refinement-proposal-options";
 import type { RefinementSession } from "../types/resume-refinement/refinement-session";
@@ -14,11 +16,12 @@ import { SuggestionMode } from "../types/resume-refinement/suggestion-mode";
 
 /**
  * The suggestion card for the website and the phone: accept, accept what the fact guard held,
- * write my own, chat with the assistant, another take, skip. Each failure goes to `onError`, and
- * nothing typed is lost to one.
+ * write my own, chat with the assistant, another take, skip, and moving to the previous or next
+ * suggestion. They share one busy state, so a move and an answer are never both on their way.
+ * Each failure goes to `onError`, and nothing typed is lost to one.
  */
 export function useRefinementProposal(
-  session: Pick<RefinementSession, "id" | "turn_count">,
+  session: Pick<RefinementSession, "id" | "target_index" | "turn_count">,
   { onSuccess, onError, externalPending = false }: RefinementProposalOptions,
 ): RefinementProposalControls {
   const [mode, setMode] = useState<SuggestionMode>(SuggestionMode.VIEW);
@@ -34,14 +37,25 @@ export function useRefinementProposal(
   const [supplyCustom, custom] = useSupplyCustomRewriteMutation();
   const [requestAlternative, alternative] = useRequestAlternativeMutation();
   const [skipTarget, skipping] = useSkipTargetMutation();
+  const [navigateRefinement, navigation] = useNavigateRefinementMutation();
 
   // Cleared during render, in the same render the real turn arrives.
   if (pendingEcho && session.turn_count > pendingEcho.baselineTurnCount) {
     setPendingEcho(null);
   }
 
+  // Which suggestion an answer (or a reply, or another take) is for, so the server refuses it if the session has
+  // moved on since.
+  const answer = { id: session.id, seen_target_index: session.target_index, seen_turn_count: session.turn_count };
+
   const isPending =
-    accept.isLoading || flaggedAccept.isLoading || custom.isLoading || alternative.isLoading || skipping.isLoading || externalPending;
+    accept.isLoading ||
+    flaggedAccept.isLoading ||
+    custom.isLoading ||
+    alternative.isLoading ||
+    skipping.isLoading ||
+    navigation.isLoading ||
+    externalPending;
 
   async function run(action: () => Promise<unknown>, after: () => void): Promise<void> {
     try {
@@ -66,10 +80,11 @@ export function useRefinementProposal(
     isForcing: flaggedAccept.isLoading,
     isSubmittingCustom: custom.isLoading,
     isSkipping: skipping.isLoading,
+    isNavigating: navigation.isLoading,
     isRegenerating: alternative.isLoading || externalPending,
     accept: () =>
       run(
-        () => acceptPending(session.id).unwrap(),
+        () => acceptPending(answer).unwrap(),
         () => {
           onSuccess(REFINEMENT_TOASTS.applied);
           setMode(SuggestionMode.VIEW);
@@ -78,7 +93,7 @@ export function useRefinementProposal(
     // The backend records the confirmed phrases for the session, so the guard never flags them again.
     forceAccept: () =>
       run(
-        () => acceptFlagged(session.id).unwrap(),
+        () => acceptFlagged(answer).unwrap(),
         () => {
           onSuccess(REFINEMENT_TOASTS.applied);
           setMode(SuggestionMode.VIEW);
@@ -89,7 +104,7 @@ export function useRefinementProposal(
       const text = customText.trim();
       if (!text) return;
       await run(
-        () => supplyCustom({ id: session.id, user_text: text }).unwrap(),
+        () => supplyCustom({ ...answer, user_text: text }).unwrap(),
         () => {
           onSuccess(REFINEMENT_TOASTS.customApplied);
           setMode(SuggestionMode.VIEW);
@@ -104,14 +119,15 @@ export function useRefinementProposal(
       setComposerText("");
       setPendingEcho({ text, baselineTurnCount: session.turn_count });
       try {
-        await requestAlternative({ id: session.id, hint: text }).unwrap();
+        await requestAlternative({ ...answer, hint: text }).unwrap();
       } catch (error) {
         setPendingEcho(null);
         setComposerText(text);
         onError(error);
       }
     },
-    regenerate: () => run(() => requestAlternative({ id: session.id, hint: undefined }).unwrap(), () => undefined),
-    skip: () => run(() => skipTarget(session.id).unwrap(), () => setMode(SuggestionMode.VIEW)),
+    regenerate: () => run(() => requestAlternative({ ...answer, hint: undefined }).unwrap(), () => undefined),
+    skip: () => run(() => skipTarget(answer).unwrap(), () => setMode(SuggestionMode.VIEW)),
+    move: (direction: NavDirection) => run(() => navigateRefinement({ id: session.id, direction }).unwrap(), () => undefined),
   };
 }

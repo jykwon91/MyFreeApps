@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.resume_refinement.seen_suggestion import SeenSuggestion
+
 
 class ImprovementTarget(BaseModel):
     """One entry in the prioritized critique list.
@@ -104,19 +106,17 @@ class SessionStartRequest(BaseModel):
     )
 
 
-class TurnAcceptRequest(BaseModel):
-    """User accepts the pending AI proposal as-is."""
-
-    pass
+class TurnAcceptRequest(SeenSuggestion):
+    """User accepts the pending AI proposal as-is (or the guard-held one)."""
 
 
-class TurnCustomRequest(BaseModel):
+class TurnCustomRequest(SeenSuggestion):
     """User supplies their own rewrite instead of the AI proposal."""
 
     user_text: str = Field(..., min_length=1, max_length=4000)
 
 
-class TurnAlternativeRequest(BaseModel):
+class TurnAlternativeRequest(SeenSuggestion):
     """User asks Claude for a different proposal for the same target.
 
     Optional ``hint`` lets the user nudge the regenerated proposal
@@ -126,10 +126,8 @@ class TurnAlternativeRequest(BaseModel):
     hint: str | None = Field(default=None, max_length=500)
 
 
-class TurnSkipRequest(BaseModel):
+class TurnSkipRequest(SeenSuggestion):
     """User skips the current target without modifying it."""
-
-    pass
 
 
 class SessionCompleteRequest(BaseModel):

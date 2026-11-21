@@ -20,7 +20,7 @@ import { Text, View } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as MESSAGES, DISMISS_SHEET_OPTIONS, SKIP_DISMISS_REASON } from "../../constants/discoveredJob";
 import type { DiscoveredJobCardProps } from "../../types/DiscoveredJobCardProps";
 import DismissedJobActions from "./DismissedJobActions";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /**
  * A discovered posting as the website's card shows it, with Open, Apply, Save and Dismiss (with a

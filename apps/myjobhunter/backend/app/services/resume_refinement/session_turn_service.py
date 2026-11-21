@@ -14,9 +14,16 @@ Public entry points (called from ``app.api.resume_refinement``):
   after the cursor and generate a proposal for it.
 
 Each "advance" entry point has the same shape:
+0. Refuse (``SuggestionChanged``) when the client says it was showing a
+   suggestion the session has since moved past (accept, accept-flagged,
+   custom, alternative and skip take ``seen_target_index`` /
+   ``seen_turn_count``). Every entry point here loads the session row
+   locked, so two writes in flight at once serialize: the second waits,
+   then sees the position the first wrote and is refused.
 1. Apply the user's resolution to the draft (or skip).
 2. Bump ``target_index`` (except for ``request_alternative``).
-3. Append a turn row recording what just happened.
+3. Append a turn row recording what just happened. Steps 1-3 are staged
+   and land in one commit, which releases the lock before step 4.
 4. Generate the NEXT proposal (or mark complete if no targets remain).
 5. Return the refreshed session.
 """
@@ -37,6 +44,9 @@ from app.services.resume_refinement.errors import (
     NoMoreTargets,
     NoPendingProposal,
 )
+from app.services.resume_refinement.seen_suggestion_check import (
+    ensure_seen_suggestion_is_current,
+)
 from app.services.resume_refinement.session_helpers import (
     _apply_rewrite,
     _current_target,
@@ -52,9 +62,16 @@ async def accept_pending(
     db: AsyncSession,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
+    seen_target_index: int | None = None,
+    seen_turn_count: int | None = None,
 ) -> ResumeRefinementSession:
     """Apply ``pending_proposal`` to the draft, advance, and queue the next."""
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
+    ensure_seen_suggestion_is_current(
+        session,
+        seen_target_index=seen_target_index,
+        seen_turn_count=seen_turn_count,
+    )
     if not session.pending_proposal:
         raise NoPendingProposal(
             "No pending AI proposal to accept. Request a new one or skip."
@@ -70,7 +87,7 @@ async def accept_pending(
     target_section = session.pending_target_section
 
     session = await session_repo.apply_user_resolution(
-        db, session, new_draft=new_draft, advance_target=True,
+        db, session, new_draft=new_draft, advance_target=True, commit=False,
     )
     await turn_repo.append(
         db,
@@ -80,7 +97,9 @@ async def accept_pending(
         target_section=target_section,
         proposed_text=accepted_text,
         draft_after=new_draft,
+        commit=False,
     )
+    session = await session_repo.commit_staged(db, session)
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
@@ -93,6 +112,8 @@ async def accept_flagged(
     db: AsyncSession,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
+    seen_target_index: int | None = None,
+    seen_turn_count: int | None = None,
 ) -> ResumeRefinementSession:
     """Apply a guard-held proposal after explicit user confirmation.
 
@@ -101,18 +122,18 @@ async def accept_flagged(
     facts (so they never re-flag), and the held proposal is applied to
     the draft exactly like a normal accept.
     """
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
+    ensure_seen_suggestion_is_current(
+        session,
+        seen_target_index=seen_target_index,
+        seen_turn_count=seen_turn_count,
+    )
     if not session.pending_flagged_proposal:
         raise NoPendingProposal(
             "No guard-held proposal to apply. Request a new suggestion instead."
         )
 
     flagged_facts = list(session.pending_guard_flagged or [])
-    if flagged_facts:
-        session = await session_repo.add_confirmed_facts(
-            db, session, facts=flagged_facts,
-        )
-
     target = _current_target(session)
     new_draft = _apply_rewrite(
         session.current_draft,
@@ -123,8 +144,12 @@ async def accept_flagged(
     target_section = session.pending_target_section
 
     session = await session_repo.apply_user_resolution(
-        db, session, new_draft=new_draft, advance_target=True,
+        db, session, new_draft=new_draft, advance_target=True, commit=False,
     )
+    if flagged_facts:
+        session = await session_repo.add_confirmed_facts(
+            db, session, facts=flagged_facts, commit=False,
+        )
     await turn_repo.append(
         db,
         session_id=session.id,
@@ -133,7 +158,9 @@ async def accept_flagged(
         target_section=target_section,
         proposed_text=accepted_text,
         draft_after=new_draft,
+        commit=False,
     )
+    session = await session_repo.commit_staged(db, session)
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
@@ -147,9 +174,16 @@ async def accept_custom(
     user_id: uuid.UUID,
     session_id: uuid.UUID,
     user_text: str,
+    seen_target_index: int | None = None,
+    seen_turn_count: int | None = None,
 ) -> ResumeRefinementSession:
     """Apply user-supplied text instead of the pending AI proposal."""
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
+    ensure_seen_suggestion_is_current(
+        session,
+        seen_target_index=seen_target_index,
+        seen_turn_count=seen_turn_count,
+    )
     target = _current_target(session)
     if target is None:
         raise NoMoreTargets()
@@ -162,7 +196,7 @@ async def accept_custom(
     target_section = session.pending_target_section or target.get("section")
 
     session = await session_repo.apply_user_resolution(
-        db, session, new_draft=new_draft, advance_target=True,
+        db, session, new_draft=new_draft, advance_target=True, commit=False,
     )
     await turn_repo.append(
         db,
@@ -172,7 +206,9 @@ async def accept_custom(
         target_section=target_section,
         user_text=user_text,
         draft_after=new_draft,
+        commit=False,
     )
+    session = await session_repo.commit_staged(db, session)
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
@@ -186,9 +222,16 @@ async def request_alternative(
     user_id: uuid.UUID,
     session_id: uuid.UUID,
     hint: str | None,
+    seen_target_index: int | None = None,
+    seen_turn_count: int | None = None,
 ) -> ResumeRefinementSession:
     """Regenerate the proposal for the same target without advancing."""
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
+    ensure_seen_suggestion_is_current(
+        session,
+        seen_target_index=seen_target_index,
+        seen_turn_count=seen_turn_count,
+    )
     target = _current_target(session)
     if target is None:
         raise NoMoreTargets()
@@ -202,7 +245,7 @@ async def request_alternative(
     flagged_facts = list(session.pending_guard_flagged or [])
     if hint and hint.strip() and flagged_facts:
         session = await session_repo.add_confirmed_facts(
-            db, session, facts=flagged_facts,
+            db, session, facts=flagged_facts, commit=False,
         )
 
     await turn_repo.append(
@@ -212,16 +255,19 @@ async def request_alternative(
         role="user_request_alternative",
         target_section=target.get("section"),
         user_text=hint,
+        commit=False,
     )
-    session = await session_repo.bump_turn_count(db, session)
+    session = await session_repo.bump_turn_count(db, session, commit=False)
 
     # Drop the cached proposal so this regeneration's output replaces
     # the stale one. Without invalidation, a future navigate-back to
     # this target would surface the OLD proposal even though the
     # operator explicitly asked for a fresh take.
     session = await session_repo.invalidate_cached_proposal(
-        db, session, target_index=session.target_index,
+        db, session, target_index=session.target_index, commit=False,
     )
+    # One commit for all of it, which releases the row lock before the Claude call.
+    session = await session_repo.commit_staged(db, session)
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=hint, use_cache=False,
@@ -234,16 +280,23 @@ async def skip_target(
     db: AsyncSession,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
+    seen_target_index: int | None = None,
+    seen_turn_count: int | None = None,
 ) -> ResumeRefinementSession:
     """Skip the current target without modifying the draft."""
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
+    ensure_seen_suggestion_is_current(
+        session,
+        seen_target_index=seen_target_index,
+        seen_turn_count=seen_turn_count,
+    )
     target = _current_target(session)
     target_section = session.pending_target_section or (
         target.get("section") if target else None
     )
 
     session = await session_repo.apply_user_resolution(
-        db, session, new_draft=session.current_draft, advance_target=True,
+        db, session, new_draft=session.current_draft, advance_target=True, commit=False,
     )
     await turn_repo.append(
         db,
@@ -252,7 +305,9 @@ async def skip_target(
         role="user_skip",
         target_section=target_section,
         draft_after=session.current_draft,
+        commit=False,
     )
+    session = await session_repo.commit_staged(db, session)
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
@@ -279,8 +334,12 @@ async def navigate(
         SessionNotFound / SessionNotActive: standard load failures.
         ValueError: ``direction`` is not "next" / "prev", OR the move
             would step out of bounds.
+
+    Loads the session row locked, like the answers, so a move and an
+    answer in flight at once run one after the other. Moving commits,
+    which releases the lock before any Claude call.
     """
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
     targets = session.improvement_targets or []
     if not targets:
         raise NoMoreTargets()
@@ -349,8 +408,11 @@ async def create_target_from_line(
     cursor (not appended) so the progress bar's "resolved" count stays
     accurate, the cursor moves to it, and a proposal is generated
     on-demand (user targets are never prefetched).
+
+    Loads the session row locked, like the answers; the turn row and the
+    new target land in one commit, which releases it before any Claude call.
     """
-    session = await _load_active(db, session_id, user_id)
+    session = await _load_active(db, session_id, user_id, for_update=True)
     normalized = _normalize_line(current_text)
     if not normalized:
         raise ValueError("The selected line is empty.")
@@ -393,6 +455,7 @@ async def create_target_from_line(
         role="user_created_target",
         target_section=new_target["section"],
         user_text=normalized,
+        commit=False,
     )
     session = await session_target_repo.insert_target_at(
         db, session, target=new_target, insert_at=insert_at,

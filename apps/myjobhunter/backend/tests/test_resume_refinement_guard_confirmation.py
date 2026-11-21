@@ -99,19 +99,27 @@ async def test_clarify_answer_records_confirmed_facts() -> None:
     )
     db = _mock_db()
     confirmed: list[list[str]] = []
+    generated_after_commits: list[int] = []
 
-    async def fake_add_confirmed_facts(_db, sess, *, facts):
+    async def fake_add_confirmed_facts(_db, sess, *, facts, commit):
+        assert commit is False
         confirmed.append(list(facts))
         sess.confirmed_facts = list(sess.confirmed_facts) + list(facts)
         return sess
 
+    async def fake_generate(*_args, **_kwargs):
+        generated_after_commits.append(db.commit.await_count)
+        return session
+
+    append = AsyncMock()
+    invalidate = AsyncMock(return_value=session)
     with (
         patch.object(session_turn_service, "_load_active", new=AsyncMock(return_value=session)),
-        patch.object(session_turn_service, "_generate_next_proposal", new=AsyncMock(return_value=session)),
+        patch.object(session_turn_service, "_generate_next_proposal", new=fake_generate),
         patch.object(session_turn_service, "_with_turns", new=AsyncMock(return_value=session)),
         patch.object(session_service.session_repo, "add_confirmed_facts", new=fake_add_confirmed_facts),
-        patch.object(session_service.session_repo, "invalidate_cached_proposal", new=AsyncMock(return_value=session)),
-        patch.object(session_service.turn_repo, "append", new=AsyncMock()),
+        patch.object(session_service.session_repo, "invalidate_cached_proposal", new=invalidate),
+        patch.object(session_service.turn_repo, "append", new=append),
     ):
         await session_turn_service.request_alternative(
             db=db,
@@ -121,6 +129,11 @@ async def test_clarify_answer_records_confirmed_facts() -> None:
         )
 
     assert confirmed == [["40%", "Hooli"]]
+    # The facts, the turn row, the turn count and the cache drop land in one
+    # commit, made before the Claude call so the row lock is free during it.
+    assert append.await_args.kwargs["commit"] is False
+    assert invalidate.await_args.kwargs["commit"] is False
+    assert generated_after_commits == [1]
 
 
 @pytest.mark.asyncio
@@ -195,22 +208,32 @@ async def test_accept_flagged_applies_held_proposal_and_confirms() -> None:
     applied: dict = {}
     turns: list[dict] = []
 
-    async def fake_add_confirmed_facts(_db, sess, *, facts):
+    staged: list[bool] = []
+    generated_after_commits: list[int] = []
+
+    async def fake_add_confirmed_facts(_db, sess, *, facts, commit):
+        staged.append(commit)
         confirmed.append(list(facts))
         return sess
 
-    async def fake_apply_user_resolution(_db, sess, *, new_draft, advance_target):
+    async def fake_apply_user_resolution(_db, sess, *, new_draft, advance_target, commit):
+        staged.append(commit)
         applied["new_draft"] = new_draft
         applied["advance_target"] = advance_target
         sess.current_draft = new_draft
         return sess
 
     async def fake_turn_append(_db, **kwargs):
+        staged.append(kwargs["commit"])
         turns.append(kwargs)
+
+    async def fake_generate(*_args, **_kwargs):
+        generated_after_commits.append(db.commit.await_count)
+        return session
 
     with (
         patch.object(session_turn_service, "_load_active", new=AsyncMock(return_value=session)),
-        patch.object(session_turn_service, "_generate_next_proposal", new=AsyncMock(return_value=session)),
+        patch.object(session_turn_service, "_generate_next_proposal", new=fake_generate),
         patch.object(session_turn_service, "_with_turns", new=AsyncMock(return_value=session)),
         patch.object(session_service.session_repo, "add_confirmed_facts", new=fake_add_confirmed_facts),
         patch.object(session_service.session_repo, "apply_user_resolution", new=fake_apply_user_resolution),
@@ -231,6 +254,10 @@ async def test_accept_flagged_applies_held_proposal_and_confirms() -> None:
     # explicit confirmation.
     assert turns and turns[0]["role"] == "user_accept_flagged"
     assert turns[0]["proposed_text"] == "new text with 40% improvement"
+    # The advance, the confirmed facts and the turn row are staged and land in
+    # one commit, made before the next proposal's Claude call.
+    assert staged == [False, False, False]
+    assert generated_after_commits == [1]
 
 
 @pytest.mark.asyncio

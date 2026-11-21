@@ -27,8 +27,9 @@ async def append(
     draft_after: str | None = None,
     tokens_in: int = 0,
     tokens_out: int = 0,
+    commit: bool = True,
 ) -> ResumeRefinementTurn:
-    """Insert one turn row and return it."""
+    """Insert one turn row and return it. ``commit=False`` only stages it in the caller's transaction."""
     turn = ResumeRefinementTurn(
         session_id=session_id,
         turn_index=turn_index,
@@ -44,8 +45,9 @@ async def append(
     )
     db.add(turn)
     await db.flush()
-    await db.commit()
-    await db.refresh(turn)
+    if commit:
+        await db.commit()
+        await db.refresh(turn)
     return turn
 
 

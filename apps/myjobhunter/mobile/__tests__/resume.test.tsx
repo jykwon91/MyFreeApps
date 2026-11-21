@@ -206,7 +206,8 @@ describe("working through the suggestions", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.useMine }));
 
     expect(await screen.findByText(REFINEMENT_TOASTS.customApplied)).toBeTruthy();
-    expect(bodiesTo(sent, `POST ${SESSION}/custom`)).toEqual([{ user_text: "Shipped 12 APIs" }]);
+    // It names the suggestion it was written for, so the server refuses it if that one has moved on.
+    expect(bodiesTo(sent, `POST ${SESSION}/custom`)).toEqual([{ user_text: "Shipped 12 APIs", seen_target_index: 0, seen_turn_count: 1 }]);
     await waitFor(() => expect(screen.queryByLabelText(MESSAGES.customLabel)).toBeNull());
   });
 
@@ -235,7 +236,10 @@ describe("working through the suggestions", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.anotherTake }));
     expect(screen.getByRole("button", { name: MESSAGES.askingButton })).toBeDisabled();
     await alternative.answer(1, { status: 200, data: held.current });
-    expect(bodiesTo(sent, `POST ${SESSION}/alternative`)).toEqual([{ hint: "no em dashes" }, { hint: null }]);
+    expect(bodiesTo(sent, `POST ${SESSION}/alternative`)).toEqual([
+      { hint: "no em dashes", seen_target_index: 0, seen_turn_count: 1 },
+      { hint: null, seen_target_index: 0, seen_turn_count: 3 },
+    ]);
   });
 
   it("moves between suggestions without answering them", async () => {
@@ -247,6 +251,21 @@ describe("working through the suggestions", () => {
     expect(await screen.findByText(MESSAGES.suggestionOf(2, 2))).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.next })).toBeDisabled();
     expect(bodiesTo(sent, `POST ${SESSION}/navigate`)).toEqual([{ direction: "next" }]);
+  });
+
+  it("can't be answered while a move is on its way, so a move and an answer never go together", async () => {
+    const navigation = heldReplies();
+    const { held, sent } = await openWithSession(refinementSessionRecord(), { [`POST ${SESSION}/navigate`]: navigation.route });
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.next }));
+    expect(screen.getByRole("button", { name: MESSAGES.accept })).toBeDisabled();
+    expect(screen.getByRole("button", { name: MESSAGES.skip })).toBeDisabled();
+    expect(screen.getByRole("button", { name: MESSAGES.writeMyOwn })).toBeDisabled();
+
+    await navigation.answer(0, { status: 200, data: { ...held.current, target_index: 1 } });
+    expect(await screen.findByText(MESSAGES.suggestionOf(2, 2))).toBeTruthy();
+    expect(screen.getByRole("button", { name: MESSAGES.accept })).toBeEnabled();
+    expect(bodiesTo(sent, `POST ${SESSION}/accept`)).toEqual([]);
   });
 
   it("answers a held rewrite's question by confirming it, and offers Profile for a wrong fact", async () => {

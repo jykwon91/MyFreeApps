@@ -20,7 +20,7 @@ import { REFRESH_FREQUENCY_OPTIONS } from "../../constants/refreshFrequency";
 import { SAVED_SEARCH_MESSAGES as MESSAGES } from "../../constants/savedSearches";
 import type { SavedSearchRowProps } from "../../types/SavedSearchRowProps";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /** A saved search as the website lists it: its name and query, schedule and last error, with Refresh, Edit and Remove. */
 export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSearchRowProps) {

@@ -1,4 +1,4 @@
-import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
+import { refinementAnswerErrorMessage } from "@/lib/refinementAnswerErrorMessage";
 import { useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
@@ -37,7 +37,10 @@ export default function PendingProposalCard({
 }: PendingProposalCardProps) {
   const proposal = useRefinementProposal(session, {
     onSuccess: showSuccess,
-    onError: (err) => showError(aiActionErrorMessage(err, "resumeRefinement")),
+    onError: (err) => {
+      const message = refinementAnswerErrorMessage(err);
+      if (message) showError(message);
+    },
     externalPending,
   });
   const pendingEcho = proposal.pendingEcho;
@@ -89,10 +92,10 @@ export default function PendingProposalCard({
         </h2>
         <div className="flex items-center gap-2 shrink-0">
           <NavigationButtons
-            sessionId={session.id}
             targetIndex={session.target_index}
             totalTargets={totalTargets}
             isPending={isPending}
+            onMove={proposal.move}
           />
         </div>
       </header>

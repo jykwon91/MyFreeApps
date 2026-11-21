@@ -8,7 +8,7 @@ import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { REMOTE_CHOICES } from "../../constants/remoteChoices";
 import type { RemotePreferenceFieldProps } from "../../types/RemotePreferenceFieldProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /**
  * Saves as soon as a choice is tapped. The tapped choice shows at once and stays until the saved

@@ -10,7 +10,7 @@ import { useDispatch } from "react-redux";
 import { Text, View } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as MESSAGES } from "../../constants/discoveredJob";
 import type { DismissedJobActionsProps } from "../../types/DismissedJobActionsProps";
-import { repeatableWriteFailure } from "../../lib/writeFailure";
+import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /**
  * A dismissed posting's footer in the Dismissed view, as the website's: when (and why) it was

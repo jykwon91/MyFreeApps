@@ -162,14 +162,18 @@ async def invalidate_cached_proposal(
     session: ResumeRefinementSession,
     *,
     target_index: int,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Drop the cached proposal for ``target_index`` (used by
     ``request_alternative`` so the next ``cache_proposal`` write is
-    the regenerated value).
+    the regenerated value). ``commit=False`` only stages the change.
     """
     existing = dict(session.proposal_cache or {})
     if str(target_index) in existing:
         del existing[str(target_index)]
         session.proposal_cache = existing
+        if not commit:
+            await db.flush()
+            return session
         return await _persist(db, session)
     return session

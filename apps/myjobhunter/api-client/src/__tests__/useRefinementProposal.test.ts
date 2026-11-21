@@ -4,6 +4,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { REFINEMENT_TOASTS } from "../constants/refinementToasts";
 import { useRefinementProposal } from "../hooks/useRefinementProposal";
+import { NavDirection } from "../types/resume-refinement/nav-direction";
 import { SuggestionMode } from "../types/resume-refinement/suggestion-mode";
 
 type Trigger = ReturnType<typeof vi.fn>;
@@ -18,6 +19,7 @@ const api = vi.hoisted(() => {
     custom: mutation(),
     alternative: mutation(),
     skip: mutation(),
+    navigate: mutation(),
   };
 });
 
@@ -27,6 +29,7 @@ vi.mock("../store/resumeRefinementApi", () => ({
   useSupplyCustomRewriteMutation: () => [api.custom.trigger, api.custom.state],
   useRequestAlternativeMutation: () => [api.alternative.trigger, api.alternative.state],
   useSkipTargetMutation: () => [api.skip.trigger, api.skip.state],
+  useNavigateRefinementMutation: () => [api.navigate.trigger, api.navigate.state],
 }));
 
 function resolves(trigger: Trigger): void {
@@ -37,10 +40,13 @@ function rejects(trigger: Trigger, error: unknown): void {
   trigger.mockReturnValue({ unwrap: () => Promise.reject(error) });
 }
 
+// The suggestion on screen in setup(): target 3, turn count 2.
+const SHOWN = { id: "s1", seen_target_index: 3, seen_turn_count: 2 };
+
 function setup(turnCount = 2) {
   const onSuccess = vi.fn();
   const onError = vi.fn();
-  const hook = renderHook(({ count }) => useRefinementProposal({ id: "s1", turn_count: count }, { onSuccess, onError }), {
+  const hook = renderHook(({ count }) => useRefinementProposal({ id: "s1", target_index: 3, turn_count: count }, { onSuccess, onError }), {
     initialProps: { count: turnCount },
   });
   return { ...hook, onSuccess, onError };
@@ -55,10 +61,10 @@ describe("useRefinementProposal", () => {
     }
   });
 
-  it("accepts the suggestion and says so", async () => {
+  it("accepts the suggestion on screen, naming it so a stale tap is refused, and says so", async () => {
     const { result, onSuccess } = setup();
     await act(() => result.current.accept());
-    expect(api.accept.trigger).toHaveBeenCalledWith("s1");
+    expect(api.accept.trigger).toHaveBeenCalledWith(SHOWN);
     expect(onSuccess).toHaveBeenCalledWith(REFINEMENT_TOASTS.applied);
   });
 
@@ -70,7 +76,7 @@ describe("useRefinementProposal", () => {
     });
     expect(result.current.mode).toBe(SuggestionMode.CUSTOM);
     await act(() => result.current.submitCustom());
-    expect(api.custom.trigger).toHaveBeenCalledWith({ id: "s1", user_text: "My words" });
+    expect(api.custom.trigger).toHaveBeenCalledWith({ ...SHOWN, user_text: "My words" });
     expect(onSuccess).toHaveBeenCalledWith(REFINEMENT_TOASTS.customApplied);
     expect(result.current.mode).toBe(SuggestionMode.VIEW);
     expect(result.current.customText).toBe("");
@@ -104,7 +110,7 @@ describe("useRefinementProposal", () => {
     const { result, rerender } = setup(2);
     act(() => result.current.setComposerText(" shorter please "));
     await act(() => result.current.send());
-    expect(api.alternative.trigger).toHaveBeenCalledWith({ id: "s1", hint: "shorter please" });
+    expect(api.alternative.trigger).toHaveBeenCalledWith({ ...SHOWN, hint: "shorter please" });
     expect(result.current.composerText).toBe("");
     expect(result.current.pendingEcho).toBe("shorter please");
 
@@ -129,11 +135,11 @@ describe("useRefinementProposal", () => {
     const { result, onSuccess } = setup();
     act(() => result.current.setComposerText("draft"));
     await act(() => result.current.regenerate());
-    expect(api.alternative.trigger).toHaveBeenCalledWith({ id: "s1", hint: undefined });
+    expect(api.alternative.trigger).toHaveBeenCalledWith({ ...SHOWN, hint: undefined });
     await act(() => result.current.skip());
-    expect(api.skip.trigger).toHaveBeenCalledWith("s1");
+    expect(api.skip.trigger).toHaveBeenCalledWith(SHOWN);
     await act(() => result.current.forceAccept());
-    expect(api.flagged.trigger).toHaveBeenCalledWith("s1");
+    expect(api.flagged.trigger).toHaveBeenCalledWith(SHOWN);
     expect(onSuccess).toHaveBeenCalledWith(REFINEMENT_TOASTS.applied);
     expect(result.current.composerText).toBe("");
   });
@@ -146,9 +152,28 @@ describe("useRefinementProposal", () => {
 
     api.skip.state.isLoading = false;
     const external = renderHook(() =>
-      useRefinementProposal({ id: "s1", turn_count: 0 }, { onSuccess: vi.fn(), onError: vi.fn(), externalPending: true }),
+      useRefinementProposal({ id: "s1", target_index: 0, turn_count: 0 }, { onSuccess: vi.fn(), onError: vi.fn(), externalPending: true }),
     );
     expect(external.result.current.isPending).toBe(true);
     expect(external.result.current.isRegenerating).toBe(true);
+  });
+
+  it("moves to another suggestion, and is busy while it does so no answer goes with it", async () => {
+    const { result } = setup();
+    await act(() => result.current.move(NavDirection.NEXT));
+    expect(api.navigate.trigger).toHaveBeenCalledWith({ id: "s1", direction: NavDirection.NEXT });
+
+    api.navigate.state.isLoading = true;
+    const moving = setup();
+    expect(moving.result.current.isNavigating).toBe(true);
+    expect(moving.result.current.isPending).toBe(true);
+  });
+
+  it("hands a failed move to onError", async () => {
+    const error = { status: 429 };
+    rejects(api.navigate.trigger, error);
+    const { result, onError } = setup();
+    await act(() => result.current.move(NavDirection.PREV));
+    expect(onError).toHaveBeenCalledWith(error);
   });
 });

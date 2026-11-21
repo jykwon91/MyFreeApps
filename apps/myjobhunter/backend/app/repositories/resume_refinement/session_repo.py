@@ -30,6 +30,29 @@ from app.repositories.resume_refinement.session_proposal_cache_repo import (
 _RECENT_LIMIT = 25
 
 
+async def _write(
+    db: AsyncSession, session: ResumeRefinementSession, *, commit: bool,
+) -> ResumeRefinementSession:
+    """Flush ``session``; with ``commit``, also commit and reload it.
+
+    ``commit=False`` stages the write in the caller's transaction, so several
+    writes made under the session's row lock land in one commit (see
+    ``commit_staged``).
+    """
+    await db.flush()
+    if commit:
+        await db.commit()
+        await db.refresh(session)
+    return session
+
+
+async def commit_staged(
+    db: AsyncSession, session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Commit every write staged with ``commit=False``, releasing the row lock."""
+    return await _write(db, session, commit=True)
+
+
 async def create(
     db: AsyncSession,
     *,
@@ -56,14 +79,22 @@ async def get_by_id_for_user(
     db: AsyncSession,
     session_id: uuid.UUID,
     user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> ResumeRefinementSession | None:
-    """Return a session scoped to the given user, or None."""
-    result = await db.execute(
-        select(ResumeRefinementSession).where(
-            ResumeRefinementSession.id == session_id,
-            ResumeRefinementSession.user_id == user_id,
-        )
+    """Return a session scoped to the given user, or None.
+
+    ``for_update`` locks the row until the next commit, so two answers to
+    one suggestion run one after the other: the second waits, then reads
+    the position the first one wrote.
+    """
+    stmt = select(ResumeRefinementSession).where(
+        ResumeRefinementSession.id == session_id,
+        ResumeRefinementSession.user_id == user_id,
     )
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -180,6 +211,7 @@ async def apply_user_resolution(
     *,
     new_draft: str,
     advance_target: bool,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Clear pending state, persist the new draft, optionally bump target_index."""
     session.current_draft = new_draft
@@ -192,10 +224,7 @@ async def apply_user_resolution(
     if advance_target:
         session.target_index += 1
     session.turn_count += 1
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def set_target_index(
@@ -249,6 +278,7 @@ async def add_confirmed_facts(
     session: ResumeRefinementSession,
     *,
     facts: list[str],
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Append user-confirmed facts to the session-level allowlist.
 
@@ -264,10 +294,7 @@ async def add_confirmed_facts(
             existing.append(cleaned)
             seen.add(cleaned.lower())
     session.confirmed_facts = existing
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def clear_pending_state(
@@ -294,14 +321,13 @@ async def clear_pending_state(
 async def bump_turn_count(
     db: AsyncSession,
     session: ResumeRefinementSession,
+    *,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Persist a turn_count increment for a user action that appends a
     turn row without going through ``apply_user_resolution``."""
     session.turn_count += 1
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | None:

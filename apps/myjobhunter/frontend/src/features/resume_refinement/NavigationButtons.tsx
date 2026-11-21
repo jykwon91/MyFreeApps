@@ -1,21 +1,18 @@
-import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { showError } from "@platform/ui";
-import { useNavigateRefinementMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { NavDirection } from "@myjobhunter/api-client/types/resume-refinement/nav-direction";
 
 interface NavigationButtonsProps {
-  sessionId: string;
   /** Zero-based index of the current target. */
   targetIndex: number;
   /** Total number of improvement targets in the session. */
   totalTargets: number;
   /**
-   * True while ANY mutation on the session is in flight (accept,
-   * skip, etc.). The navigation buttons share that disabled state so
-   * the operator can't fire two mutations at once.
+   * True while ANY action on the session is in flight, a move
+   * included. The answer buttons share that state, so a move and an
+   * answer are never both on their way.
    */
   isPending: boolean;
+  onMove: (direction: NavDirection) => void;
 }
 
 /**
@@ -24,30 +21,20 @@ interface NavigationButtonsProps {
  * the session boundaries (first / last target).
  */
 export default function NavigationButtons({
-  sessionId,
   targetIndex,
   totalTargets,
   isPending,
+  onMove,
 }: NavigationButtonsProps) {
-  const [navigate, navState] = useNavigateRefinementMutation();
   const atFirst = targetIndex <= 0;
   const atLast = targetIndex >= totalTargets - 1;
-  const busy = isPending || navState.isLoading;
-
-  async function move(direction: NavDirection) {
-    try {
-      await navigate({ id: sessionId, direction }).unwrap();
-    } catch (err) {
-      showError(aiActionErrorMessage(err, "resumeRefinement"));
-    }
-  }
 
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
-        onClick={() => move(NavDirection.PREV)}
-        disabled={busy || atFirst}
+        onClick={() => onMove(NavDirection.PREV)}
+        disabled={isPending || atFirst}
         aria-label="Previous suggestion"
         className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
       >
@@ -56,8 +43,8 @@ export default function NavigationButtons({
       </button>
       <button
         type="button"
-        onClick={() => move(NavDirection.NEXT)}
-        disabled={busy || atLast}
+        onClick={() => onMove(NavDirection.NEXT)}
+        disabled={isPending || atLast}
         aria-label="Next suggestion"
         className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
       >

@@ -23,6 +23,7 @@ vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
   useSupplyCustomRewriteMutation: () => idleMutation(),
   useRequestAlternativeMutation: () => [requestAlternative, { isLoading: false }],
   useSkipTargetMutation: () => idleMutation(),
+  useNavigateRefinementMutation: () => idleMutation(),
 }));
 
 vi.mock("@/features/resume_refinement/NavigationButtons", () => ({ default: () => null }));

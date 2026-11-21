@@ -118,7 +118,8 @@ async def test_navigate_cache_hit_skips_claude_call() -> None:
     db = MagicMock()
     rewrite_mock = AsyncMock(side_effect=AssertionError("Claude must NOT be called"))
 
-    async def fake_load_active(_db, session_id, user_id):
+    async def fake_load_active(_db, session_id, user_id, *, for_update=False):
+        assert for_update is True
         return cached_session
 
     async def fake_set_target_index(_db, session, *, new_index):
@@ -186,7 +187,8 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
     session = _fake_session(targets=targets, target_index=0, proposal_cache={})
     db = MagicMock()
 
-    async def fake_load_active(_db, session_id, user_id):
+    async def fake_load_active(_db, session_id, user_id, *, for_update=False):
+        assert for_update is True
         return session
 
     async def fake_set_target_index(_db, sess, *, new_index):
