@@ -98,7 +98,6 @@
 "48":["Blackfathom Deeps","dungeon",22,22,10,1440,16.4,10.9],
 "70":["Uldaman","dungeon",35,35,30,1432,34.8,85.1],
 "189":["Scarlet Monastery","dungeon",30,30,20,1420,85.7,31.9],
-"229":["Blackrock Spire","dungeon",53,53,45,1428,33.2,24.9],
 "230":["Blackrock Depths","dungeon",48,48,40,1427,27.6,72.4],
 "249":["Onyxia's Lair","raid",60,60,50,1445,52.9,78.2],
 "289":["Scholomance","dungeon",57,57,45,1422,69.0,72.7],
@@ -181,7 +180,6 @@
 "18371":{"instance":{"mobs":[["Magister Kalendris",60,60,20.0,429,"boss"]],"more":0}},
 "18435":{"vendors":[[12799,"Sergeant Ba'sha","Accessories Quartermaster",1454,"",41.5,68.6,"H",0,0]]},
 "18691":{"instance":{"mobs":[["Vectus",60,60,7.0,289,"boss"]],"more":0}},
-"18755":{"instance":{"mobs":[["Lord Hel'nurath",62,62,25.0,429,"boss"]],"more":0}},
 "19395":{"instance":{"mobs":[["Ebonroc",63,63,14.0,469,"boss"],["Firemaw",63,63,14.0,469,"boss"],["Flamegor",63,63,14.0,469,"boss"]],"more":0}},
 "19523":{"vendors":[[14753,"Illiyana Moonblaze","Silverwing Supply Officer",1440,"Fallen Sky Lake",61.5,83.9,"A",0,0]]},
 "19587":{"vendors":[[14753,"Illiyana Moonblaze","Silverwing Supply Officer",1440,"Fallen Sky Lake",61.5,83.9,"A",0,0],[14754,"Kelm Hargunth","Warsong Supply Officer",1413,"The Mor'shan Rampart",46.7,8.4,"H",0,0]]},
@@ -192,7 +190,6 @@
 "21187":{"quests":[8548]},
 "22083":{"quests":[9003,9009]},
 "22275":{"instance":{"mobs":[["Hurley Blackbreath",55,55,30.3,230,"boss"]],"more":0}},
-"22339":{"instance":{"mobs":[["Lord Valthalak",63,63,35.3,229,"boss"]],"more":0}},
 "22403":{"instance":{"mobs":[["Cannon Master Willey",60,60,20.0,329,"boss"]],"more":0}},
 "22467":{"quests":[9071]},
 "22659":{"quests":[9222,9224,9225,9228]}

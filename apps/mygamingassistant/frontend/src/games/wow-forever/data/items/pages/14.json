@@ -1,4 +1,4 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 71037, 13,998 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":14,"shardCount":64,
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 13,356 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":14,"shardCount":64,
 "items":[
 [1486,"Tree Bark Jacket","rare","chest","Cloth",26,21,44,null,{"spell_power":13},null,0,0,0],
 [1678,"Black Ogre Kickers","rare","feet","Mail",41,36,177,null,{"stamina":14,"strength":6},null,0,0,0],
@@ -145,7 +145,6 @@
 [273358,"Premier Ringmail Vices","rare","hands","Mail",60,55,221,null,{"healing":15,"intellect":7,"spell_damage":5,"spirit":6,"stamina":19},["shaman"],0,0,0],
 [273422,"Premier Marshal's Mooncloth Pants","epic","legs","Cloth",65,60,158,null,{"healing":33,"intellect":17,"spell_damage":11,"spirit":8,"stamina":34},["priest"],0,0,0],
 [273806,"Dark Horde Band","rare","finger",null,26,21,null,null,{"spell_power":6,"stamina":6},null,0,0,0],
-[273934,"Spiritcaller Spaulders","epic","shoulder","Mail",60,60,290,null,{"intellect":11,"nature_resistance":7,"stamina":14,"strength":21},["shaman"],0,0,0],
 [274190,"Premier Marshal's Flatmail Spaulders","epic","shoulder","Mail",65,60,312,null,{"intellect":8,"spell_power":14,"stamina":26,"strength":12},["shaman"],0,0,0],
 [274254,"Premier General's Lamellar Legplates","epic","legs","Plate",65,60,646,null,{"crit_rating":7,"healing":33,"intellect":18,"spell_damage":11,"stamina":34},["paladin"],0,0,0],
 [274638,"Sandfury Pauldrons","rare","shoulder","Mail",47,42,213,null,{"intellect":7,"spell_power":15,"spirit":11},null,0,0,0],
@@ -312,7 +311,6 @@
 "273358":{"bind":1},
 "273422":{"bind":1},
 "273806":{"bind":1,"buy":7629},
-"273934":{"bind":2,"buy":160154,"crafted":[["leatherworking",300,1292971,"Spiritcaller Spaulders",[[274030,3,"Malleable Essence of Nature"],[15407,2,"Cured Rugged Hide"],[248825,18,"Fel Leather"],[14341,8,"Rune Thread"]],"item","Pattern: Spiritcaller Spaulders"]]},
 "274190":{"bind":1},
 "274254":{"bind":1},
 "274638":{"bind":1,"buy":49507},

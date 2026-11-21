@@ -1,4 +1,4 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 71037, 13,998 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":10,"shardCount":64,
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 13,356 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":10,"shardCount":64,
 "items":[
 [1930,"Stonemason Cloak","uncommon","back",null,18,13,16,null,{"stamina":3},null,0,0,0],
 [1994,"Ebonclaw Reaver","uncommon","one_hand","Axe",46,41,null,[34,64,1.8],{},null,0,0,0],
@@ -145,7 +145,6 @@
 [272842,"Premier Grand Marshal's Repeater","epic","ranged","Crossbow",65,60,null,[85,129,2.9],{"attack_power":32,"stamina":6},null,0,0,0],
 [273034,"Ephemeral Grips","rare","hands","Cloth",32,27,31,null,{"arcane_spell_damage":9,"intellect":7,"shadow_spell_damage":9,"stamina":7},null,0,0,0],
 [273418,"Premier Centurion's Kodohide Boots","epic","feet","Leather",65,60,166,null,{"healing":22,"intellect":14,"spell_damage":7,"spirit":8,"stamina":26},["druid"],0,0,0],
-[273930,"Grimstitch Spaulders","epic","shoulder","Leather",60,60,138,null,{"agility":16,"crit_rating":14,"nature_resistance":7,"stamina":16,"strength":9},["rogue"],0,0,0],
 [274186,"Premier Knight-Captain's Flatmail Bracers","epic","wrist","Mail",65,60,182,null,{"intellect":7,"stamina":20,"strength":12},["shaman"],0,0,0],
 [274250,"Premier Champion's Lamellar Gloves","epic","hands","Plate",65,60,461,null,{"healing":26,"intellect":12,"spell_damage":8,"stamina":28},["paladin"],0,0,0],
 [276746,"Defias Enforcer's Legguards","rare","legs","Leather",55,50,138,null,{"agility":20,"fire_resistance":16,"hit_rating":10},null,0,0,0],
@@ -309,7 +308,6 @@
 "272842":{"bind":1},
 "273034":{"bind":1,"buy":7407},
 "273418":{"bind":1},
-"273930":{"bind":2,"buy":131301,"crafted":[["leatherworking",300,1292967,"Grimstitch Spaulders",[[274030,3,"Malleable Essence of Nature"],[15407,2,"Cured Rugged Hide"],[248825,18,"Fel Leather"],[14341,8,"Rune Thread"]],"item","Pattern: Grimstitch Spaulders"]]},
 "274186":{"bind":1},
 "274250":{"bind":1},
 "276746":{"bind":1,"buy":81741},

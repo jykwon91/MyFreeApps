@@ -1,4 +1,4 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 71037, 13,998 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":9,"shardCount":64,
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 13,356 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":9,"shardCount":64,
 "items":[
 [1929,"Silk-threaded Trousers","rare","legs","Cloth",18,13,31,null,{"agility":5,"spell_power":7},null,0,0,0],
 [1993,"Ogremind Ring","uncommon","finger",null,36,31,null,null,{"intellect":7,"spirit":3},null,0,0,0],
@@ -145,7 +145,6 @@
 [273289,"Ogre Loincloth","rare","legs","Cloth",22,17,35,null,{"healing":18,"spell_damage":6,"stamina":6,"strength":4},null,0,0,0],
 [273353,"Premier Mail Wristguards","rare","wrist","Mail",60,55,155,null,{"intellect":6,"spell_power":7,"stamina":15},["shaman"],0,0,0],
 [273417,"Premier Legionnaire's Kodohide Bracers","epic","wrist","Leather",65,60,86,null,{"healing":18,"intellect":12,"spell_damage":6,"stamina":20},["druid"],0,0,0],
-[273929,"Grimstitch Gloves","epic","hands","Leather",60,60,115,null,{"agility":13,"crit_rating":14,"nature_resistance":7,"stamina":15,"strength":10},["rogue"],0,0,0],
 [274185,"Premier Knight-Captain's Flatmail Waistband","epic","waist","Mail",65,60,234,null,{"intellect":12,"stamina":26,"strength":15},["shaman"],0,0,0],
 [274249,"Premier Legionnaire's Lamellar Belt","epic","waist","Plate",65,60,415,null,{"healing":24,"intellect":11,"mp5":4,"spell_damage":8,"stamina":26},["paladin"],0,0,0],
 [274761,"Parachute-Priest Pager","rare","trinket",null,55,50,null,null,{"shadow_resistance":20},null,0,0,0],
@@ -316,7 +315,6 @@
 "273289":{"bind":1,"buy":4478},
 "273353":{"bind":1},
 "273417":{"bind":1},
-"273929":{"bind":2,"buy":87674,"crafted":[["leatherworking",300,1292966,"Grimstitch Gloves",[[274030,3,"Malleable Essence of Nature"],[15407,2,"Cured Rugged Hide"],[248825,18,"Fel Leather"],[14341,8,"Rune Thread"]],"item","Pattern: Grimstitch Gloves"]]},
 "274185":{"bind":1},
 "274249":{"bind":1},
 "274761":{"bind":1,"buy":75960},

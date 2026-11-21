@@ -1,4 +1,4 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 71037, 13,998 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":40,"shardCount":64,
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 13,356 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":40,"shardCount":64,
 "items":[
 [744,"Thunderbrew's Boot Flask","uncommon","trinket",null,44,0,null,null,{"spirit":8},null,0,0,0],
 [872,"Rockslicer","rare","two_hand","Axe",23,18,null,[52,78,3.3],{"nature_resistance":7,"strength":7},null,0,0,0],
@@ -139,7 +139,6 @@
 [272808,"Premier Lieutenant Commander's Dreadweave Gloves","epic","hands","Cloth",65,60,63,null,{"intellect":17,"spell_power":12,"stamina":26},["warlock"],0,0,0],
 [273384,"Premier Wyrmhide Chestpiece","rare","chest","Leather",60,55,199,null,{"crit_rating":7,"intellect":11,"spell_power":9,"stamina":26},["druid"],0,0,0],
 [273448,"Premier Mooncloth Robes","rare","chest","Cloth",60,55,85,null,{"healing":26,"intellect":10,"spell_damage":9,"spirit":6,"stamina":25},["priest"],0,0,0],
-[273896,"Grovekeeper Leggings","epic","legs","Leather",60,60,162,null,{"defense":7,"expertise_rating":15,"nature_resistance":9,"stamina":22,"strength":19},["druid"],0,0,0],
 [274152,"Roogug's Severed Head","rare","trinket",null,30,25,null,null,{"spirit":6},null,0,0,0],
 [274600,"Berserker Shackles","rare","wrist","Mail",39,34,109,null,{"defense":6,"strength":7},null,0,0,0],
 [274920,"Twilight Carver","uncommon","one_hand","Sword",40,0,null,[39,73,2.5],{"attack_power":10,"stamina":4},null,0,0,0],
@@ -303,7 +302,6 @@
 "272808":{"bind":1},
 "273384":{"bind":1},
 "273448":{"bind":1},
-"273896":{"bind":2,"buy":178484,"crafted":[["leatherworking",300,1292933,"Grovekeeper Leggings",[[274030,5,"Malleable Essence of Nature"],[15407,4,"Cured Rugged Hide"],[248825,24,"Fel Leather"],[14341,8,"Rune Thread"]],"item","Pattern: Grovekeeper Leggings"]]},
 "274152":{"bind":1,"buy":10369},
 "274600":{"bind":1,"buy":20784},
 "274920":{"bind":1,"buy":52424},

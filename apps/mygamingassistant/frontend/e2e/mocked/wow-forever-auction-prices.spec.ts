@@ -410,10 +410,10 @@ test("the Auction house page filters by category and subclass, and loads the cat
 });
 
 const ITEMS_FILE = "**/items*.json*";
-const ITEM_COLUMNS = ["id", "name", "quality", "slot", "itemType", "itemLevel", "requiredLevel", "armor", "weapon", "stats", "classes", "damageUnknown", "otherEffects"];
+const ITEM_COLUMNS = ["id", "name", "quality", "slot", "itemType", "itemLevel", "requiredLevel", "armor", "weapon", "stats", "classes", "damageUnknown", "otherEffects", "spellPowerUnknown"];
 
 function neckRow(id: number, name: string, spellDamage: number): unknown[] {
-  return [id, name, "rare", "neck", null, 60, 0, null, null, { spell_damage: spellDamage }, null, 0, 0];
+  return [id, name, "rare", "neck", null, 60, 0, null, null, { spell_damage: spellDamage }, null, 0, 0, 0];
 }
 
 /** Necks for a Warlock at level 60: Rare Test Item (50, #1), a filler (48, #2), Gold Bar (45, #3) and another filler (40, out). */
