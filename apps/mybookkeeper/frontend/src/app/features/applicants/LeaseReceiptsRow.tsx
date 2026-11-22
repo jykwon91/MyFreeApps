@@ -2,14 +2,13 @@ import { useEffect } from "react";
 import { Download, FileText } from "lucide-react";
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import { rentReceipts } from "@mybookkeeper/api-client/utils/rentReceipts";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LeaseReceiptsRowProps {
   leaseId: string;
   onPreview: (attachment: SignedLeaseAttachment) => void;
 }
-
-const RECEIPT_KIND = "rent_receipt";
 
 /**
  * Fetches a single lease's attachments and renders only the
@@ -22,7 +21,7 @@ const RECEIPT_KIND = "rent_receipt";
  */
 export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRowProps) {
   const { data: detail, isLoading } = useGetSignedLeaseByIdQuery(leaseId);
-  const receipts = (detail?.attachments ?? []).filter((a) => a.kind === RECEIPT_KIND);
+  const receipts = rentReceipts(detail?.attachments);
 
   useEffect(() => {
     for (const att of receipts) {

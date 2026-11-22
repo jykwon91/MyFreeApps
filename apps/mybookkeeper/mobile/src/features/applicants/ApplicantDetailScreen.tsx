@@ -11,6 +11,7 @@ import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import TenantLeases from "../leases/TenantLeases";
+import TenantReceipts from "../leases/TenantReceipts";
 import TenantRent from "../rent/TenantRent";
 import TenantRentReminders from "../rent/TenantRentReminders";
 import TenantPayments from "./TenantPayments";
@@ -118,6 +119,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
         </InquirySection>
 
         <TenantLeases applicantId={applicant.id} isTenant={isTenant} name={applicant.legal_name ?? "them"} />
+
+        <TenantReceipts applicantId={applicant.id} />
 
         {isTenant ? <TenantRent applicantId={applicant.id} key={`rent-${applicant.id}`} /> : null}
 
