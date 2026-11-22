@@ -18,7 +18,9 @@ const strength = (n: number): string => `stats = { ITEM_MOD_STRENGTH_SHORT = ${n
 const SHOW_ROLL = 'GroupLootFrame1.rollID = 1; GroupLootFrame1.shown = true; fire("START_LOOT_ROLL", 1); tick()';
 const COLOUR_CODES = /\|c[0-9a-f]{8}|\|r/gi;
 const VERDICT = /^frame: (Upgrade|Downgrade|About the same)/;
-const ESTIMATE = /effect estimated from item level: worth ~(\d+) stat points/;
+const ESTIMATE = /effect is a guess: about (\d+) stats' worth, judging by item level/;
+const LEVELING = "Scored with leveling stat values (PvE)";
+const ARMS = "Scored for Arms (raid stat values, PvE)";
 
 /** Loads the addon after `setup`, runs `then`, and returns what the roll window and chat showed, colour codes stripped. */
 function run(setup: string, then = SHOW_ROLL): string[] {
@@ -65,11 +67,11 @@ describe("MGA Loot verdicts", () => {
   it("calls an upgrade on the roll window, with the spec from talents and the bind type", () => {
     const [line] = run(roll(`${CHEST}, bind = 1, ${strength(20)}`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`));
     expect(line).toMatch(/^frame: Upgrade \+100% over .*\[Item 5\]/);
-    expect(line).toContain("as Arms · PvE values · binds on pickup");
+    expect(line).toContain(`${ARMS} // Binds on pickup`);
   });
 
   it("says its values are PvE next to the spec on every verdict", () => {
-    expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain("leveling estimate · PvE values");
+    expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain(LEVELING);
   });
 
   it("marks a stun proc as worth more in PvP (Dark Iron Pulverizer)", () => {
@@ -261,11 +263,11 @@ describe("MGA Loot verdicts", () => {
   });
 
   it("tags the level an item needs", () => {
-    expect(run(roll(`${CHEST}, minLevel = 45, ${strength(10)}`, "me.level = 42"))[0]).toContain("needs level 45");
+    expect(run(roll(`${CHEST}, minLevel = 45, ${strength(10)}`, "me.level = 42"))[0]).toContain("Needs level 45");
   });
 
   it("uses leveling weights below 60 and marks them an estimate", () => {
-    expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain("leveling estimate");
+    expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain(LEVELING);
   });
 
   it("estimates an effect with no data from the item's level: the stat points it lacks next to items like it", () => {
@@ -281,7 +283,8 @@ describe("MGA Loot verdicts", () => {
       roll(`${CHEST}, quality = 3, ilvl = 60, ${strength(budget)}, lines = { "Use: Restores 500 health." }`, `items[5] = { ${CHEST}, ${strength(budget)} }; equipped[5] = 5`),
     );
     expect(full).toContain("About the same as");
-    expect(full).toContain("worth ~0 stat points");
+    expect(full).toContain("This item's Use effect adds little, judging by item level");
+    expect(full).not.toContain("0 stats' worth");
   });
 
   it("estimates an effect on your worn item too", () => {
@@ -297,7 +300,7 @@ describe("MGA Loot verdicts", () => {
       roll(`${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_MYSTERY_SHORT = 3 }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`),
     );
     expect(line).toMatch(VERDICT);
-    expect(line).toContain("ITEM_MOD_MYSTERY_SHORT counted at your average stat weight");
+    expect(line).toContain("ITEM_MOD_MYSTERY_SHORT counted like an average stat");
   });
 
   it("never says Can't judge", () => {
@@ -337,7 +340,7 @@ describe("MGA Loot verdicts", () => {
     );
     // Arms: 10 strength + 2.333 proc DPS x 5.31 melee = 22.4 vs 10.
     expect(line).toMatch(/Upgrade \+124% over .*\[Item 16\]/);
-    expect(line).toContain("proc: 140 Fire dmg at 1 PPM (Classic rate) = +2.3 DPS");
+    expect(line).toContain("+2.3 DPS from this item's proc: 140 Fire dmg at 1 PPM (Classic rate)");
     expect(line).not.toContain("Can't judge");
   });
 
@@ -349,7 +352,7 @@ describe("MGA Loot verdicts", () => {
     );
     // Arms: 46.667 attack power x 0.45 = 21 vs the weaker trinket's 10 strength.
     expect(line).toMatch(/Upgrade \+110% over .*\[Item 13\]/);
-    expect(line).toContain("use: +280 attack power for 20s every 2min = +46.7 attack power");
+    expect(line).toContain("+46.7 attack power from this item's Use effect: +280 attack power for 20s every 2min");
   });
 
   it("scores a proc with no rate in the data at the Classic server's own rule (Fiery War Axe)", () => {
@@ -379,13 +382,15 @@ describe("MGA Loot verdicts", () => {
       `items[754] = { ${SWORD}, ${strength(20)}, ${SMITE} }; rolls[1] = 754; talents = { 31, 20, 0 }; items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
     );
     expect(up).toMatch(/Upgrade \+\d+% over/);
-    expect(up).toContain("worth ~14 stat points");
+    expect(up).toContain("This item's Holy Smite is a guess: about 14 stats' worth, judging by item level");
+    // The guess line names the effect, so its "the data can't ..." note isn't repeated.
+    expect(up).not.toContain("the data gives no proc rate");
     // 10 strength + 14 points of effect beats a plain 20 strength sword.
     const [weaker] = run(
       `items[754] = { ${SWORD}, ${strength(10)}, ${SMITE} }; rolls[1] = 754; talents = { 31, 20, 0 }; items[16] = { ${SWORD}, ${strength(20)} }; equipped[16] = 16`,
     );
     expect(weaker).toMatch(VERDICT);
-    expect(weaker).toContain("worth ~14 stat points");
+    expect(weaker).toContain("This item's Holy Smite is a guess: about 14 stats' worth, judging by item level");
   });
 
   it("counts Zum'rah's Vexing Cane's summon for a caster, with its summon note", () => {
@@ -407,13 +412,51 @@ describe("MGA Loot verdicts", () => {
     const TALISMAN = `items[19617] = { ${TRINKET}, ${strength(10)} }; rolls[1] = 19617; talents = { 31, 20, 0 }; `;
     const WORN = `items[13] = { ${TRINKET}, ${strength(10)} }; items[14] = { ${TRINKET}, ${strength(10)} }; equipped[13] = 13; equipped[14] = 14`;
     const [rogue] = run(`${TALISMAN}me.class = "ROGUE"; ${WORN}`);
-    expect(rogue).toContain("Improved Kick: Kick");
-    expect(rogue).not.toContain("only for rogues");
+    expect(rogue).toContain("DPS from Improved Kick: Kick");
+    expect(rogue).not.toContain("only helps rogues");
     expect(rogue).not.toContain("About the same");
     const [warrior] = run(`${TALISMAN}${WORN}`);
-    expect(warrior).toContain("(only for rogues, so it counts 0)");
+    expect(warrior).toContain("Improved Kick only helps rogues, so it counts 0");
     expect(warrior).toContain("About the same");
-    expect(warrior).not.toContain("estimated from item level");
+    expect(warrior).not.toContain("judging by item level");
+  });
+
+  it("scores a plain stat line GetItemStats doesn't give (Gemburst Circlet vs Dreamweave Circlet)", () => {
+    const HEAD = `loc = "INVTYPE_HEAD", ${ARMOR}, subclassID = 1`;
+    const GEMBURST = `items[7] = { ${HEAD}, quality = 2, ilvl = 30, stats = { RESISTANCE0_NAME = 48, ITEM_MOD_INTELLECT_SHORT = 8 }, lines = { "Equip: Increases healing done by up to 13 and damage done by up to 4 for all magical spells and effects." } }; rolls[1] = 7; `;
+    const DREAMWEAVE = `items[10041] = { ${HEAD}, stats = { RESISTANCE0_NAME = 58, ITEM_MOD_INTELLECT_SHORT = 10, ITEM_MOD_SPIRIT_SHORT = 12 }, lines = { "Equip: Increases damage and healing done by magical spells and effects by up to 21." } }; equipped[1] = 10041`;
+    const [line] = run(`${GEMBURST}me.class = "PRIEST"; me.level = 40; talents = { 0, 31, 20 }; ${DREAMWEAVE}`);
+    expect(line).toMatch(VERDICT);
+    // Read from the text, the line is scored exactly: no item-level guess, no "Can't judge".
+    expect(line).not.toContain("Can't judge");
+    expect(line).not.toContain("judging by item level");
+  });
+
+  it("shows at most three grey lines, one fact each, biggest first, and /mgaloot check shows them all", () => {
+    const ODD = "stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_MYSTERY_SHORT = 3, ITEM_MOD_ODD_SHORT = 1 }";
+    const setup = `items[100] = { ${CHEST}, bind = 1, ${ODD} }; rolls[1] = 100; talents = { 31, 0, 0 }; items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`;
+    const [line] = run(setup);
+    const grey = line.split(" // ").slice(1);
+    expect(grey).toEqual([ARMS, "ITEM_MOD_MYSTERY_SHORT counted like an average stat", "+2 more with /mgaloot check"]);
+    expect(line).not.toContain(" · ");
+    const all = run(setup, 'SlashCmdList.MGALOOT("check " .. link(100))');
+    expect(all.slice(1)).toEqual([
+      `chat: MGA Loot: ${ARMS}`,
+      "chat: MGA Loot: ITEM_MOD_MYSTERY_SHORT counted like an average stat",
+      "chat: MGA Loot: ITEM_MOD_ODD_SHORT counted like an average stat",
+      "chat: MGA Loot: Binds on pickup",
+    ]);
+  });
+
+  it("never counts a tooltip stat line twice when GetItemStats gives the same stat", () => {
+    const HEAD = `loc = "INVTYPE_HEAD", ${ARMOR}, subclassID = 1`;
+    const HEALING = "stats = { RESISTANCE0_NAME = 40, ITEM_MOD_SPELL_HEALING_DONE_SHORT = 22 }";
+    const [line] = run(
+      `items[7] = { ${HEAD}, ${HEALING}, lines = { "Equip: Increases healing done by spells and effects by up to 22." } }; rolls[1] = 7; ` +
+        `me.class = "PRIEST"; me.level = 40; talents = { 0, 31, 20 }; items[1] = { ${HEAD}, ${HEALING} }; equipped[1] = 1`,
+    );
+    expect(line).toContain("About the same");
+    expect(line).not.toContain("judging by item level");
   });
 
   it("turns armor off the target into a share of weapon DPS against mobs your level", () => {
@@ -452,17 +495,17 @@ describe("MGA Loot verdicts", () => {
 
   it("falls back to chat when it can't find the roll window", () => {
     const [line] = run(roll(`${CHEST}, ${strength(10)}`), 'fire("START_LOOT_ROLL", 1); tick()');
-    expect(line).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms · PvE values$/);
+    expect(line).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — Scored for Arms \(raid stat values, PvE\)$/);
   });
 
   it("finds the roll window when it shows after the event", () => {
     const then = 'fire("START_LOOT_ROLL", 1); GroupLootFrame1.rollID = 1; GroupLootFrame1.shown = true; tick()';
-    expect(run(roll(`${CHEST}, ${strength(10)}`), then)[0]).toBe("frame: Upgrade: your slot is empty // as Arms · PvE values");
+    expect(run(roll(`${CHEST}, ${strength(10)}`), then)[0]).toBe(`frame: Upgrade: your slot is empty // ${ARMS}`);
   });
 
   it("finds roll windows in the newer loot UI", () => {
     const setup = roll(`${CHEST}, ${strength(10)}`, "GroupLootFrame1 = nil; GroupLootContainer = { rollFrames = { rollWindow(1) } }");
-    expect(run(setup, 'fire("START_LOOT_ROLL", 1); tick()')[0]).toBe("frame: Upgrade: your slot is empty // as Arms · PvE values");
+    expect(run(setup, 'fire("START_LOOT_ROLL", 1); tick()')[0]).toBe(`frame: Upgrade: your slot is empty // ${ARMS}`);
   });
 
   it("says nothing about a roll that ended before its verdict was ready", () => {
@@ -472,7 +515,7 @@ describe("MGA Loot verdicts", () => {
   });
 
   it("reads talent points from either GetTalentTabInfo shape", () => {
-    expect(run(roll(`${CHEST}, ${strength(10)}`, 'talentShape = "retail"; talents = { 0, 0, 31 }'))[0]).toContain("as Protection");
+    expect(run(roll(`${CHEST}, ${strength(10)}`, 'talentShape = "retail"; talents = { 0, 0, 31 }'))[0]).toContain("Scored for Protection (raid stat values, PvE)");
   });
 
   it("works with a global GetItemInfo instead of C_Item's", () => {
@@ -488,7 +531,7 @@ describe("MGA Loot verdicts", () => {
   });
 
   it("uses the spec saved from last session, which the game loads after the addon", () => {
-    expect(run(roll(`${CHEST}, ${strength(10)}`), `MGALootSettings = { spec = "fury" }; ${SHOW_ROLL}`)[0]).toContain("as Fury");
+    expect(run(roll(`${CHEST}, ${strength(10)}`), `MGALootSettings = { spec = "fury" }; ${SHOW_ROLL}`)[0]).toContain("Scored for Fury (raid stat values, PvE)");
   });
 });
 
@@ -498,7 +541,7 @@ describe("MGA Loot slash command", () => {
   it("sets the spec, which then labels verdicts", () => {
     const lines = run(roll(`${CHEST}, ${strength(10)}`), `${slash("spec protection")}; SlashCmdList.MGALOOT("check " .. link(100))`);
     expect(lines[0]).toBe("chat: MGA Loot: spec: Protection.");
-    expect(lines[1]).toContain("as Protection");
+    expect(lines[2]).toBe("chat: MGA Loot: Scored for Protection (raid stat values, PvE)");
   });
 
   it("lists the specs when given one it doesn't know", () => {
@@ -508,7 +551,9 @@ describe("MGA Loot slash command", () => {
   it("checks an item link without a roll", () => {
     const lines = run(roll(`${CHEST}, ${strength(10)}`), `${slash("check")}; SlashCmdList.MGALOOT("check " .. link(100))`);
     expect(lines[0]).toBe("chat: MGA Loot: put an item link after /mgaloot check.");
-    expect(lines[1]).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms · PvE values$/);
+    // Each grey line is its own chat line, all of them (no cap).
+    expect(lines[1]).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty$/);
+    expect(lines[2]).toBe(`chat: MGA Loot: ${ARMS}`);
   });
 
   it("asks to check again an item the game hasn't loaded", () => {
@@ -518,8 +563,8 @@ describe("MGA Loot slash command", () => {
   });
 
   it("reports the weights it's using, and the spec only at 60", () => {
-    expect(run("me.level = 30", slash(""))[0]).toBe("chat: MGA Loot: level 30 warrior, leveling estimate.");
-    expect(run("talents = { 31, 0, 0 }", slash(""))[0]).toBe("chat: MGA Loot: level 60 warrior, as Arms. Spec: auto from talents.");
+    expect(run("me.level = 30", slash(""))[0]).toBe("chat: MGA Loot: level 30 warrior, scored with leveling stat values (PvE).");
+    expect(run("talents = { 31, 0, 0 }", slash(""))[0]).toBe("chat: MGA Loot: level 60 warrior, scored for Arms (raid stat values, PvE). Spec: auto from talents.");
   });
 });
 
@@ -531,7 +576,7 @@ describe("MGA Loot on item tooltips", () => {
     const lines = run(setup(), "hover(100)");
     expect(lines).toHaveLength(2);
     expect(lines[0]).toMatch(/^GameTooltip: MGA Loot: Upgrade \+100% over .*\[Item 5\]/);
-    expect(lines[1]).toBe("GameTooltip: as Arms · PvE values");
+    expect(lines[1]).toBe(`GameTooltip: ${ARMS}`);
   });
 
   it("adds it once per tooltip show however many hooks fire, and again for the next show", () => {
@@ -596,7 +641,7 @@ describe("/mgaloot bags", () => {
 
   it("lists the upgrades across every bag, biggest first, once each, with the level they need", () => {
     const lines = run(bagsSetup("{ [0] = { 100, 102, 104 }, [2] = { 101, 103, 100 } }"), bags);
-    expect(lines[0]).toBe("chat: MGA Loot: upgrades in your bags (as Arms):");
+    expect(lines[0]).toBe("chat: MGA Loot: upgrades in your bags, scored for Arms (raid stat values, PvE):");
     expect(lines).toHaveLength(4);
     expect(lines[1]).toMatch(/\[Item 103\].* Upgrade: your slot is empty$/);
     expect(lines[2]).toMatch(/\[Item 101\].* Upgrade \+200% over .*\[Item 5\].* \(needs level 61\)$/);
@@ -604,7 +649,7 @@ describe("/mgaloot bags", () => {
   });
 
   it("says when nothing is an upgrade", () => {
-    expect(run(bagsSetup("{ [0] = { 102, 104 } }"), bags)).toEqual(["chat: MGA Loot: nothing in your bags is an upgrade (as Arms)."]);
+    expect(run(bagsSetup("{ [0] = { 102, 104 } }"), bags)).toEqual(["chat: MGA Loot: nothing in your bags is an upgrade, scored for Arms (raid stat values, PvE)."]);
   });
 
   it("counts items the game hasn't loaded yet", () => {
