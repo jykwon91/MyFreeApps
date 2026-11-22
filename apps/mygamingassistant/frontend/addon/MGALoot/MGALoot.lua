@@ -31,9 +31,10 @@
 local ADDON = "MGA Loot"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local MAX_LEVEL = 60
--- Closer than this (percent) is "about the same": the weights aren't that exact.
+-- Every weight and model is for fighting mobs; PvP is a label, never a number.
 local PVE_TAG = "PvE values"
 local PVP_NOTE = " (worth more in PvP)"
+-- Closer than this (percent) is "about the same": the weights aren't that exact.
 local SIDEGRADE_PCT = 5
 -- Past this the old item scores next to nothing, so a percentage means little.
 local MAX_SHOWN_PCT = 300
