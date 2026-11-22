@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal, Text, View } from "react-native";
 import { requestTwoStepDisable } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
+import { useMotion } from "../hooks/useMotion";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useTheme } from "../theme/useTheme";
 import type { TwoStepTurnOffSheetProps } from "../types/TwoStepTurnOffSheetProps";
@@ -12,6 +13,7 @@ import LoadingButton from "./LoadingButton";
 
 export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnOffSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const secondFactor = useSecondFactorCode();
   const [codeError, setCodeError] = useState<string | undefined>();
   const [failure, setFailure] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}>

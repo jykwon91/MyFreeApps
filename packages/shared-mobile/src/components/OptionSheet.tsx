@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FlatList, Modal, Platform, Pressable, Text, View } from "react-native";
+import { useMotion } from "../hooks/useMotion";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { OptionSheetProps } from "../types/OptionSheetProps";
@@ -23,6 +24,7 @@ export default function OptionSheet<Value extends string>({
   onClosed,
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const wasOpen = useRef(isOpen);
   const list = useRef<FlatList<(typeof options)[number]>>(null);
   const selectedIndex = options.findIndex((option) => option.value === value);
@@ -39,7 +41,7 @@ export default function OptionSheet<Value extends string>({
   }, [isOpen, onClosed]);
 
   return (
-    <Modal animationType="slide" onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

@@ -1,7 +1,7 @@
 import { ASSIGNABLE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useTheme, useMotion } from "@platform/mobile";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
 import { memberName } from "./membersDisplay";
@@ -17,8 +17,9 @@ interface MemberSheetProps {
 
 export default function MemberSheet({ member, orgName, onChooseRole, onRemove, onClose }: MemberSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible>
       <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

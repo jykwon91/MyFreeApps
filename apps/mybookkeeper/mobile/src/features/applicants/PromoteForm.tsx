@@ -8,7 +8,7 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FIELD_PRESETS, FormField, type KeyboardAwareScrollRef, LoadingButton, PinnedBar, ScrollWithPinnedBar, SegmentedControl, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { Banner, FIELD_PRESETS, FormField, type KeyboardAwareScrollRef, LoadingButton, PinnedBar, ScrollWithPinnedBar, SegmentedControl, useConfirmLeave, useFieldChain, useTheme, useToast, useMotion } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
@@ -21,6 +21,7 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const { colors, spacing, fontSize } = useTheme();
+  const { isAnimated } = useMotion();
   const { showToast } = useToast();
   const [promote, { isLoading }] = usePromoteFromInquiryMutation();
   const [initial] = useState(() => promoteValuesFrom(inquiry));
@@ -82,7 +83,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
       isSubmitting.current = false;
     }
     // The message is at the top and the button stays at the bottom, so they may be far apart.
-    scroller.current?.scrollTo({ y: 0 });
+    scroller.current?.scrollTo({ y: 0, animated: isAnimated });
   }
 
   return (

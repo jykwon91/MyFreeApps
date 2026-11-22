@@ -1,7 +1,7 @@
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
-import { Banner, confirmDiscard, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast, useMotion } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
@@ -14,6 +14,7 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: { applicantId: string; isOpen: boolean; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const { showToast } = useToast();
   const [upload, { isLoading: isUploading }] = useUploadScreeningResultMutation();
   const [outcome, setOutcome] = useState<ScreeningStatus | null>(null);
@@ -67,7 +68,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

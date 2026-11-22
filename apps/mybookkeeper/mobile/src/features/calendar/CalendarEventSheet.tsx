@@ -1,6 +1,6 @@
 import { isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, useTheme, useMotion } from "@platform/mobile";
 import { useEffect, useRef } from "react";
 import { Alert, Modal, Platform, Pressable, Text, View } from "react-native";
 import { CALENDAR_MESSAGES } from "../../constants/calendar";
@@ -23,6 +23,7 @@ interface CalendarEventSheetProps {
 
 export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease, onClosed }: CalendarEventSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const canWrite = useCanWrite();
   const notes = useCalendarEventNotes(event);
   const wasOpen = useRef(isOpen);
@@ -60,7 +61,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
   }
 
   return (
-    <Modal animationType="slide" onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

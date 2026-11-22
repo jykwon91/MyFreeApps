@@ -2,7 +2,7 @@ import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRele
 import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, SectionError, type SectionErrorProps, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, SectionError, type SectionErrorProps, useTheme, useMotion } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { STATUS_FILTER, TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
@@ -45,12 +45,13 @@ export default function TransactionFilterSheet({
   onClose: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const [draft, setDraft] = useState(filters);
   const update = (change: Partial<TransactionFilters>) => setDraft((current) => ({ ...current, ...change }));
   const categories = useFilterCategories(draft, today);
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

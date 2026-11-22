@@ -1,6 +1,6 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, confirmDiscard, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useConfirmLeave, useFieldChain, useTheme, useToast, type KeyboardAwareScrollRef } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, LoadingButton, PinnedBar, ScrollWithPinnedBar, useConfirmLeave, useFieldChain, useTheme, useToast, type KeyboardAwareScrollRef, useMotion } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, Text, View } from "react-native";
@@ -29,6 +29,7 @@ interface NewLeaseFormProps {
 
 export default function NewLeaseForm({ flow, applicantId, applicantName, fields, computed, templateNames, onOutOfDate }: NewLeaseFormProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { isAnimated } = useMotion();
   const { showToast } = useToast();
   const leaveFlow = useLeaveNewLeaseFlow();
   const [createLease, { isLoading }] = useCreateSignedLeaseMutation();
@@ -87,7 +88,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
     if (problems.length > 0) {
       setShowMissing(true);
       setFailure(MESSAGES.needMoreAnswers);
-      scroller.current?.scrollTo({ y: fieldTops.current[problems[0].placeholder.key] ?? 0 });
+      scroller.current?.scrollTo({ y: fieldTops.current[problems[0].placeholder.key] ?? 0, animated: isAnimated });
       return;
     }
     isSubmitting.current = true;
@@ -113,7 +114,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
         setFailure(newLeaseFailure(error));
       }
       // The message is at the top and the button stays at the bottom, so they may be far apart.
-      scroller.current?.scrollTo({ y: 0 });
+      scroller.current?.scrollTo({ y: 0, animated: isAnimated });
     } finally {
       isSubmitting.current = false;
     }

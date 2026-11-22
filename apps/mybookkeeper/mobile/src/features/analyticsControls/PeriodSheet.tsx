@@ -1,5 +1,5 @@
 import { isValidPropertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme, useMotion } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { isoFromDate } from "../../lib/localDate";
@@ -9,13 +9,14 @@ import CustomRangeFields from "../transactions/CustomRangeFields";
 /** Pick a named period or hand-picked dates. Mounted only while open, so its choice starts from what's applied and Close discards it. */
 export default function PeriodSheet<K extends string>({ choices, selection, today, messages, onApply, onClose }: PeriodSheetProps<K>) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const [draft, setDraft] = useState(selection);
   const isCustom = draft.key === null;
   const todayIso = isoFromDate(today);
   const customRange = draft.range ?? { since: todayIso, until: todayIso };
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
