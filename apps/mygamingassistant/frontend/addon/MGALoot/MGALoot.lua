@@ -7,11 +7,13 @@
 -- the talent tab with the most points. It never rolls for you.
 -- Use, Chance on hit and Equip effects count at the stat they're worth on
 -- average (MGALootEffects in Data.lua, worked out from the game files), with
--- a note saying how; an effect the data can't value still says "Can't judge".
+-- a note saying how. An effect the data can't value is estimated from the
+-- item's level: the stat points it lacks next to items of its slot, quality
+-- and level with no effect (MGALootBudget), at your average stat weight.
 --
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
 --   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
---   pickup or equip, the level it needs, effects and stats it can't score.
+--   pickup or equip, the level it needs, and how each effect was counted.
 --   On an item's tooltip: the same verdict (the tooltip already shows binding and
 --   level), except on the items you're wearing.
 --   /mgaloot              which weights it's using
@@ -100,6 +102,24 @@ local EFFECT_RANGED = { ranged_hit_pct = "hit_pct", ranged_crit_pct = "crit_pct"
 local VS_BASE = { SPELL_DAMAGE = "spell_damage", ATTACK_POWER = "attack_power" }
 local DPS_KEY = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
 local ARMOR_KEY = "RESISTANCE0_NAME"
+-- Stats whose amounts aren't on the stat-point scale: left out of an item's stat points, and given no weight.
+local NOT_POINTS = { ITEM_MOD_MANA_SHORT = true, ITEM_MOD_HEALTH_SHORT = true }
+-- A stat point at your average weight is the mean of the primary stats your weights value.
+local PRIMARY_STATS = { "strength", "agility", "stamina", "intellect", "spirit" }
+-- Equip location -> MGALootBudget's slot group.
+local BUDGET_GROUP = {
+  INVTYPE_HEAD = "head_chest_legs", INVTYPE_CHEST = "head_chest_legs", INVTYPE_ROBE = "head_chest_legs",
+  INVTYPE_LEGS = "head_chest_legs",
+  INVTYPE_SHOULDER = "shoulder_hands_feet_waist", INVTYPE_HAND = "shoulder_hands_feet_waist",
+  INVTYPE_FEET = "shoulder_hands_feet_waist", INVTYPE_WAIST = "shoulder_hands_feet_waist",
+  INVTYPE_WRIST = "wrist_neck_finger_back", INVTYPE_NECK = "wrist_neck_finger_back",
+  INVTYPE_FINGER = "wrist_neck_finger_back", INVTYPE_CLOAK = "wrist_neck_finger_back",
+  INVTYPE_TRINKET = "trinket",
+  INVTYPE_WEAPON = "one_hand", INVTYPE_WEAPONMAINHAND = "one_hand", INVTYPE_WEAPONOFFHAND = "one_hand",
+  INVTYPE_2HWEAPON = "two_hand",
+  INVTYPE_RANGED = "ranged", INVTYPE_RANGEDRIGHT = "ranged", INVTYPE_THROWN = "ranged", INVTYPE_RELIC = "ranged",
+  INVTYPE_SHIELD = "off_hand", INVTYPE_HOLDABLE = "off_hand",
+}
 
 -- Equip location → the inventory slots it can go in.
 local SLOTS = {
@@ -145,9 +165,12 @@ end
 local function itemInfo(link)
   local get = (C_Item and C_Item.GetItemInfo) or GetItemInfo
   if not get or not link then return nil end
-  local name, _, _, _, minLevel, _, _, _, equipLoc, _, _, classID, subclassID, bindType = get(link)
+  local name, _, quality, itemLevel, minLevel, _, _, _, equipLoc, _, _, classID, subclassID, bindType = get(link)
   if not name then return nil end
-  return { minLevel = minLevel or 0, equipLoc = equipLoc or "", classID = classID, subclassID = subclassID, bindType = bindType }
+  return {
+    minLevel = minLevel or 0, equipLoc = equipLoc or "", classID = classID, subclassID = subclassID, bindType = bindType,
+    quality = quality or 0, itemLevel = itemLevel or 0,
+  }
 end
 
 local function statsApi()
@@ -305,14 +328,40 @@ local function mainHandDps()
   return stats and stats[DPS_KEY] or 0
 end
 
+-- Your average weight for a stat point: the mean of the primary stats your weights value (0 when none).
+local function averageStatWeight(w)
+  local sum, count = 0, 0
+  for _, stat in ipairs(PRIMARY_STATS) do
+    local weight = w.stats[stat] or 0
+    if weight > 0 then sum, count = sum + weight, count + 1 end
+  end
+  return count > 0 and sum / count or 0
+end
+
+-- The item's stat points: every stat but weapon DPS, armor, mana and health.
+local function statPoints(stats)
+  local points = 0
+  for key, amount in pairs(stats) do
+    if key ~= DPS_KEY and key ~= ARMOR_KEY and not NOT_POINTS[key] then points = points + amount end
+  end
+  return points
+end
+
+-- The median stat points of items with no effect at this item's slot group, quality and item level (0 when none).
+local function budgetPoints(info)
+  local byQuality = MGALootBudget and info and MGALootBudget[BUDGET_GROUP[info.equipLoc] or ""]
+  local levels = byQuality and byQuality[info.quality]
+  if not levels or info.itemLevel < 1 then return 0 end
+  return levels[math.min(info.itemLevel, MGALootBudgetTop or #levels)] or 0
+end
+
 -- Add MGALootEffects' values for this item (what its Use, Chance on hit and Equip lines are worth).
--- Returns whether the data covers those lines: false with no data or with an effect it couldn't resolve.
+-- Returns whether the data has the item, what its valued effects add, and the stat points its item-level
+-- estimate gives (nil when every effect is valued).
 local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
   local entries = MGALootEffects and id and MGALootEffects[id]
-  if not entries then return false end
-  for _, e in ipairs(entries) do
-    if e.stat == "unresolved" then return false end
-  end
+  if not entries then return false, 0 end
+  local budget
   local weaponDps = RANGED_LOC[equipLoc] and w.ranged or w.melee
   local spellDps = (w.stats.spell_damage or 0) * SPELL_DAMAGE_PER_DPS
   local rangedFirst = w.ranged > w.melee
@@ -320,7 +369,9 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
   for _, e in ipairs(entries) do
     local ranged = EFFECT_RANGED[e.stat]
     local note = e.note
-    if e.stat == "dps" then
+    if e.stat == "budget" then
+      budget, note = e.value, nil
+    elseif e.stat == "dps" then
       add = add + e.value * weaponDps
     elseif e.stat == "spell_dps" then
       add = add + e.value * spellDps
@@ -340,23 +391,25 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
       if rangedFirst then chance[ranged] = math.max(chance[ranged] or 0, e.value) end
     elseif EFFECT_CHANCE[e.stat] then
       chance[e.stat] = math.max(chance[e.stat] or 0, e.value)
-    elseif e.stat ~= "none" then
+    elseif e.stat ~= "none" and e.stat ~= "unresolved" then
       add = add + e.value * (w.stats[e.stat] or 0)
     end
-    table.insert(notes, note)
+    if note then table.insert(notes, note) end
   end
-  return true, add
+  return true, add, budget
 end
 
--- Score with these weights. Also returns what on the item it couldn't score (stat names and
--- tooltip lines) and notes on how it counted creature-type stats and item effects.
+-- Score with these weights. Also returns notes on how it counted creature-type stats, stats it has no
+-- weight for and item effects.
 local function score(link, equipLoc, w, level)
   -- The client has the item by now (judge checks GetItemInfo first); no stats table means no stats.
   local stats = statsApi()(link) or {}
-  local total, unscored, notes = 0, {}, {}
+  local total, notes = 0, {}
   local chance = {}
-  local effectsCovered, effectsValue = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes, level)
-  if effectsCovered then total = total + effectsValue end
+  local averageWeight = averageStatWeight(w)
+  local effectsCovered, effectsValue, budget = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes, level)
+  local uncountedLine = false
+  total = total + effectsValue
   for key, amount in pairs(stats) do
     local vsStat, vsKind = key:match("^ITEM_MOD_(%u+_%u+)_VS_(%u+)_SHORT$")
     if key == DPS_KEY then
@@ -371,8 +424,11 @@ local function score(link, equipLoc, w, level)
       local share = creatureShare(level, vsKind)
       total = total + amount * (w.stats[VS_BASE[vsStat]] or 0) * share
       table.insert(notes, (_G[key] or key) .. " counted at " .. floor(share * 100 + 0.5) .. "% (" .. plural(vsKind):lower() .. " among mobs your level)")
+    elseif NOT_POINTS[key] then
+      table.insert(notes, (_G[key] or key) .. " has no stat weight, so it counts as 0")
     else
-      table.insert(unscored, _G[key] or key)
+      total = total + amount * averageWeight
+      table.insert(notes, (_G[key] or key) .. " counted at your average stat weight")
     end
   end
   for _, line in ipairs(tooltipLines(link) or {}) do
@@ -386,15 +442,24 @@ local function score(link, equipLoc, w, level)
       end
     end
     if not matched and not effectsCovered and matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
-      table.insert(unscored, '"' .. line .. '"')
+      uncountedLine = true
     end
   end
   for stat, pct in pairs(chance) do
     total = total + pct * (w.stats[stat] or 0)
   end
-  table.sort(unscored)
+  if uncountedLine and not budget then
+    budget = math.max(0, budgetPoints(itemInfo(link)) - statPoints(stats))
+  end
+  if budget then
+    -- The budget pays for every effect on the item, so what the valued ones add already counts toward it.
+    local worth = math.max(0, budget * averageWeight - effectsValue)
+    total = total + worth
+    local points = averageWeight > 0 and floor(worth / averageWeight + 0.5) or 0
+    table.insert(notes, "effect estimated from item level: worth ~" .. points .. " stat points")
+  end
   table.sort(notes)
-  return total, unscored, notes
+  return total, notes
 end
 
 local function equipped(slot)
@@ -424,20 +489,15 @@ local function replaced(info, w, me, link)
   if info.equipLoc == "INVTYPE_2HWEAPON" then
     local off = equipped(OFF_HAND)
     if not main and not off then return { link = nil } end
-    local total, unscored = 0, {}
+    local total = 0
     for _, item in ipairs({ main or false, off or false }) do
-      if item then
-        local s, u = score(item.link, item.loc, w, me.level)
-        total = total + s
-        for _, name in ipairs(u) do table.insert(unscored, name) end
-      end
+      if item then total = total + score(item.link, item.loc, w, me.level) end
     end
-    return { link = (main or off).link, score = total, unscored = unscored }
+    return { link = (main or off).link, score = total }
   end
   if inHands and main and main.loc == "INVTYPE_2HWEAPON" then
     if slots[1] == OFF_HAND then return { blocked = "you use a two-hander" } end
-    local s, u = score(main.link, main.loc, w, me.level)
-    return { link = main.link, score = s, unscored = u }
+    return { link = main.link, score = score(main.link, main.loc, w, me.level) }
   end
   local held = {}
   for _, slot in ipairs(slots) do
@@ -449,8 +509,8 @@ local function replaced(info, w, me, link)
   local weakest, other
   for _, item in ipairs(held) do
     if itemId(item.link) == newId and isUnique(link) then return { blocked = "it's unique and you wear one" } end
-    local s, u = score(item.link, item.loc, w, me.level)
-    local this = { link = item.link, score = s, unscored = u }
+    local s = score(item.link, item.loc, w, me.level)
+    local this = { link = item.link, score = s }
     if not weakest or s < weakest.score then
       other, weakest = weakest, this
     else
@@ -468,7 +528,7 @@ local function percentText(new, old)
 end
 
 -- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
--- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare / can't judge);
+-- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare);
 -- `needs` is the level it needs when above yours. `brief` leaves out the binding and
 -- level tags, for a tooltip that already shows them.
 local function judge(link, brief)
@@ -492,7 +552,7 @@ local function judge(link, brief)
 
   local w, label = weightsFor(me)
   local text, kind, pct
-  local new, unscored, notes = score(link, info.equipLoc, w, me.level)
+  local new, notes = score(link, info.equipLoc, w, me.level)
   table.insert(tags, 1, label)
   for _, note in ipairs(notes) do table.insert(tags, note) end
   local old = replaced(info, w, me, link)
@@ -500,36 +560,11 @@ local function judge(link, brief)
     text = GREY .. "Can't compare: " .. old.blocked .. "|r"
   elseif not old.link then
     text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
-  elseif #unscored == 0 and #old.unscored > 0 and old.score > 0 and percentText(new, old.score) <= -SIDEGRADE_PCT then
-    -- Only your worn item has an effect MGA Loot can't count, and it's already better on the rest:
-    -- that effect only widens the gap, so the downgrade stands.
-    local shown
-    pct, shown = percentText(new, old.score)
-    text, kind = RED .. "Downgrade " .. shown .. " vs|r " .. old.link, "downgrade"
-    text = text .. "\n" .. GREY .. "and yours also has " .. table.concat(old.unscored, ", ") .. ", which only widens the gap|r"
-  elseif #old.unscored == 0 and #unscored > 0 and (old.score <= 0 and new > 0 or old.score > 0 and percentText(new, old.score) >= SIDEGRADE_PCT) then
-    -- Only this item has an uncounted effect, and it already wins on the rest: the effect only adds to it.
-    if old.score > 0 then
-      local shown
-      pct, shown = percentText(new, old.score)
-      text = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link
-    else
-      pct = EMPTY_SLOT_PCT
-      text = GREEN .. "Upgrade over|r " .. old.link
-    end
-    kind = "upgrade"
-    text = text .. "\n" .. GREY .. "and it also has " .. table.concat(unscored, ", ") .. ", which only adds to it|r"
-  elseif #unscored > 0 or #old.unscored > 0 then
-    -- An uncounted effect could flip the verdict: say what it can't count instead.
-    local whose = #unscored > 0 and ("this item has " .. table.concat(unscored, ", "))
-      or (old.link .. " has " .. table.concat(old.unscored, ", "))
-    text = YELLOW .. "Can't judge:|r " .. whose .. YELLOW .. ", which MGA Loot can't count|r"
-    if old.score > 0 then text = text .. "\n" .. GREY .. "stats alone: " .. select(2, percentText(new, old.score)) .. " vs|r " .. old.link end
   elseif old.score <= 0 then
     if new > 0 then
       text, kind, pct = GREEN .. "Upgrade over|r " .. old.link, "upgrade", EMPTY_SLOT_PCT
     else
-      text = GREY .. "Nothing it scores on either item|r"
+      text, kind, pct = YELLOW .. "About the same as|r " .. old.link, "same", 0
     end
   else
     local shown
@@ -545,13 +580,9 @@ local function judge(link, brief)
   -- Two rings: the verdict is against the one you'd swap out; this line shows the other too.
   local other = kind and old.link and old.other
   if other and other.score > 0 and new > 0 then
-    if #other.unscored > 0 then
-      text = text .. "\n" .. YELLOW .. "Can't judge vs|r " .. other.link .. GREY .. " (your other one has " .. table.concat(other.unscored, ", ") .. ")|r"
-    else
-      local otherPct, otherShown = percentText(new, other.score)
-      local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
-      text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
-    end
+    local otherPct, otherShown = percentText(new, other.score)
+    local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
+    text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
   end
   if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end
   return { text = text, kind = kind, pct = pct, needs = needs }

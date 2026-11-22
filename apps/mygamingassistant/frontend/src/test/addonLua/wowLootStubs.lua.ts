@@ -29,7 +29,7 @@ C_Item = {
   GetItemInfo = function(l)
     local i = items[idOf(l)]
     if not i or i.loading then return nil end
-    return "Item", l, 2, 60, i.minLevel or 1, "Armor", "x", 1, i.loc, 0, 0, i.classID, i.subclassID, i.bind
+    return "Item", l, i.quality or 2, i.ilvl or 60, i.minLevel or 1, "Armor", "x", 1, i.loc, 0, 0, i.classID, i.subclassID, i.bind
   end,
 }
 function GetItemStats(l)

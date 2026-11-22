@@ -8,6 +8,7 @@ import { PAWN_CLASSIC_WEIGHTS } from "@/games/wow-forever/data/weights/pawnClass
 import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
 import creatureTypeShare from "@/games/wow-forever/data/lootAddon/creatureTypeShare.json";
 import itemEffects from "@/games/wow-forever/data/lootAddon/itemEffects.json";
+import type { ItemBudgetTable } from "@/games/wow-forever/types/lootAddon/itemBudgetTable";
 import type { ItemEffectEntry } from "@/games/wow-forever/types/lootAddon/itemEffectEntry";
 
 const luaList = (items: readonly string[]): string => `{${items.map(luaString).join(", ")}}`;
@@ -72,12 +73,39 @@ function mobArmorLua(): string[] {
   ];
 }
 
+/**
+ * `MGALootBudget[group][quality][itemLevel]`: the median stat points of items with no effect, for valuing an
+ * effect nothing else can (`backend/scripts/wow_loot/budget.py`).
+ */
+function budgetLua(): string[] {
+  const byNumber = ([a]: [string, unknown], [b]: [string, unknown]): number => Number(a) - Number(b);
+  const groups = Object.entries(itemEffects.budget as ItemBudgetTable).sort(([a], [b]) => a.localeCompare(b));
+  const levels = groups.flatMap(([, byQuality]) => Object.values(byQuality).flatMap((l) => Object.keys(l).map(Number)));
+  return [
+    "MGALootBudget = {",
+    ...groups.map(([group, byQuality]) => {
+      const qualities = Object.entries(byQuality)
+        .sort(byNumber)
+        .map(([quality, points]) => {
+          const rows = Object.entries(points).sort(byNumber);
+          // A Lua list: item level N is entry N, so the levels must run 1, 2, 3, ... with no gap.
+          if (rows.some(([level], i) => Number(level) !== i + 1)) throw new Error(`budget ${group} ${quality} has a level gap`);
+          const list = rows.map(([, n]) => n);
+          return `[${quality}] = {${list.join(", ")}}`;
+        });
+      return `  ${group} = {${qualities.join(", ")}},`;
+    }),
+    "}",
+    `MGALootBudgetTop = ${Math.max(...levels)}`,
+  ];
+}
+
 // WoW's fonts have no arrow glyph, so the notes' "→" reads "=" in game.
 const ARROW = /→/g;
 
 /**
  * `MGALootEffects[itemId]`: what each item's Use, Chance on hit and Equip effects are worth
- * (`stat` = a weight key, or "dps" / "use_dps" / "spell_dps" / "dps_pct" / "armor_cut" / "ranged_*" / "none" / "unresolved"), from `itemEffects.json`.
+ * (`stat` = a weight key, or "dps" / "use_dps" / "spell_dps" / "dps_pct" / "armor_cut" / "ranged_*" / "none" / "unresolved" / "budget" = stat points the item lacks for its level), from `itemEffects.json`.
  */
 function itemEffectsLua(): string[] {
   const items = Object.entries(itemEffects.items as Record<string, readonly ItemEffectEntry[]>)
@@ -109,6 +137,7 @@ export function lootAddonDataLua(): string {
     "}",
     ...creatureShareLua(),
     ...mobArmorLua(),
+    ...budgetLua(),
     ...itemEffectsLua(),
     "",
   ].join("\n");

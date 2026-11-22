@@ -9,6 +9,10 @@ classic-db: a chance-on-hit spell's procs per minute when the client gives that 
 mobs you fight (``creature_template`` + ``creature``, see ``mobs.py``). A summoned creature Classic lacks is
 named from the operator's client creature cache.
 
+An item with an effect the data can't value also gets a ``budget`` entry: the stat points it lacks next to
+items of its slot, quality and item level that have no effect (``budget.py``), so MGA Loot can still put a
+value on it. The budget table itself goes in the file too, for items MGA Loot meets with no data at all.
+
 Run from apps/mygamingassistant/backend:
   python -m scripts.wow_loot.item_effects [--hotfix-cache PATH] [--creature-cache PATH]
 """
@@ -21,12 +25,14 @@ from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 
 from scripts.wow_food.build import WOW_DATA_DIR
+from scripts.wow_items.build import load_tables
 from scripts.wow_items.client_ids import STAT_KEY_BY_CLIENT_ID
 from scripts.wow_items.forever_items import ForeverTables, Row, hotfix_cache_path, load_forever_tables
-from scripts.wow_items.formula import stat_lines
+from scripts.wow_items.formula import BudgetTables, stat_lines
 from scripts.wow_loot.effect_model import (
     ASSUMED_SECONDS_PER_CAST,
     ASSUMED_SECONDS_PER_HIT,
+    BUDGET,
     CREATURE_SUMMON_EFFECTS,
     NONE,
     PROC_ON_CAST_BITS,
@@ -43,6 +49,7 @@ from scripts.wow_loot.effect_model import (
     Spell,
     World,
 )
+from scripts.wow_loot.budget import MIN_SAMPLE, Budget, budget_samples, effect_points
 from scripts.wow_loot.effect_values import item_entries
 from scripts.wow_loot.mobs import mob_world, normal_mobs, summoned_creature, unique_names
 from scripts.wow_rares.creature_cache import creature_cache_path, read_creature_cache
@@ -249,6 +256,7 @@ def build_effects(
     classic_events: Mapping[int, tuple[float, float]],
     creatures: Callable[[int], Creature] | None = None,
     world: World = World(),
+    budget: tuple[BudgetTables, Budget] | None = None,
 ) -> dict[int, list[Entry]]:
     book = SpellBook(tables, classic_events, creatures)
     items = tables.rows["Item"]
@@ -266,9 +274,18 @@ def build_effects(
             level=_int(sparse_row.get("RequiredLevel")),
         )
         entries = item_entries(item, spells, book, world)
+        if budget and any(e.stat == UNRESOLVED for e in entries):
+            entries.append(budget_entry(sparse_row, *budget))
         if entries:
             out[item_id] = entries
     return out
+
+
+def budget_entry(sparse: Row, tables: BudgetTables, budget: Budget) -> Entry:
+    points = effect_points(sparse, tables, budget)
+    if points is None:
+        return Entry(BUDGET, 0, "effect estimated from item level: items like it carry no stat budget, so ~0 stat points")
+    return Entry(BUDGET, points, f"effect estimated from item level: worth ~{points} stat points")
 
 
 def summary(effects: Mapping[int, list[Entry]]) -> Counter[str]:
@@ -276,7 +293,7 @@ def summary(effects: Mapping[int, list[Entry]]) -> Counter[str]:
     for entries in effects.values():
         stats = {e.stat for e in entries}
         if UNRESOLVED in stats:
-            kinds["unresolved"] += 1
+            kinds["estimated from item level"] += 1
         elif stats == {NONE}:
             kinds["no combat value"] += 1
         else:
@@ -315,9 +332,16 @@ def main() -> None:
     dump = read_dump(cmangos_dump(), {"item_template", "spell_proc_event", "creature_template", "creature"})
     templates = {int(t["Entry"]): t for t in dump["creature_template"]}
     world = mob_world(normal_mobs(dump["creature"], templates))
+    budget_tables = load_tables()
+    effect_items = {_int(r["ItemID"]) for r in tables.table("ItemXItemEffect")}
+    classic_items = {int(r["entry"]): r for r in dump["item_template"]}
+    budget = Budget(
+        budget_samples(tables.table("ItemSparse"), budget_tables, effect_items, classic_items),
+        budget_tables.rand_prop_points,
+    )
     effects = build_effects(
         tables, classic_item_procs(dump["item_template"]), classic_proc_events(dump["spell_proc_event"]),
-        creature_lookup(templates, client_names), world,
+        creature_lookup(templates, client_names), world, (budget_tables, budget),
     )
     write_effects(OUT, {
         "source": (
@@ -326,13 +350,21 @@ def main() -> None:
         "assumedSecondsPerHit": ASSUMED_SECONDS_PER_HIT,
         "assumedSecondsPerCast": ASSUMED_SECONDS_PER_CAST,
         "mobArmor": {str(band): armor for band, armor in world.mob_armor},
+        "minBudgetSample": MIN_SAMPLE,
+        "budget": {
+            group: {str(quality): {str(level): points for level, points in levels.items()} for quality, levels in by_quality.items()}
+            for group, by_quality in budget.table().items()
+        },
         "note": (
             "Item id -> what its Use, Chance on hit and Equip effects are worth in MGA Loot's stat-weight keys. "
             "dps = weighed like weapon DPS; use_dps = damage from a Use (weapon DPS or, for casters, spell damage); "
             "spell_dps = damage from procs on your spell casts (weighed as spell damage x 3.5); "
             "dps_pct = share of weapon DPS (extra attacks); armor_cut = average armor off the target, turned into "
             "a share of weapon DPS against mobArmor (median normal-mob armor by ten-level band); ranged_* = counted "
-            "only for ranged weights; none = no combat value; unresolved = the data can't value it. "
+            "only for ranged weights; none = no combat value; unresolved = the data can't value it; "
+            "budget = stat points the item lacks next to no-effect items of its slot group, quality and item level "
+            f"(budget: group -> quality -> item level -> median stat points, at least {MIN_SAMPLE} items a cell), "
+            "MGA Loot's estimate for the effects marked unresolved. "
             f"A non-weapon's chance per hit assumes a hit every {ASSUMED_SECONDS_PER_HIT}s, "
             f"a chance per cast a cast every {ASSUMED_SECONDS_PER_CAST}s."
         ),
