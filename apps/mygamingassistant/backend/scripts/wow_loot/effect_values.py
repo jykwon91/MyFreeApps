@@ -53,9 +53,14 @@ Every conversion turns an effect into a steady per-fight equivalent of a stat th
   ``ranged_`` key, which the addon counts only for weights that value ranged DPS over melee.
 * **No combat value** (water breathing, run / swim / mount speed, stealth, safe fall, illusions...): value 0,
   note "no combat value".
+* **Class-spell changes** (equip auras 107 / 108): valued in ``class_mods.py`` and marked with the class whose
+  spells they change (``Entry.cls``), the only class the addon counts them for. Each modifier effect is valued
+  on its own, so an item with a direct-damage and a periodic-damage change to spells that share a cooldown
+  (the shocks) counts both at that cooldown. A Use or proc that changes class spells is unresolved for its class.
 * **Unresolved:** scripted (dummy) spells, other effects on the enemy, effects on your pet, class-spell
-  modifiers, summoned objects and totems, rage / energy, buffs that last a set number of hits,
-  and anything the data gives no rate, cooldown or duration for. The addon says it can't judge those.
+  changes the data can't value, summoned objects and totems, rage / energy, buffs that last a set number of
+  hits, and anything the data gives no rate, cooldown or duration for. The addon estimates those from item
+  level (``budget``).
 
 A dummy effect that triggers the same spell as a real effect in the same spell (Hand of Justice's tooltip
 copy of its proc) adds nothing and is skipped.
