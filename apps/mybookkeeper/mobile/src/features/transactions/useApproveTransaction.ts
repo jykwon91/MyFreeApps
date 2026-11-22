@@ -25,11 +25,11 @@ export function useApproveTransaction(id: string, queueParams: TransactionListPa
   // The count covers everything waiting, so it only describes an unfiltered list.
   const showsCount = isReview && isWholeReviewQueue(queueParams);
   const count = useGetTransactionReviewCountQuery(undefined, { skip: !showsCount });
-  const queueRows = useMemo<Transaction[]>(() => queue.data?.pages.flat() ?? [], [queue.data]);
+  const queueRows = useMemo<Transaction[]>(() => queue.data?.pages.flatMap((page) => page.items) ?? [], [queue.data]);
 
   async function moveToNext(lead: string, others = ""): Promise<void> {
     const refreshed = await queue.refetch();
-    const remaining = refreshed.data?.pages.flat() ?? queueRows.filter((row) => row.id !== id);
+    const remaining = refreshed.data?.pages.flatMap((page) => page.items) ?? queueRows.filter((row) => row.id !== id);
     const next = nextToReview(queueRows, remaining, id);
     if (next === null) {
       showToast(`${lead}That's the last one.${others}`);

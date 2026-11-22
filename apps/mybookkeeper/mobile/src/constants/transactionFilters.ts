@@ -21,11 +21,16 @@ export const NO_FILTERS: TransactionFilters = {
   propertyId: null,
   category: null,
   vendor: "",
-  approvedOnly: false,
+  status: null,
   taxRelevant: null,
   sortBy: DEFAULT_TRANSACTION_SORT_FIELD,
   sortDir: DEFAULT_TRANSACTION_SORT_DIRECTION,
 };
+
+export const STATUS_FILTER = {
+  title: "Status",
+  any: "Any status",
+} as const;
 
 export const TAX_FILTER = {
   title: "In your tax report",

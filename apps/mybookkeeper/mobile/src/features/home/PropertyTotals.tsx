@@ -27,7 +27,7 @@ export default function PropertyTotals({ properties, period }: { properties: rea
             detailColor={moneySign(property.profit) > 0 ? colors.positiveText : undefined}
             key={property.property_id}
             label={property.name}
-            onPress={() => router.navigate(transactionsLink({ ...NO_FILTERS, period, propertyId: property.property_id, approvedOnly: true }))}
+            onPress={() => router.navigate(transactionsLink({ ...NO_FILTERS, period, propertyId: property.property_id, status: "approved" }))}
           />
         ))}
       </View>

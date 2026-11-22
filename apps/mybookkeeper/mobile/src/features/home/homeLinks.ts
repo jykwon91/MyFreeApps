@@ -13,7 +13,7 @@ import { transactionsLink } from "../transactions/transactionFilters";
  */
 
 function expensesFilters(period: HomePeriod) {
-  return { ...NO_FILTERS, period, type: "expense" as const, approvedOnly: true };
+  return { ...NO_FILTERS, period, type: "expense" as const, status: "approved" as const };
 }
 
 /** A category's expenses within the chosen properties; the category filter doesn't narrow one category. */
@@ -29,5 +29,5 @@ export function allExpensesLink(period: HomePeriod, scope: AnalysisScope): strin
 
 export function monthLink(month: string, scope: AnalysisScope): string {
   if (scope.propertyIds || scope.categories) return drillDownLink(wholeMonthDrillDown(month, scope));
-  return transactionsLink({ ...NO_FILTERS, month, approvedOnly: true });
+  return transactionsLink({ ...NO_FILTERS, month, status: "approved" });
 }

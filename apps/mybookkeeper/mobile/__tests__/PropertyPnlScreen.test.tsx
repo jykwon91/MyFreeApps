@@ -124,7 +124,7 @@ describe("property profit and loss", () => {
     await fireEvent.press((await screen.findAllByHintText(MESSAGES.opensTransactions))[0]);
     const month = propertyPnlRange("this_month", new Date());
     expect(mockNavigate).toHaveBeenCalledWith(
-      transactionsLink({ ...NO_FILTERS, period: "custom", startDate: month.since, endDate: month.until, propertyId: "p1", approvedOnly: true }),
+      transactionsLink({ ...NO_FILTERS, period: "custom", startDate: month.since, endDate: month.until, propertyId: "p1", status: "approved" }),
     );
   });
 

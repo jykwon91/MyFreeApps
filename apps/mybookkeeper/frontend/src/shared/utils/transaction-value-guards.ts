@@ -1,9 +1,10 @@
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { STATUS_OPTIONS, TYPE_OPTIONS } from "@/shared/lib/transaction-config";
+import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
+import { TYPE_OPTIONS } from "@/shared/lib/transaction-config";
 
 export function isTransactionStatus(value: string): value is TransactionStatus {
-  return STATUS_OPTIONS.some((status) => status === value);
+  return TRANSACTION_STATUS_OPTIONS.some((option) => option.value === value);
 }
 
 export function isTransactionType(value: string): value is TransactionType {

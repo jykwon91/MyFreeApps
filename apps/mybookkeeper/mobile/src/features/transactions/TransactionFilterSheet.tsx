@@ -1,11 +1,11 @@
 import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
-import { INCOME_CATEGORIES, EXPENSE_CATEGORY_LIST } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, SectionError, type SectionErrorProps, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
-import { TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { STATUS_FILTER, TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { isoFromDate, monthName } from "../../lib/localDate";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import FilterSheetSection from "../shell/FilterSheetSection";
@@ -13,6 +13,7 @@ import SortSections from "../shell/SortSections";
 import CustomRangeFields from "./CustomRangeFields";
 import { categoryLabel } from "./transactionDisplay";
 import { clearedFilters } from "./transactionFilters";
+import { useFilterCategories } from "./useFilterCategories";
 
 /** Picking "Custom range" starts from the first of this month to today, or from the range already chosen. */
 function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters> {
@@ -30,6 +31,7 @@ export default function TransactionFilterSheet({
   filters,
   properties,
   propertiesLoadError,
+  today,
   onApply,
   onClose,
 }: {
@@ -37,18 +39,15 @@ export default function TransactionFilterSheet({
   properties: readonly Property[];
   /** Set when the properties couldn't load, so the list below isn't mistaken for all of them. */
   propertiesLoadError?: SectionErrorProps;
+  /** The day the period choices count from. */
+  today: Date;
   onApply: (filters: TransactionFilters) => void;
   onClose: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
   const [draft, setDraft] = useState(filters);
   const update = (change: Partial<TransactionFilters>) => setDraft((current) => ({ ...current, ...change }));
-  const categories: readonly string[] =
-    draft.type === "income"
-      ? INCOME_CATEGORIES
-      : draft.type === "expense"
-        ? EXPENSE_CATEGORY_LIST
-        : [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORY_LIST])];
+  const categories = useFilterCategories(draft, today);
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
@@ -96,6 +95,20 @@ export default function TransactionFilterSheet({
                   startDate={draft.startDate}
                 />
               ) : null}
+            </FilterSheetSection>
+          )}
+          {/* The review queue is the rows waiting for review, whatever their status. */}
+          {draft.view === "review" ? null : (
+            <FilterSheetSection title={STATUS_FILTER.title}>
+              <OptionRow isSelected={draft.status === null} label={STATUS_FILTER.any} onPress={() => update({ status: null })} />
+              {TRANSACTION_STATUS_OPTIONS.map((option) => (
+                <OptionRow
+                  isSelected={draft.status === option.value}
+                  key={option.value}
+                  label={option.label}
+                  onPress={() => update({ status: option.value })}
+                />
+              ))}
             </FilterSheetSection>
           )}
           <FilterSheetSection title="Type">
@@ -161,7 +174,7 @@ export default function TransactionFilterSheet({
         </ScrollView>
         <View style={{ flexDirection: "row", gap: spacing.sm, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LoadingButton
-            onPress={() => setDraft({ ...clearedFilters(draft), vendor: draft.vendor, approvedOnly: draft.approvedOnly })}
+            onPress={() => setDraft({ ...clearedFilters(draft), vendor: draft.vendor })}
             style={{ flex: 1 }}
             variant="secondary"
           >

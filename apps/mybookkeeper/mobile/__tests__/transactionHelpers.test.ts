@@ -90,7 +90,7 @@ describe("filters", () => {
   });
 
   it("lists a month from a link instead of the period", () => {
-    expect(toListParams({ ...NO_FILTERS, period: "lastYear", month: "2026-02", approvedOnly: true }, today)).toEqual({
+    expect(toListParams({ ...NO_FILTERS, period: "lastYear", month: "2026-02", status: "approved" }, today)).toEqual({
       start_date: "2026-02-01",
       end_date: "2026-02-28",
       status: "approved",

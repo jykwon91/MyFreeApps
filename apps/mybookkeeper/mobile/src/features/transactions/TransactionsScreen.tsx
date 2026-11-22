@@ -2,6 +2,7 @@ import DuplicatesLink from "../duplicates/DuplicatesLink";
 import PagedListFooter from "../shell/PagedListFooter";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
+import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { ClampedText, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedControl, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -11,7 +12,7 @@ import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
-import { TRANSACTION_LIST_MESSAGES } from "../../constants/transactionList";
+import { TRANSACTION_LIST_MESSAGES, transactionCountLabel } from "../../constants/transactionList";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
@@ -77,7 +78,9 @@ export default function TransactionsScreen({
   }, error);
 
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties]);
-  const rows = useMemo(() => currentData?.pages.flat() ?? [], [currentData]);
+  const rows = useMemo(() => currentData?.pages.flatMap((page) => page.items) ?? [], [currentData]);
+  // Every page counts every matching row; the latest one is the freshest count.
+  const total = currentData?.pages.at(-1)?.total;
   const rowsVersion = useRefetchCount(listKey, currentData ? fulfilledTimeStamp : undefined, currentData?.pages.length ?? 0);
   // Loading the next page leaves the rows already shown as they are; any other fetch may change them.
   const isRefetching = isFetching && !isFetchingNextPage;
@@ -100,7 +103,7 @@ export default function TransactionsScreen({
           : filters.period !== "all"
             ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
             : null,
-    filters.approvedOnly && filters.view !== "review" ? "Approved" : null,
+    filters.status && filters.view !== "review" ? TRANSACTION_STATUS_OPTIONS.find((option) => option.value === filters.status)?.label : null,
     filters.taxRelevant ? taxFilterLabel(filters.taxRelevant) : null,
     isSorted(filters) && filters.view !== "review" ? sortLabel(filters.sortBy, filters.sortDir) : null,
   ]
@@ -270,14 +273,16 @@ export default function TransactionsScreen({
                 )
               ) : null}
             </View>
-            {summary ? (
+            {summary || total !== undefined ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                 <ClampedText numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
-                  {summary}
+                  {[total === undefined ? null : transactionCountLabel(total), summary].filter(Boolean).join(" · ")}
                 </ClampedText>
-                <LoadingButton onPress={clearNarrowing} variant="ghost">
-                  Clear
-                </LoadingButton>
+                {summary ? (
+                  <LoadingButton onPress={clearNarrowing} variant="ghost">
+                    Clear
+                  </LoadingButton>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -332,6 +337,7 @@ export default function TransactionsScreen({
           onClose={() => setIsFilterSheetOpen(false)}
           properties={properties}
           propertiesLoadError={pickerLoadError({ hasLoaded: loadedProperties !== undefined, error: propertiesError, refetch: refetchProperties }, PICKER_LOAD_MESSAGES.propertiesFailed)}
+          today={today}
         />
       ) : null}
     </View>

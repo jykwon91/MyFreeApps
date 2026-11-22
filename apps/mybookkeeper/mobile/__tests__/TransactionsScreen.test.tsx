@@ -150,8 +150,11 @@ describe("TransactionsScreen", () => {
     await screen.findByText("Home Depot");
     await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Income" }));
+    // The sheet's category choices follow what's picked; the list itself waits for Show results.
     const askedForIncome = () =>
-      server.requests.some((request) => (request.params as { transaction_type?: string } | undefined)?.transaction_type === "income");
+      server.requests.some(
+        (request) => request.url === "/transactions/page" && (request.params as { transaction_type?: string } | undefined)?.transaction_type === "income",
+      );
     expect(askedForIncome()).toBe(false);
     await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
     expect(await screen.findByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
@@ -272,21 +275,21 @@ describe("TransactionsScreen", () => {
 
   it("can show approved rows only, says so, and clears it", async () => {
     startTransactionServer([aTransaction({ id: "t1", vendor: "Acme", status: "approved" }), aTransaction({ id: "t2", vendor: "Lowes", status: "pending" })]);
-    await renderScreen({ ...NO_FILTERS, approvedOnly: true });
+    await renderScreen({ ...NO_FILTERS, status: "approved" });
     await screen.findByText("Acme");
     expect(screen.queryByText("Lowes")).toBeNull();
-    expect(screen.getByText("Approved")).toBeTruthy();
+    expect(screen.getByText("1 transaction · Approved")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Clear" }));
     expect(await screen.findByText("Lowes")).toBeTruthy();
-    expect(screen.queryByText("Approved")).toBeNull();
+    expect(screen.queryByText(/Approved/)).toBeNull();
   });
 
   it("shows the month a link opened, asks for just that month, and lets a period replace it", async () => {
     const server = startTransactionServer([aTransaction({ status: "approved" })]);
-    await renderScreen({ ...NO_FILTERS, month: "2026-03", approvedOnly: true });
+    await renderScreen({ ...NO_FILTERS, month: "2026-03", status: "approved" });
     await screen.findByText("Home Depot");
     expect(screen.getByText(/March 2026/)).toBeTruthy();
-    const params = server.requests.filter((request) => request.url === "/transactions").map((request) => request.params);
+    const params = server.requests.filter((request) => request.url === "/transactions/page").map((request) => request.params);
     expect(params).toContainEqual(expect.objectContaining({ start_date: "2026-03-01", end_date: "2026-03-31", status: "approved" }));
     await fireEvent.press(screen.getByRole("button", { name: "Filters, 2 on" }));
     expect(screen.getByRole("radio", { name: "March 2026" }).props.accessibilityState).toEqual(expect.objectContaining({ checked: true }));

@@ -18,7 +18,7 @@ interface PropertyPnlCardProps {
 
 /** The numbers are approved-only, so the transactions behind them are too. */
 function transactionsBehind(entry: PropertyPnLEntry, range: PropertyPnLRange): string {
-  return transactionsLink({ ...NO_FILTERS, period: "custom", startDate: range.since, endDate: range.until, propertyId: entry.property_id, approvedOnly: true });
+  return transactionsLink({ ...NO_FILTERS, period: "custom", startDate: range.since, endDate: range.until, propertyId: entry.property_id, status: "approved" });
 }
 
 export default function PropertyPnlCard({ entry, range }: PropertyPnlCardProps) {

@@ -47,6 +47,18 @@ describe("TransactionFilterBar", () => {
     expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTERS, transaction_type: "expense" });
   });
 
+  it("offers the shared status choices with their labels and reports the one picked", async () => {
+    const { onChange } = renderBar();
+    const status = screen.getByRole("combobox", { name: "Filter by status" });
+
+    expect(within(status).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified",
+    ]);
+    await userEvent.selectOptions(status, "needs_review");
+
+    expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTERS, status: "needs_review" });
+  });
+
   it("the toggle is named with the active filter count, and Clear filters resets them", async () => {
     const { onChange } = renderBar({ ...EMPTY_FILTERS, transaction_type: "expense", vendor: "Power" });
     expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument();
