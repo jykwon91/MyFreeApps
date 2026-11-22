@@ -19,18 +19,37 @@ class ProductionTestModeError(RuntimeError):
     """Raised at boot when test-only routes are switched on outside development and test."""
 
 
-def check_test_mode_off(*, flag_name: str, flag_is_on: bool, environment: str) -> None:
-    """Fail loud at boot if test-only routes are on outside development and test.
+def check_test_mode_off(
+    *,
+    flag_name: str,
+    flag_is_on: bool,
+    environment: str,
+    environment_is_explicit: bool = True,
+) -> None:
+    """Fail loud at boot if test-only routes are on outside an explicit development or test.
 
-    Those routes can make any account an admin or mark any email verified.
+    Those routes can make any account an admin or mark any email verified, so
+    ``environment`` only counts as development or test when ENVIRONMENT was
+    actually set. A production env file that omits ENVIRONMENT falls back to the
+    "development" default and must not unlock them. Every app except
+    MyGamingAssistant (maintained separately) passes ``environment_is_explicit``;
+    test_app_conformance enforces that, so the default only keeps MGA's
+    existing behaviour.
     """
-    if environment in _DEV_ENVIRONMENTS:
+    if not flag_is_on:
         return
-    if flag_is_on:
+    if environment_is_explicit and environment in _DEV_ENVIRONMENTS:
+        return
+    if not environment_is_explicit:
         raise ProductionTestModeError(
-            f"{flag_name} must be off when ENVIRONMENT={environment}. "
-            "Remove it from the app's env file."
+            f"{flag_name} requires ENVIRONMENT to be explicitly set to one of "
+            f"{_DEV_ENVIRONMENTS}; ENVIRONMENT is unset so it defaulted to "
+            f"{environment!r}. Set ENVIRONMENT, or remove {flag_name} from the app's env file."
         )
+    raise ProductionTestModeError(
+        f"{flag_name} must be off when ENVIRONMENT={environment}. "
+        "Remove it from the app's env file."
+    )
 
 
 class TurnstileNotConfiguredError(RuntimeError):

@@ -215,3 +215,9 @@ class BaseAppSettings(BaseSettings):
     transparency_shared_bucket: str = "myfreeapps-shared"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @property
+    def environment_is_explicit(self) -> bool:
+        """True only when ENVIRONMENT was supplied (env var, .env, or init kwarg),
+        not when ``environment`` fell back to its "development" default."""
+        return "environment" in self.model_fields_set

@@ -211,6 +211,7 @@ check_test_mode_off(
     flag_name="MYJOBHUNTER_ENABLE_TEST_HELPERS",
     flag_is_on=os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1",
     environment=settings.environment,
+    environment_is_explicit=settings.environment_is_explicit,
 )
 if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
     from app.api import test_helpers

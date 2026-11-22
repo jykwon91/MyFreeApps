@@ -1560,6 +1560,10 @@ def _test_route_guard_and_mount(main_source: str) -> tuple[ast.stmt, ast.If]:
     raise AssertionError("test routes not found; update this test if they moved")
 
 
+# MyGamingAssistant is maintained separately and keeps the guard's default.
+_EXPLICIT_ENVIRONMENT_EXEMPT = {"mygamingassistant"}
+
+
 class TestTestRoutesCantMountInProduction:
     """The boot guard's unit tests can't notice an app that stops calling it, or
     one whose mount starts following a different condition from the guard."""
@@ -1577,6 +1581,15 @@ class TestTestRoutesCantMountInProduction:
         assert ast.unparse(guard.value.func) == "check_test_mode_off"
         flag_is_on = next(kw.value for kw in guard.value.keywords if kw.arg == "flag_is_on")
         assert ast.dump(flag_is_on) == ast.dump(mount.test)
+        if main_path[1] in _EXPLICIT_ENVIRONMENT_EXEMPT:
+            return
+        explicit = next(
+            (kw.value for kw in guard.value.keywords if kw.arg == "environment_is_explicit"), None,
+        )
+        assert explicit is not None and ast.unparse(explicit) == "settings.environment_is_explicit", (
+            "check_test_mode_off must get environment_is_explicit=settings.environment_is_explicit, "
+            "so a defaulted ENVIRONMENT can't unlock the test routes."
+        )
 
 
 class TestTotpRoutesAreShared:

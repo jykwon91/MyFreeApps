@@ -208,6 +208,7 @@ check_test_mode_off(
     flag_name="APP_ENABLE_TEST_HELPERS",
     flag_is_on=settings.app_enable_test_helpers,
     environment=settings.environment,
+    environment_is_explicit=settings.environment_is_explicit,
 )
 if settings.app_enable_test_helpers:
     from app.test_helpers.router import router as _test_helpers_router
