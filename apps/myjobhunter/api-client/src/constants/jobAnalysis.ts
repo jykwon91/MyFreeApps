@@ -25,3 +25,11 @@ export const JOB_ANALYSIS_ERRORS = {
  * the same analysis again returns the application it already made, so trying again is safe.
  */
 export const JOB_ANALYSIS_APPLY_UNSURE = "I'm not sure it was added to your applications. Trying again won't add it twice.";
+
+/** What to say when adding an analysis to applications failed and the request reached the server. */
+export const JOB_ANALYSIS_APPLY_ERRORS = {
+  /** The analysis no longer exists, so adding it again can't work: no offer to retry. */
+  gone: "I couldn't add it: this analysis is gone. Analyze the job again to add it.",
+  couldntAdd: "I couldn't add it to your applications",
+  tryAgain: "Want to try again?",
+} as const;

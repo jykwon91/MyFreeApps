@@ -34,7 +34,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector, useStore } from "react-redux";
-import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { showError, showSuccess } from "@platform/ui";
 import type { AnalyzeInputMode } from "@/features/analyze/AnalyzeJdInput";
 import AnalyzeInputView from "@/features/analyze/AnalyzeInputView";
 import AnalyzeProcessingView from "@/features/analyze/AnalyzeProcessingView";
@@ -45,6 +45,7 @@ import { useAnalysisApplyRecheck } from "@myjobhunter/api-client/hooks/useAnalys
 import { useIsLongRunning } from "@myjobhunter/api-client/hooks/useIsLongRunning";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
 import { analysisFailureFrom } from "@myjobhunter/api-client/utils/analysisFailureFrom";
+import { describeApplyError } from "@myjobhunter/api-client/utils/describeApplyError";
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
@@ -168,7 +169,7 @@ export default function Analyze() {
    */
   async function settleAdd(analysisId: string, err: unknown, stillThisAccount: () => boolean) {
     if (!stillThisAccount()) return;
-    const failed = `${ANALYZE_MESSAGES.couldntSave} ${extractErrorMessage(err)}`;
+    const failed = describeApplyError(err);
     if (writeOutcome(err) !== "unknown") {
       showError(failed);
       return;

@@ -4,6 +4,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { AccessibilityInfo, Linking, StyleSheet } from "react-native";
+import { JOB_ANALYSIS_APPLY_ERRORS } from "@myjobhunter/api-client/constants/jobAnalysis";
 import { ANALYZE_MESSAGES as MESSAGES } from "../src/constants/analyze";
 import { store } from "../src/lib/store";
 import { analysisRecord } from "../test-support/analysisRecord";
@@ -219,7 +220,7 @@ describe("adding it to applications", () => {
     });
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
 
-    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
+    expect(await screen.findByText("I couldn't add it to your applications (boom). Want to try again?")).toBeTruthy();
     expect(screen).toHavePathname("/analyze");
     expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBeNull();
 
@@ -227,6 +228,17 @@ describe("adding it to applications", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
     await waitFor(() => expect(screen).toHavePathname("/applications"));
     expect(requestsTo(sent, APPLY)).toHaveLength(2);
+  });
+});
+
+describe("adding an analysis that is gone", () => {
+  it("says it is gone, without offering to try again", async () => {
+    await showResult(undefined, { [APPLY]: () => ({ status: 404, data: { detail: "Job analysis not found" } }) });
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
+
+    expect(await screen.findByText(JOB_ANALYSIS_APPLY_ERRORS.gone)).toBeTruthy();
+    expect(screen.queryByText(/Want to try again/)).toBeNull();
+    expect(screen).toHavePathname("/analyze");
   });
 });
 
@@ -250,14 +262,14 @@ describe("adding it to applications when the answer is lost", () => {
     await waitFor(() => expect(screen).toHavePathname("/applications"));
     expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBe("app-new");
     expect(requestsTo(sent, APPLY)).toHaveLength(1);
-    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+    expect(screen.queryByText(/couldn't add it/)).toBeNull();
   });
 
   it("offers to try again when the analysis, read again, names no application", async () => {
     await showResult(undefined, { [APPLY]: LOST, [READ]: () => ({ status: 200, data: analysisRecord() }) });
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
 
-    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
+    expect(await screen.findByText("I couldn't add it to your applications. Want to try again?")).toBeTruthy();
     expect(screen).toHavePathname("/analyze");
     expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBeNull();
   });
@@ -267,7 +279,7 @@ describe("adding it to applications when the answer is lost", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addToApplications }));
 
     expect(await screen.findByText(JOB_ANALYSIS_APPLY_UNSURE)).toBeTruthy();
-    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
+    expect(screen.queryByText(/couldn't add it/)).toBeNull();
     expect(screen).toHavePathname("/analyze");
     expect(screen.getByRole("button", { name: MESSAGES.addToApplications })).toBeEnabled();
   });

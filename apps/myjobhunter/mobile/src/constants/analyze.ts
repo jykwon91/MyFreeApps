@@ -41,7 +41,6 @@ export const ANALYZE_MESSAGES = {
   addToApplications: "Add to applications",
   adding: "Adding…",
   added: "Application added",
-  couldntAdd: "I couldn't add it to your applications. Want to try again?",
   saved: "Saved to your applications.",
   viewApplications: "View applications",
   analyzeAnother: "Analyze another",
