@@ -10,6 +10,7 @@ import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inqui
 import type { InquirySpamAssessmentType } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment-type";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
+import { inquirySpamLabel } from "@mybookkeeper/api-client/utils/inquirySpamLabel";
 import { formatDesiredDates, formatRelativeTime, formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import {
   BODY_LENGTH_THRESHOLD,
@@ -64,9 +65,14 @@ export function qualityLabel(inquiry: InquirySummary): string | null {
   return tier === "complete" ? "Complete" : null;
 }
 
-export function spamLabel(status: InquirySummary["spam_status"]): string | null {
-  if (status === "flagged") return "Flagged";
-  return status === "spam" ? "Spam" : null;
+export function spamLabel(inquiry: Pick<InquirySummary, "spam_status" | "spam_score">): string | null {
+  const { spam_status: status, spam_score: score } = inquiry;
+  return status === "flagged" || status === "spam" ? inquirySpamLabel(status, score) : null;
+}
+
+export function flaggedBannerMessage(score: number | null): string {
+  const message = "I flagged this as possible spam.";
+  return score === null ? message : `${message} ${inquirySpamLabel("flagged", score)}`;
 }
 
 export function shortSource(inquiry: InquirySummary): string {
@@ -81,7 +87,7 @@ export function rowAccessibilityLabel(inquiry: InquirySummary): string {
   return [
     inquirerName(inquiry.inquirer_name),
     stageLabel(inquiry.stage).toLowerCase(),
-    spamLabel(inquiry.spam_status)?.toLowerCase(),
+    spamLabel(inquiry)?.toLowerCase(),
     spokenStayDates(inquiry.desired_start_date, inquiry.desired_end_date),
     inquiry.inquirer_employer?.trim(),
     `received ${receivedAgo(inquiry.received_at)}`,

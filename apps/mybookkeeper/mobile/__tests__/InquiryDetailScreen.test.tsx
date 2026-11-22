@@ -261,6 +261,18 @@ describe("InquiryDetailScreen", () => {
     await waitFor(() => expect(screen.queryByText("I flagged this as possible spam.")).toBeNull());
   });
 
+  it("shows the spam score in the flagged banner, rounded the way the web does", async () => {
+    startInquiryServer([anInquiry({ spam_status: "flagged", spam_score: 41.6 })]);
+    await renderScreen();
+    expect(await screen.findByText("I flagged this as possible spam. Flagged · 42")).toBeTruthy();
+  });
+
+  it("leaves the score out of the flagged banner when there isn't one", async () => {
+    startInquiryServer([anInquiry({ spam_status: "flagged", spam_score: null })]);
+    await renderScreen();
+    expect(await screen.findByText("I flagged this as possible spam.")).toBeTruthy();
+  });
+
   it("marks as spam from More", async () => {
     const server = startInquiryServer([anInquiry()]);
     await renderScreen();
