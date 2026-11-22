@@ -115,6 +115,17 @@ describe("KanbanBoard", () => {
     expect(screen.queryByText(/couldn't refresh it/i)).not.toBeInTheDocument();
   });
 
+  it("shows the stale banner with the empty state when a refresh fails over an empty board", () => {
+    renderBoard([], vi.fn(), true);
+    expect(screen.getByText(/your hunt starts here/i)).toBeInTheDocument();
+    expect(screen.getByText(/couldn't refresh it/i)).toBeInTheDocument();
+  });
+
+  it("shows no banner on a healthy empty board", () => {
+    renderBoard([]);
+    expect(screen.queryByText(/couldn't refresh it/i)).not.toBeInTheDocument();
+  });
+
   it("counts only non-closed applications in the header", () => {
     renderBoard([
       makeItem({ id: "a", latest_event_type: "applied" }),
