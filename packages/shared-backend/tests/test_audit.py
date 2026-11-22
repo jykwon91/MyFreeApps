@@ -7,13 +7,13 @@ on top.
 """
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from platform_shared.core import audit as audit_module
 from platform_shared.core.audit import (
@@ -28,6 +28,7 @@ from platform_shared.core.audit import (
     reset_registry,
     verify_sensitive_field_names,
 )
+from platform_shared.core.encrypted_string_type import EncryptedString, PIICodec
 from platform_shared.db.base import Base
 from platform_shared.db.models.audit_log import AuditLog
 
@@ -49,6 +50,23 @@ class _SecretBag(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     payload: Mapped[str] = mapped_column(String(100))
+
+
+class _IsolatedBase(DeclarativeBase):
+    """Kept off the shared ``Base`` so the encrypted column below doesn't make
+    every other test's ``register_audit_listeners()`` fail verification."""
+
+
+_IDENTITY_CODEC = PIICodec(encrypt=lambda v: v, decrypt=lambda v: v)
+
+
+class _Diary(_IsolatedBase):
+    """A table with an encrypted column, for the encrypted-column check."""
+    __tablename__ = "test_diary"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(100))
+    entry_text: Mapped[str] = mapped_column(EncryptedString(1000, codec=_IDENTITY_CODEC))
 
 
 @pytest_asyncio.fixture()
@@ -452,3 +470,39 @@ class TestSensitiveFieldNameValidation:
         i_m = msg.index("'mmm_unknown'")
         i_z = msg.index("'zzz_unknown'")
         assert i_a < i_m < i_z
+
+
+class TestEncryptedColumnsMustBeMasked:
+    """The listener reads the DECRYPTED attribute value, so an EncryptedString
+    column missing from the sensitive fields lands in audit_logs as cleartext
+    (MLT's tutor transcripts did). Verification must refuse to boot instead.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_models(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(audit_module, "Base", _IsolatedBase)
+
+    def test_raises_when_encrypted_column_is_not_masked(self) -> None:
+        with pytest.raises(AuditConfigurationError) as exc:
+            verify_sensitive_field_names()
+        msg = str(exc.value)
+        assert "test_diary.entry_text" in msg
+        # Plain String columns are not the verifier's business.
+        assert "title" not in msg
+
+    def test_register_audit_listeners_refuses_to_attach(self) -> None:
+        with pytest.raises(AuditConfigurationError):
+            register_audit_listeners()
+        assert audit_module._listeners_registered is False
+
+    def test_passes_when_encrypted_column_is_masked(self) -> None:
+        register_sensitive_fields(["entry_text"])
+        verify_sensitive_field_names()  # no raise
+
+    def test_passes_when_encrypted_column_is_skipped(self) -> None:
+        register_skip_fields(["entry_text"])
+        verify_sensitive_field_names()  # no raise
+
+    def test_passes_when_table_is_skipped(self) -> None:
+        register_skip_tables(["test_diary"])
+        verify_sensitive_field_names()  # no raise

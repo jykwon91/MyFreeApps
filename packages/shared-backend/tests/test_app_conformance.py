@@ -2508,3 +2508,77 @@ class TestApiShutdownWindowCoversTheDrain:
     def test_scaffold_dockerfile_bounds_in_flight_requests(self) -> None:
         dockerfile = _read("infra", "templates", "scaffold", "docker", "backend.Dockerfile")
         assert f'"--timeout-graceful-shutdown", "{UVICORN_GRACEFUL_SHUTDOWN_SECONDS}"' in dockerfile
+
+
+def _audit_registry(app: str, suffix: str) -> set[str]:
+    """String names in ``apps/<app>/backend/app/core/audit.py``'s ``*<suffix>`` frozenset."""
+    tree = ast.parse(_read("apps", app, "backend", "app", "core", "audit.py"))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign | ast.Assign):
+            targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
+            if any(isinstance(t, ast.Name) and t.id.endswith(suffix) for t in targets) and node.value:
+                names |= {
+                    c.value for c in ast.walk(node.value)
+                    if isinstance(c, ast.Constant) and isinstance(c.value, str)
+                }
+    return names
+
+
+def _is_encrypted_string_column(value: ast.expr | None) -> bool:
+    if not (isinstance(value, ast.Call) and getattr(value.func, "id", None) == "mapped_column"):
+        return False
+    first = value.args[0] if value.args else None
+    return isinstance(first, ast.Call) and getattr(first.func, "id", None) == "EncryptedString"
+
+
+def _encrypted_columns(app: str) -> list[tuple[str, str]]:
+    """(table, attribute) for every ``mapped_column(EncryptedString(...))`` in the app's models."""
+    columns: list[tuple[str, str]] = []
+    models = _REPO_ROOT / "apps" / app / "backend" / "app" / "models"
+    for path in sorted(models.rglob("*.py")):
+        for cls in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            table = next(
+                (
+                    s.value.value for s in cls.body
+                    if isinstance(s, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "__tablename__" for t in s.targets)
+                    and isinstance(s.value, ast.Constant)
+                ),
+                cls.name,
+            )
+            for stmt in cls.body:
+                if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                    if _is_encrypted_string_column(stmt.value):
+                        columns.append((table, stmt.target.id))
+    return columns
+
+
+class TestEncryptedColumnsMaskedInAuditLog:
+    """The audit listener copies the DECRYPTED attribute value into audit_logs,
+    so every EncryptedString column must be a sensitive (masked) field. MLT's
+    tutor transcripts were copied in cleartext before this check. The same rule
+    fails app boot via platform_shared.core.audit.verify_sensitive_field_names;
+    this catches it in CI.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_every_encrypted_column_is_masked(self, app: str) -> None:
+        masked = _audit_registry(app, "_SENSITIVE_FIELDS") | _audit_registry(app, "_SKIP_FIELDS")
+        skipped_tables = _audit_registry(app, "_SKIP_TABLES")
+        unmasked = [
+            f"{table}.{attr}" for table, attr in _encrypted_columns(app)
+            if attr not in masked and table not in skipped_tables
+        ]
+        assert not unmasked, (
+            f"apps/{app}: EncryptedString columns {unmasked} would be copied into "
+            "audit_logs as cleartext. Add them to the sensitive fields in "
+            f"apps/{app}/backend/app/core/audit.py."
+        )
+
+    def test_finds_the_encrypted_columns(self) -> None:
+        # Guards the parser: an AST change that finds nothing would pass vacuously.
+        assert ("tutor_turn", "learner_text") in _encrypted_columns("mylanguagetutor")
+        assert ("inquiries", "inquirer_email") in _encrypted_columns("mybookkeeper")

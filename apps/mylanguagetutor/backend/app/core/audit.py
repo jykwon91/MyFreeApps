@@ -17,12 +17,19 @@ from platform_shared.core.audit import (
     register_skip_tables,
 )
 
-# Sensitive-field allowlist -- generic auth secrets from the shared User model.
-# Add domain-specific PII column names here as new tables come online.
+# Sensitive-field allowlist -- generic auth secrets from the shared User model,
+# plus every EncryptedString column (the listener sees the decrypted value, so
+# an unmasked encrypted column lands in audit_logs as cleartext; boot fails if
+# one is missing). Add domain-specific PII column names here as new tables come online.
 APP_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     "hashed_password",
     "totp_secret",
     "totp_recovery_codes",
+    # tutor_turn transcript text (learner PII, encrypted at rest).
+    "learner_text",
+    "reply_text",
+    "corrections_json",
+    "translation_text",
 })
 
 # Skip-tables -- high-volume / secret-bearing tables we don't audit.

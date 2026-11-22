@@ -3,6 +3,7 @@
 This module captures INSERT / UPDATE / DELETE events on every flush and writes
 per-field rows into the shared ``audit_logs`` table. Each consuming app
 contributes its own list of column names that should be masked as ``"***"``
+(:data:`~platform_shared.core.audit_constants.SENSITIVE_VALUE_MASK`)
 (PII, secrets, tokens) and any additional tables that should be skipped from
 auditing entirely.
 
@@ -40,6 +41,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import NO_VALUE
 from sqlalchemy.orm.base import NEVER_SET
 
+from platform_shared.core.audit_constants import SENSITIVE_VALUE_MASK
+from platform_shared.core.encrypted_string_type import EncryptedString
 from platform_shared.db.base import Base
 from platform_shared.db.models.audit_log import AuditLog
 
@@ -111,15 +114,43 @@ def _all_mapped_column_keys() -> set[str]:
     return {col.key for table in Base.metadata.tables.values() for col in table.columns}
 
 
+def _unmasked_encrypted_columns() -> list[str]:
+    """``table.attribute`` for every audited :class:`EncryptedString` column
+    whose attribute key is neither masked nor skipped.
+
+    The ORM attribute holds the DECRYPTED value, so the listener would copy it
+    into ``audit_logs`` as cleartext. Walks the mappers (not the tables) because
+    the listener matches on ``attr.key`` and ``target.__tablename__``.
+    """
+    unmasked: list[str] = []
+    for mapper in Base.registry.mappers:
+        table_name = getattr(mapper.class_, "__tablename__", None)
+        if table_name is None or table_name in _skip_tables:
+            continue
+        for prop in mapper.column_attrs:
+            if prop.key in _sensitive_fields or prop.key in _skip_fields:
+                continue
+            if any(isinstance(col.type, EncryptedString) for col in prop.columns):
+                unmasked.append(f"{table_name}.{prop.key}")
+    return sorted(set(unmasked))
+
+
 def verify_sensitive_field_names() -> None:
-    """Raise :class:`AuditConfigurationError` if any registered sensitive-field
-    name does not match an actual column attribute on any mapped class.
+    """Raise :class:`AuditConfigurationError` if the masking registry would let
+    plaintext reach ``audit_logs``:
+
+    1. a registered sensitive-field name matches no column attribute on any
+       mapped class, or
+    2. an audited :class:`EncryptedString` column is not registered as a
+       sensitive field (or skip field, or on a skip table).
 
     The PII mask compares ``attr.key`` (the SQLAlchemy attribute name) against
     ``_sensitive_fields`` on every flush. A name that matches no column means
     the mask silently never fires for that field — exactly the typo class that
     leaked plaintext TOTP secrets into ``audit_logs`` in MJH + MGA before this
-    check was added.
+    check was added. An encrypted column left off the list leaks the same way:
+    the ORM attribute is the decrypted value, so encryption at rest is undone
+    in the audit table (MLT's tutor transcripts, before this check).
 
     Called automatically by :func:`register_audit_listeners` unless
     ``verify_field_names=False`` is passed (tests that exercise the listener
@@ -127,18 +158,26 @@ def verify_sensitive_field_names() -> None:
     """
     known = _all_mapped_column_keys()
     unknown = _sensitive_fields - known
-    if not unknown:
-        return
-    raise AuditConfigurationError(
-        "register_sensitive_fields() received names that don't match any ORM "
-        f"column on any mapped class: {sorted(unknown)}. The audit mask will "
-        "never fire for these names — plaintext values in the columns they were "
-        "meant to mask will leak into audit_logs. Check spelling against the "
-        "actual SQLAlchemy attribute names on your models. (Tip: this check "
-        "runs against Base.metadata, so make sure every model module is "
-        "imported before register_audit_listeners is called — apps' main.py "
-        "lifespan already does this via the import side-effect chain.)",
-    )
+    if unknown:
+        raise AuditConfigurationError(
+            "register_sensitive_fields() received names that don't match any ORM "
+            f"column on any mapped class: {sorted(unknown)}. The audit mask will "
+            "never fire for these names — plaintext values in the columns they were "
+            "meant to mask will leak into audit_logs. Check spelling against the "
+            "actual SQLAlchemy attribute names on your models. (Tip: this check "
+            "runs against Base.metadata, so make sure every model module is "
+            "imported before register_audit_listeners is called — apps' main.py "
+            "lifespan already does this via the import side-effect chain.)",
+        )
+    unmasked = _unmasked_encrypted_columns()
+    if unmasked:
+        raise AuditConfigurationError(
+            f"EncryptedString columns are not masked in audit_logs: {unmasked}. "
+            "The audit listener reads the decrypted attribute value, so these "
+            "columns would be copied into audit_logs as cleartext. Add each "
+            "attribute name to the app's sensitive fields in app/core/audit.py "
+            "(or skip the column or table there if it shouldn't be audited).",
+        )
 
 
 def reset_registry() -> None:
@@ -246,7 +285,7 @@ def register_audit_listeners(
         for attr in inspect(target).attrs:
             if attr.key in _skip_fields or not _is_loaded(attr):
                 continue
-            new_val = "***" if attr.key in _sensitive_fields else _serialize(attr.value)
+            new_val = SENSITIVE_VALUE_MASK if attr.key in _sensitive_fields else _serialize(attr.value)
             _create_log(session, target.__tablename__, record_id, "INSERT", attr.key, None, new_val)
 
     def _handle_update(session: Session, target: Any) -> None:
@@ -262,8 +301,8 @@ def register_audit_listeners(
             old = hist.deleted[0] if hist.deleted else None
             new = hist.added[0] if hist.added else None
             if attr.key in _sensitive_fields:
-                old_val = "***" if old is not None else None
-                new_val = "***" if new is not None else None
+                old_val = SENSITIVE_VALUE_MASK if old is not None else None
+                new_val = SENSITIVE_VALUE_MASK if new is not None else None
             else:
                 old_val, new_val = _serialize(old), _serialize(new)
             _create_log(session, target.__tablename__, record_id, "UPDATE", attr.key, old_val, new_val)
@@ -275,7 +314,7 @@ def register_audit_listeners(
         for attr in inspect(target).attrs:
             if attr.key in _skip_fields or not _is_loaded(attr):
                 continue
-            old_val = "***" if attr.key in _sensitive_fields else _serialize(attr.value)
+            old_val = SENSITIVE_VALUE_MASK if attr.key in _sensitive_fields else _serialize(attr.value)
             _create_log(session, target.__tablename__, record_id, "DELETE", attr.key, old_val, None)
 
     def _after_flush(session: Session, _flush_context: Any) -> None:
