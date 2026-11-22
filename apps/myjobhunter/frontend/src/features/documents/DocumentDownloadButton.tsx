@@ -1,17 +1,20 @@
 import { Download, Loader2 } from "lucide-react";
-import { useDocumentDownload } from "@/features/documents/useDocumentDownload";
+import { useLazyGetDocumentDownloadUrlQuery } from "@myjobhunter/api-client/store/documentsApi";
+import { useFileDownload } from "@/hooks/useFileDownload";
 
 interface DocumentDownloadButtonProps {
   documentId: string;
 }
 
 export default function DocumentDownloadButton({ documentId }: DocumentDownloadButtonProps) {
-  const { download, isDownloading } = useDocumentDownload(documentId);
+  const [fetchUrl] = useLazyGetDocumentDownloadUrlQuery();
+  const { download, downloadingId } = useFileDownload((id) => fetchUrl(id).unwrap());
+  const isDownloading = downloadingId !== null;
 
   return (
     <button
       type="button"
-      onClick={() => void download()}
+      onClick={() => void download(documentId)}
       disabled={isDownloading}
       aria-busy={isDownloading}
       title="Download file"
