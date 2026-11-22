@@ -435,3 +435,67 @@ async def test_export_response_is_attachment(db: AsyncSession) -> None:
     assert "attachment" in disposition
     assert "myjobhunter-export-" in disposition
     assert disposition.endswith(".json")
+
+
+# ---------------------------------------------------------------------------
+# GET /users/me/export — previously dropped columns now appear with values
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_export_includes_previously_dropped_application_and_event_fields(db: AsyncSession) -> None:
+    user = _make_user()
+    db.add(user)
+    await db.flush()
+
+    company = Company(user_id=user.id, name="Acme Co", external_ref="co-ref", external_source="crunchbase")
+    db.add(company)
+    await db.flush()
+
+    application = Application(
+        user_id=user.id,
+        company_id=company.id,
+        role_title="Senior Engineer",
+        jd_text="Full job description text",
+        jd_parsed={"skills": ["python"]},
+        external_ref="ext-123",
+        external_source="greenhouse",
+    )
+    db.add(application)
+    await db.flush()
+
+    db.add(ApplicationEvent(
+        user_id=user.id,
+        application_id=application.id,
+        event_type="interview_scheduled",
+        occurred_at=datetime.now(timezone.utc),
+        source="gmail",
+        email_message_id="msg-abc",
+        raw_payload={"subject": "Interview"},
+        interview_details={"location": "Zoom"},
+    ))
+    await db.flush()
+
+    _override_deps(user, db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/users/me/export")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    data = response.json()
+
+    exported_app = data["applications"][0]
+    assert exported_app["jd_text"] == "Full job description text"
+    assert exported_app["jd_parsed"] == {"skills": ["python"]}
+    assert exported_app["external_ref"] == "ext-123"
+    assert exported_app["external_source"] == "greenhouse"
+
+    exported_event = data["application_events"][0]
+    assert exported_event["email_message_id"] == "msg-abc"
+    assert exported_event["raw_payload"] == {"subject": "Interview"}
+    assert exported_event["interview_details"] == {"location": "Zoom"}
+
+    assert data["companies"][0]["external_ref"] == "co-ref"
+    assert data["companies"][0]["external_source"] == "crunchbase"
