@@ -354,7 +354,7 @@ describe("deleting a recipe", () => {
     await pressDelete();
     await act(async () => alertButton(SHARED.deleteConfirm).onPress?.());
 
-    expect(await screen.findByRole("alert", { name: MESSAGES.gone })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: SHARED.gone })).toBeTruthy();
     expect(mockDismissTo).toHaveBeenCalledWith(RECIPES_LIST_PATH);
   });
 

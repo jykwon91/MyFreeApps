@@ -24,4 +24,5 @@ export const COOK_LOG_MESSAGES = {
   deleteConfirm: "Delete",
   deleted: "Cook log deleted.",
   couldntDelete: "Couldn't delete that cook log — please try again.",
+  gone: "This cook log was already deleted.",
 } as const;

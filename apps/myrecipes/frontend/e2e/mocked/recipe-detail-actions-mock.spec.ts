@@ -119,6 +119,18 @@ test.describe("Edit", () => {
 });
 
 test.describe("Delete", () => {
+  test("a recipe that was already deleted says so and returns to the list", async ({ page }) => {
+    await stubSignedInShell(page);
+    await stubRecipeApi(page, RECIPE_ID, { failWith: { "DELETE /": 404 } });
+
+    await page.goto(`/recipes/${RECIPE_ID}`);
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete recipe" }).click();
+
+    await expect(toast(page, "This recipe was already deleted.")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("asks first; cancelling deletes nothing", async ({ page }) => {
     await stubSignedInShell(page);
     const { writes: sent } = await stubRecipeApi(page, RECIPE_ID);
@@ -238,6 +250,19 @@ test.describe("I made it", () => {
     await expect(page.getByText("Needed more salt")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^v1/ })).toContainText("0 cooks");
     expect(writes).toEqual([{ method: "DELETE", path: `${COOKS_PATH}/${COOK_ID}`, body: null }]);
+  });
+
+  test("a cook that was already deleted says so and drops the row", async ({ page }) => {
+    await stubSignedInShell(page);
+    await stubRecipeApi(page, RECIPE_ID, { cooks: [cookOf()], failWith: { [`DELETE /cooks/${COOK_ID}`]: 404 } });
+
+    await page.goto(`/recipes/${RECIPE_ID}`);
+    await page.getByRole("button", { name: "Delete cook log" }).click();
+    await page.getByRole("dialog", { name: "Delete cook log?" }).getByRole("button", { name: "Delete", exact: true }).click();
+
+    await expect(toastAboveModal(page, "This cook log was already deleted.")).toBeVisible();
+    await expect(page.getByText("Needed more salt")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^v1/ })).toContainText("0 cooks");
   });
 
   test("a refused cook delete says so and keeps the cook", async ({ page }) => {

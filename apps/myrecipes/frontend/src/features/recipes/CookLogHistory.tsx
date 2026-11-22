@@ -5,6 +5,7 @@ import StarRating from "@/features/recipes/StarRating";
 import { useDeleteCookMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import { COOK_LOG_MESSAGES as MESSAGES } from "@myrecipes/api-client/constants/cookLog";
+import { deleteFailureOutcome } from "@myrecipes/api-client/utils/deleteFailureOutcome";
 import { cooksNewestFirst } from "@myrecipes/api-client/utils/cooksNewestFirst";
 
 interface Props {
@@ -35,8 +36,14 @@ export default function CookLogHistory({
       await deleteCook({ recipeId, cookId: pendingDelete }).unwrap();
       showSuccess(MESSAGES.deleted);
       setPendingDelete(null);
-    } catch {
-      showError(MESSAGES.couldntDelete);
+    } catch (error) {
+      const { isGone, message } = deleteFailureOutcome(error, MESSAGES);
+      if (!isGone) {
+        showError(message);
+        return;
+      }
+      showSuccess(message);
+      setPendingDelete(null);
     }
   }
 
