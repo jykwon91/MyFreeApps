@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Companies from "@/pages/Companies";
 import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
@@ -79,32 +80,40 @@ describe("Companies page", () => {
   });
 
   describe("error state", () => {
-    it("renders the error empty state when the query fails with an HTTP status", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+
+    it("shows the error with Try again when nothing has loaded", async () => {
       mockUseListCompaniesQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
         isError: true,
         error: { status: 500 },
+        refetch,
       } as unknown as ReturnType<typeof useListCompaniesQuery>);
 
       renderCompanies();
 
-      expect(
-        screen.getByText(/The server returned 500/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText("We couldn't load your companies.")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
 
-    it("renders a generic error message when no status is available", () => {
+    it("keeps the loaded rows under a notice with Try again when a refresh fails", async () => {
       mockUseListCompaniesQuery.mockReturnValue({
-        data: undefined,
+        data: { items: [{ id: "c1", name: "Acme Corp", primary_domain: null, industry: null, hq_location: null }], total: 1 },
         isLoading: false,
         isError: true,
-        error: new Error("network error"),
+        error: { status: 500 },
+        refetch,
       } as unknown as ReturnType<typeof useListCompaniesQuery>);
 
       renderCompanies();
 
-      expect(screen.getByText(/Try refreshing the page/i)).toBeInTheDocument();
+      expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+      expect(screen.getByText(/We couldn't refresh them/)).toBeInTheDocument();
+      expect(screen.queryByText("We couldn't load your companies.")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetch).toHaveBeenCalled();
     });
   });
 
