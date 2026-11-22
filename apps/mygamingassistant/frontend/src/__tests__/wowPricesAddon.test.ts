@@ -445,6 +445,8 @@ describe("disenchant verdict", () => {
     const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 25; hover(GameTooltip, ${DE_ITEM})`, highData);
     // 5000 − 250 (5% cut) = 4750 net; 4750 − 20 vendor = 4730 over vendor.
     expect(lines).toContain("Sell on AH | +4730c over vendor");
+    // Disenchanting lost, but its value still shows so it can be compared.
+    expect(lines.some((l) => /^Disenchant \| ~?\d+c \(less\)$/.test(l))).toBe(true);
   });
 
   it("finds Enchanting under a collapsed Professions header, and leaves the header collapsed", () => {

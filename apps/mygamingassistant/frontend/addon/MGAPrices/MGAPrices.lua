@@ -252,11 +252,16 @@ local function addVerdict(tooltip, itemId, market, cut, count)
       line(tooltip, "Disenchant", prefix .. money(floor(deEV)), GOOD, VALUE)
       return
     end
-    -- DE didn't win; fall through to AH vs Vendor.
+    -- DE didn't win; fall through to AH vs Vendor, and still say what disenchanting gets.
     if ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
       line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
     else
       line(tooltip, "Vendor it", ahNets and ("AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal)) or ("vendor " .. money(vendorTotal)), WARN, MUTED)
+    end
+    if deEV then
+      line(tooltip, "Disenchant", prefix .. money(floor(deEV)) .. " (less)", MUTED, MUTED)
+    else
+      line(tooltip, "Disenchant", deMissing and "~ prices not loaded" or "not priced", MUTED, MUTED)
     end
     return
   end
