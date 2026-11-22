@@ -44,8 +44,8 @@ async def seed_operator_user(email: str, hashed_password: str) -> None:
     async with unit_of_work() as db:
         existing = await user_repo.get_by_email(db, email)
         if existing is not None:
-            logger.info("seed_operator_user: user %s already exists — skipping", email)
+            logger.info("seed_operator_user: user_id=%s already exists — skipping", existing.id)
             return
 
-        await user_repo.create_seed_user(db, email=email, hashed_password=hashed_password)
-        logger.info("seed_operator_user: created operator user %s", email)
+        user = await user_repo.create_seed_user(db, email=email, hashed_password=hashed_password)
+        logger.info("seed_operator_user: created operator user_id=%s", user.id)

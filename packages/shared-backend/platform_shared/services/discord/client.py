@@ -4,7 +4,8 @@ Wraps the Discord API v10 with:
   - ``Authorization: Bot <token>`` on every request
   - Branded User-Agent per Discord API docs
   - 429 rate-limit handling: honour ``retry_after`` / ``Retry-After`` with bounded retries
-  - Structured error logging (status + discord error code + route; token never logged)
+  - Structured error logging (status + discord error code + route template; ids,
+    interaction tokens and the bot token never logged, not even by httpx)
   - Safe ``allowed_mentions`` defaults so user-controlled text cannot ping @everyone/@here
 
 Usage::
@@ -22,10 +23,13 @@ from typing import Any, Final
 
 import httpx
 
+from platform_shared.core.host_only_request_log_filter import hide_request_urls
+
 from .client_events import ScheduledEventsAndThreads
 from .client_files import InteractionFiles
 from .client_members import GuildMembers
 from .client_pins import MessagePins
+from .route_template import route_template
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +164,12 @@ class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMember
         client = self._assert_open()
         resp: httpx.Response | None = None
         for attempt in range(self.MAX_RETRIES):
-            resp = await client.request(method, path, **kwargs)
+            # httpx logs the full URL at INFO; a webhook path carries the token.
+            hide = hide_request_urls.set(True)
+            try:
+                resp = await client.request(method, path, **kwargs)
+            finally:
+                hide_request_urls.reset(hide)
             if resp.status_code != 429:
                 return resp
             try:
@@ -172,7 +181,7 @@ class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMember
             is_global = bool(data.get("global", False))
             logger.warning(
                 "Discord rate limited: route=%s attempt=%d retry_after=%.2fs global=%s",
-                path,
+                route_template(path),
                 attempt + 1,
                 retry_after,
                 is_global,
@@ -185,9 +194,9 @@ class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMember
     def _raise_for_status(self, resp: httpx.Response, route: str) -> None:
         """Raise :exc:`DiscordApiError` for 4xx/5xx responses.
 
-        Logs WARNING with status + Discord error code + route.  The bot token
-        is never logged (it lives only in the Authorization header; we only
-        log the route path, not headers).
+        Logs WARNING with status + Discord error code + route template.  The
+        bot token lives only in the Authorization header, which is never
+        logged; ids and interaction tokens in the path are templated out.
         """
         if resp.status_code < 400:
             return
@@ -203,7 +212,7 @@ class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMember
             "Discord API error: status=%d discord_code=%s route=%s",
             resp.status_code,
             code,
-            route,
+            route_template(route),
         )
         raise DiscordApiError(resp.status_code, code, message)
 
@@ -216,8 +225,9 @@ class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMember
     ) -> Any:
         """Make a request and return the parsed response body (or ``None`` for 204).
 
-        ``params`` become the query string. Only ``path`` is ever logged (see
-        :meth:`_raise_for_status`), so query values never reach the logs either.
+        ``params`` become the query string. Only ``path``'s template is ever
+        logged (see :meth:`_raise_for_status`), so query values never reach the
+        logs either.
         """
         kwargs: dict[str, Any] = {}
         if json is not None:

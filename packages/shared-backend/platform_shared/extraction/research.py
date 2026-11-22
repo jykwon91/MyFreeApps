@@ -34,6 +34,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
 from platform_shared.extraction.errors import (
     ExtractionNotConfiguredError,
@@ -351,7 +352,7 @@ def _build_response(responses: list["Message"]) -> ResearchResponse:
                         seen.add(source.url)
                         sources.append(source)
 
-    data = _payload_from_texts(texts)
+    data = _payload_from_texts(texts, stop_reason=getattr(responses[-1], "stop_reason", None))
     return ResearchResponse(
         data=data,
         sources=sources,
@@ -404,7 +405,7 @@ def _document_title(content: Any) -> str | None:
     return getattr(document, "title", None) if document is not None else None
 
 
-def _payload_from_texts(texts: list[str]) -> Any:
+def _payload_from_texts(texts: list[str], *, stop_reason: str | None) -> Any:
     """The JSON payload out of the response's text blocks.
 
     With ``output_config.format`` set the final text block *is* the JSON, so
@@ -426,6 +427,9 @@ def _payload_from_texts(texts: list[str]) -> Any:
         except json.JSONDecodeError:
             continue
 
-    preview = (texts[-1][:500] if texts else "EMPTY").replace("\n", " ")
-    logger.error("Research response carried no JSON payload — raw: %s", preview)
+    # Never the text itself, only its shape: a research reply can quote what it read.
+    logger.error(
+        "Research response carried no JSON payload — %s",
+        describe_model_output(texts[-1] if texts else "", stop_reason=stop_reason),
+    )
     raise ExtractionParseError("Model response contained no JSON payload")

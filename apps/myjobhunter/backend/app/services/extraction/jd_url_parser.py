@@ -38,9 +38,9 @@ import uuid
 from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
+from platform_shared.core.loggable_url import loggable_url
 from platform_shared.extraction import ExtractionError
 
-from app.core.loggable_url import loggable_url
 from app.services.extraction import claude_service
 from app.services.extraction.ai_failure import ai_failure_message
 from app.services.extraction.jd_ai_extraction_error import JDAiExtractionError

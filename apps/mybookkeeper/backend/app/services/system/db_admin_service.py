@@ -3,7 +3,9 @@
 Owns the session / transaction for each admin-db endpoint: read-only
 queries run on a plain session, bulk maintenance writes run inside
 ``unit_of_work`` so they commit atomically. Every write is logged with an
-``ADMIN_DB`` prefix so the operator has an audit trail of manual fixes.
+``ADMIN_DB`` prefix so the operator has an audit trail of manual fixes. The
+log names the org, target and count, never the vendor or the match patterns:
+those are payee names and file names, and log lines reach Sentry.
 """
 import logging
 
@@ -35,9 +37,8 @@ async def reassign_property(body: BulkPropertyReassignRequest) -> BulkUpdateResp
             body.vendor, body.filename_pattern, str(body.target_property_id),
         )
     logger.info(
-        "ADMIN_DB reassign_property org=%s vendor=%s pattern=%s target=%s count=%d",
-        body.organization_id, body.vendor, body.filename_pattern,
-        body.target_property_id, count,
+        "ADMIN_DB reassign_property org=%s target=%s count=%d",
+        body.organization_id, body.target_property_id, count,
     )
     return BulkUpdateResponse(updated=count)
 
@@ -49,9 +50,8 @@ async def fix_sub_category(body: BulkSubCategoryFixRequest) -> BulkUpdateRespons
             body.vendor, body.description_pattern, body.new_sub_category,
         )
     logger.info(
-        "ADMIN_DB fix_sub_category org=%s vendor=%s pattern=%s sub_cat=%s count=%d",
-        body.organization_id, body.vendor, body.description_pattern,
-        body.new_sub_category, count,
+        "ADMIN_DB fix_sub_category org=%s sub_cat=%s count=%d",
+        body.organization_id, body.new_sub_category, count,
     )
     return BulkUpdateResponse(updated=count)
 
@@ -63,8 +63,8 @@ async def soft_delete_transactions(body: BulkSoftDeleteRequest) -> BulkUpdateRes
             body.vendor, body.category, body.source, body.description_pattern,
         )
     logger.info(
-        "ADMIN_DB soft_delete org=%s vendor=%s category=%s source=%s count=%d",
-        body.organization_id, body.vendor, body.category, body.source, count,
+        "ADMIN_DB soft_delete org=%s category=%s source=%s count=%d",
+        body.organization_id, body.category, body.source, count,
     )
     return BulkUpdateResponse(updated=count)
 

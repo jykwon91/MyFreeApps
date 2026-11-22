@@ -1,4 +1,5 @@
 """Tests for organization service — create, members, invites, role changes."""
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -178,11 +179,16 @@ class TestMemberManagement:
 class TestInvites:
     @pytest.mark.asyncio
     async def test_create_invite(
-        self, db: AsyncSession, owner: User, org_with_owner: Organization
+        self, db: AsyncSession, owner: User, org_with_owner: Organization,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        invite = await organization_service.create_invite(
-            org_with_owner.id, "new@example.com", "editor", owner.id,
-        )
+        with caplog.at_level(logging.INFO):
+            invite = await organization_service.create_invite(
+                org_with_owner.id, "new@example.com", "editor", owner.id,
+            )
+        # Logs carry the invite id and the address's domain, never the address.
+        assert "new@example.com" not in caplog.text
+        assert f"invite={invite.id} email=***@example.com" in caplog.text
         assert invite.email == "new@example.com"
         assert invite.org_role == "editor"
         assert invite.status == "pending"

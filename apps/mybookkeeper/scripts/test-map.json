@@ -140,7 +140,8 @@
         "test_password_validation.py",
         "test_totp_service.py",
         "test_totp_routes.py",
-        "test_turnstile.py"
+        "test_turnstile.py",
+        "test_auth_logs_no_email.py"
       ],
       "frontend_tests": [
         "Login.test.tsx",
@@ -173,7 +174,8 @@
         "backend/app/schemas/classification/"
       ],
       "backend_tests": [
-        "test_sender_category.py"
+        "test_sender_category.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [],
       "e2e_specs": []
@@ -189,7 +191,8 @@
       "backend_tests": [
         "test_demo_service.py",
         "test_demo_security.py",
-        "test_integration_smoke.py"
+        "test_integration_smoke.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [
         "Demo.test.tsx"
@@ -556,7 +559,8 @@
         "test_org_idor.py",
         "test_org_role_enforcement.py",
         "test_member_role_schema.py",
-        "test_member_seed_routes.py"
+        "test_member_seed_routes.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [
         "OrgSwitcher.test.tsx",
@@ -1654,7 +1658,9 @@
         "test_lease_template_upload_routes.py",
         "test_lease_write_races.py",
         "test_signed_lease_render_error_routes.py",
-        "test_attachment_upload_commit_outcome.py"
+        "test_attachment_upload_commit_outcome.py",
+        "test_logs_carry_no_personal_details.py",
+        "test_lease_email_logs.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
@@ -1970,7 +1976,8 @@
         "api-client/src/utils/taxFieldSourceMode.ts",
         "api-client/src/utils/taxFormStatus.ts",
         "api-client/src/utils/taxReportTotals.ts",
-        "api-client/src/utils/taxReturnYearChoices.ts"
+        "api-client/src/utils/taxReturnYearChoices.ts",
+        "backend/app/core/tax_advisor_disclaimer.py"
       ],
       "backend_tests": [
         "test_tax_advisor_service.py",
@@ -1995,7 +2002,8 @@
         "test_tax_return_staleness.py",
         "test_capital_improvements_not_deducted.py",
         "test_tax_summary_by_tax_year.py",
-        "test_depreciation_schedule_e.py"
+        "test_depreciation_schedule_e.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
@@ -2337,7 +2345,8 @@
         "mobile/app/(app)/vendor-rules/"
       ],
       "backend_tests": [
-        "test_vendor_normalization.py"
+        "test_vendor_normalization.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [
         "useClassificationRulesPanelMode.test.ts",
@@ -2355,7 +2364,8 @@
         "frontend/src/shared/types/version/"
       ],
       "backend_tests": [
-        "test_version_endpoint.py"
+        "test_version_endpoint.py",
+        "test_request_log_hides_path_tokens.py"
       ],
       "frontend_tests": [
         "VersionTag.test.tsx"
@@ -2483,7 +2493,8 @@
         "test_upload_processor_retries.py",
         "test_self_healing.py",
         "test_lease_auto_end_scheduler.py",
-        "test_utility_plan_scheduler.py"
+        "test_utility_plan_scheduler.py",
+        "test_logs_carry_no_personal_details.py"
       ],
       "frontend_tests": [],
       "e2e_specs": []

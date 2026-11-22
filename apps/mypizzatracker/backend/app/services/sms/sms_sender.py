@@ -4,9 +4,10 @@ Mirrors ``app.services.email.email_sender`` shape — routes through
 ``platform_shared.services.sms_service.SmsService`` for the live Twilio
 backend, or logs to stdout in console mode.
 
-Console mode exists so dev/CI runs don't need a Twilio account; the
-operator can still see the rendered SMS body in logs while testing
-service-dashboard transitions. The boot guard
+Console mode exists so dev/CI runs don't need a Twilio account. It logs
+that a text would have gone out and how long it is, never the customer's
+number or the text (it names the customer), the same as the email console
+backend. The boot guard
 (``platform_shared.core.boot_guards.check_sms_configured``) blocks
 console mode in production.
 """
@@ -31,13 +32,8 @@ def _twilio_service() -> SmsService:
     )
 
 
-def _log_console_send(to: str, body: str) -> None:
-    logger.info(
-        "[sms:console] to=%s body_chars=%d body=%r",
-        to,
-        len(body),
-        body,
-    )
+def _log_console_send(body: str) -> None:
+    logger.info("[sms:console] body_chars=%d", len(body))
 
 
 def send_sms(to: str, body: str) -> bool:
@@ -52,7 +48,7 @@ def send_sms(to: str, body: str) -> bool:
         return False
     if settings.sms_backend == "twilio":
         return _twilio_service().send(to, body)
-    _log_console_send(to, body)
+    _log_console_send(body)
     return True
 
 
@@ -70,7 +66,7 @@ def send_sms_or_raise(to: str, body: str) -> str | None:
         raise ValueError("SMS body cannot be empty")
     if settings.sms_backend == "twilio":
         return _twilio_service().send_or_raise(to, body)
-    _log_console_send(to, body)
+    _log_console_send(body)
     return None
 
 

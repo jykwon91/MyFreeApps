@@ -23,6 +23,7 @@ import httpx
 
 from platform_shared.core.capped_fetch import fetch_capped
 from platform_shared.core.capped_fetch_error import CappedFetchError
+from platform_shared.core.loggable_url import loggable_url
 
 from app.core.job_page_fetch_constants import (
     JOB_PAGE_MAX_BYTES,
@@ -160,7 +161,12 @@ async def fetch_html(url: str) -> str:
 
 
 def _jd_fetch_error(exc: CappedFetchError, url: str) -> JDFetchError:
-    """The typed error the route maps to a status for this failure."""
+    """The typed error the route maps to a status for this failure.
+
+    Messages name the URL without its query string or login: they are logged,
+    sent to Sentry and shown to the user, and job links carry tracking tokens.
+    """
+    url = loggable_url(url)
     if exc.reason == "timeout":
         return JDFetchTimeoutError(f"Timed out fetching {url}")
     if exc.reason == "http_status" and exc.status_code in (401, 403):

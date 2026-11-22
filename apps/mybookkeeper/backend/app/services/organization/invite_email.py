@@ -3,6 +3,8 @@
 import html as html_mod
 import logging
 
+from platform_shared.core.mask_email import mask_email
+
 from app.core.config import settings
 from app.services.system import email_service
 
@@ -108,13 +110,7 @@ async def send_invite_email(
     subject = f"You've been invited to join {org_name} on MyBookkeeper"
     success = await email_service.send_email([recipient_email], subject, html)
     if success:
-        logger.info(
-            "Organization invite email sent to %s for org %s",
-            recipient_email, org_name,
-        )
+        logger.info("Organization invite email sent to %s", mask_email(recipient_email))
     else:
-        logger.warning(
-            "Failed to send organization invite email to %s for org %s",
-            recipient_email, org_name,
-        )
+        logger.warning("Failed to send organization invite email to %s", mask_email(recipient_email))
     return success

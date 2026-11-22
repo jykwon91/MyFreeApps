@@ -10,6 +10,7 @@ import smtplib
 import socket
 import threading
 import time
+import traceback
 from email.mime.multipart import MIMEMultipart
 from unittest.mock import MagicMock, patch
 
@@ -135,6 +136,62 @@ class TestRecipientsAreNotLogged:
         with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING):
             assert _service().send(["x@example.com"], "subj", "<p>b</p>") is False
         assert "x@example.com" not in caplog.text
+
+
+class TestSubjectsAreNotLogged:
+    """Subjects name tenants and applicants ("Your lease, Jane Doe")."""
+
+    _SUBJECT = "Your lease, Jane Doe"
+
+    def test_a_successful_send_does_not_log_the_subject(self, caplog: pytest.LogCaptureFixture) -> None:
+        with patch("smtplib.SMTP", return_value=_server()), caplog.at_level(logging.INFO):
+            _service().send_or_raise(["a@example.com"], self._SUBJECT, "<p>b</p>")
+        assert "Email sent via SMTP to 1 recipient(s) at example.com" in caplog.text
+        assert "Jane Doe" not in caplog.text
+
+    def test_a_failed_send_does_not_log_the_subject(self, caplog: pytest.LogCaptureFixture) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPDataError(554, b"rejected")
+        with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING):
+            assert _service().send(["a@example.com"], self._SUBJECT, "<p>b</p>") is False
+        assert "smtp_code=554" in caplog.text
+        assert "Jane Doe" not in caplog.text
+
+
+class TestErrorMessagesCarryNoAddress:
+    def test_a_reply_quoting_the_recipient_is_cut_to_its_domain(self) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPDataError(
+            550, b"5.1.1 <jane.doe@example.com>: Recipient address rejected",
+        )
+        error = _send_failure(server, ["jane.doe@example.com"])
+        assert error.smtp_code == 550
+        assert "jane.doe" not in str(error)
+        assert "***@example.com" in str(error)
+
+    def test_an_unencodable_address_is_not_quoted(self) -> None:
+        server = _server()
+        server.sendmail.side_effect = UnicodeEncodeError(
+            "ascii", "RCPT TO:<jos\u00e9@example.com>", 12, 13, "ordinal not in range(128)",
+        )
+        error = _send_failure(server, ["jos\u00e9@example.com"])
+        assert error.kind == "message_rejected"
+        assert "jos" not in str(error)
+        assert "UnicodeEncodeError" in str(error)
+
+    def test_the_smtp_exception_is_not_chained_into_the_traceback(self) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPDataError(
+            550, b"5.1.1 <jane.doe@example.com>: Recipient address rejected",
+        )
+        error = _send_failure(server, ["jane.doe@example.com"])
+        # The traceback is what uvicorn logs at ERROR and Sentry sends.
+        assert error.__cause__ is None
+        assert "jane.doe" not in "".join(traceback.format_exception(error))
+
+    def test_masking_survives_pickling(self) -> None:
+        error = EmailSendError("refused <bob@example.com>", kind="recipient_rejected")
+        assert str(pickle.loads(pickle.dumps(error))) == "refused <***@example.com>"
 
 
 class TestRefusedRecipients:
@@ -305,14 +362,16 @@ class TestUnsendableMessages:
             with pytest.raises(EmailSendError) as exc:
                 _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
         assert exc.value.kind == "message_rejected"
-        assert exc.value.__cause__ is bad
+        assert exc.value.__cause__ is None
+        assert "HeaderParseError" in str(exc.value)
 
     def test_non_ascii_recipient_is_a_send_error(self) -> None:
         with patch("smtplib.SMTP", _OfflineSmtp), pytest.raises(EmailSendError) as exc:
             _service().send_or_raise(["jos\u00e9@example.com"], "subj", "<p>b</p>")
             assert _service().send(["jos\u00e9@example.com"], "subj", "<p>b</p>") is False
         assert exc.value.kind == "message_rejected"
-        assert isinstance(exc.value.__cause__, UnicodeEncodeError)
+        assert exc.value.__cause__ is None
+        assert "UnicodeEncodeError" in str(exc.value)
 
 
 class TestConfigFaults:

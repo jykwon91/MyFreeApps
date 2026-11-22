@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 from datetime import date
 from typing import Any
@@ -337,7 +338,7 @@ _MINIMAL_CLAUDE_RESPONSE = {
 
 
 @pytest.mark.asyncio
-async def test_process_one_happy_path(user_factory, as_user):
+async def test_process_one_happy_path(user_factory, as_user, caplog):
     """Happy path: queued job → complete with parsed rows in DB."""
     from app.workers.resume_parser_worker import process_one
 
@@ -356,7 +357,7 @@ async def test_process_one_happy_path(user_factory, as_user):
         with patch("app.services.jobs.resume_upload_service.get_storage", return_value=fake_storage):
             resp = await authed.post(
                 "/resumes",
-                files={"file": ("resume.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+                files={"file": ("Jane_Doe_Resume.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
             )
     assert resp.status_code == 201
     job_id = resp.json()["id"]
@@ -366,10 +367,14 @@ async def test_process_one_happy_path(user_factory, as_user):
         patch("app.workers.resume_parser_worker.get_storage", return_value=fake_storage),
         patch("app.workers.resume_parser_worker.extract_text", fake_extractor),
         patch("app.workers.resume_parser_worker.extract_resume", fake_claude),
+        caplog.at_level(logging.INFO, logger="app.workers.resume_parser_worker"),
     ):
         found = await process_one()
 
     assert found is True
+    # The file name is the person's name; the log names the job instead.
+    assert f"Processing resume job {job_id}" in caplog.text
+    assert "Jane_Doe" not in caplog.text
 
     # Verify the job is now complete.
     async with (await as_user(user)) as authed:

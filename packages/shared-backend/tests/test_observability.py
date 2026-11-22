@@ -59,6 +59,11 @@ class TestSentryInit:
             init_sentry(dsn="https://x@y/1", environment="development")
 
     @patch("platform_shared.core.observability.sentry_sdk.init")
+    def test_frame_locals_are_not_sent(self, mock_init: MagicMock) -> None:
+        init_sentry(dsn="https://x@y/1", environment="production")
+        assert mock_init.call_args.kwargs["include_local_variables"] is False
+
+    @patch("platform_shared.core.observability.sentry_sdk.init")
     def test_before_send_hook_wired(self, mock_init: MagicMock) -> None:
         init_sentry(dsn="https://x@y/1", environment="production")
         assert mock_init.call_args.kwargs["before_send"] is _drop_known_noise

@@ -100,11 +100,10 @@ async def ingest_booking_email(
     if parse_result.source_channel is None or parse_result.source_listing_id is None:
         logger.warning(
             "Booking-looking email could not be fully parsed: "
-            "email_message_id=%r source_channel=%r source_listing_id=%r subject=%r",
+            "email_message_id=%r source_channel=%r source_listing_id=%r",
             email_message_id,
             parse_result.source_channel,
             parse_result.source_listing_id,
-            subject,
         )
         return IngestionResult(action="unparseable")
 

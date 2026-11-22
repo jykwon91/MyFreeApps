@@ -35,6 +35,7 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 from platform_shared.core import async_storage
+from platform_shared.core.mask_email import mask_email
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
@@ -372,7 +373,7 @@ async def _send_to_tenant(
     if not sent:
         logger.warning(
             "lease_email.send_failed lease_id=%s recipient=%s",
-            lease_id, _redact_email(contact_email),
+            lease_id, mask_email(contact_email),
         )
         await record_event(
             organization_id,
@@ -385,7 +386,7 @@ async def _send_to_tenant(
 
     logger.info(
         "lease_email.sent lease_id=%s recipient=%s attachments=%d",
-        lease_id, _redact_email(contact_email), len(email_attachments),
+        lease_id, mask_email(contact_email), len(email_attachments),
     )
     await record_event(
         organization_id,
@@ -449,17 +450,3 @@ def _skip_reason(contact_email: str | None, eligible: list, storage: object | No
     if storage is None:
         return _Skip("storage_not_configured", "Tenant email skipped: object storage is not configured.", logging.WARNING, "warning")
     return None
-
-
-def _redact_email(value: str) -> str:
-    """Redact the local-part of an email so logs don't leak PII.
-
-    ``user@example.com`` → ``u***@example.com``. Defensive: returns
-    ``***`` for malformed inputs so we never log the raw value.
-    """
-    if not value or "@" not in value:
-        return "***"
-    local, _, domain = value.partition("@")
-    if not local:
-        return f"***@{domain}"
-    return f"{local[0]}***@{domain}"

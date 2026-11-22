@@ -161,9 +161,9 @@ async def poll_one(
     except Exception as exc:  # noqa: BLE001 — parse errors, unexpected failures
         category = "unknown"
         message = _failure_message(exc)
-        # No exc_info: the exception message and the frame locals both hold the
-        # feed URL, and Sentry would ship them. Log the redacted message plus the
-        # bare call stack instead so the failure stays diagnosable.
+        # No exc_info: the exception message holds the feed URL, and the
+        # traceback Sentry receives would carry it. Log the redacted message plus
+        # the bare call stack instead so the failure stays diagnosable.
         logger.error(
             "iCal poll unknown error for channel_listing=%s url=%s: %s\n%s",
             channel_listing.id, feed, message,

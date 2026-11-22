@@ -40,24 +40,19 @@ from platform_shared.core.capped_body_decoder import CappedBodyDecoder
 from platform_shared.core.capped_fetch_constants import (
     ACCEPT_ENCODING,
     DEFAULT_MAX_REDIRECTS,
-    HTTPX_LOGGER_NAME,
     REDIRECT_STATUSES,
 )
 from platform_shared.core.capped_fetch_error import CappedFetchError
 from platform_shared.core.capped_fetch_failure_reason import CappedFetchFailureReason
 from platform_shared.core.capped_response import CappedResponse
 from platform_shared.core.content_coding import single_content_coding
-from platform_shared.core.host_only_request_log_filter import (
-    HostOnlyRequestLogFilter,
-    hide_request_urls,
-)
+from platform_shared.core.host_only_request_log_filter import hide_request_urls
 from platform_shared.core.url_host import url_host
 from platform_shared.core.url_safety import assert_url_safe
 
 __all__ = ["fetch_capped"]
 
 logger = logging.getLogger(__name__)
-logging.getLogger(HTTPX_LOGGER_NAME).addFilter(HostOnlyRequestLogFilter())
 
 
 def _fail(

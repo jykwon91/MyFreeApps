@@ -35,6 +35,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
 from platform_shared.extraction.errors import (
     ExtractionNotConfiguredError,
@@ -236,8 +237,10 @@ def _parse_message(message: "Message") -> ExtractionResponse:
         parsed = find_json(text)
     except json.JSONDecodeError as e:
         logger.error(
-            "Failed to parse extraction response: %s — model=%s input_tokens=%d output_tokens=%d raw: %s",
-            e, message.model, input_tokens, output_tokens, text[:500] or "EMPTY",
+            "Failed to parse extraction response: %s — model=%s input_tokens=%d output_tokens=%d %s",
+            e, message.model, input_tokens, output_tokens,
+            # Never the text itself: it is what the model read off the document.
+            describe_model_output(text, stop_reason=message.stop_reason),
         )
         raise ExtractionParseError(f"Could not parse model response as JSON: {e}") from e
 
@@ -248,3 +251,4 @@ def _parse_message(message: "Message") -> ExtractionResponse:
         total_tokens=input_tokens + output_tokens,
         model=message.model,
     )
+

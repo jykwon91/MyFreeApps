@@ -23,6 +23,7 @@ import logging
 import uuid
 
 from bs4 import BeautifulSoup
+from platform_shared.core.loggable_url import loggable_url
 
 from app.services.extraction.jd_ai_extraction_error import JDAiExtractionError
 from app.services.extraction.jd_url_fetcher import (
@@ -77,7 +78,7 @@ async def extract_from_url(url: str, *, user_id: uuid.UUID) -> ExtractedJD:
     parsed = validate_url(url)
 
     if is_auth_walled(parsed.netloc + parsed.path):
-        logger.info("JD URL is auth-walled domain — short-circuiting: %s", url)
+        logger.info("JD URL is auth-walled domain — short-circuiting: %s", loggable_url(url))
         raise JDFetchAuthRequiredError(
             "This site requires sign-in — paste the description text instead.",
         )
@@ -88,7 +89,7 @@ async def extract_from_url(url: str, *, user_id: uuid.UUID) -> ExtractedJD:
     # Tier 1 — schema.org JobPosting fast path
     schema_payload = find_jobposting_schema(soup)
     if schema_payload is not None:
-        logger.info("JD URL extracted via schema.org JobPosting: %s", url)
+        logger.info("JD URL extracted via schema.org JobPosting: %s", loggable_url(url))
         return from_schema_org(schema_payload, source_url=url)
 
     # Tier 2 — strip visible HTML and pass to Claude
@@ -98,7 +99,7 @@ async def extract_from_url(url: str, *, user_id: uuid.UUID) -> ExtractedJD:
             "JD URL produced %d visible bytes (<%d) — auth-walled or JS-only: %s",
             len(visible_text),
             MIN_VISIBLE_BYTES,
-            url,
+            loggable_url(url),
         )
         raise JDFetchAuthRequiredError(
             "Couldn't read enough text from this page — paste the description text instead.",

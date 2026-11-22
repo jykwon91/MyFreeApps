@@ -72,9 +72,9 @@ class ExportFidelityError(RuntimeError):
     """The exported document is missing facts the source markdown carries."""
 
     def __init__(self, missing_facts: list[str]):
-        super().__init__(
-            f"Exported document missing facts: {', '.join(missing_facts[:5])}"
-        )
+        # The facts come from the resume, and the message reaches logs and
+        # Sentry; ``missing_facts`` keeps them for the caller.
+        super().__init__(f"Exported document missing {len(missing_facts)} fact(s)")
         self.missing_facts = missing_facts
 
 
@@ -209,10 +209,9 @@ def _verify_round_trip(*, markdown: str, output_bytes: bytes, fmt: ExportFormat)
 
     if missing:
         logger.warning(
-            "Export round-trip missing %d tokens (fmt=%s): %s",
+            "Export round-trip missing %d tokens (fmt=%s)",
             len(missing),
             fmt,
-            missing[:5],
         )
         raise ExportFidelityError(missing)
 

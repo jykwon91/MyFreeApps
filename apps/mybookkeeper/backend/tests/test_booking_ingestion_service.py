@@ -163,6 +163,9 @@ class TestUnparseable:
 
         assert result.action == "unparseable"
         assert any("unparseable" in r.message.lower() or "could not be fully parsed" in r.message for r in caplog.records)
+        # Booking subjects can name the guest; the log keeps the message id instead.
+        assert _AIRBNB_SUBJECT not in caplog.text
+        assert "msg-no-listing" in caplog.text
         mock_db.__aenter__.assert_not_awaited()
 
 

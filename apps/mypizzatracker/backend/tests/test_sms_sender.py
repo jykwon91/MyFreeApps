@@ -20,14 +20,15 @@ from platform_shared.services.sms_service import SmsNotConfiguredError
 class TestConsoleBackend:
     """When sms_backend == 'console', sends log to stdout and return success."""
 
-    def test_send_logs_and_returns_true(self, caplog) -> None:
+    def test_send_logs_neither_number_nor_text_and_returns_true(self, caplog) -> None:
         caplog.set_level(logging.INFO, logger=sms_sender.__name__)
         with patch.object(settings, "sms_backend", "console"):
             ok = send_sms("+15559876543", "Your pizza is ready!")
         assert ok is True
         joined = " ".join(r.getMessage() for r in caplog.records)
-        assert "[sms:console]" in joined
-        assert "+15559876543" in joined
+        assert "[sms:console] body_chars=20" in joined
+        assert "+15559876543" not in joined
+        assert "pizza" not in joined
 
     def test_send_or_raise_returns_none(self) -> None:
         with patch.object(settings, "sms_backend", "console"):

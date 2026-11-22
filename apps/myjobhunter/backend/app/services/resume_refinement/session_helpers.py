@@ -475,7 +475,7 @@ def _apply_rewrite(
         return current_draft.replace(target_current_text, new_text, 1)
 
     logger.warning(
-        "Rewrite target not found in draft — appending. (target preview: %r)",
-        target_current_text[:80],
+        "Rewrite target not found in draft — appending. (target_chars=%d)",
+        len(target_current_text),
     )
     return f"{current_draft}\n\n{new_text}".strip()

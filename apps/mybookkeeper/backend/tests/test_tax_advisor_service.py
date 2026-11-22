@@ -2,7 +2,7 @@
 import json
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,12 +17,10 @@ from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
-from app.schemas.tax.tax_advisor import TaxAdvisorCachedResponse, TaxAdvisorResponse, TaxSuggestion
-from app.services.tax.tax_advisor_service import (
-    HARDCODED_DISCLAIMER,
-    _assemble_tax_data,
-    _parse_and_validate,
-)
+from app.schemas.tax.tax_advisor import TaxAdvisorCachedResponse, TaxAdvisorResponse
+from app.core.tax_advisor_disclaimer import HARDCODED_DISCLAIMER
+from app.services.tax.tax_advisor_response_parser import parse_advisor_response
+from app.services.tax.tax_advisor_service import _assemble_tax_data
 
 
 def _make_property(org: Organization, user: User, **kwargs) -> Property:
@@ -86,7 +84,7 @@ class TestParseAndValidate:
             "disclaimer": "Some AI disclaimer we should ignore",
         })
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert isinstance(result, TaxAdvisorResponse)
         assert len(result.suggestions) == 1
@@ -100,7 +98,7 @@ class TestParseAndValidate:
             "disclaimer": "Claude's own disclaimer text that should be replaced",
         })
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert result.disclaimer == HARDCODED_DISCLAIMER
         assert result.disclaimer != "Claude's own disclaimer text that should be replaced"
@@ -108,7 +106,7 @@ class TestParseAndValidate:
     def test_invalid_json_returns_fallback(self) -> None:
         raw = "This is not valid JSON at all"
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert isinstance(result, TaxAdvisorResponse)
         assert len(result.suggestions) == 1
@@ -119,7 +117,7 @@ class TestParseAndValidate:
     def test_strips_markdown_fences(self) -> None:
         raw = '```json\n{"suggestions": [{"id": "test", "category": "data_quality", "severity": "low", "title": "Test", "description": "Test desc", "action": "Do something", "confidence": "high"}], "disclaimer": ""}\n```'
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert len(result.suggestions) == 1
         assert result.suggestions[0].id == "test"
@@ -143,7 +141,7 @@ class TestParseAndValidate:
             "disclaimer": "",
         })
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert len(result.suggestions) == 1
         assert result.suggestions[0].id == "valid_one"
@@ -151,7 +149,7 @@ class TestParseAndValidate:
     def test_empty_suggestions_allowed(self) -> None:
         raw = json.dumps({"suggestions": [], "disclaimer": ""})
 
-        result = _parse_and_validate(raw)
+        result = parse_advisor_response(raw)
 
         assert len(result.suggestions) == 0
         assert result.disclaimer == HARDCODED_DISCLAIMER

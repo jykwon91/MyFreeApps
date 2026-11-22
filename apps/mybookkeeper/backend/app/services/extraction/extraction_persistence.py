@@ -119,8 +119,8 @@ async def save_email_extraction(
     ):
         logger.warning(
             "Skipping payment confirmation email — no recordable amount "
-            "(message_id=%s, subject=%r)",
-            message_id, subject,
+            "(message_id=%s)",
+            message_id,
         )
         return EmailExtractionOutcome(
             records_added=0,

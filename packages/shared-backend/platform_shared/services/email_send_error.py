@@ -1,5 +1,6 @@
 from collections.abc import Callable, Mapping
 
+from platform_shared.core.mask_email_addresses import mask_email_addresses
 from platform_shared.services.email_failure_kind import EmailFailureKind
 
 
@@ -13,6 +14,11 @@ class EmailSendError(RuntimeError):
     ``None`` for timeouts and dropped connections. ``refused_recipients`` maps
     each address the server refused to its reply code; when it is non-empty but
     shorter than the recipient list, the other recipients DID get the email.
+
+    The message never carries an email address: SMTP replies often quote the
+    refused address, and the message is logged and sent to Sentry, so every
+    address in it is cut down to its domain. ``refused_recipients`` keeps the
+    full addresses for callers that must act on them.
     """
 
     def __init__(
@@ -23,7 +29,7 @@ class EmailSendError(RuntimeError):
         smtp_code: int | None = None,
         refused_recipients: Mapping[str, int] | None = None,
     ) -> None:
-        super().__init__(message)
+        super().__init__(mask_email_addresses(message))
         self.kind: EmailFailureKind = kind
         self.smtp_code = smtp_code
         self.refused_recipients: dict[str, int] = dict(refused_recipients or {})

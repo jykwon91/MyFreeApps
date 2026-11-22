@@ -23,6 +23,7 @@ from decimal import Decimal
 
 import anthropic
 from anthropic import Timeout
+from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction import create_with_backoff, extraction_error_from_anthropic
 
 from app.core.config import settings
@@ -214,7 +215,9 @@ async def extract_resume(
 
 def _parse_json_response(message: anthropic.types.Message) -> dict:
     """Extract and parse the JSON payload from a Claude Message."""
-    content = message.content[0].text.strip() if message.content else ""
+    # Every text block joined, as the shared ExtractionService reads a reply:
+    # a non-text first block (tool use, thinking) has no ``.text``.
+    content = "".join(block.text for block in message.content if block.type == "text").strip()
 
     # Strip markdown code fences if Claude wraps the JSON.
     if "```" in content:
@@ -229,11 +232,11 @@ def _parse_json_response(message: anthropic.types.Message) -> dict:
     try:
         return json.loads(content)
     except json.JSONDecodeError as exc:
-        raw_preview = content[:300]
+        # Never the text itself: it carries the resume or posting the model read.
         logger.error(
-            "Failed to parse Claude response as JSON: %s — raw: %s",
+            "Failed to parse Claude response as JSON: %s — %s",
             exc,
-            raw_preview,
+            describe_model_output(content, stop_reason=message.stop_reason),
         )
         raise ValueError(f"Claude returned invalid JSON: {exc}") from exc
 

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.services.auth_event_service import log_auth_event
+from platform_shared.core.mask_email import mask_email
 
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.organization.organization import Organization
@@ -239,8 +240,8 @@ async def create_invite(
             await organization_repo.delete_other_pending_invites(db, org_id, email, invite.id)
 
         logger.info(
-            "ORG_ACTION invite org=%s email=%s role=%s by=%s email_sent=%s",
-            org_id, email, org_role, invited_by, email_sent,
+            "ORG_ACTION invite org=%s invite=%s email=%s role=%s by=%s email_sent=%s",
+            org_id, invite.id, mask_email(email), org_role, invited_by, email_sent,
         )
         return invite
 

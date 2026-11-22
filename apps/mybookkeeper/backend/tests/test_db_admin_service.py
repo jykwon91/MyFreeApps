@@ -92,40 +92,52 @@ class TestDbAdminService:
             sessions["write"], str(org_id), "ACME", "%inv%", str(prop_id),
         )
         assert result == BulkUpdateResponse(updated=3)
-        assert any("ADMIN_DB reassign_property" in r.message for r in caplog.records)
+        assert f"ADMIN_DB reassign_property org={org_id} target={prop_id} count=3" in caplog.text
+        # Payee and file-name patterns stay out of the log, which reaches Sentry.
+        assert "ACME" not in caplog.text and "%inv%" not in caplog.text
 
     @pytest.mark.asyncio
-    async def test_fix_sub_category(self, sessions) -> None:
+    async def test_fix_sub_category(self, sessions, caplog) -> None:
         org_id = uuid.uuid4()
         body = BulkSubCategoryFixRequest(
             organization_id=org_id, vendor="City Water",
             description_pattern="%water%", new_sub_category="water",
         )
-        with patch.object(
-            db_admin_service.db_admin_repo, "bulk_update_sub_category",
-            new=AsyncMock(return_value=2),
-        ) as repo:
+        with (
+            patch.object(
+                db_admin_service.db_admin_repo, "bulk_update_sub_category",
+                new=AsyncMock(return_value=2),
+            ) as repo,
+            caplog.at_level(logging.INFO, logger="app.services.system.db_admin_service"),
+        ):
             result = await db_admin_service.fix_sub_category(body)
 
         repo.assert_awaited_once_with(
             sessions["write"], str(org_id), "City Water", "%water%", "water",
         )
         assert result.updated == 2
+        assert f"ADMIN_DB fix_sub_category org={org_id} sub_cat=water count=2" in caplog.text
+        assert "City Water" not in caplog.text and "%water%" not in caplog.text
 
     @pytest.mark.asyncio
-    async def test_soft_delete_transactions(self, sessions) -> None:
+    async def test_soft_delete_transactions(self, sessions, caplog) -> None:
         org_id = uuid.uuid4()
         body = BulkSoftDeleteRequest(organization_id=org_id, vendor="ACME", category="utilities")
-        with patch.object(
-            db_admin_service.db_admin_repo, "bulk_soft_delete",
-            new=AsyncMock(return_value=4),
-        ) as repo:
+        with (
+            patch.object(
+                db_admin_service.db_admin_repo, "bulk_soft_delete",
+                new=AsyncMock(return_value=4),
+            ) as repo,
+            caplog.at_level(logging.INFO, logger="app.services.system.db_admin_service"),
+        ):
             result = await db_admin_service.soft_delete_transactions(body)
 
         repo.assert_awaited_once_with(
             sessions["write"], str(org_id), "ACME", "utilities", None, None,
         )
         assert result.updated == 4
+        assert f"ADMIN_DB soft_delete org={org_id} category=utilities source=None count=4" in caplog.text
+        assert "ACME" not in caplog.text
 
     @pytest.mark.asyncio
     async def test_queue_reextraction(self, sessions) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.loggable_url import loggable_url
+from platform_shared.core.loggable_url import UNPARSEABLE_URL, loggable_url
 
 
 @pytest.mark.parametrize(
@@ -17,6 +17,9 @@ from app.core.loggable_url import loggable_url
         ("http://jobs.example.com:8080/p?x=1", "http://jobs.example.com:8080/p"),
         ("  https://jobs.example.com/p  ", "https://jobs.example.com/p"),
         ("https://jobs.example.com:99999/p?x=1", "https://jobs.example.com/p"),
+        ("http://[2001:db8::1]:8080/p?x=1", "http://[2001:db8::1]:8080/p"),
+        ("https://u:p@[::1]/p#f", "https://[::1]/p"),
+        ("http://[::1/p?token=s3cret", UNPARSEABLE_URL),
     ],
 )
 def test_loggable_url(url: str, expected: str) -> None:

@@ -82,7 +82,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
         doc_id = doc.id
         org_id = doc.organization_id
         retry_count = doc.retry_count
-        logger.info("Processing document %s for user %s (%s, retry=%d)", doc_id, user_id, doc.file_name, retry_count)
+        logger.info("Processing document %s for user %s (retry=%d)", doc_id, user_id, retry_count)
 
     try:
         result = await asyncio.wait_for(
