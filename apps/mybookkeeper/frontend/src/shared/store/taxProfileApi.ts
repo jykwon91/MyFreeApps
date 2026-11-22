@@ -13,10 +13,6 @@ export const taxProfileApi = baseApi.injectEndpoints({
       query: () => ({ url: "/tax-profile", method: "GET" }),
       providesTags: ["TaxProfile"],
     }),
-    updateTaxProfile: build.mutation<TaxProfile, Partial<TaxProfile>>({
-      query: (data) => ({ url: "/tax-profile", method: "PUT", data }),
-      invalidatesTags: ["TaxProfile"],
-    }),
     completeOnboarding: build.mutation<TaxProfile, CompleteOnboardingArgs>({
       query: (data) => ({ url: "/tax-profile/complete-onboarding", method: "POST", data }),
       invalidatesTags: ["TaxProfile"],
@@ -26,6 +22,5 @@ export const taxProfileApi = baseApi.injectEndpoints({
 
 export const {
   useGetTaxProfileQuery,
-  useUpdateTaxProfileMutation,
   useCompleteOnboardingMutation,
 } = taxProfileApi;

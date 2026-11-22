@@ -65,14 +65,6 @@ const rentRemindersApi = baseApi.enhanceEndpoints({
       invalidatesTags: (_r, _e, { applicantId }) => [reminderTag(applicantId)],
     }),
 
-    deleteRentReminderPlan: builder.mutation<void, string>({
-      query: (applicantId) => ({
-        url: `/rent-reminders/tenants/${applicantId}/plan`,
-        method: "DELETE",
-      }),
-      invalidatesTags: (_r, _e, applicantId) => [reminderTag(applicantId)],
-    }),
-
     /** Sends every enabled channel together — email and text never go out
      *  at different times. */
     sendRentReminderNow: builder.mutation<RentReminderSend[], RentReminderSendNowArgs>({
@@ -93,7 +85,6 @@ export const {
   useGetRentReminderSendsQuery,
   useCreateRentReminderPlanMutation,
   useUpdateRentReminderPlanMutation,
-  useDeleteRentReminderPlanMutation,
   useSendRentReminderNowMutation,
 } = rentRemindersApi;
 

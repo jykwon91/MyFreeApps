@@ -23,22 +23,6 @@ export const leaseTemplatesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["LeaseTemplate"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getLeaseTemplates: builder.query<LeaseTemplateListResponse, { limit?: number; offset?: number } | void>({
-      query: (args) => ({
-        url: "/lease-templates",
-        params: {
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((template) => ({ type: "LeaseTemplate" as const, id: template.id })),
-              { type: "LeaseTemplate" as const, id: "LIST" },
-            ]
-          : [{ type: "LeaseTemplate" as const, id: "LIST" }],
-    }),
     listLeaseTemplatePages: builder.infiniteQuery<LeaseTemplateListResponse, void, number>({
       infiniteQueryOptions: {
         initialPageParam: 0,
@@ -100,7 +84,6 @@ export const leaseTemplatesApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useGetLeaseTemplatesQuery,
   useListLeaseTemplatePagesInfiniteQuery,
   useGetLeaseTemplateByIdQuery,
   useLazyGetLeaseTemplateByIdQuery,
