@@ -3,4 +3,6 @@ export interface ItemEffectEntry {
   stat: string;
   value: number;
   note: string;
+  /** Worth a lot more against players than its PvE value (control, immunities, damage shields, armor cuts...). */
+  pvp?: true;
 }

@@ -114,7 +114,10 @@ function itemEffectsLua(): string[] {
     "MGALootEffects = {",
     ...items.map(([id, entries]) => {
       const list = entries
-        .map((e) => `{stat = ${luaString(e.stat)}, value = ${e.value}, note = ${luaString(e.note.replace(ARROW, "="))}}`)
+        .map((e) => {
+          const pvp = e.pvp ? ", pvp = true" : "";
+          return `{stat = ${luaString(e.stat)}, value = ${e.value}, note = ${luaString(e.note.replace(ARROW, "="))}${pvp}}`;
+        })
         .join(", ");
       return `  [${id}] = {${list}},`;
     }),

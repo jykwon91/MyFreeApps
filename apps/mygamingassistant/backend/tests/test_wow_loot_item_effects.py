@@ -308,7 +308,43 @@ def test_resistance_cut_no_mob_has_is_worth_nothing() -> None:
 def test_control_on_the_enemy_has_no_damage_value() -> None:
     stun = Spell(52, "Hammer", ppm=2, duration_ms=3_000, effects=(_enemy_aura(AURA_STUN, 0),))
     [entry] = _entries(WEAPON, ItemSpell(52, TRIGGER_CHANCE_ON_HIT), stun)
-    assert entry == Entry(NONE, 0, "Hammer: control effect: no damage or healing value")
+    assert entry == Entry(NONE, 0, "Hammer: control effect: no damage or healing value", pvp=True)
+
+
+# --- PvP marks: a label on effects worth a lot more against players, never a number ------------
+
+AURA_MECHANIC_IMMUNITY = 77
+AURA_RESIST_CC = 117
+
+
+def test_armor_and_resistance_cuts_are_marked_pvp() -> None:
+    sunder = Spell(53, "Sunder", ppm=1, duration_ms=30_000, effects=(_enemy_aura(AURA_RESISTANCE, -200, misc=1),))
+    curse = Spell(54, "Curse", ppm=1, duration_ms=10_000, effects=(_enemy_aura(AURA_RESISTANCE, -50, misc=FIRE),))
+    assert _entries(WEAPON, ItemSpell(53, TRIGGER_CHANCE_ON_HIT), sunder, world=WORLD)[0].pvp
+    assert _entries(WEAPON, ItemSpell(54, TRIGGER_CHANCE_ON_HIT), curse, world=WORLD)[0].pvp
+
+
+def test_immunities_and_crowd_control_resists_are_marked_pvp() -> None:
+    immune = Spell(55, "Immune Root/Snare/Stun", effects=(_aura(AURA_MECHANIC_IMMUNITY, 0),))
+    resist = Spell(56, "Resist Fear", effects=(_aura(AURA_RESIST_CC, 15),))
+    [entry] = _entries(ARMOUR, ItemSpell(55, TRIGGER_ON_EQUIP), immune)
+    assert entry == Entry(UNRESOLVED, 0, "Immune Root/Snare/Stun: an immunity, which has no stat weight", pvp=True)
+    assert _entries(ARMOUR, ItemSpell(56, TRIGGER_ON_EQUIP), resist)[0].pvp
+
+
+def test_a_proc_when_you_are_hit_is_marked_pvp_and_one_on_your_hits_is_not() -> None:
+    bolt = Spell(58, "Firebolt", school_mask=FIRE, effects=(_damage(100),))
+    struck = Spell(57, "Firebolt", proc_chance=10, when_hit=True, effects=(_aura(AURA_PROC_TRIGGER, 0, trigger=58),))
+    hitting = Spell(59, "Firebolt", proc_chance=10, effects=(_aura(AURA_PROC_TRIGGER, 0, trigger=58),))
+    [hit] = _entries(ARMOUR, ItemSpell(57, TRIGGER_ON_EQUIP), struck, bolt)
+    assert hit.stat == "dps" and hit.pvp
+    [swing] = _entries(WEAPON, ItemSpell(59, TRIGGER_ON_EQUIP), hitting, bolt)
+    assert swing.stat == "dps" and not swing.pvp
+
+
+def test_plain_damage_and_stat_effects_are_not_marked_pvp() -> None:
+    buff = Spell(60, "Earthstrike", duration_ms=20_000, cooldown_ms=120_000, effects=(_aura(AURA_ATTACK_POWER, 280),))
+    assert not _entries(ARMOUR, ItemSpell(60, TRIGGER_ON_USE), buff)[0].pvp
 
 
 # --- Equip -----------------------------------------------------------------------------------
@@ -375,6 +411,18 @@ def test_committed_mob_armor_rises_with_level() -> None:
     assert armor == sorted(armor)
 
 
+def test_committed_pvp_marks() -> None:
+    # Insignia of the Alliance: the immunity it gives is worth more against players.
+    assert _item(18854)[0]["pvp"] is True
+    # Dark Iron Pulverizer's stun, Naglering's damage shield, Rivenspike's armor cut.
+    assert _item(11608)[0]["pvp"] is True
+    assert _item(11669)[0]["pvp"] is True
+    assert _item(13286)[0]["pvp"] is True
+    # Teebu's fire proc and Earthstrike's attack power are plain PvE values.
+    assert "pvp" not in _item(1728)[0]
+    assert "pvp" not in _item(21180)[0]
+
+
 def test_committed_water_breathing_item() -> None:
     assert _item(9452) == [{"stat": "none", "value": 0, "note": "Water Breathing: no combat value"}]
 
@@ -385,7 +433,8 @@ def test_committed_entries_are_well_formed() -> None:
     for item_id, entries in items.items():
         assert entries, item_id
         for entry in entries:
-            assert set(entry) == {"stat", "value", "note"}, item_id
+            assert set(entry) <= {"stat", "value", "note", "pvp"}, item_id
+            assert entry.get("pvp", True) is True, item_id
             assert entry["note"], item_id
             if entry["stat"] in (NONE, UNRESOLVED):
                 assert entry["value"] == 0, item_id

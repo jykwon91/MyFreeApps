@@ -10,6 +10,9 @@
 -- a note saying how. An effect the data can't value is estimated from the
 -- item's level: the stat points it lacks next to items of its slot, quality
 -- and level with no effect (MGALootBudget), at your average stat weight.
+-- Weights and models are PvE ("PvE values" in the tags); an effect worth a lot
+-- more against players (control, immunities, damage shields, armor cuts) says
+-- "(worth more in PvP)". That is a label only: there are no PvP weights.
 --
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
 --   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
@@ -29,6 +32,8 @@ local ADDON = "MGA Loot"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local MAX_LEVEL = 60
 -- Closer than this (percent) is "about the same": the weights aren't that exact.
+local PVE_TAG = "PvE values"
+local PVP_NOTE = " (worth more in PvP)"
 local SIDEGRADE_PCT = 5
 -- Past this the old item scores next to nothing, so a percentage means little.
 local MAX_SHOWN_PCT = 300
@@ -394,6 +399,7 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
     elseif e.stat ~= "none" and e.stat ~= "unresolved" then
       add = add + e.value * (w.stats[e.stat] or 0)
     end
+    if note and e.pvp then note = note .. PVP_NOTE end
     if note then table.insert(notes, note) end
   end
   return true, add, budget
@@ -554,6 +560,7 @@ local function judge(link, brief)
   local text, kind, pct
   local new, notes = score(link, info.equipLoc, w, me.level)
   table.insert(tags, 1, label)
+  table.insert(tags, 2, PVE_TAG)
   for _, note in ipairs(notes) do table.insert(tags, note) end
   local old = replaced(info, w, me, link)
   if old.blocked then

@@ -65,7 +65,24 @@ describe("MGA Loot verdicts", () => {
   it("calls an upgrade on the roll window, with the spec from talents and the bind type", () => {
     const [line] = run(roll(`${CHEST}, bind = 1, ${strength(20)}`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`));
     expect(line).toMatch(/^frame: Upgrade \+100% over .*\[Item 5\]/);
-    expect(line).toContain("as Arms · binds on pickup");
+    expect(line).toContain("as Arms · PvE values · binds on pickup");
+  });
+
+  it("says its values are PvE next to the spec on every verdict", () => {
+    expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain("leveling estimate · PvE values");
+  });
+
+  it("marks a stun proc as worth more in PvP (Dark Iron Pulverizer)", () => {
+    const MACE = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 5`;
+    const [line] = run(
+      `items[11608] = { ${MACE}, ${strength(20)}, lines = { "Chance on hit: Stuns target for 2 sec." } }; rolls[1] = 11608; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${MACE}, ${strength(10)} }; equipped[16] = 16`,
+    );
+    expect(line).toContain("Stunning Blow: control effect: no damage or healing value (worth more in PvP)");
+    // A plain damage proc carries no PvP mark.
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const [fire] = run(`items[1728] = { ${SWORD}, ${strength(10)} }; rolls[1] = 1728; talents = { 31, 20, 0 }`);
+    expect(fire).not.toContain("worth more in PvP");
   });
 
   it("scores Forever's school spell damage (Twisted Shadow Staff vs Zum'rah's Vexing Cane)", () => {
@@ -421,17 +438,17 @@ describe("MGA Loot verdicts", () => {
 
   it("falls back to chat when it can't find the roll window", () => {
     const [line] = run(roll(`${CHEST}, ${strength(10)}`), 'fire("START_LOOT_ROLL", 1); tick()');
-    expect(line).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms$/);
+    expect(line).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms · PvE values$/);
   });
 
   it("finds the roll window when it shows after the event", () => {
     const then = 'fire("START_LOOT_ROLL", 1); GroupLootFrame1.rollID = 1; GroupLootFrame1.shown = true; tick()';
-    expect(run(roll(`${CHEST}, ${strength(10)}`), then)[0]).toBe("frame: Upgrade: your slot is empty // as Arms");
+    expect(run(roll(`${CHEST}, ${strength(10)}`), then)[0]).toBe("frame: Upgrade: your slot is empty // as Arms · PvE values");
   });
 
   it("finds roll windows in the newer loot UI", () => {
     const setup = roll(`${CHEST}, ${strength(10)}`, "GroupLootFrame1 = nil; GroupLootContainer = { rollFrames = { rollWindow(1) } }");
-    expect(run(setup, 'fire("START_LOOT_ROLL", 1); tick()')[0]).toBe("frame: Upgrade: your slot is empty // as Arms");
+    expect(run(setup, 'fire("START_LOOT_ROLL", 1); tick()')[0]).toBe("frame: Upgrade: your slot is empty // as Arms · PvE values");
   });
 
   it("says nothing about a roll that ended before its verdict was ready", () => {
@@ -477,7 +494,7 @@ describe("MGA Loot slash command", () => {
   it("checks an item link without a roll", () => {
     const lines = run(roll(`${CHEST}, ${strength(10)}`), `${slash("check")}; SlashCmdList.MGALOOT("check " .. link(100))`);
     expect(lines[0]).toBe("chat: MGA Loot: put an item link after /mgaloot check.");
-    expect(lines[1]).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms$/);
+    expect(lines[1]).toMatch(/^chat: MGA Loot: .*\[Item 100\].* Upgrade: your slot is empty — as Arms · PvE values$/);
   });
 
   it("asks to check again an item the game hasn't loaded", () => {
@@ -500,7 +517,7 @@ describe("MGA Loot on item tooltips", () => {
     const lines = run(setup(), "hover(100)");
     expect(lines).toHaveLength(2);
     expect(lines[0]).toMatch(/^GameTooltip: MGA Loot: Upgrade \+100% over .*\[Item 5\]/);
-    expect(lines[1]).toBe("GameTooltip: as Arms");
+    expect(lines[1]).toBe("GameTooltip: as Arms · PvE values");
   });
 
   it("adds it once per tooltip show however many hooks fire, and again for the next show", () => {
