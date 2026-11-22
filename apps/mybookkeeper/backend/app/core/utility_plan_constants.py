@@ -82,6 +82,14 @@ RENEWAL_STATUSES: frozenset[str] = frozenset({
     RENEWAL_STATUS_EXPIRED,
 })
 
+# Rank of each band in the list's "renewal" sort: what needs acting on first,
+# past (superseded) plans last. Within a band, the soonest term end leads.
+RENEWAL_SORT_RANK_EXPIRED = 0
+RENEWAL_SORT_RANK_EXPIRING_SOON = 1
+RENEWAL_SORT_RANK_ACTIVE = 2
+RENEWAL_SORT_RANK_NOT_APPLICABLE = 3
+RENEWAL_SORT_RANK_PAST_PLAN = 4
+
 # Statuses that warrant surfacing to the operator without being asked.
 ACTIONABLE_RENEWAL_STATUSES: frozenset[str] = frozenset({
     RENEWAL_STATUS_EXPIRING_SOON,

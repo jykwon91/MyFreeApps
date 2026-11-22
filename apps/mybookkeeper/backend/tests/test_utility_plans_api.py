@@ -33,6 +33,7 @@ from app.schemas.properties.utility_offer_search_response import (
 )
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
+from app.schemas.properties.utility_plan_list_sort import UtilityPlanListSort
 from app.schemas.properties.utility_plan_renewal_alert_response import (
     UtilityPlanRenewalAlertResponse,
 )
@@ -604,6 +605,27 @@ class TestList:
             client.get("/utility-plans", params=utc_today_params())
 
         assert mock_list.await_args.kwargs["needs_renewal"] is False
+
+    def test_sorts_newest_term_first_unless_asked(self, client: TestClient) -> None:
+        empty = UtilityPlanListResponse(items=[], total=0, has_more=False)
+        with patch(
+            f"{_SERVICE}.list_plans", new_callable=AsyncMock, return_value=empty,
+        ) as mock_list:
+            client.get("/utility-plans", params=utc_today_params())
+            client.get("/utility-plans", params={**utc_today_params(), "sort": "renewal"})
+
+        assert mock_list.await_args_list[0].kwargs["sort"] == UtilityPlanListSort.RECENT
+        assert mock_list.await_args_list[1].kwargs["sort"] == UtilityPlanListSort.RENEWAL
+
+    def test_an_unknown_sort_returns_422(self, client: TestClient) -> None:
+        with patch(f"{_SERVICE}.list_plans", new_callable=AsyncMock) as mock_list:
+            response = client.get(
+                "/utility-plans",
+                params={**utc_today_params(), "sort": "service_start_date; drop"},
+            )
+
+        assert response.status_code == 422
+        mock_list.assert_not_awaited()
 
     def test_limit_above_the_cap_returns_422(self, client: TestClient) -> None:
         response = client.get(

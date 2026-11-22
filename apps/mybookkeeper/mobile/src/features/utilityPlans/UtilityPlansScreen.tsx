@@ -1,6 +1,6 @@
 import { useUtilityPlansPages } from "@mybookkeeper/api-client/hooks/useUtilityPlansPages";
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { EmptyState, LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { LoadingButton, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -11,13 +11,12 @@ import { useTodayIso } from "../../lib/useTodayIso";
 import type { UtilityPlanFilter } from "../../types/UtilityPlanFilter";
 import PagedListFooter from "../shell/PagedListFooter";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { sortedPlans } from "./utilityPlanDisplay";
 import { NO_UTILITY_PLAN_FILTER, filterLabel, isNarrowed, pageArgsFor } from "./utilityPlanFilter";
 import UtilityPlanFilterSheet from "./UtilityPlanFilterSheet";
 import UtilityPlanRow from "./UtilityPlanRow";
+import UtilityPlansEmptyList from "./UtilityPlansEmptyList";
 import UtilityPlansGlance from "./UtilityPlansGlance";
 import UtilityPlanSkeletonRow from "./UtilityPlanSkeletonRow";
-import UtilityPlansSkeleton from "./UtilityPlansSkeleton";
 
 export default function UtilityPlansScreen() {
   const { spacing } = useTheme();
@@ -32,25 +31,20 @@ export default function UtilityPlansScreen() {
   const anyPlan = useGetUtilityPlansQuery({ limit: 1 }, { skip: !narrowed });
   const { refresh, refreshControl } = useRefresh(list.refetch, list.error);
   const isCurrent = hasCurrentPages(list);
-  const rows = useMemo(() => sortedPlans(isCurrent ? list.plans : [], todayIso), [isCurrent, list.plans, todayIso]);
+  // In the server's order (most urgent renewal first, past plans last), which holds across pages.
+  const rows = useMemo(() => (isCurrent ? list.plans : []), [isCurrent, list.plans]);
   const hasPlans = narrowed ? (anyPlan.data?.total ?? 0) > 0 : rows.length > 0;
   const addPlan = () => router.push("/utility-plans/new");
 
-  const emptyList = !isCurrent && list.isFetching ? (
-    <UtilityPlansSkeleton />
-  ) : list.error ? (
-    <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoadList} />
-  ) : narrowed ? (
-    <EmptyState
-      action={{ label: MESSAGES.filterClear, onPress: () => setFilter(NO_UTILITY_PLAN_FILTER) }}
-      body={filter.needsRenewing && filter.serviceType === null ? MESSAGES.noMatchesRenewing : MESSAGES.tryAnotherFilter}
-      heading={MESSAGES.noMatches}
-    />
-  ) : (
-    <EmptyState
-      action={canWrite ? { label: MESSAGES.add, onPress: addPlan } : undefined}
-      body={canWrite ? MESSAGES.noneBody : MESSAGES.noneViewOnlyBody}
-      heading={MESSAGES.noneHeading}
+  const emptyList = (
+    <UtilityPlansEmptyList
+      canWrite={canWrite}
+      filter={filter}
+      isLoading={!isCurrent && list.isFetching}
+      loadFailed={Boolean(list.error)}
+      onAdd={addPlan}
+      onClearFilter={() => setFilter(NO_UTILITY_PLAN_FILTER)}
+      onRetry={refresh}
     />
   );
 

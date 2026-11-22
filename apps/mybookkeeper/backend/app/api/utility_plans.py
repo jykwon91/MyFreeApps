@@ -35,6 +35,7 @@ from app.schemas.properties.utility_offer_search_response import (
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_extract_request import UtilityPlanExtractRequest
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
+from app.schemas.properties.utility_plan_list_sort import UtilityPlanListSort
 from app.schemas.properties.utility_plan_rate_comparison_response import (
     UtilityPlanRateComparisonResponse,
 )
@@ -139,6 +140,7 @@ async def list_plans(
     service_type: str | None = Query(None),
     expiring_before: _dt.date | None = Query(None),
     needs_renewal: bool = Query(False),
+    sort: UtilityPlanListSort = Query(UtilityPlanListSort.RECENT),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     ctx: RequestContext = Depends(current_org_member),
@@ -150,6 +152,7 @@ async def list_plans(
         service_type=service_type,
         expiring_before=expiring_before,
         needs_renewal=needs_renewal,
+        sort=sort,
         limit=limit,
         offset=offset,
         today=today,

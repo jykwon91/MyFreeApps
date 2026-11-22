@@ -10,7 +10,7 @@ import type { ReactElement } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { Provider } from "react-redux";
 import { UTILITY_PLAN_MESSAGES } from "../src/constants/utilityPlans";
-import { planChip, planFacts, planTermNote, sortedPlans } from "../src/features/utilityPlans/utilityPlanDisplay";
+import { planChip, planFacts, planTermNote } from "../src/features/utilityPlans/utilityPlanDisplay";
 import UtilityPlanDetailScreen from "../src/features/utilityPlans/UtilityPlanDetailScreen";
 import UtilityPlansScreen from "../src/features/utilityPlans/UtilityPlansScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -101,28 +101,6 @@ describe("planChip", () => {
   });
 });
 
-describe("sortedPlans", () => {
-  it("puts what needs attention first and past plans last", () => {
-    const sorted = sortedPlans([
-      aUtilityPlanSummary({ id: "past", is_current: false, term_end_date: "2020-01-01" }),
-      aUtilityPlanSummary({ id: "none", term_end_date: null }),
-      aUtilityPlanSummary({ id: "active", term_end_date: "2027-01-01" }),
-      aUtilityPlanSummary({ id: "later", term_end_date: "2026-04-20" }),
-      aUtilityPlanSummary({ id: "soon", term_end_date: "2026-04-01" }),
-      aUtilityPlanSummary({ id: "lapsed", term_end_date: "2026-01-01" }),
-    ], "2026-03-10");
-    expect(sorted.map((plan) => plan.id)).toEqual(["lapsed", "soon", "later", "active", "none", "past"]);
-  });
-
-  it("sorts by the same date the chip counts from", () => {
-    const sorted = sortedPlans([
-      aUtilityPlanSummary({ id: "today", renewal_status: "expired", term_end_date: "2026-03-10" }),
-      aUtilityPlanSummary({ id: "lapsed", renewal_status: "expiring_soon", term_end_date: "2026-03-09" }),
-    ], "2026-03-10");
-    expect(sorted.map((plan) => plan.id)).toEqual(["lapsed", "today"]);
-  });
-});
-
 describe("planTermNote", () => {
   it("only says there's no term when that's true", () => {
     expect(planTermNote(aUtilityPlanSummary({ rate_type: "regulated", term_end_date: null }))).toBe(UTILITY_PLAN_MESSAGES.noFixedTerm);
@@ -209,6 +187,24 @@ describe("UtilityPlansScreen", () => {
     await screen.findByText("Oak Street · Water");
     expect(server.listParams).toMatchObject({ limit: UTILITY_PLAN_PAGE_SIZE, offset: UTILITY_PLAN_PAGE_SIZE });
     expect(screen.getByText("Oak Street · Electricity")).toBeTruthy();
+  });
+
+  it("asks the server for the most urgent renewals first and shows its order as is, across pages", async () => {
+    const lapsed = aUtilityPlanSummary({ id: "u1", service_type: "water", term_end_date: "2000-01-01", renewal_status: "expired" });
+    const past = aUtilityPlanSummary({ id: "u2", service_type: "internet", is_current: false, term_end_date: "1999-01-01" });
+    const server = startServer(aPage([lapsed, past], true));
+    await show(<UtilityPlansScreen />);
+    await screen.findByText("Oak Street · Water");
+    expect(server.listParams).toMatchObject({ sort: "renewal", offset: 0 });
+    // A plan the server puts on page 2 stays below what's already showing, whatever its date.
+    server.list = aPage([aUtilityPlanSummary({ id: "u3", service_type: "electricity", term_end_date: "1990-01-01", renewal_status: "expired" })]);
+    await act(async () => {
+      await screen.getByTestId("utility-plans-list").props.onEndReached();
+    });
+    await screen.findByText("Oak Street · Electricity");
+    expect(server.listParams).toMatchObject({ sort: "renewal", offset: UTILITY_PLAN_PAGE_SIZE });
+    const shown = screen.getByTestId("utility-plans-list").props.data as UtilityPlanSummary[];
+    expect(shown.map((plan) => plan.id)).toEqual(["u1", "u2", "u3"]);
   });
 
   it("invites a writer to add the first plan", async () => {

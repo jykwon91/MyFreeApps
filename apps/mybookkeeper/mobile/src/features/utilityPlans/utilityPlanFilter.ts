@@ -10,11 +10,13 @@ export function isNarrowed(filter: UtilityPlanFilter): boolean {
 }
 
 /**
- * What the server is asked for. The server narrows the whole list, not just the pages loaded so far, and
- * "needs renewing" is the derived status (a regulated plan has no renewal to act on), which it owns.
+ * What the server is asked for. The server narrows and orders the whole list, not just the pages loaded so far,
+ * so a plan about to lapse leads the first page instead of turning up after "Load more". "Needs renewing" is the
+ * derived status (a regulated plan has no renewal to act on), which it owns.
  */
 export function pageArgsFor(filter: UtilityPlanFilter): UtilityPlanPageArgs {
   return {
+    sort: "renewal",
     ...(filter.serviceType ? { service_type: filter.serviceType } : {}),
     ...(filter.needsRenewing ? { needs_renewal: true } : {}),
   };
