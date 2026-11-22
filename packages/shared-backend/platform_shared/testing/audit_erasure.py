@@ -14,11 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.core.audit import (
     current_user_id,
     register_audit_listeners,
-    register_sensitive_fields,
-    register_skip_fields,
-    register_skip_tables,
     reset_registry,
 )
+from platform_shared.core.audit_config import AuditConfig
 from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.testing.factories import hash_test_password
 
@@ -29,27 +27,17 @@ TEST_ACCOUNT_PASSWORD_HASH = hash_test_password(TEST_ACCOUNT_PASSWORD)
 
 
 @contextmanager
-def audit_listener_attached(
-    *,
-    sensitive_fields: Iterable[str],
-    skip_tables: Iterable[str],
-    skip_fields: Iterable[str],
-) -> Iterator[None]:
-    """Attach the audit listener for one test, then put the app's registry back.
+def audit_listener_attached(config: AuditConfig) -> Iterator[None]:
+    """Attach the audit listener with the app's ``config`` for one test, then detach it.
 
     The listener is process-global, so leaving it attached makes every later
-    test write audit rows. ``reset_registry`` also clears the app's import-time
-    registrations, which are re-applied from the sets passed in.
+    test write audit rows.
     """
-    sensitive, tables, fields = list(sensitive_fields), list(skip_tables), list(skip_fields)
-    register_audit_listeners()
+    register_audit_listeners(config)
     try:
         yield
     finally:
         reset_registry()
-        register_sensitive_fields(sensitive)
-        register_skip_tables(tables)
-        register_skip_fields(fields)
 
 
 async def audit_values(db: AsyncSession) -> list[str]:

@@ -11,21 +11,6 @@ from collections.abc import AsyncIterator, Iterator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.audit import APP_SENSITIVE_FIELDS, APP_SKIP_FIELDS, APP_SKIP_TABLES
-from app.core.auth import current_active_user
-from app.db.session import get_db
-from app.domain.languages import LANGUAGE_CODES
-from app.domain.levels import LEVEL_CODES
-from app.domain.scenarios import SCENARIO_SLUGS
-from app.domain.session_status import SESSION_STATUS_CODES
-from app.domain.turn_status import TURN_STATUS_CODES
-from app.main import app
-from app.models.tutor.tutor_session import TutorSession
-from app.models.tutor.tutor_turn import TutorTurn
-from app.models.user.user import User
 from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.testing.audit_erasure import (
     TEST_ACCOUNT_PASSWORD_HASH,
@@ -37,13 +22,26 @@ from platform_shared.testing.audit_erasure import (
     remove_committed_test_rows,
     write_as,
 )
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.audit import AUDIT_CONFIG
+from app.core.auth import current_active_user
+from app.db.session import get_db
+from app.domain.languages import LANGUAGE_CODES
+from app.domain.levels import LEVEL_CODES
+from app.domain.scenarios import SCENARIO_SLUGS
+from app.domain.session_status import SESSION_STATUS_CODES
+from app.domain.turn_status import TURN_STATUS_CODES
+from app.main import app
+from app.models.tutor.tutor_session import TutorSession
+from app.models.tutor.tutor_turn import TutorTurn
+from app.models.user.user import User
 
 
 @pytest.fixture(autouse=True)
 def _audit_listener() -> Iterator[None]:
-    with audit_listener_attached(
-        sensitive_fields=APP_SENSITIVE_FIELDS, skip_tables=APP_SKIP_TABLES, skip_fields=APP_SKIP_FIELDS,
-    ):
+    with audit_listener_attached(AUDIT_CONFIG):
         yield
 
 

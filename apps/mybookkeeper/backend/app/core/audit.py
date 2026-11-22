@@ -1,20 +1,15 @@
 """MBK audit listener — thin wrapper over :mod:`platform_shared.core.audit`.
 
-Registers MBK-specific sensitive-field column names + skip-tables at import
-time so the shared listener masks PII the moment it attaches. Re-exports
-``current_user_id`` and ``register_audit_listeners`` so the rest of MBK
-(``app.main`` lifespan + middleware) keeps importing from the same path.
+Defines MBK's sensitive-field column names, skip-tables and skip-fields as
+``AUDIT_CONFIG``, which ``app.main`` passes to ``create_app_lifespan``: the
+shared listener cannot attach without it. Re-exports ``current_user_id`` so the
+rest of MBK (middleware, tests) keeps importing it from the same path.
 
 PII column names are app-specific — MBK's are documented in CLAUDE.md under
 "PII encryption (column-level)" and RENTALS_PLAN.md §8.7.
 """
-from platform_shared.core.audit import (
-    current_user_id,
-    register_audit_listeners,
-    register_sensitive_fields,
-    register_skip_fields,
-    register_skip_tables,
-)
+from platform_shared.core.audit import current_user_id
+from platform_shared.core.audit_config import AuditConfig
 
 # MBK-specific sensitive-field allowlist. Edit this list when adding a new
 # PII-bearing column. The shared listener masks any value attached to a column
@@ -118,28 +113,20 @@ MBK_SKIP_TABLES: frozenset[str] = frozenset({
 MBK_SKIP_FIELDS: frozenset[str] = frozenset({"file_content"})
 
 
-# Register at IMPORT time — not lazily — so the listener (registered later in
-# the FastAPI lifespan) never fires without these sets populated. Importing
-# ``app.core.audit`` anywhere during app startup is sufficient; ``app.main``
-# already imports it before the lifespan runs.
-register_sensitive_fields(MBK_SENSITIVE_FIELDS)
-register_skip_tables(MBK_SKIP_TABLES)
-register_skip_fields(MBK_SKIP_FIELDS)
+# Passed to create_app_lifespan(audit_config=...) in app.main. The listener can
+# only be attached with a configuration, and boot fails if an EncryptedString
+# column is missing from the sensitive fields.
+AUDIT_CONFIG = AuditConfig(
+    sensitive_fields=MBK_SENSITIVE_FIELDS,
+    skip_tables=MBK_SKIP_TABLES,
+    skip_fields=MBK_SKIP_FIELDS,
+)
 
-
-# Backwards-compatible re-exports — older MBK code referenced these as
-# module-level names on app.core.audit. Keep them working.
-SENSITIVE_FIELDS: frozenset[str] = MBK_SENSITIVE_FIELDS
-SKIP_TABLES: frozenset[str] = MBK_SKIP_TABLES
-SKIP_FIELDS: frozenset[str] = MBK_SKIP_FIELDS
 
 __all__ = [
     "current_user_id",
-    "register_audit_listeners",
+    "AUDIT_CONFIG",
     "MBK_SENSITIVE_FIELDS",
     "MBK_SKIP_TABLES",
     "MBK_SKIP_FIELDS",
-    "SENSITIVE_FIELDS",
-    "SKIP_TABLES",
-    "SKIP_FIELDS",
 ]

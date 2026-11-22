@@ -1,9 +1,9 @@
 """MJH audit listener — thin wrapper over :mod:`platform_shared.core.audit`.
 
-Mirrors MyBookkeeper's wrapper pattern. Registers MJH-specific sensitive-field
-column names + skip-tables at import time so the shared listener masks PII the
-moment it attaches. Re-exports ``current_user_id`` and ``register_audit_listeners``
-so the rest of MJH (``app.main`` lifespan + middleware) keeps importing from
+Mirrors MyBookkeeper's wrapper pattern. Defines MJH's sensitive-field column
+names, skip-tables and skip-fields as ``AUDIT_CONFIG``, which ``app.main``
+passes to ``create_app_lifespan``: the shared listener cannot attach without
+it. Re-exports ``current_user_id`` so the rest of MJH keeps importing it from
 the same path.
 
 Phase 1 has no plaintext PII columns — ``job_board_credentials.encrypted_credentials``
@@ -11,13 +11,8 @@ is already encrypted at the value level via Fernet, not at the audit boundary.
 The empty allowlist is reserved for Phase 2+ extension (e.g. resume parsed
 fields, contact email columns).
 """
-from platform_shared.core.audit import (
-    current_user_id,
-    register_audit_listeners,
-    register_sensitive_fields,
-    register_skip_fields,
-    register_skip_tables,
-)
+from platform_shared.core.audit import current_user_id
+from platform_shared.core.audit_config import AuditConfig
 
 # MJH-specific sensitive-field allowlist. Phase 1: only generic auth secrets
 # from the shared User model (hashed_password, totp_secret, totp_recovery_codes).
@@ -25,7 +20,7 @@ from platform_shared.core.audit import (
 # (parsed resume fields, contact emails, etc.).
 #
 # Field names MUST match the SQLAlchemy attribute keys on the actual ORM
-# columns — verified at boot by platform_shared.core.audit.verify_sensitive_field_names.
+# columns — verified at boot by platform_shared.core.audit.verify_audit_config.
 # Misspellings would silently disable masking and leak plaintext into audit_logs.
 MJH_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     "hashed_password",
@@ -53,18 +48,19 @@ MJH_SKIP_FIELDS: frozenset[str] = frozenset({
 })
 
 
-# Register at IMPORT time — not lazily — so the listener (registered later in
-# the FastAPI lifespan) never fires without these sets populated. Importing
-# ``app.core.audit`` anywhere during app startup is sufficient; ``app.main``
-# already imports it before the lifespan runs.
-register_sensitive_fields(MJH_SENSITIVE_FIELDS)
-register_skip_tables(MJH_SKIP_TABLES)
-register_skip_fields(MJH_SKIP_FIELDS)
+# Passed to create_app_lifespan(audit_config=...) in app.main. The listener can
+# only be attached with a configuration, and boot fails if an EncryptedString
+# column is missing from the sensitive fields.
+AUDIT_CONFIG = AuditConfig(
+    sensitive_fields=MJH_SENSITIVE_FIELDS,
+    skip_tables=MJH_SKIP_TABLES,
+    skip_fields=MJH_SKIP_FIELDS,
+)
 
 
 __all__ = [
     "current_user_id",
-    "register_audit_listeners",
+    "AUDIT_CONFIG",
     "MJH_SENSITIVE_FIELDS",
     "MJH_SKIP_TABLES",
     "MJH_SKIP_FIELDS",

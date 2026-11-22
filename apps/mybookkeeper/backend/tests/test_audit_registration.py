@@ -1,35 +1,34 @@
-"""Verify MBK's import-time registration of sensitive-field column names.
+"""MBK's production lifespan attaches the audit listener with MBK's masking config.
 
-After PR M3 the audit listener + AuditLog model live in ``platform_shared``.
-MBK's ``app/core/audit.py`` is now a thin wrapper that calls the shared
-``register_sensitive_fields`` / ``register_skip_tables`` / ``register_skip_fields``
-at import time. If that wiring ever breaks (e.g. someone refactors away the
-top-level ``register_*`` calls), the listener would still attach but produce
-audit rows with PII plaintext leaked into ``new_value`` — a silent security
-regression.
-
-This test is the safety net: if it fails, the listener is no longer protecting
-PII columns.
+The listener used to read sets that ``app/core/audit.py`` registered as an
+import-time side effect. PR #2623 removed the only import of that module from
+``app/main.py`` (it looked unused), so the listener attached with nothing
+registered and copied TOTP secrets, password hashes and encrypted PII into
+``audit_logs`` in cleartext. These tests run ``app.main``'s real lifespan up to
+the audit step and check what the listener attached with.
 """
 from __future__ import annotations
 
-# Importing ``app.core.audit`` runs the module body, which calls
-# ``register_sensitive_fields(MBK_SENSITIVE_FIELDS)`` etc. We rely on that side
-# effect — do NOT defer the import inside the tests.
-from app.core.audit import (  # noqa: F401 — import side-effect populates registry
-    MBK_SENSITIVE_FIELDS,
-    MBK_SKIP_FIELDS,
-    MBK_SKIP_TABLES,
-)
-from platform_shared.core.audit import (
-    get_sensitive_fields,
-    get_skip_tables,
-)
+import pytest
+from platform_shared.core.audit_config import AuditConfig
+from platform_shared.testing.audit_wiring import audit_config_attached_by_lifespan
+
+from app.core.audit import AUDIT_CONFIG
+from app.main import app
+
+
+@pytest.fixture()
+async def attached() -> AuditConfig:
+    return await audit_config_attached_by_lifespan(app)
 
 
 class TestMBKAuditRegistration:
-    def test_inquiries_pii_columns_are_registered(self) -> None:
-        registered = get_sensitive_fields()
+    @pytest.mark.asyncio
+    async def test_lifespan_attaches_the_app_config(self, attached: AuditConfig) -> None:
+        assert attached == AUDIT_CONFIG
+
+    @pytest.mark.asyncio
+    async def test_inquiries_pii_columns_are_masked(self, attached: AuditConfig) -> None:
         for field in (
             "inquirer_name",
             "inquirer_email",
@@ -39,14 +38,13 @@ class TestMBKAuditRegistration:
             "to_address",
             "notes",
         ):
-            assert field in registered, (
-                f"{field!r} must be registered as sensitive — adding a new "
-                "encrypted PII column without registering it leaks plaintext "
-                "into audit_logs.new_value."
+            assert field in attached.sensitive_fields, (
+                f"{field!r} must be masked — adding a new encrypted PII column "
+                "without masking it leaks plaintext into audit_logs.new_value."
             )
 
-    def test_applicants_pii_columns_are_registered(self) -> None:
-        registered = get_sensitive_fields()
+    @pytest.mark.asyncio
+    async def test_applicants_pii_columns_are_masked(self, attached: AuditConfig) -> None:
         for field in (
             "legal_name",
             "dob",
@@ -55,16 +53,13 @@ class TestMBKAuditRegistration:
             "reference_name",
             "reference_contact",
         ):
-            assert field in registered, f"{field!r} must be registered as sensitive."
+            assert field in attached.sensitive_fields, f"{field!r} must be masked."
 
-    def test_secrets_are_registered(self) -> None:
-        # Field names MUST match the actual SQLAlchemy column attributes.
+    @pytest.mark.asyncio
+    async def test_secrets_are_masked(self, attached: AuditConfig) -> None:
         # `access_token` / `refresh_token` are @hybrid_property accessors on
         # Integration, not mapped columns — the audit listener only sees the
-        # underlying `*_encrypted` columns. Pre-PR-#618 these were misregistered
-        # (the mask silently never fired); the verifier in
-        # platform_shared.core.audit now catches that class of bug at boot.
-        registered = get_sensitive_fields()
+        # underlying `*_encrypted` columns.
         for field in (
             "hashed_password",
             "access_token_encrypted",
@@ -72,27 +67,13 @@ class TestMBKAuditRegistration:
             "totp_secret",
             "totp_recovery_codes",
         ):
-            assert field in registered
+            assert field in attached.sensitive_fields
 
-    def test_default_audit_logs_skip_table_is_present(self) -> None:
-        # platform_shared seeds this — without it the listener would recurse
-        # infinitely on every flush.
-        assert "audit_logs" in get_skip_tables()
+    @pytest.mark.asyncio
+    async def test_high_volume_and_secret_tables_are_skipped(self, attached: AuditConfig) -> None:
+        for table in ("auth_events", "refresh_sessions", "processed_emails", "usage_logs", "sync_logs"):
+            assert table in attached.skip_tables
 
-    def test_mbk_high_volume_skip_tables_are_registered(self) -> None:
-        registered = get_skip_tables()
-        for table in ("auth_events", "processed_emails", "usage_logs", "sync_logs"):
-            assert table in registered
-
-    def test_mbk_constants_match_registered_state(self) -> None:
-        # The exported MBK_SENSITIVE_FIELDS constant is the documentation
-        # surface — every entry must actually have been pushed into the
-        # shared registry.
-        for field in MBK_SENSITIVE_FIELDS:
-            assert field in get_sensitive_fields()
-        for table in MBK_SKIP_TABLES:
-            assert table in get_skip_tables()
-        # MBK_SKIP_FIELDS is registered separately — assert non-empty + present.
-        from platform_shared.core import audit as audit_module
-        for field in MBK_SKIP_FIELDS:
-            assert field in audit_module._skip_fields
+    @pytest.mark.asyncio
+    async def test_file_content_is_left_out(self, attached: AuditConfig) -> None:
+        assert "file_content" in attached.skip_fields

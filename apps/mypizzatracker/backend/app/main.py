@@ -35,6 +35,7 @@ from app.api import (
     service,
     totp,
 )
+from app.core.audit import AUDIT_CONFIG
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
@@ -93,6 +94,7 @@ async def _on_startup() -> None:
 
 lifespan = create_app_lifespan(
     settings=settings,
+    audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     sms_required=True,

@@ -37,18 +37,18 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from platform_shared.core.audit import register_audit_listeners
+from platform_shared.db.models.audit_log import AuditLog
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.core.audit import current_user_id, register_audit_listeners
+from app.core.audit import AUDIT_CONFIG, current_user_id
 from app.core.config import settings
 from app.models.application.application import Application
 from app.models.company.company import Company
 from app.models.user.user import User
 from app.repositories.application import application_repository
-from platform_shared.db.models.audit_log import AuditLog
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -520,7 +520,7 @@ class TestAuditOnCreate:
         at least one ``audit_logs`` row tagged with the actor user id."""
         # Attach the listener locally — idempotent at the
         # ``platform_shared`` registration boundary.
-        register_audit_listeners()
+        register_audit_listeners(AUDIT_CONFIG)
         user = User(
             id=uuid.uuid4(),
             email=f"audit-app-{uuid.uuid4().hex[:8]}@example.com",

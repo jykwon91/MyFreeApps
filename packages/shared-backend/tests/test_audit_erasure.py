@@ -16,10 +16,8 @@ from sqlalchemy import ForeignKey, String, delete, event, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from platform_shared.core.audit import (
-    register_audit_listeners,
-    register_sensitive_fields,
-)
+from platform_shared.core.audit import register_audit_listeners
+from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.audit_erasure_constants import (
     ERASED_AUDIT_VALUE,
     MASKED_AUDIT_VALUE,
@@ -103,8 +101,10 @@ async def db() -> AsyncIterator[AsyncSession]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_AppBase.metadata.create_all)
-    register_sensitive_fields(["pin"])
-    register_audit_listeners(verify_field_names=False)
+    register_audit_listeners(
+        AuditConfig(sensitive_fields=frozenset({"pin"}), skip_tables=frozenset(), skip_fields=frozenset()),
+        base=_AppBase,
+    )
     async with async_sessionmaker(engine, expire_on_commit=False)() as session:
         yield session
     await engine.dispose()

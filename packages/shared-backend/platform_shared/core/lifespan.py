@@ -22,7 +22,8 @@ Boot order (rationale documented inline below):
   2. check_turnstile_configured() — fail loud on missing CAPTCHA in prod
   3. check_email_configured()     — fail loud on missing SMTP creds /
                                     console mode in prod
-  4. register_audit_listeners()   — wire SQLAlchemy listeners before any
+  4. register_audit_listeners()   — verify the app's AuditConfig and wire
+                                    the SQLAlchemy listener before any
                                     request handler can write
   5. bucket_init()                — verify MinIO reachable; refuse to
                                     boot if storage missing
@@ -45,8 +46,11 @@ Usage:
     from app.core.config import settings
     from app.services.storage.bucket_initializer import ensure_bucket
 
+    from app.core.audit import AUDIT_CONFIG
+
     lifespan = create_app_lifespan(
         settings=settings,
+        audit_config=AUDIT_CONFIG,
         bucket_init=ensure_bucket,
     )
 
@@ -61,6 +65,7 @@ Usage:
 
     lifespan = create_app_lifespan(
         settings=settings,
+        audit_config=AUDIT_CONFIG,
         bucket_init=ensure_bucket,
         on_startup=_on_startup,
         on_shutdown=_on_shutdown,
@@ -74,7 +79,8 @@ from typing import Any, Protocol
 
 from fastapi import FastAPI
 
-from platform_shared.core.audit import register_audit_listeners
+from platform_shared.core.audit import register_audit_listeners, registered_audit_config
+from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.boot_guards import (
     check_email_configured,
     check_sms_configured,
@@ -120,6 +126,7 @@ LifecycleHook = Callable[[], Awaitable[None] | None]
 def create_app_lifespan(
     *,
     settings: _SettingsProtocol,
+    audit_config: AuditConfig | None = None,
     init_sentry: InitSentryFn | None = None,
     bucket_init: BucketInitFn = lambda: None,
     turnstile_required: bool = True,
@@ -137,6 +144,12 @@ def create_app_lifespan(
             thread sentry_dsn, environment, turnstile_secret_key,
             email_backend, smtp_user, smtp_password through the boot
             guards.
+        audit_config: The app's ``AUDIT_CONFIG`` from ``app/core/audit.py``
+            — what the audit listener masks and skips. Every app passes it
+            (tests/test_app_conformance.py enforces this). None is the
+            legacy path for MGA only: the configuration is read from the
+            import-time registry (``registered_audit_config``), which
+            refuses to boot when nothing was registered.
         init_sentry: Optional. The app's wrapper around
             platform_shared.core.observability.init_sentry, binding its
             own settings.sentry_dsn / settings.environment internally so
@@ -232,7 +245,9 @@ def create_app_lifespan(
         # 3. Side-effect inits — wire SQLAlchemy listeners before any
         #    request handler can run a write, and verify MinIO is
         #    reachable.
-        register_audit_listeners()
+        register_audit_listeners(
+            audit_config if audit_config is not None else registered_audit_config(),
+        )
         bucket_init()
 
         # 4. Platform-admin seed (multi-user apps) — after the audit

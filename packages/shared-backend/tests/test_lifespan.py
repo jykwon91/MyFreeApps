@@ -10,6 +10,11 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import FastAPI
 
+from platform_shared.core.audit import (
+    AuditConfigurationError,
+    register_sensitive_fields,
+)
+from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.boot_guards import (
     EmailNotConfiguredError,
     SmsNotConfiguredError,
@@ -58,6 +63,15 @@ def _settings(
     )
 
 
+# Verifiable against the shared Base alone: some tests below run the real
+# audit step, which checks the names against the mapped models.
+_AUDIT_CONFIG = AuditConfig(
+    sensitive_fields=frozenset(),
+    skip_tables=frozenset({"auth_events"}),
+    skip_fields=frozenset(),
+)
+
+
 @pytest.fixture
 def app() -> FastAPI:
     return FastAPI()
@@ -71,10 +85,11 @@ class TestBootSequenceOrder:
         order: list[str] = []
         monkeypatch.setattr(
             "platform_shared.core.lifespan.register_audit_listeners",
-            lambda: order.append("audit"),
+            lambda _config: order.append("audit"),
         )
 
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=lambda: order.append("sentry"),
             bucket_init=lambda: order.append("bucket"),
@@ -96,13 +111,14 @@ class TestBootSequenceOrder:
         order: list[str] = []
         monkeypatch.setattr(
             "platform_shared.core.lifespan.register_audit_listeners",
-            lambda: order.append("audit"),
+            lambda _config: order.append("audit"),
         )
 
         async def _seed() -> None:
             order.append("seed_admin")
 
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=lambda: order.append("sentry"),
             bucket_init=lambda: order.append("bucket"),
@@ -125,6 +141,7 @@ class TestBootSequenceOrder:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
         )
@@ -147,6 +164,7 @@ class TestBootSequenceOrder:
 
         started = []
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
             seed_admin=_seed,
@@ -168,6 +186,7 @@ class TestBootGuardsRunWithSettings:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -189,6 +208,7 @@ class TestBootGuardsRunWithSettings:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -210,6 +230,7 @@ class TestBootGuardsRunWithSettings:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(environment="development"),
             init_sentry=MagicMock(),
         )
@@ -232,6 +253,7 @@ class TestSentryFirst:
         )
 
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -265,6 +287,7 @@ class TestInitSentryOptional:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="",  # no DSN, and init_sentry omitted below
@@ -289,6 +312,7 @@ class TestInitSentryOptional:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="present",
@@ -311,6 +335,7 @@ class TestOptionalHooks:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
         )
@@ -325,6 +350,7 @@ class TestOptionalHooks:
         )
         called = []
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
             on_startup=lambda: called.append("startup"),
@@ -345,6 +371,7 @@ class TestOptionalHooks:
             called.append("async-startup")
 
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
             on_startup=_async_startup,
@@ -363,6 +390,7 @@ class TestOptionalHooks:
         )
         called = []
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
             on_shutdown=lambda: called.append("shutdown"),
@@ -384,6 +412,7 @@ class TestBucketInit:
         )
         # No bucket_init provided — should not raise
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
         )
@@ -398,6 +427,7 @@ class TestBucketInit:
         )
         bucket_called = []
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(),
             init_sentry=MagicMock(),
             bucket_init=lambda: bucket_called.append("bucket"),
@@ -420,6 +450,7 @@ class TestSmsRequired:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -442,6 +473,7 @@ class TestSmsRequired:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -468,6 +500,7 @@ class TestSmsRequired:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -496,6 +529,7 @@ class TestSmsRequired:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(environment="development"),
             init_sentry=MagicMock(),
             sms_required=True,
@@ -520,6 +554,7 @@ class TestTurnstileEmailRequiredFlags:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="",  # missing
@@ -543,6 +578,7 @@ class TestTurnstileEmailRequiredFlags:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="",  # missing — but not required
@@ -566,6 +602,7 @@ class TestTurnstileEmailRequiredFlags:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="present",
@@ -587,6 +624,7 @@ class TestTurnstileEmailRequiredFlags:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="present",
@@ -609,6 +647,7 @@ class TestTurnstileEmailRequiredFlags:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 turnstile_secret_key="",
@@ -637,6 +676,7 @@ class TestTransparencyGuard:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -662,6 +702,7 @@ class TestTransparencyGuard:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -687,6 +728,7 @@ class TestTransparencyGuard:
             MagicMock(),
         )
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(
                 environment="production",
                 sentry_dsn="https://x@y/1",
@@ -715,6 +757,7 @@ class TestShutdownDrainsTrackedTasks:
             order.append("task-finished")
 
         lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
             settings=_settings(), on_shutdown=lambda: order.append("shutdown"),
         )
         async with lifespan(app):
@@ -735,7 +778,7 @@ class TestShutdownDrainsTrackedTasks:
         async def work() -> None:
             await never.wait()
 
-        lifespan = create_app_lifespan(settings=_settings())
+        lifespan = create_app_lifespan(settings=_settings(), audit_config=_AUDIT_CONFIG)
         with caplog.at_level(logging.ERROR, logger="platform_shared.core.tracked_task"):
             async with lifespan(app):
                 task = spawn_tracked(work(), name="stuck-reset-email")
@@ -743,3 +786,51 @@ class TestShutdownDrainsTrackedTasks:
         assert "stuck-reset-email" in caplog.text
         task.cancel()
         await drain_tracked()
+
+
+class TestAuditConfig:
+    """The lifespan attaches the audit listener with the app's configuration."""
+
+    @pytest.mark.asyncio
+    async def test_passes_the_apps_audit_config_to_the_listener(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        received: list[AuditConfig] = []
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", received.append,
+        )
+        lifespan = create_app_lifespan(settings=_settings(), audit_config=_AUDIT_CONFIG)
+        async with lifespan(app):
+            pass
+        assert received == [_AUDIT_CONFIG]
+
+    @pytest.mark.asyncio
+    async def test_without_audit_config_and_nothing_registered_boot_fails(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """The regression: app.core.audit was no longer imported, nothing was
+        registered, and the listener attached anyway. Now boot refuses."""
+        attach = MagicMock()
+        monkeypatch.setattr("platform_shared.core.lifespan.register_audit_listeners", attach)
+        bucket = MagicMock()
+        lifespan = create_app_lifespan(settings=_settings(), bucket_init=bucket)
+        with pytest.raises(AuditConfigurationError):
+            async with lifespan(app):
+                pass
+        attach.assert_not_called()
+        bucket.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_without_audit_config_uses_the_legacy_registry(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """MGA's path: its sets are registered at import time."""
+        register_sensitive_fields(["hashed_password"])
+        received: list[AuditConfig] = []
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", received.append,
+        )
+        lifespan = create_app_lifespan(settings=_settings())
+        async with lifespan(app):
+            pass
+        assert [c.sensitive_fields for c in received] == [frozenset({"hashed_password"})]

@@ -8,9 +8,9 @@ Asserts:
 - Anonymous writes (no current_user_id) leave ``changed_by`` NULL.
 - ``audit_logs`` itself is in ``_skip_tables`` so writes to it don't recurse.
 - ``auth_events``, ``extraction_logs``, ``resume_upload_jobs`` are skipped.
-- The MJH PII allowlist is registered (regression: refactoring away the
-  import-time ``register_*`` calls would silently leak plaintext into the
-  audit table).
+- MJH's production lifespan attaches the listener with MJH's ``AUDIT_CONFIG``
+  (regression: PR #2623 dropped the import that registered the masking sets,
+  and plaintext secrets went into the audit table).
 
 Schema-level wiring uses a dedicated async engine + session per test so the
 listener's after-flush audit row queue commits cleanly. The conftest's
@@ -25,29 +25,20 @@ from collections.abc import AsyncIterator
 
 import pytest
 import pytest_asyncio
+from platform_shared.core.audit import register_audit_listeners
+from platform_shared.core.audit_config import AuditConfig
+from platform_shared.db.models.audit_log import AuditLog
+from platform_shared.db.models.auth_event import AuthEvent
+from platform_shared.testing.audit_wiring import audit_config_attached_by_lifespan
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-# Importing ``app.core.audit`` runs the module body which calls
-# ``register_sensitive_fields(MJH_SENSITIVE_FIELDS)`` etc. We rely on that
-# side effect — keep the import at module top.
-from app.core.audit import (  # noqa: F401
-    MJH_SENSITIVE_FIELDS,
-    MJH_SKIP_FIELDS,
-    MJH_SKIP_TABLES,
-    current_user_id,
-    register_audit_listeners,
-)
+from app.core.audit import AUDIT_CONFIG, current_user_id
 from app.core.config import settings
+from app.main import app
 from app.models.company.company import Company
 from app.models.user.user import User
-from platform_shared.core.audit import (
-    get_sensitive_fields,
-    get_skip_tables,
-)
-from platform_shared.db.models.audit_log import AuditLog
-from platform_shared.db.models.auth_event import AuthEvent
 
 
 @pytest.fixture(autouse=True)
@@ -56,9 +47,9 @@ def _attach_listener() -> None:
 
     ASGITransport doesn't invoke FastAPI's lifespan in unit tests, so the
     listener registration that normally happens at app startup never runs.
-    Call it explicitly here. ``register_audit_listeners()`` is idempotent.
+    Attach it here with the same config. Idempotent for the same config.
     """
-    register_audit_listeners()
+    register_audit_listeners(AUDIT_CONFIG)
 
 
 @pytest_asyncio.fixture()
@@ -122,40 +113,36 @@ async def _create_user(session: AsyncSession) -> User:
 
 
 class TestMJHAuditRegistration:
-    def test_default_audit_logs_skip_table_is_present(self) -> None:
-        # platform_shared seeds this — without it the listener would recurse
-        # infinitely on every flush.
-        assert "audit_logs" in get_skip_tables()
+    """Runs ``app.main``'s real lifespan up to the audit step."""
 
-    def test_mjh_high_volume_skip_tables_are_registered(self) -> None:
-        registered = get_skip_tables()
-        for table in ("auth_events", "extraction_logs", "resume_upload_jobs"):
-            assert table in registered, (
-                f"{table!r} must be registered as a skip-table — auditing "
-                "high-volume / cost-meter rows would bloat audit_logs."
+    @pytest_asyncio.fixture()
+    async def attached(self) -> AuditConfig:
+        config = await audit_config_attached_by_lifespan(app)
+        register_audit_listeners(AUDIT_CONFIG)  # restore what _attach_listener set up
+        return config
+
+    @pytest.mark.asyncio
+    async def test_lifespan_attaches_the_app_config(self, attached: AuditConfig) -> None:
+        assert attached == AUDIT_CONFIG
+
+    @pytest.mark.asyncio
+    async def test_mjh_high_volume_skip_tables_are_skipped(self, attached: AuditConfig) -> None:
+        for table in ("auth_events", "refresh_sessions", "extraction_logs", "resume_upload_jobs"):
+            assert table in attached.skip_tables, (
+                f"{table!r} must be a skip-table — auditing high-volume / "
+                "cost-meter / secret-bearing rows would bloat or leak into audit_logs."
             )
 
-    def test_mjh_secrets_are_registered(self) -> None:
+    @pytest.mark.asyncio
+    async def test_mjh_secrets_are_masked(self, attached: AuditConfig) -> None:
         # `totp_secret` is the actual SQLAlchemy column (typed as
-        # EncryptedString — encrypts at bind-time, AFTER the audit listener
-        # captures attr.value). The mask MUST match this exact attribute
-        # name; pre-PR-#618 this set referenced `totp_secret_encrypted`
-        # (column-rename leftover), which never matched → plaintext leak.
-        registered = get_sensitive_fields()
+        # EncryptedString — the listener sees the decrypted value). The mask
+        # MUST match this exact attribute name.
         for field in ("hashed_password", "totp_secret", "totp_recovery_codes"):
-            assert field in registered, (
-                f"{field!r} must be registered as sensitive — the audit "
-                "listener would otherwise capture plaintext secrets."
+            assert field in attached.sensitive_fields, (
+                f"{field!r} must be masked — the audit listener would otherwise "
+                "capture plaintext secrets."
             )
-
-    def test_mjh_constants_match_registered_state(self) -> None:
-        # The exported MJH_SENSITIVE_FIELDS constant is the documentation
-        # surface — every entry must actually have been pushed into the
-        # shared registry.
-        for field in MJH_SENSITIVE_FIELDS:
-            assert field in get_sensitive_fields()
-        for table in MJH_SKIP_TABLES:
-            assert table in get_skip_tables()
 
 
 class TestAuditWritesOnModelChange:

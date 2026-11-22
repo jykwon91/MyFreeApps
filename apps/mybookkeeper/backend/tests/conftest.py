@@ -27,17 +27,19 @@ os.environ.setdefault("MINIO_SECRET_KEY", "test-secret-key")
 os.environ.setdefault("MINIO_BUCKET", "test-bucket")
 os.environ.setdefault("MINIO_PUBLIC_ENDPOINT", "test-minio:9000")
 import pytest_asyncio
+from platform_shared.testing.audit_erasure import audit_listener_attached
+from platform_shared.testing.factories import make_user_fixture
+from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.db.base import Base
 import app.models  # noqa: F401 — registers every table before the patch below
+from app.core.audit import AUDIT_CONFIG
+from app.db.base import Base
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
-from platform_shared.testing.factories import make_user_fixture
-from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 
 pytest_plugins = ["tests.receipt_seed", "tests.reply_seed"]
 
@@ -144,39 +146,16 @@ async def db(_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest.fixture()
 def audit_listeners():
-    """Attach the audit listener for one test, then put the registry back.
+    """Attach the audit listener (with MBK's AUDIT_CONFIG) for one test, then detach it.
 
     The listener lives on the global SQLAlchemy ``Session`` class, so leaving
     it attached makes every later test in the session write an audit row per
     changed field — the demo-seeding tests went from 664 to 15,230 statements
     purely from listener leakage. Any test that needs the listener must take
-    this fixture rather than calling ``register_audit_listeners()`` directly.
-
-    ``reset_registry()`` also clears the sensitive / skip sets, so the
-    import-time registrations from ``app.core.audit`` are re-applied here to
-    leave global state exactly as it was found.
+    this fixture rather than calling ``register_audit_listeners`` directly.
     """
-    from app.core.audit import (
-        MBK_SENSITIVE_FIELDS,
-        MBK_SKIP_FIELDS,
-        MBK_SKIP_TABLES,
-        register_audit_listeners,
-    )
-    from platform_shared.core.audit import (
-        register_sensitive_fields,
-        register_skip_fields,
-        register_skip_tables,
-        reset_registry,
-    )
-
-    register_audit_listeners()
-    try:
+    with audit_listener_attached(AUDIT_CONFIG):
         yield
-    finally:
-        reset_registry()
-        register_sensitive_fields(MBK_SENSITIVE_FIELDS)
-        register_skip_tables(MBK_SKIP_TABLES)
-        register_skip_fields(MBK_SKIP_FIELDS)
 
 
 test_user, test_org = make_user_fixture(
