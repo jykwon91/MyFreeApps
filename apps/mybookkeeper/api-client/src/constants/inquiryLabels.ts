@@ -1,3 +1,5 @@
+import type { InquiryEventActor } from "../types/inquiry/inquiry-event-actor";
+import type { InquiryMessageChannel } from "../types/inquiry/inquiry-message-channel";
 import type { InquirySource } from "../types/inquiry/inquiry-source";
 import type { InquiryStage } from "../types/inquiry/inquiry-stage";
 
@@ -55,4 +57,16 @@ export const INQUIRY_STAGE_LABELS: Record<InquiryStage, string> = {
   declined: "Declined",
   converted: "Converted",
   archived: "Archived",
+};
+
+export const INQUIRY_EVENT_ACTOR_LABELS: Record<InquiryEventActor, string> = {
+  host: "You",
+  system: "System",
+  applicant: "Inquirer",
+};
+
+export const INQUIRY_MESSAGE_CHANNEL_LABELS: Record<InquiryMessageChannel, string> = {
+  email: "Email",
+  sms: "SMS",
+  in_app: "In-app",
 };

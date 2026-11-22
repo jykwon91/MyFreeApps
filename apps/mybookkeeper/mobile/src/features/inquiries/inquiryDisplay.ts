@@ -1,4 +1,9 @@
-import { INQUIRY_SOURCE_SHORT_LABELS, INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import {
+  INQUIRY_EVENT_ACTOR_LABELS,
+  INQUIRY_MESSAGE_CHANNEL_LABELS,
+  INQUIRY_SOURCE_SHORT_LABELS,
+  INQUIRY_STAGE_LABELS,
+} from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryEvent } from "@mybookkeeper/api-client/types/inquiry/inquiry-event";
 import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
@@ -110,7 +115,8 @@ export function messageSpeaker(message: InquiryMessage, name: string | null): st
 
 export function spokenMessage(message: InquiryMessage, name: string | null): string {
   const speaker = message.direction === "outbound" ? "Your reply" : `Message from ${inquirerName(name)}`;
-  return `${speaker}, ${messageWhen(message)}: ${messageBody(message)}`;
+  const subject = message.subject ? `, subject ${message.subject}` : "";
+  return `${speaker}, ${messageWhen(message)}, ${messageAddressLine(message).replace(" · ", ", ")}${subject}: ${messageBody(message)}`;
 }
 
 export function eventLabel(event: InquiryEvent): string {
@@ -118,6 +124,16 @@ export function eventLabel(event: InquiryEvent): string {
   const stage = event.event_type as InquiryStage;
   if (stage in INQUIRY_STAGE_LABELS) return `Moved to ${INQUIRY_STAGE_LABELS[stage]}`;
   return event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1);
+}
+
+export function eventActorLabel(event: InquiryEvent): string {
+  return INQUIRY_EVENT_ACTOR_LABELS[event.actor];
+}
+
+export function messageAddressLine(message: InquiryMessage): string {
+  const inbound = message.direction === "inbound";
+  const address = (inbound ? message.from_address : message.to_address) ?? "—";
+  return `${inbound ? "From" : "To"}: ${address} · ${INQUIRY_MESSAGE_CHANNEL_LABELS[message.channel] ?? message.channel}`;
 }
 
 export function spamCheckLabel(check: InquirySpamAssessment): string {

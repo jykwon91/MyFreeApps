@@ -1,16 +1,11 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatAbsoluteTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { INQUIRY_MESSAGE_CHANNEL_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 
 export interface InquiryMessageThreadProps {
   messages: InquiryMessage[];
 }
-
-const CHANNEL_LABELS: Record<string, string> = {
-  email: "Email",
-  sms: "SMS",
-  in_app: "In-app",
-};
 
 /**
  * Renders the inquiry's email/SMS thread chronologically (oldest first).
@@ -35,7 +30,7 @@ export default function InquiryMessageThread({ messages }: InquiryMessageThreadP
       {messages.map((msg) => {
         const inbound = msg.direction === "inbound";
         const Icon = inbound ? ChevronDown : ChevronUp;
-        const channelLabel = CHANNEL_LABELS[msg.channel] ?? msg.channel;
+        const channelLabel = INQUIRY_MESSAGE_CHANNEL_LABELS[msg.channel] ?? msg.channel;
         const sentAt = msg.sent_at ?? msg.created_at;
         // PR 2.2 will populate parsed_body; until then we fall back to
         // raw_email_body so manual entries (and outbound replies in PR 2.3)

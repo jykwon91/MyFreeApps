@@ -3,7 +3,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { CLAMPED_MESSAGE_LINES, LONG_MESSAGE_CHARACTERS } from "../../constants/inquiries";
-import { messageBody, messageSpeaker, messageWhen, spokenMessage } from "./inquiryDisplay";
+import { messageAddressLine, messageBody, messageSpeaker, messageWhen, spokenMessage } from "./inquiryDisplay";
 
 export default function InquiryMessageCard({ message, name }: { message: InquiryMessage; name: string | null }) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -24,6 +24,8 @@ export default function InquiryMessageCard({ message, name }: { message: Inquiry
     >
       <View accessibilityLabel={spokenMessage(message, name)} accessible style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${messageSpeaker(message, name)} · ${messageWhen(message)}`}</Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{messageAddressLine(message)}</Text>
+        {message.subject ? <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{message.subject}</Text> : null}
         <Text numberOfLines={isLong && !isExpanded ? CLAMPED_MESSAGE_LINES : undefined} selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>
           {body}
         </Text>
