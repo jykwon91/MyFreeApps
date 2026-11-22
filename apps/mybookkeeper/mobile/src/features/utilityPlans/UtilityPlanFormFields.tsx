@@ -1,6 +1,6 @@
 import { UTILITY_PLAN_RATE_TYPES, UTILITY_PLAN_RATE_TYPE_HINTS, UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanRateTypes";
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
-import { OptionRow, PickerField, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, OptionRow, PickerField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
   UTILITY_PLAN_ACCOUNT_MAX_LENGTH,
@@ -20,7 +20,7 @@ interface UtilityPlanFormFieldsProps extends UtilityPlanFieldsProps {
 export default function UtilityPlanFormFields({ onPickService, ...fields }: UtilityPlanFormFieldsProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { values, onChange, problems, isBusy } = fields;
-  const money = { ...fields, keyboardType: "decimal-pad" as const };
+  const money = { ...fields, preset: FIELD_PRESETS.decimal };
   const today = new Date();
 
   return (
@@ -44,14 +44,14 @@ export default function UtilityPlanFormFields({ onPickService, ...fields }: Util
 
       <UtilityPlanTextField {...fields} field="providerName" label={MESSAGES.provider} maxLength={UTILITY_PLAN_TEXT_MAX_LENGTH} placeholder={MESSAGES.providerPlaceholder} required />
       <UtilityPlanTextField {...fields} field="planName" label={MESSAGES.planName} maxLength={UTILITY_PLAN_TEXT_MAX_LENGTH} placeholder={MESSAGES.planNamePlaceholder} />
-      <UtilityPlanTextField {...fields} field="accountNumber" label={MESSAGES.accountNumber} maxLength={UTILITY_PLAN_ACCOUNT_MAX_LENGTH} placeholder={MESSAGES.accountNumberPlaceholder} />
+      <UtilityPlanTextField {...fields} field="accountNumber" preset={FIELD_PRESETS.code} label={MESSAGES.accountNumber} maxLength={UTILITY_PLAN_ACCOUNT_MAX_LENGTH} placeholder={MESSAGES.accountNumberPlaceholder} />
 
       <UtilityPlanTextField {...money} field="energyCharge" label={MESSAGES.energyCharge} />
       <UtilityPlanTextField {...money} field="tduCharge" label={MESSAGES.tduCharge} />
       <UtilityPlanTextField {...money} field="avgPrice" label={MESSAGES.avgPrice} />
       <UtilityPlanTextField {...money} field="monthlyBase" label={MESSAGES.monthlyBase} />
 
-      <UtilityPlanTextField {...fields} field="termMonths" keyboardType="number-pad" label={MESSAGES.termMonths} />
+      <UtilityPlanTextField {...fields} field="termMonths" preset={FIELD_PRESETS.wholeNumber} label={MESSAGES.termMonths} />
       <UtilityPlanDateField field="serviceStartDate" label={MESSAGES.serviceStart} onChange={onChange} problems={problems} isBusy={isBusy} today={today} values={values} />
       <UtilityPlanDateField field="termEndDate" label={MESSAGES.termEnds} onChange={onChange} problems={problems} isBusy={isBusy} today={today} values={values} />
       <UtilityPlanTextField {...money} field="etf" label={MESSAGES.earlyTerminationFee} />

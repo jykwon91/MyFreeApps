@@ -68,6 +68,16 @@ describe("adding an inquiry by hand", () => {
     expect(screen.queryByRole("button", { name: "Add inquiry" })).toBeNull();
   });
 
+  it("asks the phone not to autofill the owner's own name, email or phone for the inquirer", async () => {
+    startInquiryServer([]);
+    await openSheet();
+    const noAutofill = { autoComplete: "off", textContentType: "none" };
+    expect(screen.getByLabelText("Inquirer name, required").props).toMatchObject({ ...noAutofill, autoCapitalize: "words" });
+    expect(screen.getByLabelText("Email").props).toMatchObject({ ...noAutofill, keyboardType: "email-address", autoCapitalize: "none", autoCorrect: false });
+    expect(screen.getByLabelText("Phone").props).toMatchObject({ ...noAutofill, keyboardType: "phone-pad" });
+    expect(screen.getByLabelText("Employer / hospital").props).toMatchObject(noAutofill);
+  });
+
   it("opens on a direct inquiry received now, with the website's fields", async () => {
     startInquiryServer([]);
     await openSheet();

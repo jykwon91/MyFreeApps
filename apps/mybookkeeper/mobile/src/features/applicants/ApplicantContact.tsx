@@ -1,7 +1,7 @@
 import { APPLICANT_CONTACT_EMAIL_MESSAGES as MESSAGES } from "@mybookkeeper/api-client/constants/applicantContactEmail";
 import { useUpdateApplicantContactEmailMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { FormField, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import InquiryContact from "../inquiries/InquiryContact";
@@ -57,12 +57,9 @@ export default function ApplicantContact({ applicantId, name, email, phone, canW
     return (
       <View style={{ gap: spacing.sm }}>
         <FormField
-          autoCapitalize="none"
-          autoComplete="off"
-          autoCorrect={false}
+          {...FIELD_PRESETS.otherEmail}
           editable={!isLoading}
           error={error}
-          keyboardType="email-address"
           label={MESSAGES.label}
           onChangeText={setDraft}
           onSubmitEditing={() => void save()}

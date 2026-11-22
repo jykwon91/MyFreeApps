@@ -13,7 +13,7 @@ import type { Company } from "@myjobhunter/api-client/types/company";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { writeOutcome } from "@platform/core/utils/writeOutcome";
-import { FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
 import type { AddCompanySheetProps } from "../../types/AddCompanySheetProps";
@@ -87,8 +87,8 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   return (
     <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_COMPANY_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <FormField
+        {...FIELD_PRESETS.otherName}
         {...fields.field("name")}
-        autoCapitalize="words"
         autoFocus
         editable={!isLoading}
         counter={counters.name}
@@ -100,14 +100,12 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         value={values.name}
       />
       <FormField
+        {...FIELD_PRESETS.url}
         {...fields.field("domain")}
-        autoCapitalize="none"
-        autoCorrect={false}
         editable={!isLoading}
         counter={counters.primary_domain}
         error={problems.primary_domain ?? (isDuplicateDomain ? COMPANY_FORM_PROBLEMS.duplicateDomain : undefined)}
         hint={MESSAGES.domainHint}
-        keyboardType="url"
         label={MESSAGES.domainLabel}
         onChangeText={change("primary_domain")}
         placeholder={MESSAGES.domainPlaceholder}
@@ -124,6 +122,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         value={values.industry}
       />
       <FormField
+        {...FIELD_PRESETS.otherAddress}
         {...fields.field("hq")}
         editable={!isLoading}
         counter={counters.hq_location}

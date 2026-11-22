@@ -6,7 +6,7 @@ import type { WelcomeManualPlaceFormValues } from "@mybookkeeper/api-client/type
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import { placeProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { placeCreateRequest, placeUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
-import { FormField, SegmentedControl, useFieldChain } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, SegmentedControl, useFieldChain } from "@platform/mobile";
 import { WELCOME_MANUAL_PLACE_MESSAGES as MESSAGES, DELETE_PLACE_BODY, deletePlaceTitle } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { cuisineSuggestions } from "@mybookkeeper/api-client/utils/welcomeManualPlaces";
@@ -67,7 +67,7 @@ export default function WelcomeManualPlaceSheet({ manualId, places, place, onClo
       <WelcomeManualCuisineSuggestions onPick={(cuisine) => edit("cuisine", cuisine)} suggestions={editable ? cuisineSuggestions(places, values.cuisine) : []} />
       <SegmentedControl accessibilityLabel={MESSAGES.priceLabel} disabled={!editable} onChange={(tier) => edit("price_tier", tier)} segments={PRICE_SEGMENTS} value={values.price_tier} />
       <FormField {...fields.target("note")} editable={editable} error={form.errorFor("note")} label={MESSAGES.noteLabel} maxLength={WELCOME_MANUAL_PLACE_NOTE_MAX_LENGTH} multiline onChangeText={(text) => edit("note", text)} value={values.note} />
-      <FormField {...fields.field("mapUrl")} autoCapitalize="none" editable={editable} error={form.errorFor("map_url")} keyboardType="url" label={MESSAGES.mapLabel} maxLength={WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH} onChangeText={(text) => edit("map_url", text)} placeholder={MESSAGES.mapPlaceholder} value={values.map_url} />
+      <FormField {...FIELD_PRESETS.url} {...fields.field("mapUrl")} editable={editable} error={form.errorFor("map_url")} label={MESSAGES.mapLabel} maxLength={WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH} onChangeText={(text) => edit("map_url", text)} placeholder={MESSAGES.mapPlaceholder} value={values.map_url} />
     </WelcomeManualEditSheet>
   );
 }

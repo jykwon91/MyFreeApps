@@ -8,7 +8,7 @@ import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems
 import { cleanPurchasePrice } from "@mybookkeeper/api-client/utils/purchasePrice";
 import { RENTED_SINCE_MESSAGES } from "@mybookkeeper/api-client/constants/rentedSince";
 import { depreciationInputChanges, landValueProblem, placedInServiceProblem, showsDepreciationInputs } from "@mybookkeeper/api-client/utils/depreciationInputs";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
@@ -91,8 +91,8 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           value={form.name}
         />
         <FormField
+          {...FIELD_PRESETS.otherAddress}
           {...fields.field("street")}
-          autoComplete="street-address"
           editable={!locked}
           error={errorFor("street")}
           label={MESSAGES.street}
@@ -102,6 +102,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           value={form.street}
         />
         <FormField
+          {...FIELD_PRESETS.otherAddress}
           {...fields.field("city")}
           editable={!locked}
           error={errorFor("city")}
@@ -112,6 +113,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
         />
         <View style={{ flexDirection: "row", gap: spacing.md }}>
           <FormField
+            {...FIELD_PRESETS.otherAddress}
             {...fields.field("state")}
             autoCapitalize="characters"
             editable={!locked}
@@ -125,8 +127,8 @@ export default function PropertyFormScreen({ original }: { original: Property | 
             value={form.state}
           />
           <FormField
+            {...FIELD_PRESETS.otherAddress}
             {...fields.field("zip")}
-            autoComplete="postal-code"
             editable={!locked}
             error={errorFor("zip")}
             keyboardType="numbers-and-punctuation"
@@ -153,13 +155,12 @@ export default function PropertyFormScreen({ original }: { original: Property | 
           />
         ) : null}
         <FormField
+          {...FIELD_PRESETS.decimal}
           {...fields.field("purchasePrice")}
           editable={!locked}
           error={hasTried && priceInvalid
             ? (priceRemoved ? MESSAGES.purchasePriceRemoved : MESSAGES.purchasePriceInvalid)
             : undefined}
-          inputMode="decimal"
-          keyboardType="decimal-pad"
           label={MESSAGES.purchasePrice}
           onChangeText={setPurchasePrice}
           placeholder={MESSAGES.purchasePricePlaceholder}

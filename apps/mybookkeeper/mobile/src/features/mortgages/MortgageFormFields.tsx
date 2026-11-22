@@ -3,7 +3,7 @@ import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortga
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
-import { FieldError, FormField, OptionRow, useFieldChain, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, FieldError, FormField, OptionRow, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
   MORTGAGE_FORM_MESSAGES as MESSAGES,
@@ -47,11 +47,11 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
     <>
       <FormField {...fields.field("lender")} editable={!isBusy} hint={MESSAGES.lenderHint} label={MESSAGES.lender} maxLength={MORTGAGE_TEXT_MAX_LENGTH} onChangeText={(text) => onChange("lender", text)} value={values.lender} />
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("interestRate")}
         editable={!isBusy}
         error={problemText("interestRate")}
         hint={MESSAGES.rateHint}
-        keyboardType="decimal-pad"
         label={MESSAGES.rate}
         onChangeText={(text) => onChange("interestRate", text)}
         value={values.interestRate}
@@ -101,15 +101,16 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
 
       <MortgageMoneyField fields={fields} error={problemText("originalPrincipalDollars")} isBusy={isBusy} label={MESSAGES.originalLoan} onChange={onChange} field="originalPrincipalDollars" value={values.originalPrincipalDollars} />
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("termMonths")}
         editable={!isBusy}
         error={problemText("termMonths")}
-        keyboardType="number-pad"
         label={MESSAGES.term}
         onChangeText={(text) => onChange("termMonths", text)}
         value={values.termMonths}
       />
       <FormField
+        {...FIELD_PRESETS.code}
         {...fields.field("accountNumber")}
         editable={!isBusy}
         hint={MESSAGES.accountHint}

@@ -1,6 +1,6 @@
 import { INDUSTRY_CHIPS } from "@myjobhunter/api-client/constants/industryChips";
 import { COUNTRY_OPTIONS, DATE_POSTED_OPTIONS, EMPLOYMENT_TYPE_OPTIONS, EXPERIENCE_OPTIONS } from "@myjobhunter/api-client/constants/jsearchFilterOptions";
-import { FormField, SwitchRow } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, SwitchRow } from "@platform/mobile";
 import ChipListField from "../../components/forms/ChipListField";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import ToggleChipsField from "../../components/forms/ToggleChipsField";
@@ -54,10 +54,10 @@ export default function JSearchFields({ values, onChange, drafts, onDraftChange,
       />
       <ChoiceGroup disabled={disabled} label={MESSAGES.experienceLabel} onChange={(experience) => onChange({ experience })} options={EXPERIENCE_OPTIONS} value={values.experience} />
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("minSalary")}
         editable={!disabled}
         hint={MESSAGES.minSalaryHint}
-        keyboardType="number-pad"
         label={MESSAGES.minSalaryLabel}
         onChangeText={(minSalary) => onChange({ minSalary })}
         placeholder={MESSAGES.minSalaryPlaceholder}

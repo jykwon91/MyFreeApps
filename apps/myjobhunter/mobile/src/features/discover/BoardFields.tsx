@@ -1,4 +1,4 @@
-import { FormField } from "@platform/mobile";
+import { FIELD_PRESETS, FormField } from "@platform/mobile";
 import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSearchSheet";
 import ChipListField from "../../components/forms/ChipListField";
 import type { BoardFieldsProps } from "../../types/BoardFieldsProps";
@@ -8,10 +8,8 @@ export default function BoardFields({ label, placeholder, value, onChangeValue, 
   return (
     <>
       <FormField
+        {...FIELD_PRESETS.code}
         {...chain}
-        autoCapitalize="none"
-        autoComplete="off"
-        autoCorrect={false}
         editable={!disabled}
         error={isInvalid ? hint : undefined}
         hint={isInvalid ? undefined : hint}
@@ -19,7 +17,6 @@ export default function BoardFields({ label, placeholder, value, onChangeValue, 
         onChangeText={onChangeValue}
         placeholder={placeholder}
         required
-        spellCheck={false}
         value={value}
       />
       <ChipListField disabled={disabled} draft={keywordsDraft} hint={keywordsHint} label={MESSAGES.boardKeywordsLabel} onChange={onChangeKeywords} onDraftChange={onKeywordsDraftChange} placeholder={MESSAGES.keywordsPlaceholder} values={keywords} />

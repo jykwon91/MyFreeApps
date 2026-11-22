@@ -1,6 +1,6 @@
 import { type FieldChainProps, FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { PLACEHOLDER_KEYBOARDS } from "../../constants/newLease";
+import { PLACEHOLDER_PRESETS } from "../../constants/newLease";
 import OptionalDateField from "../shell/OptionalDateField";
 
 interface PlaceholderFieldProps {
@@ -31,12 +31,10 @@ export default function PlaceholderField({ label, inputType: type, required, val
         />
       ) : (
         <FormField
+          {...PLACEHOLDER_PRESETS[type]}
           {...chain}
-          autoCapitalize={type === "email" ? "none" : undefined}
-          autoCorrect={type === "email" ? false : undefined}
           editable={!isDisabled}
           error={error}
-          keyboardType={PLACEHOLDER_KEYBOARDS[type]}
           label={label}
           onChangeText={onChange}
           required={required}

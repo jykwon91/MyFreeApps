@@ -6,7 +6,7 @@ import {
 import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
 import type { IngredientRowProblems } from "@myrecipes/api-client/types/recipe/ingredient-row-problems";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { type FieldChain, FormField, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, type FieldChain, FormField, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { IngredientFieldKey } from "../../types/IngredientFieldKey";
@@ -50,11 +50,11 @@ export default function IngredientRowEditor({ row, number, isLast, isNew, disabl
       />
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <FormField
+          {...FIELD_PRESETS.decimal}
           {...fields.field(ingredientFieldKey(row.key, "quantity"))}
           accessibilityLabel={`${label} ${MESSAGES.quantityLabel.toLowerCase()}`}
           editable={!disabled}
           error={problems?.quantity}
-          keyboardType="decimal-pad"
           label={MESSAGES.quantityLabel}
           onChangeText={(quantity) => onChange(row.key, { quantity })}
           placeholder={MESSAGES.quantityPlaceholder}

@@ -1,6 +1,6 @@
 import { RECIPE_SERVINGS_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
 import { characterCounter } from "@platform/core/utils/characterCounter";
-import { FormField, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, FormField, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { RecipeTimingFieldsProps } from "../../types/RecipeTimingFieldsProps";
@@ -23,20 +23,20 @@ export default function RecipeTimingFields({ values, problems, disabled, onEdit,
       />
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <FormField
+          {...FIELD_PRESETS.wholeNumber}
           {...fields.field("prepMinutes")}
           editable={!disabled}
           error={problems.prepMinutes}
-          keyboardType="number-pad"
           label={MESSAGES.prepLabel}
           onChangeText={(text) => onEdit("prepMinutes", text)}
           style={{ flex: 1 }}
           value={values.prepMinutes}
         />
         <FormField
+          {...FIELD_PRESETS.wholeNumber}
           {...fields.field("cookMinutes")}
           editable={!disabled}
           error={problems.cookMinutes}
-          keyboardType="number-pad"
           label={MESSAGES.cookLabel}
           onChangeText={(text) => onEdit("cookMinutes", text)}
           style={{ flex: 1 }}

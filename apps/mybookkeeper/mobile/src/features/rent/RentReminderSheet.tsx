@@ -14,7 +14,7 @@ import {
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
 import { sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
-import { deviceDecimalSeparator, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FIELD_PRESETS, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
@@ -93,11 +93,11 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       ) : null}
 
       <FormField
+        {...FIELD_PRESETS.wholeNumber}
         {...fields.field("daysBefore")}
         editable={!isBusy}
         error={isDaysValid ? undefined : daysHintBad(MAX_SEND_DAYS_BEFORE[values.frequency])}
         hint={REMINDER_SETUP_MESSAGES.daysHintOk}
-        keyboardType="number-pad"
         label={REMINDER_SETUP_MESSAGES.daysBefore}
         onChangeText={(text) => change("sendDaysBefore", text)}
         required
@@ -142,11 +142,11 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       />
 
       <FormField
+        {...FIELD_PRESETS.decimal}
         {...fields.field("fixedAmount")}
         editable={!isBusy}
         error={amountOverrideProblem(values.amountOverride, decimalSeparator)}
         hint={REMINDER_SETUP_MESSAGES.fixedAmountHint}
-        keyboardType="decimal-pad"
         label={REMINDER_SETUP_MESSAGES.fixedAmount}
         onChangeText={(text) => change("amountOverride", text)}
         value={values.amountOverride}

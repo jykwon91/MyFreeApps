@@ -4,7 +4,7 @@ import type { LeasePlaceholderFormField } from "@mybookkeeper/api-client/types/l
 import type { LeasePlaceholderFormValues } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-values";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import { placeholderDirtyFields, placeholderFormProblems, placeholderToFormValues } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, FIELD_PRESETS, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
@@ -60,8 +60,8 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         <PickerField disabled={locked} label={MESSAGES.type} onPress={() => setIsPickerOpen(true)} valueLabel={LEASE_PLACEHOLDER_INPUT_TYPE_LABELS[values.input_type]} />
         <SwitchRow disabled={locked} label={MESSAGES.requiredSwitch} onValueChange={(next) => edit("required", next)} value={values.required} />
         <FormField
+          {...FIELD_PRESETS.code}
           {...fields.field("defaultSource")}
-          autoCapitalize="none"
           editable={!locked}
           error={defaultProblem}
           hint={MESSAGES.defaultSourceHint}
@@ -72,8 +72,8 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         />
         {values.input_type === "computed" ? (
           <FormField
+            {...FIELD_PRESETS.code}
             {...fields.field("computedExpr")}
-            autoCapitalize="none"
             editable={!locked}
             hint={MESSAGES.computedHint}
             label={MESSAGES.computedExpr}
