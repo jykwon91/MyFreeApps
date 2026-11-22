@@ -3,6 +3,7 @@ import { DOCUMENT_MESSAGES } from "../src/constants/documents";
 import { RESUME_MESSAGES } from "../src/constants/resume";
 import { documentUploadFailure } from "../src/lib/documentUploadFailure";
 import { resumeUploadFailure } from "../src/lib/resumeUploadFailure";
+import { DOCUMENT_UPLOAD_PROBLEM_MESSAGES } from "@myjobhunter/api-client/constants/documentUploadProblemMessages";
 
 const NO_ANSWER = [{ status: undefined, data: "Network Error" }, { status: "FETCH_ERROR" }, { status: "TIMEOUT_ERROR" }];
 
@@ -42,7 +43,7 @@ describe("documentUploadFailure", () => {
 
   it("keeps its other wording", () => {
     expect(documentUploadFailure(null, { status: 500, data: { detail: "Storage unavailable" } })).toBe(DOCUMENT_MESSAGES.couldntUpload);
-    expect(documentUploadFailure(null, { status: 415 })).toBe(DOCUMENT_MESSAGES.badType);
-    expect(documentUploadFailure("empty")).toBe(DOCUMENT_MESSAGES.emptyFile);
+    expect(documentUploadFailure(null, { status: 415 })).toBe(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type);
+    expect(documentUploadFailure("empty")).toBe(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.empty);
   });
 });
