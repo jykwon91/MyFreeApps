@@ -7,17 +7,18 @@ interface TextFallbackInputProps {
   label: string;
   placeholder: string;
   busy: boolean;
-  disabled: boolean;
   onSend: (text: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
 }
 
-/** Typed practice: for browsers without speech recognition, or when the mic is off. */
+/**
+ * Typed practice: for browsers without speech recognition, or when the mic is off. The field stays
+ * editable (and focused) while a reply streams, so the learner keeps typing; only sending waits.
+ */
 export default function TextFallbackInput({
   label,
   placeholder,
   busy,
-  disabled,
   onSend,
   inputRef,
 }: TextFallbackInputProps) {
@@ -26,7 +27,7 @@ export default function TextFallbackInput({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!trimmed || busy || disabled) return;
+    if (!trimmed || busy) return;
     onSend(trimmed);
     setText("");
   };
@@ -45,11 +46,10 @@ export default function TextFallbackInput({
           onChange={(event) => setText(event.target.value)}
           maxLength={MAX_TURN_CHARS}
           placeholder={placeholder}
-          disabled={disabled}
           autoComplete="off"
-          className="min-h-[44px] flex-1 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+          className="min-h-[44px] flex-1 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
-        <LoadingButton type="submit" isLoading={busy} loadingText={PRACTICE_COPY.sending} disabled={disabled || !trimmed}>
+        <LoadingButton type="submit" isLoading={busy} loadingText={PRACTICE_COPY.sending} disabled={!trimmed}>
           {PRACTICE_COPY.send}
         </LoadingButton>
       </div>

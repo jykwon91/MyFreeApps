@@ -124,7 +124,6 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
               label={typedAnswerLabel(recognition.supported)}
               placeholder={typedAnswerPlaceholder(language.display_name)}
               busy={busy}
-              disabled={busy}
               onSend={session.send}
               inputRef={textInput}
             />
