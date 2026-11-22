@@ -14,9 +14,6 @@ export const SAVED_SEARCH_MESSAGES = {
   editFrequency: (cadence: string) => `Edit refresh frequency (currently ${cadence})`,
   frequencySheetTitle: "Refresh frequency",
   frequencySheetDescription: "How often this saved search fetches new postings on its own.",
-  removeTitle: "Remove this saved search?",
-  removeBody: "It stops fetching new postings. The postings it already found stay.",
-  keep: "Keep",
   actionFor: (action: string, name: string) => `${action} ${name}`,
 } as const;
 

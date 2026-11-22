@@ -38,6 +38,7 @@ vi.mock("@platform/ui", () => ({
       {children}
     </button>
   ),
+  ConfirmDialog: () => null,
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   LoadingButton: ({
     children,

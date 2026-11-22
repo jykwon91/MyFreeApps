@@ -28,8 +28,8 @@ vi.mock("@/features/discover/SavedSearchesPanel", () => ({
 }));
 
 vi.mock("@/features/discover/DiscoverInboxView", () => ({
-  default: ({ hasSources }: { hasSources: boolean }) => (
-    <div data-testid="inbox-view" data-has-sources={String(hasSources)} />
+  default: ({ hasNoSources, areSourcesLoading }: { hasNoSources: boolean; areSourcesLoading: boolean }) => (
+    <div data-testid="inbox-view" data-has-no-sources={String(hasNoSources)} data-sources-loading={String(areSourcesLoading)} />
   ),
 }));
 
@@ -186,24 +186,33 @@ describe("Discover page", () => {
       expect(screen.queryByTestId("inbox-view")).toBeNull();
     });
 
-    it("passes hasSources=true to InboxView when sources exist", () => {
+    it("tells the inbox there are saved searches when some exist", () => {
       stubQueries({ hasSources: true });
       renderDiscover();
 
-      expect(screen.getByTestId("inbox-view")).toHaveAttribute(
-        "data-has-sources",
-        "true",
-      );
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute("data-has-no-sources", "false");
     });
 
-    it("passes hasSources=false to InboxView when no sources", () => {
+    it("tells the inbox there are none only for a loaded, empty list", () => {
       stubQueries({ hasSources: false });
       renderDiscover();
 
-      expect(screen.getByTestId("inbox-view")).toHaveAttribute(
-        "data-has-sources",
-        "false",
-      );
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute("data-has-no-sources", "true");
+    });
+
+    it("does not call the list empty while the saved searches load", () => {
+      mockListSources.mockReturnValue({ data: undefined, isLoading: true, isError: false } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
+      renderDiscover();
+
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute("data-has-no-sources", "false");
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute("data-sources-loading", "true");
+    });
+
+    it("does not call the list empty when the saved searches failed to load", () => {
+      mockListSources.mockReturnValue({ data: undefined, isLoading: false, isError: true } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
+      renderDiscover();
+
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute("data-has-no-sources", "false");
     });
   });
 

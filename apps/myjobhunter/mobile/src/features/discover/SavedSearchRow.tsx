@@ -68,8 +68,8 @@ export default function SavedSearchRow({ source, onEdit, onRefreshed }: SavedSea
   }
 
   function confirmRemove(): void {
-    Alert.alert(MESSAGES.removeTitle, `"${name}" — ${MESSAGES.removeBody}`, [
-      { text: MESSAGES.keep, style: "cancel" },
+    Alert.alert(ACTIONS.removeTitle, ACTIONS.removeBody(name), [
+      { text: ACTIONS.keep, style: "cancel" },
       { text: MESSAGES.remove, style: "destructive", onPress: () => void remove() },
     ]);
   }

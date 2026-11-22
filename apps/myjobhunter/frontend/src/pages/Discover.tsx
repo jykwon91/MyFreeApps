@@ -70,8 +70,9 @@ export default function Discover() {
     );
   }
 
-  const { data: sources } = useListDiscoverySourcesQuery();
-  const hasSources = (sources?.length ?? 0) > 0;
+  const { data: sources, isLoading: areSourcesLoading } = useListDiscoverySourcesQuery();
+  // Only a loaded, empty list means "no saved searches"; loading and a failed load are not empty.
+  const hasNoSources = sources !== undefined && sources.length === 0;
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -91,9 +92,9 @@ export default function Discover() {
 
       <SavedSearchesPanel onRefreshed={scoringWindow.open} />
 
-      {hasSources && (
+      {sources !== undefined && sources.length > 0 && (
         <SourceFilterChips
-          sources={sources ?? []}
+          sources={sources}
           activeSourceId={activeSourceId}
           onSelect={setSourceFilter}
         />
@@ -104,7 +105,8 @@ export default function Discover() {
       <DiscoverTabPanel activeView={activeView}>
         {activeView === "inbox" ? (
           <DiscoverInboxView
-            hasSources={hasSources}
+            hasNoSources={hasNoSources}
+            areSourcesLoading={areSourcesLoading}
             activeSourceId={activeSourceId}
             scoringWindow={scoringWindow}
           />

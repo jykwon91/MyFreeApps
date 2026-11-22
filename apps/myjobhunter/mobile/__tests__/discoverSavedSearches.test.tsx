@@ -290,8 +290,8 @@ describe("removing a saved search", () => {
     await showRow();
 
     await fireEvent.press(screen.getByRole("button", { name: name(SAVED.remove) }));
-    expect(Alert.alert).toHaveBeenLastCalledWith(SAVED.removeTitle, `"Backend roles" — ${SAVED.removeBody}`, expect.any(Array));
-    await act(async () => alertButton(SAVED.keep).onPress?.());
+    expect(Alert.alert).toHaveBeenLastCalledWith(ACTIONS.removeTitle, ACTIONS.removeBody("Backend roles"), expect.any(Array));
+    await act(async () => alertButton(ACTIONS.keep).onPress?.());
     expect(requests(sent, "DELETE /discover/sources/src-1")).toHaveLength(0);
 
     await fireEvent.press(screen.getByRole("button", { name: name(SAVED.remove) }));

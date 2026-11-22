@@ -115,10 +115,10 @@ function makeResponse(overrides: Partial<DiscoveredJobsPagesState> = {}): Discov
 
 const CLOSED_WINDOW: ScoringWindow = { isOpen: false, pollingInterval: 0, open: vi.fn(), observe: vi.fn() };
 
-function renderInbox(scoringWindow: ScoringWindow = CLOSED_WINDOW) {
+function renderInbox(scoringWindow: ScoringWindow = CLOSED_WINDOW, sources: { hasNoSources: boolean; areSourcesLoading: boolean } = { hasNoSources: false, areSourcesLoading: false }) {
   return render(
     <MemoryRouter>
-      <DiscoverInboxView hasSources activeSourceId={null} scoringWindow={scoringWindow} />
+      <DiscoverInboxView {...sources} activeSourceId={null} scoringWindow={scoringWindow} />
     </MemoryRouter>,
   );
 }
@@ -203,7 +203,7 @@ describe("DiscoverInboxView — list states", () => {
     mockListJobs.mockReturnValue(makeResponse());
     render(
       <MemoryRouter>
-        <DiscoverInboxView hasSources activeSourceId="s1" scoringWindow={CLOSED_WINDOW} />
+        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId="s1" scoringWindow={CLOSED_WINDOW} />
       </MemoryRouter>,
     );
     expect(mockListJobs).toHaveBeenCalledWith({ state: "inbox", source_id: "s1" }, 0);
@@ -234,6 +234,20 @@ describe("DiscoverInboxView — list states", () => {
     mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
     renderInbox();
     expect(screen.getByText("Inbox empty")).toBeInTheDocument();
+  });
+
+  it("asks for a saved search only when the loaded list of saved searches is empty", () => {
+    mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
+    renderInbox(CLOSED_WINDOW, { hasNoSources: true, areSourcesLoading: false });
+    expect(screen.getByText("No saved searches yet")).toBeInTheDocument();
+  });
+
+  it("shows the skeleton, not an empty inbox or a saved-search prompt, while the saved searches load", () => {
+    mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
+    renderInbox(CLOSED_WINDOW, { hasNoSources: false, areSourcesLoading: true });
+    expect(screen.getByTestId("skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("No saved searches yet")).toBeNull();
+    expect(screen.queryByText("Inbox empty")).toBeNull();
   });
 
   it("offers Retry when the inbox can't load, and retries", () => {

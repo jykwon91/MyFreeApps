@@ -1,3 +1,5 @@
+import ListLoadError from "@/components/ListLoadError";
+import { SAVED_SEARCHES_LIST_MESSAGES as MESSAGES } from "@/constants/saved-searches-list-messages";
 import SavedSearchesSkeleton from "@/features/discover/SavedSearchesSkeleton";
 import SavedSearchRow from "@/features/discover/SavedSearchRow";
 import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
@@ -8,19 +10,17 @@ interface SavedSearchesPanelProps {
 }
 
 export default function SavedSearchesPanel({ onRefreshed }: SavedSearchesPanelProps) {
-  const { data: sources, isLoading, isError } = useListDiscoverySourcesQuery();
+  const { data: sources, isError, refetch } = useListDiscoverySourcesQuery();
 
-  if (isLoading) {
-    return <SavedSearchesSkeleton />;
-  }
-  if (isError) {
-    return (
-      <p className="text-sm text-destructive">
-        Couldn't load saved searches — try refreshing the page.
-      </p>
+  // A refetch that fails keeps the rows already loaded; the error is only for when there is nothing to show.
+  if (sources === undefined) {
+    return isError ? (
+      <ListLoadError message={MESSAGES.couldntLoad} retryLabel={MESSAGES.retry} onRetry={refetch} />
+    ) : (
+      <SavedSearchesSkeleton />
     );
   }
-  if (!sources || sources.length === 0) {
+  if (sources.length === 0) {
     return null;
   }
 
