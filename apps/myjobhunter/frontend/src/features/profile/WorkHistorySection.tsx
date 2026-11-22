@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RowActions from "@/components/RowActions";
 import { Briefcase, Pencil, Plus, Trash2 } from "lucide-react";
 import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
 import { deleteWithFeedback } from "@/lib/delete-with-feedback";
@@ -63,25 +64,26 @@ export default function WorkHistorySection({ entries }: WorkHistorySectionProps)
                     </ul>
                   ) : null}
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => {
-                      setEditTarget(entry);
-                      setDialogOpen(true);
-                    }}
-                    className="p-2 rounded hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label={`Edit ${entry.company_name}`}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => void handleDelete(entry.id, entry.company_name)}
-                    className="p-2 rounded hover:bg-destructive/10 text-destructive min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label={`Delete ${entry.company_name}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+                <RowActions
+                  actions={[
+                    {
+                      key: "edit",
+                      label: `Edit ${entry.company_name}`,
+                      icon: Pencil,
+                      onClick: () => {
+                        setEditTarget(entry);
+                        setDialogOpen(true);
+                      },
+                    },
+                    {
+                      key: "delete",
+                      label: `Delete ${entry.company_name}`,
+                      icon: Trash2,
+                      destructive: true,
+                      onClick: () => void handleDelete(entry.id, entry.company_name),
+                    },
+                  ]}
+                />
               </div>
             ))}
           </div>

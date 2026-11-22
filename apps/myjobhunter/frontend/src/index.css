@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Only on devices whose primary input can hover (not touch screens). */
+@custom-variant hover-capable (@media (hover: hover));
+
 /* Map the shadcn-style HSL design tokens below to Tailwind v4 theme colours so
    every semantic utility is generated — with variants (hover:, focus-visible:,
    dark:) and opacity modifiers (bg-primary/10) — not just a hand-written few.
