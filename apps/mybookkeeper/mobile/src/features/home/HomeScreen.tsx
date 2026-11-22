@@ -47,19 +47,20 @@ export default function HomeScreen() {
   const properties = propertiesQuery.data ?? [];
   const isFilteringCategories = isCategoryFilterActive(categories);
   const isFiltered = propertyIds.length > 0 || isFilteringCategories;
+  // Every property chosen is no property filter, so the totals match what a number opens.
+  const activeIds = useMemo(() => activePropertyIds(propertyIds, properties.length), [propertyIds, properties.length]);
   const summaryParams = useMemo(() => {
     const range = periodRange(period, today);
-    return { startDate: range.start_date, endDate: range.end_date, propertyIds: propertyIds.length > 0 ? propertyIds : undefined };
-  }, [period, today, propertyIds]);
-  // What a number opens is cut the same way: every property chosen is no property filter.
+    return { startDate: range.start_date, endDate: range.end_date, propertyIds: activeIds };
+  }, [period, today, activeIds]);
   const scope = useMemo<AnalysisScope>(
     () => ({
       startDate: summaryParams.startDate,
       endDate: summaryParams.endDate,
-      propertyIds: activePropertyIds(propertyIds, properties.length),
+      propertyIds: activeIds,
       categories: isFilteringCategories ? [...categories] : undefined,
     }),
-    [summaryParams, propertyIds, properties.length, categories, isFilteringCategories],
+    [summaryParams, activeIds, categories, isFilteringCategories],
   );
   const showEverything = () => {
     setPropertyIds([]);

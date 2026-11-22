@@ -61,6 +61,12 @@ export default function Dashboard() {
 
   const { data: properties = [] } = useGetPropertiesQuery();
 
+  // Every property chosen is no property filter, for the totals and for what a number opens alike.
+  const activePropertyIds = useMemo(
+    () => activePropertyIdsFor(selectedPropertyIds, properties.length),
+    [selectedPropertyIds, properties.length],
+  );
+
   // Compute effective dateRange: manual override wins; then year selection; "all" → undefined
   const dateRange = useMemo<DateRange | undefined>(() => {
     if (manualDateRange) return manualDateRange;
@@ -83,7 +89,7 @@ export default function Dashboard() {
     {
       startDate: dateRange?.startDate,
       endDate: dateRange?.endDate,
-      propertyIds: selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined,
+      propertyIds: activePropertyIds,
     },
   );
 
@@ -101,11 +107,6 @@ export default function Dashboard() {
     resetCategories,
     isFiltered,
   } = useDashboardFilter(summary);
-
-  const activePropertyIds = useMemo(
-    () => activePropertyIdsFor(selectedPropertyIds, properties.length),
-    [selectedPropertyIds, properties.length],
-  );
 
   const headerMode = useDashboardHeaderMode({
     dateRange: manualDateRange,
