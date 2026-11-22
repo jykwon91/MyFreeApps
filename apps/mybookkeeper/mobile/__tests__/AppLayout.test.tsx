@@ -3,6 +3,7 @@ import { render } from "@testing-library/react-native";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
 import AppLayout, { unstable_settings } from "../app/(app)/_layout";
+import GmailSyncWatcher from "../src/features/integrations/GmailSyncWatcher";
 
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("react-native/Libraries/Utilities/useColorScheme", () => ({ __esModule: true, default: jest.fn() }));
@@ -17,6 +18,7 @@ jest.mock("../src/features/workspace/WorkspaceGate", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock("../src/features/workspace/WorkspaceLostToast", () => ({ __esModule: true, default: () => null }));
+jest.mock("../src/features/integrations/GmailSyncWatcher", () => ({ __esModule: true, default: jest.fn(() => null) }));
 
 function lastStackOptions() {
   const calls = jest.mocked(Stack).mock.calls;
@@ -39,6 +41,12 @@ describe("the signed-in layout", () => {
       headerTitleStyle: { color: colors.foreground },
       contentStyle: { backgroundColor: colors.background },
     });
+  });
+
+  it("watches Gmail extraction on every screen, not only Integrations", async () => {
+    await render(<AppLayout />);
+
+    expect(GmailSyncWatcher).toHaveBeenCalled();
   });
 
   it("keeps the tabs under a screen opened cold, so Back doesn't leave the app", () => {

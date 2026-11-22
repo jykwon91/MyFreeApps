@@ -36,7 +36,7 @@ export function aQueueItem(overrides: Partial<EmailQueueItem> = {}): EmailQueueI
 
 /** The integration, sync history and email queue requests, answered in memory. */
 export function startIntegrationsServer(overrides: Partial<FakeIntegrationsServer> = {}): FakeIntegrationsServer {
-  const server: FakeIntegrationsServer = { integrations: [aGmail()], logs: [], queue: [], role: "owner", failures: {}, requests: [], documentReads: 0, ...overrides };
+  const server: FakeIntegrationsServer = { integrations: [aGmail()], logs: [], queue: [], role: "owner", failures: {}, requests: [], documentReads: 0, queueReads: 0, ...overrides };
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data: JSON.parse(JSON.stringify(data)), status, statusText: "", headers: {}, config };
@@ -55,7 +55,10 @@ export function startIntegrationsServer(overrides: Partial<FakeIntegrationsServe
     if (method === "get") {
       if (url === "/integrations") return outcome("integrations", server.integrations);
       if (url === "/integrations/gmail/logs") return outcome("logs", server.logs);
-      if (url === "/integrations/gmail/queue") return outcome("queue", server.queue);
+      if (url === "/integrations/gmail/queue") {
+        server.queueReads += 1;
+        return outcome("queue", server.queue);
+      }
       if (url === GMAIL_CONNECT_URL) {
         server.requests.push(config);
         return outcome("connect", { auth_url: GOOGLE_AUTH_URL });
