@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { useCallback, useMemo, useState } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
+import WaypointsAddonCard from "@/games/wow-forever/components/waypointsAddon/WaypointsAddonCard";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
 import CaptureImport from "@/games/wow-forever/components/worldMap/CaptureImport";
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
@@ -292,6 +293,7 @@ export default function WowWorldMapPage() {
             )}
           </div>
           <ForeverNotes />
+          <WaypointsAddonCard />
           <AddonHelp />
           {canImport && <CaptureImport data={data} />}
         </>
