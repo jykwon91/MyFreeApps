@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError } from "@platform/ui";
-import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
-import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
+import { welcomeManualEmailFailure } from "@mybookkeeper/api-client/utils/welcomeManualEmailFailure";
 import { EMAIL_REGEX, SHARED_ROOM_OPTION, WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { useEmailWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { emailRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
@@ -45,8 +44,8 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
     } catch (err) {
       // A non-200 (e.g. 404 manual not found) — the send-record path returns
       // 200 even for failed/skipped, so this only fires on transport errors
-      // and a demo account's refusal.
-      showError(isDemoRefusal(err) ? DEMO_EMAIL_REFUSED : "I couldn't send that. Want to try again?");
+      // a demo account's refusal, and the send limit (429).
+      showError(welcomeManualEmailFailure(err));
     }
   }
 

@@ -1,4 +1,4 @@
-import { WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { WELCOME_MANUAL_EMAIL_TOO_MANY, WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
@@ -78,5 +78,6 @@ export function emailFailure(error: unknown): string {
   if (status === 403) return isDemoRefusal(error) ? FAILURE.demoEmail : FAILURE.viewOnly;
   if (status === 404) return goneMessage("manual or room");
   if (status === 422) return FAILURE.invalid;
+  if (status === 429) return WELCOME_MANUAL_EMAIL_TOO_MANY;
   return couldntMessage("send the guide");
 }

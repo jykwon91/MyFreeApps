@@ -4,6 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
+from app.core.rate_limit import (
+    welcome_manual_email_org_limiter,
+    welcome_manual_email_user_limiter,
+)
 from app.schemas.welcome_manuals.welcome_manual_create_request import (
     WelcomeManualCreateRequest,
 )
@@ -130,7 +134,12 @@ async def email_welcome_manual(
     ``failed``/``skipped`` — the body's ``status`` field communicates the
     result so the frontend shows a clear message rather than a network error.
     An SMTP failure is NOT surfaced as a 5xx.
+
+    Over the per-user hourly or per-organization daily allowance, nothing is
+    rendered or sent and the answer is 429.
     """
+    welcome_manual_email_user_limiter.check(f"welcome-manual-email:{ctx.user_id}")
+    welcome_manual_email_org_limiter.check(f"welcome-manual-email:{ctx.organization_id}")
     try:
         return await welcome_manual_email_service.send_manual_to_guest(
             organization_id=ctx.organization_id,

@@ -37,6 +37,12 @@ from platform_shared.services.turnstile_service import verify_turnstile_token
 
 from app.core.config import settings
 from app.core.request_utils import get_client_ip
+from app.core.welcome_manual_constants import (
+    WELCOME_MANUAL_EMAIL_ORG_MAX_PER_DAY,
+    WELCOME_MANUAL_EMAIL_ORG_WINDOW_SECONDS,
+    WELCOME_MANUAL_EMAIL_USER_MAX_PER_HOUR,
+    WELCOME_MANUAL_EMAIL_USER_WINDOW_SECONDS,
+)
 from app.db.session import get_db
 # Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
 from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
@@ -60,6 +66,8 @@ __all__ = [
     "document_re_extract_limiter",
     "frontend_error_limiter",
     "admin_db_key_failure_limiter",
+    "welcome_manual_email_user_limiter",
+    "welcome_manual_email_org_limiter",
     "require_turnstile",
     "check_login_rate_limit",
     "check_totp_rate_limit",
@@ -110,6 +118,15 @@ welcome_manual_unlock_limiter = RateLimiter(max_attempts=20, window_seconds=900)
 # Wrong X-Admin-Api-Key attempts on /admin/db/*, per client IP. Only failures
 # are recorded, so the operator's tooling is never slowed by correct requests.
 admin_db_key_failure_limiter = RateLimiter(max_attempts=10, window_seconds=900)
+# Emailing a guide sends platform mail with a PDF to any address the host types.
+welcome_manual_email_user_limiter = RateLimiter(
+    max_attempts=WELCOME_MANUAL_EMAIL_USER_MAX_PER_HOUR,
+    window_seconds=WELCOME_MANUAL_EMAIL_USER_WINDOW_SECONDS,
+)
+welcome_manual_email_org_limiter = RateLimiter(
+    max_attempts=WELCOME_MANUAL_EMAIL_ORG_MAX_PER_DAY,
+    window_seconds=WELCOME_MANUAL_EMAIL_ORG_WINDOW_SECONDS,
+)
 
 
 # ---------------------------------------------------------------------------

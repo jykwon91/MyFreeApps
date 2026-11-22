@@ -61,3 +61,6 @@ export const SHARED_ROOM_OPTION = "shared";
  * detail ("must be a permutation of ...") is for developers and is never shown.
  */
 export const WELCOME_MANUAL_STALE_ORDER_MESSAGE = "That list changed somewhere else. I've refreshed it, so check the order and try again.";
+
+/** Said, on web and phone, when emailing a guide is refused with 429 (too many sent in the last hour, or today by the workspace). */
+export const WELCOME_MANUAL_EMAIL_TOO_MANY = "You've emailed a lot of guides in a short time. Try again in a while.";
