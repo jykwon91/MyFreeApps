@@ -190,3 +190,21 @@ describe("MoreScreen search", () => {
     expect(scroll.props.stickyHeaderIndices).toEqual([0]);
   });
 });
+
+describe("More menu website links", () => {
+  const webPaths = MORE_MENU.flatMap((group) => group.items).flatMap((item) => ("webPath" in item && item.webPath ? [[item.label, item.webPath]] : []));
+
+  it("links Terms of service and Support MyFreeApps to the website, next to the privacy policy", () => {
+    expect(webPaths).toEqual(expect.arrayContaining([
+      ["Privacy policy", "/privacy"],
+      ["Terms of service", "/terms"],
+      ["Support MyFreeApps", "/support-myfreeapps"],
+    ]));
+  });
+
+  it("shows both entries on the screen", async () => {
+    await show();
+    expect(screen.getByText("Terms of service")).toBeTruthy();
+    expect(screen.getByText("Support MyFreeApps")).toBeTruthy();
+  });
+});

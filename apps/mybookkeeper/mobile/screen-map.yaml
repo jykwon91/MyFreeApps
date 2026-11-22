@@ -60,7 +60,7 @@ routes:
   /oauth-callback:
     not_on_mobile: The website's Gmail sign-in popup. The app connects Gmail with its own return path (mybookkeeper://oauth-callback).
   /onboarding:
-    not_on_mobile: First-time setup is done once, on the website.
+    not_on_mobile: The app never asks for the first-time tax questions. The website asks anyone who hasn't finished them the first time they open it; the answers feed the Tax Advisor's suggestions.
   /payment-review:
     screen: (app)/payment-review/index
   /privacy:

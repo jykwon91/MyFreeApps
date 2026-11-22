@@ -1,6 +1,7 @@
 import type { MoreMenuGroup } from "@platform/mobile";
 import type { MoreDestination } from "../types/MoreDestination";
 import { PRIVACY_POLICY_PATH } from "./aiPermission";
+import { SUPPORT_MYFREEAPPS_PATH, TERMS_OF_SERVICE_PATH } from "./legalPaths";
 
 export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
   {
@@ -51,6 +52,7 @@ export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
     items: [
       { label: "Claude and my documents", screen: "/ai-permission", keywords: ["ai", "permission", "privacy", "reading", "consent"] },
       { label: "Privacy policy", webPath: PRIVACY_POLICY_PATH, keywords: ["terms", "data", "legal"] },
+      { label: "Terms of service", webPath: TERMS_OF_SERVICE_PATH, keywords: ["legal", "agreement", "conditions", "tos"] },
     ],
   },
   {
@@ -59,6 +61,7 @@ export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
       { label: "Integrations", screen: "/integrations", keywords: ["gmail", "email", "connect", "sync", "accounts"] },
       { label: "Members", screen: "/members", access: "admin", keywords: ["team", "invite", "users", "roles", "access", "co-owner"] },
       { label: "Security", screen: "/security", keywords: ["two-factor", "2fa", "totp", "password", "recovery codes", "sign in", "passkey", "export", "data", "download", "name"] },
+      { label: "Support MyFreeApps", webPath: SUPPORT_MYFREEAPPS_PATH, keywords: ["donate", "tip", "contribute", "sponsor", "help"] },
     ],
   },
 ];
