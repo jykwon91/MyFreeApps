@@ -8,6 +8,7 @@
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { formatSalaryRange } from "@platform/ui";
 import type { Application } from "@myjobhunter/api-client/types/application";
+import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 
 interface OverviewSectionProps {
@@ -30,7 +31,7 @@ function Field({ label, value }: FieldProps) {
 
 export default function OverviewSection({ application }: OverviewSectionProps) {
   const remoteLabel =
-    application.remote_type !== "unknown" ? application.remote_type : "—";
+    formatRemoteType(application.remote_type) ?? "—";
   const salary = formatSalaryRange(
     application.posted_salary_min,
     application.posted_salary_max,
