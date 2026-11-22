@@ -63,7 +63,7 @@ copy of its proc) adds nothing and is skipped.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from scripts.wow_loot.creature_types import band_of
 from scripts.wow_loot.effect_model import (
@@ -205,23 +205,23 @@ def _summon_entry(item: Item, part: Summon, uptime: float, when: str, key: str, 
 def _enemy_entry(part: object, uptime: float, when: str, world: World) -> Entry | None:
     """An armor or resistance cut on the enemy, or a control effect; None for any other part."""
     if isinstance(part, Control):
-        return Entry(NONE, 0, f"{part.name}: control effect: no damage or healing value")
+        return Entry(NONE, 0, f"{part.name}: control effect: no damage or healing value", pvp=True)
     if isinstance(part, ArmorCut):
         if part.duration_ms <= 0:
-            return Entry(UNRESOLVED, 0, "an armor cut with no duration")
+            return Entry(UNRESOLVED, 0, "an armor cut with no duration", pvp=True)
         average = part.amount * uptime
         return Entry("armor_cut", _round(average), (
             f"-{_num(part.amount)} armor on the target for {_duration(part.duration_ms)} {when} "
             f"→ -{_num(average)} armor on average"
-        ))
+        ), pvp=True)
     if isinstance(part, ResistCut):
         names = " and ".join(part.schools)
         if all(school in world.resist_free for school in part.schools):
             return Entry(NONE, 0, (
                 f"{part.name}: -{_num(part.amount)} {names} resistance on the target; normal mobs at every level "
                 f"resist none (median 0), so it adds no damage"
-            ))
-        return Entry(UNRESOLVED, 0, f"{part.name}: cuts {names} resistance, which normal mobs have")
+            ), pvp=True)
+        return Entry(UNRESOLVED, 0, f"{part.name}: cuts {names} resistance, which normal mobs have", pvp=True)
     return None
 
 
@@ -240,7 +240,7 @@ def _proc_entries(
             continue
         enemy = _enemy_entry(part, min(1.0, rate.per_second * getattr(part, "duration_ms", 0) / 1000), f"at {rate.text}", world)
         if enemy is not None:
-            entries.append(Entry(enemy.stat, enemy.value, f"{prefix}: {enemy.note}") if enemy.stat == "armor_cut" else enemy)
+            entries.append(replace(enemy, note=f"{prefix}: {enemy.note}") if enemy.stat == "armor_cut" else enemy)
             continue
         if isinstance(part, Damage):
             dps = part.amount * rate.per_second
@@ -270,7 +270,7 @@ def _proc_entries(
         elif isinstance(part, NoValue):
             continue
         elif isinstance(part, Unresolved):
-            entries.append(Entry(UNRESOLVED, 0, part.reason))
+            entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{prefix}: an effect inside a proc the data can't resolve"))
     return entries
@@ -297,7 +297,7 @@ def _use_entries(item: Item, effect: ItemSpell, spell: Spell, parts: list[object
             continue
         enemy = _enemy_entry(part, uptime, every, world)
         if enemy is not None:
-            entries.append(Entry(enemy.stat, enemy.value, f"use: {enemy.note}") if enemy.stat == "armor_cut" else enemy)
+            entries.append(replace(enemy, note=f"use: {enemy.note}") if enemy.stat == "armor_cut" else enemy)
             continue
         if isinstance(part, Damage):
             dps = part.amount / (cooldown / 1000)
@@ -324,7 +324,7 @@ def _use_entries(item: Item, effect: ItemSpell, spell: Spell, parts: list[object
         elif isinstance(part, NoValue):
             continue
         elif isinstance(part, Unresolved):
-            entries.append(Entry(UNRESOLVED, 0, part.reason))
+            entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: a use effect the data can't resolve"))
     return entries
@@ -351,7 +351,7 @@ def _equip_entries(item: Item, spell: Spell, parts: list[object], world: World =
                 entries.append(Entry("dps", _round(dps), f"equip: +{_num(part.amount)} damage per hit{assumed} → +{_num(dps)} DPS"))
             else:
                 dps = part.amount / ASSUMED_SECONDS_PER_HIT
-                entries.append(Entry("dps", _round(dps), f"equip: {_num(part.amount)} damage to each attacker, assuming you're hit every {_num(ASSUMED_SECONDS_PER_HIT)}s → +{_num(dps)} DPS"))
+                entries.append(Entry("dps", _round(dps), f"equip: {_num(part.amount)} damage to each attacker, assuming you're hit every {_num(ASSUMED_SECONDS_PER_HIT)}s → +{_num(dps)} DPS", pvp=True))
         elif isinstance(part, Proc):
             rate = proc_rate(
                 item, part.chance, part.ppm, part.icd_ms, part.classic_ppm, part.classic_chance, part.cast,
@@ -360,13 +360,14 @@ def _equip_entries(item: Item, spell: Spell, parts: list[object], world: World =
             if rate is None:
                 entries.append(Entry(UNRESOLVED, 0, f"{part.spell}: the data gives no proc rate"))
                 continue
-            entries += _proc_entries(item, part.parts, rate, "proc", world, part.cast)
+            procs = _proc_entries(item, part.parts, rate, "proc", world, part.cast)
+            entries += [replace(e, pvp=True) for e in procs] if part.when_hit else procs
         elif isinstance(part, Control):
-            entries.append(Entry(NONE, 0, f"{part.name}: control effect: no damage or healing value"))
+            entries.append(Entry(NONE, 0, f"{part.name}: control effect: no damage or healing value", pvp=True))
         elif isinstance(part, NoValue):
             continue
         elif isinstance(part, Unresolved):
-            entries.append(Entry(UNRESOLVED, 0, part.reason))
+            entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: an equip effect the data can't resolve"))
     return entries

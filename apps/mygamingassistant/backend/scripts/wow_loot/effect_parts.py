@@ -51,6 +51,7 @@ from scripts.wow_loot.effect_model import (
     PET_TARGET,
     PHYSICAL,
     PROC_AURAS,
+    PVP_AURAS,
     RANGED_ONLY_KEYS,
     RANGED_WEAPON_BITS,
     SCHOOL_RESISTANCE,
@@ -244,7 +245,7 @@ def _aura_parts(spell: Spell, row: EffectRow, ctx: _Ctx, depth: int, paired_heal
     if not _beneficial(row):
         return _enemy_parts(spell, row, duration)
     if aura in UNWEIGHTED_AURAS:
-        return [Unresolved(f"{spell.name}: {UNWEIGHTED_AURAS[aura]}")]
+        return [Unresolved(f"{spell.name}: {UNWEIGHTED_AURAS[aura]}", pvp=aura in PVP_AURAS)]
     if row.base < 0:
         return [Unresolved(f"{spell.name}: a penalty on you the data can't resolve")]
     if spell.proc_charges > 0:
@@ -277,6 +278,7 @@ def _proc(spell: Spell, parts: tuple) -> Proc:
     return Proc(
         spell.name, spell.proc_chance, spell.ppm, spell.proc_icd_ms, parts, spell.classic_ppm, spell.classic_chance,
         cast=spell.cast_proc, chance_unknown=spell.chance_worded and spell.proc_chance == FULL_CHANCE,
+        when_hit=spell.when_hit,
     )
 
 

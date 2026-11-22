@@ -37,6 +37,7 @@ from scripts.wow_loot.effect_model import (
     NONE,
     PROC_ON_CAST_BITS,
     PROC_ON_HIT_BITS,
+    PROC_WHEN_HIT_BITS,
     TRIGGER_CHANCE_ON_HIT,
     UNRESOLVED,
     USE_TRIGGERS,
@@ -162,6 +163,7 @@ class SpellBook(Mapping[int, Spell]):
             classic_ppm=classic_ppm,
             classic_chance=classic_chance,
             cast_proc=bool(proc_mask & PROC_ON_CAST_BITS) and not proc_mask & PROC_ON_HIT_BITS,
+            when_hit=bool(proc_mask & PROC_WHEN_HIT_BITS),
             chance_worded="chance" in self._descriptions.get(spell_id, "").lower(),
             creatures=tuple(self._creatures(c) for c in summoned) if self._creatures else (),
             effects=tuple(
@@ -364,12 +366,13 @@ def main() -> None:
             "only for ranged weights; none = no combat value; unresolved = the data can't value it; "
             "budget = stat points the item lacks next to no-effect items of its slot group, quality and item level "
             f"(budget: group -> quality -> item level -> median stat points, at least {MIN_SAMPLE} items a cell), "
-            "MGA Loot's estimate for the effects marked unresolved. "
+            "MGA Loot's estimate for the effects marked unresolved; pvp: true = worth more against players than this "
+            "PvE value (control, immunities, damage shields and when-hit procs, armor and resistance cuts), a label only. "
             f"A non-weapon's chance per hit assumes a hit every {ASSUMED_SECONDS_PER_HIT}s, "
             f"a chance per cast a cast every {ASSUMED_SECONDS_PER_CAST}s."
         ),
         "items": {
-            str(item_id): [{"stat": e.stat, "value": e.value, "note": e.note} for e in entries]
+            str(item_id): [{"stat": e.stat, "value": e.value, "note": e.note, **({"pvp": True} if e.pvp else {})} for e in entries]
             for item_id, entries in effects.items()
         },
     })

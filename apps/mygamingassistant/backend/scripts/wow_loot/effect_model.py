@@ -14,6 +14,9 @@ ASSUMED_SECONDS_PER_CAST = 2.5
 # SpellAuraOptions.ProcTypeMask_0 bits: what a proc aura procs on. Dealing a melee or ranged hit, or casting a spell.
 PROC_ON_HIT_BITS = 0x4 | 0x10 | 0x40 | 0x100  # deal melee swing / melee ability / ranged attack / ranged ability
 PROC_ON_CAST_BITS = 0x4000 | 0x10000 | 0x40000  # deal helpful spell / harmful spell / harmful periodic
+# Take melee swing / melee ability / ranged attack / ranged ability / harmful spell / harmful periodic / damage:
+# a proc when you're hit, which another player triggers far more than a mob does.
+PROC_WHEN_HIT_BITS = 0x8 | 0x20 | 0x80 | 0x200 | 0x20000 | 0x80000 | 0x100000
 
 # ItemEffect.TriggerType
 TRIGGER_ON_USE = 0
@@ -139,6 +142,9 @@ UNWEIGHTED_AURAS: dict[int, str] = {
     117: "resists a kind of crowd control, which has no stat weight",
     232: "shortens crowd control on you, which has no stat weight",
 }
+# Of those, the immunities and crowd-control resists and breaks: worth more against players, who stun, root,
+# fear and slow far more than mobs do.
+PVP_AURAS = frozenset({77, 117, 232})
 # SpellEffect.Effect values that summon something (creatures, totems, guardians, objects).
 SUMMON_EFFECTS = frozenset({28, 34, 41, 56, 87, 97, 98, 104, 105, 106, 107, 112})
 EFFECT_LEARN_SPELL = 36
@@ -216,6 +222,8 @@ class Spell:
     classic_chance: float = 0
     # A proc aura that procs on your spell casts, not your hits (ProcTypeMask).
     cast_proc: bool = False
+    # A proc aura that fires when you're hit (PROC_WHEN_HIT_BITS).
+    when_hit: bool = False
     # The spell's tooltip calls it a chance ("Chance on hit...", "...have a chance to...").
     chance_worded: bool = False
     # The creatures this spell's summon effects summon, as cmangos classic-db knows them.
@@ -250,6 +258,9 @@ class Entry:
     stat: str
     value: float
     note: str
+    # Worth a lot more against players than the PvE value says: control, immunities and breaks, damage shields
+    # and when-hit procs, armor and resistance cuts modelled from mob values. A label only, never a number.
+    pvp: bool = False
 
 
 NONE = "none"
@@ -313,6 +324,7 @@ class Proc:
     cast: bool = False
     # ProcChance 100 on a proc its tooltip calls a chance: the chance isn't in the data.
     chance_unknown: bool = False
+    when_hit: bool = False
 
 
 @dataclass(frozen=True)
@@ -355,3 +367,4 @@ class NoValue:
 @dataclass(frozen=True)
 class Unresolved:
     reason: str
+    pvp: bool = False

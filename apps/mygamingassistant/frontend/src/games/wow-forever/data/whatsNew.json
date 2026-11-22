@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot says its values are for PvE",
+    "summary": "MGA Loot's stat weights and effect values are for fighting mobs, and the grey line under each verdict now says so: \"as Arms · PvE values\". Effects worth a lot more against players, like stuns, roots and slows, immunities and crowd-control breaks, damage shields and procs when you're hit, and armor or resistance taken off the target, add \"(worth more in PvP)\" to their note. That's a label only: MGA Loot doesn't have PvP numbers to score them with.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot always gives a verdict",
     "summary": "MGA Loot no longer says Can't judge. An effect the game files can't put a number on is now worth the stats the item is missing next to items of its slot, quality and item level that have no effect, at your average stat weight. The note says so: \"effect estimated from item level: worth ~14 stat points\". A stat MGA Loot has no weight for counts at your average stat weight too, so every item reads Upgrade, Downgrade or About the same.",
     "to": "/wow-forever/compare"
