@@ -274,8 +274,46 @@ describe("MGA Loot verdicts", () => {
     expect(line).not.toContain("Can't judge");
   });
 
-  it("leaves trinkets to their effect", () => {
-    expect(run(roll(`loc = "INVTYPE_TRINKET", ${ARMOR}, subclassID = 0, ${strength(10)}`))[0]).toContain("Trinket: judge it by its effect");
+  it("scores a weapon's Chance on hit from its effect data, with the note (Teebu's Blazing Longsword)", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const [line] = run(
+      `items[1728] = { ${SWORD}, ${strength(10)}, lines = { "Chance on hit: Blasts a target for 140 Fire damage." } }; rolls[1] = 1728; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
+    );
+    // Arms: 10 strength + 2.333 proc DPS x 5.31 melee = 22.4 vs 10.
+    expect(line).toMatch(/Upgrade \+124% over .*\[Item 16\]/);
+    expect(line).toContain("proc: 140 Fire dmg at 1 PPM (Classic rate) = +2.3 DPS");
+    expect(line).not.toContain("Can't judge");
+  });
+
+  it("scores a Use: buff at its average value (Earthstrike), so trinkets get a verdict", () => {
+    const TRINKET = `loc = "INVTYPE_TRINKET", ${ARMOR}, subclassID = 0`;
+    const [line] = run(
+      `items[21180] = { ${TRINKET}, lines = { "Use: Increases your melee and ranged attack power by 280.  Effect lasts for 20 sec." } }; rolls[1] = 21180; talents = { 31, 20, 0 }; ` +
+        `items[13] = { ${TRINKET}, ${strength(10)} }; items[14] = { ${TRINKET}, ${strength(30)} }; equipped[13] = 13; equipped[14] = 14`,
+    );
+    // Arms: 46.667 attack power x 0.45 = 21 vs the weaker trinket's 10 strength.
+    expect(line).toMatch(/Upgrade \+110% over .*\[Item 13\]/);
+    expect(line).toContain("use: +280 attack power for 20s every 2min = +46.7 attack power");
+  });
+
+  it("still can't judge an effect its data couldn't value (Fiery War Axe)", () => {
+    const AXE = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 1`;
+    const [line] = run(
+      `items[870] = { ${AXE}, ${strength(20)}, lines = { "Chance on hit: Hurls a fiery ball that causes 155 to 197 Fire damage." } }; rolls[1] = 870; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${AXE}, ${strength(10)} }; equipped[16] = 16`,
+    );
+    expect(line).toContain("Can't judge: this item has \"Chance on hit: Hurls a fiery ball");
+    expect(line).not.toContain("Upgrade");
+  });
+
+  it("notes an effect with no combat value and judges the rest (Water Breathing)", () => {
+    const [line] = run(
+      `items[9452] = { ${CHEST}, ${strength(20)}, lines = { "Equip: Allows underwater breathing." } }; rolls[1] = 9452; talents = { 31, 20, 0 }; ` +
+        `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`,
+    );
+    expect(line).toMatch(/Upgrade \+100% over .*\[Item 5\]/);
+    expect(line).toContain("Water Breathing: no combat value");
   });
 
   it("says nothing about items that aren't gear", () => {

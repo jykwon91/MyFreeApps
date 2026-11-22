@@ -5,6 +5,9 @@
 -- under level 60 your class's leveling weights (an estimate); at 60 your
 -- spec's Pawn Classic scale. Your spec comes from /mgaloot spec, or else from
 -- the talent tab with the most points. It never rolls for you.
+-- Use, Chance on hit and Equip effects count at the stat they're worth on
+-- average (MGALootEffects in Data.lua, worked out from the game files), with
+-- a note saying how; an effect the data can't value still says "Can't judge".
 --
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
 --   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
@@ -86,6 +89,13 @@ local CHANCE_TEXT = {
   { "^Equip: Increases your chance to parry an attack by (%d+)%%%.$", "parry_pct" },
   { "^Equip: Increases your chance to block attacks with a shield by (%d+)%%%.$", "block_pct" },
 }
+-- MGALootEffects stat keys that are chances, merged with the item's own (the highest counts, never both).
+local EFFECT_CHANCE = {
+  hit_pct = true, crit_pct = true, spell_hit_pct = true, spell_crit_pct = true,
+  dodge_pct = true, parry_pct = true, block_pct = true,
+}
+-- Effects that only work with a ranged weapon: counted only for weights that value ranged DPS over melee.
+local EFFECT_RANGED = { ranged_hit_pct = "hit_pct", ranged_crit_pct = "crit_pct", ranged_haste_pct = "haste_pct" }
 -- "Spell Damage Vs Humanoids" and the like: the stat it is, against one creature type.
 local VS_BASE = { SPELL_DAMAGE = "spell_damage", ATTACK_POWER = "attack_power" }
 local DPS_KEY = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
@@ -268,13 +278,53 @@ local function plural(kind)
   return word .. "s"
 end
 
+-- The DPS of the weapon in your main hand, for extra attacks on an item that isn't a weapon.
+local function mainHandDps()
+  local link = GetInventoryItemLink("player", MAIN_HAND)
+  local stats = link and statsApi()(link)
+  return stats and stats[DPS_KEY] or 0
+end
+
+-- Add MGALootEffects' values for this item (what its Use, Chance on hit and Equip lines are worth).
+-- Returns whether the data covers those lines: false with no data or with an effect it couldn't resolve.
+local function scoreEffects(id, stats, equipLoc, w, chance, notes)
+  local entries = MGALootEffects and id and MGALootEffects[id]
+  if not entries then return false end
+  for _, e in ipairs(entries) do
+    if e.stat == "unresolved" then return false end
+  end
+  local weaponDps = RANGED_LOC[equipLoc] and w.ranged or w.melee
+  local rangedFirst = w.ranged > w.melee
+  local add = 0
+  for _, e in ipairs(entries) do
+    local ranged = EFFECT_RANGED[e.stat]
+    if e.stat == "dps" then
+      add = add + e.value * weaponDps
+    elseif e.stat == "dps_pct" then
+      add = add + e.value * (stats[DPS_KEY] or mainHandDps()) * w.melee
+    elseif e.stat == "armor" then
+      add = add + e.value * w.armor
+    elseif ranged then
+      if rangedFirst then chance[ranged] = math.max(chance[ranged] or 0, e.value) end
+    elseif EFFECT_CHANCE[e.stat] then
+      chance[e.stat] = math.max(chance[e.stat] or 0, e.value)
+    elseif e.stat ~= "none" then
+      add = add + e.value * (w.stats[e.stat] or 0)
+    end
+    table.insert(notes, e.note)
+  end
+  return true, add
+end
+
 -- Score with these weights. Also returns what on the item it couldn't score (stat names and
--- tooltip lines) and notes on how it counted creature-type stats.
+-- tooltip lines) and notes on how it counted creature-type stats and item effects.
 local function score(link, equipLoc, w, level)
   -- The client has the item by now (judge checks GetItemInfo first); no stats table means no stats.
   local stats = statsApi()(link) or {}
   local total, unscored, notes = 0, {}, {}
   local chance = {}
+  local effectsCovered, effectsValue = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes)
+  if effectsCovered then total = total + effectsValue end
   for key, amount in pairs(stats) do
     local vsStat, vsKind = key:match("^ITEM_MOD_(%u+_%u+)_VS_(%u+)_SHORT$")
     if key == DPS_KEY then
@@ -303,7 +353,7 @@ local function score(link, equipLoc, w, level)
         break
       end
     end
-    if not matched and matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
+    if not matched and not effectsCovered and matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
       table.insert(unscored, '"' .. line .. '"')
     end
   end
@@ -386,7 +436,7 @@ local function percentText(new, old)
 end
 
 -- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
--- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare / trinket);
+-- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare / can't judge);
 -- `needs` is the level it needs when above yours. `brief` leaves out the binding and
 -- level tags, for a tooltip that already shows them.
 local function judge(link, brief)
@@ -410,50 +460,46 @@ local function judge(link, brief)
 
   local w, label = weightsFor(me)
   local text, kind, pct
-  if info.equipLoc == "INVTYPE_TRINKET" then
-    text = YELLOW .. "Trinket: judge it by its effect|r"
-  else
-    local new, unscored, notes = score(link, info.equipLoc, w, me.level)
-    table.insert(tags, 1, label)
-    for _, note in ipairs(notes) do table.insert(tags, note) end
-    local old = replaced(info, w, me, link)
-    if old.blocked then
-      text = GREY .. "Can't compare: " .. old.blocked .. "|r"
-    elseif not old.link then
-      text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
-    elseif #unscored > 0 or #old.unscored > 0 then
-      -- A verdict that leaves part of either item out would mislead: say what it can't count instead.
-      local whose = #unscored > 0 and ("this item has " .. table.concat(unscored, ", "))
-        or (old.link .. " has " .. table.concat(old.unscored, ", "))
-      text = YELLOW .. "Can't judge:|r " .. whose .. YELLOW .. ", which MGA Loot can't count|r"
-      if old.score > 0 then text = text .. "\n" .. GREY .. "stats alone: " .. select(2, percentText(new, old.score)) .. " vs|r " .. old.link end
-    elseif old.score <= 0 then
-      if new > 0 then
-        text, kind, pct = GREEN .. "Upgrade over|r " .. old.link, "upgrade", EMPTY_SLOT_PCT
-      else
-        text = GREY .. "Nothing it scores on either item|r"
-      end
+  local new, unscored, notes = score(link, info.equipLoc, w, me.level)
+  table.insert(tags, 1, label)
+  for _, note in ipairs(notes) do table.insert(tags, note) end
+  local old = replaced(info, w, me, link)
+  if old.blocked then
+    text = GREY .. "Can't compare: " .. old.blocked .. "|r"
+  elseif not old.link then
+    text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
+  elseif #unscored > 0 or #old.unscored > 0 then
+    -- A verdict that leaves part of either item out would mislead: say what it can't count instead.
+    local whose = #unscored > 0 and ("this item has " .. table.concat(unscored, ", "))
+      or (old.link .. " has " .. table.concat(old.unscored, ", "))
+    text = YELLOW .. "Can't judge:|r " .. whose .. YELLOW .. ", which MGA Loot can't count|r"
+    if old.score > 0 then text = text .. "\n" .. GREY .. "stats alone: " .. select(2, percentText(new, old.score)) .. " vs|r " .. old.link end
+  elseif old.score <= 0 then
+    if new > 0 then
+      text, kind, pct = GREEN .. "Upgrade over|r " .. old.link, "upgrade", EMPTY_SLOT_PCT
     else
-      local shown
-      pct, shown = percentText(new, old.score)
-      if pct >= SIDEGRADE_PCT then
-        text, kind = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link, "upgrade"
-      elseif pct <= -SIDEGRADE_PCT then
-        text, kind = RED .. "Downgrade " .. shown .. " vs|r " .. old.link, "downgrade"
-      else
-        text, kind = YELLOW .. "About the same as|r " .. old.link, "same"
-      end
+      text = GREY .. "Nothing it scores on either item|r"
     end
-    -- Two rings: the verdict is against the one you'd swap out; this line shows the other too.
-    local other = kind and old.link and old.other
-    if other and other.score > 0 and new > 0 then
-      if #other.unscored > 0 then
-        text = text .. "\n" .. YELLOW .. "Can't judge vs|r " .. other.link .. GREY .. " (your other one has " .. table.concat(other.unscored, ", ") .. ")|r"
-      else
-        local otherPct, otherShown = percentText(new, other.score)
-        local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
-        text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
-      end
+  else
+    local shown
+    pct, shown = percentText(new, old.score)
+    if pct >= SIDEGRADE_PCT then
+      text, kind = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link, "upgrade"
+    elseif pct <= -SIDEGRADE_PCT then
+      text, kind = RED .. "Downgrade " .. shown .. " vs|r " .. old.link, "downgrade"
+    else
+      text, kind = YELLOW .. "About the same as|r " .. old.link, "same"
+    end
+  end
+  -- Two rings: the verdict is against the one you'd swap out; this line shows the other too.
+  local other = kind and old.link and old.other
+  if other and other.score > 0 and new > 0 then
+    if #other.unscored > 0 then
+      text = text .. "\n" .. YELLOW .. "Can't judge vs|r " .. other.link .. GREY .. " (your other one has " .. table.concat(other.unscored, ", ") .. ")|r"
+    else
+      local otherPct, otherShown = percentText(new, other.score)
+      local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
+      text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
     end
   end
   if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end

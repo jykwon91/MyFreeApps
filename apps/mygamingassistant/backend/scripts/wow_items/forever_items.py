@@ -83,6 +83,13 @@ TABLE_HASHES = {
     "CurrencyTypes": 0x2F51378E,
     "Achievement": 0xD2EE2CA7,
     "Achievement_Category": 0x231B414D,
+    # Item effects (scripts/wow_loot/item_effects)
+    "ItemEffect": 0x4002A5B1,
+    "ItemXItemEffect": 0x00CB674F,
+    "SpellCooldowns": 0xF9F37C57,
+    "SpellProcsPerMinute": 0xD0768C6C,
+    "SpellShapeshift": 0xBC91EA17,
+    "SpellEquippedItems": 0xE44ABBD4,
 }
 ITEM_TABLES = ("Item", "ItemSparse")
 

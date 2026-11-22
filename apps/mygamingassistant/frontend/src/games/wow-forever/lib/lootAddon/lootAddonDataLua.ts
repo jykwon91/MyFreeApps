@@ -7,6 +7,8 @@ import { LEVELING_WEIGHTS } from "@/games/wow-forever/data/weights/levelingWeigh
 import { PAWN_CLASSIC_WEIGHTS } from "@/games/wow-forever/data/weights/pawnClassicWeights";
 import type { StatWeights } from "@/games/wow-forever/data/weights/statWeights";
 import creatureTypeShare from "@/games/wow-forever/data/lootAddon/creatureTypeShare.json";
+import itemEffects from "@/games/wow-forever/data/lootAddon/itemEffects.json";
+import type { ItemEffectEntry } from "@/games/wow-forever/types/lootAddon/itemEffectEntry";
 
 const luaList = (items: readonly string[]): string => `{${items.map(luaString).join(", ")}}`;
 
@@ -60,6 +62,28 @@ function creatureShareLua(): string[] {
   ];
 }
 
+// WoW's fonts have no arrow glyph, so the notes' "→" reads "=" in game.
+const ARROW = /→/g;
+
+/**
+ * `MGALootEffects[itemId]`: what each item's Use, Chance on hit and Equip effects are worth
+ * (`stat` = a weight key, or "dps" / "dps_pct" / "ranged_*" / "none" / "unresolved"), from `itemEffects.json`.
+ */
+function itemEffectsLua(): string[] {
+  const items = Object.entries(itemEffects.items as Record<string, readonly ItemEffectEntry[]>)
+    .sort(([a], [b]) => Number(a) - Number(b));
+  return [
+    "MGALootEffects = {",
+    ...items.map(([id, entries]) => {
+      const list = entries
+        .map((e) => `{stat = ${luaString(e.stat)}, value = ${e.value}, note = ${luaString(e.note.replace(ARROW, "="))}}`)
+        .join(", ");
+      return `  [${id}] = {${list}},`;
+    }),
+    "}",
+  ];
+}
+
 /**
  * MGA Loot's `Data.lua`: per class, the leveling weights, each spec's Pawn
  * Classic level-60 weights and talent tab, and what the class can equip — the
@@ -74,6 +98,7 @@ export function lootAddonDataLua(): string {
     ...WOW_CLASSES.flatMap(classLua),
     "}",
     ...creatureShareLua(),
+    ...itemEffectsLua(),
     "",
   ].join("\n");
 }
