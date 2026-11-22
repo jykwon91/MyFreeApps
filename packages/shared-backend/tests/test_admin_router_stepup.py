@@ -21,6 +21,7 @@ from httpx import ASGITransport, AsyncClient
 from platform_shared.api.admin_router import build_admin_router
 from platform_shared.core.permissions import Role
 from platform_shared.services.admin_user_service import AdminUserService
+from tests.fake_strict_gate import as_strict_gate
 
 
 class _FakeUser:
@@ -84,7 +85,7 @@ def _build_app(
     router = build_admin_router(
         service=service,
         current_admin=fake_current_admin,
-        current_strict_superuser=fake_current_strict_superuser,
+        current_strict_superuser=as_strict_gate(fake_current_strict_superuser),
     )
     app = FastAPI()
     app.include_router(router)

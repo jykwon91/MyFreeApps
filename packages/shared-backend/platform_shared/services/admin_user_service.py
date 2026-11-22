@@ -74,6 +74,18 @@ class AdminUserService(Generic[TUser]):
                 db, self._user_model, limit=limit, offset=offset,
             )
 
+    async def is_superuser_target(self, user_id: uuid.UUID) -> bool:
+        """Whether the user exists and is a superuser.
+
+        The admin router uses this to demand step-up before an action on a
+        superuser. A missing user reads as False; the action then answers 404.
+        """
+        async with self._async_session_factory() as db:
+            target = await admin_user_repo.get_by_id(
+                db, self._user_model, user_id,
+            )
+            return bool(getattr(target, "is_superuser", False))
+
     async def update_user_role(
         self, user_id: uuid.UUID, role: Role, admin: TUser,
     ) -> TUser:
