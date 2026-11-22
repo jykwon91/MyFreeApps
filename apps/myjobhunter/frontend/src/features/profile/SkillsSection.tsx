@@ -1,14 +1,32 @@
+import { useState } from "react";
 import { Code2 } from "lucide-react";
-import SkillAddForm from "@/features/profile/SkillAddForm";
-import { deleteWithFeedback } from "@/lib/delete-with-feedback";
+import { ConfirmDialog, extractErrorMessage, isNotFound, showError, showSuccess } from "@platform/ui";
 import { useDeleteSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
+import type { Skill } from "@myjobhunter/api-client/types/skill/skill";
+import { skillRemoveBody } from "@myjobhunter/api-client/utils/skillRemoveBody";
+import { SKILL_MESSAGES as MESSAGES } from "@/constants/skill-messages";
+import SkillAddForm from "@/features/profile/SkillAddForm";
+import SkillChip from "@/features/profile/SkillChip";
 import type { SkillsSectionProps } from "@/types/profile/skills-section-props";
 
 export default function SkillsSection({ skills }: SkillsSectionProps) {
-  const [deleteSkill] = useDeleteSkillMutation();
+  const [removing, setRemoving] = useState<Skill | null>(null);
+  const [deleteSkill, { isLoading: isRemoving }] = useDeleteSkillMutation();
 
-  async function handleDelete(id: string, name: string) {
-    await deleteWithFeedback(() => deleteSkill(id).unwrap(), `Skill "${name}" removed`, "Couldn't remove skill");
+  async function confirmRemove(): Promise<void> {
+    if (!removing) return;
+    const { id, name } = removing;
+    try {
+      await deleteSkill(id).unwrap();
+    } catch (err) {
+      // A 404 means it's already gone (removed in another tab, or a double click): what was asked for.
+      if (!isNotFound(err)) {
+        showError(`${MESSAGES.couldntRemove}: ${extractErrorMessage(err)}`);
+        return;
+      }
+    }
+    showSuccess(MESSAGES.removed(name));
+    setRemoving(null);
   }
 
   return (
@@ -21,23 +39,7 @@ export default function SkillsSection({ skills }: SkillsSectionProps) {
       {skills.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {skills.map((skill) => (
-            <span
-              key={skill.id}
-              className="inline-flex items-center gap-1.5 text-sm bg-muted px-3 py-1.5 rounded-full"
-            >
-              <span>{skill.name}</span>
-              {/* years_experience is number | null; 0 years is a valid distinct value — keep !== null */}
-              {skill.years_experience !== null ? (
-                <span className="text-xs text-muted-foreground">{skill.years_experience}y</span>
-              ) : null}
-              <button
-                onClick={() => void handleDelete(skill.id, skill.name)}
-                className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors min-h-[20px] min-w-[20px] flex items-center justify-center"
-                aria-label={`Remove ${skill.name}`}
-              >
-                ×
-              </button>
-            </span>
+            <SkillChip key={skill.id} skill={skill} onRemove={setRemoving} />
           ))}
         </div>
       ) : (
@@ -45,6 +47,18 @@ export default function SkillsSection({ skills }: SkillsSectionProps) {
       )}
 
       <SkillAddForm existingNames={skills.map((s) => s.name)} />
+
+      <ConfirmDialog
+        open={removing !== null}
+        title={MESSAGES.removeTitle}
+        description={removing ? skillRemoveBody(removing.name) : ""}
+        confirmLabel={MESSAGES.remove}
+        cancelLabel={MESSAGES.keep}
+        variant="danger"
+        isLoading={isRemoving}
+        onConfirm={confirmRemove}
+        onCancel={() => (isRemoving ? undefined : setRemoving(null))}
+      />
     </section>
   );
 }
