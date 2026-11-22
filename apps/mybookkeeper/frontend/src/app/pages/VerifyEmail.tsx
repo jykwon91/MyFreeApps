@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { describeAuthError, isAlreadyVerifiedError } from "@platform/ui";
+import { describeAuthError, isAlreadyVerifiedError, useUrlToken } from "@platform/ui";
 
 type VerifyState = "verifying" | "success" | "error";
 
@@ -9,8 +9,7 @@ const NO_TOKEN_MESSAGE =
   "No verification token found in the link. Please check your email and try again.";
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = useUrlToken("/verify-email");
 
   // Initialize directly from token presence — avoids calling setState inside an effect.
   const [state, setState] = useState<VerifyState>(token ? "verifying" : "error");

@@ -199,6 +199,8 @@ test.describe("signed-in shell", () => {
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 
+    await expect(nav.getByRole("link", { name: "Support MyFreeApps" })).toHaveAttribute("href", "/support-myfreeapps");
+
     await nav.getByRole("link", { name: "Practice" }).click();
     await expect(page).toHaveURL(/\/scenarios$/);
     await expect(page.getByRole("heading", { name: "Practice Spanish" })).toBeVisible();

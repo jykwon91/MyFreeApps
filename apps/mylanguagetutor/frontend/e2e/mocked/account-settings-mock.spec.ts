@@ -21,10 +21,13 @@ import { INCORRECT_PASSWORD, INTERNAL_ERROR } from "./constants/refusalDetails";
 import {
   DISPLAY_NAME_PLACEHOLDER,
   DISPLAY_NAME_SAVE_FAILED,
+  DELETE_WARNING,
   DISPLAY_NAME_SAVED,
+  EXPORT_DESCRIPTION,
   EXPORT_DOWNLOADING,
   EXPORT_FAILED,
   EXPORT_PREPARING,
+  TWO_FACTOR_INTRO,
 } from "./constants/accountCopy";
 import { ACCOUNT_EXPORT } from "./fixtures/accountExport";
 
@@ -37,6 +40,16 @@ test("Settings links to Security", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/security$/);
   await expect(page.getByRole("heading", { name: "Security" })).toBeVisible();
+});
+
+test("Security says what the phone says about 2FA, the export and deleting the account", async ({ page }) => {
+  await stubSignedInShell(page);
+
+  await page.goto("/security");
+  await expect(page.getByText(TWO_FACTOR_INTRO)).toBeVisible();
+  await expect(page.getByText(EXPORT_DESCRIPTION)).toBeVisible();
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page.getByRole("dialog", { name: "Delete account permanently" }).getByText(DELETE_WARNING)).toBeVisible();
 });
 
 test.describe("display name", () => {

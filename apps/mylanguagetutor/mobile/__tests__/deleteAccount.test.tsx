@@ -1,7 +1,7 @@
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
+import { ACCOUNT_COPY } from "@mylanguagetutor/api-client/constants/accountCopy";
 import { renderApp } from "../test-support/renderApp";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 
@@ -23,7 +23,7 @@ describe("deleting the account", () => {
     await renderApp("/settings");
     await fireEvent.press(await screen.findByRole("button", { name: "Delete account" }));
 
-    expect(await screen.findByText(DELETE_ACCOUNT_WARNING)).toBeTruthy();
+    expect(await screen.findByText(ACCOUNT_COPY.deleteWarning)).toBeTruthy();
     expect(screen).toHavePathname("/delete-account");
   });
 

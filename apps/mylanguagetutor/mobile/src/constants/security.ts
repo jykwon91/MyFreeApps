@@ -1,4 +1,5 @@
 import type { SecurityScreenContent } from "@platform/mobile";
+import { ACCOUNT_COPY } from "@mylanguagetutor/api-client/constants/accountCopy";
 
 export const SECURITY_ROUTE = "/security";
 export const SECURITY_TURN_ON_ROUTE = "/security/turn-on";
@@ -9,9 +10,8 @@ export const SECURITY_BACK_TITLE = "Settings";
 export const SECURITY_INTRO_DISMISSED_KEY = "mlt_security_info_dismissed";
 
 export const SECURITY_CONTENT: SecurityScreenContent = {
-  intro:
-    "Two-step sign-in adds an extra layer of security to your account. I recommend turning it on to protect your account access.",
+  intro: ACCOUNT_COPY.twoFactorIntro,
   whatTwoStepProtects: "your practice conversations and account",
   displayNameDescription: "Shown in your profile and on exported data.",
-  exportDescription: "A JSON copy of your profile and practice conversations.",
+  exportDescription: ACCOUNT_COPY.exportDescription,
 };
