@@ -109,6 +109,7 @@ export default function Discover() {
             areSourcesLoading={areSourcesLoading}
             activeSourceId={activeSourceId}
             scoringWindow={scoringWindow}
+            onShowAllSources={() => setSourceFilter(null)}
           />
         ) : (
           <DiscoverListView

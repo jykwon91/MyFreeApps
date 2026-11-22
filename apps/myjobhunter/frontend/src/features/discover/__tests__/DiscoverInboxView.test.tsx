@@ -32,7 +32,12 @@ vi.mock("@myjobhunter/api-client/store/skillsApi", () => ({
 
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),
-  EmptyState: ({ heading }: { heading: string }) => <div>{heading}</div>,
+  EmptyState: ({ heading, action }: { heading: string; action?: { label: string; onClick: () => void } }) => (
+    <div>
+      {heading}
+      {action && <button onClick={action.onClick}>{action.label}</button>}
+    </div>
+  ),
 }));
 
 vi.mock("@/features/discover/DiscoveredJobsSkeleton", () => ({
@@ -115,10 +120,15 @@ function makeResponse(overrides: Partial<DiscoveredJobsPagesState> = {}): Discov
 
 const CLOSED_WINDOW: ScoringWindow = { isOpen: false, pollingInterval: 0, open: vi.fn(), observe: vi.fn() };
 
-function renderInbox(scoringWindow: ScoringWindow = CLOSED_WINDOW, sources: { hasNoSources: boolean; areSourcesLoading: boolean } = { hasNoSources: false, areSourcesLoading: false }) {
+function renderInbox(
+  scoringWindow: ScoringWindow = CLOSED_WINDOW,
+  sources: { hasNoSources: boolean; areSourcesLoading: boolean } = { hasNoSources: false, areSourcesLoading: false },
+  activeSourceId: string | null = null,
+  onShowAllSources = vi.fn(),
+) {
   return render(
     <MemoryRouter>
-      <DiscoverInboxView {...sources} activeSourceId={null} scoringWindow={scoringWindow} />
+      <DiscoverInboxView {...sources} activeSourceId={activeSourceId} scoringWindow={scoringWindow} onShowAllSources={onShowAllSources} />
     </MemoryRouter>,
   );
 }
@@ -203,7 +213,7 @@ describe("DiscoverInboxView — list states", () => {
     mockListJobs.mockReturnValue(makeResponse());
     render(
       <MemoryRouter>
-        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId="s1" scoringWindow={CLOSED_WINDOW} />
+        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId="s1" scoringWindow={CLOSED_WINDOW} onShowAllSources={() => undefined} />
       </MemoryRouter>,
     );
     expect(mockListJobs).toHaveBeenCalledWith({ state: "inbox", source_id: "s1" }, 0);
@@ -234,6 +244,17 @@ describe("DiscoverInboxView — list states", () => {
     mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
     renderInbox();
     expect(screen.getByText("Inbox empty")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show every saved search" })).toBeNull();
+  });
+
+  it("says nothing came from the chosen saved search, and offers every saved search again", () => {
+    const onShowAllSources = vi.fn();
+    mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
+    renderInbox(CLOSED_WINDOW, { hasNoSources: false, areSourcesLoading: false }, "s1", onShowAllSources);
+    expect(screen.getByText("Inbox empty for this search")).toBeInTheDocument();
+    expect(screen.queryByText("Inbox empty")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show every saved search" }));
+    expect(onShowAllSources).toHaveBeenCalledTimes(1);
   });
 
   it("asks for a saved search only when the loaded list of saved searches is empty", () => {

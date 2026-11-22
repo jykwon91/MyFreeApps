@@ -1,8 +1,8 @@
 import { Telescope } from "lucide-react";
 import { EmptyState, LoadMoreFooter } from "@platform/ui";
 import ListLoadError from "@/components/ListLoadError";
-import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import { DISCOVERED_INBOX_LIST_MESSAGES as MESSAGES } from "@/constants/discovered-inbox-list-messages";
+import DiscoverEmptyState from "@/features/discover/DiscoverEmptyState";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import ProfileCompletenessBanner from "@/features/discover/ProfileCompletenessBanner";
@@ -14,6 +14,7 @@ import type { ScoringWindow } from "@myjobhunter/api-client/types/discovery/scor
 import { discoveredJobsFilter } from "@myjobhunter/api-client/utils/discoveredJobsFilter";
 import { inboxCoverageLine } from "@myjobhunter/api-client/utils/inboxCoverageLine";
 import { unscoredCount as countUnscored } from "@myjobhunter/api-client/utils/unscoredCount";
+import { DISCOVER_NO_SAVED_SEARCHES_COPY } from "@myjobhunter/api-client/constants/discoverEmptyStates";
 import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 
 // Background scoring polls for a bounded window after a refresh succeeds — see
@@ -28,6 +29,8 @@ interface DiscoverInboxViewProps {
   activeSourceId: string | null;
   /** Opened by a saved search's refresh (the page owns it); polls the inbox while it's open. */
   scoringWindow: ScoringWindow;
+  /** Clears the source filter, so every saved search's postings show. */
+  onShowAllSources: () => void;
 }
 
 export default function DiscoverInboxView({
@@ -35,6 +38,7 @@ export default function DiscoverInboxView({
   areSourcesLoading,
   activeSourceId,
   scoringWindow,
+  onShowAllSources,
 }: DiscoverInboxViewProps) {
   // Polls only while the bounded scoring window is open (0 = idle). The inbox's
   // unscored count feeds back into the window.
@@ -52,8 +56,8 @@ export default function DiscoverInboxView({
     return (
       <EmptyState
         icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-        heading={DISCOVER_EMPTY_STATES.no_saved_searches.heading}
-        body={DISCOVER_EMPTY_STATES.no_saved_searches.body}
+        heading={DISCOVER_NO_SAVED_SEARCHES_COPY.heading}
+        body={DISCOVER_NO_SAVED_SEARCHES_COPY.body}
       />
     );
   }
@@ -84,11 +88,7 @@ export default function DiscoverInboxView({
     return (
       <>
         {profileBanner}
-        <EmptyState
-          icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-          heading={DISCOVER_EMPTY_STATES.inbox_empty.heading}
-          body={DISCOVER_EMPTY_STATES.inbox_empty.body}
-        />
+        <DiscoverEmptyState view="inbox" isFiltered={activeSourceId !== null} onShowAllSources={onShowAllSources} />
       </>
     );
   }

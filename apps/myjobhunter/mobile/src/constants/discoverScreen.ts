@@ -1,3 +1,4 @@
+import { DISCOVER_EMPTY_STATES, DISCOVER_NO_SAVED_SEARCHES_COPY, DISCOVER_SHOW_ALL_SOURCES_LABEL } from "@myjobhunter/api-client/constants/discoverEmptyStates";
 import { DISCOVER_VIEW_LABELS, DISCOVER_VIEWS } from "@myjobhunter/api-client/constants/discoverViewLabels";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 import type { DiscoverViewCopy } from "../types/DiscoverViewCopy";
@@ -18,16 +19,9 @@ export const DISCOVER_SCREEN_MESSAGES = {
   couldntLoadDismissed: "I couldn't load your dismissed jobs.",
   tryAgainOffer: "Want me to try again?",
   tryAgain: "Try again",
-  noSavedSearchesHeading: "No saved searches yet",
-  noSavedSearchesBody:
-    "Create a saved search and I'll pull tailored postings from Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter) every time you tap Refresh.",
-  inboxEmptyHeading: "Inbox empty",
-  inboxEmptyBody: "Tap Refresh on a saved search above to fetch the latest postings.",
-  savedEmptyHeading: "No saved jobs",
-  savedEmptyBody: "When you save a posting from the inbox it shows up here — hold it until you're ready to apply.",
-  dismissedEmptyHeading: "No dismissed jobs",
-  dismissedEmptyBody: "Postings you dismiss show up here while they're still open, newest first, so you can restore one if you change your mind.",
-  showAllSources: "Show every saved search",
+  noSavedSearchesHeading: DISCOVER_NO_SAVED_SEARCHES_COPY.heading,
+  noSavedSearchesBody: DISCOVER_NO_SAVED_SEARCHES_COPY.body,
+  showAllSources: DISCOVER_SHOW_ALL_SOURCES_LABEL,
   scoring: "Scoring your new postings",
   listSummary: (view: DiscoverView, count: number) => `${DISCOVER_VIEW_LABELS[view]}: ${count} posting${count === 1 ? "" : "s"}`,
 } as const;
@@ -38,15 +32,22 @@ export const DISCOVER_VIEW_SEGMENTS: readonly { value: DiscoverView; label: stri
   label: DISCOVER_VIEW_LABELS[view],
 }));
 
-/** What each view says when it couldn't load, or has nothing to show. */
+function viewCopy(view: DiscoverView, couldntLoad: string): DiscoverViewCopy {
+  const { empty, emptyFiltered } = DISCOVER_EMPTY_STATES[view];
+  return {
+    couldntLoad,
+    emptyHeading: empty.heading,
+    emptyBody: empty.body,
+    emptyFilteredHeading: emptyFiltered.heading,
+    emptyFilteredBody: emptyFiltered.body,
+  };
+}
+
+/** What each view says when it couldn't load, or has nothing to show with every saved search or one chosen. */
 export const DISCOVER_VIEW_COPY: Readonly<Record<DiscoverView, DiscoverViewCopy>> = {
-  inbox: { couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadInbox, emptyHeading: DISCOVER_SCREEN_MESSAGES.inboxEmptyHeading, emptyBody: DISCOVER_SCREEN_MESSAGES.inboxEmptyBody },
-  saved: { couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadSaved, emptyHeading: DISCOVER_SCREEN_MESSAGES.savedEmptyHeading, emptyBody: DISCOVER_SCREEN_MESSAGES.savedEmptyBody },
-  dismissed: {
-    couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadDismissed,
-    emptyHeading: DISCOVER_SCREEN_MESSAGES.dismissedEmptyHeading,
-    emptyBody: DISCOVER_SCREEN_MESSAGES.dismissedEmptyBody,
-  },
+  inbox: viewCopy("inbox", DISCOVER_SCREEN_MESSAGES.couldntLoadInbox),
+  saved: viewCopy("saved", DISCOVER_SCREEN_MESSAGES.couldntLoadSaved),
+  dismissed: viewCopy("dismissed", DISCOVER_SCREEN_MESSAGES.couldntLoadDismissed),
 };
 
 /** The source filter's choice for every saved search. No saved search's id is empty. */

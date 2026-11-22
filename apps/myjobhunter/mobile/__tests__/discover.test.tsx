@@ -5,7 +5,7 @@ import { act, fireEvent, waitFor, within } from "@testing-library/react-native";
 import { screen } from "expo-router/testing-library";
 import { AccessibilityInfo, Linking } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as JOB } from "../src/constants/discoveredJob";
-import { DISCOVER_SCREEN_MESSAGES as MESSAGES } from "../src/constants/discoverScreen";
+import { DISCOVER_SCREEN_MESSAGES as MESSAGES, DISCOVER_VIEW_COPY } from "../src/constants/discoverScreen";
 import { PROFILE_BANNER_DISMISSED_KEY, PROFILE_BANNER_MESSAGES as BANNER } from "../src/constants/profileBanner";
 import { SAVED_SEARCH_MESSAGES as SAVED } from "../src/constants/savedSearches";
 import { store } from "../src/lib/store";
@@ -164,7 +164,7 @@ describe("the Discovery screen", () => {
     await fireEvent.press(await screen.findByRole("radio", { name: "greenhouse" }));
     await fireEvent.press(screen.getByRole("tab", { name: "Saved" }));
 
-    expect(await screen.findByRole("header", { name: MESSAGES.savedEmptyHeading })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.saved.emptyFilteredHeading })).toBeTruthy();
     expect(discoverRequests(sent).at(-1)?.params).toEqual({ state: "saved", source_id: STRIPE.id, limit: 50, offset: 0 });
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.showAllSources }));
     expect(await screen.findByTestId("discovered-job-j-kept")).toBeTruthy();
@@ -186,12 +186,29 @@ describe("the Discovery screen", () => {
     serve(discoverRoutes(SOURCES, []));
     await renderDiscover();
 
-    expect(await screen.findByRole("header", { name: MESSAGES.inboxEmptyHeading })).toBeTruthy();
-    expect(screen.getByText(MESSAGES.inboxEmptyBody)).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.inbox.emptyHeading })).toBeTruthy();
+    expect(screen.getByText(DISCOVER_VIEW_COPY.inbox.emptyBody)).toBeTruthy();
     expect(screen.queryByTestId("inbox-scoring-coverage")).toBeNull();
     await fireEvent.press(screen.getByRole("tab", { name: "Saved" }));
-    expect(await screen.findByRole("header", { name: MESSAGES.savedEmptyHeading })).toBeTruthy();
-    expect(screen.getByText(MESSAGES.savedEmptyBody)).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.saved.emptyHeading })).toBeTruthy();
+    expect(screen.getByText(DISCOVER_VIEW_COPY.saved.emptyBody)).toBeTruthy();
+  });
+
+  it("says when the chosen saved search has no inbox or dismissed postings, and offers every saved search", async () => {
+    serve(discoverRoutes(SOURCES, []));
+    await renderDiscover();
+    await fireEvent.press(await screen.findByRole("button", { name: `${MESSAGES.sourceFilter}, ${MESSAGES.allSources}` }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Backend roles" }));
+
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.inbox.emptyFilteredHeading })).toBeTruthy();
+    expect(screen.getByText(DISCOVER_VIEW_COPY.inbox.emptyFilteredBody)).toBeTruthy();
+    expect(screen.queryByRole("header", { name: DISCOVER_VIEW_COPY.inbox.emptyHeading })).toBeNull();
+
+    await fireEvent.press(screen.getByRole("tab", { name: "Dismissed" }));
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.dismissed.emptyFilteredHeading })).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.showAllSources }));
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.dismissed.emptyHeading })).toBeTruthy();
   });
 
   it("says when the postings couldn't load, and loads them on Try again", async () => {

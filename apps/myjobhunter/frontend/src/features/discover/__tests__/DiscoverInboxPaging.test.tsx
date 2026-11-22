@@ -74,7 +74,7 @@ function renderInbox(activeSourceId: string | null = null) {
   const tree = (id: string | null) => (
     <Provider store={store}>
       <MemoryRouter>
-        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId={id} scoringWindow={CLOSED_WINDOW} />
+        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId={id} scoringWindow={CLOSED_WINDOW} onShowAllSources={() => undefined} />
       </MemoryRouter>
     </Provider>
   );
