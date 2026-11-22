@@ -18,6 +18,9 @@ export interface ThemeColors {
   destructiveText: string;
   /** For money coming in, on `background` or `card`. Never the only sign of it. */
   positiveText: string;
+  /** Chart series for money in and out. Differ in lightness (3:1 apart) and from `background` (3:1), so they read without hue. */
+  chartPositive: string;
+  chartNegative: string;
   toastSuccessBackground: string;
   toastSuccessBorder: string;
   toastSuccessForeground: string;

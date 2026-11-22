@@ -1,6 +1,7 @@
+import { StyleSheet } from "react-native";
 import api from "@platform/core/lib/api";
 import { fireEvent, screen } from "@testing-library/react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
+import { lightColors, SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { holdSummary, pull, renderHome, resetHome } from "../test-support/homeScreen";
 import { startTransactionServer } from "../test-support/transactionsServer";
 
@@ -27,6 +28,18 @@ afterEach(() => {
 });
 
 describe("Home monthly chart", () => {
+  it("tells revenue and expenses apart by lightness, not just hue", async () => {
+    const server = startTransactionServer([]);
+    server.summary = { revenue: 7800, expenses: 2100.5, profit: 5699.5, by_month: SPRING };
+    await renderHome();
+    const chart = await screen.findByRole("image", { name: /^Revenue and expenses by month/ });
+    await fireEvent(chart, "layout", { nativeEvent: { layout: { width: 320, height: 160 } } });
+    const swatch = (label: string) =>
+      StyleSheet.flatten(screen.getByTestId(`home-monthly-chart-legend-${label}`, { includeHiddenElements: true }).props.style).backgroundColor;
+    expect(swatch("Revenue")).toBe(lightColors.chartPositive);
+    expect(swatch("Expenses")).toBe(lightColors.chartNegative);
+  });
+
   it("draws revenue against expenses with a spoken summary and one button per month", async () => {
     const server = startTransactionServer([]);
     server.summary = { revenue: 7800, expenses: 2100.5, profit: 5699.5, by_month: SPRING };

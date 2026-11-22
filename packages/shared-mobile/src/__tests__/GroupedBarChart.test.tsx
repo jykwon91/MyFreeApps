@@ -7,8 +7,8 @@ import { lightColors } from "../theme/colors";
 import type { GroupedBarChartGroup } from "../types/GroupedBarChartGroup";
 
 const SERIES = [
-  { label: "Revenue", color: lightColors.positiveText },
-  { label: "Expenses", color: lightColors.destructiveText },
+  { label: "Revenue", color: lightColors.chartPositive },
+  { label: "Expenses", color: lightColors.chartNegative },
 ];
 
 function aGroup(overrides: Partial<GroupedBarChartGroup> = {}): GroupedBarChartGroup {
@@ -62,6 +62,15 @@ describe("GroupedBarChart", () => {
     await renderChart([aGroup()]);
     expect(screen.getByText("Revenue", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText("Expenses", { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it("draws each legend swatch in its series colour, which differs in lightness from the other", async () => {
+    await renderChart([aGroup()]);
+    const swatch = (label: string) =>
+      StyleSheet.flatten(screen.getByTestId(`chart-legend-${label}`, { includeHiddenElements: true }).props.style).backgroundColor;
+    expect(swatch("Revenue")).toBe(lightColors.chartPositive);
+    expect(swatch("Expenses")).toBe(lightColors.chartNegative);
+    expect(swatch("Revenue")).not.toBe(swatch("Expenses"));
   });
 
   it("draws the axis in the format it's given", async () => {
