@@ -48,7 +48,13 @@ export default function ApplicationsScreen() {
       <FlatList
         ListEmptyComponent={emptyList}
         ListFooterComponent={
-          <ApplicationsListFooter isLoadMoreError={list.isLoadMoreError} isLoadingMore={list.isFetchingNextPage} onRetry={list.loadMore} />
+          <ApplicationsListFooter
+            isLoadMoreError={list.isLoadMoreError}
+            isLoadingMore={list.isFetchingNextPage}
+            onRetry={list.loadMore}
+            shown={rows.length}
+            total={hasLoaded ? list.total : undefined}
+          />
         }
         ListHeaderComponent={
           hasLoaded && (list.error || rows.length > 0) ? (
