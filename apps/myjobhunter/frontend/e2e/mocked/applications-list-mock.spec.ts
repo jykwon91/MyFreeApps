@@ -128,3 +128,24 @@ test("a failed next page keeps the loaded rows and offers Try again", async ({ p
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.locator("tbody tr")).toHaveCount(firstPage * 2);
 });
+
+test("an archived application is marked Archived in the list and an active one is not", async ({ page }) => {
+  await stubSignedInShell(page);
+  await page.route(APPLICATIONS_ENDPOINT, (route) =>
+    route.fulfill(
+      json({
+        items: [
+          mockApplication({ id: "a1", role_title: "Old Role", company_name: "Acme Corp", archived: true }),
+          mockApplication({ id: "a2", role_title: "Live Role", company_name: "Globex", archived: false }),
+        ],
+        total: 2,
+      }),
+    ),
+  );
+
+  await page.goto("/applications");
+
+  const archivedRow = page.locator("tbody tr").filter({ hasText: "Old Role" });
+  await expect(archivedRow.getByText("Archived", { exact: true })).toBeVisible();
+  await expect(page.locator("tbody tr").filter({ hasText: "Live Role" }).getByText("Archived", { exact: true })).toHaveCount(0);
+});

@@ -170,6 +170,22 @@ it("opens the Applications tab on a skeleton of the rows while the list loads, t
   expect(companies()).toEqual(["Stripe", "Airbnb", "Lyft", "Zillow"]);
 });
 
+it("marks an archived application as Archived, in the row and for a screen reader, and leaves active ones alone", async () => {
+  const ARCHIVED = applicationRecord({
+    id: "00000000-0000-4000-8000-000000000005",
+    company_name: "Etsy",
+    role_title: "Old Role",
+    latest_status: "applied",
+    archived: true,
+  });
+  serve({ "POST /auth/mobile/refresh": refreshed, "GET /applications": listOf(ARCHIVED, AIRBNB) });
+  await renderApp("/applications");
+
+  expect(await screen.findByRole("link", { name: "Etsy, Old Role, Applied, Archived" })).toBeTruthy();
+  expect(screen.getAllByText("Archived")).toHaveLength(1);
+  expect(screen.getByRole("link", { name: /^Airbnb, Senior Engineer/ }).props.accessibilityLabel).not.toMatch(/Archived/);
+});
+
 it("opens an application's own screen when its row is pressed", async () => {
   serve({
     "POST /auth/mobile/refresh": refreshed,

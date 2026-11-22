@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Applications from "@/pages/Applications";
 import { applicationsListResult } from "@/test-utils/applicationsListResult";
@@ -104,6 +104,7 @@ function makeApp(overrides: Partial<{
   latest_status: string | null;
   company_name: string | null;
   applied_at: string | null;
+  archived: boolean;
 }> = {}) {
   return {
     id: overrides.id ?? "app-1",
@@ -123,7 +124,7 @@ function makeApp(overrides: Partial<{
     remote_type: "remote",
     fit_score: null,
     notes: null,
-    archived: false,
+    archived: overrides.archived ?? false,
     external_ref: null,
     external_source: null,
     latest_status: overrides.latest_status ?? null,
@@ -166,6 +167,30 @@ describe("Applications page", () => {
       renderApplications();
 
       expect(screen.getByText(/The server returned 503/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("archived applications", () => {
+    it("marks an archived row with an Archived chip and leaves an active row without one", () => {
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({
+          page: {
+            items: [
+              makeApp({ id: "a", role_title: "Old Role", archived: true, latest_status: "applied" }),
+              makeApp({ id: "b", role_title: "Live Role" }),
+            ],
+            total: 2,
+          },
+        }),
+      );
+
+      renderApplications();
+
+      expect(screen.getAllByText("Archived")).toHaveLength(1);
+      const archivedRow = screen.getByRole("link", { name: /Old Role/ }).closest("tr") as HTMLElement;
+      const activeRow = screen.getByRole("link", { name: /Live Role/ }).closest("tr") as HTMLElement;
+      expect(within(archivedRow).getByText("Archived")).toBeInTheDocument();
+      expect(within(activeRow).queryByText("Archived")).toBeNull();
     });
   });
 
