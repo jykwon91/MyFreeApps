@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserCircle, Pencil, DollarSign } from "lucide-react";
 import { formatSalaryRange } from "@platform/ui";
+import ProfileLoadError from "@/features/profile/ProfileLoadError";
 import ProfileSkeleton from "@/features/profile/ProfileSkeleton";
 import ProfileHeaderDialog from "@/features/profile/ProfileHeaderDialog";
 import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
@@ -9,6 +10,7 @@ import WorkHistorySection from "@/features/profile/WorkHistorySection";
 import EducationSection from "@/features/profile/EducationSection";
 import SkillsSection from "@/features/profile/SkillsSection";
 import ScreeningAnswersSection from "@/features/profile/ScreeningAnswersSection";
+import { profileListState } from "@myjobhunter/api-client/utils/profileListState";
 import { formatSeniority } from "@myjobhunter/api-client/utils/formatSeniority";
 import { formatWorkAuthStatus } from "@myjobhunter/api-client/utils/formatWorkAuthStatus";
 import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
@@ -18,15 +20,19 @@ import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 import { useListScreeningAnswersQuery } from "@myjobhunter/api-client/store/screeningAnswersApi";
 
 export default function Profile() {
-  const { data: profile, isLoading: profileLoading } = useGetProfileQuery();
-  const { data: workHistoryData, isLoading: whLoading } = useListWorkHistoryQuery();
-  const { data: educationData, isLoading: eduLoading } = useListEducationQuery();
-  const { data: skillsData, isLoading: skillsLoading } = useListSkillsQuery();
-  const { data: screeningData, isLoading: screeningLoading } = useListScreeningAnswersQuery();
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useGetProfileQuery();
+  const workHistoryQuery = useListWorkHistoryQuery();
+  const educationQuery = useListEducationQuery();
+  const skillsQuery = useListSkillsQuery();
+  const screeningQuery = useListScreeningAnswersQuery();
+  const workHistory = profileListState(workHistoryQuery);
+  const education = profileListState(educationQuery);
+  const skills = profileListState(skillsQuery);
+  const screening = profileListState(screeningQuery);
 
   const [headerDialogOpen, setHeaderDialogOpen] = useState(false);
 
-  const isLoading = profileLoading || whLoading || eduLoading || skillsLoading || screeningLoading;
+  const isLoading = profileLoading || workHistoryQuery.isLoading || educationQuery.isLoading || skillsQuery.isLoading || screeningQuery.isLoading;
 
   if (isLoading) {
     return <ProfileSkeleton />;
@@ -36,7 +42,7 @@ export default function Profile() {
     return (
       <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
         <h1 className="sr-only">Profile</h1>
-        <p className="text-destructive">Couldn't load profile. Try refreshing.</p>
+        <ProfileLoadError message="We couldn't load your profile. Check your connection and try again." onRetry={refetchProfile} />
       </div>
     );
   }
@@ -109,13 +115,29 @@ export default function Profile() {
 
       <LocationsSection profile={profile} />
 
-      <WorkHistorySection entries={workHistoryData?.items ?? []} />
+      {workHistory.items ? (
+        <WorkHistorySection entries={workHistory.items} />
+      ) : (
+        <ProfileLoadError title="Work history" message="We couldn't load your work history." onRetry={workHistory.retry} />
+      )}
 
-      <EducationSection entries={educationData?.items ?? []} />
+      {education.items ? (
+        <EducationSection entries={education.items} />
+      ) : (
+        <ProfileLoadError title="Education" message="We couldn't load your education." onRetry={education.retry} />
+      )}
 
-      <SkillsSection skills={skillsData?.items ?? []} />
+      {skills.items ? (
+        <SkillsSection skills={skills.items} />
+      ) : (
+        <ProfileLoadError title="Skills" message="We couldn't load your skills." onRetry={skills.retry} />
+      )}
 
-      <ScreeningAnswersSection answers={screeningData?.items ?? []} />
+      {screening.items ? (
+        <ScreeningAnswersSection answers={screening.items} />
+      ) : (
+        <ProfileLoadError title="Screening answers" message="We couldn't load your screening answers." onRetry={screening.retry} />
+      )}
 
       <ResumeUploadSection profileId={profile.id} />
 

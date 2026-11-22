@@ -190,22 +190,22 @@ function setupAllMocks() {
   mockUpdateProfile.mockReturnValue(stubMutation as unknown as ReturnType<typeof useUpdateProfileMutation>);
 
   mockListWorkHistory.mockReturnValue({
-    data: { items: [], total: 0 },
+    currentData: { items: [], total: 0 },
     isLoading: false,
   } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
 
   mockListEducation.mockReturnValue({
-    data: { items: [], total: 0 },
+    currentData: { items: [], total: 0 },
     isLoading: false,
   } as unknown as ReturnType<typeof useListEducationQuery>);
 
   mockListSkills.mockReturnValue({
-    data: { items: [], total: 0 },
+    currentData: { items: [], total: 0 },
     isLoading: false,
   } as unknown as ReturnType<typeof useListSkillsQuery>);
 
   mockListScreening.mockReturnValue({
-    data: { items: [], total: 0 },
+    currentData: { items: [], total: 0 },
     isLoading: false,
   } as unknown as ReturnType<typeof useListScreeningAnswersQuery>);
 
@@ -271,10 +271,10 @@ describe("Profile page", () => {
         error: { status: 500 },
       } as unknown as ReturnType<typeof useGetProfileQuery>);
 
-      mockListWorkHistory.mockReturnValue({ data: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
-      mockListEducation.mockReturnValue({ data: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListEducationQuery>);
-      mockListSkills.mockReturnValue({ data: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListSkillsQuery>);
-      mockListScreening.mockReturnValue({ data: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListScreeningAnswersQuery>);
+      mockListWorkHistory.mockReturnValue({ currentData: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
+      mockListEducation.mockReturnValue({ currentData: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListEducationQuery>);
+      mockListSkills.mockReturnValue({ currentData: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListSkillsQuery>);
+      mockListScreening.mockReturnValue({ currentData: { items: [], total: 0 }, isLoading: false } as unknown as ReturnType<typeof useListScreeningAnswersQuery>);
       mockUpdateProfile.mockReturnValue(stubMutation as unknown as ReturnType<typeof useUpdateProfileMutation>);
       mockDeleteWorkHistory.mockReturnValue(stubMutation);
       mockDeleteEducation.mockReturnValue(stubMutation);
@@ -290,7 +290,7 @@ describe("Profile page", () => {
 
       renderProfile();
 
-      expect(screen.getByText(/couldn't load profile/i)).toBeInTheDocument();
+      expect(screen.getByText(/couldn't load your profile/i)).toBeInTheDocument();
     });
   });
 
@@ -353,7 +353,7 @@ describe("Profile page", () => {
     it("renders work history entries", () => {
       setupAllMocks();
       mockListWorkHistory.mockReturnValue({
-        data: {
+        currentData: {
           items: [
             {
               id: "wh1",
@@ -392,7 +392,7 @@ describe("Profile page", () => {
         updated_at: "2026-01-01T00:00:00Z",
       };
       mockListWorkHistory.mockReturnValue({
-        data: {
+        currentData: {
           items: [
             { ...base, id: "wh-current", company_name: "CurrentCo", end_date: null, is_current: true },
             { ...base, id: "wh-unknown", company_name: "UnknownCo", end_date: null, is_current: false },
@@ -412,7 +412,7 @@ describe("Profile page", () => {
     it("renders skill chips", () => {
       setupAllMocks();
       mockListSkills.mockReturnValue({
-        data: {
+        currentData: {
           items: [
             {
               id: "s1",
@@ -440,7 +440,7 @@ describe("Profile page", () => {
     it("renders EEOC and non-EEOC answer groups", () => {
       setupAllMocks();
       mockListScreening.mockReturnValue({
-        data: {
+        currentData: {
           items: [
             {
               id: "sa1",
@@ -568,7 +568,7 @@ describe("Profile page — deleting a work history entry", () => {
     setupAllMocks();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     mockListWorkHistory.mockReturnValue({
-      data: { items: [ENTRY], total: 1 },
+      currentData: { items: [ENTRY], total: 1 },
       isLoading: false,
     } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
   });

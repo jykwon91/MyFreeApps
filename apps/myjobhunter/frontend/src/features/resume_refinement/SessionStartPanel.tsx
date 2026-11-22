@@ -25,7 +25,7 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
   const cached = resumesApi.endpoints.listResumeJobs.useQueryState().data;
   // Poll only while an upload is still being read, so it appears here once it finishes.
   const isReading = resumeJobsInFlight(cached ?? []).length > 0;
-  const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
+  const { data: jobs, isLoading, isError, isFetching, refetch } = useListResumeJobsQuery(undefined, {
     pollingInterval: isReading ? RESUME_JOBS_POLL_INTERVAL_MS : 0,
     skipPollingIfUnfocused: true,
   });
@@ -46,6 +46,18 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
       </div>
+    );
+  }
+
+  // A failed first load says nothing about whether a resume was uploaded; a failed poll keeps the list.
+  if (isError && !jobs) {
+    return (
+      <EmptyState
+        icon={<Sparkles className="size-8 text-muted-foreground" />}
+        heading="We couldn't load your resumes"
+        body="Check your connection and try again. Your uploaded resumes are still saved."
+        action={{ label: "Try again", onClick: () => void refetch(), loading: isFetching }}
+      />
     );
   }
 

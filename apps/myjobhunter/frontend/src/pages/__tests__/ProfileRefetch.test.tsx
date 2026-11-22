@@ -13,7 +13,7 @@ vi.mock("@/features/profile/ResumeUploadSection", () => ({ default: () => <div d
 
 const { mutation, list } = vi.hoisted(() => ({
   mutation: () => [() => undefined, { isLoading: false }],
-  list: () => ({ data: { items: [] }, isLoading: false }),
+  list: () => ({ currentData: { items: [] }, isLoading: false }),
 }));
 
 vi.mock("@myjobhunter/api-client/store/profileApi", () => ({ useGetProfileQuery: vi.fn(), useUpdateProfileMutation: mutation }));
@@ -44,11 +44,11 @@ describe("Profile when a refetch fails", () => {
   it("keeps the profile on screen", () => {
     renderProfile(PROFILE);
     expect(screen.getByText("Experienced engineer")).toBeInTheDocument();
-    expect(screen.queryByText(/Couldn't load profile/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/couldn.t load your profile/)).not.toBeInTheDocument();
   });
 
   it("still says it couldn't load when there is nothing to show", () => {
     renderProfile(undefined);
-    expect(screen.getByText(/Couldn't load profile/)).toBeInTheDocument();
+    expect(screen.getByText(/couldn.t load your profile/)).toBeInTheDocument();
   });
 });

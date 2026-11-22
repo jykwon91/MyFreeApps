@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ProfileListState } from "./ProfileListState";
+import type { ProfileListState } from "@myjobhunter/api-client/types/profile-list/profile-list-state";
 
 export interface ProfileListSectionProps<Item> {
   title: string;
