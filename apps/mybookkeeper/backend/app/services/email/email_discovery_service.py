@@ -207,8 +207,8 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
                 )
                 filtered_count += 1
                 logger.info(
-                    "Filtered bounce email message_id=%s reason=%s subject=%r",
-                    message_id, bounce_result.reason, subject,
+                    "Filtered bounce email message_id=%s reason=%s",
+                    message_id, bounce_result.reason,
                 )
                 continue
 

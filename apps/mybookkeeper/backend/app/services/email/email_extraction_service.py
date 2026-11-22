@@ -246,7 +246,7 @@ async def _extract_claimed(ctx: RequestContext, claimed: ClaimedQueueItem, raw_c
     sender_email: str | None = None
     if claimed.attachment_id == "body":
         email_data = cast(EmailBodyData, json.loads(raw_content.decode("utf-8")))
-        logger.info("Extracting body for email id=%s subject=%r", claimed.message_id, email_data.get("subject"))
+        logger.info("Extracting body for queue item %s (message id=%s)", claimed.id, claimed.message_id)
         sender_email = email_data.get("from_address")
 
         # --- Booking ingestion pre-check ---
@@ -294,7 +294,7 @@ async def _extract_claimed(ctx: RequestContext, claimed: ClaimedQueueItem, raw_c
             content_type=claimed.attachment_content_type or "application/octet-stream",
             data=raw_content,
         )
-        logger.info("Extracting attachment %r for email id=%s", claimed.attachment_filename, claimed.message_id)
+        logger.info("Extracting attachment for queue item %s (message id=%s)", claimed.id, claimed.message_id)
         raw_result = await asyncio.wait_for(
             _extract_from_attachment(attachment, user_id=ctx.user_id),
             timeout=EXTRACTION_TIMEOUT_SECONDS,
