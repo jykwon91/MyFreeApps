@@ -4,7 +4,7 @@ import { Alert, type AlertButton, Text, TextInput } from "react-native";
 import FormSheet from "../components/FormSheet";
 import FormSheetCancelButton from "../components/FormSheetCancelButton";
 import LoadingButton from "../components/LoadingButton";
-import { DISCARD_MESSAGES } from "../constants/discard";
+import { DISCARD_MESSAGES } from "@platform/core/constants/discard";
 import { FORM_SHEET_TEST_ID } from "../constants/formSheet";
 
 const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);

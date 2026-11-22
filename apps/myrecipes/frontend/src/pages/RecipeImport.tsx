@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertBox } from "@platform/ui";
+import { AlertBox, useWarnBeforeUnload } from "@platform/ui";
 import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 import RecipeExtractionProgress from "@/features/recipes/RecipeExtractionProgress";
@@ -8,6 +8,7 @@ import RecipeImportUploadStep from "@/features/recipes/RecipeImportUploadStep";
 import { useExtractRecipeFromPhotoMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import { PHOTO_IMPORT_COPY } from "@myrecipes/api-client/constants/photoImport";
+import { CHOOSE_AGAIN_DISCARD_COPY } from "@myrecipes/api-client/constants/recipeDiscard";
 import { photoImportErrorMessage } from "@myrecipes/api-client/utils/photoImportErrorMessage";
 
 type ImportStep = "upload" | "extracting" | "review";
@@ -36,15 +37,7 @@ export default function RecipeImport() {
   }, [objectUrl]);
 
   // Warn before a browser close/refresh abandons an in-flight extraction.
-  useEffect(() => {
-    if (step !== "extracting") return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [step]);
+  useWarnBeforeUnload(step === "extracting");
 
   function selectFile(next: File) {
     setObjectUrl((prev) => {
@@ -97,7 +90,12 @@ export default function RecipeImport() {
           title={PHOTO_IMPORT_COPY.title}
           subtitle="We've pre-filled what we could from your photo — edit anything that looks off, then save."
         />
-        <RecipeEditorForm mode="create" initialDraft={draft} onCancel={() => setStep("upload")} />
+        <RecipeEditorForm
+          mode="create"
+          seed={{ draft, origin: "photo" }}
+          onCancel={() => setStep("upload")}
+          cancelCopy={CHOOSE_AGAIN_DISCARD_COPY}
+        />
       </div>
     );
   }

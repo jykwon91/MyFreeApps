@@ -2,7 +2,7 @@ import { act, screen } from "@testing-library/react-native";
 import { router, Stack } from "expo-router";
 import { renderRouter } from "expo-router/testing-library";
 import { Alert, type AlertButton, Text } from "react-native";
-import { DISCARD_MESSAGES } from "../constants/discard";
+import { DISCARD_MESSAGES } from "@platform/core/constants/discard";
 import { useDiscardPrompt } from "../hooks/useDiscardPrompt";
 
 const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);

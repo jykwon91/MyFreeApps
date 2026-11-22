@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Ref } from "react";
 import { useForm } from "react-hook-form";
 import type { FieldErrors } from "react-hook-form";
@@ -8,14 +8,13 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
-import { Panel, PanelTitle, LoadingButton, ConfirmDialog, showError } from "@platform/ui";
+import { Panel, PanelTitle, LoadingButton, ConfirmDialog, UnsavedChangesDialog, showError, useWarnBeforeUnload } from "@platform/ui";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
-import UnsavedChangesDialog from "@/app/features/transactions/UnsavedChangesDialog";
 import TaxYearChangeDialog from "@/app/features/transactions/TaxYearChangeDialog";
 import { useTaxYearQuestion } from "@/app/features/transactions/useTaxYearQuestion";
-import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
+import { TRANSACTION_DISCARD_COPY, TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
@@ -137,15 +136,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   useImperativeHandle(ref, () => ({ requestClose }));
 
   // Closing or reloading the tab gets the browser's own "leave site?" prompt.
-  useEffect(() => {
-    if (!isDirty) return;
-    function warn(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
+  useWarnBeforeUnload(isDirty);
 
   function handleClose() {
     requestClose(onClose);
@@ -303,11 +294,16 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
 
       <UnsavedChangesDialog
         open={pendingClose !== null}
-        isSaving={isSaving || isSavingAndClosing}
+        copy={TRANSACTION_DISCARD_COPY}
         error={unsavedSaveError}
         onKeepEditing={handleKeepEditing}
         onDiscard={handleDiscard}
-        onSave={handleSaveAndClose}
+        save={{
+          label: MSG.saveAndClose,
+          loadingLabel: MSG.saving,
+          isSaving: isSaving || isSavingAndClosing,
+          onSave: handleSaveAndClose,
+        }}
       />
 
       <TaxYearChangeDialog question={taxYearQuestion.question} onChoose={taxYearQuestion.answer} />

@@ -6,6 +6,7 @@ import { changeNoteProblem } from "@myrecipes/api-client/utils/changeNoteProblem
 import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContentProblems";
 import { recipeFormValuesFromVersion } from "@myrecipes/api-client/utils/recipeFormValuesFromVersion";
 import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
+import { tweakFormIsDirty } from "@myrecipes/api-client/utils/tweakFormIsDirty";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { useNavigation } from "expo-router";
@@ -104,7 +105,7 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
     rows,
     isSaving,
     isLeaving: isSaved,
-    isDirty: values !== initialValues || changeNote !== "",
+    isDirty: tweakFormIsDirty(values, initialValues, changeNote),
     edit,
     setChangeNote,
     save,

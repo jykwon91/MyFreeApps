@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { DiscardCopy } from "./DiscardCopy";
+import type { DiscardCopy } from "@platform/core/types/discard/discard-copy";
 
 export interface FormSheetProps {
   title: string;

@@ -1,5 +1,6 @@
 import { Banner, confirmDiscard, LoadingButton, useConfirmLeave } from "@platform/mobile";
-import { CHOOSE_AGAIN_DISCARD_COPY, DRAFT_DISCARD_COPY, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { CHOOSE_AGAIN_DISCARD_COPY, DRAFT_DISCARD_COPY } from "@myrecipes/api-client/constants/recipeDiscard";
+import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { NewRecipeFormProps } from "../../types/NewRecipeFormProps";
 import { draftNotice } from "../../utils/draftNotice";
 import RecipeDetailsFields from "./RecipeDetailsFields";

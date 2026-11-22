@@ -3,10 +3,10 @@ import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/e
 import { act, render } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { DRAFT_DISCARD_COPY } from "../src/constants/newRecipe";
+import { DRAFT_DISCARD_COPY } from "@myrecipes/api-client/constants/recipeDiscard";
 import NewRecipeForm from "../src/features/newRecipe/NewRecipeForm";
 import { makeStore } from "../src/lib/store";
-import type { DraftOrigin } from "../src/types/DraftOrigin";
+import type { DraftOrigin } from "@myrecipes/api-client/types/recipe/draft-origin";
 
 const mockRepeat = jest.fn();
 const mockGuard: { prevent: boolean; ask: ((event: { repeat: () => void }) => void) | null } = { prevent: false, ask: null };

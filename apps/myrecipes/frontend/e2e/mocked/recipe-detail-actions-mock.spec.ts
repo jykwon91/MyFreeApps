@@ -49,6 +49,8 @@ test.describe("Edit", () => {
     const dialog = page.getByRole("dialog", { name: "Edit recipe details" });
     await dialog.getByLabel("Title").fill("Half typed");
     await dialog.getByRole("button", { name: "Cancel" }).click();
+    // Cancel asks before throwing the edit away.
+    await page.getByRole("alertdialog", { name: "Discard your changes?" }).getByRole("button", { name: "Discard" }).click();
     await expect(dialog).toHaveCount(0);
 
     await page.getByRole("button", { name: "Edit", exact: true }).click();
