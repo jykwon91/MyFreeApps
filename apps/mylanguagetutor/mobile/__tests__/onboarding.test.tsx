@@ -15,7 +15,7 @@ import { PROFILE_GATE_MESSAGES } from "../src/constants/onboarding";
 import { store } from "../src/lib/store";
 import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
-import { SCENARIOS, SPANISH, USAGE_LEFT } from "../test-support/tutorRecords";
+import { PROFILE, SCENARIOS, SPANISH, USAGE_LEFT } from "../test-support/tutorRecords";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -171,7 +171,7 @@ describe("onboarding", () => {
   });
 
   it("says when the level couldn't be saved, and keeps the choice to try again", async () => {
-    const sent = serveNewLearner({ "PUT /profile": () => ({ status: 422, data: { detail: "Unsupported language" } }) });
+    const sent = serveNewLearner({ "PUT /profile": () => ({ status: 400, data: { detail: "Bad request" } }) });
     await renderApp();
     await chooseSpanish();
 
@@ -182,6 +182,42 @@ describe("onboarding", () => {
     expect(screen).toHavePathname("/onboarding/level");
     expect(screen.getByRole("radio", { name: "I can hold a conversation" })).toBeChecked();
     expect(sent.filter((request) => request.route === "PUT /profile")).toHaveLength(1);
+  });
+
+  it("tells the learner to choose a language again when the server doesn't accept the one they had", async () => {
+    serveNewLearner({ "PUT /profile": () => ({ status: 422, data: { detail: "Unsupported language" } }) });
+    await renderApp();
+    await chooseSpanish();
+
+    await fireEvent.press(screen.getByRole("radio", { name: "I can hold a conversation" }));
+    await fireEvent.press(screen.getByRole("button", { name: ONBOARDING_COPY.continue }));
+
+    expect(await screen.findByRole("alert", { name: ONBOARDING_COPY.saveBadLanguage })).toBeTruthy();
+    expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveFailed })).toBeNull();
+  });
+
+  it("sends a language that isn't on offer back to the language step instead of trying to save it", async () => {
+    const sent = serveNewLearner();
+    await renderApp("/onboarding/level?language=xx");
+
+    await waitFor(() => expect(screen).toHavePathname("/onboarding/language"));
+    expect(sent.some((request) => request.route === "PUT /profile")).toBe(false);
+  });
+
+  it("offers a retry when the saved profile can't load and no language was chosen, instead of the language step", async () => {
+    let isDown = true;
+    serve({
+      "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }),
+      ...ONBOARDED_LEARNER_ROUTES,
+      "GET /profile": () => (isDown ? { status: 500, data: {} } : { status: 200, data: PROFILE }),
+    });
+    await renderApp("/onboarding/level");
+
+    expect(await screen.findByRole("header", { name: CATALOG_COPY.loadFailed })).toBeTruthy();
+    expect(screen).toHavePathname("/onboarding/level");
+    isDown = false;
+    await fireEvent.press(screen.getByRole("button", { name: CATALOG_COPY.retry }));
+    await waitFor(() => expect(screen.getByRole("radio", { name: "I know some phrases" })).toBeChecked());
   });
 
   it("says nothing about a save that signing out called off", async () => {

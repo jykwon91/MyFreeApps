@@ -5,19 +5,21 @@ import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOption
 import { LEVEL_SAVE_FAILURE_COPY, ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useLevelChoice } from "@mylanguagetutor/api-client/hooks/useLevelChoice";
+import CatalogError from "@/features/catalog/CatalogError";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 
 /** Onboarding step 2 (and "Change level" later): how much the learner already knows. */
 export default function OnboardingLevel() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { languageCode, selected, pick, isProfilePending, isFirstTime, isSaving, saveFailure, save } = useLevelChoice(
+  const { languageCode, selected, pick, isPending, loadFailed, retry, isFirstTime, isSaving, saveFailure, save } = useLevelChoice(
     params.get("language"),
   );
 
   if (!languageCode) {
-    // Profile still loading: wait; no profile and no language chosen: step 1.
-    if (isProfilePending) return <PageSkeleton />;
+    // Still loading: wait; the profile won't load: offer a retry; no usable language chosen: step 1.
+    if (isPending) return <PageSkeleton />;
+    if (loadFailed) return <CatalogError onRetry={() => void retry()} />;
     return <Navigate to={ONBOARDING_LANGUAGE_PATH} replace />;
   }
 
