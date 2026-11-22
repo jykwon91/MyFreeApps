@@ -16,7 +16,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
-  useGetCompanyResearchQuery: () => ({ data: undefined, isError: false, error: undefined }),
+  useGetCompanyResearchQuery: () => ({ data: undefined, isError: false, error: undefined, isFetching: false, refetch: vi.fn() }),
   useTriggerCompanyResearchMutation: () => [trigger, mutationState],
 }));
 

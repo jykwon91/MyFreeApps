@@ -7,7 +7,6 @@ export const COMPANY_RESEARCH_MESSAGES = {
   running: "Researching…",
   runningNote: (name: string) => `Researching ${name}. This can take up to half a minute; I'll say when it's ready.`,
   rerun: "Run research again",
-  ready: "The research is ready.",
   couldntRun: "I couldn't run the research. Want to try again?",
   failedBody: "The research didn't finish.",
   notConfigured: "Research isn't set up on the server, so it can't run. Trying again won't help until it is.",

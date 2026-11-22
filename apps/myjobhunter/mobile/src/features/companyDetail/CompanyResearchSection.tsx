@@ -1,6 +1,9 @@
 import { useCompanyResearchRun } from "@myjobhunter/api-client/hooks/useCompanyResearchRun";
 import { useGetCompanyResearchQuery } from "@myjobhunter/api-client/store/companiesApi";
+import { COMPANY_RESEARCH_READY_MESSAGE } from "@myjobhunter/api-client/constants/companyResearchMessages";
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
+import { researchFirstLoading } from "@myjobhunter/api-client/utils/researchFirstLoading";
+import { researchLoadFailed } from "@myjobhunter/api-client/utils/researchLoadFailed";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { LoadingRegion, SectionError, useTheme, useToast } from "@platform/mobile";
@@ -31,7 +34,7 @@ export default function CompanyResearchSection({ companyId, companyName }: Compa
   async function runResearch(): Promise<void> {
     try {
       await triggerResearch(companyId).unwrap();
-      showToast(MESSAGES.ready);
+      showToast(COMPANY_RESEARCH_READY_MESSAGE);
     } catch (error) {
       if (isCancelledRequest(error)) return;
       showToast(researchFailureMessage(researchRunFailure(error).reason, MESSAGES.couldntRun), "error");
@@ -39,9 +42,9 @@ export default function CompanyResearchSection({ companyId, companyName }: Compa
   }
 
   // The website shows Run research until the first answer; the phone shows where the research will be.
-  const isFirstLoad = mode === "no-research" && !query.data && query.isFetching;
+  const isFirstLoad = researchFirstLoading(mode, query.data, query.isFetching);
   // A failed GET offers to load it again; only a failed run offers to run it again.
-  const couldntLoad = mode === "failed" && !run.isError;
+  const couldntLoad = researchLoadFailed(mode, run.isError);
 
   return (
     <View style={{ gap: spacing.md }} testID="company-research">

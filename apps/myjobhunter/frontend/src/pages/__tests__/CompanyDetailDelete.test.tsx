@@ -7,7 +7,7 @@ import CompanyDetail from "@/pages/CompanyDetail";
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useGetCompanyQuery: vi.fn(),
   useDeleteCompanyMutation: vi.fn(),
-  useGetCompanyResearchQuery: vi.fn(() => ({ data: undefined, isLoading: false, isError: false })),
+  useGetCompanyResearchQuery: vi.fn(() => ({ data: undefined, isLoading: false, isError: false, isFetching: false, refetch: vi.fn() })),
   useRunCompanyResearchMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({

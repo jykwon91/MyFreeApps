@@ -2,6 +2,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import { researchFailureMessage } from "../../lib/researchFailureMessage";
+import { canRetryResearch } from "@myjobhunter/api-client/utils/canRetryResearch";
 import { researchFailureFixedMessage } from "@myjobhunter/api-client/utils/researchFailureFixedMessage";
 import type { ResearchFailedProps } from "../../types/ResearchFailedProps";
 
@@ -25,7 +26,7 @@ export default function ResearchFailed({ failure, isRunning, onRun }: ResearchFa
           {failure.detail}
         </Text>
       ) : null}
-      {reason !== "not-configured" && reason !== "company-gone" ? (
+      {canRetryResearch(reason) ? (
         <LoadingButton isLoading={isRunning} loadingText={MESSAGES.running} onPress={onRun}>
           {MESSAGES.tryAgain}
         </LoadingButton>
