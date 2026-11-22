@@ -58,6 +58,14 @@ describe("getting to the duplicates", () => {
     expect(mockPush).toHaveBeenCalledWith("/duplicates");
   });
 
+  it("marks only the rows that sit in a suspected pair on the Money tab", async () => {
+    const server = startTransactionServer([aTransaction({ id: "a1", vendor: "Paired Vendor" }), aTransaction({ id: "z9", vendor: "Lone Vendor" })]);
+    server.duplicates = [aDuplicatePair()];
+    await renderMoney();
+    await screen.findByText("Lone Vendor");
+    expect(await screen.findAllByText("Possible duplicate")).toHaveLength(1);
+  });
+
   it("shows nothing on the Money tab when there are none", async () => {
     startTransactionServer([aTransaction()]);
     await renderMoney();

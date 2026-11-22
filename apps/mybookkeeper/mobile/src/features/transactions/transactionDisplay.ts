@@ -8,6 +8,7 @@ import { taxRelevantParam } from "@mybookkeeper/api-client/utils/taxRelevantPara
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import { formatCurrency } from "@platform/core/utils/currency";
+import { POSSIBLE_DUPLICATE_LABEL } from "../../constants/duplicates";
 import { SORT_DIRECTIONS } from "../../constants/sortSheet";
 import { TAX_FILTER } from "../../constants/transactionFilters";
 import { fullDateLabel } from "../../lib/localDate";
@@ -17,7 +18,7 @@ const STATUS_LABELS: Record<TransactionStatus, string> = {
   pending: "Pending",
   needs_review: "Needs review",
   unverified: "Unverified",
-  duplicate: "Possible duplicate",
+  duplicate: POSSIBLE_DUPLICATE_LABEL,
   approved: "Approved",
 };
 

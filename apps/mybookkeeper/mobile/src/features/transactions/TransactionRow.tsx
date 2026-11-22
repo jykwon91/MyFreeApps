@@ -3,6 +3,7 @@ import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/ca
 import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
+import { POSSIBLE_DUPLICATE_LABEL } from "../../constants/duplicates";
 import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
 
 function TransactionRow({
@@ -11,6 +12,7 @@ function TransactionRow({
   onPress,
   onLongPress,
   isSelected,
+  isPossibleDuplicate = false,
 }: {
   transaction: Transaction;
   propertyName: string | null;
@@ -20,6 +22,8 @@ function TransactionRow({
   onLongPress?: (transaction: Transaction) => void;
   /** Set while picking several: the row then ticks on and off instead of opening. */
   isSelected?: boolean;
+  /** The transaction sits in a suspected-duplicate pair waiting for review. */
+  isPossibleDuplicate?: boolean;
 }) {
   const isPicking = isSelected !== undefined;
   const { colors, spacing, fontSize } = useTheme();
@@ -70,9 +74,10 @@ function TransactionRow({
       <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {details}
       </ClampedText>
-      {transaction.status === "approved" && !transaction.is_capital_improvement ? null : (
+      {transaction.status === "approved" && !transaction.is_capital_improvement && !isPossibleDuplicate ? null : (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
           {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
+          {isPossibleDuplicate ? <Chip label={POSSIBLE_DUPLICATE_LABEL} /> : null}
           {transaction.is_capital_improvement ? <Chip label={CAPITAL_IMPROVEMENT_LABEL} /> : null}
         </View>
       )}
