@@ -58,6 +58,7 @@ function anItem(overrides: Partial<ChecklistItem> = {}): ChecklistItem {
 }
 
 interface Server {
+  returnYears: number[];
   response: SourceDocumentsResponse;
   reads: unknown[];
   dead: boolean;
@@ -66,8 +67,12 @@ interface Server {
 }
 
 function serve(response: SourceDocumentsResponse = { documents: [aDocument()], checklist: [anItem()] }): Server {
-  const server: Server = { response, reads: [], dead: false, never: false };
+  const server: Server = { returnYears: [2025, 2024], response, reads: [], dead: false, never: false };
   const adapter: AxiosAdapter = async (config: AxiosRequestConfig & { url?: string }) => {
+    if (config.url === "/tax-returns") {
+      const returns = server.returnYears.map((tax_year) => ({ id: String(tax_year), tax_year }));
+      return { data: returns, status: 200, statusText: "", headers: {}, config } as never;
+    }
     if (server.never) return new Promise(() => undefined);
     if (server.dead) throw Object.assign(new Error("Network Error"), { isAxiosError: true, config });
     server.reads.push((config.params as { tax_year: number } | undefined)?.tax_year ?? "all");
@@ -235,6 +240,16 @@ describe("TaxDocumentsScreen", () => {
     await screen.findByText("Airbnb");
     await chooseYear("2024");
     await waitFor(() => expect(server.reads).toEqual([2025, 2024]));
+  });
+
+  it("offers every year that has a tax return, not just the last three", async () => {
+    const server = serve();
+    server.returnYears = [2019, 2025];
+    await show();
+    await screen.findByText("Airbnb");
+    await fireEvent.press(screen.getByLabelText(new RegExp(`^${TAX_REPORT_MESSAGES.year}`)));
+    expect(await screen.findByText("2019")).toBeTruthy();
+    expect(screen.getAllByText("2025")).toHaveLength(2);
   });
 
   it("shows every year when asked, with the years told apart and no year sent", async () => {
