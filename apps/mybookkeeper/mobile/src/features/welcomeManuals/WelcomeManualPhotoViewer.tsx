@@ -57,8 +57,8 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
           <WelcomeManualViewerButton glyph={GLYPHS.close} label={MESSAGES.close} onPress={onClose} />
         </View>
         <View pointerEvents="box-none" style={{ position: "absolute", top: 0, bottom: 0, left: 12, right: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          {index > 0 ? <WelcomeManualViewerButton glyph={GLYPHS.previous} label={MESSAGES.previous} onPress={() => goTo(index - 1)} /> : <View />}
-          {index < total - 1 ? <WelcomeManualViewerButton glyph={GLYPHS.next} label={MESSAGES.next} onPress={() => goTo(index + 1)} /> : <View />}
+          <WelcomeManualViewerButton disabled={index <= 0} glyph={GLYPHS.previous} label={MESSAGES.previous} onPress={() => goTo(index - 1)} />
+          <WelcomeManualViewerButton disabled={index >= total - 1} glyph={GLYPHS.next} label={MESSAGES.next} onPress={() => goTo(index + 1)} />
         </View>
         <View pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 12, left: 0, right: 0, alignItems: "center" }}>
           <Text style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, overflow: "hidden", backgroundColor: STYLE.overlay, color: STYLE.onBackdrop }}>

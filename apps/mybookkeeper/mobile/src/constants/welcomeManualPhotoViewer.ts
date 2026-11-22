@@ -21,6 +21,7 @@ export const WELCOME_MANUAL_PHOTO_VIEWER_STYLE = {
   mutedOnBackdrop: "#d4d4d4",
   touchTarget: 44,
   glyphSize: 28,
+  disabledOpacity: 0.4,
 } as const;
 
 export function photoViewerCounter(index: number, total: number): string {
