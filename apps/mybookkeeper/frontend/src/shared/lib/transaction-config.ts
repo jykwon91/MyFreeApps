@@ -16,8 +16,6 @@ export const EMPTY_FILTERS: Filters = {
 /** The transactions table opens on its first page of 25 rows. */
 export const INITIAL_TRANSACTION_PAGINATION: PaginationState = { pageIndex: 0, pageSize: 25 };
 
-export const STATUS_OPTIONS = ["pending", "approved", "needs_review", "duplicate", "unverified"] as const;
-
 // Statuses that can be promoted to "approved" via the inline ✓ / bulk Approve
 // actions (the row must also have a property assigned). Mirrors the backend
 // allowlist in transaction_bulk_repo.bulk_approve.

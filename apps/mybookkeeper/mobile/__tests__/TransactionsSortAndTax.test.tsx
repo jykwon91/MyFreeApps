@@ -65,7 +65,7 @@ function threeRows(): FakeTransactionServer {
 }
 
 const listParams = (server: FakeTransactionServer): TransactionListParams[] =>
-  server.requests.filter((request) => request.url === "/transactions").map((request) => (request.params ?? {}) as TransactionListParams);
+  server.requests.filter((request) => request.url === "/transactions/page").map((request) => (request.params ?? {}) as TransactionListParams);
 
 const shownVendors = (): string[] =>
   (screen.getByTestId("transactions-list").props.data as { vendor: string }[]).map((row) => row.vendor);
@@ -88,7 +88,7 @@ describe("Transactions sort and tax filter", () => {
 
     await waitFor(() => expect(shownVendors()).toEqual(["Small", "Mid", "Big"]));
     expect(listParams(server)).toContainEqual(expect.objectContaining({ sort_by: "amount", sort_dir: "asc" }));
-    expect(screen.getByText("Amount, ascending")).toBeTruthy();
+    expect(screen.getByText("3 transactions · Amount, ascending")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Filters" })).toBeTruthy();
   });
 
@@ -137,7 +137,7 @@ describe("Transactions sort and tax filter", () => {
     expect(screen.queryByText("Big")).toBeNull();
     expect(listParams(server)).toContainEqual(expect.objectContaining({ tax_relevant: true }));
     expect(screen.getByRole("button", { name: "Filters, 1 on" })).toBeTruthy();
-    expect(screen.getByText("In tax report")).toBeTruthy();
+    expect(screen.getByText("2 transactions · In tax report")).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear" }));
     expect(await screen.findByText("Big")).toBeTruthy();
@@ -154,7 +154,7 @@ describe("Transactions sort and tax filter", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
 
     expect(await screen.findByText("Nothing matches that")).toBeTruthy();
-    expect(screen.getByText("Not in tax report · Vendor, ascending")).toBeTruthy();
+    expect(screen.getByText("0 transactions · Not in tax report · Vendor, ascending")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("Counts")).toBeTruthy();
     expect(screen.queryByText(/Vendor, ascending/)).toBeNull();

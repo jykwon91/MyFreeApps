@@ -77,7 +77,7 @@ describe("exporting transactions from the Money tab", () => {
 
   it("downloads the CSV with the current filters, opens the share sheet, and removes the copy", async () => {
     startTransactionServer([aTransaction()]);
-    await renderScreen({ ...NO_FILTERS, month: "2026-03", type: "expense", propertyId: "p1", approvedOnly: true, category: "maintenance" });
+    await renderScreen({ ...NO_FILTERS, month: "2026-03", type: "expense", propertyId: "p1", status: "approved", category: "maintenance" });
     await openSheet();
     await fireEvent.press(screen.getByRole("radio", { name: "CSV spreadsheet" }));
     await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(1));

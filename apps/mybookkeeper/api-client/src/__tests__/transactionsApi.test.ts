@@ -9,6 +9,8 @@ import { transactionsApi } from "../store/transactionsApi";
 
 const sent: InternalAxiosRequestConfig[] = [];
 let rowsPerRequest: number[] = [];
+/** How many rows every matching page says the filters match, across every page. */
+let matchingRows = 0;
 
 function makeStore() {
   return configureStore({
@@ -28,7 +30,9 @@ beforeAll(() => {
     sent.push(config);
     const count = rowsPerRequest.shift() ?? 0;
     const rows = Array.from({ length: count }, (_, index) => ({ id: `${sent.length}-${index}` }));
-    const data = config.url?.startsWith("/transactions/page") ? { items: rows, total: count, has_more: false } : rows;
+    const offset = Number(new URLSearchParams(config.url?.split("?")[1]).get("offset") ?? 0);
+    const total = Math.max(matchingRows, count);
+    const data = config.url?.startsWith("/transactions/page") ? { items: rows, total, has_more: offset + count < total } : rows;
     return Promise.resolve({ data, status: 200, statusText: "", headers: {}, config });
   };
   api.defaults.adapter = adapter;
@@ -37,24 +41,28 @@ beforeAll(() => {
 beforeEach(() => {
   sent.length = 0;
   rowsPerRequest = [];
+  matchingRows = 0;
 });
 
 describe("listTransactionPages", () => {
-  it("asks for the next page after a full one and stops after a short one", async () => {
+  it("asks for the next page while the server says more match, and stops when it says none do", async () => {
     const store = makeStore();
     rowsPerRequest = [TRANSACTION_PAGE_SIZE, 3];
+    matchingRows = TRANSACTION_PAGE_SIZE + 3;
     const initiate = transactionsApi.endpoints.listTransactionPages.initiate;
 
-    await store.dispatch(initiate({ to_review: true }));
+    const first = await store.dispatch(initiate({ to_review: true }));
+    expect(first.hasNextPage).toBe(true);
     const second = await store.dispatch(initiate({ to_review: true }, { direction: "forward" }));
 
     expect(sent.map((request) => request.url)).toEqual([
-      `/transactions?to_review=true&limit=${TRANSACTION_PAGE_SIZE}&offset=0`,
-      `/transactions?to_review=true&limit=${TRANSACTION_PAGE_SIZE}&offset=${TRANSACTION_PAGE_SIZE}`,
+      `/transactions/page?to_review=true&limit=${TRANSACTION_PAGE_SIZE}&offset=0`,
+      `/transactions/page?to_review=true&limit=${TRANSACTION_PAGE_SIZE}&offset=${TRANSACTION_PAGE_SIZE}`,
     ]);
     expect(sent.every((request) => request.params === undefined)).toBe(true);
     expect(second.hasNextPage).toBe(false);
-    expect(second.data?.pages.flat()).toHaveLength(TRANSACTION_PAGE_SIZE + 3);
+    expect(second.data?.pages.flatMap((page) => page.items)).toHaveLength(TRANSACTION_PAGE_SIZE + 3);
+    expect(second.data?.pages[0]?.total).toBe(TRANSACTION_PAGE_SIZE + 3);
   });
 
   it("sends list filters as repeated keys, never as statuses[]", async () => {
@@ -62,7 +70,7 @@ describe("listTransactionPages", () => {
     await store.dispatch(transactionsApi.endpoints.listTransactionPages.initiate({ statuses: ["pending", "approved"] }));
 
     expect(sent.map((request) => request.url)).toEqual([
-      `/transactions?statuses=pending&statuses=approved&limit=${TRANSACTION_PAGE_SIZE}&offset=0`,
+      `/transactions/page?statuses=pending&statuses=approved&limit=${TRANSACTION_PAGE_SIZE}&offset=0`,
     ]);
   });
 });

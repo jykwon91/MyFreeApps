@@ -10,6 +10,8 @@
  *   - A multi-select header filter (Status: Pending + Needs Review) is sent to the
  *     server as repeated `statuses`, starts again from the first page, and the
  *     footer counts what it matches.
+ *   - The filter bar's Status choice offers the shared status labels (the phone's
+ *     filter sheet offers the same) and is sent to the server as `status`.
  *   - Shift-clicking a second column header sends both columns as repeated `sort`
  *     keys, the first-clicked one first.
  *   - Ticked rows that a filter-bar change hides are unticked (after the
@@ -117,6 +119,20 @@ test.describe("Transactions table paging", () => {
     await expect(page.getByText(`1–${PENDING_TOTAL} of ${PENDING_TOTAL}`)).toBeVisible();
     expect(lastRequest(requests).getAll("statuses")).toEqual(["pending", "needs_review"]);
     expect(lastRequest(requests).get("offset")).toBe("0");
+    await expect(table(page).getByText("Vendor 3", { exact: true })).toBeVisible();
+    await expect(table(page).getByText("Vendor 1", { exact: true })).toHaveCount(0);
+  });
+
+  test("the filter bar's Status choice is sent as status and counted by the server", async ({ page }) => {
+    const requests = await openList(page);
+    await expect(page.getByText(`1–25 of ${TOTAL}`)).toBeVisible();
+    const status = page.getByRole("combobox", { name: "Filter by status" });
+
+    await expect(status.getByRole("option")).toHaveText(["All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified"]);
+    await status.selectOption("pending");
+
+    await expect(page.getByText(`1–${PENDING_TOTAL} of ${PENDING_TOTAL}`)).toBeVisible();
+    expect(lastRequest(requests).get("status")).toBe("pending");
     await expect(table(page).getByText("Vendor 3", { exact: true })).toBeVisible();
     await expect(table(page).getByText("Vendor 1", { exact: true })).toHaveCount(0);
   });

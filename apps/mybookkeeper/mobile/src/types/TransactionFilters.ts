@@ -1,5 +1,6 @@
 import type { SortDirection } from "@mybookkeeper/api-client/types/sort/SortDirection";
 import type { TaxRelevantChoice } from "@mybookkeeper/api-client/types/transaction/TaxRelevantChoice";
+import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import type { TransactionSortField } from "@mybookkeeper/api-client/types/transaction/TransactionSortField";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import type { TransactionPeriod } from "./TransactionPeriod";
@@ -18,8 +19,8 @@ export interface TransactionFilters {
   propertyId: string | null;
   category: string | null;
   vendor: string;
-  /** Only rows that count towards the money totals. */
-  approvedOnly: boolean;
+  /** Only rows in this status; links from money totals set "approved", the rows those totals count. */
+  status: TransactionStatus | null;
   /** Only rows in the tax report, or only rows left out of it. */
   taxRelevant: TaxRelevantChoice | null;
   /** How the "All" view is ordered; the review queue is always newest first. */

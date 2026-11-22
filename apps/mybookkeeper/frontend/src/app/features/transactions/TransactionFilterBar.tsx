@@ -1,7 +1,8 @@
 import { formatTag } from "@/shared/utils/tag";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
-import { STATUS_OPTIONS, TYPE_OPTIONS, ALL_CATEGORIES, EMPTY_FILTERS } from "@/shared/lib/transaction-config";
+import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
+import { TYPE_OPTIONS, ALL_CATEGORIES, EMPTY_FILTERS } from "@/shared/lib/transaction-config";
 import Select from "@/shared/components/ui/Select";
 import CollapsibleFilters from "@/shared/components/ui/CollapsibleFilters";
 
@@ -29,8 +30,8 @@ export default function TransactionFilterBar({ filters, onChange, properties }: 
 
       <Select aria-label="Filter by status" value={filters.status} onChange={(e) => update("status", e.target.value)} className="text-xs py-1.5">
         <option value="">All Statuses</option>
-        {STATUS_OPTIONS.map((s) => (
-          <option key={s} value={s}>{formatTag(s)}</option>
+        {TRANSACTION_STATUS_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </Select>
 

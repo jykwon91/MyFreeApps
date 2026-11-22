@@ -33,21 +33,21 @@ export const transactionsApi = baseApi.enhanceEndpoints({
           ? [...result.map((t) => ({ type: "Transaction" as const, id: t.id })), { type: "Transaction", id: "LIST" }]
           : [{ type: "Transaction", id: "LIST" }],
     }),
-    // The server sends no total, so a short page is how the list knows it reached the end.
-    listTransactionPages: builder.infiniteQuery<Transaction[], TransactionListParams, number>({
+    // The phone's list, a page at a time; each page carries how many rows the filters match, so the list can say so.
+    listTransactionPages: builder.infiniteQuery<TransactionListPage, TransactionListParams, number>({
       infiniteQueryOptions: {
         initialPageParam: 0,
         getNextPageParam: (lastPage, _allPages, lastOffset) =>
-          lastPage.length < TRANSACTION_PAGE_SIZE ? undefined : lastOffset + TRANSACTION_PAGE_SIZE,
+          lastPage.has_more ? lastOffset + TRANSACTION_PAGE_SIZE : undefined,
       },
       query: ({ queryArg, pageParam }) => ({
         url: pathWithQuery(
-          "/transactions",
+          "/transactions/page",
           `${transactionListQuery({ ...queryArg, limit: TRANSACTION_PAGE_SIZE })}&offset=${pageParam}`,
         ),
       }),
       providesTags: (result) => [
-        ...(result?.pages.flat().map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
+        ...(result?.pages.flatMap((page) => page.items).map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
         { type: "Transaction", id: "LIST" },
       ],
     }),

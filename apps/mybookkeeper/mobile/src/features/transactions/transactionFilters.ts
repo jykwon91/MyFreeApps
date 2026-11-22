@@ -1,4 +1,5 @@
 import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
+import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { taxRelevantParam } from "@mybookkeeper/api-client/utils/taxRelevantParam";
@@ -53,7 +54,7 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
       params.start_date = filters.startDate;
       params.end_date = filters.endDate;
     }
-    if (filters.approvedOnly) params.status = "approved";
+    if (filters.status) params.status = filters.status;
     if (isSorted(filters)) {
       params.sort_by = filters.sortBy;
       params.sort_dir = filters.sortDir;
@@ -76,7 +77,7 @@ export function clearedFilters(filters: TransactionFilters): TransactionFilters 
 }
 
 export function activeFilterCount(filters: TransactionFilters): number {
-  return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category, filters.taxRelevant].filter(Boolean).length;
+  return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.status, filters.type, filters.propertyId, filters.category, filters.taxRelevant].filter(Boolean).length;
 }
 
 export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilters {
@@ -93,7 +94,7 @@ export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilt
     propertyId: params.property || null,
     category: params.category || null,
     vendor: params.vendor ?? "",
-    approvedOnly: params.status === "approved",
+    status: TRANSACTION_STATUS_OPTIONS.find((option) => option.value === params.status)?.value ?? null,
     taxRelevant: TAX_RELEVANT_OPTIONS.find((option) => option.value === params.tax)?.value ?? null,
     sortBy: TRANSACTION_SORT_FIELDS.find((option) => option.value === params.sort)?.value ?? NO_FILTERS.sortBy,
     sortDir: SORT_DIRECTIONS.find((option) => option.value === params.order)?.value ?? NO_FILTERS.sortDir,
@@ -111,7 +112,7 @@ export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, 
     property: filters.propertyId ?? "",
     category: filters.category ?? "",
     vendor: filters.vendor,
-    status: filters.approvedOnly ? "approved" : "",
+    status: filters.status ?? "",
     tax: filters.taxRelevant ?? "",
     sort: isSorted(filters) ? filters.sortBy : "",
     order: isSorted(filters) ? filters.sortDir : "",

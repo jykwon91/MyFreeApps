@@ -70,6 +70,8 @@ export interface FakeTransactionServer {
   failListFromOffset: number | null;
   /** The status every "select all" request (GET /transactions/selection) fails with, while set. */
   failSelectionWith: number | null;
+  /** The status every Category filter request (GET /transactions/categories) fails with, while set. */
+  failCategoriesWith: number | null;
   retroactiveCount: number;
   summary: Partial<SummaryResponse>;
   summaryYears: number[];
@@ -148,6 +150,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     bulkCapitalBeforeFailing: null,
     failListFromOffset: null,
     failSelectionWith: null,
+    failCategoriesWith: null,
     retroactiveCount: 0,
     summary: { revenue: 0, expenses: 0, profit: 0, by_property: [] },
     summaryYears: [2026],
@@ -312,6 +315,10 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/selection") {
       if (server.failSelectionWith !== null) return respond({ detail: "nope" }, server.failSelectionWith);
       return respond(matching().map(({ id, property_id, status }) => ({ id, property_id, status })));
+    }
+    if (config.url === "/transactions/categories") {
+      if (server.failCategoriesWith !== null) return respond({ detail: "nope" }, server.failCategoriesWith);
+      return respond([...new Set(matching().map((row) => row.category))].sort());
     }
     if (config.url === "/transactions/page") {
       const offset = Number(listParams.offset ?? 0);
