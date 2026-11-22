@@ -20,6 +20,10 @@ local ADDON = "MGA Prices"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local SITE = "mygamingassistant.myfreeapps.org/wow-forever/auction-house"
 local OLD_AFTER_SECONDS = 24 * 60 * 60
+-- The MGA updater rewrites Data.lua every hour, but the game only reads it at login or /reload.
+-- Past this age a newer file is probably waiting on disk, so say once to /reload.
+local RELOAD_AFTER_SECONDS = 90 * 60
+local RELOAD_CHECK_SECONDS = 5 * 60
 local HOUSES = { "alliance", "horde", "neutral" }
 local HOUSE_LABEL = { alliance = "Alliance", horde = "Horde", neutral = "Blackwater" }
 local BIND_ON_PICKUP = 1
@@ -169,6 +173,24 @@ local function disenchantEV(itemId, house)
   return ev, anyMissing
 end
 
+-- What disenchanting gives, one material per line: "  1-2 Vision Dust · 75%   18s each".
+-- Most likely first, so the player can weigh selling against disenchanting themselves.
+local function addMaterials(tooltip, itemId)
+  local de = MGAPricesData and MGAPricesData.deItems and MGAPricesData.deItems[itemId]
+  local deTable = de and MGAPricesData.deTables and MGAPricesData.deTables[de[1]]
+  if not deTable then return end
+  local house = playerHouse()
+  local rows = {}
+  for resultId, entry in pairs(deTable) do table.insert(rows, { id = resultId, min = entry[1], max = entry[2], chance = entry[3] }) end
+  table.sort(rows, function(a, b) return a.chance > b.chance end)
+  for _, r in ipairs(rows) do
+    local name = (MGAPricesData.deNames and MGAPricesData.deNames[r.id]) or (getItemInfo and getItemInfo(r.id)) or ("item " .. r.id)
+    local amount = r.min == r.max and tostring(r.min) or (r.min .. "-" .. r.max)
+    local price = houseRow(house, r.id)
+    line(tooltip, "  " .. amount .. " " .. name .. " · " .. r.chance .. "%", price and (money(price[1]) .. " each") or "not on sale", MUTED, MUTED)
+  end
+end
+
 -- Disenchant / Sell on AH / Vendor it: pick the best option.
 -- market=nil means the item can't be auctioned (BoP or not listed).
 -- Shows at most one verdict line and one detail line.
@@ -248,11 +270,16 @@ local function addVerdict(tooltip, itemId, market, cut, count)
       line(tooltip, "Disenchant", prefix .. money(floor(deEV)), GOOD, VALUE)
       return
     end
-    -- DE didn't win; fall through to AH vs Vendor.
+    -- DE didn't win; fall through to AH vs Vendor, and still say what disenchanting gets.
     if ahNets and ahNets > vendorTotal * AH_BEATS_VENDOR_BY then
       line(tooltip, "Sell on AH", "+" .. money(ahNets - vendorTotal) .. " over vendor", GOOD, VALUE)
     else
       line(tooltip, "Vendor it", ahNets and ("AH nets " .. money(ahNets) .. " · vendor " .. money(vendorTotal)) or ("vendor " .. money(vendorTotal)), WARN, MUTED)
+    end
+    if deEV then
+      line(tooltip, "Disenchant", prefix .. money(floor(deEV)) .. " (less)", MUTED, MUTED)
+    else
+      line(tooltip, "Disenchant", deMissing and "~ prices not loaded" or "not priced", MUTED, MUTED)
     end
     return
   end
@@ -286,6 +313,7 @@ local function addYourHouse(tooltip, itemId)
   end
   line(tooltip, "Cheapest · on sale", money(cheapest) .. " · " .. quantity, MUTED, MUTED)
   addVerdict(tooltip, itemId, market, data.cut, count)
+  addMaterials(tooltip, itemId)
 end
 
 local function addEveryHouse(tooltip, itemId)
@@ -347,6 +375,7 @@ local function addPrice(tooltip, itemId)
     local deEntry = MGAPricesData.deItems and MGAPricesData.deItems[itemId]
     if deEntry then
       addVerdict(tooltip, itemId, nil, nil, stackCount(tooltip))
+      addMaterials(tooltip, itemId)
     elseif tooltip == ItemRefTooltip then
       line(tooltip, "Auction", "can't be sold (binds when picked up)", LABEL, MUTED)
     end
@@ -412,6 +441,19 @@ events:SetScript("OnEvent", function(_, _, key)
     GameTooltip:RefreshData()
   end
 end)
+
+-- Reload reminder: once per session, when the loaded prices are old enough that the updater has newer ones.
+local reloadReminded = false
+local function remindReload()
+  local updated = MGAPricesData and MGAPricesData.updated
+  if reloadReminded or not updated or time() - updated < RELOAD_AFTER_SECONDS then return end
+  reloadReminded = true
+  say("these prices were " .. ageText(updated) .. ". If the MGA updater is running, it has newer ones (and any addon updates): type /reload to load them.")
+end
+if C_Timer and C_Timer.NewTicker then
+  C_Timer.NewTicker(RELOAD_CHECK_SECONDS, remindReload)
+end
+remindReload()
 
 -- Chat. MGAPricesSettings is saved between sessions (.toc SavedVariables).
 local function chatPricesOn()
