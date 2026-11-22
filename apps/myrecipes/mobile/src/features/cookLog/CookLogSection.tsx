@@ -19,7 +19,7 @@ export default function CookLogSection({ recipeId, versionId, versionNumber, ver
   const { colors, spacing, fontSize } = useTheme();
   // Reopening asks again, so cooks logged or deleted on the website show.
   const { data: cooks, isError, refetch } = useListRecipeCooksQuery(recipeId, { refetchOnMountOrArgChange: true });
-  const versionNumberById = useVersionNumberById(recipeId, versionCount);
+  const versionNumberById = useVersionNumberById(recipeId, versionCount, { id: versionId, number: versionNumber });
 
   function renderCooks() {
     if (cooks === undefined && isError) {

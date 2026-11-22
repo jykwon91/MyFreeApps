@@ -147,11 +147,11 @@ describe("the cook log on the recipe screen", () => {
     expect(screen.getByText("Too salty.")).toBeTruthy();
   });
 
-  it("doesn't say which version on a recipe with only one, and doesn't ask for its versions", async () => {
-    await show({ "GET /recipes/r1/cooks": () => reply(200, [{ ...NEWER, version_id: "v1" }]) }, { ...SOUP, version_count: 1 });
+  it("says v1 on a recipe with only one version, without asking for its versions", async () => {
+    await show({ "GET /recipes/r1/cooks": () => reply(200, [{ ...NEWER, version_id: "v1" }]) }, { ...SOUP, version_count: 1, latest_version: { ...SOUP.latest_version!, id: "v1", version_number: 1, parent_version_id: null } });
 
     await screen.findByTestId("cook-c2");
-    expect(screen.queryByText("v1")).toBeNull();
+    expect(screen.getByText("v1")).toBeTruthy();
     expect(loads("GET /recipes/r1/versions")).toBe(0);
   });
 
