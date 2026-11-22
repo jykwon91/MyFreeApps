@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWatchResumeReads } from "../../src/features/resume/useWatchResumeReads";
 import { SINGLE_COPY_SCREENS } from "../../src/constants/singleCopyScreens";
 
-// A cold deep link to a screen above the tabs, like a vendor from a notification, still has the tabs underneath.
+// A cold deep link to a screen above the tabs, like an application opened from a link, still has the tabs underneath.
 export const unstable_settings = { anchor: "(tabs)" };
 
 export default function AppLayout() {
