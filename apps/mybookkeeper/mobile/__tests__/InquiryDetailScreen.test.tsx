@@ -168,6 +168,24 @@ describe("InquiryDetailScreen", () => {
     expect(screen.getByText("First question")).toBeTruthy();
   });
 
+  it("shows each message's sender, channel and subject", async () => {
+    startInquiryServer([
+      anInquiry({
+        messages: [
+          aMessage({ id: "m1", from_address: "dana@example.com", subject: "About the room", sent_at: new Date(Date.now() - 3000_000).toISOString() }),
+          aMessage({ id: "m2", direction: "outbound", from_address: null, to_address: "dana@example.com", channel: "sms", subject: "Re: About the room", parsed_body: "Yes it is", sent_at: new Date(Date.now() - 4000_000).toISOString() }),
+        ],
+      }),
+    ]);
+    await renderScreen();
+    expect(await screen.findByText("From: dana@example.com · Email")).toBeTruthy();
+    expect(screen.getByText("About the room")).toBeTruthy();
+    expect(screen.getByLabelText(/, From: dana@example.com, Email, subject About the room: /)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Show 1 other message", expanded: false }));
+    expect(screen.getByText("To: dana@example.com · SMS")).toBeTruthy();
+    expect(screen.getByText("Re: About the room")).toBeTruthy();
+  });
+
   it("shortens a long message until asked", async () => {
     startInquiryServer([anInquiry({ messages: [aMessage({ parsed_body: "word ".repeat(200) })] })]);
     await renderScreen();
@@ -491,13 +509,14 @@ describe("InquiryDetailScreen", () => {
   it("opens the history, spam checks and quality when asked, and fetches checks only then", async () => {
     const server = startInquiryServer([
       anInquiry({
-        events: [{ id: "e1", inquiry_id: "i1", event_type: "replied", actor: "host", notes: null, occurred_at: new Date().toISOString(), created_at: new Date().toISOString() }],
+        events: [{ id: "e1", inquiry_id: "i1", event_type: "replied", actor: "host", notes: "Sent the welcome note", occurred_at: new Date().toISOString(), created_at: new Date().toISOString() }],
       }),
     ]);
     server.assessments = [{ id: "s1", inquiry_id: "i1", assessment_type: "honeypot", passed: true, score: null, flags: null, details_json: null, created_at: new Date().toISOString() }];
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: "Activity" }));
-    expect(screen.getByText("Moved to Replied")).toBeTruthy();
+    expect(screen.getByText("You — Moved to Replied")).toBeTruthy();
+    expect(screen.getByText("Sent the welcome note")).toBeTruthy();
     expect(server.requests.some((request) => request.url?.endsWith("spam-assessments"))).toBe(false);
     await fireEvent.press(screen.getByRole("button", { name: "Spam checks" }));
     expect(await screen.findByText("Hidden form field")).toBeTruthy();

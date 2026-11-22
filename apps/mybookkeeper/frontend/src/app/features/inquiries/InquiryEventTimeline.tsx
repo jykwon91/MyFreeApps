@@ -4,7 +4,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import { INQUIRY_EVENT_ACTOR_LABELS, INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryEvent } from "@mybookkeeper/api-client/types/inquiry/inquiry-event";
 import type { InquiryEventActor } from "@mybookkeeper/api-client/types/inquiry/inquiry-event-actor";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
@@ -13,12 +13,6 @@ const ACTOR_ICONS: Record<InquiryEventActor, typeof User> = {
   host: User,
   system: Server,
   applicant: Mail,
-};
-
-const ACTOR_LABELS: Record<InquiryEventActor, string> = {
-  host: "You",
-  system: "System",
-  applicant: "Inquirer",
 };
 
 export interface InquiryEventTimelineProps {
@@ -73,7 +67,7 @@ export default function InquiryEventTimeline({ events, defaultOpen = false }: In
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
-                    <span className="font-medium">{ACTOR_LABELS[evt.actor]}</span>{" "}
+                    <span className="font-medium">{INQUIRY_EVENT_ACTOR_LABELS[evt.actor]}</span>{" "}
                     <span className="text-muted-foreground">— {formatEventType(evt.event_type)}</span>
                   </p>
                   {evt.notes ? (

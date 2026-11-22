@@ -3,7 +3,7 @@ import { useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import CollapsibleSection from "./CollapsibleSection";
-import { arrangeMessages, eventLabel, messageBody, qualityFactors, receivedAgo } from "./inquiryDisplay";
+import { arrangeMessages, eventActorLabel, eventLabel, messageBody, qualityFactors, receivedAgo } from "./inquiryDisplay";
 import InquiryLine from "./InquiryLine";
 import InquirySpamChecks from "./InquirySpamChecks";
 
@@ -24,7 +24,12 @@ export default function InquiryExtras({ inquiry }: { inquiry: InquiryResponse })
         <View style={{ gap: spacing.xs }}>
           {inquiry.events.length === 0 ? <InquiryLine left="Nothing yet." muted /> : null}
           {inquiry.events.map((event) => (
-            <InquiryLine key={event.id} left={eventLabel(event)} right={receivedAgo(event.occurred_at)} />
+            <InquiryLine
+              key={event.id}
+              left={`${eventActorLabel(event)} — ${eventLabel(event)}`}
+              note={event.notes}
+              right={receivedAgo(event.occurred_at)}
+            />
           ))}
         </View>
       </CollapsibleSection>
