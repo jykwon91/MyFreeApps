@@ -22,6 +22,7 @@ import EventsSection from "@/features/applications/sections/EventsSection";
 import DocumentsSection from "@/features/applications/sections/DocumentsSection";
 import ContactsManager from "@/features/applications/contacts/ContactsManager";
 import NotesSection from "@/features/applications/sections/NotesSection";
+import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
 import { getStageColor } from "@/lib/stage-color";
 import { useStageMove } from "@/features/applications/useStageMove";
 import {
@@ -106,6 +107,8 @@ export default function ApplicationDetail() {
     }
   }
 
+  const remoteLabel = formatRemoteType(app.remote_type);
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
@@ -125,9 +128,7 @@ export default function ApplicationDetail() {
           <div className="flex items-center gap-2 pt-1 flex-wrap">
             <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color={getStageColor(currentColumn)} />
             {app.archived ? <Badge label="Archived" color="gray" /> : null}
-            {app.remote_type !== "unknown" ? (
-              <Badge label={app.remote_type} color="blue" />
-            ) : null}
+            {remoteLabel ? <Badge label={remoteLabel} color="blue" /> : null}
           </div>
         </div>
         <div className="flex items-center gap-2">
