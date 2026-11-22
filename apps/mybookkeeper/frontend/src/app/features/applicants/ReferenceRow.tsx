@@ -3,6 +3,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { referenceRelationshipLabel } from "@mybookkeeper/api-client/utils/applicantReferenceLabel";
 import type { ApplicantReference } from "@mybookkeeper/api-client/types/applicant/applicant-reference";
 
 export interface ReferenceRowProps {
@@ -10,15 +11,6 @@ export interface ReferenceRowProps {
   /** Present once the host has shown sensitive data. */
   contact?: string;
 }
-
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  landlord: "Previous landlord",
-  employer: "Employer",
-  personal: "Personal",
-  professional: "Professional",
-  family: "Family",
-  other: "Other",
-};
 
 /**
  * Single reference row. Shows relationship, name, and contact if shown, plus a
@@ -28,8 +20,7 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
  * host should know at a glance which references they've already chased.
  */
 export default function ReferenceRow({ reference, contact }: ReferenceRowProps) {
-  const relationship =
-    RELATIONSHIP_LABELS[reference.relationship] ?? reference.relationship;
+  const relationship = referenceRelationshipLabel(reference.relationship);
 
   return (
     <li

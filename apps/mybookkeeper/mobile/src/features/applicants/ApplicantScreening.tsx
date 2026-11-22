@@ -1,14 +1,16 @@
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import { useState } from "react";
+import { REVEAL_MESSAGES } from "../../constants/applicantReveal";
 import { SCREENING_MESSAGES } from "../../constants/applicantScreening";
 import InquiryLine from "../inquiries/InquiryLine";
 import InquirySection from "../inquiries/InquirySection";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { screeningLine, shortDate } from "./applicantDisplay";
+import { screeningLine, screeningUploadedLine, shortDate } from "./applicantDisplay";
+import ApplicantHistoryItem from "./ApplicantHistoryItem";
 import ScreeningActions from "./ScreeningActions";
 import ScreeningUploadSheet from "./ScreeningUploadSheet";
 
-export default function ApplicantScreening({ applicant }: { applicant: ApplicantDetailResponse }) {
+export default function ApplicantScreening({ applicant, isRevealed }: { applicant: ApplicantDetailResponse; isRevealed: boolean }) {
   const canWrite = useCanWrite();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const results = applicant.screening_results;
@@ -18,7 +20,12 @@ export default function ApplicantScreening({ applicant }: { applicant: Applicant
     <InquirySection title="Screening">
       {results.length === 0 ? <InquiryLine left={SCREENING_MESSAGES.nothingYet} muted /> : null}
       {results.map((result) => (
-        <InquiryLine key={result.id} left={screeningLine(result)} right={shortDate(result.completed_at ?? result.requested_at)} />
+        <ApplicantHistoryItem
+          key={result.id}
+          lines={[screeningUploadedLine(result), ...(result.has_report && !isRevealed ? [REVEAL_MESSAGES.reportHidden] : [])]}
+          right={shortDate(result.completed_at ?? result.requested_at)}
+          title={screeningLine(result)}
+        />
       ))}
       {canWrite ? (
         <>

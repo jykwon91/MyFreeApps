@@ -4,6 +4,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { APPLICANT_EVENT_ACTOR_LABELS } from "@mybookkeeper/api-client/constants/applicantEventActorLabels";
 import { applicantEventLabel } from "@mybookkeeper/api-client/utils/applicantEvents";
 import type { ApplicantEvent } from "@mybookkeeper/api-client/types/applicant/applicant-event";
 import type { ApplicantEventActor } from "@mybookkeeper/api-client/types/applicant/applicant-event-actor";
@@ -12,12 +13,6 @@ const ACTOR_ICONS: Record<ApplicantEventActor, typeof User> = {
   host: User,
   system: Server,
   applicant: Mail,
-};
-
-const ACTOR_LABELS: Record<ApplicantEventActor, string> = {
-  host: "You",
-  system: "System",
-  applicant: "Applicant",
 };
 
 export interface ApplicantTimelineListProps {
@@ -62,7 +57,7 @@ export default function ApplicantTimelineList({ events, defaultOpen = false }: A
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
-                    <span className="font-medium">{ACTOR_LABELS[evt.actor]}</span>{" "}
+                    <span className="font-medium">{APPLICANT_EVENT_ACTOR_LABELS[evt.actor]}</span>{" "}
                     <span className="text-muted-foreground">— {applicantEventLabel(evt.event_type)}</span>
                   </p>
                   {evt.notes ? (

@@ -26,6 +26,7 @@ import ApplicantPrivateDetails from "./ApplicantPrivateDetails";
 import ApplicantScreening from "./ApplicantScreening";
 import ApplicantStageSheet from "./ApplicantStageSheet";
 import ContractStartSheet from "./ContractStartSheet";
+import { useApplicantReveal } from "./useApplicantReveal";
 import { useMoveApplicantStage } from "./useMoveApplicantStage";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../lib/store";
@@ -46,6 +47,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
   const move = useMoveApplicantStage(id, refetch);
+  const reveal = useApplicantReveal(id);
   const [openSheet, setOpenSheet] = useState<"stage" | "contract" | null>(null);
   // Outlives the note sheet closing, so it doesn't slide away empty.
   const [noteForStage, setNoteForStage] = useState<ApplicantStage | null>(null);
@@ -123,11 +125,11 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
         {isTenant ? <TenantPayments applicantId={applicant.id} key={`payments-${applicant.id}`} name={applicant.legal_name ?? "them"} /> : null}
 
-        {isTenant ? null : <ApplicantScreening applicant={applicant} />}
+        {isTenant ? null : <ApplicantScreening applicant={applicant} isRevealed={Boolean(reveal.details)} />}
 
-        <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} key={applicant.id} />
+        <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} key={applicant.id} reveal={reveal} />
 
-        {isTenant ? <ApplicantScreening applicant={applicant} /> : null}
+        {isTenant ? <ApplicantScreening applicant={applicant} isRevealed={Boolean(reveal.details)} /> : null}
 
         <ApplicantHistory applicant={applicant} />
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
