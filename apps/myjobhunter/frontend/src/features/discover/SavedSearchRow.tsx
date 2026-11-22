@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertTriangle, Pencil, RefreshCw, Trash2 } from "lucide-react";
-import { Badge, Button, Card, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Badge, Button, Card, ConfirmDialog, LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
@@ -9,6 +9,7 @@ import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/di
 import { describeRefreshError } from "@myjobhunter/api-client/utils/describeRefreshError";
 import { describeRefreshResult } from "@myjobhunter/api-client/utils/describeRefreshResult";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { savedSearchName } from "@myjobhunter/api-client/utils/savedSearchName";
 import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";
 import { discoverySourceTone } from "@myjobhunter/api-client/utils/discoverySourceTone";
 import { refreshIntervalShortLabel } from "@myjobhunter/api-client/utils/refreshIntervalShortLabel";
@@ -16,6 +17,7 @@ import { savedSearchCadence } from "@myjobhunter/api-client/utils/savedSearchCad
 import { summarizeSearchQuery } from "@myjobhunter/api-client/utils/summarizeSearchQuery";
 import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
+import { REMOVE_LABEL } from "@/constants/saved-search-remove";
 import EditFrequencyPopover from "./EditFrequencyPopover";
 import EditSavedSearchDialog from "./EditSavedSearchDialog";
 
@@ -30,6 +32,7 @@ export default function SavedSearchRow({ source, onRefreshed }: SavedSearchRowPr
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
   const [isEditingFrequency, setIsEditingFrequency] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isConfirmingRemove, setIsConfirmingRemove] = useState(false);
 
   const query = summarizeSearchQuery(source.config ?? {}, source.source);
   // Schedule line: "Refreshes every 6h — last fetched 2h ago" (PR 5).
@@ -52,6 +55,7 @@ export default function SavedSearchRow({ source, onRefreshed }: SavedSearchRowPr
   }
 
   async function handleDeactivate() {
+    setIsConfirmingRemove(false);
     try {
       await deactivate(source.id).unwrap();
       showSuccess(DISCOVER_ACTION_MESSAGES.removed);
@@ -133,7 +137,7 @@ export default function SavedSearchRow({ source, onRefreshed }: SavedSearchRowPr
           <Button
             size="sm"
             variant="ghost"
-            onClick={handleDeactivate}
+            onClick={() => setIsConfirmingRemove(true)}
             disabled={isDeactivating}
             aria-label="Remove saved search"
           >
@@ -141,6 +145,17 @@ export default function SavedSearchRow({ source, onRefreshed }: SavedSearchRowPr
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={isConfirmingRemove}
+        title={DISCOVER_ACTION_MESSAGES.removeTitle}
+        description={DISCOVER_ACTION_MESSAGES.removeBody(savedSearchName(source))}
+        confirmLabel={REMOVE_LABEL}
+        cancelLabel={DISCOVER_ACTION_MESSAGES.keep}
+        variant="destructive"
+        onConfirm={handleDeactivate}
+        onCancel={() => setIsConfirmingRemove(false)}
+      />
 
       {/* Inline frequency editor — renders below the row content when open.
           Preserved as a quick path for cadence-only changes. The full

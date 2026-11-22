@@ -20,7 +20,10 @@ import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 // useScoringWindow (shared with the phone) for why it never polls forever.
 
 interface DiscoverInboxViewProps {
-  hasSources: boolean;
+  /** The saved searches loaded and there are none: the one case the inbox asks for a saved search. */
+  hasNoSources: boolean;
+  /** The saved searches haven't loaded yet, so nothing is known about whether there are any. */
+  areSourcesLoading: boolean;
   /** Active source filter from ?source= URL param. Null = no filter (show all). */
   activeSourceId: string | null;
   /** Opened by a saved search's refresh (the page owns it); polls the inbox while it's open. */
@@ -28,7 +31,8 @@ interface DiscoverInboxViewProps {
 }
 
 export default function DiscoverInboxView({
-  hasSources,
+  hasNoSources,
+  areSourcesLoading,
   activeSourceId,
   scoringWindow,
 }: DiscoverInboxViewProps) {
@@ -44,7 +48,7 @@ export default function DiscoverInboxView({
   const hasResume = profile?.resume_file_path != null;
   const hasSkills = (skillsData?.total ?? 0) > 0;
 
-  if (!hasSources) {
+  if (hasNoSources) {
     return (
       <EmptyState
         icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
@@ -67,7 +71,7 @@ export default function DiscoverInboxView({
     );
   }
 
-  if (list.isLoading || list.isFiltering) {
+  if (list.isLoading || list.isFiltering || areSourcesLoading) {
     return (
       <>
         {profileBanner}

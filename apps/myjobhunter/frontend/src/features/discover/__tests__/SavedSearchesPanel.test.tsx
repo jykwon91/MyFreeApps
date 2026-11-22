@@ -3,7 +3,7 @@
  * when consecutive_failures > 0.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import SavedSearchesPanel from "../SavedSearchesPanel";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
@@ -46,6 +46,7 @@ vi.mock("@platform/ui", () => ({
       {children}
     </button>
   ),
+  ConfirmDialog: () => null,
   Card: ({
     children,
     className,
@@ -138,18 +139,33 @@ describe("SavedSearchesPanel", () => {
     expect(screen.getByTestId("sources-skeleton")).toBeInTheDocument();
   });
 
-  it("shows error message when sources query fails", () => {
+  it("shows an error with Try again when the saved searches never loaded, and retries", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
     mockListSources.mockReturnValue({
       data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch,
+    } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
+
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
+
+    expect(screen.getByText(/Couldn't load saved searches/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Try again"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the loaded rows when a later refetch fails", () => {
+    mockListSources.mockReturnValue({
+      data: [makeSource()],
       isLoading: false,
       isError: true,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
     render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
-    expect(
-      screen.getByText(/Couldn't load saved searches/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Software Engineer — Remote")).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't load saved searches/i)).toBeNull();
   });
 
   it("renders nothing when sources list is empty", () => {

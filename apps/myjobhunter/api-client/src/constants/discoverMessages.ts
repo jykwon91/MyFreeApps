@@ -53,6 +53,9 @@ export const DISCOVER_ACTION_MESSAGES = {
   // Save or Restore's coded 409: that twin has since expired or closed.
   noLongerListed: "This posting is no longer listed.",
   removed: "Saved search removed",
+  removeTitle: "Remove this saved search?",
+  removeBody: (name: string) => `"${name}" — It stops fetching new postings. The postings it already found stay.`,
+  keep: "Keep",
   removeFailed: "Couldn't remove saved search",
   frequencyUpdated: "Refresh frequency updated",
   frequencyFailed: "Couldn't update refresh frequency",

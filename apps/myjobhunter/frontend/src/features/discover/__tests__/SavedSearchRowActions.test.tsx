@@ -21,6 +21,17 @@ vi.mock("@platform/ui", () => ({
     <button onClick={onClick} aria-label={ariaLabel}>{children}</button>
   ),
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ConfirmDialog: ({ open, title, description, confirmLabel, cancelLabel, onConfirm, onCancel }: {
+    open: boolean; title: string; description: string; confirmLabel: string; cancelLabel: string; onConfirm: () => void; onCancel: () => void;
+  }) =>
+    open ? (
+      <div role="dialog">
+        <h2>{title}</h2>
+        <p>{description}</p>
+        <button onClick={onCancel}>{cancelLabel}</button>
+        <button onClick={onConfirm}>{confirmLabel}</button>
+      </div>
+    ) : null,
   LoadingButton: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>,
   showError,
   showSuccess,
@@ -117,17 +128,41 @@ describe("SavedSearchRow — refresh", () => {
 describe("SavedSearchRow — remove", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("confirms the removal", async () => {
-    deactivate.mockReturnValue(answer(undefined));
+  function askToRemove() {
     render(<SavedSearchRow onRefreshed={onRefreshed} source={source} />);
     fireEvent.click(screen.getByLabelText("Remove saved search"));
+  }
+
+  it("asks first, with the phone's wording, and removes nothing yet", () => {
+    askToRemove();
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Remove this saved search?")).toBeInTheDocument();
+    expect(screen.getByText('"Backend" — It stops fetching new postings. The postings it already found stay.')).toBeInTheDocument();
+    expect(deactivate).not.toHaveBeenCalled();
+  });
+
+  it("keeps the saved search when the user says Keep", () => {
+    askToRemove();
+    fireEvent.click(screen.getByText("Keep"));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(deactivate).not.toHaveBeenCalled();
+  });
+
+  it("removes it and says so once confirmed", async () => {
+    deactivate.mockReturnValue(answer(undefined));
+    askToRemove();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith("Saved search removed"));
+    expect(deactivate).toHaveBeenCalledExactlyOnceWith(source.id);
   });
 
   it("falls back to its own message when the server gives no reason", async () => {
     deactivate.mockReturnValue(fail({ status: "FETCH_ERROR", data: undefined }));
-    render(<SavedSearchRow onRefreshed={onRefreshed} source={source} />);
-    fireEvent.click(screen.getByLabelText("Remove saved search"));
+    askToRemove();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(showError).toHaveBeenCalledWith("Couldn't remove saved search"));
   });
 });
