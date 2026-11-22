@@ -172,7 +172,7 @@ describe("ListingsScreen", () => {
   it("shows each listing's title, property, status and rate, and opens it", async () => {
     startServer({ pages: [[aSummary()]] });
     await show(<ListingsScreen />);
-    const row = await screen.findByRole("button", { name: "Garden room, Elm House, Active, $1,200 a month" });
+    const row = await screen.findByRole("button", { name: "Garden room, Elm House, Private Room, Active, $1,200 a month" });
     await fireEvent.press(row);
     expect(mockPush).toHaveBeenCalledWith("/listings/l1");
   });
@@ -180,7 +180,7 @@ describe("ListingsScreen", () => {
   it("leaves out a property it can't find, rather than guessing", async () => {
     startServer({ pages: [[aSummary({ property_id: "gone" })]] });
     await show(<ListingsScreen />);
-    await screen.findByRole("button", { name: "Garden room, Active, $1,200 a month" });
+    await screen.findByRole("button", { name: "Garden room, Private Room, Active, $1,200 a month" });
   });
 
   it("tells a viewer who can add listings when there are none", async () => {
