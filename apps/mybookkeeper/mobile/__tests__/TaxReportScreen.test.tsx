@@ -237,6 +237,13 @@ describe("TaxReportScreen", () => {
     expect(screen.queryByText(MESSAGES.noneHeading(2025))).toBeNull();
   });
 
+  it("offers the PDFs for a year with only W-2 income", async () => {
+    serve(aSummary({ by_category: {}, by_property: [], w2_income: [W2], w2_total: 50000 }));
+    await show();
+    expect(await screen.findByRole("button", { name: "Share 2025 tax summary PDF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Share 2025 Schedule E PDF" })).toBeTruthy();
+  });
+
   it("offers a writer a photo when the year is empty", async () => {
     serve(aSummary({ by_category: {}, by_property: [] }));
     await show();

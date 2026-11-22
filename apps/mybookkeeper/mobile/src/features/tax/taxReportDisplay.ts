@@ -1,4 +1,5 @@
 import type { TaxSummaryResponse } from "@mybookkeeper/api-client/types/summary/TaxSummaryResponse";
+import { hasW2Income } from "@mybookkeeper/api-client/utils/taxReportTotals";
 import { NEUTRAL_CATEGORIES, NON_DEDUCTIBLE_CATEGORIES } from "@mybookkeeper/api-client/constants/taxCategories";
 import { TAX_REPORT_MESSAGES as MESSAGES, TAX_YEARS_SHOWN, UNASSIGNED_PROPERTY_NAME, UNCATEGORIZED_CATEGORY } from "../../constants/taxReport";
 import type { TaxCategoryRow } from "../../types/TaxCategoryRow";
@@ -75,6 +76,11 @@ export function uncategorizedCents(summary: TaxSummaryResponse): number {
 
 export function hasTaxData(summary: TaxSummaryResponse): boolean {
   return Object.keys(summary.by_category).length > 0;
+}
+
+/** The PDFs cover wages too, so a year with only W-2 income is as shareable as one with categories. */
+export function hasShareableTaxData(summary: TaxSummaryResponse): boolean {
+  return hasTaxData(summary) || hasW2Income(summary);
 }
 
 export function taxExports(year: number): TaxExport[] {

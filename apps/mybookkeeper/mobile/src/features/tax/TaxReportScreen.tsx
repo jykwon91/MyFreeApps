@@ -12,7 +12,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import TaxW2RowView from "./TaxW2RowView";
 import TaxCategoryRowView from "./TaxCategoryRowView";
 import TaxPropertyRowView from "./TaxPropertyRowView";
-import { availableViews, categoryRows, hasTaxData, propertyRows, taxRowKey, taxYears, w2Rows } from "./taxReportDisplay";
+import { availableViews, categoryRows, hasShareableTaxData, propertyRows, taxRowKey, taxYears, w2Rows } from "./taxReportDisplay";
 import TaxReportExports from "./TaxReportExports";
 import TaxReportHeader from "./TaxReportHeader";
 import TaxReportSkeleton from "./TaxReportSkeleton";
@@ -40,7 +40,7 @@ export default function TaxReportScreen() {
   }, [currentData, shownView]);
   const yearOptions = taxYears(today).map((option) => ({ value: String(option), label: String(option) }));
   const showLastLoaded = Boolean(error) && currentData !== undefined;
-  const hasData = currentData !== undefined && hasTaxData(currentData);
+  const canShowShare = currentData !== undefined && hasShareableTaxData(currentData);
 
   function emptyList() {
     if (rows.length > 0) return undefined;
@@ -68,7 +68,7 @@ export default function TaxReportScreen() {
       <FlatList<TaxRow>
         ListEmptyComponent={emptyList()}
         ListFooterComponent={
-          currentData ? <TaxReportExports canShare={!showLastLoaded} onShare={share} sharingId={sharingId} showShare={hasData} year={year} /> : undefined
+          currentData ? <TaxReportExports canShare={!showLastLoaded} onShare={share} sharingId={sharingId} showShare={canShowShare} year={year} /> : undefined
         }
         ListHeaderComponent={
           <TaxReportHeader
