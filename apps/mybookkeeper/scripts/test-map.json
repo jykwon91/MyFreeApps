@@ -1071,7 +1071,8 @@
         "test_rent_period_math.py",
         "test_rent_allocation.py",
         "test_rent_ledger_service.py",
-        "test_rent_ledger_as_of.py"
+        "test_rent_ledger_as_of.py",
+        "test_rent_ledger_intra_org_isolation_http.py"
       ],
       "frontend_tests": [
         "RentLedgerPanel.test.tsx",

@@ -15,6 +15,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_charge import RentCharge
 from app.models.transactions.transaction import Transaction
 
@@ -62,13 +63,27 @@ async def create(
 
 
 async def get(
-    db: AsyncSession, *, organization_id: uuid.UUID, charge_id: uuid.UUID,
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    charge_id: uuid.UUID,
 ) -> RentCharge | None:
+    """Return the charge iff its tenant belongs to (organization_id, user_id).
+
+    Same per-user applicant scoping as ``rent_schedule_repo.get``: a charge on
+    another member's tenant reads as not found.
+    """
     result = await db.execute(
-        select(RentCharge).where(
+        select(RentCharge)
+        .join(Applicant, Applicant.id == RentCharge.applicant_id)
+        .where(
             RentCharge.id == charge_id,
             RentCharge.organization_id == organization_id,
             RentCharge.deleted_at.is_(None),
+            Applicant.organization_id == organization_id,
+            Applicant.user_id == user_id,
+            Applicant.deleted_at.is_(None),
         ),
     )
     return result.scalar_one_or_none()

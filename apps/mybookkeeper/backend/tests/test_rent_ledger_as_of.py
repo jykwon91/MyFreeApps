@@ -294,7 +294,8 @@ class TestPastDateView:
                 if c[1] == datetime.date(2026, 9, 1)
             )
             await rent_schedule_service.waive_charge(
-                organization_id=_ORG, charge_id=september[0], reason="Away",
+                organization_id=_ORG, user_id=_USER,
+                charge_id=september[0], reason="Away",
             )
             # One-off charges are host entries and show whatever their date.
             await rent_schedule_service.add_charge(
@@ -327,7 +328,9 @@ class TestPastDateView:
         )
         _ledger_patch, schedule_patch = _patch_uow(db)
         with schedule_patch:
-            await rent_schedule_service.delete_charge(organization_id=_ORG, charge_id=september[0])
+            await rent_schedule_service.delete_charge(
+                organization_id=_ORG, user_id=_USER, charge_id=september[0],
+            )
         before = await _all_charge_rows(db, applicant_id)
 
         await _ledger_on(db, applicant_id, datetime.date(2026, 8, 20))
