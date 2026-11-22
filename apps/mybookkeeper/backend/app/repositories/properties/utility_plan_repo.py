@@ -12,9 +12,19 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import Select, desc, func, select, update
+from sqlalchemy import ColumnElement, Select, case, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utility_plan_constants import (
+    EXPIRING_SOON_DAYS,
+    RATE_TYPE_REGULATED,
+    RENEWAL_SORT_RANK_ACTIVE,
+    RENEWAL_SORT_RANK_EXPIRED,
+    RENEWAL_SORT_RANK_EXPIRING_SOON,
+    RENEWAL_SORT_RANK_NOT_APPLICABLE,
+    RENEWAL_SORT_RANK_PAST_PLAN,
+)
+from app.models.properties.property import Property
 from app.models.properties.utility_plan import UtilityPlan
 
 
@@ -142,6 +152,52 @@ async def get(
     return result.scalar_one_or_none()
 
 
+def _renewal_rank(
+    *, today: _dt.date, current_ids: set[uuid.UUID],
+) -> ColumnElement[int]:
+    """The band ``renewal_status`` puts a plan in on ``today``, as a sortable rank.
+
+    Mirrors ``_utility_plan_helpers.renewal_status`` (lapsed before ``today``,
+    expiring within ``EXPIRING_SOON_DAYS`` of it inclusive) so the order always
+    agrees with the status shown on each row. Superseded plans rank last
+    whatever their dates say: currency is decided over the whole set by the
+    service, so it arrives here as ``current_ids``.
+    """
+    soon_cutoff = today + _dt.timedelta(days=EXPIRING_SOON_DAYS)
+    return case(
+        (UtilityPlan.id.not_in(current_ids), RENEWAL_SORT_RANK_PAST_PLAN),
+        (
+            or_(
+                UtilityPlan.rate_type == RATE_TYPE_REGULATED,
+                UtilityPlan.term_end_date.is_(None),
+            ),
+            RENEWAL_SORT_RANK_NOT_APPLICABLE,
+        ),
+        (UtilityPlan.term_end_date < today, RENEWAL_SORT_RANK_EXPIRED),
+        (UtilityPlan.term_end_date <= soon_cutoff, RENEWAL_SORT_RANK_EXPIRING_SOON),
+        else_=RENEWAL_SORT_RANK_ACTIVE,
+    )
+
+
+def _order_by_renewal(
+    stmt: Select, *, today: _dt.date, current_ids: set[uuid.UUID],
+) -> Select:
+    """Most urgent first, soonest term end first within a band, then by property and service.
+
+    An undated plan leads its band (``NULLS FIRST`` is spelled out because
+    PostgreSQL and SQLite disagree on the default). ``id`` makes the order total,
+    so a row never shifts between pages. The rank depends on ``today``, so it
+    can't be indexed; the tenant filter bounds the sort to one org's plans.
+    """
+    return stmt.outerjoin(Property, Property.id == UtilityPlan.property_id).order_by(
+        _renewal_rank(today=today, current_ids=current_ids),
+        UtilityPlan.term_end_date.asc().nulls_first(),
+        func.lower(Property.name),
+        UtilityPlan.service_type,
+        UtilityPlan.id,
+    )
+
+
 async def list_for_org(
     db: AsyncSession,
     *,
@@ -152,9 +208,17 @@ async def list_for_org(
     expiring_before: _dt.date | None = None,
     plan_ids: set[uuid.UUID] | None = None,
     include_deleted: bool = False,
+    renewal_order_on: _dt.date | None = None,
+    current_ids: set[uuid.UUID] | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[UtilityPlan]:
+    """One page of the org's plans.
+
+    Newest term first by default. With ``renewal_order_on`` (the caller's local
+    date) the page is cut from the renewal-urgency order instead, which needs
+    ``current_ids`` to send superseded plans to the end.
+    """
     stmt = _apply_filters(
         _scope(
             select(UtilityPlan),
@@ -167,16 +231,18 @@ async def list_for_org(
         expiring_before=expiring_before,
         plan_ids=plan_ids,
     )
-    # Newest term first so the current plan for each property leads its group;
-    # created_at breaks ties for rows entered without a start date.
-    stmt = (
-        stmt.order_by(
+    if renewal_order_on is not None:
+        if current_ids is None:
+            raise ValueError("renewal order needs the current plan ids")
+        stmt = _order_by_renewal(stmt, today=renewal_order_on, current_ids=current_ids)
+    else:
+        # Newest term first so the current plan for each property leads its group;
+        # created_at breaks ties for rows entered without a start date.
+        stmt = stmt.order_by(
             desc(UtilityPlan.service_start_date),
             desc(UtilityPlan.created_at),
         )
-        .limit(limit)
-        .offset(offset)
-    )
+    stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

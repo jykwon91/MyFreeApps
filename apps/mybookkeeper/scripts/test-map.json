@@ -1308,6 +1308,7 @@
         "backend/app/schemas/properties/utility_plan_summary.py",
         "backend/app/schemas/properties/utility_plan_response.py",
         "backend/app/schemas/properties/utility_plan_list_response.py",
+        "backend/app/schemas/properties/utility_plan_list_sort.py",
         "backend/app/schemas/properties/utility_plan_renewal_alert_response.py",
         "backend/app/schemas/properties/utility_plan_validation.py",
         "backend/app/schemas/properties/utility_plan_draft.py",
@@ -1390,6 +1391,7 @@
       "backend_tests": [
         "test_utility_plan_service.py",
         "test_utility_plan_repo.py",
+        "test_utility_plan_renewal_sort.py",
         "test_utility_plans_api.py",
         "test_utility_plan_extraction.py",
         "test_prompt_notes_section.py",

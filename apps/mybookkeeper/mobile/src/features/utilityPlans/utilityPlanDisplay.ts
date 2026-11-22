@@ -9,14 +9,6 @@ import { EXPIRING_SOON_DAYS, UTILITY_PLAN_MESSAGES as MESSAGES } from "../../con
 import { daysBetween, fullDateLabel } from "../../lib/localDate";
 import type { UtilityPlanFact } from "../../types/UtilityPlanFact";
 
-const SORT_GROUP: Record<UtilityPlanRenewalStatus, number> = {
-  expired: 0,
-  expiring_soon: 1,
-  active: 2,
-  not_applicable: 3,
-};
-const PAST_PLAN_GROUP = 4;
-
 export function planTitle(plan: Pick<UtilityPlanSummary, "property_name" | "service_type">): string {
   return `${plan.property_name ?? MESSAGES.unknownProperty} · ${UTILITY_SERVICE_TYPE_LABELS[plan.service_type]}`;
 }
@@ -54,20 +46,6 @@ export function planChip(plan: Pick<UtilityPlanSummary, "is_current" | "rate_typ
 export function planTermNote(plan: Pick<UtilityPlanSummary, "is_current" | "rate_type" | "term_end_date">): string | null {
   if (!plan.is_current || plan.term_end_date) return null;
   return plan.rate_type === "regulated" ? MESSAGES.noFixedTerm : formatRenewalCountdown(null);
-}
-
-function sortGroup(plan: Pick<UtilityPlanSummary, "is_current" | "rate_type" | "term_end_date">, todayIso: string): number {
-  return plan.is_current ? SORT_GROUP[renewalStatusOn(plan, todayIso)] : PAST_PLAN_GROUP;
-}
-
-/** What needs attention first, soonest date first, past plans last. */
-export function sortedPlans<Plan extends UtilityPlanSummary>(plans: readonly Plan[], todayIso: string): Plan[] {
-  return [...plans].sort(
-    (a, b) =>
-      sortGroup(a, todayIso) - sortGroup(b, todayIso) ||
-      (a.term_end_date ?? "").localeCompare(b.term_end_date ?? "") ||
-      planTitle(a).localeCompare(planTitle(b)),
-  );
 }
 
 export function planRowLabel(plan: UtilityPlanSummary, todayIso: string): string {

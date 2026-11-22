@@ -38,6 +38,7 @@ from app.core.utility_plan_constants import (
 from app.db.session import unit_of_work
 from app.repositories.properties import property_repo, utility_plan_repo
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
+from app.schemas.properties.utility_plan_list_sort import UtilityPlanListSort
 from app.schemas.properties.utility_plan_renewal_alert_response import (
     UtilityPlanRenewalAlertResponse,
 )
@@ -160,6 +161,7 @@ async def list_plans(
     service_type: str | None = None,
     expiring_before: _dt.date | None = None,
     needs_renewal: bool = False,
+    sort: UtilityPlanListSort = UtilityPlanListSort.RECENT,
     limit: int = 50,
     offset: int = 0,
     today: _dt.date,
@@ -185,6 +187,10 @@ async def list_plans(
             service_type=service_type,
             expiring_before=expiring_before,
             plan_ids=plan_ids,
+            # Urgency is judged on the caller's local date, the same one each
+            # row's renewal_status is computed from.
+            renewal_order_on=today if sort == UtilityPlanListSort.RENEWAL else None,
+            current_ids=current_ids,
             limit=limit,
             offset=offset,
         )

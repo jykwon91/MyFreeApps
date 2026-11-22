@@ -50,6 +50,15 @@ describe("utilityPlansApi reads", () => {
     expect(params).not.toHaveProperty("offset");
   });
 
+  it("asks for the order a paged list wants, and leaves it to the server otherwise", async () => {
+    const store = newStore();
+    await store.dispatch(utilityPlansApi.endpoints.listUtilityPlanPages.initiate({ sort: "renewal", needs_renewal: true }));
+    await store.dispatch(utilityPlansApi.endpoints.listUtilityPlanPages.initiate({}));
+    expect(seen[0]).toMatchObject({ method: "get", url: "/utility-plans" });
+    expect(seen[0].params).toMatchObject({ sort: "renewal", needs_renewal: true, offset: 0 });
+    expect(seen[1].params).not.toHaveProperty("sort");
+  });
+
   it("reads the renewal alerts and the rate comparison with today's date", async () => {
     const store = newStore();
     await store.dispatch(utilityPlansApi.endpoints.getUtilityPlanRenewalAlerts.initiate());
