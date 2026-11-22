@@ -8,13 +8,12 @@ import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
-import { Share } from "react-native";
+import { Linking, Share } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { stayLimits } from "../src/features/listings/listingDisplay";
 import ListingDetailScreen from "../src/features/listings/ListingDetailScreen";
 import ListingsScreen from "../src/features/listings/ListingsScreen";
-import { plainFromMarkdown } from "../src/lib/plainFromMarkdown";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -143,22 +142,6 @@ describe("listing display", () => {
     expect(formatRate("1200.00")).toBe("$1,200");
     expect(formatRate("49.50")).toBe("$49.50");
   });
-
-  it("takes Markdown's markers off a description and leaves ordinary text alone", () => {
-    expect(plainFromMarkdown("# Bright room\n\n**Quiet** and *sunny*\n- Desk\n- [Map](https://x.test)")).toBe("Bright room\n\nQuiet and sunny\n• Desk\n• Map");
-    expect(plainFromMarkdown("Rate is 2*3 weeks, snake_case_name stays")).toBe("Rate is 2*3 weeks, snake_case_name stays");
-    expect(plainFromMarkdown("Call __init__ or snake__case__name")).toBe("Call init or snake__case__name");
-  });
-
-  it("keeps the blank lines around a list", () => {
-    expect(plainFromMarkdown("Intro\n\n- Desk\n\n- Bed")).toBe("Intro\n\n• Desk\n\n• Bed");
-  });
-
-  it("stays quick on a long description with nothing to close its markers", () => {
-    const started = Date.now();
-    plainFromMarkdown("[".repeat(50_000) + "\n".repeat(50_000) + " *x".repeat(20_000));
-    expect(Date.now() - started).toBeLessThan(1000);
-  });
 });
 
 describe("ListingsScreen", () => {
@@ -263,6 +246,26 @@ describe("ListingDetailScreen", () => {
     expect(screen.getByText("Wi-Fi, Washer")).toBeTruthy();
     expect(screen.getByText("Quiet room")).toBeTruthy();
     expect(screen.queryByText("Pets on premises")).toBeNull();
+  });
+
+  it("draws the description's list and link as the website does, and opens the link", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    startServer({ listing: aListing({ description: "Includes:\n\n- Desk\n- Bed\n\nSee [the map](https://maps.example/elm)." }) });
+    await show(<ListingDetailScreen id="l1" />);
+    expect(await screen.findByText("Desk")).toBeTruthy();
+    expect(screen.getByText("Bed")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("link", { name: "the map" }));
+    expect(open).toHaveBeenCalledWith("https://maps.example/elm");
+  });
+
+  it("never opens a description link with an unsafe scheme", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    open.mockClear();
+    startServer({ listing: aListing({ description: "See [the map](javascript:alert(1))." }) });
+    await show(<ListingDetailScreen id="l1" />);
+    await fireEvent.press(await screen.findByText("the map"));
+    expect(screen.queryByRole("link", { name: "the map" })).toBeNull();
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("shares the inquiry form link and says who can use it", async () => {

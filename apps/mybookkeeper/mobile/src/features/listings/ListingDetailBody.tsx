@@ -3,11 +3,11 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import { Banner, Chip, LoadingButton, OptionSheet, StaleDataBanner, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { type ReactElement, useMemo, useRef, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { deleteListingTitle, LISTING_MESSAGES } from "../../constants/listings";
 import { askOnce } from "../../lib/askOnce";
-import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
+import MarkdownText from "../markdown/MarkdownText";
 import TransactionFact from "../transactions/TransactionFact";
 import ListingFacts from "./ListingFacts";
 import ListingApplyQr from "./ListingApplyQr";
@@ -34,8 +34,6 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const actions = useListingActions(listing, onDeleted);
   const isBusy = actions.isChangingStatus || actions.isDeleting;
-  const markdown = listing.description;
-  const description = useMemo(() => (markdown ? plainFromMarkdown(markdown) : null), [markdown]);
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
@@ -56,7 +54,12 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
         <TransactionFact label={LISTING_MESSAGES.petsLabel} value={listing.large_dog_disclosure?.trim() || LISTING_MESSAGES.petsDefault} />
       ) : null}
       <ListingFacts listing={listing} />
-      {description ? <TransactionFact label={LISTING_MESSAGES.description} value={description} /> : null}
+      {listing.description ? (
+        <View style={{ gap: spacing.xs }}>
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LISTING_MESSAGES.description}</Text>
+          <MarkdownText source={listing.description} />
+        </View>
+      ) : null}
       <ListingSummaryRows listing={listing} />
       {canWrite ? (
         <View style={{ gap: spacing.sm }}>

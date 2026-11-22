@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Text } from "react-native";
 import { WELCOME_MANUAL_PREVIEW_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import type { WelcomeManualView } from "../../types/WelcomeManualView";
+import MarkdownText from "../markdown/MarkdownText";
 import { previewScopeOptions } from "./welcomeManualPreviewOptions";
-import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import WelcomeManualPlaceDirectory from "./WelcomeManualPlaceDirectory";
 import WelcomeManualSection from "./WelcomeManualSection";
 
@@ -30,7 +30,7 @@ export default function WelcomeManualPreviewBody({ manual, refreshControl, refre
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
           {manual.title}
         </Text>
-        {manual.intro_text ? <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>{plainFromMarkdown(manual.intro_text)}</Text> : null}
+        {manual.intro_text ? <MarkdownText source={manual.intro_text} /> : null}
         {isEmpty ? <EmptyState body="" heading={MESSAGES.noSections} /> : null}
         {sections.map((section) => (
           <WelcomeManualSection key={section.id} onRetryPhoto={refresh} section={section} />

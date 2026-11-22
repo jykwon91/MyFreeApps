@@ -2,7 +2,7 @@ const { transformIgnorePatterns } = require("jest-expo/jest-preset");
 
 // These publish ES modules to React Native's export condition, which is the one Jest
 // resolves here, so they need transforming like the packages the preset already allows.
-const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux|redux-thunk|axios)";
+const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux|redux-thunk|axios|marked|github-slugger)";
 
 // Behind UTC, so a date read as UTC by mistake lands on the day before and fails a test.
 process.env.TZ = "America/Los_Angeles";

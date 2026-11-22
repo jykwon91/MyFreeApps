@@ -197,10 +197,11 @@ describe("previewing a manual", () => {
     await screen.findByText("House rules");
   });
 
-  it("shows the intro as plain text, without the markdown marks", async () => {
+  it("draws the intro's Markdown instead of showing its marks", async () => {
     startWelcomeManualsServer({ manuals: [aManual({ intro_text: "**Welcome** to the [lake house](https://x.example)", sections: [aSection()] })] });
     await open();
     await screen.findByText("Welcome to the lake house");
+    expect(screen.getByRole("link", { name: "lake house" })).toBeTruthy();
   });
 
   it("shows a field that has a label but no value yet", async () => {

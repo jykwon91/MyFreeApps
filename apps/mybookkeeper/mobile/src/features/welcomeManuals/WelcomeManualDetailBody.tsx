@@ -8,7 +8,7 @@ import type { RefreshControlProps } from "react-native";
 import { ScrollView, Text, View } from "react-native";
 import { DELETE_MANUAL_BODY, WELCOME_MANUAL_MESSAGES as MESSAGES, deleteManualTitle } from "../../constants/welcomeManuals";
 import { askOnce } from "../../lib/askOnce";
-import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
+import MarkdownText from "../markdown/MarkdownText";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { manualPropertyName } from "./welcomeManualDisplay";
 import WelcomeManualEmailRow from "./WelcomeManualEmailRow";
@@ -43,11 +43,7 @@ export default function WelcomeManualDetailBody({ manual, refreshControl, onDele
           {manual.title}
         </Text>
         {propertyName ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{propertyName}</Text> : null}
-        {manual.intro_text ? (
-          <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>
-            {plainFromMarkdown(manual.intro_text)}
-          </Text>
-        ) : null}
+        {manual.intro_text ? <MarkdownText source={manual.intro_text} /> : null}
       </View>
       {failure ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
