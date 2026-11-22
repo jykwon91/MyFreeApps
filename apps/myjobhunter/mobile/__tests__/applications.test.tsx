@@ -261,6 +261,25 @@ it("loads the next page when the list is scrolled to the end, with skeleton rows
   expect(sent).toHaveLength(requests);
 });
 
+it("says how many of the total are showing, and updates it as more load", async () => {
+  serve({ "GET /applications": (_body, params) => pageOf(MANY, params) });
+  await showScreen();
+  await screen.findByText("Company 0");
+  expect(screen.getByText(`Showing ${APPLICATIONS_PAGE_SIZE} of ${MANY.length} applications`)).toBeTruthy();
+
+  await scrollToEnd();
+
+  expect(await screen.findByText(`Showing ${MANY.length} of ${MANY.length} applications`)).toBeTruthy();
+});
+
+it("shows no count while the list is still loading", async () => {
+  serve({ "GET /applications": () => new Promise<FakeReply>(() => undefined) });
+  await showScreen();
+
+  expect(await screen.findByLabelText(APPLICATION_MESSAGES.loadingList)).toBeTruthy();
+  expect(screen.queryByText(/Showing \d+ of \d+ applications/)).toBeNull();
+});
+
 it("keeps the rows it has when the next page fails, and loads it on Try again", async () => {
   let failNextPage = true;
   const sent = serve({
