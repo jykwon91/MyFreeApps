@@ -280,13 +280,12 @@ export function useAddApplicationFlow(
     const isCurrent = startRun();
     setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "text", longRunning: false });
-    setSubmittedJdText(text);
     const request = parseJobDescription({ jd_text: text });
     inFlightRead.current = request;
     try {
       const result = await request.unwrap();
       if (!isCurrent()) return;
-      await applyParseResult(result, isCurrent);
+      await applyParseResult(result, text, isCurrent);
     } catch (err) {
       if (!isCurrent()) return;
       showError(aiActionErrorMessage(err, "jobPosting", "Couldn't auto-fill: "));
@@ -319,9 +318,12 @@ export function useAddApplicationFlow(
   }
 
   // The company is matched first, so a read abandoned meanwhile fills nothing.
-  async function applyParseResult(result: JdParseResponse, isCurrent: IsCurrent) {
+  // The pasted text is kept as the job description only once it has been read,
+  // so a failed read leaves nothing behind for a link or manual save to send.
+  async function applyParseResult(result: JdParseResponse, text: string, isCurrent: IsCurrent) {
     const company = await resolveCompany(result.company, {}, isCurrent);
     if (!company) return;
+    setSubmittedJdText(text);
     applyPrefill(prefillFromParse(result));
     setState({ kind: "review", sourceUrl: null, summary: result.summary, company, changingCompany: false });
   }
