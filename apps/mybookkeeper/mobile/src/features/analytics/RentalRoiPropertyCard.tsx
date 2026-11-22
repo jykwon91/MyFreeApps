@@ -13,12 +13,10 @@ export interface RentalRoiPropertyCardProps {
   property: RentalRoiProperty;
 }
 
-/** Phone card: headline is the target or break-even; actual and gap sit below. */
+/** Phone card: break-even and target side by side (as on the web); actual and gap sit below. */
 export default function RentalRoiPropertyCard({ property }: RentalRoiPropertyCardProps) {
   const { colors, fontSize, radius, spacing } = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const hasTarget = property.target_monthly_cents !== null;
-  const headlineCents = property.target_monthly_cents ?? property.break_even_monthly_cents;
 
   return (
     <View
@@ -36,24 +34,31 @@ export default function RentalRoiPropertyCard({ property }: RentalRoiPropertyCar
         {property.property_name}
       </Text>
 
-      <View>
-        <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>
-          {hasTarget ? MESSAGES.target : MESSAGES.breakEven}
-        </Text>
-        <Text style={{ fontSize: fontSize.xl, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>
-          {formatMoneyCents(headlineCents)}/mo
-        </Text>
-        {!hasTarget && (
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.push(property.has_purchase_price ? "/mortgages" : `/properties/${property.property_id}/edit`)}
-            style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
-          >
-            <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: "500" }}>
-              {property.has_purchase_price ? MESSAGES.addLoanOriginalAmount : MESSAGES.addPurchasePrice}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>
+        <View>
+          <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{MESSAGES.breakEven}</Text>
+          <Text style={{ fontSize: fontSize.xl, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>
+            {formatMoneyCents(property.break_even_monthly_cents)}/mo
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground }}>{MESSAGES.target}</Text>
+          {property.target_monthly_cents !== null ? (
+            <Text style={{ fontSize: fontSize.xl, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>
+              {formatMoneyCents(property.target_monthly_cents)}/mo
             </Text>
-          </Pressable>
-        )}
+          ) : (
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push(property.has_purchase_price ? "/mortgages" : `/properties/${property.property_id}/edit`)}
+              style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-end" }}
+            >
+              <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: "500" }}>
+                {property.has_purchase_price ? MESSAGES.addLoanOriginalAmount : MESSAGES.addPurchasePrice}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>

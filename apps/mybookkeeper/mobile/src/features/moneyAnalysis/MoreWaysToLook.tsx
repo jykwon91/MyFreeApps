@@ -8,6 +8,7 @@ export default function MoreWaysToLook() {
     <HomeCard title={MESSAGES.moreTools}>
       <HomeLinkRow label={MESSAGES.utilityCosts} onPress={() => router.navigate("/analytics")} />
       <HomeLinkRow label={MESSAGES.propertyPnl} onPress={() => router.navigate("/property-pnl")} />
+      <HomeLinkRow label={MESSAGES.rentalRoi} onPress={() => router.navigate("/analytics/rental-roi")} />
     </HomeCard>
   );
 }

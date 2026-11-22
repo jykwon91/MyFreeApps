@@ -6,7 +6,9 @@ import type { RentalRoiCostLine } from "@mybookkeeper/api-client/types/analytics
 import type { RentalRoiProperty } from "@mybookkeeper/api-client/types/analytics/rental-roi-property";
 import { formatExactMoneyCents, rentalRoiCostLineLabel } from "@mybookkeeper/api-client/utils/rentalRoi";
 import { useTheme } from "@platform/mobile";
-import { Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, Text, View } from "react-native";
+import { RENTAL_ROI_MESSAGES } from "../../constants/rentalRoi";
 import RentalRoiCostRow from "./RentalRoiCostRow";
 
 export interface RentalRoiBreakEvenBreakdownProps {
@@ -30,6 +32,15 @@ export default function RentalRoiBreakEvenBreakdown({ property }: RentalRoiBreak
         <RentalRoiCostRow isSubtotal label={MESSAGES.mortgage} value={perMonth(costs.debt_service_monthly_cents)} />
         {costs.mortgage_lines.map(toRow)}
         <Text style={noteStyle}>{RENTAL_ROI_MORTGAGE_SOURCE_NOTES[property.mortgage_source]}</Text>
+        {property.mortgage_source === "none" && (
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.push("/mortgages")}
+            style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
+          >
+            <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: "500" }}>{RENTAL_ROI_MESSAGES.addLoan}</Text>
+          </Pressable>
+        )}
       </View>
       <View style={{ gap: spacing.xs }}>
         <RentalRoiCostRow isSubtotal label={MESSAGES.operatingCosts} value={perMonth(costs.operating_monthly_cents)} />

@@ -58,6 +58,7 @@ export const MONEY_ANALYSIS_MESSAGES = {
   retryComparison: "Try the comparison again",
   utilityCosts: "Utility costs",
   propertyPnl: "Property P&L",
+  rentalRoi: "Rental ROI",
   moreTools: "More ways to look",
   allTime: "All time",
   everyDate: "Every date",
