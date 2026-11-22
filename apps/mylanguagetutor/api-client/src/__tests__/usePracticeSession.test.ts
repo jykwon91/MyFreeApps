@@ -272,6 +272,17 @@ describe("usePracticeSession", () => {
       expect(dispatch).toHaveBeenCalledWith({ type: "usage/invalidated" });
     });
 
+    it("asks usage again while a tutor-unavailable block is up: the tutor's shared daily budget resets then too", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], now: new Date("2026-11-20T15:00:00Z") });
+      const dispatch = vi.spyOn(store, "dispatch");
+      usage = answered({ ...BUDGET_LEFT, tutor_available: false }, Date.now());
+      const { result } = setup();
+      expect(result.current.block).toBe("unavailable");
+
+      act(() => vi.advanceTimersByTime(9 * 3_600_000 + 1000));
+      expect(dispatch).toHaveBeenCalledWith({ type: "usage/invalidated" });
+    });
+
     it("does not ask while nothing is blocked", () => {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], now: new Date("2026-11-20T15:00:00Z") });
       const dispatch = vi.spyOn(store, "dispatch");
@@ -303,6 +314,71 @@ describe("usePracticeSession", () => {
     expect(result.current.entries).toHaveLength(1);
     expect(result.current.entries[0]).toMatchObject({ learnerText: "hola", status: "failed" });
     expect(result.current.failure).toBeNull();
+  });
+
+  it("a turn refused because the conversation ended keeps the learner's words, with no retry", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(409, "session_ended"));
+    const { result } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("session_ended"));
+
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]).toMatchObject({ learnerText: "hola", replyText: "", status: "failed" });
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("a turn refused because the tutor is unavailable keeps the learner's words, to send once it's back", async () => {
+    streamTurn.mockRejectedValue(new TurnRequestError(503, "tutor_unavailable"));
+    const { result } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("unavailable"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]).toMatchObject({ learnerText: "hola", replyText: "", status: "failed" });
+    // Nothing can be sent while the tutor is away, so "Try again" isn't offered yet.
+    expect(result.current.failure).toEqual({
+      code: "tutor_unavailable",
+      text: "hola",
+      retryable: false,
+      entryKey: result.current.entries[0].key,
+    });
+    act(() => result.current.retry());
+    expect(streamTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it("lifts the tutor-unavailable block once usage asked after the refusal says the tutor is back, and resends the kept words", async () => {
+    streamTurn.mockRejectedValueOnce(new TurnRequestError(503, "tutor_unavailable"));
+    const { result, rerender } = setup();
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.block).toBe("unavailable"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+
+    // Usage read before the refusal still says the tutor is on: that doesn't lift it.
+    rerender();
+    expect(result.current.block).toBe("unavailable");
+
+    // Asked after the refusal, but not answered yet.
+    usage = { ...answered(BUDGET_LEFT, Date.now() + 1000), isFetching: true };
+    rerender();
+    expect(result.current.block).toBe("unavailable");
+
+    // Answered after the refusal: the tutor is still away.
+    usage = answered({ ...BUDGET_LEFT, tutor_available: false }, Date.now() + 1000);
+    rerender();
+    expect(result.current.block).toBe("unavailable");
+
+    usage = answered(BUDGET_LEFT, Date.now() + 2000);
+    rerender();
+    await waitFor(() => expect(result.current.block).toBeNull());
+    expect(result.current.failure?.retryable).toBe(true);
+
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(result.current.entries).toHaveLength(1);
+    expect(streamTurn).toHaveBeenCalledTimes(2);
+    expect(streamTurn.mock.calls[1][0].text).toBe("hola");
   });
 
   it("blocks before the learner speaks once usage says the conversation is out of turns", () => {

@@ -286,5 +286,38 @@ class TestUsageToday:
         assert body["tutor_available"] is False
 
     @pytest.mark.asyncio
+    async def test_full_global_budget_reports_unavailable(
+        self, user_factory, as_user, fake_claude, db,
+    ) -> None:
+        """A full global budget refuses turns as ``tutor_unavailable``, so usage says so
+        too: the client keeps a refused turn blocked until usage says the tutor is back."""
+        user = await user_factory()
+        global_cap = settings.ltutor_global_daily_units
+        async with await as_user(user) as authed:
+            session_id = (
+                await authed.post(
+                    "/sessions",
+                    json={"language_code": "es", "scenario_slug": "cafe", "level": "beginner"},
+                )
+            ).json()["id"]
+            session = await tutor_session_repository.get_by_id(
+                db, uuid.UUID(session_id), uuid.UUID(user["id"]),
+            )
+            assert session is not None
+            next_units = await session_next_turn_units(db, session)
+            await _set_used(quota_service.GLOBAL_BUCKET, global_cap - next_units + 1)
+            full = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+            refused = await authed.post(
+                f"/sessions/{session_id}/turns", json={"text": "y" * MAX_TURN_CHARS},
+            )
+            await _set_used(quota_service.GLOBAL_BUCKET, global_cap - next_units)
+            fits = (await authed.get(f"/usage/today?session_id={session_id}")).json()
+        assert full["tutor_available"] is False
+        assert full["cap_reached"] is False
+        assert refused.status_code == 503
+        assert refused.json()["detail"] == "tutor_unavailable"
+        assert fits["tutor_available"] is True
+
+    @pytest.mark.asyncio
     async def test_requires_auth(self, client: AsyncClient) -> None:
         assert (await client.get("/usage/today")).status_code == 401

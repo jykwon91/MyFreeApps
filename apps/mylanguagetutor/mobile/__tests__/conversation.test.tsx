@@ -329,7 +329,9 @@ describe("a typed conversation", () => {
 
     await write("Hola");
     expect(await screen.findByText(SESSION_BLOCK_COPY.session_ended)).toBeTruthy();
+    expect(screen.getByText("Hola")).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).toBeNull();
     expect(mockKeepAwake.active).toBe(0);
 
     await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.pickScenario }));
@@ -384,14 +386,38 @@ describe("a typed conversation", () => {
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.pickScenario })).toBeNull();
   });
 
-  it("stops the learner when the server says the tutor is unavailable", async () => {
-    serveConversation();
-    serveTurns(() => ({ status: 503, data: { detail: "tutor_unavailable" } }));
+  it("stops the learner when the server says the tutor is unavailable, keeping what they wrote to send once it's back", async () => {
+    let tutorOn = true;
+    serveConversation({ "GET /usage/today": () => ({ status: 200, data: { ...USAGE_LEFT, tutor_available: tutorOn } }) });
+    const stream = turnStream();
+    let refusing = true;
+    const turns = serveTurns(() => {
+      if (!refusing) return { stream };
+      // The tutor's shared budget ran out: usage asked from now on says so too.
+      tutorOn = false;
+      return { status: 503, data: { detail: "tutor_unavailable" } };
+    });
     await openCafe();
 
     await write("Hola");
     expect(await screen.findByText(SESSION_BLOCK_COPY.unavailable)).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
+    expect(screen.getByText("Hola")).toBeTruthy();
+    expect(screen.getByText(turnErrorCopy("tutor_unavailable"))).toBeTruthy();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).toBeNull();
+
+    tutorOn = true;
+    refusing = false;
+    await moveApp("background");
+    await moveApp("active");
+    await fireEvent.press(await screen.findByRole("button", { name: PRACTICE_COPY.tryAgain }));
+    await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola!" }));
+    await finish(stream);
+
+    expect(screen.getByText("¡Hola!")).toBeTruthy();
+    expect(screen.queryByText(SESSION_BLOCK_COPY.unavailable)).toBeNull();
+    expect(screen.getAllByText("Hola")).toHaveLength(1);
+    expect(turns.map((turn) => turn.text)).toEqual(["Hola", "Hola"]);
   });
 
   it("says up front when the conversation has used all its turns", async () => {

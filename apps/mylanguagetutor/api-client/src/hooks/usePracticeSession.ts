@@ -55,8 +55,10 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * attaches corrections, and turns refusals into retry / blocked states.
  * Today's usage, sized for this conversation's next turn, decides whether the learner can start a
  * turn; a daily-limit refusal stands in for it until a usage answer from after the next daily reset
- * arrives. A turn refused for the daily limit keeps the learner's words, to send after the reset;
- * one refused for the conversation's turn limit keeps them too, with no retry, as the conversation is over.
+ * arrives. A tutor-unavailable refusal does the same until a usage answer from after it says the tutor is back.
+ * A turn refused for the daily limit or the tutor being unavailable keeps the learner's words, to send once
+ * that lifts; one refused for the conversation's turn limit or its end keeps them too, with no retry, as the
+ * conversation is over.
  * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
@@ -68,12 +70,15 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const [requestPhase, setRequestPhase] = useState<RequestPhase>("idle");
   const [failure, setFailure] = useState<TurnFailure | null>(null);
   const usage = useGetUsageTodayQuery(sessionId ?? undefined);
-  // A refusal that blocks this conversation for good (ended, too long, tutor off).
+  // A refusal that blocks this conversation for good (ended, too long).
   const [turnBlock, setTurnBlock] = useState<SessionBlock | null>(null);
   // When the budget a daily-limit refusal said was spent comes back (ms since the epoch). Until
   // then usage may still say a turn fits: it was read before the refusal, or budget was spent
   // elsewhere (another tab or device) after it was read.
   const [limitResetsAt, setLimitResetsAt] = useState<number | null>(null);
+  // When a refusal said the tutor is unavailable (ms since the epoch). Until a usage answer from
+  // after it says the tutor is back, usage read before it may still say a turn fits.
+  const [unavailableSince, setUnavailableSince] = useState<number | null>(null);
   const [scenarioState, setScenarioState] = useState<ScenarioState>(EMPTY_STATE);
   const sessionRef = useRef<string | null>(null);
   const inFlight = useRef(false);
@@ -125,9 +130,16 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     if (limitLifted) setLimitResetsAt(null);
   }, [limitLifted]);
   const limitBlock: SessionBlock | null = limitResetsAt !== null && !limitLifted ? "daily_limit" : null;
-  const block = turnBlock ?? limitBlock ?? usageBlock(usage.data);
-  // Nothing else asks again at the reset: refresh usage then, so a daily-limit block lifts in place.
-  useAtDailyReset(block === "daily_limit", () => {
+  const tutorBack =
+    unavailableSince !== null && usageAnsweredSince(usage, unavailableSince) && usage.data?.tutor_available === true;
+  useEffect(() => {
+    if (tutorBack) setUnavailableSince(null);
+  }, [tutorBack]);
+  const unavailableBlock: SessionBlock | null = unavailableSince !== null && !tutorBack ? "unavailable" : null;
+  const block = turnBlock ?? unavailableBlock ?? limitBlock ?? usageBlock(usage.data);
+  // Nothing else asks again at the reset: refresh usage then, so a daily-limit block lifts in place, as
+  // does one for the tutor's shared daily budget running out.
+  useAtDailyReset(block === "daily_limit" || block === "unavailable", () => {
     dispatch(usageApiUtil.invalidateTags(["Usage"]));
   });
 
@@ -166,18 +178,21 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
       setFailure({ code, text, retryable: true, entryKey: key });
       return;
     }
-    if (blocked === "session_limit") {
-      // Only reached when the limit was hit in a race the up-front check couldn't see. The words
-      // stay on screen; nothing can send them in this conversation.
+    if (blocked === "unavailable") {
+      // As for the daily limit: the words stay, and "Try again" sends them once the tutor is back.
+      setUnavailableSince(Date.now());
+      patchEntry(key, (e) => ({ ...e, status: "failed" }));
+      setFailure({ code, text, retryable: true, entryKey: key });
+      return;
+    }
+    if (blocked === "session_limit" || blocked === "session_ended") {
+      // The conversation can't take another turn (the limit hit in a race the up-front check couldn't
+      // see, or the conversation ended). The words stay on screen; nothing can send them in it.
       patchEntry(key, (e) => ({ ...e, status: "failed" }));
       setTurnBlock(blocked);
       return;
     }
     removeEntry(key);
-    if (blocked) {
-      setTurnBlock(blocked);
-      return;
-    }
     if (code === SESSION_NOT_FOUND) {
       // The session is gone (deleted elsewhere): a retry starts a fresh one.
       sessionRef.current = null;

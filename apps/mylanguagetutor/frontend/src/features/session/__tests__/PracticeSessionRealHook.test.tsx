@@ -7,10 +7,15 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { CONNECTION_LOST } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
 import { TURN_STREAM_IDLE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
+import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { usageApiUtil } from "@mylanguagetutor/api-client/store/usageApi";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import PracticeSession from "@/features/session/PracticeSession";
+
+/** Whether GET /usage/today says the tutor is on: a test flips it to see the screen follow. */
+const server = vi.hoisted(() => ({ tutorAvailable: true }));
 
 // The real conversation hook, store and turn stream, with only the server faked under them: the
 // API client's requests here, and the browser's fetch for the turn stream below.
@@ -31,7 +36,9 @@ vi.mock("@platform/core/store/baseQuery", () => ({
         },
       };
     }
-    if (url === "/usage/today") return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: true, session_limit_reached: false } };
+    if (url === "/usage/today") {
+      return { data: { remaining_fraction: 1, cap_reached: false, tutor_available: server.tutorAvailable, session_limit_reached: false } };
+    }
     return { error: { status: 404, data: {} } };
   },
 }));
@@ -75,8 +82,13 @@ function wholeTurn(): Response {
   return new Response(events.join(""), { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
-/** Renders the practice screen on a fresh store and sends one typed turn. */
-function sendTypedTurn(): void {
+/** A turn the server refuses before it starts, as ``app/api/turns.py`` does. */
+function refused(status: number, detail: string): Response {
+  return new Response(JSON.stringify({ detail }), { status, headers: { "Content-Type": "application/json" } });
+}
+
+/** Renders the practice screen on a fresh store and sends one typed turn; returns the store. */
+function sendTypedTurn() {
   const store = configureStore({
     reducer: { [baseApi.reducerPath]: baseApi.reducer },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
@@ -90,6 +102,7 @@ function sendTypedTurn(): void {
   );
   fireEvent.change(screen.getByLabelText(PRACTICE_COPY.typingOnlyLabel), { target: { value: "hola" } });
   fireEvent.click(screen.getByRole("button", { name: PRACTICE_COPY.send }));
+  return store;
 }
 
 /** A stand-in for the browser's utterance: records what it was asked to say and how fast. */
@@ -184,5 +197,60 @@ describe("PracticeSession when the turn's connection goes quiet", () => {
     expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).not.toBeInTheDocument();
     expect(turns).toEqual(["hola", "hola"]);
+  });
+});
+
+describe("PracticeSession when the server refuses a turn that can't be answered now", () => {
+  beforeEach(() => {
+    localStorage.setItem("token", "test-token");
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    server.tutorAvailable = true;
+  });
+
+  it("keeps the learner's words when the tutor is unavailable, and Try again sends them once the tutor is back", async () => {
+    const turns: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        turns.push((JSON.parse(String(init.body)) as { text: string }).text);
+        return turns.length === 1 ? refused(503, "tutor_unavailable") : wholeTurn();
+      }),
+    );
+    // The server's shared budget is spent: usage asked after the refusal says so too.
+    server.tutorAvailable = false;
+
+    const store = sendTypedTurn();
+
+    expect(await screen.findByText(turnErrorCopy("tutor_unavailable"))).toBeInTheDocument();
+    expect(screen.getByText(SESSION_BLOCK_COPY.unavailable)).toBeInTheDocument();
+    expect(screen.getByText("hola")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).not.toBeInTheDocument();
+
+    server.tutorAvailable = true;
+    act(() => {
+      store.dispatch(usageApiUtil.invalidateTags(["Usage"]));
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: PRACTICE_COPY.tryAgain }));
+    expect(await screen.findByText("¡Hola! Bienvenido.")).toBeInTheDocument();
+    expect(screen.queryByText(SESSION_BLOCK_COPY.unavailable)).not.toBeInTheDocument();
+    expect(screen.getAllByText("hola")).toHaveLength(1);
+    expect(turns).toEqual(["hola", "hola"]);
+  });
+
+  it("keeps the learner's words when the conversation has ended, and points to another scenario", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => refused(409, "session_ended")));
+
+    sendTypedTurn();
+
+    expect(await screen.findByText(SESSION_BLOCK_COPY.session_ended)).toBeInTheDocument();
+    expect(screen.getByText("hola")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: PRACTICE_COPY.pickScenario })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).not.toBeInTheDocument();
   });
 });

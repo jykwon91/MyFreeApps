@@ -13,3 +13,6 @@ export const CONNECTION_LOST_COPY = "The connection dropped before the tutor fin
 /** A turn the daily limit refused: its words stay on screen to send again later. */
 export const DAILY_LIMIT_KEPT_COPY =
   "That answer wasn't sent because today's practice time ran out. It's kept above, so you can send it again once your practice time is back.";
+/** A turn refused because the tutor is unavailable: its words stay on screen to send once it's back. */
+export const TUTOR_UNAVAILABLE_KEPT_COPY =
+  "That answer wasn't sent because the tutor is taking a break. It's kept above, so you can send it again once the tutor is back.";
