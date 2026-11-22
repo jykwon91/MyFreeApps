@@ -16,6 +16,7 @@ import { EDIT_SOURCE_DESCRIPTIONS, EDIT_UNKNOWN_SOURCE_DESCRIPTION } from "@myjo
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/jsearch-form-values";
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
+import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { isSourceKind } from "@myjobhunter/api-client/utils/isSourceKind";
 import { savedSearchEditProblem } from "@myjobhunter/api-client/utils/savedSearchEditProblem";
@@ -97,7 +98,7 @@ export default function EditSavedSearchDialog({ source, open, onClose }: EditSav
           <label className="block text-sm font-medium">Job source</label>
           <input
             type="text"
-            value={source.source.charAt(0).toUpperCase() + source.source.slice(1)}
+            value={discoverySourceLabel(source.source)}
             disabled
             aria-label="Job source (read-only)"
             className="w-full rounded border border-border bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
