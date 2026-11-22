@@ -116,7 +116,9 @@ async def delete_schedule(
 ) -> None:
     try:
         await rent_schedule_service.delete_schedule(
-            organization_id=ctx.organization_id, schedule_id=schedule_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            schedule_id=schedule_id,
         )
     except rent_schedule_service.ScheduleNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_SCHEDULE_NOT_FOUND) from exc
@@ -155,6 +157,7 @@ async def waive_charge(
     try:
         await rent_schedule_service.waive_charge(
             organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
             charge_id=charge_id,
             reason=payload.reason,
         )
@@ -169,7 +172,9 @@ async def unwaive_charge(
 ) -> None:
     try:
         await rent_schedule_service.unwaive_charge(
-            organization_id=ctx.organization_id, charge_id=charge_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            charge_id=charge_id,
         )
     except rent_schedule_service.ChargeNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_CHARGE_NOT_FOUND) from exc
@@ -187,7 +192,9 @@ async def delete_charge(
     """
     try:
         await rent_schedule_service.delete_charge(
-            organization_id=ctx.organization_id, charge_id=charge_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            charge_id=charge_id,
         )
     except rent_schedule_service.ChargeNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_CHARGE_NOT_FOUND) from exc

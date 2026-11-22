@@ -541,7 +541,8 @@ class TestScheduleInvariants:
         _, schedule_patch = _patch_uow(db)
         with schedule_patch:
             await rent_schedule_service.waive_charge(
-                organization_id=ORG, charge_id=charge_id, reason="comped month",
+                organization_id=ORG, user_id=USER,
+                charge_id=charge_id, reason="comped month",
             )
 
         ledger_patch, _ = _patch_uow(db)

@@ -9,6 +9,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_schedule import RentSchedule
 
 
@@ -45,13 +46,28 @@ async def create(
 
 
 async def get(
-    db: AsyncSession, *, organization_id: uuid.UUID, schedule_id: uuid.UUID,
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    schedule_id: uuid.UUID,
 ) -> RentSchedule | None:
+    """Return the schedule iff its tenant belongs to (organization_id, user_id).
+
+    Applicants are scoped per user within an org, so a schedule is reachable
+    only through an applicant the caller owns — the same rule
+    ``applicant_repo.get`` enforces. Anything else reads as not found.
+    """
     result = await db.execute(
-        select(RentSchedule).where(
+        select(RentSchedule)
+        .join(Applicant, Applicant.id == RentSchedule.applicant_id)
+        .where(
             RentSchedule.id == schedule_id,
             RentSchedule.organization_id == organization_id,
             RentSchedule.deleted_at.is_(None),
+            Applicant.organization_id == organization_id,
+            Applicant.user_id == user_id,
+            Applicant.deleted_at.is_(None),
         ),
     )
     return result.scalar_one_or_none()
@@ -70,20 +86,6 @@ async def list_for_applicant(
         .where(
             RentSchedule.organization_id == organization_id,
             RentSchedule.applicant_id == applicant_id,
-            RentSchedule.deleted_at.is_(None),
-        )
-        .order_by(RentSchedule.start_date, RentSchedule.created_at),
-    )
-    return result.scalars().all()
-
-
-async def list_for_org(
-    db: AsyncSession, *, organization_id: uuid.UUID,
-) -> Sequence[RentSchedule]:
-    result = await db.execute(
-        select(RentSchedule)
-        .where(
-            RentSchedule.organization_id == organization_id,
             RentSchedule.deleted_at.is_(None),
         )
         .order_by(RentSchedule.start_date, RentSchedule.created_at),

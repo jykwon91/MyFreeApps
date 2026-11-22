@@ -28,11 +28,11 @@ class TenantNotFoundError(LookupError):
 
 
 class ScheduleNotFoundError(LookupError):
-    pass
+    """No schedule with that id on one of the caller's own tenants."""
 
 
 class ChargeNotFoundError(LookupError):
-    pass
+    """No charge with that id on one of the caller's own tenants."""
 
 
 class OverlappingScheduleError(ValueError):
@@ -164,7 +164,8 @@ async def update_schedule(
     touched = fields_set or set()
     async with unit_of_work() as db:
         schedule = await rent_schedule_repo.get(
-            db, organization_id=organization_id, schedule_id=schedule_id,
+            db, organization_id=organization_id,
+            user_id=user_id, schedule_id=schedule_id,
         )
         if schedule is None:
             raise ScheduleNotFoundError(str(schedule_id))
@@ -197,7 +198,7 @@ async def update_schedule(
 
 
 async def delete_schedule(
-    *, organization_id: uuid.UUID, schedule_id: uuid.UUID,
+    *, organization_id: uuid.UUID, user_id: uuid.UUID, schedule_id: uuid.UUID,
 ) -> None:
     """Soft-delete a schedule.
 
@@ -208,7 +209,8 @@ async def delete_schedule(
     """
     async with unit_of_work() as db:
         schedule = await rent_schedule_repo.get(
-            db, organization_id=organization_id, schedule_id=schedule_id,
+            db, organization_id=organization_id,
+            user_id=user_id, schedule_id=schedule_id,
         )
         if schedule is None:
             raise ScheduleNotFoundError(str(schedule_id))
@@ -260,11 +262,16 @@ async def add_charge(
 
 
 async def waive_charge(
-    *, organization_id: uuid.UUID, charge_id: uuid.UUID, reason: str,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    charge_id: uuid.UUID,
+    reason: str,
 ) -> None:
     async with unit_of_work() as db:
         charge = await rent_charge_repo.get(
-            db, organization_id=organization_id, charge_id=charge_id,
+            db, organization_id=organization_id,
+            user_id=user_id, charge_id=charge_id,
         )
         if charge is None:
             raise ChargeNotFoundError(str(charge_id))
@@ -272,11 +279,12 @@ async def waive_charge(
 
 
 async def unwaive_charge(
-    *, organization_id: uuid.UUID, charge_id: uuid.UUID,
+    *, organization_id: uuid.UUID, user_id: uuid.UUID, charge_id: uuid.UUID,
 ) -> None:
     async with unit_of_work() as db:
         charge = await rent_charge_repo.get(
-            db, organization_id=organization_id, charge_id=charge_id,
+            db, organization_id=organization_id,
+            user_id=user_id, charge_id=charge_id,
         )
         if charge is None:
             raise ChargeNotFoundError(str(charge_id))
@@ -284,7 +292,7 @@ async def unwaive_charge(
 
 
 async def delete_charge(
-    *, organization_id: uuid.UUID, charge_id: uuid.UUID,
+    *, organization_id: uuid.UUID, user_id: uuid.UUID, charge_id: uuid.UUID,
 ) -> None:
     """Soft-delete a charge.
 
@@ -294,7 +302,8 @@ async def delete_charge(
     """
     async with unit_of_work() as db:
         charge = await rent_charge_repo.get(
-            db, organization_id=organization_id, charge_id=charge_id,
+            db, organization_id=organization_id,
+            user_id=user_id, charge_id=charge_id,
         )
         if charge is None:
             raise ChargeNotFoundError(str(charge_id))
