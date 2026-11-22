@@ -57,8 +57,8 @@ def error_from_refused_recipients(
         else "transient"
     )
     delivered = recipient_count - len(codes)
-    summary = ", ".join(f"{address} ({code})" for address, code in codes.items())
-    message = f"SMTP server refused {len(codes)} of {recipient_count} recipient(s): {summary}"
+    summary = ", ".join(str(code) for code in codes.values())
+    message = f"SMTP server refused {len(codes)} of {recipient_count} recipient(s) (reply codes: {summary})"
     if delivered > 0:
         message += f"; delivered to the other {delivered}"
     return EmailSendError(

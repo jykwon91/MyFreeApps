@@ -26,6 +26,8 @@ Status code conventions:
   * 404 — invite not found
   * 409 — conflict (recipient unavailable, already-accepted invite)
   * 410 — gone (expired)
+  * 502 — invite email: ``invite_email_failed`` (no invite is left; retry) or
+    ``invite_email_unconfirmed`` (may have arrived; the invite is kept)
   * 429 — rate limited (public preview)
 """
 from __future__ import annotations
@@ -33,6 +35,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from platform_shared.core.request_utils import get_client_ip
 
 from app.core.auth import current_active_user
 from app.core.permissions import current_superuser
@@ -43,18 +46,17 @@ from app.schemas.platform.invite_create_request import InviteCreateRequest
 from app.schemas.platform.invite_info_response import InviteInfoResponse
 from app.schemas.platform.invite_read import InviteRead
 from app.services.platform import invite_service
-from app.services.platform.invite_email import send_invite_email
 from app.services.platform.invite_service import (
     InviteAlreadyAcceptedError,
     InviteEmailAlreadyRegisteredError,
     InviteEmailMismatchError,
+    InviteEmailSendFailedError,
+    InviteEmailUnconfirmedError,
     InviteExpiredError,
     InviteNotFoundError,
     InvitePendingAlreadyExistsError,
     InviteRecipientUnavailableError,
 )
-from platform_shared.core.request_utils import get_client_ip
-
 
 admin_router = APIRouter(prefix="/admin/invites", tags=["admin"])
 public_router = APIRouter(prefix="/invites", tags=["invites"])
@@ -98,7 +100,7 @@ async def create_invite(
     admin: User = Depends(current_superuser),
 ) -> InviteRead:
     try:
-        result = await invite_service.create_invite(
+        invite = await invite_service.create_and_send_invite(
             email=body.email, admin_id=admin.id,
         )
     except InviteEmailAlreadyRegisteredError as e:
@@ -107,13 +109,14 @@ async def create_invite(
         raise HTTPException(status_code=409, detail="invite_already_pending") from e
     except InviteRecipientUnavailableError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
-
-    # Email send happens AFTER the row commits (the unit_of_work in the
-    # service has already returned). If SMTP fails the row stays — the
-    # admin can resend via a future cancel-and-reissue flow rather than
-    # being left with an orphan email-but-no-row.
-    await send_invite_email(result.invite.email, result.raw_token)
-    return _to_read(result.invite)
+    except InviteEmailSendFailedError as e:
+        # The service already removed the row, so a retry works.
+        raise HTTPException(status_code=502, detail="invite_email_failed") from e
+    except InviteEmailUnconfirmedError as e:
+        # The invite row is kept: the email may have arrived. The admin can
+        # cancel it from the list and resend.
+        raise HTTPException(status_code=502, detail="invite_email_unconfirmed") from e
+    return _to_read(invite)
 
 
 @admin_router.get("", response_model=list[InviteRead])

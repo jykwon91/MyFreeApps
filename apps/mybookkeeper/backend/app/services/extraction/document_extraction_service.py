@@ -203,7 +203,10 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                 {"document_id": str(document_id), "error": str(e)[:500]},
             )
         except Exception:
-            pass
+            logger.exception(
+                "Could not record extraction_failed event for document %s",
+                document_id,
+            )
         raise
 
     # Phase 3: Persist results (single atomic transaction)

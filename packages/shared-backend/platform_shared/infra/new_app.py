@@ -229,6 +229,8 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
             "object-src 'none'; "
             "upgrade-insecure-requests"
         ),
+        # The scaffolded app uses create_app_lifespan, which drains tracked tasks.
+        "drain_on_shutdown": True,
         "workers": [],
         "post_deploy_commands": [],
     }

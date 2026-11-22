@@ -45,11 +45,7 @@ async def delete_account(db: AsyncSession, user: Any) -> None:
             with both apps' User class without needing the class as a
             parameter. Detached instances are handled correctly.
     """
-    logger.warning(
-        "Account deletion: user_id=%s email=%s",
-        user.id,
-        user.email,
-    )
+    logger.warning("Account deletion: user_id=%s", user.id)
     # Refetch via the session so SQLAlchemy emits a real DELETE statement
     # (rather than a no-op when the caller passed a detached instance).
     loaded_user = await db.get(type(user), user.id)

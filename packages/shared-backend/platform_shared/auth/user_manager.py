@@ -25,10 +25,12 @@ Subclasses MUST override:
 
   * ``on_after_register`` — for app-specific seed data + verification dispatch
   * ``on_after_request_verify`` — to actually deliver the verification email
-  * ``on_after_forgot_password`` — to deliver the reset email
+  * ``send_password_reset_email`` — to deliver the reset email
 
 Subclasses MAY override:
 
+  * ``on_password_reset_email_sent`` / ``on_password_reset_email_failed`` — e.g. to
+    log PASSWORD_RESET_REQUEST (both run in the background, after the response)
   * ``on_after_reset_password`` — e.g. to disable TOTP after password reset
   * ``on_after_verify`` — e.g. to log EMAIL_VERIFY_SUCCESS
 
@@ -58,8 +60,11 @@ from fastapi_users import (
 
 from platform_shared.auth.session_invalidation import session_cutoff_now
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.core.tracked_task import spawn_tracked
 from platform_shared.db.session import release_connection, unit_of_work_on_same_database
 from platform_shared.services.account_guard_service import AccountGuardService
+from platform_shared.services.email_send_error import EmailSendError
+from platform_shared.services.email_service import EmailNotConfiguredError
 from platform_shared.services.guard_outcome import GuardOutcome
 from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
 from platform_shared.services.seed_admin_service import is_reserved_seed_email
@@ -226,6 +231,53 @@ class PlatformBaseUserManager(
             request=request,
         )
         return result if outcome is GuardOutcome.ALLOWED else None
+
+    async def send_password_reset_email(self, email: str, token: str) -> None:
+        """Deliver the reset email. Every app overrides this (a conformance test checks)."""
+        raise NotImplementedError
+
+    async def on_password_reset_email_sent(
+        self, user_id: uuid.UUID, request: Request | None = None,
+    ) -> None:
+        """Hook run in the background after the reset email was sent. Default: nothing."""
+
+    async def on_password_reset_email_failed(
+        self, user_id: uuid.UUID, failure_kind: str, request: Request | None = None,
+    ) -> None:
+        """Hook run in the background after the reset email could not be sent. Default: nothing."""
+
+    async def on_after_forgot_password(
+        self, user: UP, token: str, request: Request | None = None,
+    ) -> None:
+        """Send the reset email after the response, so the response cannot tell accounts apart.
+
+        The forgot-password route answers 202 for an unknown address at once. If
+        the known-address path waited for SMTP (or surfaced its failure), timing
+        or a 5xx would show whether an account exists. The send runs as a
+        tracked background task instead; a failure is logged at ERROR with the
+        user id only, never the address.
+        """
+        user_id: uuid.UUID = user.id  # type: ignore[attr-defined]
+        email: str = user.email  # type: ignore[attr-defined]
+        spawn_tracked(
+            self._deliver_password_reset(user_id, email, token, request),
+            name=f"password-reset-email:{user_id}",
+        )
+
+    async def _deliver_password_reset(
+        self, user_id: uuid.UUID, email: str, token: str, request: Request | None,
+    ) -> None:
+        try:
+            await self.send_password_reset_email(email, token)
+        except (EmailSendError, EmailNotConfiguredError) as exc:
+            kind = exc.kind if isinstance(exc, EmailSendError) else "not_configured"
+            logger.error(
+                "Password reset email failed for user_id=%s kind=%s smtp_code=%s",
+                user_id, kind, getattr(exc, "smtp_code", None),
+            )
+            await self.on_password_reset_email_failed(user_id, kind, request)
+            return
+        await self.on_password_reset_email_sent(user_id, request)
 
     async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
         """End every existing session when the password changes.

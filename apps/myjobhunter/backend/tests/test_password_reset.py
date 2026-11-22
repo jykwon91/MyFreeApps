@@ -9,16 +9,17 @@ Locks the contract:
 - The UserManager.on_after_forgot_password hook is wired to the sender so
   fastapi-users' forgot-password endpoint actually delivers the email.
 """
-from unittest.mock import AsyncMock, MagicMock, patch
+import logging
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.core.auth import UserManager
 from app.services.email.email_sender import EmailSendError
 from app.services.email.password_reset_email import (
     _build_reset_html,
     send_password_reset_email,
 )
+from platform_shared.core.tracked_task import drain_tracked
 
 
 class TestPasswordResetEmailTemplate:
@@ -90,15 +91,18 @@ class TestOnAfterForgotPassword:
         user.email = "test@example.com"
 
         await manager.on_after_forgot_password(user, "resettoken123")
+        await drain_tracked()
 
         mock_send.assert_called_once_with("test@example.com", "resettoken123")
 
     @pytest.mark.anyio
     @patch("app.core.auth.send_password_reset_email")
-    async def test_raises_on_send_failure(self, mock_send) -> None:
-        """Send failure must propagate so the forgot-password HTTP request
-        fails 5xx and the user retries — never returns a 2xx with the
-        reset email lost.
+    async def test_send_failure_is_logged_not_raised(
+        self, mock_send, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A send failure must not change the HTTP response: unknown addresses
+        get 202, so a 5xx here would reveal that the account exists. The
+        operator is alerted through an ERROR log carrying the user id only.
         """
         mock_send.side_effect = EmailSendError("smtp down", kind="transient")
         manager = UserManager.__new__(UserManager)
@@ -108,5 +112,11 @@ class TestOnAfterForgotPassword:
         user.id = "u1"
         user.email = "fail@example.com"
 
-        with pytest.raises(EmailSendError, match="smtp down"):
+        with caplog.at_level(logging.ERROR):
             await manager.on_after_forgot_password(user, "token")
+            await drain_tracked()
+
+        errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert "u1" in errors[0].getMessage()
+        assert "fail@example.com" not in errors[0].getMessage()

@@ -7,7 +7,10 @@ import {
   showSuccess,
 } from "@platform/ui";
 import { useCreateInviteMutation } from "@myjobhunter/api-client/store/invitesApi";
-import { extractInviteCreateErrorMessage } from "./inviteErrorMessages";
+import {
+  extractInviteCreateErrorMessage,
+  isInviteEmailUnconfirmed,
+} from "./inviteErrorMessages";
 
 export interface CreateInviteDialogProps {
   open: boolean;
@@ -20,7 +23,9 @@ export interface CreateInviteDialogProps {
  * Single email input + submit. On success, shows a toast, resets the
  * form, and closes. Server-side errors (already registered, already
  * pending) are surfaced inline via toast — the dialog stays open so
- * the admin can correct the address. Escape and a click on the backdrop
+ * the admin can correct the address. When the email's delivery is
+ * unconfirmed the invite was kept, so the dialog closes and the admin works
+ * from the list (cancel and resend). Escape and a click on the backdrop
  * close it, like Cancel.
  */
 export default function CreateInviteDialog({
@@ -51,6 +56,10 @@ export default function CreateInviteDialog({
       onOpenChange(false);
     } catch (err) {
       showError(extractInviteCreateErrorMessage(err));
+      if (isInviteEmailUnconfirmed(err)) {
+        // The invite exists now; resending the same address would only 409.
+        handleClose();
+      }
     }
   }
 

@@ -151,7 +151,7 @@ async def seed_admin_user(
             user_id=user.id,
             succeeded=True,
         )
-        logger.info("seed_admin_user: created platform admin %s", email)
+        logger.info("seed_admin_user: created platform admin user_id=%s", user.id)
         return "created"
 
     if existing.hashed_password != password_hash:
@@ -198,8 +198,8 @@ async def seed_admin_user(
         metadata={"fields": sorted(updates)},
     )
     logger.info(
-        "seed_admin_user: promoted existing seed-owned user %s to platform "
-        "admin (fields: %s)", email, ", ".join(sorted(updates)),
+        "seed_admin_user: promoted existing seed-owned user_id=%s to platform "
+        "admin (fields: %s)", existing.id, ", ".join(sorted(updates)),
     )
     return "promoted"
 

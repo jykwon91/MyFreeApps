@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractInviteCreateErrorMessage } from "../inviteErrorMessages";
+import { extractInviteCreateErrorMessage, isInviteEmailUnconfirmed } from "../inviteErrorMessages";
 
 function makeRtkError(detail: string): unknown {
   return { data: { detail } };
@@ -16,6 +16,19 @@ describe("extractInviteCreateErrorMessage", () => {
     const msg = extractInviteCreateErrorMessage(makeRtkError("invite_already_pending"));
     expect(msg).toContain("Invite already pending");
     expect(msg).toContain("cancel");
+  });
+
+  it("explains that no invite was created when the email could not be sent", () => {
+    const msg = extractInviteCreateErrorMessage(makeRtkError("invite_email_failed"));
+    expect(msg).toContain("no invite was created");
+    expect(msg).toContain("Try again");
+  });
+
+  it("says the email may have arrived and points to cancel-and-resend when delivery is unconfirmed", () => {
+    const msg = extractInviteCreateErrorMessage(makeRtkError("invite_email_unconfirmed"));
+    expect(msg).toContain("may have arrived");
+    expect(msg).toContain("cancel it and send again");
+    expect(msg).not.toContain("no invite was created");
   });
 
   it("returns fallback for an unrecognised detail code", () => {
@@ -37,5 +50,11 @@ describe("extractInviteCreateErrorMessage", () => {
     const a = extractInviteCreateErrorMessage(makeRtkError("user_already_exists"));
     const b = extractInviteCreateErrorMessage(makeRtkError("invite_already_pending"));
     expect(a).not.toEqual(b);
+  });
+
+  it("flags only the unconfirmed-delivery code", () => {
+    expect(isInviteEmailUnconfirmed(makeRtkError("invite_email_unconfirmed"))).toBe(true);
+    expect(isInviteEmailUnconfirmed(makeRtkError("invite_email_failed"))).toBe(false);
+    expect(isInviteEmailUnconfirmed(null)).toBe(false);
   });
 });

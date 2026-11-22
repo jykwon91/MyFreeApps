@@ -3,19 +3,8 @@ import uuid
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import Depends, Request
-from fastapi_users import FastAPIUsers
-from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from platform_shared.auth.jwt_backend import build_jwt_auth_backend
-from platform_shared.auth.user_manager import PlatformBaseUserManager
-from platform_shared.core.auth_events import AuthEventType
-from platform_shared.services.account_lockout import lock_duration_for
-from platform_shared.services.auth_event_service import log_auth_event
-
 from app.core.config import settings
-from app.db.session import get_db
+from app.db.session import get_db, unit_of_work
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.organization.tax_profile import TaxProfile
@@ -23,6 +12,15 @@ from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from app.services.system.password_reset_email import send_password_reset_email
 from app.services.system.verification_email import send_verification_email
+from fastapi import Depends, Request
+from fastapi_users import FastAPIUsers
+from fastapi_users.db import SQLAlchemyUserDatabase
+from platform_shared.auth.jwt_backend import build_jwt_auth_backend
+from platform_shared.auth.user_manager import PlatformBaseUserManager
+from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.account_lockout import lock_duration_for
+from platform_shared.services.auth_event_service import log_auth_event
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -108,24 +106,40 @@ class UserManager(PlatformBaseUserManager[User]):
             succeeded=True,
         )
 
-    async def on_after_forgot_password(
-        self, user: User, token: str, request: Optional[Request] = None,
-    ) -> None:
-        """Send password-reset email when a token is generated.
+    async def send_password_reset_email(self, email: str, token: str) -> None:
+        await send_password_reset_email(email, token)
 
-        Raises on any send failure so the forgot-password HTTP request
-        fails 5xx and the user retries — never returns 2xx with the reset
-        email lost.
-        """
-        await send_password_reset_email(user.email, token)
-        logger.info("Password reset email sent to %s", user.email)
-        await log_auth_event(
-            self.user_db.session,
-            event_type=AuthEventType.PASSWORD_RESET_REQUEST,
-            user_id=user.id,
-            request=request,
-            succeeded=True,
+    async def on_password_reset_email_sent(
+        self, user_id: uuid.UUID, request: Request | None = None,
+    ) -> None:
+        logger.info("Password reset email sent to user_id=%s", user_id)
+        await self._record_reset_request(user_id, request, succeeded=True, metadata=None)
+
+    async def on_password_reset_email_failed(
+        self, user_id: uuid.UUID, failure_kind: str, request: Request | None = None,
+    ) -> None:
+        await self._record_reset_request(
+            user_id, request, succeeded=False, metadata={"failure_kind": failure_kind},
         )
+
+    @staticmethod
+    async def _record_reset_request(
+        user_id: uuid.UUID,
+        request: Request | None,
+        *,
+        succeeded: bool,
+        metadata: dict[str, str] | None,
+    ) -> None:
+        # Runs after the response, so it cannot use the request's session.
+        async with unit_of_work() as db:
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.PASSWORD_RESET_REQUEST,
+                user_id=user_id,
+                request=request,
+                succeeded=succeeded,
+                metadata=metadata,
+            )
 
     async def on_after_reset_password(
         self, user: User, request: Optional[Request] = None,

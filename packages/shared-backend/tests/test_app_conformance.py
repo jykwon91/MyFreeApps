@@ -21,7 +21,12 @@ from pathlib import Path
 
 import pytest
 import yaml
-
+from platform_shared.core.tracked_task_constants import (
+    API_STOP_GRACE_PERIOD_SECONDS,
+    SHUTDOWN_DRAIN_TIMEOUT_SECONDS,
+    SHUTDOWN_MARGIN_SECONDS,
+    UVICORN_GRACEFUL_SHUTDOWN_SECONDS,
+)
 from platform_shared.infra import render as _render
 from platform_shared.infra import screen_map as _screen_map
 
@@ -658,7 +663,7 @@ class TestInfraTemplateDrift:
     @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker", "myrecipes", "mylanguagetutor"])
     def test_no_drift(self, app: str) -> None:
         try:
-            from platform_shared.infra.render import diff_app, _repo_root
+            from platform_shared.infra.render import _repo_root, diff_app
         except ModuleNotFoundError as e:
             import pytest as _pytest
             _pytest.skip(f"infra render module unavailable ({e}); skipping drift check")
@@ -2425,3 +2430,81 @@ class TestMjhJobDescriptionLimitMatchesClients:
         client_match = re.search(r"^export const JD_TEXT_MAX_LENGTH = ([\d_]+);$", client, re.M)
         assert backend_match and client_match, "JD length constants not found"
         assert int(backend_match.group(1).replace("_", "")) == int(client_match.group(1).replace("_", ""))
+
+
+# Apps whose user manager still delivers the reset email inside its own
+# on_after_forgot_password (so a send failure is a 5xx for a registered address
+# and the send delays the response). Listing an app here is a reviewed
+# exception, not a default.
+# - mygamingassistant: not yet converted to PlatformBaseUserManager's
+#   send_password_reset_email hook; single-user, so no account to reveal.
+_PASSWORD_RESET_HOOK_EXEMPT = {"mygamingassistant"}
+
+
+class TestPasswordResetUsesTheSharedHook:
+    """A missing send_password_reset_email would only fail when someone resets a password."""
+
+    @pytest.mark.parametrize("app", [a for a in _APPS if a not in _PASSWORD_RESET_HOOK_EXEMPT])
+    def test_app_implements_the_sender(self, app: str) -> None:
+        source = _read("apps", app, "backend", "app", "core", "auth.py")
+        assert "async def send_password_reset_email(self, email: str, token: str)" in source, (
+            f"apps/{app}/backend/app/core/auth.py must override send_password_reset_email"
+        )
+
+    @pytest.mark.parametrize("app", [a for a in _APPS if a not in _PASSWORD_RESET_HOOK_EXEMPT])
+    def test_app_does_not_bypass_the_shared_flow(self, app: str) -> None:
+        source = _read("apps", app, "backend", "app", "core", "auth.py")
+        assert "def on_after_forgot_password" not in source, (
+            f"apps/{app} overrides on_after_forgot_password; implement send_password_reset_email "
+            "instead so the send runs in the background and its failure cannot reveal the account"
+        )
+
+    def test_scaffold_implements_the_sender(self) -> None:
+        source = _read("infra", "templates", "scaffold", "backend", "app", "core", "auth.py")
+        assert "async def send_password_reset_email(self, email: str, token: str)" in source
+        assert "def on_after_forgot_password" not in source
+
+
+# MyGamingAssistant is single-user and not yet on the shared password-reset
+# flow; its api service keeps compose's default grace period.
+_SHUTDOWN_DRAIN_EXEMPT = {"mygamingassistant"}
+_DRAIN_APPS = [a for a in _ALL_APPS if a not in _SHUTDOWN_DRAIN_EXEMPT]
+_SECONDS = {"ms": 0.001, "s": 1, "m": 60, "h": 3600}
+
+
+def _api_stop_grace_seconds(app: str) -> float:
+    compose = yaml.safe_load(_read("apps", app, "docker-compose.yml"))
+    raw = compose["services"]["api"].get("stop_grace_period")
+    assert raw, f"apps/{app}/docker-compose.yml api has no stop_grace_period (docker SIGKILLs at 10s)"
+    match = re.fullmatch(r"(\d+)(ms|s|m|h)", str(raw))
+    assert match, f"apps/{app}/docker-compose.yml api stop_grace_period {raw!r} is not a duration"
+    return int(match.group(1)) * _SECONDS[match.group(2)]
+
+
+class TestApiShutdownWindowCoversTheDrain:
+    """The lifespan drain only helps if docker waits long enough for it."""
+
+    def test_constants_add_up(self) -> None:
+        assert API_STOP_GRACE_PERIOD_SECONDS >= (
+            UVICORN_GRACEFUL_SHUTDOWN_SECONDS + SHUTDOWN_DRAIN_TIMEOUT_SECONDS + SHUTDOWN_MARGIN_SECONDS
+        )
+
+    @pytest.mark.parametrize("app", _DRAIN_APPS)
+    def test_api_stop_grace_period_covers_the_drain(self, app: str) -> None:
+        needed = SHUTDOWN_DRAIN_TIMEOUT_SECONDS + SHUTDOWN_MARGIN_SECONDS
+        assert _api_stop_grace_seconds(app) >= needed + UVICORN_GRACEFUL_SHUTDOWN_SECONDS, (
+            f"apps/{app} api stop_grace_period is shorter than uvicorn wait + drain + margin; "
+            f"set drain_on_shutdown: true in app.yaml and re-render"
+        )
+
+    @pytest.mark.parametrize("app", _DRAIN_APPS)
+    def test_uvicorn_bounds_in_flight_requests(self, app: str) -> None:
+        dockerfile = _read("apps", app, "docker", "backend.Dockerfile")
+        assert f'"--timeout-graceful-shutdown", "{UVICORN_GRACEFUL_SHUTDOWN_SECONDS}"' in dockerfile, (
+            f"apps/{app}/docker/backend.Dockerfile must run uvicorn with "
+            f"--timeout-graceful-shutdown {UVICORN_GRACEFUL_SHUTDOWN_SECONDS}"
+        )
+
+    def test_scaffold_dockerfile_bounds_in_flight_requests(self) -> None:
+        dockerfile = _read("infra", "templates", "scaffold", "docker", "backend.Dockerfile")
+        assert f'"--timeout-graceful-shutdown", "{UVICORN_GRACEFUL_SHUTDOWN_SECONDS}"' in dockerfile

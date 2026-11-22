@@ -11,11 +11,11 @@ from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.core.auth import UserManager
 from app.core.config import settings
 from app.services.system import email_service
 from app.services.system.email_service import EmailSendError
+from platform_shared.core.tracked_task import drain_tracked
 
 
 @pytest.fixture
@@ -52,6 +52,7 @@ async def test_forgot_password_email_is_sent_off_the_event_loop(smtp_backend: No
 
     with patch("smtplib.SMTP", return_value=server):
         await _manager().on_after_forgot_password(_user(), "reset-token")
+        await drain_tracked()
 
     assert send_threads and send_threads[0] != loop_thread
 

@@ -34,7 +34,8 @@ Boot order (rationale documented inline below):
   7. extra_startup()              — app-specific (e.g. MBK spawns the
                                     upload worker; MJH has nothing yet)
   8. yield                        — app handles requests
-  9. extra_shutdown()             — app-specific cleanup (e.g. cancel
+  9. drain tracked background tasks (bounded)
+ 10. extra_shutdown()             — app-specific cleanup (e.g. cancel
                                     the upload worker task)
 
 Usage:
@@ -80,6 +81,7 @@ from platform_shared.core.boot_guards import (
     check_transparency_configured,
     check_turnstile_configured,
 )
+from platform_shared.core.tracked_task import drain_tracked_at_shutdown
 from platform_shared.services.email_backend import EmailBackend
 
 
@@ -250,7 +252,11 @@ def create_app_lifespan(
         try:
             yield
         finally:
-            # 6. App-specific shutdown hook
+            # 6. Let in-flight tracked background work (reset emails) finish
+            # while the DB pool is still up; log what cannot finish in time.
+            await drain_tracked_at_shutdown()
+
+            # 7. App-specific shutdown hook
             if on_shutdown is not None:
                 result = on_shutdown()
                 if hasattr(result, "__await__"):

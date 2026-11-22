@@ -12,21 +12,19 @@ import uuid
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import Depends, Request
-from fastapi_users import FastAPIUsers
-from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from platform_shared.auth.jwt_backend import build_jwt_auth_backend
-from platform_shared.auth.user_manager import PlatformBaseUserManager
-from platform_shared.services.account_lockout import lock_duration_for
-
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from app.services.email.password_reset_email import send_password_reset_email
 from app.services.email.verification_email import send_verification_email
+from fastapi import Depends, Request
+from fastapi_users import FastAPIUsers
+from fastapi_users.db import SQLAlchemyUserDatabase
+from platform_shared.auth.jwt_backend import build_jwt_auth_backend
+from platform_shared.auth.user_manager import PlatformBaseUserManager
+from platform_shared.services.account_lockout import lock_duration_for
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +67,13 @@ class UserManager(PlatformBaseUserManager[User]):
         await send_verification_email(user.email, token)
         logger.info("Verification email sent to user_id=%s", user.id)
 
-    async def on_after_forgot_password(
-        self, user: User, token: str, request: Optional[Request] = None,
+    async def send_password_reset_email(self, email: str, token: str) -> None:
+        await send_password_reset_email(email, token)
+
+    async def on_password_reset_email_sent(
+        self, user_id: uuid.UUID, request: Optional[Request] = None,
     ) -> None:
-        await send_password_reset_email(user.email, token)
-        logger.info("Password-reset email sent to user_id=%s", user.id)
+        logger.info("Password-reset email sent to user_id=%s", user_id)
 
     async def on_after_verify(
         self, user: User, request: Optional[Request] = None,

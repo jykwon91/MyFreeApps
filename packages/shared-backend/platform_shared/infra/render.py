@@ -75,6 +75,11 @@ Other keys:
                                (duration string; validated by
                                ``worker_stop_grace_period``) overrides compose's 10s
                                SIGTERM-to-SIGKILL wait.
+  drain_on_shutdown     bool   True when the api drains tracked background tasks at shutdown
+                               (every app on create_app_lifespan). Gives the api service a
+                               ``stop_grace_period`` derived from
+                               ``platform_shared.core.tracked_task_constants`` so docker
+                               does not SIGKILL it mid-drain. Absent/false = compose default.
   post_deploy_commands  list   Shell commands run in-container after ``alembic upgrade head``.
 """
 
@@ -90,6 +95,7 @@ from typing import Any
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from platform_shared.core.tracked_task_constants import API_STOP_GRACE_PERIOD_SECONDS
 from platform_shared.infra.worker_healthcheck import normalize_worker_healthcheck
 from platform_shared.infra.worker_stop_grace_period import validate_worker_stop_grace_period
 
@@ -289,6 +295,7 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
                 worker["name"], worker["stop_grace_period"],
             )
     # The web image builds from a subset of the workspace, so it has to copy this.
+    ctx["api_stop_grace_period"] = f"{API_STOP_GRACE_PERIOD_SECONDS}s"
     ctx["has_api_client"] = (repo_root / "apps" / app_slug / "api-client" / "package.json").is_file()
 
     env = Environment(

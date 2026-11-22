@@ -3,22 +3,24 @@
 Each test exercises a real code path (mocking only auth/DB plumbing) and
 asserts that the correct AuthEvent row is written.
 """
+import asyncio
 import contextlib
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.auth import current_active_user, get_jwt_strategy
 from app.db.session import get_db
 from app.main import app
 from app.models.system.auth_event import AuthEvent
 from app.models.user.user import User
-
+from app.services.system.email_service import EmailSendError
+from httpx import ASGITransport, AsyncClient
+from platform_shared.core.tracked_task import drain_tracked
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -80,6 +82,18 @@ def _patch_totp_service(db: AsyncSession):
     with (
         patch("app.services.user.totp_service.unit_of_work", _fake_session),
     ):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _patch_auth_unit_of_work(db: AsyncSession):
+    """The reset-email audit write runs after the response, in its own unit of work."""
+    @asynccontextmanager
+    async def _fake_uow():
+        yield db
+        await db.flush()
+
+    with patch("app.core.auth.unit_of_work", _fake_uow):
         yield
 
 
@@ -172,6 +186,7 @@ async def test_password_reset_request_creates_event(db: AsyncSession) -> None:
                 "/auth/forgot-password",
                 json={"email": user.email},
             )
+        await drain_tracked()
 
     assert resp.status_code == 202
 
@@ -180,6 +195,70 @@ async def test_password_reset_request_creates_event(db: AsyncSession) -> None:
     assert "password_reset.request" in event_types
     ev = next(e for e in events if e.event_type == "password_reset.request")
     assert ev.user_id == user.id
+
+
+@pytest.mark.anyio
+async def test_forgot_password_answers_the_same_for_a_known_and_an_unknown_address_when_smtp_fails(
+    db: AsyncSession, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A registered address must look the same as an unknown one during an SMTP outage."""
+    user = _make_user()
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    with (
+        patch(
+            "app.core.auth.send_password_reset_email",
+            side_effect=EmailSendError("smtp down", kind="transient"),
+        ),
+        patch("app.core.rate_limit.verify_turnstile_token", new_callable=AsyncMock, return_value=(True, [])),
+        caplog.at_level(logging.ERROR),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            known = await client.post("/auth/forgot-password", json={"email": user.email})
+            unknown = await client.post("/auth/forgot-password", json={"email": "nobody@example.com"})
+        await drain_tracked()
+
+    assert (known.status_code, known.content) == (unknown.status_code, unknown.content)
+    assert known.status_code == 202
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert any(str(user.id) in r.getMessage() for r in errors)
+    assert all(user.email not in r.getMessage() for r in errors)
+    failed = [e for e in await _events(db) if e.event_type == "password_reset.request"]
+    assert len(failed) == 1
+    assert failed[0].user_id == user.id and failed[0].succeeded is False
+    assert failed[0].event_metadata == {"failure_kind": "transient"}
+
+
+@pytest.mark.anyio
+async def test_forgot_password_does_not_wait_for_the_reset_email(db: AsyncSession) -> None:
+    """The response is sent before SMTP finishes, so timing cannot reveal the account."""
+    user = _make_user()
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    release = asyncio.Event()
+
+    async def slow_send(email: str, token: str) -> None:
+        await release.wait()
+
+    with (
+        patch("app.core.auth.send_password_reset_email", side_effect=slow_send),
+        patch("app.core.rate_limit.verify_turnstile_token", new_callable=AsyncMock, return_value=(True, [])),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await asyncio.wait_for(
+                client.post("/auth/forgot-password", json={"email": user.email}), timeout=5,
+            )
+        assert resp.status_code == 202
+        assert [e for e in await _events(db) if e.event_type == "password_reset.request"] == []
+        release.set()
+        await drain_tracked()
+
+    assert len([e for e in await _events(db) if e.event_type == "password_reset.request"]) == 1
 
 
 # ---------------------------------------------------------------------------
