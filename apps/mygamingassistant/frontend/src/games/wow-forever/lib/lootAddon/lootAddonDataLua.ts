@@ -62,12 +62,22 @@ function creatureShareLua(): string[] {
   ];
 }
 
+/** `MGALootMobArmor[band]`: the median armor of normal mobs in each ten-level band, for armor cuts. */
+function mobArmorLua(): string[] {
+  const bands = Object.entries(itemEffects.mobArmor as Record<string, number>).sort(([a], [b]) => Number(a) - Number(b));
+  const top = Math.max(...bands.map(([band]) => Number(band)));
+  return [
+    `MGALootMobArmor = {${bands.map(([band, armor]) => `[${band}] = ${armor}`).join(", ")}}`,
+    `MGALootMobArmorTop = ${top}`,
+  ];
+}
+
 // WoW's fonts have no arrow glyph, so the notes' "→" reads "=" in game.
 const ARROW = /→/g;
 
 /**
  * `MGALootEffects[itemId]`: what each item's Use, Chance on hit and Equip effects are worth
- * (`stat` = a weight key, or "dps" / "dps_pct" / "ranged_*" / "none" / "unresolved"), from `itemEffects.json`.
+ * (`stat` = a weight key, or "dps" / "use_dps" / "spell_dps" / "dps_pct" / "armor_cut" / "ranged_*" / "none" / "unresolved"), from `itemEffects.json`.
  */
 function itemEffectsLua(): string[] {
   const items = Object.entries(itemEffects.items as Record<string, readonly ItemEffectEntry[]>)
@@ -98,6 +108,7 @@ export function lootAddonDataLua(): string {
     ...WOW_CLASSES.flatMap(classLua),
     "}",
     ...creatureShareLua(),
+    ...mobArmorLua(),
     ...itemEffectsLua(),
     "",
   ].join("\n");

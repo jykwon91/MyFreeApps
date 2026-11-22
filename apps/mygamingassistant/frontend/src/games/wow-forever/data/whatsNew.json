@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot scores summons and effects on the enemy",
+    "summary": "MGA Loot now counts items that summon a helper, like Zum'rah's Vexing Cane's zombie troll, at the helper's damage times how often it's out. A helper the Classic data doesn't have counts as a normal mob of the item's level. Procs on your spell casts count for casters, at their spell damage weight. Armor taken off the target counts as the extra weapon damage it gives against mobs your level, stuns and slows say they add no damage, and resistance cuts say mobs resist none. Procs whose real chance the game files don't give stay uncounted, unless a cooldown caps them.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot scores procs that have no listed rate",
     "summary": "Procs the game files give no rate for, like Fiery War Axe's fireball, now count at the Classic server's own rule for them: 1.08 procs a minute. The note under the verdict says \"Classic server rule\" so you can tell them apart. Effects that change a class spell, scripted effects and effects on the enemy still say Can't judge.",
     "to": "/wow-forever/compare"

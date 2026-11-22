@@ -3,18 +3,21 @@
 Every equippable item with an item effect (ItemXItemEffect → ItemEffect) gets a list of
 ``{stat, value, note}`` entries, worked out by ``effect_values.py`` (its docstring has every conversion).
 The spell rows are Forever's own: the client tables with wago.tools' hotfixes and the operator's client
-hotfix cache on top, so hotfix-only items and Forever's changed numbers are in. The one thing taken from
-cmangos classic-db is a chance-on-hit spell's procs per minute when the client gives that spell no rate
-at all (``item_template.spellppmRate``), and the note says "Classic rate".
+hotfix cache on top, so hotfix-only items and Forever's changed numbers are in. Taken from cmangos
+classic-db: a chance-on-hit spell's procs per minute when the client gives that spell no rate at all
+(``item_template.spellppmRate``, the note says "Classic rate"), summoned creatures' damage and the normal
+mobs you fight (``creature_template`` + ``creature``, see ``mobs.py``). A summoned creature Classic lacks is
+named from the operator's client creature cache.
 
-Run from apps/mygamingassistant/backend:  python -m scripts.wow_loot.item_effects [--hotfix-cache PATH]
+Run from apps/mygamingassistant/backend:
+  python -m scripts.wow_loot.item_effects [--hotfix-cache PATH] [--creature-cache PATH]
 """
 from __future__ import annotations
 
 import argparse
 import json
 from collections import Counter
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 
 from scripts.wow_food.build import WOW_DATA_DIR
@@ -22,19 +25,27 @@ from scripts.wow_items.client_ids import STAT_KEY_BY_CLIENT_ID
 from scripts.wow_items.forever_items import ForeverTables, Row, hotfix_cache_path, load_forever_tables
 from scripts.wow_items.formula import stat_lines
 from scripts.wow_loot.effect_model import (
+    ASSUMED_SECONDS_PER_CAST,
     ASSUMED_SECONDS_PER_HIT,
+    CREATURE_SUMMON_EFFECTS,
     NONE,
+    PROC_ON_CAST_BITS,
+    PROC_ON_HIT_BITS,
     TRIGGER_CHANCE_ON_HIT,
     UNRESOLVED,
     USE_TRIGGERS,
     WEAPON_CLASS,
+    Creature,
     EffectRow,
     Entry,
     Item,
     ItemSpell,
     Spell,
+    World,
 )
 from scripts.wow_loot.effect_values import item_entries
+from scripts.wow_loot.mobs import mob_world, normal_mobs, summoned_creature, unique_names
+from scripts.wow_rares.creature_cache import creature_cache_path, read_creature_cache
 from scripts.wow_world_map.sources import CMANGOS_COMMIT, cmangos_dump
 from scripts.wow_world_map.sql_dump import read_dump
 
@@ -42,7 +53,7 @@ OUT = WOW_DATA_DIR / "lootAddon" / "itemEffects.json"
 TABLES = (
     "Item", "ItemSparse", "ItemEffect", "ItemXItemEffect", "SpellName", "SpellEffect", "SpellMisc",
     "SpellDuration", "SpellAuraOptions", "SpellProcsPerMinute", "SpellCooldowns", "SpellShapeshift",
-    "SpellEquippedItems",
+    "SpellEquippedItems", "Spell",
 )
 # Item.InventoryType values a character can wear (no shirts, tabards, bags or ammo).
 EQUIPPABLE = frozenset({1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 25, 26, 28})
@@ -76,9 +87,16 @@ def _by_spell(rows: list[Row]) -> dict[int, Row]:
 class SpellBook(Mapping[int, Spell]):
     """Client spells as ``effect_values.Spell``, built when first asked for."""
 
-    def __init__(self, tables: ForeverTables, classic_events: Mapping[int, tuple[float, float]]) -> None:
+    def __init__(
+        self,
+        tables: ForeverTables,
+        classic_events: Mapping[int, tuple[float, float]],
+        creatures: Callable[[int], Creature] | None = None,
+    ) -> None:
         self._classic_events = classic_events
+        self._creatures = creatures
         self._names = {_int(r["ID"]): r["Name_lang"] for r in tables.table("SpellName")}
+        self._descriptions = {_int(r["ID"]): r.get("Description_lang") or "" for r in tables.table("Spell")}
         self._effects: dict[int, list[Row]] = {}
         for row in tables.table("SpellEffect"):
             if row["DifficultyID"] == BASE_DIFFICULTY:
@@ -116,6 +134,11 @@ class SpellBook(Mapping[int, Spell]):
             weapon_bits = _int(equipped["EquippedItemSubclass"])
         rows = sorted(self._effects.get(spell_id, []), key=lambda r: _int(r["EffectIndex"]))
         classic_ppm, classic_chance = self._classic_events.get(spell_id, (0.0, 0.0))
+        proc_mask = _int(options.get("ProcTypeMask_0"))
+        summoned = sorted({
+            _int(r["EffectMiscValue_0"]) for r in rows
+            if _int(r["Effect"]) in CREATURE_SUMMON_EFFECTS and _int(r["EffectMiscValue_0"]) > 0
+        })
         return Spell(
             id=spell_id,
             name=self._names.get(spell_id, f"spell {spell_id}"),
@@ -131,6 +154,9 @@ class SpellBook(Mapping[int, Spell]):
             weapon_bits=weapon_bits,
             classic_ppm=classic_ppm,
             classic_chance=classic_chance,
+            cast_proc=bool(proc_mask & PROC_ON_CAST_BITS) and not proc_mask & PROC_ON_HIT_BITS,
+            chance_worded="chance" in self._descriptions.get(spell_id, "").lower(),
+            creatures=tuple(self._creatures(c) for c in summoned) if self._creatures else (),
             effects=tuple(
                 EffectRow(
                     effect=_int(r["Effect"]),
@@ -221,8 +247,10 @@ def build_effects(
     tables: ForeverTables,
     classic_items: Mapping[int, list[tuple[int, float]]],
     classic_events: Mapping[int, tuple[float, float]],
+    creatures: Callable[[int], Creature] | None = None,
+    world: World = World(),
 ) -> dict[int, list[Entry]]:
-    book = SpellBook(tables, classic_events)
+    book = SpellBook(tables, classic_events, creatures)
     items = tables.rows["Item"]
     sparse = tables.rows["ItemSparse"]
     out: dict[int, list[Entry]] = {}
@@ -235,8 +263,9 @@ def build_effects(
             id=item_id,
             weapon_speed=delay / 1000 if _int(item_row["ClassID"]) == WEAPON_CLASS and delay > 0 else None,
             stat_keys=sparse_stat_keys(sparse_row),
+            level=_int(sparse_row.get("RequiredLevel")),
         )
-        entries = item_entries(item, spells, book)
+        entries = item_entries(item, spells, book, world)
         if entries:
             out[item_id] = entries
     return out
@@ -267,21 +296,45 @@ def write_effects(path: Path, payload: dict) -> None:
     path.write_text(f'{head},"items":{{\n{rows}\n}}}}\n', encoding="utf-8", newline="\n")
 
 
+def creature_lookup(
+    templates: Mapping[int, Mapping[str, object]], client_names: Mapping[int, tuple[str, int]],
+) -> Callable[[int], Creature]:
+    """Creature id -> the summoned creature, from cmangos templates and the client cache's names."""
+    by_name = unique_names(templates.values())
+    return lambda creature_id: summoned_creature(creature_id, templates, by_name, client_names)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build MGA Loot's item effect values.")
     parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
+    parser.add_argument("--creature-cache", help="the Forever client's Cache/WDB/enUS/creaturecache.wdb")
     args = parser.parse_args()
     tables = load_forever_tables(hotfix_cache_path(args.hotfix_cache), TABLES)
-    dump = read_dump(cmangos_dump(), {"item_template", "spell_proc_event"})
-    effects = build_effects(tables, classic_item_procs(dump["item_template"]), classic_proc_events(dump["spell_proc_event"]))
+    cache, _ = read_creature_cache(creature_cache_path(args.creature_cache))
+    client_names = {c.creature_id: (c.name, c.creature_type) for c in cache.creatures.values()}
+    dump = read_dump(cmangos_dump(), {"item_template", "spell_proc_event", "creature_template", "creature"})
+    templates = {int(t["Entry"]): t for t in dump["creature_template"]}
+    world = mob_world(normal_mobs(dump["creature"], templates))
+    effects = build_effects(
+        tables, classic_item_procs(dump["item_template"]), classic_proc_events(dump["spell_proc_event"]),
+        creature_lookup(templates, client_names), world,
+    )
     write_effects(OUT, {
-        "source": f"{tables.source()}; proc rates the client lacks from cmangos/classic-db@{CMANGOS_COMMIT}",
+        "source": (
+            f"{tables.source()}; proc rates the client lacks, creatures and mobs from cmangos/classic-db@{CMANGOS_COMMIT}"
+        ),
         "assumedSecondsPerHit": ASSUMED_SECONDS_PER_HIT,
+        "assumedSecondsPerCast": ASSUMED_SECONDS_PER_CAST,
+        "mobArmor": {str(band): armor for band, armor in world.mob_armor},
         "note": (
             "Item id -> what its Use, Chance on hit and Equip effects are worth in MGA Loot's stat-weight keys. "
-            "dps = weighed like weapon DPS; dps_pct = share of weapon DPS (extra attacks); ranged_* = counted only "
-            "for ranged weights; none = no combat value; unresolved = MGA Loot can't judge it. "
-            f"A non-weapon's chance per hit assumes a hit every {ASSUMED_SECONDS_PER_HIT}s."
+            "dps = weighed like weapon DPS; use_dps = damage from a Use (weapon DPS or, for casters, spell damage); "
+            "spell_dps = damage from procs on your spell casts (weighed as spell damage x 3.5); "
+            "dps_pct = share of weapon DPS (extra attacks); armor_cut = average armor off the target, turned into "
+            "a share of weapon DPS against mobArmor (median normal-mob armor by ten-level band); ranged_* = counted "
+            "only for ranged weights; none = no combat value; unresolved = the data can't value it. "
+            f"A non-weapon's chance per hit assumes a hit every {ASSUMED_SECONDS_PER_HIT}s, "
+            f"a chance per cast a cast every {ASSUMED_SECONDS_PER_CAST}s."
         ),
         "items": {
             str(item_id): [{"stat": e.stat, "value": e.value, "note": e.note} for e in entries]

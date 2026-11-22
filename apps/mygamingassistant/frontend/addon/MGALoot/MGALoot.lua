@@ -278,6 +278,26 @@ local function plural(kind)
   return word .. "s"
 end
 
+-- Classic's spell coefficient is cast time / 3.5, so a point of spell damage is worth 1/3.5 DPS:
+-- damage per second from a spell-cast proc is worth 3.5 spell damage per point.
+local SPELL_DAMAGE_PER_DPS = 3.5
+
+-- Classic's armor damage reduction against a mob of `armor` when you're `level`.
+local function armorReduction(armor, level)
+  armor = math.max(0, armor)
+  return armor / (armor + 400 + 85 * level)
+end
+
+-- The share of weapon DPS `cut` armor off the target adds: against the median armor of normal mobs
+-- in your ten-level band (MGALootMobArmor). Nil with no mob data.
+local function armorCutShare(cut, level)
+  local bands = MGALootMobArmor or {}
+  local band = math.min(math.floor(level / 10) * 10, MGALootMobArmorTop or 50)
+  local armor = bands[band]
+  if not armor then return nil end
+  return (1 - armorReduction(armor - cut, level)) / (1 - armorReduction(armor, level)) - 1, armor
+end
+
 -- The DPS of the weapon in your main hand, for extra attacks on an item that isn't a weapon.
 local function mainHandDps()
   local link = GetInventoryItemLink("player", MAIN_HAND)
@@ -287,21 +307,33 @@ end
 
 -- Add MGALootEffects' values for this item (what its Use, Chance on hit and Equip lines are worth).
 -- Returns whether the data covers those lines: false with no data or with an effect it couldn't resolve.
-local function scoreEffects(id, stats, equipLoc, w, chance, notes)
+local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
   local entries = MGALootEffects and id and MGALootEffects[id]
   if not entries then return false end
   for _, e in ipairs(entries) do
     if e.stat == "unresolved" then return false end
   end
   local weaponDps = RANGED_LOC[equipLoc] and w.ranged or w.melee
+  local spellDps = (w.stats.spell_damage or 0) * SPELL_DAMAGE_PER_DPS
   local rangedFirst = w.ranged > w.melee
   local add = 0
   for _, e in ipairs(entries) do
     local ranged = EFFECT_RANGED[e.stat]
+    local note = e.note
     if e.stat == "dps" then
       add = add + e.value * weaponDps
+    elseif e.stat == "spell_dps" then
+      add = add + e.value * spellDps
+    elseif e.stat == "use_dps" then
+      add = add + e.value * math.max(weaponDps, spellDps)
     elseif e.stat == "dps_pct" then
       add = add + e.value * (stats[DPS_KEY] or mainHandDps()) * w.melee
+    elseif e.stat == "armor_cut" then
+      local share, armor = armorCutShare(e.value, level or 0)
+      if share then
+        add = add + share * (stats[DPS_KEY] or mainHandDps()) * w.melee
+        note = note .. ", worth +" .. floor(share * 1000 + 0.5) / 10 .. "% weapon DPS vs " .. armor .. " armor (normal mobs your level)"
+      end
     elseif e.stat == "armor" then
       add = add + e.value * w.armor
     elseif ranged then
@@ -311,7 +343,7 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes)
     elseif e.stat ~= "none" then
       add = add + e.value * (w.stats[e.stat] or 0)
     end
-    table.insert(notes, e.note)
+    table.insert(notes, note)
   end
   return true, add
 end
@@ -323,7 +355,7 @@ local function score(link, equipLoc, w, level)
   local stats = statsApi()(link) or {}
   local total, unscored, notes = 0, {}, {}
   local chance = {}
-  local effectsCovered, effectsValue = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes)
+  local effectsCovered, effectsValue = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes, level)
   if effectsCovered then total = total + effectsValue end
   for key, amount in pairs(stats) do
     local vsStat, vsKind = key:match("^ITEM_MOD_(%u+_%u+)_VS_(%u+)_SHORT$")

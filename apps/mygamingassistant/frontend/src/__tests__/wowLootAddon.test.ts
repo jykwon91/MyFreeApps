@@ -308,11 +308,11 @@ describe("MGA Loot verdicts", () => {
     expect(line).not.toContain("Can't judge");
   });
 
-  it("calls a downgrade when only your worn item has the uncounted effect (War Staff vs Zum'rah's Vexing Cane)", () => {
-    const STAFF = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 10`;
+  it("calls a downgrade when only your worn item has the uncounted effect", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
     const [line] = run(
-      `items[854] = { ${STAFF} }; rolls[1] = 854; talents = { 31, 20, 0 }; ` +
-        `items[18082] = { ${STAFF}, ${strength(20)}, lines = { "Equip: Chance on harmful spell cast to summon a Zombie Troll of Zum'rah for 20 sec." } }; equipped[16] = 18082`,
+      `items[854] = { ${SWORD} }; rolls[1] = 854; talents = { 31, 20, 0 }; ` +
+        `items[754] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; equipped[16] = 754`,
     );
     expect(line).toMatch(/Downgrade -\d+% vs/);
     expect(line).toContain("which only widens the gap");
@@ -322,7 +322,7 @@ describe("MGA Loot verdicts", () => {
   it("calls an upgrade when only the new item has the uncounted effect and it already wins on stats", () => {
     const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
     const [line] = run(
-      `items[19019] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts your enemy with lightning, dealing 300 Nature damage and then jumping to additional nearby enemies." } }; rolls[1] = 19019; talents = { 31, 20, 0 }; ` +
+      `items[754] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; rolls[1] = 754; talents = { 31, 20, 0 }; ` +
         `items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
     );
     expect(line).toMatch(/Upgrade \+\d+% over/);
@@ -330,14 +330,40 @@ describe("MGA Loot verdicts", () => {
     expect(line).not.toContain("Can't judge");
   });
 
-  it("still can't judge when an uncounted effect could flip the verdict (Thunderfury's slow, weaker on stats)", () => {
+  it("still can't judge when an uncounted effect could flip the verdict (weaker on stats)", () => {
     const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
     const [line] = run(
-      `items[19019] = { ${SWORD}, ${strength(10)}, lines = { "Chance on hit: Blasts your enemy with lightning, dealing 300 Nature damage and then jumping to additional nearby enemies." } }; rolls[1] = 19019; talents = { 31, 20, 0 }; ` +
+      `items[754] = { ${SWORD}, ${strength(10)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; rolls[1] = 754; talents = { 31, 20, 0 }; ` +
         `items[16] = { ${SWORD}, ${strength(20)} }; equipped[16] = 16`,
     );
-    expect(line).toContain("Can't judge: this item has \"Chance on hit: Blasts your enemy");
+    expect(line).toContain("Can't judge: this item has \"Chance on hit: Blasts the enemy");
     expect(line).not.toContain("Upgrade");
+  });
+
+  it("counts Zum'rah's Vexing Cane's summon for a caster, with its summon note", () => {
+    const STAFF = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 10`;
+    const STATS = "stats = { ITEM_MOD_STAMINA_SHORT = 20, ITEM_MOD_SPELL_POWER_SHORT = 40 }";
+    const CANE = `items[18082] = { ${STAFF}, ${STATS}, lines = { "Equip: Chance on harmful spell cast to summon a Zombie Troll of Zum'rah for 20 sec." } }; rolls[1] = 18082; `;
+    const WORN = `items[16] = { ${STAFF}, ${STATS} }; equipped[16] = 16`;
+    const [warlock] = run(`${CANE}me.class = "WARLOCK"; me.level = 45; talents = { 31, 20, 0 }; ${WORN}`);
+    expect(warlock).toMatch(/Upgrade \+\d+% over/);
+    expect(warlock).toContain("summons Zombie Troll of Zum'rah for 20s");
+    expect(warlock).not.toContain("Can't judge");
+    // A warrior weighs spell damage at nothing, so the zombie adds nothing for him.
+    const [warrior] = run(`${CANE}me.level = 45; talents = { 31, 20, 0 }; ${WORN}`);
+    expect(warrior).toContain("About the same");
+  });
+
+  it("turns armor off the target into a share of weapon DPS against mobs your level", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const sword = (id: number): string => `items[${id}] = { ${SWORD}, stats = { ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 40 } }`;
+    const [line] = run(
+      `${sword(13286)}; items[13286].lines = { "Chance on hit: Reduces the target's armor by 100 for 30 sec." }; rolls[1] = 13286; me.level = 50; talents = { 31, 20, 0 }; ` +
+        `${sword(16)}; equipped[16] = 16`,
+    );
+    expect(line).toMatch(/Upgrade|About the same/);
+    expect(line).toMatch(/-50 armor on average, worth \+[\d.]+% weapon DPS vs 3271 armor \(normal mobs your level\)/);
+    expect(line).not.toContain("Can't judge");
   });
 
   it("notes an effect with no combat value and judges the rest (Water Breathing)", () => {
