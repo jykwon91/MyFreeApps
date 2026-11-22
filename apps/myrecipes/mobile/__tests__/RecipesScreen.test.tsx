@@ -174,7 +174,7 @@ describe("RecipesScreen", () => {
     await fireEvent.press(card);
     expect(mockPush).toHaveBeenCalledWith({
       pathname: "/recipes/[id]",
-      params: { id: "r1", title: "Tomato soup", owner: "Sam" },
+      params: { id: "r1" },
     });
   });
 

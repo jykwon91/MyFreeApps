@@ -31,7 +31,7 @@ export default function DiscoveryDetailContent({ detail, resultId }: { detail: D
       />
       {detail.summary ? <Text style={{ color: colors.foreground, fontSize: fontSize.md }}>{detail.summary}</Text> : null}
       <View style={{ gap: spacing.sm }}>
-        <DiscoverySaveAction resultId={resultId} title={detail.title} />
+        <DiscoverySaveAction resultId={resultId} />
         <LoadingButton accessibilityHint="Opens in your browser" onPress={() => openLink(detail.url)} variant="ghost">
           View original
         </LoadingButton>

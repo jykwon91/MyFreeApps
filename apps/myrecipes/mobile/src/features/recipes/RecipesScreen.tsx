@@ -121,10 +121,7 @@ export default function RecipesScreen() {
   }
 
   function openRecipe(recipe: RecipeSummary): void {
-    router.push({
-      pathname: "/recipes/[id]",
-      params: { id: recipe.id, title: recipe.title, owner: recipe.owner_display_name },
-    });
+    router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } });
   }
 
   return (

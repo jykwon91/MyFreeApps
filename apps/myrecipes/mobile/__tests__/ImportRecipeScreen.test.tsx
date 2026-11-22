@@ -325,7 +325,7 @@ describe("reading the photo", () => {
     await waitFor(() =>
       expect(mockReplace).toHaveBeenCalledWith({
         pathname: "/recipes/[id]",
-        params: { id: "r-new", title: DRAFT.title, owner: "Sam" },
+        params: { id: "r-new" },
       }),
     );
     const created = sent.find((candidate) => candidate.route === "POST /recipes");

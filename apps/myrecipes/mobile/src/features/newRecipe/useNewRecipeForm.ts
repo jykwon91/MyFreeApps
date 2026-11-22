@@ -63,8 +63,8 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
   const [values, setValues] = useState(initialValues);
   const [hasTried, setHasTried] = useState(false);
   const rows = useRecipeRows(setValues);
-  // Where to go once it's saved: the detail screen opens with these while it loads.
-  const [created, setCreated] = useState<{ id: string; title: string; owner: string } | null>(null);
+  // Where to go once it's saved; the detail screen already has the recipe from the cache.
+  const [created, setCreated] = useState<{ id: string } | null>(null);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
       dispatch(recipesApi.util.upsertQueryData("getRecipe", recipe.id, recipe));
       seed?.onCreated?.(recipe.id);
       showToast(MESSAGES.created);
-      if (isMounted.current) setCreated({ id: recipe.id, title: recipe.title, owner: recipe.owner_display_name });
+      if (isMounted.current) setCreated({ id: recipe.id });
     } catch (error) {
       const message = recipeWriteErrorMessage(error, "create");
       if (message && isMounted.current) showToast(message, "error");
