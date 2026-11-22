@@ -105,6 +105,15 @@ class _FastPasswordHelper:
         return uuid.uuid4().hex
 
 
+def hash_test_password(password: str) -> str:
+    """The ``hashed_password`` that ``password`` verifies against in tests.
+
+    Matches what the fast helper installed below checks, so a route that asks
+    for the user's password accepts ``password`` for a user stored with this.
+    """
+    return _FastPasswordHelper().hash(password)
+
+
 def _install_fast_password_helper() -> None:
     """Monkeypatch fastapi-users to use the fast test hasher.
 

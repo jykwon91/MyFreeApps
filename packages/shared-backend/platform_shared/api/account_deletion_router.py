@@ -29,6 +29,7 @@ from platform_shared.services.account_deletion import (
     AccountDeletionBlockedError,
     delete_account,
 )
+from platform_shared.services.audit_erasure import capture_deletion_scope, erase_audit_history
 from platform_shared.services.guard_outcome import GuardOutcome
 
 
@@ -67,6 +68,10 @@ def build_account_deletion_router(
             ``AccountDeletionBlockedError`` to refuse with a 409. Returns
             work to run after the commit and the response, for what a
             rollback couldn't undo, or None when there is none.
+
+    The rows the deletion may remove are collected before ``prepare_deletion``
+    and their ``audit_logs`` values erased after the delete, in the same
+    transaction (see :mod:`platform_shared.services.audit_erasure`).
 
     Returns:
         An ``APIRouter`` with a single DELETE route at ``/users/me``.
@@ -121,8 +126,10 @@ def build_account_deletion_router(
                 # Serialise concurrent deletes of one account, so the second
                 # one can't collect keys the first has already removed.
                 await txn_db.get(type(current_user), current_user.id, with_for_update=True)
+                scope = await capture_deletion_scope(txn_db, current_user)
                 after_commit = await prepare_deletion(txn_db, current_user) if prepare_deletion else None
                 await delete_account(txn_db, current_user)
+                await erase_audit_history(txn_db, current_user, scope)
         except AccountDeletionBlockedError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         if after_commit is not None:
