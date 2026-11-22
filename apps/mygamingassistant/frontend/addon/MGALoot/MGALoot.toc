@@ -1,10 +1,11 @@
 ## Interface: 16001
 ## Title: MGA Loot
-## Notes: Says on each loot roll and on every item tooltip whether the item is an upgrade over what you wear, scored with MyGamingAssistant's Item compare weights. /mgaloot bags lists the upgrades in your bags. Never rolls for you.
+## Notes: Says on each loot roll and on every item tooltip whether the item is an upgrade over what you wear, scored with MyGamingAssistant's Item compare weights. The MGA minimap button lists the upgrades in your bags. Never rolls for you.
 ## Author: MyGamingAssistant
-## Version: 1.9.0
-## SavedVariables: MGALootSettings
+## Version: 1.10.0
+## SavedVariables: MGAHubSettings, MGALootSettings
 ## IconTexture: Interface\Icons\INV_Misc_Bag_10
 
+MGAHub.lua
 Data.lua
 MGALoot.lua

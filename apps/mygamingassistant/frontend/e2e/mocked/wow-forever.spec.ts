@@ -105,13 +105,13 @@ test("the Item compare page downloads the MGA Loot addon with its weights inside
   const card = page.getByTestId("loot-addon");
   await card.getByText("Know in game if an item is an upgrade").click();
   await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
-  await expect(card).toContainText("/mgaloot bags lists the upgrades in your bags");
+  await expect(card).toContainText("lists the upgrades in your bags");
   const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("loot-addon-download").click()]);
   expect(download.suggestedFilename()).toBe("MGALoot.zip");
   const files = unzipSync(readFileSync(await download.path()));
-  expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Data.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
+  expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Bindings.xml", "MGALoot/Data.lua", "MGALoot/MGAHub.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
   expect(strFromU8(files["MGALoot/Data.lua"])).toContain('{id = "arms", name = "Arms", tab = 1, weights = {');
-  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## SavedVariables: MGALootSettings");
-  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## Version: 1.9.0");
+  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## SavedVariables: MGAHubSettings, MGALootSettings");
+  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## Version: 1.10.0");
   await expect(page.getByText("MGA Loot is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });

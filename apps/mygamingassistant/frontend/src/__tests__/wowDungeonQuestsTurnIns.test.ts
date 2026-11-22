@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
+import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import turnInsData from "../../addon/MGADungeonQuests/TurnIns.lua?raw";
 import { loadTurnInSpots } from "@/games/wow-forever/lib/dungeonQuestsAddon/loadTurnInSpots";
@@ -77,6 +78,7 @@ describe("MGA Dungeon Quests turn-ins", () => {
         ["Data.lua", addonData],
         ["TurnIns.lua", SPOTS],
         ["setup", `${STORMWIND}; ${LOG}; ${setup}`],
+        ["MGAHub.lua", hubLua],
         ["MGADungeonQuests.lua", addonLua],
         ["load", 'fire("PLAYER_ENTERING_WORLD", false, true)'],
         ["clear", "clear()"],

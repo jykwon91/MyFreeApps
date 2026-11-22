@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
+import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
 import addonToc from "../../addon/MGADungeonQuests/MGADungeonQuests.toc?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
@@ -62,6 +63,7 @@ function run(script: string, setup = ""): string[] {
     [
       ["Data.lua", FIXTURE],
       ["setup", setup],
+      ["MGAHub.lua", hubLua],
       ["MGADungeonQuests.lua", addonLua],
       ["clear", "clear()"],
       ["test", script],
@@ -83,6 +85,7 @@ describe("MGA Dungeon Quests addon files", () => {
     const lines = runAddonLua(
       [
         ["Data.lua", addonData],
+        ["MGAHub.lua", hubLua],
         ["MGADungeonQuests.lua", addonLua],
         ["clear", "clear()"],
         ["test", 'slash("deadmines")'],
@@ -97,14 +100,17 @@ describe("MGA Dungeon Quests addon files", () => {
 
   it("the toc loads Data.lua and TurnIns.lua before the addon and saves its settings; the zip unzips into one folder", () => {
     expect(addonToc).toMatch(/## Interface: 16001/);
-    expect(addonToc).toMatch(/## SavedVariables: MGADungeonQuestsSettings/);
+    expect(addonToc).toMatch(/## SavedVariables: MGAHubSettings, MGADungeonQuestsSettings/);
+    expect(addonToc.indexOf("MGAHub.lua")).toBeLessThan(addonToc.indexOf("Data.lua"));
     expect(addonToc.indexOf("Data.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
     expect(addonToc.indexOf("TurnIns.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
     const files = unzipSync(dungeonQuestsAddonZip());
     expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual([
+      "MGADungeonQuests/Bindings.xml",
       "MGADungeonQuests/Data.lua",
       "MGADungeonQuests/MGADungeonQuests.lua",
       "MGADungeonQuests/MGADungeonQuests.toc",
+      "MGADungeonQuests/MGAHub.lua",
       "MGADungeonQuests/TurnIns.lua",
     ]);
     expect(strFromU8(files["MGADungeonQuests/MGADungeonQuests.lua"])).toBe(addonLua);
@@ -315,6 +321,7 @@ describe("MGA Dungeon Quests journal pages", () => {
     const lines = runAddonLua(
       [
         ["Data.lua", addonData],
+        ["MGAHub.lua", hubLua],
         ["MGADungeonQuests.lua", addonLua],
         ["clear", "clear()"],
         ["test", 'slash("list"); shownRows(); slash("deadmines"); shownBosses(); clickBoss(1); shownLoot()'],
@@ -337,6 +344,7 @@ describe("MGA Dungeon Quests routes", () => {
       [
         ["Data.lua", addonData],
         ["setup", setup],
+        ["MGAHub.lua", hubLua],
         ["MGADungeonQuests.lua", addonLua],
         ["clear", "clear()"],
         ["test", script],
@@ -462,7 +470,7 @@ describe("MGA Dungeon Quests list and slash command", () => {
 
   it("entering a dungeon reminds you of quests you haven't picked up, until turned off", () => {
     expect(run('instance = { type = "party", id = 36 }; fire("PLAYER_ENTERING_WORLD")')).toEqual([
-      "chat: MGA Dungeon Quests: The Deadmines: 4 quests for it you haven't picked up. /mgadq to see them.",
+      "chat: MGA Dungeon Quests: The Deadmines: 4 quests for it you haven't picked up. The MGA menu opens the journal.",
     ]);
     const allPicked = "completed[3] = true; questLog = { { id = 10 } }";
     expect(run('instance = { type = "party", id = 36 }; fire("PLAYER_ENTERING_WORLD")', allPicked)).toEqual([]);
@@ -559,7 +567,7 @@ describe("MGA Dungeon Quests dungeon focus", () => {
     const data = FIXTURE.replace('{id = 3, title = "The Defias Brotherhood", level = 22, minLevel = 14,', '{id = 3, title = "The Defias Brotherhood",');
     expect(data).not.toBe(FIXTURE);
     const lines = runAddonLua(
-      [["Data.lua", data], ["MGADungeonQuests.lua", addonLua], ["clear", "clear()"], ["test", 'slash("deadmines")']],
+      [["Data.lua", data], ["MGAHub.lua", hubLua], ["MGADungeonQuests.lua", addonLua], ["clear", "clear()"], ["test", 'slash("deadmines")']],
       WOW_DUNGEON_QUEST_STUBS,
     );
     expect(window(lines).some((l) => l.includes("The Defias Brotherhood") && !l.includes("(22)"))).toBe(true);
@@ -601,5 +609,20 @@ describe("MGA Dungeon Quests dungeon focus", () => {
     expect(run('slash("focus off")')).toEqual(["chat: MGA Dungeon Quests: dungeon focus off."]);
     expect(focus(run(`${enter}; clickFocusClose(); fire("QUEST_LOG_UPDATE"); clear(); shownFocus()`, vanCleef))).toEqual(["focus: none"]);
     expect(focus(run(`${enter}; clickFocusClose(); ${leave}; ${enter}; clear(); shownFocus()`, vanCleef))[0]).toBe("focus: The Deadmines quests");
+  });
+});
+
+describe("MGA Dungeon Quests in the MGA hub", () => {
+  it("lists the journal, turn-ins and writs under a Dungeon Quests heading", () => {
+    const lines = run('fire("PLAYER_LOGIN"); MGAHub.OpenMenu(); table.insert(out, table.concat(menuLines(), " | "))');
+    expect(lines.slice(-1)[0]).toMatch(/^\[Dungeon Quests\] \| .+ \| - \| Settings$/);
+    expect(lines.slice(-1)[0]).toContain("Dungeon journal");
+  });
+
+  it("saves its three toggles in the same settings the slash commands do", () => {
+    const viaSettings = run('fire("PLAYER_LOGIN"); click(MGADungeonQuestsOptions_pins); click(MGADungeonQuestsOptions_remind); click(MGADungeonQuestsOptions_focus); local s = MGADungeonQuestsSettings; table.insert(out, tostring(s.turnInPins) .. " " .. tostring(s.remind) .. " " .. tostring(s.focus))');
+    const viaSlash = run('slash("pins off"); slash("remind off"); slash("focus off"); local s = MGADungeonQuestsSettings; table.insert(out, tostring(s.turnInPins) .. " " .. tostring(s.remind) .. " " .. tostring(s.focus))');
+    expect(viaSettings.slice(-1)[0]).toBe("false false false");
+    expect(viaSlash.slice(-1)[0]).toBe("false false false");
   });
 });

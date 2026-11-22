@@ -48,8 +48,7 @@ export default function DungeonQuestsAddonCard() {
             Restart the game, or type <code>/reload</code>.
           </li>
           <li>
-            Type <code>/mgadq</code> to open it. <code>/mgadq remind off</code> turns the chat reminder off, <code>/mgadq pins off</code> the map pins,{" "}
-            <code>/mgadq focus off</code> the dungeon tracker.
+            Click the MGA minimap button to open it. The MGA settings turn the chat reminder, the map pins and the dungeon tracker off.
           </li>
         </ol>
         <Button onClick={download} data-testid="dungeon-quests-addon-download">

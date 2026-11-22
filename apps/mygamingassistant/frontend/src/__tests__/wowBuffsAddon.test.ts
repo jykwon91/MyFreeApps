@@ -1,6 +1,7 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGABuffs/MGABuffs.lua?raw";
+import hubLua from "../../addon/MGABuffs/MGAHub.lua?raw";
 import addonToc from "../../addon/MGABuffs/MGABuffs.toc?raw";
 import { buffsAddonZip } from "@/games/wow-forever/lib/buffsAddon/buffsAddonZip";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
@@ -19,6 +20,7 @@ function run(setup: string, then = ""): string[] {
   return plain(runAddonLua(
     [
       ["setup", setup],
+      ["MGAHub.lua", hubLua],
       ["MGABuffs.lua", addonLua],
       ["then", `clear(); fire("PLAYER_LOGIN"); ${then}`],
     ],
@@ -31,13 +33,13 @@ const rows = (lines: string[]): string[] => lines.filter((l) => l.startsWith("ro
 describe("MGA Buffs files", () => {
   it("loads the addon from its toc, on the Forever interface", () => {
     expect(addonToc).toContain("## Interface: 16001");
-    expect(addonToc).toContain("## SavedVariables: MGABuffsSettings");
-    expect(addonToc.trim().split(/\r?\n/).slice(-1)[0]).toBe("MGABuffs.lua");
+    expect(addonToc).toContain("## SavedVariables: MGAHubSettings, MGABuffsSettings");
+    expect(addonToc.trim().split(/\r?\n/).slice(-2)).toEqual(["MGAHub.lua", "MGABuffs.lua"]);
   });
 
   it("zips the addon inside its folder", () => {
     const files = unzipSync(buffsAddonZip());
-    expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc"]);
+    expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/Bindings.xml", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc", "MGABuffs/MGAHub.lua"]);
     expect(strFromU8(files["MGABuffs/MGABuffs.lua"])).toBe(addonLua);
   });
 });
@@ -267,6 +269,7 @@ describe("MGA Buffs list", () => {
   it("uses settings saved last session, which the game loads after the addon", () => {
     expect(runAddonLua(
       [
+        ["MGAHub.lua", hubLua],
         ["MGABuffs.lua", addonLua],
         ["then", `MGABuffsSettings = { food = false, soulstone = false }; clear(); fire("PLAYER_LOGIN")`],
       ],
@@ -327,9 +330,10 @@ describe("MGA Buffs options window", () => {
   const quiet = `${ARMORED}; ${FED}; units.player.level = 15`;
   const box = (key: string): string => `MGABuffsOptions_${key}`;
 
-  it("adds itself to Options > AddOns and shows the saved settings", () => {
+  it("adds its section to the MGA settings (Options > AddOns > MGA) and shows the saved settings", () => {
     const lines = runAddonLua(
       [
+        ["MGAHub.lua", hubLua],
         ["MGABuffs.lua", addonLua],
         ["then", `MGABuffsSettings = { food = false, minutes = 5, locked = false }; fire("PLAYER_LOGIN")
           for _, k in ipairs({ "armor", "soulstone", "healthstone", "food", "group", "party", "sound", "unlock" }) do
@@ -339,7 +343,7 @@ describe("MGA Buffs options window", () => {
       ],
       WOW_BUFF_STUBS,
     );
-    expect(lines).toContain("options: added MGA Buffs");
+    expect(lines).toContain("options: added MGA");
     expect(lines.filter((l) => l.startsWith("chat: "))).toEqual([
       "chat: armor=true",
       "chat: soulstone=true",
@@ -378,7 +382,7 @@ describe("MGA Buffs options window", () => {
   });
 
   it("unlocks the list to drag it, locks it again, and puts it back with Reset", () => {
-    expect(rows(run(quiet, `clear(); click(${box("unlock")})`))).toEqual(["MGA Buffs: drag me, then lock it in Options > AddOns > MGA Buffs"]);
+    expect(rows(run(quiet, `clear(); click(${box("unlock")})`))).toEqual(["MGA Buffs: drag me, then lock it from the MGA menu"]);
     expect(run(quiet, `click(${box("unlock")}); clear(); click(${box("unlock")})`)).toEqual(["hidden"]);
     const reset = run(quiet, `MGABuffsSettings.point = { "LEFT", "LEFT", 40, 12 }; click(MGABuffsOptions_reset); DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsSettings.point) .. " " .. table.concat(MGABuffsFrame.point, ","))`);
     expect(reset.slice(-1)[0]).toBe("chat: nil TOP,TOP,0,-140");
@@ -393,21 +397,48 @@ describe("MGA Buffs options window", () => {
     ]);
   });
 
-  it("keeps reminding when the options page can't be built", () => {
+  it("keeps reminding when the settings page can't be built", () => {
     const lines = run(`Settings = { RegisterCanvasLayoutCategory = function() error("no canvas") end, RegisterAddOnCategory = function() end }; ${FED}`);
-    expect(lines.some((l) => l.startsWith("chat: MGA Buffs: options page unavailable:"))).toBe(true);
+    expect(lines.some((l) => l.startsWith("chat: MGA: settings page unavailable:"))).toBe(true);
     expect(rows(lines)).toContain("No Demon Armor");
   });
 
   it("explains in chat when the options page won't open", () => {
     const lines = run(`Settings.OpenToCategory = function() error("no page") end; ${quiet}`, `clear(); SlashCmdList.MGABUFFS("")`);
-    expect(lines).toEqual(["chat: MGA Buffs: this game version has no AddOns options page; /mgabuffs help lists the commands."]);
+    expect(lines).toEqual(["chat: MGA: this game version has no AddOns options page, so there are no settings to open."]);
   });
 
   it("uses the older Interface Options list on clients without the Settings window", () => {
     const lines = run("Settings = nil", `SlashCmdList.MGABUFFS("")`);
-    expect(lines).toContain("options: added (old list) MGA Buffs");
-    expect(lines.slice(-1)[0]).toBe("options: opened (old list) MGA Buffs");
+    expect(lines).toContain("options: added (old list) MGA");
+    expect(lines.slice(-1)[0]).toBe("options: opened (old list) MGA");
+  });
+});
+
+describe("MGA Buffs in the MGA menu", () => {
+  const quiet = `${ARMORED}; ${FED}; units.player.level = 15`;
+  const open = "MGAHub.OpenMenu()";
+
+  it("lists its actions under a Buffs heading, above Settings", () => {
+    const lines = run(quiet, `${open}; DEFAULT_CHAT_FRAME:AddMessage(table.concat(menuLines(), " | "))`);
+    expect(lines.slice(-1)[0]).toBe("chat: [Buffs] | What's missing now | Move the buff list | Reset the buff list position | - | Settings");
+  });
+
+  it("What's missing now says what's missing", () => {
+    expect(run("units.player.level = 15", `clear(); ${open}; clickRow("What's missing now")`)[1]).toBe("chat: MGA Buffs: No Demon Skin");
+  });
+
+  it("moves and locks the list through the same setting as the Move the list checkbox", () => {
+    const unlocked = run(quiet, `clear(); ${open}; clickRow("Move the buff list"); DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsSettings.locked) .. " " .. tostring(MGABuffsOptions_unlock:GetChecked()))`);
+    expect(unlocked.slice(-1)[0]).toBe("chat: false true");
+    const relocked = run(quiet, `${open}; clickRow("Move the buff list"); ${open}; DEFAULT_CHAT_FRAME:AddMessage(table.concat(menuLines(), " | ")); clickRow("Lock the buff list"); DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsSettings.locked))`);
+    expect(relocked.find((l) => l.startsWith("chat: [Buffs]"))).toBe("chat: [Buffs] | What's missing now | Lock the buff list | Reset the buff list position | - | Settings");
+    expect(relocked.slice(-1)[0]).toBe("chat: true");
+  });
+
+  it("puts the list back where it started", () => {
+    const lines = run(quiet, `MGABuffsSettings.point = { "LEFT", "LEFT", 40, 12 }; ${open}; clickRow("Reset the buff list position"); DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsSettings.point))`);
+    expect(lines.slice(-1)[0]).toBe("chat: nil");
   });
 });
 
@@ -417,7 +448,7 @@ describe("MGA Buffs slash command", () => {
   const quiet = `${ARMORED}; ${FED}; units.player.level = 15`;
 
   it("opens the options window with no arguments", () => {
-    expect(run(quiet, `clear(); ${slash("")}`)).toEqual(["options: opened id:MGA Buffs"]);
+    expect(run(quiet, `clear(); ${slash("")}`)).toEqual(["options: opened id:MGA"]);
   });
 
   it("keeps the options window in step with a shortcut", () => {

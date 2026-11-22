@@ -3,7 +3,7 @@
 --
 -- Scores items with MyGamingAssistant's Item compare weights (Data.lua):
 -- under level 60 your class's leveling weights (an estimate); at 60 your
--- spec's Pawn Classic scale. Your spec comes from /mgaloot spec, or else from
+-- spec's Pawn Classic scale. Your spec comes from the MGA settings (or /mgaloot spec), or else from
 -- the talent tab with the most points. It never rolls for you.
 -- Use, Chance on hit and Equip effects count at the stat they're worth on
 -- average (MGALootEffects in Data.lua, worked out from the game files), with
@@ -25,6 +25,8 @@
 --   ends "+N more with /mgaloot check", which prints them all.
 --   On an item's tooltip: the same verdict (the tooltip already shows binding and
 --   level), except on the items you're wearing.
+--   Everything but `check` is also in the MGA minimap button's menu and settings window
+--   (MGAHub.lua); the slash commands keep working.
 --   /mgaloot              which weights it's using
 --   /mgaloot spec <name>  set your spec (holy, feral-tank, ...); "auto" reads talents
 --   /mgaloot check <link> the verdict for any item, without a roll
@@ -308,7 +310,7 @@ local function weightsFor(me)
   end
   local spec = (MGALootSettings.spec and specById(me.class, MGALootSettings.spec)) or talentSpec(me.class)
   if spec then return spec.weights, "Scored for " .. spec.name .. " (raid stat values, PvE)" end
-  return me.class.leveling, "Scored with leveling stat values (PvE): set your spec with /mgaloot spec"
+  return me.class.leveling, "Scored with leveling stat values (PvE): pick your spec in the MGA settings"
 end
 
 local function contains(list, value)
@@ -925,7 +927,7 @@ local function bags()
       say(found.link .. " " .. firstLine(found.verdict.text) .. needs)
     end
   end
-  if loading > 0 then say(loading .. " more still loading: run /mgaloot bags again in a moment.") end
+  if loading > 0 then say(loading .. " more still loading: open it again from the MGA menu in a moment.") end
 end
 
 local function status()
@@ -936,6 +938,15 @@ local function status()
   say("level " .. me.level .. " " .. me.classId .. ", " .. label .. "." .. spec)
 end
 
+-- The settings the slash command and the MGA settings window both change.
+local function setSpec(id)
+  MGALootSettings.spec = id or nil
+end
+
+local function setTooltips(on)
+  MGALootSettings.tooltip = on
+end
+
 SLASH_MGALOOT1 = "/mgaloot"
 SlashCmdList.MGALOOT = function(msg)
   local command, rest = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
@@ -943,11 +954,11 @@ SlashCmdList.MGALOOT = function(msg)
   if command == "spec" then
     local me = player()
     if rest:lower() == "auto" then
-      MGALootSettings.spec = nil
+      setSpec(nil)
       return say("spec: auto from your talents.")
     end
     if me.class and specById(me.class, rest:lower()) then
-      MGALootSettings.spec = rest:lower()
+      setSpec(rest:lower())
       return say("spec: " .. specById(me.class, rest:lower()).name .. ".")
     end
     local names = {}
@@ -960,7 +971,7 @@ SlashCmdList.MGALOOT = function(msg)
     if turn ~= "on" and turn ~= "off" then
       return say("tooltip verdicts are " .. (tooltipsOn() and "on" or "off") .. ": /mgaloot tooltip on or off.")
     end
-    MGALootSettings.tooltip = turn == "on"
+    setTooltips(turn == "on")
     return say("tooltip verdicts " .. turn .. ".")
   end
   if command == "check" then
@@ -978,3 +989,34 @@ SlashCmdList.MGALOOT = function(msg)
   end
   status()
 end
+
+-- The MGA button's menu and settings window.
+local function specChoices()
+  local choices = { { value = false, text = "Automatic (from your talents)" } }
+  local me = player()
+  for _, spec in ipairs(me.class and me.class.specs or {}) do
+    table.insert(choices, { value = spec.id, text = spec.name })
+  end
+  return choices
+end
+
+local UI = MGAHub.UI
+
+MGAHub.Register({
+  name = "Loot",
+  order = 20,
+  menu = { { text = "Upgrades in your bags", func = bags } },
+  settings = function(section, top)
+    local specLabel = UI.Label(section, "Your spec", "GameFontHighlight", top, -10)
+    local pick = UI.Dropdown(section, "MGALootOptions_spec", 240, specChoices, function() return MGALootSettings.spec or false end, setSpec)
+    pick:SetPoint("TOPLEFT", specLabel, "BOTTOMLEFT", 0, -4)
+    local hint = UI.Label(section, "Used at level " .. MAX_LEVEL .. ". Below that, leveling stat values apply.", "GameFontDisableSmall", pick, -4)
+    local tooltip = UI.Check(section, "MGALootOptions_tooltip", "Show the upgrade verdict in item tooltips", nil, hint, -8, setTooltips)
+    function section.refresh()
+      pick.refresh()
+      tooltip:SetChecked(tooltipsOn())
+    end
+    section.refresh()
+    return 120
+  end,
+})

@@ -37,8 +37,7 @@ export default function BuffsAddonCard() {
             Restart the game, or type <code>/reload</code>.
           </li>
           <li>
-            Set it up in the game&apos;s <span className="font-medium">Options &gt; AddOns &gt; MGA Buffs</span> (or type{" "}
-            <code>/mgabuffs</code>): tick what to remind you about, pick how early to warn, and move the list.
+            Set it up in the MGA settings (right-click the MGA minimap button, or Options &gt; AddOns &gt; MGA): tick what to remind you about, pick how early to warn, and move the list.
           </li>
         </ol>
         <Button onClick={downloadBuffsAddon} data-testid="buffs-addon-download">

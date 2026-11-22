@@ -173,8 +173,8 @@ test("the Macros page downloads the MGA Buffs addon and lists what it reminds yo
   const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("buffs-addon-download").click()]);
   expect(download.suggestedFilename()).toBe("MGABuffs.zip");
   const files = unzipSync(readFileSync(await download.path()));
-  expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc"]);
-  expect(strFromU8(files["MGABuffs/MGABuffs.toc"])).toContain("## SavedVariables: MGABuffsSettings");
+  expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/Bindings.xml", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc", "MGABuffs/MGAHub.lua"]);
+  expect(strFromU8(files["MGABuffs/MGABuffs.toc"])).toContain("## SavedVariables: MGAHubSettings, MGABuffsSettings");
   expect(strFromU8(files["MGABuffs/MGABuffs.lua"])).toContain('SLASH_MGABUFFS1 = "/mgabuffs"');
   await expect(page.getByText("MGA Buffs is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });

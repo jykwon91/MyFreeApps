@@ -1,3 +1,5 @@
+import { WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
+
 /**
  * Just enough of the WoW client API for the MGA Buffs addon to run under
  * fengari. Tests fill `units.<unit>` (class, level, name, buffs, dead,
@@ -13,8 +15,8 @@
  * secret value (issecretvalue). `C_UnitAuras = nil` leaves only
  * the older UnitBuff. Lines go into `out`: "row: ..." for each list row it
  * draws, "hidden" when the list hides, "flash: ..." for a mid-screen message,
- * "sound", "chat: ...", and "options: ..." for the options window. `clear()`
- * empties `out`; `click(frame)` clicks an options checkbox or button.
+ * "sound", "chat: ...", and "options: ..." for the settings window. `clear()`
+ * empties `out`; `click(frame)` clicks a settings checkbox or button.
  */
 export const WOW_BUFF_STUBS = `
 out = {}
@@ -102,70 +104,67 @@ SOUNDKIT = { RAID_WARNING = 8959 }
 function PlaySound() table.insert(out, "sound") end
 
 -- Only the reminder list's text is recorded ("row: ..."); other text keeps its value in .text.
+-- Methods nobody listed are no-ops, like the MGA hub's frames need.
+local noop = function() end
+local function withNoops(o, methods)
+  return setmetatable(o, { __index = function(_, k) return methods[k] or (k:match("^%u") and noop or nil) end })
+end
 local function region(owner)
-  local r = { shown = true }
-  function r:SetSize() end
-  function r:SetPoint() end
-  function r:SetJustifyH() end
-  function r:SetTexture() end
-  function r:SetTextColor() end
-  function r:Show() self.shown = true end
-  function r:Hide() self.shown = false end
-  function r:SetText(t)
+  local r = { shownFlag = true, text = "" }
+  local methods = {}
+  function methods:Show() self.shownFlag = true end
+  function methods:Hide() self.shownFlag = false end
+  function methods:IsShown() return self.shownFlag end
+  function methods:SetText(t)
     self.text = t
     if owner.name == "MGABuffsFrame" and t ~= "" then table.insert(out, "row: " .. t) end
   end
-  return r
+  function methods:GetText() return self.text end
+  function methods:GetEffectiveScale() return 1 end
+  return withNoops(r, methods)
 end
-UIParent = {}
-local handler
+UISpecialFrames = {}
+function GetCursorPosition() return 0, 0 end
+local frames = {}
 function CreateFrame(kind, name, _, template)
-  local f = { kind = kind, name = name, template = template, shown = true, scripts = {} }
-  function f:SetSize() end
-  function f:SetHeight() end
-  function f:SetClampedToScreen() end
-  function f:SetMovable() end
-  function f:EnableMouse(on) self.mouse = on end
-  function f:RegisterForDrag() end
-  function f:RegisterEvent() end
-  function f:ClearAllPoints() end
-  function f:SetPoint(p, _, rp, x, y) self.point = { p, rp, x, y } end
-  function f:GetPoint() return self.point[1], UIParent, self.point[2], self.point[3], self.point[4] end
-  function f:StartMoving() end
-  function f:StopMovingOrSizing() end
-  function f:CreateTexture() return region(self) end
-  function f:CreateFontString(fsName)
+  local f = { kind = kind, name = name, template = template, shownFlag = true, scripts = {}, events = {}, text = "", checked = false }
+  local methods = {}
+  function methods:SetSize(w, h) self.width, self.height = w, h end
+  function methods:GetWidth() return self.width or 140 end
+  function methods:GetHeight() return self.height or 100 end
+  function methods:EnableMouse(on) self.mouse = on end
+  function methods:RegisterEvent(e) self.events[e] = true end
+  function methods:SetPoint(p, _, rp, x, y) self.point = { p, rp, x, y } end
+  function methods:GetPoint() return self.point[1], UIParent, self.point[2], self.point[3], self.point[4] end
+  function methods:GetCenter() return 500, 400 end
+  function methods:CreateTexture() return region(self) end
+  function methods:CreateFontString(fsName)
     local r = region(self)
     if fsName then _G[fsName] = r end
     return r
   end
-  function f:SetScript(event, fn) self.scripts[event] = fn; if event == "OnEvent" then handler = fn end end
-  function f:SetText(t) self.text = t end
-  function f:SetChecked(on) self.checked = on and true or false end
-  function f:GetChecked() return self.checked end
-  function f:Show() self.shown = true end
-  function f:Hide()
-    if self.shown and self.name == "MGABuffsFrame" then table.insert(out, "hidden") end
-    self.shown = false
+  function methods:SetScript(event, fn) self.scripts[event] = fn end
+  function methods:SetText(t) self.text = t end
+  function methods:SetChecked(on) self.checked = on and true or false end
+  function methods:GetChecked() return self.checked end
+  function methods:Show() self.shownFlag = true end
+  function methods:IsShown() return self.shownFlag end
+  function methods:Hide()
+    if self.shownFlag and self.name == "MGABuffsFrame" then table.insert(out, "hidden") end
+    self.shownFlag = false
   end
+  withNoops(f, methods)
   if name then _G[name] = f end
+  table.insert(frames, f)
   return f
 end
--- A click the way the game does it: a checkbox flips first, then OnClick runs.
-function click(f)
-  if f.kind == "CheckButton" then f.checked = not f.checked end
-  f.scripts.OnClick(f)
+UIParent = CreateFrame("Frame", "UIParent")
+UIParent.width, UIParent.height = 1920, 1080
+Minimap = CreateFrame("Frame", "Minimap")
+function fire(event, ...)
+  for _, f in ipairs(frames) do
+    if f.events[event] and f.scripts.OnEvent then f.scripts.OnEvent(f, event, ...) end
+  end
 end
-
--- The newer Settings window. \`Settings = nil\` leaves the older Interface Options list.
-Settings = {
-  RegisterCanvasLayoutCategory = function(panel, title)
-    return { panel = panel, title = title, GetID = function() return "id:" .. title end }
-  end,
-  RegisterAddOnCategory = function(category) table.insert(out, "options: added " .. category.title) end,
-  OpenToCategory = function(id) table.insert(out, "options: opened " .. id) end,
-}
-function InterfaceOptions_AddCategory(panel) table.insert(out, "options: added (old list) " .. panel.name) end
-function InterfaceOptionsFrame_OpenToCategory(panel) table.insert(out, "options: opened (old list) " .. panel.name) end
-function fire(event, ...) handler(nil, event, ...) end
+${WOW_HUB_HELPERS}
 `;

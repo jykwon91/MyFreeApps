@@ -35,12 +35,11 @@ export default function LootAddonCard() {
             Restart the game, or type <code>/reload</code>.
           </li>
           <li>
-            If the spec it picks is wrong, set yours: <code>/mgaloot spec holy</code> (<code>/mgaloot spec</code> lists them).{" "}
+            If the spec it picks is wrong, set yours in the MGA settings (the round map button on your minimap, right-click).{" "}
             <code>/mgaloot check</code> and an item link shows the verdict for any item.
           </li>
           <li>
-            <code>/mgaloot bags</code> lists the upgrades in your bags, biggest first. <code>/mgaloot tooltip off</code> takes the
-            verdict off tooltips.
+            The MGA minimap button lists the upgrades in your bags, biggest first. The MGA settings take the verdict off tooltips.
           </li>
         </ol>
         <Button onClick={download} data-testid="loot-addon-download">

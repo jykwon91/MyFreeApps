@@ -15,7 +15,8 @@
 -- Warnings show in a small movable list with icons. A new one also flashes mid-screen with a
 -- sound. In combat, dead or a ghost, the list hides: buffs wait until you can do something.
 --
--- Everything is set in the game's options: Options > AddOns > MGA Buffs. The commands below
+-- Everything is set in the MGA settings window (the minimap button's right-click, or Options >
+-- AddOns > MGA; MGAHub.lua builds it, this addon fills its Buffs section). The commands below
 -- are shortcuts for the same settings.
 --
 --   /mgabuffs                 open the options
@@ -436,7 +437,7 @@ local function render(warnings)
   local unlocked = not settings().locked
   local list = warnings
   if unlocked and #list == 0 then
-    list = { { icon = SOULSTONE_ICON, text = "MGA Buffs: drag me, then lock it in Options > AddOns > MGA Buffs" } }
+    list = { { icon = SOULSTONE_ICON, text = "MGA Buffs: drag me, then lock it from the MGA menu" } }
   end
   local parts = {}
   for _, w in ipairs(list) do table.insert(parts, w.text) end
@@ -514,12 +515,12 @@ end
 -- Settings ------------------------------------------------------------------
 -- The options panel and the slash command both change settings through these, so they agree.
 
-local optionsPanel = nil
+local optionsSection = nil
 
 local function applied()
   shownSignature = nil
   check()
-  if optionsPanel then optionsPanel.refresh() end
+  if optionsSection then optionsSection.refresh() end
 end
 
 local function setCheck(key, on)
@@ -569,9 +570,7 @@ local function status()
   end
 end
 
--- Options panel (Options > AddOns > MGA Buffs) ---------------------------------
--- Built from the plainest pieces every client has (checkboxes, buttons, text), so it doesn't
--- depend on slider templates that differ between game versions.
+-- Settings section (in the MGA settings window, built by MGAHub) ---------------------------
 
 local OPTION_CHECKS = {
   { key = "armor", label = "Your armor", hint = "Demon Skin or Demon Armor, Frost, Ice or Mage Armor, Inner Fire" },
@@ -582,115 +581,83 @@ local OPTION_CHECKS = {
   { key = "party", label = "Buff your party", hint = "Who in your group is missing a buff you can cast" },
 }
 
-local openCategory = nil
+local label, checkbox, button = MGAHub.UI.Label, MGAHub.UI.Check, MGAHub.UI.Button
 
-local function label(parent, text, font, anchor, y)
-  local fs = parent:CreateFontString(nil, "ARTWORK", font)
-  if anchor == parent then
-    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, y)
-  else
-    fs:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
-  end
-  fs:SetJustifyH("LEFT")
-  fs:SetText(text)
-  return fs
-end
-
-local function checkbox(parent, name, text, hint, anchor, y, onClick)
-  local box = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-  box:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
-  local title = box:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-  title:SetPoint("LEFT", box, "RIGHT", 4, hint and 6 or 0)
-  title:SetText(text)
-  if hint then
-    local small = box:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    small:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
-    small:SetText(hint)
-  end
-  box:SetScript("OnClick", function(self) onClick(self:GetChecked() and true or false) end)
-  return box
-end
-
-local function button(parent, name, text, width, onClick)
-  local b = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
-  b:SetSize(width, 24)
-  b:SetText(text)
-  b:SetScript("OnClick", onClick)
-  return b
-end
-
-local function buildOptions()
-  local panel = CreateFrame("Frame", "MGABuffsOptions")
-  panel.name = ADDON
-
-  local title = label(panel, ADDON, "GameFontNormalLarge", panel, -16)
-  local intro = label(panel, "Reminds you, out of combat, when a buff is missing or about to run out.", "GameFontHighlightSmall", title, -6)
-  local heading = label(panel, "Remind me about", "GameFontNormal", intro, -16)
+local function buildOptions(section, top)
+  local intro = label(section, "Reminds you, out of combat, when a buff is missing or about to run out.", "GameFontHighlightSmall", top, -6)
+  local heading = label(section, "Remind me about", "GameFontNormal", intro, -16)
 
   local boxes = {}
   local anchor = heading
   for _, c in ipairs(OPTION_CHECKS) do
     local key = c.key
-    boxes[key] = checkbox(panel, "MGABuffsOptions_" .. key, c.label, c.hint, anchor, -6, function(on) setCheck(key, on) end)
+    boxes[key] = checkbox(section, "MGABuffsOptions_" .. key, c.label, c.hint, anchor, -6, function(on) setCheck(key, on) end)
     anchor = boxes[key]
   end
 
-  local warnHeading = label(panel, "Warn before a buff runs out", "GameFontNormal", anchor, -18)
-  local minus = button(panel, "MGABuffsOptions_minus", "-", 28, function() setMinutes(settings().minutes - 1) end)
+  local warnHeading = label(section, "Warn before a buff runs out", "GameFontNormal", anchor, -18)
+  local minus = button(section, "MGABuffsOptions_minus", "-", 28, function() setMinutes(settings().minutes - 1) end)
   minus:SetPoint("TOPLEFT", warnHeading, "BOTTOMLEFT", 0, -8)
-  local minutesText = panel:CreateFontString("MGABuffsOptions_minutesText", "ARTWORK", "GameFontHighlight")
+  local minutesText = section:CreateFontString("MGABuffsOptions_minutesText", "ARTWORK", "GameFontHighlight")
   minutesText:SetPoint("LEFT", minus, "RIGHT", 10, 0)
-  local plus = button(panel, "MGABuffsOptions_plus", "+", 28, function() setMinutes(settings().minutes + 1) end)
+  local plus = button(section, "MGABuffsOptions_plus", "+", 28, function() setMinutes(settings().minutes + 1) end)
   plus:SetPoint("LEFT", minutesText, "RIGHT", 10, 0)
 
-  local sound = checkbox(panel, "MGABuffsOptions_sound", "Flash and sound for a new reminder", nil, minus, -14, setSound)
-  local unlock = checkbox(panel, "MGABuffsOptions_unlock", "Move the list (drag it, then untick to lock)", nil, sound, -6, function(on) setLocked(not on) end)
+  local sound = checkbox(section, "MGABuffsOptions_sound", "Flash and sound for a new reminder", nil, minus, -14, setSound)
+  local unlock = checkbox(section, "MGABuffsOptions_unlock", "Move the list (drag it, then untick to lock)", nil, sound, -6, function(on) setLocked(not on) end)
 
-  local reset = button(panel, "MGABuffsOptions_reset", "Reset list position", 160, resetPosition)
+  local reset = button(section, "MGABuffsOptions_reset", "Reset list position", 160, resetPosition)
   reset:SetPoint("TOPLEFT", unlock, "BOTTOMLEFT", 0, -14)
-  local show = button(panel, "MGABuffsOptions_status", "Show what's missing", 160, status)
+  local show = button(section, "MGABuffsOptions_status", "Show what's missing", 160, status)
   show:SetPoint("LEFT", reset, "RIGHT", 10, 0)
 
-  function panel.refresh()
+  function section.refresh()
     local s = settings()
     for key, box in pairs(boxes) do box:SetChecked(s[key]) end
     minutesText:SetText(s.minutes .. (s.minutes == 1 and " minute" or " minutes"))
     sound:SetChecked(s.sound)
     unlock:SetChecked(not s.locked)
   end
-  panel:SetScript("OnShow", panel.refresh)
-  panel.refresh()
-
-  -- Newer clients have the Settings window; older ones the Interface Options list.
-  if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-    local category = Settings.RegisterCanvasLayoutCategory(panel, ADDON)
-    Settings.RegisterAddOnCategory(category)
-    openCategory = function() Settings.OpenToCategory(category:GetID()) end
-  elseif InterfaceOptions_AddCategory then
-    InterfaceOptions_AddCategory(panel)
-    -- Called twice: the first call on the old Interface Options frame opens it without selecting the page.
-    openCategory = function()
-      InterfaceOptionsFrame_OpenToCategory(panel)
-      InterfaceOptionsFrame_OpenToCategory(panel)
-    end
-  end
-  optionsPanel = panel
+  optionsSection = section
+  section.refresh()
+  return 460
 end
 
-local function openOptions()
-  if not (openCategory and pcall(openCategory)) then
-    say("this game version has no AddOns options page; /mgabuffs help lists the commands.")
+-- The MGA button's menu: the actions, not the settings.
+local function toggleLocked()
+  if settings().locked then
+    setLocked(false)
+    say("drag the list where you want it, then pick Lock the buff list in the MGA menu.")
+  else
+    setLocked(true)
+    say("list locked.")
   end
 end
 
--- Slash command: shortcuts for the options ---------------------------------------
+local function resetListPosition()
+  resetPosition()
+  say("list back in its starting place.")
+end
+
+MGAHub.Register({
+  name = "Buffs",
+  order = 30,
+  menu = {
+    { text = "What's missing now", func = status },
+    { text = function() return settings().locked and "Move the buff list" or "Lock the buff list" end, func = toggleLocked },
+    { text = "Reset the buff list position", func = resetListPosition },
+  },
+  settings = buildOptions,
+})
+
+-- Slash command: shortcuts for the settings ---------------------------------------
 
 SLASH_MGABUFFS1 = "/mgabuffs"
 SlashCmdList.MGABUFFS = function(message)
   local s = settings()
   local command, arg = (message or ""):lower():match("^%s*(%S*)%s*(.-)%s*$")
   if command == "" then
-    openOptions()
+    MGAHub.OpenSettings()
   elseif command == "status" then
     status()
   elseif CHECK_SET[command] then
@@ -709,7 +676,7 @@ SlashCmdList.MGABUFFS = function(message)
     say("sound and mid-screen flash " .. onOff(s.sound) .. ".")
   elseif command == "unlock" then
     setLocked(false)
-    say("drag the list where you want it, then /mgabuffs lock.")
+    say("drag the list where you want it, then lock it from the MGA menu (or /mgabuffs lock).")
   elseif command == "lock" then
     setLocked(true)
     say("list locked.")
@@ -731,9 +698,6 @@ events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 events:SetScript("OnEvent", function(_, event, unit, _, spellId)
   if event == "PLAYER_LOGIN" then
     place()
-    -- A options-panel failure on some client must not take the reminders down with it.
-    local built, problem = pcall(buildOptions)
-    if not built then say("options page unavailable: " .. tostring(problem)) end
     check()
     if C_Timer and C_Timer.NewTicker then
       C_Timer.NewTicker(TICK_SECONDS, check)

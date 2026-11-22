@@ -13,6 +13,8 @@
 --            its cut against what a vendor pays.
 --   Chat:    hover an item link to see its tooltip (priced like any other), and
 --            each item link in chat gets your house's price after it.
+--   The MGA minimap button's settings window has the chat toggle and the loaded prices; the
+--   slash commands keep working:
 --   /mgaprices       which prices are loaded and how old they are
 --   /mgaprices chat  turn the prices after chat links off or on
 
@@ -365,7 +367,7 @@ local function addPrice(tooltip, itemId)
   if not itemId or tooltip.mgaPricedItem == itemId then return end
   tooltip.mgaPricedItem = itemId
   if not MGAPricesData then
-    tooltip:AddLine("MGA Prices: no prices loaded — /mgaprices", MUTED[1], MUTED[2], MUTED[3])
+    tooltip:AddLine("MGA Prices: no prices loaded — see MGA settings", MUTED[1], MUTED[2], MUTED[3])
     return
   end
   local anywhere = houseRow("alliance", itemId) or houseRow("horde", itemId) or houseRow("neutral", itemId)
@@ -657,29 +659,62 @@ questDetailEvents:SetScript("OnEvent", function(_, event)
   end
 end)
 
-SLASH_MGAPRICES1 = "/mgaprices"
-SlashCmdList.MGAPRICES = function(message)
-  local command = (message or ""):lower():match("^%s*(.-)%s*$")
-  if command == "chat" then
-    MGAPricesSettings = MGAPricesSettings or {}
-    MGAPricesSettings.chat = not chatPricesOn()
-    say("Prices after item links in chat: " .. (chatPricesOn() and "on" or "off") .. ".")
-    return
-  end
+-- The settings the slash command and the MGA settings window both change.
+local function setChatPrices(on)
+  MGAPricesSettings = MGAPricesSettings or {}
+  MGAPricesSettings.chat = on
+end
+
+-- One line per house: how many items are priced and how old the prices are.
+local function statusLines()
   if not MGAPricesData then
-    say("No prices loaded. Download the addon from " .. SITE .. ", replace this folder and /reload.")
-    return
+    return { "No prices loaded. Download the addon from " .. SITE .. ", replace this folder and /reload." }
   end
+  local lines = {}
   for _, house in ipairs(HOUSES) do
     local data = MGAPricesData.houses and MGAPricesData.houses[house]
     if data and data.updated then
       local count = 0
       for _ in pairs(data.items) do count = count + 1 end
-      say(HOUSE_LABEL[house] .. ": " .. count .. (count == 1 and " item, " or " items, ") .. ageText(data.updated) .. ".")
+      table.insert(lines, HOUSE_LABEL[house] .. ": " .. count .. (count == 1 and " item, " or " items, ") .. ageText(data.updated) .. ".")
     else
-      say(HOUSE_LABEL[house] .. ": no prices.")
+      table.insert(lines, HOUSE_LABEL[house] .. ": no prices.")
     end
   end
+  return lines
+end
+
+SLASH_MGAPRICES1 = "/mgaprices"
+SlashCmdList.MGAPRICES = function(message)
+  local command = (message or ""):lower():match("^%s*(.-)%s*$")
+  if command == "chat" then
+    setChatPrices(not chatPricesOn())
+    say("Prices after item links in chat: " .. (chatPricesOn() and "on" or "off") .. ".")
+    return
+  end
+  for _, line in ipairs(statusLines()) do say(line) end
+  if not MGAPricesData then return end
   say("Mouse over an item to see its price; hold Shift for every house. Refresh: download again from " .. SITE .. ".")
   say("Chat links show their price too; /mgaprices chat turns that " .. (chatPricesOn() and "off" or "on") .. ".")
 end
+
+-- The MGA button's settings window: no menu entries, nothing here is an action.
+local UI = MGAHub.UI
+
+MGAHub.Register({
+  name = "Prices",
+  order = 40,
+  settings = function(section, top)
+    local chat = UI.Check(section, "MGAPricesOptions_chat", "Show prices after item links in chat", nil, top, -10, setChatPrices)
+    local loaded = UI.Label(section, "Prices loaded", "GameFontHighlight", chat, -14)
+    local status = UI.Label(section, "", "GameFontDisableSmall", loaded, -4)
+    local refresh = UI.Label(section, "To refresh them, download the addon again from " .. SITE .. ".", "GameFontDisableSmall", status, -8)
+    refresh:SetWidth(520)
+    function section.refresh()
+      chat:SetChecked(chatPricesOn())
+      status:SetText(table.concat(statusLines(), "\n"))
+    end
+    section.refresh()
+    return 130
+  end,
+})
