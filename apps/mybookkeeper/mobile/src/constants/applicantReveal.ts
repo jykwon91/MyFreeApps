@@ -12,6 +12,7 @@ export const REVEAL_MESSAGES = {
   nothingOnFile: "Nothing private on file.",
   reportMissing: "That report file is missing.",
   reportFailed: "I couldn't open that report.",
+  reportHidden: "Report hidden. See Private details.",
   openReport: "Open report",
   screeningReport: "Screening report",
 } as const;

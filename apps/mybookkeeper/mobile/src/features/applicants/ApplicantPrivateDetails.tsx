@@ -10,7 +10,7 @@ import { fullDateLabel } from "../../lib/localDate";
 import TransactionFact from "../transactions/TransactionFact";
 import ApplicantContact from "./ApplicantContact";
 import { applicantName, screeningLine } from "./applicantDisplay";
-import { useApplicantReveal } from "./useApplicantReveal";
+import type { ApplicantReveal } from "./useApplicantReveal";
 
 function hasAnything(details: ApplicantSensitive): boolean {
   return Boolean(
@@ -20,10 +20,10 @@ function hasAnything(details: ApplicantSensitive): boolean {
   );
 }
 
-export default function ApplicantPrivateDetails({ applicant, canWrite }: { applicant: ApplicantDetailResponse; canWrite: boolean }) {
+export default function ApplicantPrivateDetails({ applicant, canWrite, reveal }: { applicant: ApplicantDetailResponse; canWrite: boolean; reveal: ApplicantReveal }) {
   const { colors, fontSize } = useTheme();
   const { showToast } = useToast();
-  const { details, hide, isBusy, problem, show } = useApplicantReveal(applicant.id);
+  const { details, hide, isBusy, problem, show } = reveal;
   const [hasShown, setHasShown] = useState(false);
   if (details && !hasShown) setHasShown(true);
   useAnnouncement(details ? REVEAL_MESSAGES.shownAnnouncement : hasShown ? REVEAL_MESSAGES.hiddenAnnouncement : undefined);

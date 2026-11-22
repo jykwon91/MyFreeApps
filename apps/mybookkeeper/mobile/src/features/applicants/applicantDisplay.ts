@@ -1,9 +1,15 @@
+import { APPLICANT_EVENT_ACTOR_LABELS } from "@mybookkeeper/api-client/constants/applicantEventActorLabels";
 import { APPLICANT_STAGE_LABELS, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
+import type { ApplicantEvent } from "@mybookkeeper/api-client/types/applicant/applicant-event";
+import type { ApplicantReference } from "@mybookkeeper/api-client/types/applicant/applicant-reference";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
+import type { VideoCallNote } from "@mybookkeeper/api-client/types/applicant/video-call-note";
+import { referenceRelationshipLabel } from "@mybookkeeper/api-client/utils/applicantReferenceLabel";
 import { formatDesiredDates, formatRelativeTime, formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 
+const MAX_GUT_RATING = 5;
 const SCREENING_PROVIDERS: Record<string, string> = { keycheck: "KeyCheck", rentspree: "RentSpree", other: "Other provider" };
 const SCREENING_STATUSES: Record<string, string> = {
   pending: "Waiting for results",
@@ -62,4 +68,30 @@ export function screeningLine(result: ScreeningResult): string {
 
 export function shortDate(value: string): string {
   return formatShortDate(value);
+}
+
+export function referenceLines(reference: ApplicantReference): string[] {
+  const contacted = reference.contacted_at ? `Contacted ${formatRelativeTime(reference.contacted_at)}` : "Not contacted yet";
+  return [`${referenceRelationshipLabel(reference.relationship)} · ${contacted}`, reference.notes?.trim() ?? ""].filter(Boolean);
+}
+
+export function eventLines(event: ApplicantEvent): string[] {
+  return [`By ${APPLICANT_EVENT_ACTOR_LABELS[event.actor]}`, event.notes?.trim() ?? ""].filter(Boolean);
+}
+
+export function ratingLabel(rating: number | null): string | null {
+  return rating === null ? null : `Rating ${rating} of ${MAX_GUT_RATING}`;
+}
+
+export function videoCallLines(call: VideoCallNote): string[] {
+  return [
+    `Scheduled ${formatRelativeTime(call.scheduled_at)}`,
+    call.completed_at ? `Completed ${formatRelativeTime(call.completed_at)}` : "",
+    ratingLabel(call.gut_rating) ?? "",
+    call.notes?.trim() || "No notes",
+  ].filter(Boolean);
+}
+
+export function screeningUploadedLine(result: ScreeningResult): string {
+  return `Uploaded ${formatRelativeTime(result.uploaded_at)}`;
 }

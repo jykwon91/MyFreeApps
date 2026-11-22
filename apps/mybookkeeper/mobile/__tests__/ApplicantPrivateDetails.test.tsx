@@ -76,11 +76,16 @@ function reveals(server: FakeApplicantServer): number {
   return server.requests.filter((request) => request.url?.endsWith("/sensitive")).length;
 }
 
+function WithReveal({ applicant, canWrite }: { applicant: ApplicantDetailResponse; canWrite: boolean }) {
+  const reveal = useApplicantReveal(applicant.id);
+  return <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} reveal={reveal} />;
+}
+
 async function renderIt(applicant: ApplicantDetailResponse = withReport, canWrite = false) {
   await render(
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
-        <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} />
+        <WithReveal applicant={applicant} canWrite={canWrite} />
       </ToastProvider>
     </Provider>,
   );
