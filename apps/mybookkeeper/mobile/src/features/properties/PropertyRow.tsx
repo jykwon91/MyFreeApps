@@ -2,7 +2,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
-import { needsClassification, propertySpokenLabel, propertyUse } from "./propertyDisplay";
+import { activityPeriodText, needsClassification, propertySpokenLabel, propertyUse } from "./propertyDisplay";
 
 interface PropertyRowProps {
   property: Property;
@@ -37,10 +37,13 @@ export default function PropertyRow({ property, onPress }: PropertyRowProps) {
         </ClampedText>
       ) : null}
       {use ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{use}</Text> : null}
-      {isWaiting || !property.is_active ? (
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
+      {isWaiting || !property.is_active || property.activity_periods.length > 0 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
           {property.is_active ? null : <Chip label={PROPERTY_MESSAGES.inactive} />}
           {isWaiting ? <Chip label={PROPERTY_MESSAGES.needsClassification} /> : null}
+          {property.activity_periods.map((period) => (
+            <Chip key={period.id} label={activityPeriodText(period)} />
+          ))}
         </View>
       ) : null}
     </Pressable>

@@ -20,6 +20,7 @@ export function propertySpokenLabel(property: Property): string {
     property.name,
     property.address,
     propertyUse(property),
+    ...property.activity_periods.map(activityPeriodText),
     property.is_active ? null : PROPERTY_MESSAGES.inactive,
     needsClassification(property) ? PROPERTY_MESSAGES.needsClassification : null,
   ]

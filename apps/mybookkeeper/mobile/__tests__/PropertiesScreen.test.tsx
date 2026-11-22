@@ -6,6 +6,7 @@ import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Provider } from "react-redux";
+import { activityPeriodText } from "../src/features/properties/propertyDisplay";
 import PropertiesScreen from "../src/features/properties/PropertiesScreen";
 import { store } from "../src/lib/store";
 
@@ -91,6 +92,23 @@ describe("PropertiesScreen", () => {
     await show();
     await screen.findByText("2 properties need classifying.");
     expect(screen.getAllByText("Needs classification")).toHaveLength(2);
+  });
+
+  it("shows each activity period as a chip and reads them out", async () => {
+    startServer([
+      aProperty({
+        activity_periods: [
+          { id: 1, active_from: "2025-01-01", active_until: "2025-06-30" },
+          { id: 2, active_from: "2025-09-01", active_until: "2025-12-31" },
+        ],
+      }),
+    ]);
+    await show();
+    const first = activityPeriodText({ id: 1, active_from: "2025-01-01", active_until: "2025-06-30" });
+    const second = activityPeriodText({ id: 2, active_from: "2025-09-01", active_until: "2025-12-31" });
+    expect(await screen.findByText(first)).toBeTruthy();
+    expect(screen.getByText(second)).toBeTruthy();
+    expect(screen.getByLabelText(`Elm House, 1 Elm St, Investment Property · Long-Term Rental, ${first}, ${second}`)).toBeTruthy();
   });
 
   it("says one property, and reads out everything about a row with both chips", async () => {
