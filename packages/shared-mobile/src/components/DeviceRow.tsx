@@ -3,6 +3,7 @@ import { useTheme } from "../theme/useTheme";
 import {
   confirmSignOutDeviceTitle,
   DEVICE_SESSION_MESSAGES,
+  deviceRowLabel,
   signOutDeviceLabel,
 } from "@platform/core/constants/deviceSessions";
 import type { SignedInDevice } from "@platform/core/types/security/signed-in-device";
@@ -20,6 +21,8 @@ interface DeviceRowProps {
 export default function DeviceRow({ device, isThisDevice, isSigningOut, onSignOut }: DeviceRowProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const name = deviceDisplayName(device);
+  const lastUsed = formatLastUsed(device.last_used_at);
+  const signedIn = formatSignedInDate(device.created_at);
 
   function confirmSignOut(): void {
     Alert.alert(
@@ -43,12 +46,18 @@ export default function DeviceRow({ device, isThisDevice, isSigningOut, onSignOu
         backgroundColor: colors.card,
       }}
     >
-      <Text style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}>{name}</Text>
-      {isThisDevice ? (
-        <Text style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "600" }}>{DEVICE_SESSION_MESSAGES.thisDevice}</Text>
-      ) : null}
-      <Text style={{ color: colors.foreground, fontSize: fontSize.sm }}>{formatLastUsed(device.last_used_at)}</Text>
-      <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{formatSignedInDate(device.created_at)}</Text>
+      <View
+        accessible
+        accessibilityLabel={deviceRowLabel(name, isThisDevice, lastUsed, signedIn)}
+        style={{ gap: spacing.xs }}
+      >
+        <Text style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}>{name}</Text>
+        {isThisDevice ? (
+          <Text style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "600" }}>{DEVICE_SESSION_MESSAGES.thisDevice}</Text>
+        ) : null}
+        <Text style={{ color: colors.foreground, fontSize: fontSize.sm }}>{lastUsed}</Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{signedIn}</Text>
+      </View>
       {isThisDevice ? null : (
         <LoadingButton
           accessibilityLabel={signOutDeviceLabel(name)}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { AccessibilityInfo, Alert } from "react-native";
 import { SessionContext } from "../auth/SessionContext";
 import AccountSection from "../components/AccountSection";
 import type { MobileSession } from "../types/MobileSession";
@@ -136,6 +136,24 @@ describe("AccountSection", () => {
     expect(screen.getByRole("button", { name: "Sign out of this phone" })).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(devices.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("announces the load failure and retries from the same alert", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    const { view, devices } = setUp({ devices: null, hasError: true });
+    await render(view);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't load your devices/);
+    expect(announce).toHaveBeenCalledWith(expect.stringContaining("Couldn't load your devices"), { queue: true });
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(devices.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads each device as one stop, with Sign out still its own stop", async () => {
+    await render(setUp().view);
+    expect(screen.getByLabelText(/^Old Pixel, Last used .+, Signed in .+$/)).toBeTruthy();
+    expect(screen.getByLabelText(/^My iPhone, this device, Last used .+, Signed in .+$/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out Old Pixel" })).toBeTruthy();
+    expect(screen.queryByLabelText(/^Old Pixel, .*Sign out/)).toBeNull();
   });
 
   it("signs this phone out without a confirmation", async () => {

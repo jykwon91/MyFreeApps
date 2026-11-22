@@ -7,6 +7,7 @@ import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { TwoStepRecoveryCodesProps } from "../types/TwoStepRecoveryCodesProps";
 import { copySecret } from "../utils/copySecret";
+import { keyForScreenReader } from "../utils/twoStepDisplay";
 import LoadingButton from "./LoadingButton";
 
 export default function TwoStepRecoveryCodes({ codes, onDone }: TwoStepRecoveryCodesProps) {
@@ -43,6 +44,7 @@ export default function TwoStepRecoveryCodes({ codes, onDone }: TwoStepRecoveryC
       <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: spacing.sm }}>
         {codes.map((code) => (
           <Text
+            accessibilityLabel={keyForScreenReader(code)}
             key={code}
             style={{ color: colors.foreground, fontSize: fontSize.md, fontVariant: ["tabular-nums"], width: "50%" }}
           >

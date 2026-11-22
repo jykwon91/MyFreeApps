@@ -13,6 +13,7 @@ import type { AccountMessage } from "../types/AccountMessage";
 import DeviceRow from "./DeviceRow";
 import LoadingButton from "./LoadingButton";
 import LoadingRegion from "./LoadingRegion";
+import SectionError from "./SectionError";
 import Skeleton from "./Skeleton";
 
 interface AccountSectionProps {
@@ -68,14 +69,12 @@ export default function AccountSection({ appName, devices, onMessage, onDeleteAc
           </LoadingRegion>
         ) : null}
         {devices.hasError ? (
-          <>
-            <Text style={{ color: colors.destructiveText, fontSize: fontSize.sm }}>
-              {DEVICE_SESSION_MESSAGES.loadFailed}
-            </Text>
-            <LoadingButton loadingText={DEVICE_SESSION_MESSAGES.tryingAgain} onPress={devices.reload} variant="secondary">
-              {DEVICE_SESSION_MESSAGES.tryAgain}
-            </LoadingButton>
-          </>
+          <SectionError
+            message={DEVICE_SESSION_MESSAGES.loadFailed}
+            onRetry={devices.reload}
+            retryLabel={DEVICE_SESSION_MESSAGES.tryAgain}
+            retryingLabel={DEVICE_SESSION_MESSAGES.tryingAgain}
+          />
         ) : null}
         {devices.devices
           ? devicesInDisplayOrder(devices.devices, state.sessionId).map((device) => (
