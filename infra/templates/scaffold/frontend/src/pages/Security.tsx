@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { X, Trash2 } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { Trash2 } from "lucide-react";
+import { AlertBox, useDismissable, DismissButton } from "@platform/ui";
 
-import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
@@ -33,14 +32,7 @@ export default function Security() {
             Two-factor authentication adds an extra layer of security to your account. We
             recommend enabling it to protect your account access.
           </span>
-          <button
-            type="button"
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

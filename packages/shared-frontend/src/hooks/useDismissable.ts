@@ -2,8 +2,8 @@ import { useState, useCallback } from "react";
 
 /**
  * Hook for info banners that can be dismissed and persist their dismissed state
- * in localStorage. Used across pages (Documents, Integrations, Analytics, etc.)
- * to avoid duplicating the same pattern 9 times.
+ * in localStorage under the given key (value "1"). Shared by every app via
+ * @platform/ui so dismissed tips stay dismissed.
  */
 export function useDismissable(storageKey: string): {
   dismissed: boolean;

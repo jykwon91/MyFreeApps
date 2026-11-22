@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { getYear } from "date-fns";
-import { Download, X } from "lucide-react";
+import { Download } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { downloadFile } from "@/shared/utils/download";
@@ -9,13 +9,12 @@ import { NON_DEDUCTIBLE_CATEGORIES } from "@mybookkeeper/api-client/constants/ta
 import { useGetTaxSummaryQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
 import Select from "@/shared/components/ui/Select";
-import { Button, AlertBox } from "@platform/ui";
+import { Button, AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import TaxReportSkeleton from "@/app/features/tax/TaxReportSkeleton";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { taxSummaryLoadError } from "@/shared/lib/totals-messages";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxReport() {
   const currentYear = getYear(new Date());
@@ -73,13 +72,7 @@ export default function TaxReport() {
           <span>
             This is your tax summary for the selected year. Use it to review your deductions or share it with your accountant. It&rsquo;s based on your approved, tax-relevant transactions.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

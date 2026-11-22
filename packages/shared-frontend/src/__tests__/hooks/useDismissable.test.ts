@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useDismissable } from "@/shared/hooks/useDismissable";
+import { useDismissable } from "../../hooks/useDismissable";
 
 describe("useDismissable", () => {
   beforeEach(() => {
@@ -43,5 +43,10 @@ describe("useDismissable", () => {
     const { result: resultB } = renderHook(() => useDismissable("key-b"));
     expect(resultA.current.dismissed).toBe(true);
     expect(resultB.current.dismissed).toBe(false);
+  });
+
+  it("is exported from the package index", async () => {
+    const index = await import("../../index");
+    expect(index.useDismissable).toBe(useDismissable);
   });
 });

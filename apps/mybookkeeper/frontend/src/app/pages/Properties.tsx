@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { X } from "lucide-react";
 import {
   useGetPropertiesQuery,
   useCreatePropertyMutation,
@@ -8,7 +7,7 @@ import {
 } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import { useToast } from "@/shared/hooks/useToast";
-import { extractErrorMessage, AlertBox, useLiveSearchParams } from "@platform/ui";
+import { extractErrorMessage, AlertBox, useLiveSearchParams, useDismissable, DismissButton } from "@platform/ui";
 import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import { TilePicker } from "@platform/ui";
@@ -25,7 +24,6 @@ import EmptyState from "@/shared/components/ui/EmptyState";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import { PROPERTY_EDIT_PARAM as EDIT_PARAM } from "@/shared/lib/property-routes";
 
 export default function Properties() {
@@ -113,13 +111,7 @@ export default function Properties() {
           <span>
             Properties let me know where each expense belongs. Assigning a property to a transaction tells me whether to put it on Schedule E (rental) or Schedule A (personal home).
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

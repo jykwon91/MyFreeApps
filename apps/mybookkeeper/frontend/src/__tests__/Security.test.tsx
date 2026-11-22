@@ -122,6 +122,13 @@ describe("Security — info alert", () => {
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
+  it("gives the Dismiss button a 44px touch target", () => {
+    renderSecurity();
+
+    const button = screen.getByRole("button", { name: "Dismiss" });
+    expect(button).toHaveClass("min-h-[44px]", "min-w-[44px]");
+  });
+
   it("clicking Dismiss hides the alert", async () => {
     const user = userEvent.setup();
     renderSecurity();

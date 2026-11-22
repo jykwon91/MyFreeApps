@@ -35,9 +35,8 @@ import DocumentsListBody from "@/app/features/documents/DocumentsListBody";
 import DocumentTable from "@/app/features/documents/DocumentTable";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { ConfirmDialog, AlertBox } from "@platform/ui";
+import { ConfirmDialog, AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import { Button } from "@platform/ui";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { DOCUMENT_POLL_INTERVAL_MS, RE_EXTRACT_POLL_WINDOW_MS } from "@/shared/lib/document-polling";
 
@@ -211,13 +210,7 @@ export default function Documents() {
               Supported formats: <strong>PDF</strong>, <strong>images</strong> (PNG, JPG), <strong>Word</strong> (.docx), and <strong>spreadsheets</strong> (XLSX, CSV).
             </p>
           </div>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

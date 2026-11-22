@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getYear, format, parseISO } from "date-fns";
-import { Plus, FileText, RefreshCw, X } from "lucide-react";
+import { Plus, FileText, RefreshCw } from "lucide-react";
 import { useListTaxReturnsQuery, useCreateTaxReturnMutation } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { FILING_STATUSES, DEFAULT_FILING_STATUS } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { taxReturnYearChoices } from "@mybookkeeper/api-client/utils/taxReturnYearChoices";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button, LoadingButton, AlertBox } from "@platform/ui";
+import { Button, LoadingButton, AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import Card from "@/shared/components/ui/Card";
 import Select from "@/shared/components/ui/Select";
@@ -15,7 +15,6 @@ import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import TaxReturnsListSkeleton from "@/app/features/tax/TaxReturnsListSkeleton";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import { hasHttpStatus } from "@/shared/utils/http-status";
 
 export default function TaxReturns() {
@@ -68,13 +67,7 @@ export default function TaxReturns() {
           <span>
             A tax return here is a workspace I use to organize your documents and calculate your numbers. It&rsquo;s not filed with the IRS &mdash; it&rsquo;s a summary you can review and share with your accountant.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

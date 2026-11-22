@@ -1,11 +1,10 @@
 import { formatCount } from "@/shared/utils/count";
 import { useCallback, useId, useMemo, useState } from "react";
-import { X } from "lucide-react";
 import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { timeSince } from "@platform/core/utils/timeSince";
-import { extractErrorMessage, AlertBox } from "@platform/ui";
+import { extractErrorMessage, AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import { groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
@@ -18,7 +17,6 @@ import type { GmailConnectMessage } from "@/shared/types/integration/gmail-conne
 import { LoadingButton } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import SyncLogRow from "@/app/features/integrations/SyncLogRow";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function Integrations() {
   const canWrite = useCanWrite();
@@ -162,13 +160,7 @@ export default function Integrations() {
           <span>
             Connect Gmail and I&rsquo;ll automatically scan your inbox for financial documents &mdash; invoices, receipts, 1099s &mdash; and import them for you. I only read emails with attachments; I never store your email content.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

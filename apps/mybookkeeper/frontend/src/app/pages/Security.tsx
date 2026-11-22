@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { X, Download, Trash2 } from "lucide-react";
-import { AlertBox, showError, showSuccess } from "@platform/ui";
+import { Download, Trash2 } from "lucide-react";
+import { AlertBox, showError, showSuccess, useDismissable, DismissButton } from "@platform/ui";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import SignedInDevices from "@platform/ui/components/auth/SignedInDevices";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/shared/lib/api";
 
@@ -43,13 +42,7 @@ export default function Security() {
           <span>
             Two-factor authentication adds an extra layer of security to your account. We recommend enabling it since your account contains sensitive financial data.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 
