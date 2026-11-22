@@ -297,13 +297,24 @@ describe("MGA Loot verdicts", () => {
     expect(line).toContain("use: +280 attack power for 20s every 2min = +46.7 attack power");
   });
 
-  it("still can't judge an effect its data couldn't value (Fiery War Axe)", () => {
+  it("scores a proc with no rate in the data at the Classic server's own rule (Fiery War Axe)", () => {
     const AXE = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 1`;
     const [line] = run(
       `items[870] = { ${AXE}, ${strength(20)}, lines = { "Chance on hit: Hurls a fiery ball that causes 155 to 197 Fire damage." } }; rolls[1] = 870; talents = { 31, 20, 0 }; ` +
         `items[16] = { ${AXE}, ${strength(10)} }; equipped[16] = 16`,
     );
-    expect(line).toContain("Can't judge: this item has \"Chance on hit: Hurls a fiery ball");
+    expect(line).toContain("Upgrade");
+    expect(line).toContain("1.08 PPM (Classic server rule)");
+    expect(line).not.toContain("Can't judge");
+  });
+
+  it("still can't judge an effect its data couldn't value (Thunderfury's slow on the enemy)", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const [line] = run(
+      `items[19019] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts your enemy with lightning, dealing 300 Nature damage and then jumping to additional nearby enemies." } }; rolls[1] = 19019; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
+    );
+    expect(line).toContain("Can't judge: this item has \"Chance on hit: Blasts your enemy");
     expect(line).not.toContain("Upgrade");
   });
 

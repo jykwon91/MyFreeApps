@@ -104,6 +104,10 @@ MELEE_WEAPON_BITS = sum(1 << s for s in (0, 1, 4, 5, 6, 7, 8, 10, 13, 15))
 RANGED_ONLY_KEYS = {"hit_pct": "ranged_hit_pct", "crit_pct": "ranged_crit_pct", "haste_pct": "ranged_haste_pct"}
 MAX_DEPTH = 4
 NO_RATE = 101  # SpellAuraOptions.ProcChance when a spell sets none.
+# A chance-on-hit item spell with neither a PPM nor a ProcChance of 100 or less procs, in the Classic server
+# (cmangos Player::CastItemCombatSpell -> Unit::GetWeaponProcChance), at swing seconds x 1.8 % per main-hand
+# swing: 1.8 / 100 x 60 = 1.08 procs a minute whatever the weapon's speed.
+CLASSIC_SERVER_ITEM_PPM = 1.08
 # Auras on you that change something MGA Loot's stat weights have no key for.
 UNWEIGHTED_AURAS: dict[int, str] = {
     10: "changes your threat, which has no stat weight",

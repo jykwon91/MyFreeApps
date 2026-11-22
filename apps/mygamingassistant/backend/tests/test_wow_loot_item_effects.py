@@ -123,8 +123,17 @@ def test_proc_chance_101_is_no_rate_and_classic_fills_the_gap() -> None:
     assert rate.text == "1 PPM (Classic rate)"
 
 
-def test_proc_with_no_rate_is_unresolved_never_guessed() -> None:
+def test_item_proc_with_no_rate_takes_the_classic_server_rule() -> None:
+    # Fiery War Axe: ProcChance 101 and spellppmRate 0, so the server procs it at speed x 1.8 % per swing = 1.08 PPM.
     proc = Spell(22, "Fireball", proc_chance=101, effects=(_damage(150),))
+    [entry] = _entries(WEAPON, ItemSpell(22, TRIGGER_CHANCE_ON_HIT), proc)
+    assert entry.stat == "dps"
+    assert entry.value == pytest.approx(150 * 1.08 / 60, abs=1e-3)
+    assert "1.08 PPM (Classic server rule)" in entry.note
+
+
+def test_proc_chance_0_never_procs_so_stays_unresolved() -> None:
+    proc = Spell(22, "Fireball", proc_chance=0, effects=(_damage(150),))
     [entry] = _entries(WEAPON, ItemSpell(22, TRIGGER_CHANCE_ON_HIT), proc)
     assert entry == Entry(UNRESOLVED, 0, "Fireball: the data gives no proc rate")
 
