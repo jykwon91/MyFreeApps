@@ -59,6 +59,7 @@ __all__ = [
     "lease_placeholder_suggest_limiter",
     "document_re_extract_limiter",
     "frontend_error_limiter",
+    "admin_db_key_failure_limiter",
     "require_turnstile",
     "check_login_rate_limit",
     "check_totp_rate_limit",
@@ -106,6 +107,9 @@ frontend_error_limiter = RateLimiter(max_attempts=50, window_seconds=3600)
 # Guest welcome-manual PIN attempts. The per-manual lockout stops guessing one
 # guide; this stops one client sweeping many guides.
 welcome_manual_unlock_limiter = RateLimiter(max_attempts=20, window_seconds=900)
+# Wrong X-Admin-Api-Key attempts on /admin/db/*, per client IP. Only failures
+# are recorded, so the operator's tooling is never slowed by correct requests.
+admin_db_key_failure_limiter = RateLimiter(max_attempts=10, window_seconds=900)
 
 
 # ---------------------------------------------------------------------------
