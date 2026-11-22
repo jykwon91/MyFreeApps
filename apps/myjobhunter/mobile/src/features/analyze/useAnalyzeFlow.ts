@@ -13,6 +13,7 @@ import {
 } from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import type { JobAnalysisRequest } from "@myjobhunter/api-client/types/job-analysis/job-analysis-request";
 import type { JobAnalysisSource } from "@myjobhunter/api-client/types/job-analysis/job-analysis-source";
+import { describeApplyError } from "@myjobhunter/api-client/utils/describeApplyError";
 import { analysisFailureFrom } from "@myjobhunter/api-client/utils/analysisFailureFrom";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
@@ -197,12 +198,12 @@ export function useAnalyzeFlow() {
     // A cache reset (sign-out, account change) called it off: there's nobody left to tell.
     if (isCancelledRequest(error)) return;
     if (writeOutcome(error) !== "unknown") {
-      showToast(MESSAGES.couldntAdd, "error");
+      showToast(describeApplyError(error), "error");
       return;
     }
     const check = await recheckApply(analysisId);
     if (check.kind === "created") added(analysisId, check.item);
-    else if (check.kind === "notCreated") showToast(MESSAGES.couldntAdd, "error");
+    else if (check.kind === "notCreated") showToast(describeApplyError(error), "error");
     else if (check.kind === "unknown") showToast(JOB_ANALYSIS_APPLY_UNSURE, "error");
   }
 

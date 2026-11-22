@@ -64,7 +64,7 @@ import {
   useApplyFromAnalysisMutation,
   useLazyGetJobAnalysisQuery,
 } from "@myjobhunter/api-client/store/jobAnalysisApi";
-import { JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
+import { JOB_ANALYSIS_APPLY_ERRORS, JOB_ANALYSIS_APPLY_UNSURE } from "@myjobhunter/api-client/constants/jobAnalysis";
 
 const mockUseAnalyzeJobMutation = vi.mocked(useAnalyzeJobMutation);
 const mockUseApplyFromAnalysisMutation = vi.mocked(useApplyFromAnalysisMutation);
@@ -832,7 +832,7 @@ describe("Analyze page, adding to applications when the answer is lost", () => {
     serveReread(() => Promise.resolve(makeAnalysis()));
     const { store } = await addWith(NO_ANSWER);
 
-    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(expect.stringMatching(/^Couldn't save: /)));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(JOB_ANALYSIS_APPLY_ERRORS.couldntAdd + ". " + JOB_ANALYSIS_APPLY_ERRORS.tryAgain));
     expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBeNull();
     expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
   });
@@ -846,11 +846,11 @@ describe("Analyze page, adding to applications when the answer is lost", () => {
     expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
   });
 
-  it("keeps a refusal's wording without reading the analysis again", async () => {
+  it("says the analysis is gone, without offering to try again, and doesn't read it again", async () => {
     const reread = serveReread(() => Promise.resolve(makeAnalysis({ applied_application_id: "app-1" })));
     await addWith({ status: 404, data: { detail: "Job analysis not found" } });
 
-    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Couldn't save: Job analysis not found"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(JOB_ANALYSIS_APPLY_ERRORS.gone));
     expect(reread).not.toHaveBeenCalled();
   });
 });

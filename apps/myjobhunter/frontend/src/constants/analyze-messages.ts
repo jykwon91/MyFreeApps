@@ -5,5 +5,4 @@ export const ANALYZE_MESSAGES = {
     "automated access. Paste the job description text below and we'll analyze it.",
   couldntAnalyze: "Couldn't analyze:",
   added: "Application added",
-  couldntSave: "Couldn't save:",
 } as const;
