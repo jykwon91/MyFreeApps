@@ -21,6 +21,7 @@ from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.services.seed_admin_service import build_seed_admin_hook
@@ -42,6 +43,7 @@ from app.db.session import unit_of_work
 from app.models.user.user import User
 from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate  # noqa: F401
 from app.services.storage.bucket_initializer import ensure_bucket
+from app.services.system.admin_user_service_factory import shared_admin_user_service
 
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -173,10 +175,6 @@ app.include_router(discovery.image_router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).
-from platform_shared.api.admin_router import build_admin_router
-from app.services.system.admin_user_service_factory import shared_admin_user_service
-
-
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,
