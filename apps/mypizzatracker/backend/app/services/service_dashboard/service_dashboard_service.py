@@ -151,12 +151,15 @@ class AdvanceOrderResult:
     ``ready_text_sent`` — the only transition that attempts an SMS. A
     successful attempt sets it to True; a Twilio failure sets it to False
     and populates ``sms_error`` with a short, operator-facing message so
-    the dashboard can prompt them to text manually.
+    the dashboard can prompt them to text manually. ``sms_outcome_unknown``
+    is True when Twilio may have sent the text anyway, so the operator
+    checks Twilio's message log before texting the customer by hand.
     """
 
     order: Order
     sms_dispatched: Optional[bool] = None
     sms_error: Optional[str] = None
+    sms_outcome_unknown: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -269,13 +272,12 @@ async def advance_order_status(
     # rollback; a Twilio outage can't undo the operator's intent either.
     # The Twilio client is synchronous; run it in a thread so a slow send
     # can't freeze the event loop for every other request.
-    sms_dispatched, sms_error = await asyncio.to_thread(
-        send_ready_text, ready_text, order_id,
-    )
+    outcome = await asyncio.to_thread(send_ready_text, ready_text, order_id)
     return AdvanceOrderResult(
         order=refreshed,
-        sms_dispatched=sms_dispatched,
-        sms_error=sms_error,
+        sms_dispatched=outcome.sent,
+        sms_error=outcome.error,
+        sms_outcome_unknown=outcome.outcome_unknown,
     )
 
 

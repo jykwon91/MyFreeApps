@@ -35,6 +35,15 @@ Error codes (rules/check-third-party-error-codes.md):
     logged at WARNING and raised as ``SmsSendError(provider_code="http_<n>")``.
     Phone-side failures arrive asynchronously in the ``message.send.failed``
     webhook's ``error_message``.
+
+Unknown outcomes:
+    Only a failure to connect (DNS, connection refused, connect timeout) is a
+    definite "not sent" (``provider_code="network_error"``). A failure after
+    the request may have reached httpSMS (a read or write error or timeout, a
+    5xx, a 2xx with an unreadable body) raises
+    ``SmsSendError(outcome_unknown=True)``: the text may already be on its way,
+    and httpSMS does not dedupe on ``request_id``, so the caller must never
+    resend it on its own.
 """
 from __future__ import annotations
 
@@ -49,6 +58,11 @@ import httpx
 import jwt
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from platform_shared.core.mask_phone_numbers import mask_phone_numbers
+from platform_shared.core.sms_constants import (
+    SMS_PROVIDER_CODE_NETWORK_ERROR,
+    SMS_PROVIDER_CODE_OUTCOME_UNKNOWN,
+)
 from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
 logger = logging.getLogger(__name__)
@@ -70,6 +84,14 @@ HTTPSMS_EVENT_SEND_FAILED = "message.send.failed"
 HTTPSMS_EVENT_SEND_EXPIRED = "message.send.expired"
 
 _IV_BYTES = 16
+
+# Transport failures raised before any byte of the request left this machine
+# (httpx reports DNS failures and refused connections as ``ConnectError``).
+_NEVER_SENT_ERRORS: tuple[type[httpx.HTTPError], ...] = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.PoolTimeout,
+)
 
 
 class HttpSmsWebhookAuthError(ValueError):
@@ -100,14 +122,14 @@ def decrypt_httpsms_content(passphrase: str, encoded: str) -> str:
     return (decryptor.update(ciphertext) + decryptor.finalize()).decode()
 
 
-def _error_summary(response: httpx.Response) -> tuple[str, Any]:
+def _error_message(response: httpx.Response) -> str:
     try:
         payload = response.json()
     except ValueError:
-        return response.text[:200], None
+        return response.text[:200]
     if not isinstance(payload, dict):
-        return str(payload)[:200], None
-    return str(payload.get("message", ""))[:200], payload.get("data")
+        return str(payload)[:200]
+    return str(payload.get("message", ""))[:200]
 
 
 @dataclass
@@ -138,6 +160,7 @@ class HttpSmsService:
             ValueError: If ``to`` or ``body`` is empty.
             SmsNotConfiguredError: If the API key or from-number is missing.
             SmsSendError: If httpSMS rejects the request or cannot be reached.
+                ``outcome_unknown`` is set when httpSMS may have accepted it.
         """
         if not to:
             raise ValueError("Recipient phone number cannot be empty")
@@ -168,26 +191,44 @@ class HttpSmsService:
                 headers={"x-api-key": self.api_key, "Accept": "application/json"},
                 timeout=HTTPSMS_TIMEOUT_S,
             )
-        except httpx.HTTPError as e:
+        except _NEVER_SENT_ERRORS as e:
             logger.warning(
-                "httpSMS send failed (network): request_id=%s err=%r", request_id, e,
+                "httpSMS send failed (unreachable, not sent): request_id=%s err=%r",
+                request_id, e,
             )
             raise SmsSendError(
-                f"httpSMS unreachable: {e}", provider_code="network_error",
+                f"httpSMS unreachable: {e}", provider_code=SMS_PROVIDER_CODE_NETWORK_ERROR,
+            ) from e
+        except httpx.HTTPError as e:
+            logger.warning(
+                "httpSMS send outcome unknown (request may have been accepted): "
+                "request_id=%s err_type=%s err=%r",
+                request_id, type(e).__name__, e,
+            )
+            raise SmsSendError(
+                f"httpSMS may have accepted the SMS, but did not confirm it: {e}",
+                provider_code=SMS_PROVIDER_CODE_OUTCOME_UNKNOWN,
+                outcome_unknown=True,
             ) from e
 
         if response.status_code >= 400:
-            message, data = _error_summary(response)
+            message = _error_message(response)
+            # A rejection can quote the number it was sending to.
+            message = mask_phone_numbers(message)
             provider_code = f"http_{response.status_code}"
+            # A 5xx can come after httpSMS stored and queued the message.
+            outcome_unknown = response.status_code >= 500
+            # Only codes are logged: the provider's text can quote the recipient,
+            # and it is carried (masked) on the raised error for the caller to store.
             logger.warning(
-                "httpSMS send rejected: status=%s code=%s request_id=%s "
-                "message=%s detail=%s",
-                response.status_code, provider_code, request_id, message, data,
+                "httpSMS send rejected: status=%s code=%s outcome_unknown=%s request_id=%s",
+                response.status_code, provider_code, outcome_unknown, request_id,
             )
             raise SmsSendError(
                 f"httpSMS rejected SMS (status={response.status_code}): {message}",
                 status=response.status_code,
                 provider_code=provider_code,
+                outcome_unknown=outcome_unknown,
             )
 
         try:
@@ -197,10 +238,13 @@ class HttpSmsService:
                 "httpSMS send returned an unexpected body: status=%s request_id=%s",
                 response.status_code, request_id,
             )
+            # A 2xx means the message was queued for the phone; only its id is
+            # missing, so resending it would text the tenant twice.
             raise SmsSendError(
                 "httpSMS accepted the request but returned no message id",
                 status=response.status_code,
                 provider_code="malformed_response",
+                outcome_unknown=True,
             ) from e
 
         logger.info(

@@ -12,6 +12,7 @@ import { Clock } from "lucide-react";
 import { formatMoney } from "@/lib/formatMoney";
 import MoveSelect from "@/features/service/MoveSelect";
 import { formatPickupTime } from "@/features/service/formatPickupTime";
+import { readyTextFailureMessage } from "@/features/service/readyTextFailureMessage";
 import {
   useAdvanceOrderMutation,
   useMoveOrderMutation,
@@ -68,9 +69,7 @@ export function OrderCard({
       }).unwrap();
       showSuccess(`Moved to ${ORDER_STATUS_LABELS[target]}`);
       if (result.sms_dispatched === false) {
-        showError(
-          `SMS not sent (${result.sms_error || "unknown error"}). Please text ${order.customer.phone} manually.`,
-        );
+        showError(readyTextFailureMessage(result, order.customer.phone));
       }
     } catch (err) {
       showError(extractErrorMessage(err) || "Failed to advance order");

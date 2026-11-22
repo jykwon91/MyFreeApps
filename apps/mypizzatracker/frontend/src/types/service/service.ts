@@ -106,4 +106,6 @@ export interface AdvanceOrderResponse {
   };
   sms_dispatched: boolean | null;
   sms_error: string | null;
+  /** True when the send failed but Twilio may still have texted the customer. */
+  sms_outcome_unknown: boolean;
 }

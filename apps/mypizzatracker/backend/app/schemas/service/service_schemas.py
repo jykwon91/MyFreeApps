@@ -109,8 +109,13 @@ class AdvanceOrderResponse(BaseModel):
       ``sms_error`` carries the operator-facing reason so the dashboard
       can prompt them to text the customer manually.
     - ``None`` -- this transition didn't involve SMS.
+
+    ``sms_outcome_unknown`` is True when the send failed in a way Twilio may
+    still have delivered (a timeout or broken connection after the request
+    went out, a Twilio 5xx), so the operator checks before texting by hand.
     """
 
     order: OrderRead
     sms_dispatched: Optional[bool] = None
     sms_error: Optional[str] = None
+    sms_outcome_unknown: bool = False

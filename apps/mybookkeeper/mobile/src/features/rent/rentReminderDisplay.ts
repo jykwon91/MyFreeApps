@@ -4,12 +4,16 @@ import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
+import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
 import { formatDueDate, formatSendTime } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { zoneAbbreviation } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { formatCurrency } from "@platform/core/utils/currency";
 import {
   addEmailFirst,
   addPhoneFirst,
+  channelDidntGo,
+  channelMayHaveGone,
+  channelWent,
   emailOnlyWent,
   goesOut,
   moneyDue,
@@ -77,11 +81,24 @@ export interface SendOutcome {
   isProblem: boolean;
 }
 
+/** Each channel in its own words, once one may have gone out without our knowing. */
+function unsureOutcome(rows: readonly RentReminderSend[]): SendOutcome {
+  const lines = rows.map((row) => {
+    const channel = CHANNEL_WORD[row.channel];
+    if (row.status !== "failed") return channelWent(channel);
+    const reason = describeReminderError(row.error_code);
+    return reminderMayStillArrive(row.error_code) ? channelMayHaveGone(channel, reason) : channelDidntGo(channel, reason);
+  });
+  return { message: lines.join(" "), isProblem: true };
+}
+
 export function sendOutcome(rows: readonly RentReminderSend[], name: string | null): SendOutcome {
   const email = rows.find((row) => row.channel === "email");
   const text = rows.find((row) => row.channel === "sms");
   const reason = (row: RentReminderSend) => describeReminderError(row.error_code);
   const failed = (row: RentReminderSend | undefined): row is RentReminderSend => row?.status === "failed";
+
+  if (rows.some((row) => row.status === "failed" && reminderMayStillArrive(row.error_code))) return unsureOutcome(rows);
 
   if (failed(email) && failed(text)) return { message: neitherWent(reason(text)), isProblem: true };
   if (email && failed(text)) return { message: emailOnlyWent(reason(text), name), isProblem: true };

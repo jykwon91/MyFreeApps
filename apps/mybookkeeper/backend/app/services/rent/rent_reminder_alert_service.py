@@ -1,4 +1,13 @@
-"""Tell the operator, once, when a rent reminder didn't go out."""
+"""Tell the operator, once per try, when a rent reminder didn't go out.
+
+The alert is claimed on the row before the email is sent, so the sender, the
+watchdog and the webhook can't each email about the same failed try. A retry
+is a new try and gets its own alert.
+
+A failure we recorded without knowing ("may already have been sent") gets one
+follow-up if the phone later reports the text definitely failed, so the
+operator knows it's safe to send again.
+"""
 from __future__ import annotations
 
 import html
@@ -9,9 +18,12 @@ from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
-    ERROR_SEND_INTERRUPTED,
     ERROR_SMS_EXPIRED,
+    ERROR_SMS_NETWORK,
     ERROR_SMS_NOT_CONFIGURED,
+    ERROR_SMS_OUTCOME_UNKNOWN,
+    ERROR_UNEXPECTED,
+    MAY_STILL_ARRIVE_ERRORS,
 )
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
@@ -23,7 +35,6 @@ from app.services.system import email_service
 logger = logging.getLogger(__name__)
 
 _SMS = "sms"
-ERROR_UNEXPECTED = "unexpected_error"
 
 # Failures that mean "the phone never got it out", where the fix is on the
 # phone itself rather than in the tenant's contact details.
@@ -31,11 +42,10 @@ PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SMS_EXPIRED,
 })
-# Sending may have got further than we know, so a retry can double up.
-_MAY_STILL_ARRIVE: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
-    ERROR_SEND_INTERRUPTED,
-})
+_CHECK_PROVIDER_LOG = (
+    "It may already have been sent, so check the message log on httpsms.com "
+    "(or the phone's Messages app) before sending it again."
+)
 _PHONE_CHECKLIST = (
     "Check the Android phone is on, online, and that httpSMS isn't "
     "battery-optimized (Settings > Apps > httpSMS > Battery > Unrestricted)."
@@ -51,9 +61,21 @@ def email_html(body: str) -> str:
     return f"<p>{html.escape(body)}</p>"
 
 
+def _settled_text(*, tenant: str, code: str) -> tuple[str, str]:
+    subject = f"{tenant}'s rent text definitely didn't go out"
+    body = (
+        f"{subject}. Earlier it looked like it might have reached them, but the "
+        f"phone has now reported it failed (reason: {code}). It definitely didn't "
+        "go out, so you can send it again with Send now on the tenant's Rent "
+        "reminders card."
+    )
+    return subject, body
+
+
 def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
     what = "rent text" if channel == _SMS else "rent reminder email"
-    subject = f"{tenant}'s {what} didn't go out"
+    outcome = "may already have been sent" if code == ERROR_SMS_OUTCOME_UNKNOWN else "didn't go out"
+    subject = f"{tenant}'s {what} {outcome}"
     if code in PHONE_SIDE_ERRORS:
         detail = _PHONE_CHECKLIST
     elif code == ERROR_NO_RECIPIENT:
@@ -62,6 +84,10 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
         detail = "The tenant's phone number couldn't be read. Re-enter it with the area code."
     elif code == ERROR_SMS_NOT_CONFIGURED:
         detail = "Text reminders are switched on but httpSMS isn't configured on the server."
+    elif code == ERROR_SMS_NETWORK:
+        detail = "The server couldn't reach httpSMS, so the text wasn't sent."
+    elif code == ERROR_SMS_OUTCOME_UNKNOWN:
+        detail = "httpSMS didn't confirm it took the text."
     else:
         detail = f"Reason: {code}."
     retry = (
@@ -70,17 +96,26 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
         "out, Send now won't resend this one, so contact the tenant yourself if "
         "they still need it."
     )
-    if code in _MAY_STILL_ARRIVE:
+    if code == ERROR_SMS_OUTCOME_UNKNOWN:
+        retry = f"{_CHECK_PROVIDER_LOG} {retry}"
+    elif code in MAY_STILL_ARRIVE_ERRORS:
         retry = f"It may still reach them, so check before sending again. {retry}"
     body = f"{subject}. {detail} {retry}"
     return subject, body
 
 
-async def alert_operator(send_id: uuid.UUID) -> bool:
-    """Email the operator about a failed reminder, at most once per row."""
+async def alert_operator(
+    send_id: uuid.UUID, attempt: int, *, settled_unsure: bool = False,
+) -> bool:
+    """Email the operator about try ``attempt`` of a failed reminder, at most once.
+
+    ``settled_unsure``: the row had been failed as "may have gone out" and the
+    phone has now said it definitely didn't (the row's alert mark was cleared
+    for this one follow-up).
+    """
     async with unit_of_work() as db:
         row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is None or row.status != "failed" or row.operator_alerted_at is not None:
+        if row is None or row.status != "failed" or row.attempt != attempt:
             return False
         applicant = await applicant_repo.get(
             db,
@@ -92,20 +127,30 @@ async def alert_operator(send_id: uuid.UUID) -> bool:
         legal_name = applicant.legal_name if applicant is not None else None
         tenant = message.first_name(legal_name) if (legal_name or "").strip() else "A tenant"
         operator = await operator_email(db, row.user_id)
-        subject, body = _alert_text(
-            tenant=tenant, channel=row.channel, code=row.error_code or ERROR_UNEXPECTED,
+        code = row.error_code or ERROR_UNEXPECTED
+        subject, body = (
+            _settled_text(tenant=tenant, code=code)
+            if settled_unsure
+            else _alert_text(tenant=tenant, channel=row.channel, code=code)
         )
-    if not operator:
-        logger.warning("Rent reminder %s failed and the operator has no email", send_id)
+        if not operator:
+            logger.warning("Rent reminder %s failed and the operator has no email", send_id)
+            return False
+        claimed_at = await rent_reminder_send_repo.claim_operator_alert(
+            db, row=row, attempt=attempt,
+        )
+    if claimed_at is None:
         return False
     delivered = await email_service.send_email(
         [operator], subject, email_html(body),
     )
     if not delivered:
         logger.warning("Could not email the operator about failed reminder %s", send_id)
+        async with unit_of_work() as db:
+            row = await rent_reminder_send_repo.get(db, send_id=send_id)
+            if row is not None:
+                await rent_reminder_send_repo.release_operator_alert(
+                    db, row=row, attempt=attempt, claimed_at=claimed_at,
+                )
         return False
-    async with unit_of_work() as db:
-        row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is not None:
-            await rent_reminder_send_repo.mark_operator_alerted(db, row=row)
     return True

@@ -2,6 +2,7 @@ import { useGetRentReminderSendsQuery, useSendRentReminderNowMutation } from "@m
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
+import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
 import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { LOST_SEND_HOLD_MS, REMINDER_MESSAGES } from "../../constants/rentReminders";
@@ -11,6 +12,7 @@ import { sendOutcome } from "./rentReminderDisplay";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 function refusal(error: unknown): string | null {
+  if (mayHaveBeenSentRefusalMessage(error) !== null) return REMINDER_MESSAGES.possiblySentRefused;
   switch (httpStatus(error)) {
     case 403:
       return isDemoRefusal(error) ? REMINDER_MESSAGES.demo : UPLOAD_MESSAGES.notAllowed;
@@ -78,6 +80,9 @@ export function useSendRentReminder(applicantId: string, name: string | null) {
         amount: preview.amount,
         message: preview.send_now_message,
         channels,
+        // The confirmation the operator just answered warned about exactly
+        // these tries; the server refuses (412) if they have moved on.
+        confirmed_possibly_sent: preview.possibly_sent,
       }).unwrap();
       const outcome = sendOutcome(rows, name);
       if (rows.some((row) => row.status !== "failed")) setSentDueDate(preview.due_date);
@@ -86,7 +91,7 @@ export function useSendRentReminder(applicantId: string, name: string | null) {
     } catch (error) {
       if (isCancelledRequest(error)) return;
       const refused = refusal(error);
-      if (httpStatus(error) === 409) setSentDueDate(preview.due_date);
+      if (httpStatus(error) === 409 && mayHaveBeenSentRefusalMessage(error) === null) setSentDueDate(preview.due_date);
       if (refused) showToast(refused, "error");
       else await checkWhatHappened(preview.due_date);
     } finally {

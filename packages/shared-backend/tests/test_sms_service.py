@@ -7,12 +7,30 @@ Covers:
 - Twilio error codes captured + embedded in SmsSendError per
   rules/check-third-party-error-codes.md.
 - ValueError on empty inputs.
+- Only a failure to connect is a definite "not sent"; a Twilio 5xx or any
+  failure after the request may have reached Twilio is ``outcome_unknown``.
+  The transport cases run through the real requests/urllib3 stack, with only
+  the socket layer faked, so the classification matches what the SDK raises.
 """
 from __future__ import annotations
 
+import logging
+import socket
+import ssl
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
+from twilio.base.exceptions import TwilioRestException
+from urllib3.exceptions import (
+    ConnectTimeoutError,
+    MaxRetryError,
+    NameResolutionError,
+    NewConnectionError,
+    ProtocolError,
+    ReadTimeoutError,
+    SSLError,
+)
 
 from platform_shared.core.sms_constants import TWILIO_HTTP_TIMEOUT_SECONDS
 from platform_shared.services.sms_service import (
@@ -89,8 +107,6 @@ class TestSendOrRaise:
         assert sid == "SM-fake-sid-1234"
 
     def test_raises_send_error_on_twilio_rejection(self) -> None:
-        from twilio.base.exceptions import TwilioRestException
-
         service = _configured_service()
         underlying = TwilioRestException(
             status=400,
@@ -112,14 +128,17 @@ class TestSendOrRaise:
         assert "21211" in str(exc.value)
         assert exc.value.code == 21211
         assert exc.value.status == 400
-        # __cause__ chain preserved for Sentry diagnostics
-        assert exc.value.__cause__ is underlying
+        # Not chained: Twilio's own text can quote the number (see below).
+        assert exc.value.__cause__ is None
+        assert exc.value.__suppress_context__ is True
 
     def test_raises_send_error_on_generic_exception(self) -> None:
-        """Non-Twilio exceptions (network errors, timeouts) still raise
-        SmsSendError so callers have a single exception type to handle."""
+        """Non-Twilio exceptions (network errors, timeouts, bad replies) still
+        raise SmsSendError so callers have a single exception type to handle.
+        One that isn't a failure to connect may have come after Twilio took
+        the message, so its outcome is unknown."""
         service = _configured_service()
-        underlying = OSError("connection refused")
+        underlying = RuntimeError("unexpected reply")
 
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = underlying
@@ -128,15 +147,14 @@ class TestSendOrRaise:
             with pytest.raises(SmsSendError) as exc:
                 service.send_or_raise("+15559876543", "body")
 
-        assert "connection refused" in str(exc.value)
+        assert "unexpected reply" in str(exc.value)
         assert exc.value.__cause__ is underlying
+        assert exc.value.outcome_unknown is True
 
 
     def test_http_timeout_is_applied_to_the_real_request(self) -> None:
         """The timeout reaches the underlying ``requests`` call, and a timeout
         surfaces as SmsSendError with the exception type in the log."""
-        import requests
-
         service = _configured_service()
         with patch(
             "requests.Session.send", side_effect=requests.exceptions.ReadTimeout("slow"),
@@ -146,6 +164,154 @@ class TestSendOrRaise:
 
         assert send.call_args.kwargs["timeout"] == TWILIO_HTTP_TIMEOUT_SECONDS
         assert isinstance(exc.value.__cause__, requests.exceptions.ReadTimeout)
+
+
+class TestOutcomeClassification:
+    """Which failures mean "not sent" and which mean "may have been sent"."""
+
+    @pytest.mark.parametrize(
+        "socket_error",
+        [
+            socket.gaierror(-2, "Name or service not known"),
+            ConnectionRefusedError(61, "Connection refused"),
+            TimeoutError("timed out"),
+        ],
+        ids=["dns", "refused", "connect_timeout"],
+    )
+    def test_failure_to_connect_is_a_definite_not_sent(
+        self, socket_error: OSError,
+    ) -> None:
+        with (
+            patch("urllib3.util.connection.create_connection", side_effect=socket_error),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "body")
+
+        assert exc.value.outcome_unknown is False
+        assert exc.value.provider_code == "network_error"
+
+    def test_tls_error_is_an_unknown_outcome(self) -> None:
+        """urllib3 reports an SSLError for TLS trouble at any point, not only
+        a refused handshake, so it can't prove the text never left."""
+        with (
+            patch("urllib3.connection.ssl_wrap_socket", side_effect=ssl.SSLError("handshake failed")),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "body")
+
+        assert isinstance(exc.value.__cause__, requests.exceptions.SSLError)
+        assert exc.value.outcome_unknown is True
+        assert exc.value.provider_code == "outcome_unknown"
+
+    @pytest.mark.parametrize(
+        ("reason", "never_sent"),
+        [
+            (ConnectTimeoutError("connect timed out"), True),
+            (NewConnectionError(None, "refused"), True),
+            (NameResolutionError("api.twilio.com", None, socket.gaierror(-2, "dns")), True),
+            (SSLError("bad record mac"), False),
+            (ProtocolError("connection aborted"), False),
+        ],
+        ids=["connect_timeout", "new_connection", "name_resolution", "ssl", "protocol"],
+    )
+    def test_only_connect_failures_count_as_never_sent(
+        self, reason: Exception, never_sent: bool,
+    ) -> None:
+        wrapped = requests.exceptions.ConnectionError(
+            MaxRetryError(None, "/Messages", reason=reason),
+        )
+        with (
+            patch("requests.Session.send", side_effect=wrapped),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "body")
+
+        assert exc.value.outcome_unknown is (not never_sent)
+
+    def test_twilio_message_quoting_the_number_never_reaches_logs_or_the_error(self, caplog) -> None:
+        mock_client = MagicMock()
+        mock_client.messages.create.side_effect = TwilioRestException(
+            status=400, uri="/Messages", msg="Invalid 'To' Phone Number: +1 555-987-6543", code=21211,
+        )
+        with (
+            patch("twilio.rest.Client", return_value=mock_client),
+            caplog.at_level(logging.DEBUG),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "body")
+
+        logged = " ".join(r.getMessage() for r in caplog.records)
+        for shown in (logged, str(exc.value)):
+            assert "6543" not in shown
+            assert "+1 555" not in shown
+        assert "code=21211" in logged
+        assert str(exc.value) == (
+            "Twilio rejected SMS (code=21211 status=400): Invalid 'To' Phone Number: [phone number]"
+        )
+
+    def test_logging_the_twilio_error_with_its_traceback_never_shows_the_number(self, caplog) -> None:
+        """Callers log the error with ``exc_info`` (and Sentry captures it);
+        the Twilio exception and its URI must not ride along."""
+        mock_client = MagicMock()
+        mock_client.messages.create.side_effect = TwilioRestException(
+            status=400,
+            uri="/Accounts/AC1/Messages.json?To=%2B15559876543",
+            msg="Invalid 'To' Phone Number: +15559876543",
+            code=21211,
+        )
+        with (
+            patch("twilio.rest.Client", return_value=mock_client),
+            caplog.at_level(logging.DEBUG),
+        ):
+            assert _configured_service().send("+15559876543", "body") is False
+
+        assert "Best-effort SMS send failed" in caplog.text
+        assert "Traceback" in caplog.text
+        assert "5559876543" not in caplog.text
+        assert "TwilioRestException" not in caplog.text
+
+    @pytest.mark.parametrize(
+        "after_connect_error",
+        [
+            ReadTimeoutError(None, "/Messages.json", "Read timed out."),
+            ConnectionResetError(54, "Connection reset by peer"),
+            ProtocolError("Connection aborted.", ConnectionResetError(54, "reset")),
+        ],
+        ids=["read_timeout", "reset", "aborted"],
+    )
+    def test_failure_after_the_request_went_out_is_outcome_unknown(
+        self, after_connect_error: Exception, caplog,
+    ) -> None:
+        with (
+            patch(
+                "urllib3.connectionpool.HTTPConnectionPool._make_request",
+                side_effect=after_connect_error,
+            ),
+            caplog.at_level(logging.WARNING),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "Pizza ready")
+
+        assert exc.value.outcome_unknown is True
+        assert exc.value.provider_code == "outcome_unknown"
+        logged = " ".join(r.getMessage() for r in caplog.records)
+        assert "+15559876543" not in logged
+        assert "Pizza ready" not in logged
+
+    @pytest.mark.parametrize("status,unknown", [(500, True), (503, True), (400, False), (429, False)])
+    def test_twilio_server_error_is_outcome_unknown(self, status: int, unknown: bool) -> None:
+        mock_client = MagicMock()
+        mock_client.messages.create.side_effect = TwilioRestException(
+            status=status, uri="/Messages", msg="boom", code=20500 if status >= 500 else 21211,
+        )
+        with (
+            patch("twilio.rest.Client", return_value=mock_client),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _configured_service().send_or_raise("+15559876543", "body")
+
+        assert exc.value.outcome_unknown is unknown
+        assert exc.value.status == status
 
 
 class TestSend:
@@ -167,8 +333,6 @@ class TestSend:
         assert _configured_service().send("+15559876543", "") is False
 
     def test_returns_false_on_twilio_rejection(self) -> None:
-        from twilio.base.exceptions import TwilioRestException
-
         service = _configured_service()
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = TwilioRestException(

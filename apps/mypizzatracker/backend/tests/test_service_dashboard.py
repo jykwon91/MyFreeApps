@@ -16,15 +16,21 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from platform_shared.services.sms_service import SmsSendError, SmsService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from twilio.base.exceptions import TwilioRestException
+from urllib3.exceptions import ReadTimeoutError
 
+from app.core.config import settings
 from app.models.order.order import Order
 from app.models.user.user import User
+from app.services.sms import sms_sender
 
 
 # ---------------------------------------------------------------------------
@@ -359,9 +365,6 @@ async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
     """When Twilio rejects the send, the order transition still commits
     but the response surfaces sms_dispatched=False + sms_error so the
     operator knows to text manually."""
-    from app.services.sms import sms_sender
-    from platform_shared.services.sms_service import SmsSendError
-
     drop_id, slot_id = await _create_active_drop(auth_client)
     pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
     order_id = await _place_order(
@@ -391,14 +394,103 @@ async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
 
 
 @pytest.mark.asyncio
+async def test_rejected_ready_text_is_a_definite_not_sent(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    order_id = await _cooking_order(client, auth_client)
+
+    def _raise(*args, **kwargs):
+        raise SmsSendError("Twilio rejected SMS (code=21211 status=400)", code=21211, status=400)
+
+    monkeypatch.setattr(sms_sender, "send_sms_or_raise", _raise)
+    body = (await auth_client.post(
+        f"/service/orders/{order_id}/advance", json={"target_status": "ready_text_sent"},
+    )).json()
+    assert body["sms_dispatched"] is False
+    assert body["sms_outcome_unknown"] is False
+
+
+@pytest.mark.asyncio
+async def test_ready_text_twilio_never_confirmed_is_flagged_outcome_unknown(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    """A Twilio timeout after the request went out may still have texted the
+    customer, so the operator is told to check before texting by hand. Runs
+    the real shared Twilio sender with only the socket read failing."""
+    order_id = await _cooking_order(client, auth_client)
+    _use_real_twilio_sender(monkeypatch)
+
+    with patch(
+        "urllib3.connectionpool.HTTPConnectionPool._make_request",
+        side_effect=ReadTimeoutError(None, "/Messages.json", "Read timed out."),
+    ):
+        r = await auth_client.post(
+            f"/service/orders/{order_id}/advance", json={"target_status": "ready_text_sent"},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["order"]["status"] == "ready_text_sent"
+    assert body["sms_dispatched"] is False
+    assert body["sms_outcome_unknown"] is True
+
+
+@pytest.mark.asyncio
+async def test_ready_text_rejection_never_shows_the_customer_number(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    """Twilio's rejection text can quote the To number; the operator's
+    sms_error carries the reason without it."""
+    order_id = await _cooking_order(client, auth_client)
+    _use_real_twilio_sender(monkeypatch)
+    rejecting = MagicMock()
+    rejecting.messages.create.side_effect = TwilioRestException(
+        status=400, uri="/Messages", msg="Invalid 'To' Phone Number: +15125550199", code=21211,
+    )
+
+    with patch("twilio.rest.Client", return_value=rejecting):
+        r = await auth_client.post(
+            f"/service/orders/{order_id}/advance", json={"target_status": "ready_text_sent"},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["sms_dispatched"] is False
+    assert body["sms_outcome_unknown"] is False
+    assert "21211" in body["sms_error"]
+    assert "5550199" not in body["sms_error"]
+
+
+def _use_real_twilio_sender(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "sms_backend", "twilio")
+    monkeypatch.setattr(
+        sms_sender,
+        "_twilio_service",
+        lambda: SmsService(
+            account_sid="ACfake1234567890fake1234567890abcd",
+            auth_token="fake-auth-token",
+            from_number="+15551234567",
+        ),
+    )
+
+
+async def _cooking_order(client: AsyncClient, auth_client: AsyncClient) -> str:
+    drop_id, slot_id = await _create_active_drop(auth_client)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+    order_id = await _place_order(
+        client, drop_id=drop_id, slot_id=slot_id, pizza_ids=[pizza_id],
+    )
+    await auth_client.post(
+        f"/service/orders/{order_id}/advance", json={"target_status": "cooking"},
+    )
+    return order_id
+
+
+@pytest.mark.asyncio
 async def test_advance_to_ready_text_sent_sends_off_the_event_loop(
     client: AsyncClient, auth_client: AsyncClient, monkeypatch,
 ):
     """The Twilio client is synchronous, so the send must run in a worker
     thread; on the loop thread a slow Twilio would freeze every request."""
     import threading
-
-    from app.services.sms import sms_sender
 
     drop_id, slot_id = await _create_active_drop(auth_client)
     pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
@@ -434,7 +526,6 @@ async def test_advance_to_ready_text_sent_handles_unconfigured_twilio(
 ):
     """When Twilio creds are missing entirely the transition still
     commits and the operator sees an operator-facing reason."""
-    from app.services.sms import sms_sender
     from platform_shared.services.sms_service import SmsNotConfiguredError
 
     drop_id, slot_id = await _create_active_drop(auth_client)

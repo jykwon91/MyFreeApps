@@ -15,6 +15,16 @@ describe("describeReminderError", () => {
     expect(describeReminderError("send_interrupted")).toContain("may still arrive");
   });
 
+  it("says a text the relay never confirmed may already have been sent, and where to check", () => {
+    const reason = describeReminderError("sms_outcome_unknown");
+    expect(reason).toContain("may already have been sent");
+    expect(reason).toContain("httpsms.com");
+  });
+
+  it("says a text that never reached the relay wasn't sent", () => {
+    expect(describeReminderError("sms_network_error")).toBe("The server couldn't reach the text relay, so it wasn't sent");
+  });
+
   it("explains the phone and relay failures", () => {
     expect(describeReminderError("phone_failed: RESULT_ERROR_GENERIC")).toBe("The phone reported a problem sending it. Check the httpSMS app");
     expect(describeReminderError("sms_send_failed")).toBe("The text relay refused it");

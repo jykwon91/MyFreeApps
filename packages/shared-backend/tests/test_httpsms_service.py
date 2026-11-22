@@ -4,7 +4,10 @@ Covers:
 - Send success returns the httpSMS message id and posts the documented body.
 - Provider rejection -> SmsSendError carrying the HTTP status + provider_code,
   logged at WARNING (rules/check-third-party-error-codes.md).
-- Network failure -> SmsSendError(provider_code="network_error").
+- Connect-phase failure -> SmsSendError(provider_code="network_error"), a
+  definite "not sent"; any failure after the request may have reached httpSMS
+  (read/write error or timeout, 5xx, unreadable 2xx) -> outcome_unknown, so
+  callers never resend it on their own.
 - End-to-end encryption: on when a key is set, and the ciphertext matches the
   Android app's scheme (round-trips through the decryptor).
 - Webhook JWT verification: valid accepted; unsigned / wrong key / wrong
@@ -82,14 +85,110 @@ class TestSendOrRaise:
         assert "validation errors" in str(exc.value)
         assert any("http_422" in r.getMessage() for r in caplog.records)
 
-    def test_network_error_raises_send_error(self) -> None:
-        with patch(
-            "platform_shared.services.httpsms_service.httpx.post",
-            side_effect=httpx.ConnectTimeout("timed out"),
+    @pytest.mark.parametrize("status", [422, 500])
+    def test_a_rejection_quoting_the_number_never_reaches_logs_or_the_error(
+        self, status: int, caplog,
+    ) -> None:
+        rejected = _response(
+            status,
+            {
+                "status": "error",
+                "message": "cannot send to +1 555-987-6543",
+                "data": {"to": ["+15559876543 is not a valid phone number"]},
+            },
+        )
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", return_value=rejected),
+            caplog.at_level(logging.DEBUG),
+            pytest.raises(SmsSendError) as exc,
         ):
-            with pytest.raises(SmsSendError) as exc:
-                _service().send_or_raise("+15559876543", "Rent due")
+            _service().send_or_raise("+15559876543", "Rent due")
+
+        logged = " ".join(r.getMessage() for r in caplog.records)
+        for shown in (logged, str(exc.value)):
+            assert "6543" not in shown
+        assert "cannot send to [phone number]" in str(exc.value)
+        assert f"http_{status}" in logged
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            httpx.ConnectError("[Errno -2] Name or service not known"),
+            httpx.ConnectError("[Errno 61] Connection refused"),
+            httpx.ConnectTimeout("timed out"),
+            httpx.PoolTimeout("no connection available"),
+        ],
+        ids=lambda e: type(e).__name__,
+    )
+    def test_connect_failure_is_a_definite_not_sent(self, error: httpx.HTTPError) -> None:
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", side_effect=error),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _service().send_or_raise("+15559876543", "Rent due")
         assert exc.value.provider_code == "network_error"
+        assert exc.value.outcome_unknown is False
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            httpx.ReadTimeout("timed out"),
+            httpx.WriteTimeout("timed out"),
+            httpx.ReadError("connection reset by peer"),
+            httpx.WriteError("broken pipe"),
+            httpx.RemoteProtocolError("server disconnected without sending a response"),
+            httpx.CloseError("close failed"),
+            httpx.DecodingError("bad gzip"),
+        ],
+        ids=lambda e: type(e).__name__,
+    )
+    def test_failure_after_the_request_went_out_is_outcome_unknown(
+        self, error: httpx.HTTPError, caplog,
+    ) -> None:
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", side_effect=error),
+            caplog.at_level(logging.WARNING),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _service().send_or_raise("+15559876543", "Rent due", request_id="req-7")
+        assert exc.value.provider_code == "outcome_unknown"
+        assert exc.value.outcome_unknown is True
+        logged = " ".join(r.getMessage() for r in caplog.records)
+        assert "req-7" in logged
+        assert "+15559876543" not in logged
+        assert "Rent due" not in logged
+
+    @pytest.mark.parametrize("status", [500, 502, 503, 504])
+    def test_server_error_is_outcome_unknown(self, status: int) -> None:
+        failed = _response(status, {"status": "error", "message": "internal error"})
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", return_value=failed),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _service().send_or_raise("+15559876543", "Rent due")
+        assert exc.value.status == status
+        assert exc.value.provider_code == f"http_{status}"
+        assert exc.value.outcome_unknown is True
+
+    @pytest.mark.parametrize("status", [400, 401, 422, 429])
+    def test_client_error_is_a_definite_rejection(self, status: int) -> None:
+        rejected = _response(status, {"status": "error", "message": "no"})
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", return_value=rejected),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _service().send_or_raise("+15559876543", "Rent due")
+        assert exc.value.outcome_unknown is False
+
+    def test_accepted_request_with_no_message_id_is_outcome_unknown(self) -> None:
+        accepted = _response(200, {"status": "success", "data": {}})
+        with (
+            patch("platform_shared.services.httpsms_service.httpx.post", return_value=accepted),
+            pytest.raises(SmsSendError) as exc,
+        ):
+            _service().send_or_raise("+15559876543", "Rent due")
+        assert exc.value.provider_code == "malformed_response"
+        assert exc.value.outcome_unknown is True
 
     def test_unconfigured_raises_not_configured(self) -> None:
         with pytest.raises(SmsNotConfiguredError):

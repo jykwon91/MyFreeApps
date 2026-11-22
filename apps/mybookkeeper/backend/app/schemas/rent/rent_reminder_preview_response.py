@@ -6,6 +6,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
+
 
 class RentReminderPreviewResponse(BaseModel):
     due_date: _dt.date
@@ -22,3 +24,7 @@ class RentReminderPreviewResponse(BaseModel):
     # Channels that already went out (or are in flight) for this due date.
     # A failed send is not listed: it can be retried with send-now.
     sent_channels: list[str]
+    # Enabled channels whose failed try may still have reached the tenant:
+    # Send now must warn, and be confirmed by echoing these back in
+    # ``confirmed_possibly_sent``, before resending.
+    possibly_sent: list[RentReminderPossiblySent]

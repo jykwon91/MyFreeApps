@@ -78,8 +78,14 @@ class RentReminderSend(Base):
         SmallInteger, nullable=False, default=1, server_default="1",
     )
 
-    # httpSMS message id (sms only). Webhooks are matched on our own row id,
-    # sent as httpSMS's ``request_id``; this is the fallback and the audit link.
+    # Which try this row is on: a retry reuses the row and adds one. Sent to
+    # httpSMS in the ``request_id`` (``<id>:<attempt>``) so the phone's news
+    # about an earlier try is told apart and ignored.
+    attempt: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=1, server_default="1",
+    )
+    # httpSMS message id (sms only) for the current try. Webhooks are matched
+    # on our own ``request_id``; this is the fallback and the audit link.
     provider_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
@@ -128,6 +134,7 @@ class RentReminderSend(Base):
             name="chk_rent_reminder_send_status_matches_channel",
         ),
         CheckConstraint("amount >= 0", name="chk_rent_reminder_send_amount_non_negative"),
+        CheckConstraint("attempt >= 1", name="chk_rent_reminder_send_attempt_positive"),
         # History for one tenant, newest first.
         Index("ix_rent_reminder_sends_applicant_created", "applicant_id", "created_at"),
         Index("ix_rent_reminder_sends_org", "organization_id"),

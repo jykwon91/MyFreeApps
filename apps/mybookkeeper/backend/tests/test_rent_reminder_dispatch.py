@@ -16,8 +16,10 @@ from contextlib import ExitStack, asynccontextmanager
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from platform_shared.services.email_service import EmailService
+from platform_shared.services.httpsms_service import HttpSmsService
 from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +30,7 @@ from app.models.rent.rent_reminder_plan import RentReminderPlan
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
 from app.repositories.rent import rent_reminder_send_repo
+from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
 from app.services.rent import (
     rent_ledger_service,
     rent_reminder_alert_service as alerts,
@@ -35,9 +38,11 @@ from app.services.rent import (
     rent_reminder_math as math,
     rent_reminder_planner as planner,
     rent_reminder_service,
+    rent_reminder_watchdog_service as watchdog,
     rent_reminder_webhook_service as webhook,
     rent_schedule_service,
 )
+from app.services.rent.rent_reminder_outbound import ReminderOutbound
 from app.services.system import email_service, sms_service
 
 ORG = uuid.uuid4()
@@ -67,6 +72,7 @@ def wired(db: AsyncSession):
             "app.services.rent.rent_reminder_alert_service.unit_of_work",
             "app.services.rent.rent_reminder_dispatch_service.unit_of_work",
             "app.services.rent.rent_reminder_service.unit_of_work",
+            "app.services.rent.rent_reminder_watchdog_service.unit_of_work",
             "app.services.rent.rent_reminder_webhook_service.unit_of_work",
         ):
             stack.enter_context(patch(target, fake))
@@ -134,6 +140,7 @@ async def _plan(db: AsyncSession, applicant_id: uuid.UUID, **fields) -> RentRemi
 
 async def _sends(db: AsyncSession) -> list[RentReminderSend]:
     return list((await db.execute(select(RentReminderSend))).scalars().all())
+
 
 
 class TestProjectionMatchesGenerator:
@@ -256,14 +263,20 @@ class TestScheduledSend:
         assert (row.due_date, row.amount) == (_dt.date(2026, 11, 1), Decimal("1500.00"))
 
     async def _failed_row(
-        self, db: AsyncSession, plan: RentReminderPlan, *, failed_at: _dt.datetime,
+        self,
+        db: AsyncSession,
+        plan: RentReminderPlan,
+        *,
+        failed_at: _dt.datetime,
+        channel: str = "email",
+        error_code: str = "no_contact",
     ) -> None:
         db.add(
             RentReminderSend(
                 id=uuid.uuid4(), plan_id=plan.id, applicant_id=plan.applicant_id,
                 organization_id=ORG, user_id=USER, due_date=_dt.date(2026, 11, 1),
-                channel="email", status="failed", amount=Decimal("300.00"),
-                message_body="early attempt", error_code="no_contact",
+                channel=channel, status="failed", amount=Decimal("300.00"),
+                message_body="early attempt", error_code=error_code,
                 created_at=failed_at, updated_at=failed_at,
             ),
         )
@@ -284,6 +297,77 @@ class TestScheduledSend:
         wired["email"].assert_called_once()
         [row] = await _sends(db)
         assert (row.status, row.error_code) == ("sent", None)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "code", ["sms_outcome_unknown", "send_interrupted", "no_phone_confirmation"],
+    )
+    async def test_early_text_that_may_still_arrive_is_not_retried(
+        self, db: AsyncSession, wired, code: str,
+    ) -> None:
+        """An early "Send now" text the relay never confirmed may already be on
+        the tenant's phone, so the scheduled sweep must not send it again."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await self._failed_row(
+            db, plan, failed_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
+            channel="sms", error_code=code,
+        )
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        wired["sms"].assert_not_called()
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", code)
+
+    @pytest.mark.asyncio
+    async def test_early_text_that_never_reached_the_relay_is_retried(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await self._failed_row(
+            db, plan, failed_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
+            channel="sms", error_code="sms_network_error",
+        )
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 1
+        wired["sms"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_retry_send_now_made_meanwhile_is_not_sent_again(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """The sweep judged try 1 safe to retry; before it requeued, Send now
+        retried it and try 2 ended unsure. The sweep must not send try 3."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await self._failed_row(
+            db, plan, failed_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
+            channel="sms", error_code="sms_network_error",
+        )
+        wired["sms"].side_effect = SmsSendError(
+            "no answer", provider_code="outcome_unknown", outcome_unknown=True,
+        )
+        send_now_ran: list[bool] = []
+
+        async def operator_email(db_: AsyncSession, user_id: uuid.UUID) -> str:
+            # The sweep asks for this after deciding what to retry.
+            if not send_now_ran:
+                send_now_ran.append(True)
+                [result] = await _send_now(applicant_id)
+                assert (result.status, result.error_code) == ("failed", "sms_outcome_unknown")
+            return "jason@example.com"
+
+        with patch.object(alerts, "operator_email", operator_email):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+
+        assert send_now_ran
+        wired["sms"].assert_called_once()
+        [row] = await _sends(db)
+        assert (row.status, row.error_code, row.attempt) == ("failed", "sms_outcome_unknown", 2)
 
     @pytest.mark.asyncio
     async def test_failure_after_scheduled_moment_is_not_retried(
@@ -331,11 +415,11 @@ class TestSms:
         to, body = wired["sms"].call_args.args
         assert to == "+17135550100"
         assert body.startswith("Hi Sonu, reminder: rent of $300")
-        assert wired["sms"].call_args.kwargs["request_id"] == str(row.id)
+        assert wired["sms"].call_args.kwargs["request_id"] == f"{row.id}:1"
         assert (row.status, row.provider_message_id) == ("sent_to_phone", "httpsms-msg-1")
 
         changed = await webhook.handle_event(
-            {"type": "message.phone.delivered", "data": {"id": "httpsms-msg-1", "request_id": str(row.id)}},
+            {"type": "message.phone.delivered", "data": {"id": "httpsms-msg-1", "request_id": f"{row.id}:1"}},
             event_type_header=None,
         )
         assert changed
@@ -360,6 +444,63 @@ class TestSms:
         assert row.operator_alerted_at is not None
         wired["alert"].assert_called_once()
         assert wired["alert"].call_args.args[0] == ["jason@example.com"]
+
+    @staticmethod
+    def _real_httpsms_failing_with(error: httpx.HTTPError):
+        """The real shared httpSMS sender, with only the HTTP call failing."""
+        def send(to: str, body: str, *, request_id: str) -> str:
+            with patch("platform_shared.services.httpsms_service.httpx.post", side_effect=error):
+                return HttpSmsService(
+                    api_key="test-key", from_number="+15551230000",
+                ).send_or_raise(to, body, request_id=request_id)
+        return send
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "error,code",
+        [
+            (httpx.ReadTimeout("timed out"), "sms_outcome_unknown"),
+            (httpx.RemoteProtocolError("server disconnected"), "sms_outcome_unknown"),
+            (httpx.ConnectError("connection refused"), "sms_network_error"),
+            (httpx.ConnectTimeout("timed out"), "sms_network_error"),
+        ],
+        ids=["read_timeout", "disconnected", "refused", "connect_timeout"],
+    )
+    async def test_relay_failure_is_recorded_as_not_sent_or_unknown(
+        self, db: AsyncSession, wired, error: httpx.HTTPError, code: str,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        wired["sms"].side_effect = self._real_httpsms_failing_with(error)
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", code)
+        wired["alert"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_unknown_outcome_is_never_resent_and_the_operator_is_told_to_check(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        wired["sms"].side_effect = self._real_httpsms_failing_with(httpx.ReadTimeout("timed out"))
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        for hours in (1, 2, 3):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=hours)) == 0
+        await watchdog.run_watchdog(SATURDAY_EVENING + _dt.timedelta(hours=3))
+        wired["sms"].assert_called_once()
+
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "sms_outcome_unknown")
+        wired["alert"].assert_called_once()
+        subject, body = wired["alert"].call_args.args[1], wired["alert"].call_args.args[2]
+        assert subject == "Sonu's rent text may already have been sent"
+        assert "may already have been sent" in body
+        assert "httpsms.com" in body
 
     @pytest.mark.asyncio
     async def test_phone_reported_failure(self, db: AsyncSession, wired) -> None:
@@ -388,10 +529,10 @@ class TestWatchdog:
         [row] = await _sends(db)
 
         # ``sent_at`` is stamped with the real clock; judge relative to it.
-        assert await dispatch.run_watchdog(row.sent_at.replace(tzinfo=UTC) + _dt.timedelta(minutes=30)) == 0
+        assert await watchdog.run_watchdog(row.sent_at.replace(tzinfo=UTC) + _dt.timedelta(minutes=30)) == 0
         later = row.sent_at.replace(tzinfo=UTC) + _dt.timedelta(minutes=61)
-        assert await dispatch.run_watchdog(later) == 1
-        assert await dispatch.run_watchdog(later) == 0
+        assert await watchdog.run_watchdog(later) == 1
+        assert await watchdog.run_watchdog(later) == 0
 
         assert (row.status, row.error_code) == ("failed", "no_phone_confirmation")
         wired["alert"].assert_called_once()
@@ -407,7 +548,7 @@ class TestWatchdog:
         await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
         await dispatch.run_due_reminders(SATURDAY_EVENING)
         [row] = await _sends(db)
-        await dispatch.run_watchdog(row.sent_at.replace(tzinfo=UTC) + _dt.timedelta(hours=2))
+        await watchdog.run_watchdog(row.sent_at.replace(tzinfo=UTC) + _dt.timedelta(hours=2))
 
         await webhook.handle_event(
             {"type": "message.phone.sent", "data": {"id": "httpsms-msg-1"}},
@@ -447,34 +588,50 @@ class TestChannelsGoTogether:
         wired["sms"].assert_called_once()
 
 
-class TestSendNow:
-    _NOW = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
+_SEND_NOW_AT = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
 
-    async def _send_now(self, applicant_id: uuid.UUID, **changes):
-        """Send what the preview shows, as a client does."""
-        preview = await rent_reminder_service.get_preview(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=self._NOW,
-        )
-        overview = await rent_reminder_service.get_overview(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
-        )
-        shown = {
-            "expected_due_date": preview.due_date,
-            "expected_amount": preview.amount,
-            "expected_message": preview.send_now_message,
-            "expected_channels": [
-                channel
-                for channel, enabled in (
-                    ("email", overview.plan.email_enabled),
-                    ("sms", overview.plan.sms_enabled),
-                )
-                if enabled
-            ],
-        }
-        return await dispatch.send_now(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=self._NOW,
-            **{**shown, **changes},
-        )
+
+async def _send_now(applicant_id: uuid.UUID, **changes):
+    """Send what the preview shows, as a client does."""
+    preview = await rent_reminder_service.get_preview(
+        organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+    )
+    overview = await rent_reminder_service.get_overview(
+        organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+    )
+    shown = {
+        "expected_due_date": preview.due_date,
+        "expected_amount": preview.amount,
+        "expected_message": preview.send_now_message,
+        "expected_channels": [
+            channel
+            for channel, enabled in (
+                ("email", overview.plan.email_enabled),
+                ("sms", overview.plan.sms_enabled),
+            )
+            if enabled
+        ],
+    }
+    return await dispatch.send_now(
+        organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        **{**shown, **changes},
+    )
+
+async def _text_with_unknown_outcome(db: AsyncSession, wired) -> uuid.UUID:
+    """A text send-now tried, which httpSMS may have taken but never confirmed."""
+    applicant_id = await _tenant(db)
+    await _schedule(db, applicant_id)
+    await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+    wired["sms"].side_effect = [
+        SmsSendError("no answer", provider_code="outcome_unknown", outcome_unknown=True),
+        "httpsms-msg-2",
+    ]
+    [first] = await _send_now(applicant_id)
+    assert (first.status, first.error_code) == ("failed", "sms_outcome_unknown")
+    return applicant_id
+
+
+class TestSendNow:
 
     @pytest.mark.asyncio
     async def test_sends_every_enabled_channel_then_refuses_a_duplicate(
@@ -484,13 +641,13 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id, sms_enabled=True)
 
-        results = await self._send_now(applicant_id)
+        results = await _send_now(applicant_id)
         assert [(r.channel, r.status) for r in results] == [
             ("email", "sent"), ("sms", "sent_to_phone"),
         ]
         assert {r.due_date for r in results} == {_dt.date(2026, 11, 1)}
         with pytest.raises(dispatch.ReminderAlreadySentError):
-            await self._send_now(applicant_id)
+            await _send_now(applicant_id)
 
     @pytest.mark.asyncio
     async def test_refused_once_any_channel_went_out(self, db: AsyncSession, wired) -> None:
@@ -498,12 +655,12 @@ class TestSendNow:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         plan = await _plan(db, applicant_id)
-        await self._send_now(applicant_id)
+        await _send_now(applicant_id)
 
         plan.sms_enabled = True
         await db.flush()
         with pytest.raises(dispatch.ReminderAlreadySentError):
-            await self._send_now(applicant_id)
+            await _send_now(applicant_id)
         wired["sms"].assert_not_called()
 
     @pytest.mark.asyncio
@@ -513,7 +670,7 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
 
-        [sent] = await self._send_now(applicant_id)
+        [sent] = await _send_now(applicant_id)
 
         row = await rent_reminder_send_repo.get(db, send_id=sent.id)
         assert row.message_body == (
@@ -540,7 +697,7 @@ class TestSendNow:
         await _plan(db, applicant_id)
 
         with pytest.raises(dispatch.ReminderChangedError):
-            await self._send_now(applicant_id, **change)
+            await _send_now(applicant_id, **change)
 
         wired["email"].assert_not_called()
         history = await rent_reminder_service.list_history(
@@ -555,10 +712,10 @@ class TestSendNow:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
-        await self._send_now(applicant_id)
+        await _send_now(applicant_id)
 
         with pytest.raises(dispatch.ReminderAlreadySentError):
-            await self._send_now(applicant_id, expected_message="What the phone was shown before.")
+            await _send_now(applicant_id, expected_message="What the phone was shown before.")
         wired["email"].assert_called_once()
 
     @pytest.mark.asyncio
@@ -568,13 +725,13 @@ class TestSendNow:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
-        await self._send_now(applicant_id)
+        await _send_now(applicant_id)
         applicant = await db.get(Applicant, applicant_id)
-        applicant.tenant_ended_at = self._NOW
+        applicant.tenant_ended_at = _SEND_NOW_AT
         await db.flush()
 
         with pytest.raises(dispatch.ReminderAlreadySentError):
-            await self._send_now(applicant_id)
+            await _send_now(applicant_id)
 
     @pytest.mark.asyncio
     async def test_sends_nothing_if_midnight_changed_the_wording(
@@ -606,14 +763,14 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         wired["email"].side_effect = [RuntimeError("smtp down"), None]
-        await self._send_now(applicant_id)
+        await _send_now(applicant_id)
         wired["email"].reset_mock()
 
         with patch.object(
             rent_reminder_send_repo, "requeue",
             AsyncMock(side_effect=rent_reminder_send_repo.ReminderAlreadyClaimedError("x")),
         ), pytest.raises(dispatch.ReminderAlreadySentError):
-            await self._send_now(applicant_id)
+            await _send_now(applicant_id)
         wired["email"].assert_not_called()
 
     @pytest.mark.asyncio
@@ -622,13 +779,14 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         wired["email"].side_effect = RuntimeError("smtp down")
-        [first] = await self._send_now(applicant_id)
+        [first] = await _send_now(applicant_id)
         row = await rent_reminder_send_repo.get(db, send_id=first.id)
         row.created_at = _dt.datetime(2026, 1, 1, tzinfo=UTC)
         await db.flush()
 
         await rent_reminder_send_repo.requeue(
             db, row=row, amount=row.amount, message_body=row.message_body,
+            seen_attempt=row.attempt, seen_error_code=row.error_code,
         )
 
         stuck = await rent_reminder_send_repo.list_unconfirmed(
@@ -646,7 +804,7 @@ class TestSendNow:
         wired["email"].side_effect = RuntimeError("smtp down")
 
         with patch.object(alerts, "alert_operator", AsyncMock(side_effect=RuntimeError("db"))):
-            results = await self._send_now(applicant_id)
+            results = await _send_now(applicant_id)
 
         assert [(r.channel, r.status) for r in results] == [
             ("email", "failed"), ("sms", "sent_to_phone"),
@@ -658,11 +816,11 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         applicant = await db.get(Applicant, applicant_id)
-        applicant.tenant_ended_at = self._NOW
+        applicant.tenant_ended_at = _SEND_NOW_AT
         await db.flush()
 
         with pytest.raises(dispatch.TenancyEndedError):
-            await self._send_now(applicant_id)
+            await _send_now(applicant_id)
         wired["email"].assert_not_called()
 
     @pytest.mark.asyncio
@@ -673,18 +831,19 @@ class TestSendNow:
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         wired["email"].side_effect = [RuntimeError("smtp down"), None]
-        [first] = await self._send_now(applicant_id)
+        [first] = await _send_now(applicant_id)
         row = await rent_reminder_send_repo.get(db, send_id=first.id)
         assert row.status == "failed"
 
+        # Both retries read the row while it was still failed.
+        seen = {"seen_attempt": row.attempt, "seen_error_code": row.error_code}
         await rent_reminder_send_repo.requeue(
-            db, row=row, amount=row.amount, message_body=row.message_body,
+            db, row=row, amount=row.amount, message_body=row.message_body, **seen,
         )
 
-        # The second retry read the row while it was still failed.
         with pytest.raises(rent_reminder_send_repo.ReminderAlreadyClaimedError):
             await rent_reminder_send_repo.requeue(
-                db, row=row, amount=row.amount, message_body=row.message_body,
+                db, row=row, amount=row.amount, message_body=row.message_body, **seen,
             )
 
     @pytest.mark.asyncio
@@ -694,10 +853,111 @@ class TestSendNow:
         await _plan(db, applicant_id)
         wired["email"].side_effect = [RuntimeError("smtp down"), None]
 
-        [first] = await self._send_now(applicant_id)
+        [first] = await _send_now(applicant_id)
         assert first.status == "failed"
-        [retry] = await self._send_now(applicant_id)
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert preview.possibly_sent == []
+        [retry] = await _send_now(applicant_id)
         assert (retry.status, retry.id) == ("sent", first.id)
+        [row] = await _sends(db)
+        assert row.attempt == 2
+
+    @pytest.mark.asyncio
+    async def test_a_text_that_may_have_gone_out_is_resent_only_when_confirmed(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert (preview.sent_channels, preview.possibly_sent) == (
+            [], [RentReminderPossiblySent(channel="sms", attempt=1)],
+        )
+
+        with pytest.raises(dispatch.ReminderMayHaveBeenSentError):
+            await _send_now(applicant_id)
+        wired["sms"].assert_called_once()
+
+        [retry] = await _send_now(applicant_id, confirmed_possibly_sent=preview.possibly_sent)
+        assert retry.status == "sent_to_phone"
+        assert wired["sms"].call_count == 2
+        [row] = await _sends(db)
+        assert wired["sms"].call_args.kwargs["request_id"] == f"{row.id}:2"
+
+    @pytest.mark.asyncio
+    async def test_a_late_confirmation_of_an_unknown_outcome_marks_it_sent(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+
+        assert await webhook.handle_event(
+            {"type": "message.phone.delivered", "data": {"id": "httpsms-msg-9", "request_id": str(row.id)}},
+            event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("delivered", None)
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await _send_now(
+                applicant_id,
+                confirmed_possibly_sent=[RentReminderPossiblySent(channel="sms", attempt=1)],
+            )
+        wired["sms"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_phone_failure_after_an_unknown_outcome_makes_it_definite(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+
+        assert await webhook.handle_event(
+            {
+                "type": "message.send.failed",
+                "data": {"id": "httpsms-msg-9", "request_id": str(row.id), "error_message": "RESULT_ERROR_NO_SERVICE"},
+            },
+            event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("failed", "phone_failed: RESULT_ERROR_NO_SERVICE")
+        # The operator was told it may have gone out; now they hear it didn't, once.
+        assert wired["alert"].call_count == 2
+        subject = wired["alert"].call_args.args[1]
+        assert subject == "Sonu's rent text definitely didn't go out"
+        assert "you can send it again" in wired["alert"].call_args.args[2]
+        assert row.operator_alerted_at is not None
+        assert not await webhook.handle_event(
+            {"type": "message.send.failed", "data": {"request_id": str(row.id), "error_message": "AGAIN"}},
+            event_type_header=None,
+        )
+        assert wired["alert"].call_count == 2
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert preview.possibly_sent == []
+        [retry] = await _send_now(applicant_id)
+        assert retry.status == "sent_to_phone"
+
+    @pytest.mark.asyncio
+    async def test_a_definite_failure_is_never_reopened_by_the_phone(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        wired["sms"].side_effect = SmsSendError("rejected", status=422, provider_code="http_422")
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+
+        assert not await webhook.handle_event(
+            {"type": "message.send.failed", "data": {"request_id": str(row.id), "error_message": "X"}},
+            event_type_header=None,
+        )
+        assert not await webhook.handle_event(
+            {"type": "message.phone.sent", "data": {"request_id": str(row.id)}},
+            event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("failed", "sms_http_422")
 
     @pytest.mark.asyncio
     async def test_preview_matches_what_will_be_sent(self, db: AsyncSession, wired) -> None:
@@ -721,3 +981,432 @@ class TestSendNow:
             "Pay via Zelle to jason@example.com."
         )
         assert preview.sent_channels == []
+
+
+def _event(kind: str, row: RentReminderSend, attempt: int | None = None, **data) -> dict:
+    request_id = str(row.id) if attempt is None else f"{row.id}:{attempt}"
+    return {"type": kind, "data": {"request_id": request_id, **data}}
+
+
+class TestWebhookTries:
+    """A retry reuses the row, so the phone's news is matched to the try it's about."""
+
+
+    async def _resent_after_unknown_outcome(self, db: AsyncSession, wired) -> RentReminderSend:
+        """Try 1's outcome was unknown; the operator confirmed and try 2 went to the phone."""
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        [retry] = await _send_now(
+            applicant_id,
+            confirmed_possibly_sent=[RentReminderPossiblySent(channel="sms", attempt=1)],
+        )
+        [row] = await _sends(db)
+        assert (retry.status, row.attempt, row.provider_message_id) == ("sent_to_phone", 2, "httpsms-msg-2")
+        return row
+
+    @pytest.mark.asyncio
+    async def test_a_late_failure_from_the_earlier_try_is_ignored(self, db: AsyncSession, wired) -> None:
+        row = await self._resent_after_unknown_outcome(db, wired)
+        alerts_before = wired["alert"].call_count
+
+        for attempt in (None, 1):
+            assert not await webhook.handle_event(
+                _event("message.send.failed", row, attempt, error_message="RESULT_ERROR_NO_SERVICE"),
+                event_type_header=None,
+            )
+        assert (row.status, row.error_code) == ("sent_to_phone", None)
+        assert wired["alert"].call_count == alerts_before
+
+        assert await webhook.handle_event(
+            _event("message.phone.delivered", row, 2, id="httpsms-msg-2"), event_type_header=None,
+        )
+        assert row.status == "delivered"
+
+    @pytest.mark.asyncio
+    async def test_a_late_confirmation_from_the_earlier_try_doesnt_confirm_the_retry(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+            seen_attempt=row.attempt, seen_error_code=row.error_code,
+        )
+        assert (row.status, row.attempt) == ("queued", 2)
+
+        assert not await webhook.handle_event(
+            _event("message.phone.delivered", row, 1, id="httpsms-msg-1"), event_type_header=None,
+        )
+        assert row.status == "queued"
+
+    @pytest.mark.asyncio
+    async def test_an_event_for_another_httpsms_message_is_ignored(self, db: AsyncSession, wired) -> None:
+        row = await self._resent_after_unknown_outcome(db, wired)
+
+        assert not await webhook.handle_event(
+            _event("message.send.failed", row, 2, id="httpsms-msg-1", error_message="X"),
+            event_type_header=None,
+        )
+        assert row.status == "sent_to_phone"
+
+    @pytest.mark.asyncio
+    async def test_a_stale_webhook_write_doesnt_clobber_a_requeued_row(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+        # What a webhook read just before Send now requeued the row.
+        seen = {"seen_status": row.status, "seen_error_code": row.error_code, "seen_attempt": row.attempt}
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+            seen_attempt=row.attempt, seen_error_code=row.error_code,
+        )
+
+        assert not await rent_reminder_send_repo.fail_if_unchanged(
+            db, row=row, error_code="phone_failed: X", **seen,
+        )
+        assert not await rent_reminder_send_repo.confirm_if_unchanged(
+            db, row=row, status="delivered", **seen,
+        )
+        assert (row.status, row.error_code, row.attempt) == ("queued", None, 2)
+
+    @pytest.mark.asyncio
+    async def test_presumed_then_failed_then_delivered_stays_failed(self, db: AsyncSession, wired) -> None:
+        """httpSMS never records a failed message as delivered, so neither do we."""
+        await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+
+        assert await webhook.handle_event(
+            _event("message.send.failed", row, error_message="RESULT_ERROR_GENERIC_FAILURE"),
+            event_type_header=None,
+        )
+        assert not await webhook.handle_event(
+            _event("message.phone.delivered", row), event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("failed", "phone_failed: RESULT_ERROR_GENERIC_FAILURE")
+
+    @pytest.mark.asyncio
+    async def test_a_failure_after_delivery_changes_nothing(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+        assert await webhook.handle_event(_event("message.phone.delivered", row, 1), event_type_header=None)
+
+        assert not await webhook.handle_event(
+            _event("message.send.failed", row, 1, error_message="X"), event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("delivered", None)
+
+    async def _unconfirmed_by_phone(self, db: AsyncSession, wired) -> RentReminderSend:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await _send_now(applicant_id)
+        assert await watchdog.run_watchdog(_dt.datetime.now(UTC) + _dt.timedelta(hours=2)) == 1
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "no_phone_confirmation")
+        return row
+
+    @pytest.mark.asyncio
+    async def test_a_final_expiry_settles_an_unconfirmed_text(self, db: AsyncSession, wired) -> None:
+        row = await self._unconfirmed_by_phone(db, wired)
+        assert wired["alert"].call_count == 1
+
+        assert await webhook.handle_event(
+            {"type": "message.send.expired", "data": {"message_id": "httpsms-msg-1", "request_id": f"{row.id}:1", "is_final": True}},
+            event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("failed", "expired")
+        assert wired["alert"].call_count == 2
+        assert wired["alert"].call_args.args[1] == "Sonu's rent text definitely didn't go out"
+
+    @pytest.mark.asyncio
+    async def test_a_non_final_expiry_leaves_an_unconfirmed_text_unsure(self, db: AsyncSession, wired) -> None:
+        row = await self._unconfirmed_by_phone(db, wired)
+
+        assert not await webhook.handle_event(
+            {"type": "message.send.expired", "data": {"message_id": "httpsms-msg-1", "request_id": f"{row.id}:1", "is_final": False}},
+            event_type_header=None,
+        )
+        assert (row.status, row.error_code) == ("failed", "no_phone_confirmation")
+        assert wired["alert"].call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_the_phones_error_text_is_stored_and_emailed_without_a_number(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+
+        assert await webhook.handle_event(
+            _event("message.send.failed", row, 1, error_message="cannot send to +17135550100"),
+            event_type_header=None,
+        )
+        assert row.error_code == "phone_failed: cannot send to [phone number]"
+        assert "5550100" not in wired["alert"].call_args.args[2]
+
+
+class TestSendNowConfirmation:
+
+    @pytest.mark.asyncio
+    async def test_a_confirmation_for_an_older_try_sends_nothing(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+        row.attempt = 3
+        await db.flush()
+
+        with pytest.raises(dispatch.ReminderChangedError):
+            await _send_now(
+                applicant_id,
+                confirmed_possibly_sent=[RentReminderPossiblySent(channel="sms", attempt=1)],
+            )
+        wired["sms"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_confirmation_once_nothing_is_unsure_sends_nothing(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+        assert await webhook.handle_event(
+            _event("message.send.failed", row, 1, error_message="X"), event_type_header=None,
+        )
+
+        with pytest.raises(dispatch.ReminderChangedError):
+            await _send_now(
+                applicant_id,
+                confirmed_possibly_sent=[RentReminderPossiblySent(channel="sms", attempt=1)],
+            )
+        wired["sms"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_switched_off_channel_isnt_warned_about(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, email_enabled=True, sms_enabled=True)
+        wired["sms"].side_effect = [
+            SmsSendError("no answer", provider_code="outcome_unknown", outcome_unknown=True),
+        ]
+        wired["email"].side_effect = [RuntimeError("smtp down"), None]
+        await _send_now(applicant_id)
+        plan.sms_enabled = False
+        await db.flush()
+
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert preview.possibly_sent == []
+        [retry] = await _send_now(applicant_id)
+        assert (retry.channel, retry.status) == ("email", "sent")
+
+
+def _phone_event(kind: str, send_id: uuid.UUID, attempt: int, **data) -> dict:
+    return {"type": kind, "data": {"request_id": f"{send_id}:{attempt}", **data}}
+
+
+async def _text_tenant(db: AsyncSession) -> uuid.UUID:
+    applicant_id = await _tenant(db)
+    await _schedule(db, applicant_id)
+    await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+    return applicant_id
+
+
+class TestRaces:
+    """The sender, the watchdog and the phone's webhook never overwrite each other."""
+
+    @pytest.mark.asyncio
+    async def test_a_confirmation_before_an_unknown_outcome_is_recorded_stands(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _text_tenant(db)
+
+        async def send(outbound: ReminderOutbound) -> str:
+            assert await webhook.handle_event(
+                _phone_event("message.phone.sent", outbound.send_id, outbound.attempt, id="httpsms-msg-1"),
+                event_type_header=None,
+            )
+            raise SmsSendError("no answer", provider_code="outcome_unknown", outcome_unknown=True)
+
+        with patch.object(dispatch, "_send", send):
+            [result] = await _send_now(applicant_id)
+
+        assert (result.status, result.error_code) == ("sent", None)
+        wired["alert"].assert_not_called()
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert preview.possibly_sent == []
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await _send_now(applicant_id)
+
+    @pytest.mark.asyncio
+    async def test_a_confirmation_before_handing_to_the_phone_is_recorded_stands(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _text_tenant(db)
+
+        async def send(outbound: ReminderOutbound) -> str:
+            assert await webhook.handle_event(
+                _phone_event("message.phone.delivered", outbound.send_id, outbound.attempt, id="httpsms-msg-1"),
+                event_type_header=None,
+            )
+            return "httpsms-msg-1"
+
+        with patch.object(dispatch, "_send", send):
+            [result] = await _send_now(applicant_id)
+
+        assert result.status == "delivered"
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("delivered", None)
+
+    @pytest.mark.asyncio
+    async def test_the_watchdog_keeps_a_confirmation_that_beat_it(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _text_tenant(db)
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+        real_mark_failed = rent_reminder_send_repo.mark_failed
+
+        async def confirmed_first(db_: AsyncSession, **kwargs) -> bool:
+            assert await webhook.handle_event(
+                _phone_event("message.phone.sent", row.id, 1, id="httpsms-msg-1"), event_type_header=None,
+            )
+            return await real_mark_failed(db_, **kwargs)
+
+        with patch.object(rent_reminder_send_repo, "mark_failed", confirmed_first):
+            assert await watchdog.run_watchdog(_dt.datetime.now(UTC) + _dt.timedelta(hours=2)) == 0
+
+        assert (row.status, row.error_code) == ("sent", None)
+        wired["alert"].assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("outcome", ["unknown", "handed_to_phone"])
+    async def test_a_stale_send_doesnt_touch_a_newer_try(
+        self, db: AsyncSession, wired, outcome: str,
+    ) -> None:
+        await _text_with_unknown_outcome(db, wired)
+        [row] = await _sends(db)
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+            seen_attempt=row.attempt, seen_error_code=row.error_code,
+        )
+        alerts_before = wired["alert"].call_count
+        wired["sms"].side_effect = (
+            SmsSendError("no answer", provider_code="outcome_unknown", outcome_unknown=True)
+            if outcome == "unknown"
+            else None
+        )
+        wired["sms"].return_value = "httpsms-msg-old"
+
+        await dispatch._deliver(
+            ReminderOutbound(
+                send_id=row.id, attempt=1, channel="sms", subject="", body=row.message_body,
+                tenant_email=None, tenant_phone="(713) 555-0100", operator_email="jason@example.com",
+            ),
+        )
+
+        assert (row.status, row.error_code, row.attempt, row.provider_message_id) == ("queued", None, 2, None)
+        assert wired["alert"].call_count == alerts_before
+
+    @pytest.mark.asyncio
+    async def test_a_webhook_that_loses_a_race_decides_again(self, db: AsyncSession, wired) -> None:
+        """The watchdog gives up on the text just as the phone says it went:
+        the phone's news is applied to the row as it now is, not dropped."""
+        applicant_id = await _text_tenant(db)
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+        real_confirm = rent_reminder_send_repo.confirm_if_unchanged
+        real_mark_failed = rent_reminder_send_repo.mark_failed
+        calls: list[str] = []
+
+        async def watchdog_first(db_: AsyncSession, **kwargs) -> bool:
+            calls.append(kwargs["seen_status"])
+            if len(calls) == 1:
+                assert await real_mark_failed(
+                    db_, row=row, error_code="no_phone_confirmation",
+                    seen_status="sent_to_phone", seen_attempt=1,
+                )
+            return await real_confirm(db_, **kwargs)
+
+        with patch.object(rent_reminder_send_repo, "confirm_if_unchanged", watchdog_first):
+            assert await webhook.handle_event(
+                _phone_event("message.phone.sent", row.id, 1, id="httpsms-msg-1"), event_type_header=None,
+            )
+
+        assert calls == ["sent_to_phone", "failed"]
+        assert (row.status, row.error_code) == ("sent", None)
+
+    @pytest.mark.asyncio
+    async def test_a_webhook_gives_up_if_the_row_keeps_changing(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _text_tenant(db)
+        await _send_now(applicant_id)
+        [row] = await _sends(db)
+        always_raced = AsyncMock(return_value=False)
+
+        with patch.object(rent_reminder_send_repo, "confirm_if_unchanged", always_raced):
+            assert not await webhook.handle_event(
+                _phone_event("message.phone.sent", row.id, 1, id="httpsms-msg-1"), event_type_header=None,
+            )
+
+        assert always_raced.await_count == 3
+        assert row.status == "sent_to_phone"
+
+
+class TestOperatorAlertClaim:
+    """One alert per failed try, however many callers race to send it."""
+
+    async def _failed_text_not_yet_alerted(self, db: AsyncSession, wired) -> RentReminderSend:
+        applicant_id = await _text_tenant(db)
+        wired["sms"].side_effect = SmsSendError("rejected", status=422, provider_code="http_422")
+        with patch.object(alerts, "alert_operator", AsyncMock(return_value=False)):
+            await _send_now(applicant_id)
+        [row] = await _sends(db)
+        assert (row.status, row.attempt, row.operator_alerted_at) == ("failed", 1, None)
+        return row
+
+    @pytest.mark.asyncio
+    async def test_two_alerts_at_once_send_one_email(self, db: AsyncSession, wired) -> None:
+        row = await self._failed_text_not_yet_alerted(db, wired)
+        second: list[bool] = []
+
+        async def send_email(*args, **kwargs) -> bool:
+            # Another alert for the same try arrives while this one is sending.
+            second.append(await alerts.alert_operator(row.id, 1))
+            return True
+
+        wired["alert"].side_effect = send_email
+        assert await alerts.alert_operator(row.id, 1)
+
+        assert second == [False]
+        wired["alert"].assert_called_once()
+        assert row.operator_alerted_at is not None
+
+    @pytest.mark.asyncio
+    async def test_an_email_that_didnt_send_can_be_alerted_again(self, db: AsyncSession, wired) -> None:
+        row = await self._failed_text_not_yet_alerted(db, wired)
+        wired["alert"].return_value = False
+
+        assert not await alerts.alert_operator(row.id, 1)
+        assert row.operator_alerted_at is None
+
+        wired["alert"].return_value = True
+        assert await alerts.alert_operator(row.id, 1)
+        assert wired["alert"].call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_a_retried_try_gets_its_own_alert(self, db: AsyncSession, wired) -> None:
+        row = await self._failed_text_not_yet_alerted(db, wired)
+        assert await alerts.alert_operator(row.id, 1)
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+            seen_attempt=1, seen_error_code=row.error_code,
+        )
+        assert await rent_reminder_send_repo.mark_failed(
+            db, row=row, error_code="sms_http_422", seen_status="queued", seen_attempt=2,
+        )
+
+        assert not await alerts.alert_operator(row.id, 1)
+        assert await alerts.alert_operator(row.id, 2)
+        assert not await alerts.alert_operator(row.id, 2)
+        assert wired["alert"].call_count == 2

@@ -68,6 +68,7 @@ async def advance_order(
         order=OrderRead.model_validate(result.order),
         sms_dispatched=result.sms_dispatched,
         sms_error=result.sms_error,
+        sms_outcome_unknown=result.sms_outcome_unknown,
     )
 
 

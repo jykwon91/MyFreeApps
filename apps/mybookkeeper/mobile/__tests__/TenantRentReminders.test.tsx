@@ -11,11 +11,14 @@ import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import {
   addEmailFirst,
+  channelMayHaveGone,
+  channelWent,
   emailOnlyWent,
   goesOut,
   LOST_SEND_HOLD_MS,
   neitherWent,
   noEmailWontGo,
+  possiblySentWarning,
   REMINDER_MESSAGES,
   sentBoth,
   sentEmail,
@@ -43,8 +46,8 @@ interface ServerState {
   preview: RentReminderPreview | null | "offline";
   sends: RentReminderSend[] | "offline";
   ledger: RentLedgerResponse;
-  /** What send-now answers: rows, an HTTP error status, or a lost connection. */
-  sendAnswer: RentReminderSend[] | number | "lost";
+  /** What send-now answers: rows, an HTTP error status (with its detail), or a lost connection. */
+  sendAnswer: RentReminderSend[] | number | { status: number; detail: unknown } | "lost";
   afterSend?: () => void;
   sendBodies: unknown[];
   workspaceReads: number;
@@ -63,8 +66,8 @@ function startServer(overrides: Partial<ServerState> = {}): ServerState {
     ...overrides,
   };
   const adapter: AxiosAdapter = async (config: AxiosRequestConfig) => {
-    const respond = (data: unknown, status = 200) => {
-      if (status >= 400) return Promise.reject(Object.assign(new Error("HTTP"), { config, response: { data: { detail: "no" }, status, statusText: "", headers: {}, config } }));
+    const respond = (data: unknown, status = 200, detail: unknown = "no") => {
+      if (status >= 400) return Promise.reject(Object.assign(new Error("HTTP"), { config, response: { data: { detail }, status, statusText: "", headers: {}, config } }));
       return { data, status, statusText: "", headers: {}, config } as never;
     };
     const lost = () => Promise.reject(Object.assign(new Error("Network Error"), { config }));
@@ -80,7 +83,8 @@ function startServer(overrides: Partial<ServerState> = {}): ServerState {
       const sent = server.sendAnswer;
       server.afterSend?.();
       if (sent === "lost") return lost();
-      return typeof sent === "number" ? respond(null, sent) : respond(sent);
+      if (typeof sent === "number") return respond(null, sent);
+      return Array.isArray(sent) ? respond(sent) : respond(null, sent.status, sent.detail);
     }
     if (url.endsWith("/preview")) return answer(server.preview);
     if (url.endsWith("/sends")) return answer(server.sends);
@@ -102,13 +106,13 @@ async function renderReminders(server: ServerState, { hasEnded = false, name = "
   await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
 }
 
-/** Presses Send now, then the alert's Send button. */
-async function sendAndConfirm() {
+/** Presses Send now, then the alert's confirm button. */
+async function sendAndConfirm(confirmText: string = REMINDER_MESSAGES.send) {
   const alert = jest.spyOn(Alert, "alert");
   await fireEvent.press(await screen.findByText(SEND_BUTTON));
   const buttons = alert.mock.calls[0][2] ?? [];
   await act(async () => {
-    buttons.find((button) => button.text === REMINDER_MESSAGES.send)?.onPress?.();
+    buttons.find((button) => button.text === confirmText)?.onPress?.();
   });
 }
 
@@ -280,7 +284,7 @@ describe("Send now", () => {
     await sendAndConfirm();
 
     await waitFor(() =>
-      expect(server.sendBodies).toEqual([{ due_date: "2030-11-03", amount: "300.00", message: "Hi Dana, rent of $300 is due on Sunday, Nov 3.", channels: ["email", "sms"] }]),
+      expect(server.sendBodies).toEqual([{ due_date: "2030-11-03", amount: "300.00", message: "Hi Dana, rent of $300 is due on Sunday, Nov 3.", channels: ["email", "sms"], confirmed_possibly_sent: [] }]),
     );
     expect(await screen.findByText(sentBoth())).toBeTruthy();
   });
@@ -326,6 +330,57 @@ describe("Send now", () => {
     await sendAndConfirm();
 
     await waitFor(() => expect(screen.getAllByText(neitherWent("The mail server refused it")).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
+  });
+
+  it("warns that the last try may have reached them, and says so when sending again", async () => {
+    const server = startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "sms", attempt: 2 }] }) });
+    const alert = jest.spyOn(Alert, "alert");
+    await renderReminders(server);
+
+    const warning = possiblySentWarning("text", "Dana", true, false);
+    expect(warning).toContain("httpsms.com");
+    expect(await screen.findByText(warning)).toBeTruthy();
+    await fireEvent.press(await screen.findByText(SEND_BUTTON));
+    expect(alert.mock.calls[0][1]).toContain(warning);
+    const buttons = alert.mock.calls[0][2] ?? [];
+    expect(buttons.map((button) => button.text)).toContain(REMINDER_MESSAGES.sendAgain);
+    await act(async () => {
+      buttons.find((button) => button.text === REMINDER_MESSAGES.sendAgain)?.onPress?.();
+    });
+
+    await waitFor(() =>
+      expect(server.sendBodies).toEqual([expect.objectContaining({ confirmed_possibly_sent: [{ channel: "sms", attempt: 2 }] })]),
+    );
+  });
+
+  it("asks about an email that may have gone out without sending them to httpsms.com", async () => {
+    const server = startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "email", attempt: 1 }] }) });
+    await renderReminders(server);
+
+    const warning = possiblySentWarning("email", "Dana", false, true);
+    expect(await screen.findByText(warning)).toBeTruthy();
+    expect(warning).toBe("The last email may already have reached Dana. Ask Dana whether it arrived before sending it again.");
+  });
+
+  it("says when the reminder changed before sending again, and sends nothing more", async () => {
+    await renderReminders(
+      startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "sms", attempt: 1 }] }), sendAnswer: { status: 412, detail: "changed" } }),
+    );
+
+    await sendAndConfirm(REMINDER_MESSAGES.sendAgain);
+
+    expect(await screen.findByText(REMINDER_MESSAGES.changed)).toBeTruthy();
+  });
+
+  it("explains a refusal to resend one that may have gone out, and keeps Send", async () => {
+    const detail = { code: "REMINDER_MAY_HAVE_BEEN_SENT", message: "check" };
+    await renderReminders(startServer({ sendAnswer: { status: 409, detail } }));
+
+    await sendAndConfirm();
+
+    expect(await screen.findByText(REMINDER_MESSAGES.possiblySentRefused)).toBeTruthy();
+    expect(screen.queryByText(REMINDER_MESSAGES.alreadyWent)).toBeNull();
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
 
@@ -447,5 +502,20 @@ describe("reminder wording", () => {
     expect(sendOutcome([email, text], "Dana")).toEqual({ message: sentBoth(), isProblem: false });
     expect(sendOutcome([{ ...email, ...failed }, text], "Dana")).toEqual({ message: textOnlyWent(reason), isProblem: true });
     expect(sendOutcome([{ ...email, ...failed }, { ...text, ...failed }], "Dana")).toEqual({ message: neitherWent(reason), isProblem: true });
+  });
+
+  it("never says a text that may have gone out didn't, or to try again", () => {
+    const email = aReminderSend();
+    const unsure = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_outcome_unknown" });
+    const reason = "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again";
+
+    for (const rows of [[unsure], [email, unsure]]) {
+      const outcome = sendOutcome(rows, "Dana");
+      expect(outcome.isProblem).toBe(true);
+      expect(outcome.message).toContain(channelMayHaveGone("text", reason));
+      expect(outcome.message).not.toContain("didn't go out");
+      expect(outcome.message).not.toContain("try again");
+    }
+    expect(sendOutcome([email, unsure], "Dana").message).toBe(`${channelWent("email")} ${channelMayHaveGone("text", reason)}`);
   });
 });
