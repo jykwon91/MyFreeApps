@@ -1,83 +1,13 @@
-import { useState, type ReactNode } from "react";
-import * as Tabs from "@radix-ui/react-tabs";
-import { Eye, EyeOff } from "lucide-react";
-import AlertBox from "../ui/AlertBox";
-import LoadingButton from "../ui/LoadingButton";
-import { describeAuthError } from "../../utils/describeAuthError";
+import LoginFormRegisterLink from "./LoginFormRegisterLink";
+import LoginFormTabs from "./LoginFormTabs";
+import {
+  LOGIN_FORM_COPY,
+  LOGIN_FORM_DEFAULT_PASSWORD_MIN_LENGTH,
+} from "../../constants/login-form-copy";
+import type { LoginFormProps } from "../../types/login-form-props";
 
-export interface LoginFormProps {
-  onSignIn: (email: string, password: string) => Promise<void>;
-  onRegister: (email: string, password: string) => Promise<void>;
-  onGoogleSignIn?: () => void;
-  defaultTab?: "signin" | "register";
-  trustCopy?: string;
-  passwordMinLength?: number;
-  /**
-   * Optional element rendered above the submit button on the register tab.
-   * Intended for a Cloudflare Turnstile widget. When the consumer's
-   * environment doesn't configure Turnstile the slot can stay null —
-   * passing it doesn't change the form layout when the widget renders nothing.
-   */
-  registerCaptchaSlot?: ReactNode;
-  /**
-   * False while the captcha in `registerCaptchaSlot` holds no fresh token
-   * (`useTurnstileToken().isReady`); keeps Create Account disabled. Defaults to true.
-   */
-  registerCaptchaReady?: boolean;
-}
-
-const DEFAULT_TRUST_COPY =
-  "Your job search data stays private. No recruiter access, no data resale, ever.";
-
-type TabId = "signin" | "register";
-
-export default function LoginForm({
-  onSignIn,
-  onRegister,
-  onGoogleSignIn,
-  defaultTab = "signin",
-  trustCopy = DEFAULT_TRUST_COPY,
-  passwordMinLength = 12,
-  registerCaptchaSlot,
-  registerCaptchaReady = true,
-}: LoginFormProps) {
-  const [tab, setTab] = useState<TabId>(defaultTab);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const passwordMeetsMin = password.length >= passwordMinLength;
-  const signInTabId = "login-tab-signin";
-  const registerTabId = "login-tab-register";
-  const passwordHelperId = "login-password-helper";
-  const errorId = "login-error";
-
-  function handleTabChange(value: string) {
-    setTab(value as TabId);
-    setEmail("");
-    setPassword("");
-    setShowPassword(false);
-    setError(null);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-    try {
-      if (tab === "signin") {
-        await onSignIn(email, password);
-      } else {
-        await onRegister(email, password);
-      }
-    } catch (err: unknown) {
-      setError(describeAuthError(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }
+export default function LoginForm(props: LoginFormProps) {
+  const { onSignIn, onGoogleSignIn, trustCopy = LOGIN_FORM_COPY.defaultTrust, autoFocusEmail = false } = props;
 
   return (
     <div className="w-full max-w-sm mx-auto">
@@ -122,207 +52,24 @@ export default function LoginForm({
         </>
       )}
 
-      <Tabs.Root value={tab} onValueChange={handleTabChange}>
-        <Tabs.List
-          aria-labelledby="login-tabs-heading"
-          className="flex border-b mb-6"
-        >
-          <Tabs.Trigger
-            id={signInTabId}
-            value="signin"
-            className="flex-1 py-2 text-sm font-medium text-muted-foreground border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-foreground transition-colors"
-          >
-            Sign In
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            id={registerTabId}
-            value="register"
-            className="flex-1 py-2 text-sm font-medium text-muted-foreground border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-foreground transition-colors"
-          >
-            Create Account
-          </Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content
-          value="signin"
-          aria-labelledby={signInTabId}
-        >
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <EmailField
-              value={email}
-              onChange={setEmail}
-              disabled={isLoading}
-            />
-            <PasswordField
-              value={password}
-              onChange={setPassword}
-              show={showPassword}
-              onToggleShow={() => setShowPassword((v) => !v)}
-              autoComplete="current-password"
-              disabled={isLoading}
-              helperId={passwordHelperId}
-            />
-            <p className="text-xs text-muted-foreground">{trustCopy}</p>
-            {error && (
-              <AlertBox variant="error" className="text-sm">
-                <span id={errorId} role="alert">
-                  {error}
-                </span>
-              </AlertBox>
-            )}
-            <LoadingButton
-              type="submit"
-              variant="primary"
-              isLoading={isLoading}
-              loadingText="Signing in..."
-              className="w-full"
-            >
-              Sign In
-            </LoadingButton>
-          </form>
-        </Tabs.Content>
-
-        <Tabs.Content
-          value="register"
-          aria-labelledby={registerTabId}
-        >
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <EmailField
-              value={email}
-              onChange={setEmail}
-              disabled={isLoading}
-            />
-            <PasswordField
-              value={password}
-              onChange={setPassword}
-              show={showPassword}
-              onToggleShow={() => setShowPassword((v) => !v)}
-              autoComplete="new-password"
-              disabled={isLoading}
-              helperId={passwordHelperId}
-              showStrengthHint
-              passwordMinLength={passwordMinLength}
-              passwordMeetsMin={passwordMeetsMin}
-            />
-            <p className="text-xs text-muted-foreground">{trustCopy}</p>
-            {registerCaptchaSlot ? (
-              <div data-testid="register-captcha-slot">{registerCaptchaSlot}</div>
-            ) : null}
-            {error && (
-              <AlertBox variant="error" className="text-sm">
-                <span id={errorId} role="alert">
-                  {error}
-                </span>
-              </AlertBox>
-            )}
-            <LoadingButton
-              type="submit"
-              variant="primary"
-              isLoading={isLoading}
-              loadingText="Creating account..."
-              disabled={isLoading || !passwordMeetsMin || !registerCaptchaReady}
-              className="w-full"
-            >
-              Create Account
-            </LoadingButton>
-          </form>
-        </Tabs.Content>
-      </Tabs.Root>
-    </div>
-  );
-}
-
-// --- Sub-components (file-scoped, not exported) ---
-
-interface EmailFieldProps {
-  value: string;
-  onChange: (v: string) => void;
-  disabled: boolean;
-}
-
-function EmailField({ value, onChange, disabled }: EmailFieldProps) {
-  return (
-    <div className="space-y-1">
-      <label htmlFor="login-email" className="text-sm font-medium">
-        Email
-      </label>
-      <input
-        id="login-email"
-        type="email"
-        autoComplete="email"
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 min-h-[44px]"
-      />
-    </div>
-  );
-}
-
-interface PasswordFieldProps {
-  value: string;
-  onChange: (v: string) => void;
-  show: boolean;
-  onToggleShow: () => void;
-  autoComplete: string;
-  disabled: boolean;
-  helperId: string;
-  showStrengthHint?: boolean;
-  passwordMinLength?: number;
-  passwordMeetsMin?: boolean;
-}
-
-function PasswordField({
-  value,
-  onChange,
-  show,
-  onToggleShow,
-  autoComplete,
-  disabled,
-  helperId,
-  showStrengthHint,
-  passwordMinLength,
-  passwordMeetsMin,
-}: PasswordFieldProps) {
-  return (
-    <div className="space-y-1">
-      <label htmlFor="login-password" className="text-sm font-medium">
-        Password
-      </label>
-      <div className="relative">
-        <input
-          id="login-password"
-          type={show ? "text" : "password"}
-          autoComplete={autoComplete}
-          required
-          minLength={passwordMinLength}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          aria-describedby={showStrengthHint ? helperId : undefined}
-          className="w-full border rounded-md px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 min-h-[44px]"
+      {props.registerHref !== undefined ? (
+        <LoginFormRegisterLink
+          onSignIn={onSignIn}
+          registerHref={props.registerHref}
+          trustCopy={trustCopy}
+          autoFocusEmail={autoFocusEmail}
         />
-        <button
-          type="button"
-          onClick={onToggleShow}
-          aria-label={show ? "Hide password" : "Show password"}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-        >
-          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-      {showStrengthHint && passwordMinLength !== undefined && (
-        <p
-          id={helperId}
-          className={
-            passwordMeetsMin
-              ? "text-xs text-green-600 flex items-center gap-1"
-              : "text-xs text-muted-foreground"
-          }
-        >
-          {passwordMeetsMin ? "✓ " : ""}At least {passwordMinLength} characters
-        </p>
+      ) : (
+        <LoginFormTabs
+          onSignIn={onSignIn}
+          onRegister={props.onRegister}
+          defaultTab={props.defaultTab ?? "signin"}
+          trustCopy={trustCopy}
+          autoFocusEmail={autoFocusEmail}
+          passwordMinLength={props.passwordMinLength ?? LOGIN_FORM_DEFAULT_PASSWORD_MIN_LENGTH}
+          registerCaptchaSlot={props.registerCaptchaSlot}
+          registerCaptchaReady={props.registerCaptchaReady ?? true}
+        />
       )}
     </div>
   );

@@ -1,10 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import LoginForm from "../components/auth/LoginForm";
 
 function noop() {
   return Promise.resolve();
+}
+
+function CurrentPath() {
+  const location = useLocation();
+  return <div data-testid="current-path">{location.pathname + location.search}</div>;
 }
 
 describe("LoginForm", () => {
@@ -53,6 +59,18 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(onSignIn).toHaveBeenCalledWith("user@example.com", "secret123");
     });
+  });
+
+  it("keeps Sign In disabled until both email and password are filled", async () => {
+    render(<LoginForm onSignIn={noop} onRegister={noop} />);
+    const submit = screen.getByRole("button", { name: "Sign In" });
+    expect(submit).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
+    expect(submit).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("Password"), "secret123");
+    expect(submit).toBeEnabled();
   });
 
   it("calls onRegister on Create Account submit", async () => {
@@ -149,5 +167,67 @@ describe("LoginForm", () => {
   it("does not render Google sign-in button when onGoogleSignIn is omitted", () => {
     render(<LoginForm onSignIn={noop} onRegister={noop} />);
     expect(screen.queryByText("Continue with Google")).toBeNull();
+  });
+
+  describe("with registerHref", () => {
+    function renderWithLink(onSignIn = vi.fn().mockResolvedValue(undefined)) {
+      render(
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route
+              path="/login"
+              element={<LoginForm onSignIn={onSignIn} registerHref="/register?returnTo=%2Fsettings" />}
+            />
+            <Route path="*" element={<CurrentPath />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      return onSignIn;
+    }
+
+    it("shows only the sign-in form, no Create Account tab", () => {
+      renderWithLink();
+      expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Create Account" })).toBeNull();
+    });
+
+    it("signs in from the form", async () => {
+      const onSignIn = renderWithLink();
+      await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
+      await userEvent.type(screen.getByLabelText("Password"), "secret123");
+      await userEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+      await waitFor(() => expect(onSignIn).toHaveBeenCalledWith("user@example.com", "secret123"));
+    });
+
+    it("links to the app's own sign-up page inside the router", async () => {
+      renderWithLink();
+      await userEvent.click(screen.getByRole("link", { name: "Create account" }));
+
+      expect(await screen.findByTestId("current-path")).toHaveTextContent("/register?returnTo=%2Fsettings");
+    });
+  });
+
+  it("leaves focus alone by default", () => {
+    render(<LoginForm onSignIn={noop} onRegister={noop} />);
+    expect(screen.getByLabelText("Email")).not.toHaveFocus();
+  });
+
+  it("focuses the email field with autoFocusEmail, but not again after a tab switch", async () => {
+    render(<LoginForm onSignIn={noop} onRegister={noop} autoFocusEmail />);
+    expect(screen.getByLabelText("Email")).toHaveFocus();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Create Account" }));
+    expect(screen.getByLabelText("Email")).not.toHaveFocus();
+  });
+
+  it("takes exactly one way to sign up", () => {
+    // @ts-expect-error -- neither onRegister nor registerHref
+    void (<LoginForm onSignIn={noop} />);
+    // @ts-expect-error -- both onRegister and registerHref
+    void (<LoginForm onSignIn={noop} onRegister={noop} registerHref="/register" />);
+    // @ts-expect-error -- the tab's captcha means nothing without the tab
+    void (<LoginForm onSignIn={noop} registerHref="/register" registerCaptchaReady />);
   });
 });

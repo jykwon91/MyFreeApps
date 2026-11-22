@@ -43,8 +43,8 @@ async function stubLogin(page: Page, answer: (body: Record<string, unknown>) => 
 
 async function submitLogin(page: Page, password = TEST_PASSWORD) {
   await page.getByLabel("Email").fill(TEST_USER.email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
 }
 
 test.describe("signing in", () => {
@@ -55,7 +55,7 @@ test.describe("signing in", () => {
     await page.goto("/security");
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Sign In", exact: true })).toBeDisabled();
 
     await submitLogin(page);
 
@@ -136,6 +136,52 @@ test.describe("signing in", () => {
       { email: TEST_USER.email, password: TEST_PASSWORD },
       { email: TEST_USER.email, password: TEST_PASSWORD, totp_code: TOTP_CODE },
     ]);
+  });
+});
+
+test.describe("sign-in page links", () => {
+  test("the sign-in link on /register brings the learner back to its returnTo once signed in", async ({ page }) => {
+    await signedOutVisitor(page);
+    await stubLogin(page, () => ({ body: { access_token: ISSUED_TOKEN, token_type: "bearer" } }));
+
+    await page.goto(`/register?returnTo=${encodeURIComponent("/security")}`);
+    await page.getByRole("link", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fsecurity$/);
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await submitLogin(page);
+
+    await expect(page).toHaveURL(/\/security$/);
+    await expect(page.getByRole("heading", { name: "Security" })).toBeVisible();
+  });
+
+  test("a returnTo pointing off the site is ignored", async ({ page }) => {
+    await signedOutVisitor(page);
+    await stubLogin(page, () => ({ body: { access_token: ISSUED_TOKEN, token_type: "bearer" } }));
+
+    await page.goto(`/login?returnTo=${encodeURIComponent("//evil.example/")}`);
+    await submitLogin(page);
+
+    await expect(page).toHaveURL(/\/scenarios$/);
+  });
+
+  test("Create account goes to /register, carrying where the visitor was headed", async ({ page }) => {
+    await signedOutVisitor(page);
+
+    await page.goto("/security");
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByRole("link", { name: "Create account" }).click();
+
+    await expect(page).toHaveURL(/\/register\?returnTo=%2Fsecurity$/);
+    await expect(page.getByRole("heading", { name: "Create an account" })).toBeVisible();
+  });
+
+  test("Forgot password opens the reset request page", async ({ page }) => {
+    await signedOutVisitor(page);
+
+    await page.goto("/login");
+    await page.getByRole("link", { name: "Forgot password?" }).click();
+
+    await expect(page).toHaveURL(/\/forgot-password$/);
   });
 });
 
