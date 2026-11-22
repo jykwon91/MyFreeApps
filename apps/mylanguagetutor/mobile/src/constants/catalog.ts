@@ -4,8 +4,6 @@ export const CATALOG_MESSAGES = {
   retryOffer: "Check your connection and try again.",
   noScenariosHeading: "No scenarios yet",
   noScenariosBody: "Scenarios for this language will show up here.",
-  loadingLanguages: "Loading languages",
-  loadingScenarios: "Loading scenarios",
 } as const;
 
 /** As many placeholder cards as the website's skeletons show. */

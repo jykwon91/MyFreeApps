@@ -5,6 +5,7 @@ import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOption
 import { LEVEL_SAVE_FAILURE_COPY, ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useLevelChoice } from "@mylanguagetutor/api-client/hooks/useLevelChoice";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import CatalogError from "@/features/catalog/CatalogError";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 
@@ -18,7 +19,7 @@ export default function OnboardingLevel() {
 
   if (!languageCode) {
     // Still loading: wait; the profile won't load: offer a retry; no usable language chosen: step 1.
-    if (isPending) return <PageSkeleton />;
+    if (isPending) return <PageSkeleton label={LOADING_COPY.level} />;
     if (loadFailed) return <CatalogError onRetry={() => void retry()} />;
     return <Navigate to={ONBOARDING_LANGUAGE_PATH} replace />;
   }

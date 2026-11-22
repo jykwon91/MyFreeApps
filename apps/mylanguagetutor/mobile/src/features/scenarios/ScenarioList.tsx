@@ -1,3 +1,4 @@
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { EmptyState, ListSeparator, useRefresh, useTheme } from "@platform/mobile";
@@ -18,7 +19,7 @@ export default function ScenarioList({ profile }: ScenarioListProps) {
 
   if (!scenarios) {
     if (isError) return <CatalogLoadError isRetrying={isRefreshing} onRetry={refresh} />;
-    return <CardListSkeleton accessibilityLabel={CATALOG_MESSAGES.loadingScenarios} rows={SCENARIO_SKELETON_ROWS} />;
+    return <CardListSkeleton accessibilityLabel={LOADING_COPY.scenarios} rows={SCENARIO_SKELETON_ROWS} />;
   }
 
   return (

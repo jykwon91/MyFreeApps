@@ -1,3 +1,4 @@
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOptions";
 import { LEVEL_SAVE_FAILURE_COPY, ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
@@ -6,7 +7,6 @@ import { LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { LEVEL_SKELETON_ROWS } from "../../constants/catalog";
-import { LOADING_LEVEL_MESSAGE } from "../../constants/onboarding";
 import { PRACTICE_PATH } from "../../constants/routes";
 import CardListSkeleton from "../catalog/CardListSkeleton";
 import CatalogLoadError from "../catalog/CatalogLoadError";
@@ -22,7 +22,7 @@ export default function LevelScreen() {
 
   if (!languageCode) {
     // Still loading: wait; the profile won't load: offer a retry; no usable language chosen: step 1.
-    if (isPending) return <CardListSkeleton accessibilityLabel={LOADING_LEVEL_MESSAGE} rows={LEVEL_SKELETON_ROWS} />;
+    if (isPending) return <CardListSkeleton accessibilityLabel={LOADING_COPY.level} rows={LEVEL_SKELETON_ROWS} />;
     if (loadFailed) return <CatalogLoadError isRetrying={isRetrying} onRetry={retry} />;
     return <Redirect href={ONBOARDING_LANGUAGE_PATH} />;
   }

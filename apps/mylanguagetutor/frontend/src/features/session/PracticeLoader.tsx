@@ -4,6 +4,7 @@ import { EmptyState } from "@platform/ui";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { usePracticeScenario } from "@mylanguagetutor/api-client/hooks/usePracticeScenario";
 import CatalogError from "@/features/catalog/CatalogError";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 import PracticeSession from "@/features/session/PracticeSession";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
@@ -20,7 +21,7 @@ export default function PracticeLoader({ profile, scenarioSlug }: PracticeLoader
 
   // A failed background refetch must not unmount a session already on screen, so errors only show with no target yet.
   if (target === undefined) {
-    return isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton />;
+    return isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton label={LOADING_COPY.scenarios} />;
   }
 
   if (!target) {
