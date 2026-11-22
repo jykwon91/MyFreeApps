@@ -62,7 +62,6 @@ from platform_shared.core.mask_phone_numbers import mask_phone_numbers
 from platform_shared.core.sms_constants import (
     SMS_PROVIDER_CODE_NETWORK_ERROR,
     SMS_PROVIDER_CODE_OUTCOME_UNKNOWN,
-    SMS_PROVIDER_MAX_LOGGED_DETAIL_CHARS,
 )
 from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
@@ -123,14 +122,14 @@ def decrypt_httpsms_content(passphrase: str, encoded: str) -> str:
     return (decryptor.update(ciphertext) + decryptor.finalize()).decode()
 
 
-def _error_summary(response: httpx.Response) -> tuple[str, Any]:
+def _error_message(response: httpx.Response) -> str:
     try:
         payload = response.json()
     except ValueError:
-        return response.text[:200], None
+        return response.text[:200]
     if not isinstance(payload, dict):
-        return str(payload)[:200], None
-    return str(payload.get("message", ""))[:200], payload.get("data")
+        return str(payload)[:200]
+    return str(payload.get("message", ""))[:200]
 
 
 @dataclass
@@ -213,17 +212,17 @@ class HttpSmsService:
             ) from e
 
         if response.status_code >= 400:
-            message, data = _error_summary(response)
+            message = _error_message(response)
             # A rejection can quote the number it was sending to.
             message = mask_phone_numbers(message)
             provider_code = f"http_{response.status_code}"
             # A 5xx can come after httpSMS stored and queued the message.
             outcome_unknown = response.status_code >= 500
+            # Only codes are logged: the provider's text can quote the recipient,
+            # and it is carried (masked) on the raised error for the caller to store.
             logger.warning(
-                "httpSMS send rejected: status=%s code=%s outcome_unknown=%s "
-                "request_id=%s message=%s detail=%s",
+                "httpSMS send rejected: status=%s code=%s outcome_unknown=%s request_id=%s",
                 response.status_code, provider_code, outcome_unknown, request_id,
-                message, mask_phone_numbers(str(data)[:SMS_PROVIDER_MAX_LOGGED_DETAIL_CHARS]),
             )
             raise SmsSendError(
                 f"httpSMS rejected SMS (status={response.status_code}): {message}",

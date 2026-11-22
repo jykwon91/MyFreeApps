@@ -186,9 +186,10 @@ async def _apply(
         db, row=row, error_code=code, **seen,
     ):
         return "raced", False
+    # The phone's words stay out of the log (they are stored, masked, on the row).
     logger.warning(
-        "Rent reminder text failed on the phone: send_id=%s attempt=%s event=%s code=%s",
-        row.id, row.attempt, event.event_type, code,
+        "Rent reminder text failed on the phone: send_id=%s attempt=%s event=%s",
+        row.id, row.attempt, event.event_type,
     )
     return "failed", settled_unsure
 

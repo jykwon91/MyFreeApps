@@ -26,6 +26,3 @@ SMS_PROVIDER_CODE_NETWORK_ERROR: Final = "network_error"
 # callers check that flag rather than this code.
 SMS_PROVIDER_CODE_OUTCOME_UNKNOWN: Final = "outcome_unknown"
 
-# How much of a provider's error ``data`` goes into a log line (after phone
-# numbers in it are masked).
-SMS_PROVIDER_MAX_LOGGED_DETAIL_CHARS: Final = 500
