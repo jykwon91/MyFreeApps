@@ -14,6 +14,7 @@ import TaxReviewScreen from "../src/features/tax/TaxReviewScreen";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { useToday } from "../src/lib/useToday";
+import { isInsideAccessibleParent } from "../test-support/isInsideAccessibleParent";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -187,6 +188,14 @@ describe("TaxReviewScreen", () => {
     expect(screen.getByText("I have 1 rental property.")).toBeTruthy();
     expect(screen.getByText(`Needs attention \u00b7 ${MESSAGES.filled(1, 16)}`)).toBeTruthy();
     expect(screen.queryByText(/line_/)).toBeNull();
+  });
+
+  it("lists the summary as a heading, with the open-return button still reachable", async () => {
+    serve();
+    await show();
+    await screen.findByText("Schedule E · 123 Main St");
+    expect(isInsideAccessibleParent(screen.getByRole("header", { name: MESSAGES.summaryTitle }))).toBe(false);
+    expect(screen.getByRole("button", { name: MESSAGES.openReturn(2025) })).toBeTruthy();
   });
 
   it("opens a form's details from its row", async () => {

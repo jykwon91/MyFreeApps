@@ -26,7 +26,7 @@ export default function RateWatchResults({ data }: { data: InsuranceMarketWatch 
         </View>
       ) : null}
       {action ? (
-        <View accessible style={{ gap: spacing.xs, padding: spacing.md, backgroundColor: colors.muted, borderRadius: radius.md }}>
+        <View style={{ gap: spacing.xs, padding: spacing.md, backgroundColor: colors.muted, borderRadius: radius.md }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{RATE_WATCH_MESSAGES.whatToDo}</Text>
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
             {action.carrierNames.length > 0

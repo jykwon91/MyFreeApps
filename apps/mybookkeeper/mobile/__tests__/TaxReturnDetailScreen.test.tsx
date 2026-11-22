@@ -183,6 +183,12 @@ describe("TaxReturnDetailScreen", () => {
     expect(await screen.findByText(TAX_DOCUMENTS_MESSAGES.stillWaiting)).toBeTruthy();
   });
 
+  it("lists the return's title as a heading", async () => {
+    serve();
+    await show();
+    expect(await screen.findByRole("header", { name: "2025 tax return" })).toBeTruthy();
+  });
+
   it("says when a return was filed", async () => {
     serve({ taxReturn: aReturn({ status: "filed", filed_at: "2026-03-10T12:00:00Z" }) });
     await show();

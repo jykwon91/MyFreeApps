@@ -70,6 +70,13 @@ describe("sharing a manual", () => {
     expect(screen.getByText("1234")).toBeTruthy();
   });
 
+  it("lists the not-shared title as a heading, with the enable button still reachable", async () => {
+    startWelcomeManualsServer({ manuals: [aManual()] });
+    await open();
+    expect(await screen.findByRole("header", { name: SHARE.off })).toBeTruthy();
+    expect(button(SHARE.enable)).toBeTruthy();
+  });
+
   it("copies the link and the code, and says so", async () => {
     startWelcomeManualsServer({ manuals: [shared()] });
     await open();

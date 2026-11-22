@@ -14,6 +14,7 @@ import type { RenderedNode } from "@platform/mobile/test-support/types/RenderedN
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 import { holdWrites } from "../test-support/holdWrites";
+import { isInsideAccessibleParent } from "../test-support/isInsideAccessibleParent";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -320,6 +321,15 @@ describe("InquiryDetailScreen", () => {
       mockModal.onDismiss?.();
     });
     expect(Alert.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists Notes as a heading beside a button that opens it", async () => {
+    startInquiryServer([anInquiry()]);
+    await renderScreen();
+    expect(isInsideAccessibleParent(await screen.findByRole("header", { name: "Notes" }))).toBe(false);
+    const button = await screen.findByRole("button", { name: /^Notes/, expanded: false });
+    await fireEvent.press(button);
+    expect(screen.getByRole("button", { name: /^Notes/, expanded: true })).toBeTruthy();
   });
 
   it("doesn't ask about notes when archiving, since they go with it", async () => {
