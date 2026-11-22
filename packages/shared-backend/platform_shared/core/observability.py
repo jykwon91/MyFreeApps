@@ -113,6 +113,9 @@ def init_sentry(*, dsn: str, environment: str) -> None:
         sentry_sdk.init(
             dsn=dsn,
             send_default_pii=False,
+            # send_default_pii doesn't cover frame locals, and those hold
+            # addresses, subjects, email bodies and tokens.
+            include_local_variables=False,
             max_request_body_size="never",
             traces_sample_rate=0.1,
             environment=environment,

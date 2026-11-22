@@ -125,9 +125,8 @@ async def learn_from_property_correction(
 
     if retroactive_count > 0:
         logger.info(
-            "Property rule learned: %r @ %r -> %s (retroactively fixed %d transactions)",
-            transaction.vendor, transaction.address,
-            transaction.property_id, retroactive_count,
+            "Property rule learned from transaction %s -> %s (retroactively fixed %d transactions)",
+            transaction.id, transaction.property_id, retroactive_count,
         )
 
     try:

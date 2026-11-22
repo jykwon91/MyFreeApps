@@ -1,13 +1,10 @@
 import asyncio
 import logging
-import time
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import jwt
-from jwt.exceptions import PyJWTError as JWTError
 from sqlalchemy import text
 
 from platform_shared.core.boot_guards import check_test_mode_off
@@ -17,6 +14,7 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
+from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
 
 from app.core.auth import fastapi_users, auth_backend
 from app.core.permissions import current_admin, current_strict_superuser
@@ -27,7 +25,6 @@ from app.core.observability import init_sentry
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-from app.core.audit import current_user_id
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
@@ -44,7 +41,6 @@ logging.basicConfig(
 # value can never forge a log record (log injection). Applied at the handler
 # boundary, so it covers every call site in the process without per-call work.
 install_crlf_safe_logging()
-logger = logging.getLogger("app")
 
 
 _worker_task: asyncio.Task[None] | None = None
@@ -109,38 +105,7 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def set_audit_user(request: Request, call_next):
-    start = time.perf_counter()
-    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    user_id = None
-    if token:
-        try:
-            payload = jwt.decode(
-                token,
-                settings.secret_key,
-                algorithms=["HS256"],
-                audience="fastapi-users:auth",
-            )
-            user_id = payload.get("sub")
-            token_ctx = current_user_id.set(user_id)
-            try:
-                response = await call_next(request)
-            finally:
-                current_user_id.reset(token_ctx)
-        except JWTError:
-            response = await call_next(request)
-    else:
-        response = await call_next(request)
-
-    ms = (time.perf_counter() - start) * 1000
-    logger.info(
-        "%s %s %s %.0fms user=%s",
-        request.method, request.url.path, response.status_code, ms, user_id or "anonymous",
-    )
-    if response.status_code >= 500:
-        logger.error("5xx on %s %s", request.method, request.url.path)
-    return response
+app.add_middleware(RequestAuditMiddleware, secret_key=settings.secret_key)
 
 
 # Auth routes (rate-limited). Only /login is gated: logout sends no credentials.

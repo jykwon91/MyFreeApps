@@ -11,6 +11,7 @@ ExtractionError (with a retry-or-final ``kind``) on every provider failure.
 from __future__ import annotations
 
 import base64
+import logging
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -295,6 +296,24 @@ class TestLocatingTheJson:
             with pytest.raises(ExtractionParseError) as exc:
                 await _service().extract_text("s", "t")
         assert "line 1 column 1" in str(exc.value)
+
+
+    async def test_an_unparseable_reply_is_logged_without_its_text(self, caplog: pytest.LogCaptureFixture) -> None:
+        msg = _message('{"vendor": "Jane Doe Plumbing", "total": 4812.', stop_reason="end_turn")
+        ctx, _ = _patched_client(msg)
+        with ctx, caplog.at_level(logging.ERROR), pytest.raises(ExtractionParseError):
+            await _service().extract_text("s", "t")
+        assert "Jane Doe" not in caplog.text and "4812" not in caplog.text
+        assert "chars=46 stop_reason=end_turn sha256=" in caplog.text
+
+    async def test_a_reply_with_no_text_block_still_raises_parse_error(self) -> None:
+        msg = _message("")
+        tool_block = MagicMock()
+        tool_block.type = "tool_use"
+        msg.content = [tool_block]
+        ctx, _ = _patched_client(msg)
+        with ctx, pytest.raises(ExtractionParseError):
+            await _service().extract_text("s", "t")
 
 
 class TestExtractDocument:

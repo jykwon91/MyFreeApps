@@ -11,6 +11,7 @@ Covers:
 - Verification email HTML template
 - send_verification_email helper
 """
+import logging
 import uuid
 from platform_shared.services.guard_outcome import GuardOutcome
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -186,8 +187,7 @@ class TestOnAfterRequestVerify:
 
 class TestOnAfterVerify:
     @pytest.mark.anyio
-    async def test_logs_verified_user_email(self, caplog):
-        import logging
+    async def test_logs_verified_user_id_not_email(self, caplog):
         manager = UserManager.__new__(UserManager)
         manager.user_db = MagicMock()
 
@@ -195,7 +195,9 @@ class TestOnAfterVerify:
         with caplog.at_level(logging.INFO, logger="app.core.auth"):
             await manager.on_after_verify(user)
 
-        assert any("verified@example.com" in r.message for r in caplog.records)
+        # INFO lines become Sentry breadcrumbs, so the log names the user by id.
+        assert "verified@example.com" not in caplog.text
+        assert str(user.id) in caplog.text
 
 
 # ---------------------------------------------------------------------------

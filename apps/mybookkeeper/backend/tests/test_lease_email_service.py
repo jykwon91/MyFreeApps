@@ -2,8 +2,8 @@
 
 Three layers:
 
-1. Pure-function helpers (``build_subject`` / ``build_body_html`` /
-   ``_redact_email``) — no I/O, no fixtures.
+1. Pure-function helpers (``build_subject`` / ``build_body_html``) — no
+   I/O, no fixtures.
 2. ``should_auto_email_after_generate`` predicate (in signed_lease_service) —
    exhaustive truth-table coverage so the four-gate logic doesn't drift.
 3. Service ``send_lease_to_tenant`` integration with mocked SMTP +
@@ -23,7 +23,6 @@ from app.services.leases.lease_email_service import (
     ApplicantEmailMissingError,
     LEASE_EMAIL_ATTACHMENT_KINDS,
     LeaseNotFoundError,
-    _redact_email,
     build_body_html,
     build_subject,
 )
@@ -66,22 +65,6 @@ class TestBuildBodyHtml:
         html = build_body_html(listing_title="<script>alert('xss')</script>")
         assert "<script>" not in html
         assert "&lt;script&gt;" in html
-
-
-class TestRedactEmail:
-    def test_redacts_local_part(self) -> None:
-        assert _redact_email("jane@example.com") == "j***@example.com"
-
-    def test_handles_empty_local_part(self) -> None:
-        # Defensive — RFC says you can't have a leading @, but if some
-        # malformed value reaches the logger we must not raise.
-        assert _redact_email("@example.com") == "***@example.com"
-
-    def test_handles_missing_at_sign(self) -> None:
-        assert _redact_email("plainstring") == "***"
-
-    def test_handles_empty_value(self) -> None:
-        assert _redact_email("") == "***"
 
 
 # ---------------------------------------------------------------------------

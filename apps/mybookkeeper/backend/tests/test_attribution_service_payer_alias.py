@@ -12,6 +12,7 @@ Covers:
 from __future__ import annotations
 
 import datetime as _dt
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
@@ -137,7 +138,9 @@ async def test_alias_to_missing_applicant_falls_through(db: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_alias_ambiguous_name_to_two_tenants_queues_review(db: AsyncSession):
+async def test_alias_ambiguous_name_to_two_tenants_queues_review(
+    db: AsyncSession, caplog: pytest.LogCaptureFixture,
+):
     """A payer name learned for TWO tenants (no handle) → review, not a guess."""
     org_id, user_id = uuid.uuid4(), uuid.uuid4()
     prince = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
@@ -152,12 +155,15 @@ async def test_alias_ambiguous_name_to_two_tenants_queues_review(db: AsyncSessio
     with patch(
         "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
         new_callable=AsyncMock,
-    ) as receipt_mock:
+    ) as receipt_mock, caplog.at_level(logging.WARNING, logger="app.services.transactions.attribution_service"):
         await maybe_attribute_payment(
             db, txn=txn, payer_name="Tushar Kapoor",
             organization_id=org_id, user_id=user_id,
         )
 
+    # The warning names the transaction, never the payer.
+    assert f"Ambiguous payer alias for txn {txn.id}" in caplog.text
+    assert "Tushar" not in caplog.text
     # Refused to guess — not attributed, no receipt, queued unmatched.
     assert txn.applicant_id is None
     receipt_mock.assert_not_awaited()

@@ -9,6 +9,7 @@ exceptions from leaking to callers.
 """
 from __future__ import annotations
 
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anthropic
@@ -301,6 +302,14 @@ class TestPayloadParsing:
         ctx, _ = _patched(msg)
         with ctx, pytest.raises(ExtractionParseError):
             await _service().search("sys", "q")
+
+    async def test_no_json_is_logged_without_the_reply_text(self, caplog: pytest.LogCaptureFixture) -> None:
+        reply = "Jane Doe of Acme was named in the filing, but nothing else."
+        ctx, _ = _patched(_message([_text_block(reply)]))
+        with ctx, caplog.at_level(logging.ERROR), pytest.raises(ExtractionParseError):
+            await _service().search("sys", "q")
+        assert "Jane Doe" not in caplog.text
+        assert f"chars={len(reply)} stop_reason=end_turn sha256=" in caplog.text
 
 
 class TestErrorWrapping:

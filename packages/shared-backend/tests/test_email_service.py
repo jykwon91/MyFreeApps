@@ -145,29 +145,28 @@ class TestSendOrRaise:
                 service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
         assert "connection refused" in str(exc.value)
 
-    def test_chains_underlying_exception(self) -> None:
-        """The original SMTP exception should be preserved as __cause__ for
-        Sentry diagnostics."""
+    def test_does_not_chain_underlying_exception(self) -> None:
+        """The smtplib exception is not chained: its text can quote the
+        recipient, and a chained cause reaches the ERROR traceback and Sentry
+        unmasked. The masked message carries the exception type instead."""
         service = _configured_service()
         underlying = OSError("network down")
         with patch("smtplib.SMTP", side_effect=underlying):
             with pytest.raises(EmailSendError) as exc:
                 service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
-        assert exc.value.__cause__ is underlying
+        assert exc.value.__cause__ is None
+        assert "OSError" in str(exc.value)
 
-    def test_smtp_reply_code_survives_in_cause(self) -> None:
-        """smtplib reply code (smtp_code, smtp_error) must survive on __cause__
-        so Sentry can distinguish 550 Mailbox unavailable from 421 rate-limit."""
+    def test_smtp_reply_code_survives_on_the_error(self) -> None:
+        """The reply code and text stay on the error itself, so Sentry can
+        tell 550 Mailbox unavailable from a 421 rate limit."""
         service = _configured_service()
         underlying = smtplib.SMTPDataError(550, b"Mailbox unavailable")
         with patch("smtplib.SMTP", side_effect=underlying):
             with pytest.raises(EmailSendError) as exc:
                 service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
         assert exc.value.smtp_code == 550
-        cause = exc.value.__cause__
-        assert isinstance(cause, smtplib.SMTPDataError)
-        assert cause.smtp_code == 550
-        assert b"Mailbox unavailable" in cause.smtp_error
+        assert "Mailbox unavailable" in str(exc.value)
 
     def test_returns_none_on_success(self) -> None:
         service = _configured_service()
@@ -376,12 +375,12 @@ class TestConsoleBackend:
 
     def test_send_or_raise_logs_and_never_opens_smtp(self, caplog: pytest.LogCaptureFixture) -> None:
         with patch("smtplib.SMTP") as mock_smtp_cls, caplog.at_level("INFO"):
-            self._console_service().send_or_raise(["a@example.com"], "Verify", "<p>Hi</p>")
+            self._console_service().send_or_raise(["a@example.com"], "Your lease, Jane Doe", "<p>Hi</p>")
         mock_smtp_cls.assert_not_called()
         assert "[email:console]" in caplog.text
         assert "a@example.com" not in caplog.text
         assert "1 recipient(s) at example.com" in caplog.text
-        assert "'Verify'" in caplog.text
+        assert "Jane Doe" not in caplog.text
 
     def test_send_returns_true(self) -> None:
         with patch("smtplib.SMTP") as mock_smtp_cls:

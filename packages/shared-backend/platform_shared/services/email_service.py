@@ -33,6 +33,8 @@ operation is capped by ``SMTP_TIMEOUT_SECONDS``.
 A failed send raises ``EmailSendError`` carrying ``kind`` (misconfigured /
 recipient_rejected / message_rejected / transient), the server's
 ``smtp_code`` and any ``refused_recipients``, and is logged with them.
+Log lines name recipients by count and domain only and never carry the
+subject, which often names a tenant or applicant.
 
 The pre-2026-05-05 ``send()`` method silently returned False when
 SMTP creds were empty — that pattern caused the Kenneth verification-
@@ -168,8 +170,8 @@ class EmailService:
             raise ValueError("Recipients list cannot be empty")
         if self.backend == "console":
             logger.info(
-                "[email:console] to=%s subject=%r body_chars=%d attachments=%d",
-                describe_recipients(to), subject, len(body_html), len(attachments or ()),
+                "[email:console] to=%s body_chars=%d attachments=%d",
+                describe_recipients(to), len(body_html), len(attachments or ()),
             )
             return
         if not self.is_configured():
@@ -208,14 +210,16 @@ class EmailService:
             refused = self._deliver(sender, to, msg.as_string())
         except (smtplib.SMTPException, OSError, email.errors.MessageError, UnicodeError) as e:
             error = error_from_smtp_exception(e, recipient_count=len(to))
-            _log_send_failure(error, to, subject)
-            raise error from e
+            _log_send_failure(error, to)
+            # Not chained: the smtplib exception's text quotes the recipient, and
+            # a cause is printed in full in the ERROR traceback Sentry receives.
+            raise error from None
         if refused:
             error = error_from_refused_recipients(refused, recipient_count=len(to))
-            _log_send_failure(error, to, subject)
+            _log_send_failure(error, to)
             raise error
 
-        logger.info("Email sent via SMTP to %s: %s", describe_recipients(to), subject)
+        logger.info("Email sent via SMTP to %s", describe_recipients(to))
 
     def _deliver(self, sender: str, to: list[str], payload: str) -> dict[str, tuple[int, bytes]]:
         """Run one SMTP conversation; return the recipients the server refused.
@@ -286,12 +290,11 @@ class EmailService:
             )
             return True
         except (ValueError, EmailNotConfiguredError, EmailSendError) as exc:
-            # No traceback: an EmailSendError chains the smtplib exception, whose
-            # text carries the recipient addresses.
+            # No traceback: this is a best-effort send, and the message already
+            # carries the masked reason.
             logger.warning(
-                "Best-effort email send failed to %s: %s (%s: %s)",
+                "Best-effort email send failed to %s (%s: %s)",
                 describe_recipients(to),
-                subject,
                 type(exc).__name__,
                 exc,
             )
@@ -313,12 +316,12 @@ class EmailService:
         )
 
 
-def _log_send_failure(error: EmailSendError, to: list[str], subject: str) -> None:
+def _log_send_failure(error: EmailSendError, to: list[str]) -> None:
     """Log a failed send with its SMTP code. Config faults log at ERROR: an
     operator has to act, and every later send will fail the same way."""
     level = logging.ERROR if error.kind == "misconfigured" else logging.WARNING
     logger.log(
         level,
-        "SMTP send failed: kind=%s smtp_code=%s refused=%d to=%s subject=%r: %s",
-        error.kind, error.smtp_code, len(error.refused_recipients), describe_recipients(to), subject, error,
+        "SMTP send failed: kind=%s smtp_code=%s refused=%d to=%s: %s",
+        error.kind, error.smtp_code, len(error.refused_recipients), describe_recipients(to), error,
     )

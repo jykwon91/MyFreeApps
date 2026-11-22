@@ -43,7 +43,7 @@ def _rate_limit_error(headers: dict[str, str]) -> anthropic.RateLimitError:
 
 def _reply() -> MagicMock:
     message = MagicMock(spec=anthropic.types.Message)
-    message.content = [MagicMock(text='{"ok": true}')]
+    message.content = [MagicMock(type="text", text='{"ok": true}')]
     message.usage = MagicMock(input_tokens=10, output_tokens=20)
     message.model = "claude-sonnet-4-6"
     return message

@@ -75,8 +75,11 @@ def error_from_smtp_exception(exc: SmtpFailure, *, recipient_count: int) -> Emai
         return error_from_refused_recipients(exc.recipients, recipient_count=recipient_count)
 
     if isinstance(exc, (email.errors.MessageError, UnicodeError)):
+        # ``str``, not ``repr``: a UnicodeEncodeError's repr quotes the whole
+        # string it failed on, which can be the recipient line or the message.
         return EmailSendError(
-            f"The email could not be encoded for SMTP (a header or address it can't carry): {exc!r}",
+            f"The email could not be encoded for SMTP (a header or address it can't carry): "
+            f"{type(exc).__name__}: {exc}",
             kind="message_rejected",
         )
 

@@ -11,13 +11,10 @@ patterns (lifespan factory, CORS, audit middleware, JWT login gating,
 TOTP routes, admin router, version endpoint).
 """
 import logging
-import time
 from datetime import datetime, timezone
 
-import jwt
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.core.boot_guards import check_extraction_configured, check_test_mode_off
 from platform_shared.core.git import resolve_git_commit
@@ -27,9 +24,9 @@ from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.services.seed_admin_service import build_seed_admin_hook
+from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
 
 from app.api import account, admin, catalog, health, mobile_auth, profile, sessions, totp, turns, usage
-from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
@@ -56,7 +53,6 @@ logging.basicConfig(
 # value can never forge a log record (log injection). Applied at the handler
 # boundary, so it covers every call site in the process without per-call work.
 install_crlf_safe_logging()
-logger = logging.getLogger("app")
 
 
 def _check_tutor_configured() -> None:
@@ -104,41 +100,7 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def set_audit_user(request: Request, call_next):
-    """Populate ``current_user_id`` ContextVar from the request's JWT and
-    emit a structured access log line for every request.
-    """
-    start = time.perf_counter()
-    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    user_id = None
-    if token:
-        try:
-            payload = jwt.decode(
-                token,
-                settings.secret_key,
-                algorithms=["HS256"],
-                audience="fastapi-users:auth",
-            )
-            user_id = payload.get("sub")
-            ctx_token = current_user_id.set(user_id)
-            try:
-                response = await call_next(request)
-            finally:
-                current_user_id.reset(ctx_token)
-        except JWTError:
-            response = await call_next(request)
-    else:
-        response = await call_next(request)
-
-    ms = (time.perf_counter() - start) * 1000
-    logger.info(
-        "%s %s %s %.0fms user=%s",
-        request.method, request.url.path, response.status_code, ms, user_id or "anonymous",
-    )
-    if response.status_code >= 500:
-        logger.error("5xx on %s %s", request.method, request.url.path)
-    return response
+app.add_middleware(RequestAuditMiddleware, secret_key=settings.secret_key)
 
 
 # Auth routes -- JWT login enforces email verification AND gates /login with

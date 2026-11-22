@@ -20,6 +20,7 @@ records must record a reason on its queue row.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from decimal import Decimal
 
@@ -211,7 +212,7 @@ class TestGenuinePaymentConfirmationStillSkipped:
 
     @pytest.mark.asyncio
     async def test_amountless_payment_confirmation_skipped_with_reason(
-        self, db: AsyncSession
+        self, db: AsyncSession, caplog: pytest.LogCaptureFixture,
     ) -> None:
         org_id, user_id = await _seed_org_user(db)
 
@@ -227,19 +228,24 @@ class TestGenuinePaymentConfirmationStillSkipped:
             "account_number": None,
         }
 
-        outcome = await save_email_extraction(
-            message_id=f"msg-{uuid.uuid4().hex}",
-            subject="Payment received",
-            result=_result(data),
-            source_att=None,
-            organization_id=org_id,
-            user_id=user_id,
-            db=db,
-            sender_email="noreply@constellation.com",
-        )
+        message_id = f"msg-{uuid.uuid4().hex}"
+        with caplog.at_level(logging.WARNING):
+            outcome = await save_email_extraction(
+                message_id=message_id,
+                subject="Payment received from Jane Doe",
+                result=_result(data),
+                source_att=None,
+                organization_id=org_id,
+                user_id=user_id,
+                db=db,
+                sender_email="noreply@constellation.com",
+            )
 
         assert outcome.records_added == 0
         assert outcome.skip_reason is not None
+        # Subjects can name a person; the skip is logged by message id.
+        assert message_id in caplog.text
+        assert "Jane Doe" not in caplog.text
         # No transaction was created.
         rows = (
             await db.execute(

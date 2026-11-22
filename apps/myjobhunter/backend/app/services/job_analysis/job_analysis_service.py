@@ -48,11 +48,12 @@ import logging
 import uuid
 from typing import Any
 
+from platform_shared.core.loggable_url import loggable_url
+from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 from platform_shared.repositories.soft_delete import soft_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.loggable_url import loggable_url
 from app.db.session import unit_of_work
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.repositories.discovery import discovery_repository
@@ -225,11 +226,10 @@ async def analyze(
         except JDAiExtractionError as exc:
             raise JobAnalysisError.from_ai_failure(exc.kind) from exc
         except JDFetchError as exc:
-            # The fetcher's messages carry the full URL; the log keeps only where it points.
-            safe_url = loggable_url(source_url)
+            # The fetcher's messages already name the URL without its query.
             logger.warning(
                 "Job posting fetch failed: user_id=%s url=%s err=%s",
-                user_id, safe_url, str(exc).replace(source_url, safe_url),
+                user_id, loggable_url(source_url), exc,
             )
             raise JobAnalysisError(str(exc)) from exc
         except ValueError as exc:
@@ -440,8 +440,9 @@ def _validate_response(raw: Any) -> dict:
 
     verdict = _str_or_none(raw.get("verdict"))
     if verdict not in _VERDICTS:
+        # The value is model output, and this message is logged and tagged in Sentry.
         raise JobAnalysisError(
-            f"Claude returned an unknown verdict: {verdict!r}",
+            f"Claude returned an unknown verdict ({describe_model_output(verdict or '', stop_reason=None)})",
         )
 
     verdict_summary = _str_or_none(raw.get("verdict_summary")) or ""

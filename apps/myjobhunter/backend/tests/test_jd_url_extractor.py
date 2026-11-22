@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -665,6 +666,43 @@ class TestAuthWalledShortCircuit:
                     "https://acme.example.com/protected",
                     user_id=uuid.uuid4(),
                 )
+
+
+class TestUrlsAreLoggedWithoutQuery:
+    """A job link's query string can carry a session or tracking token; logs keep host and path."""
+
+    _SECRET = "token=s3cret-session"
+
+    @pytest.mark.asyncio
+    async def test_schema_org_path_logs_no_query(self, caplog: pytest.LogCaptureFixture) -> None:
+        html = _wrap_html_with_schema(SAMPLE_SCHEMA_PAYLOAD)
+        fake_client = _FakeAsyncClient(response=_build_httpx_response(html))
+
+        with _patch_httpx(fake_client), caplog.at_level(logging.INFO, logger="app.services.extraction"):
+            await extract_from_url(
+                f"https://jobs.example.com/posting/abc?{self._SECRET}", user_id=uuid.uuid4(),
+            )
+
+        assert self._SECRET not in caplog.text
+        assert "https://jobs.example.com/posting/abc" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_auth_walled_and_tiny_page_paths_log_no_query(self, caplog: pytest.LogCaptureFixture) -> None:
+        tiny = _FakeAsyncClient(response=_build_httpx_response("<html><body><p>Sign in.</p></body></html>"))
+
+        with caplog.at_level(logging.INFO, logger="app.services.extraction"):
+            with pytest.raises(JDFetchAuthRequiredError):
+                await extract_from_url(
+                    f"https://www.linkedin.com/jobs/view/1?{self._SECRET}", user_id=uuid.uuid4(),
+                )
+            with _patch_httpx(tiny), pytest.raises(JDFetchAuthRequiredError):
+                await extract_from_url(
+                    f"https://acme.example.com/login?{self._SECRET}", user_id=uuid.uuid4(),
+                )
+
+        assert self._SECRET not in caplog.text
+        assert "https://www.linkedin.com/jobs/view/1" in caplog.text
+        assert "https://acme.example.com/login" in caplog.text
 
 
 # ---------------------------------------------------------------------------

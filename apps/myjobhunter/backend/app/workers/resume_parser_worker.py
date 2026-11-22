@@ -92,10 +92,9 @@ async def process_one() -> bool:
         profile_id: uuid.UUID = job.profile_id
         file_path: str = job.file_path
         content_type: str = job.file_content_type or "application/octet-stream"
-        filename: str = job.file_filename or "resume"
         claimed_at: datetime = job.started_at
 
-    logger.info("Processing resume job %s for user %s (%s)", job_id, user_id, filename)
+    logger.info("Processing resume job %s for user %s", job_id, user_id)
 
     try:
         embedding_inputs_changed = await _run_extraction(

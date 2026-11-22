@@ -45,8 +45,8 @@ async def classify(
         if rule:
             await classification_rule_repo.increment_applied(db, rule)
             logger.info(
-                "Classification rule matched: vendor+address %r @ %r -> %s",
-                vendor, address, rule.category,
+                "Classification rule matched: rule_id=%s kind=vendor+address -> %s",
+                rule.id, rule.category,
             )
             return rule.category, rule.property_id, rule.activity_id
 
@@ -57,8 +57,8 @@ async def classify(
         if rule:
             await classification_rule_repo.increment_applied(db, rule)
             logger.info(
-                "Classification rule matched: vendor %r -> %s",
-                vendor, rule.category,
+                "Classification rule matched: rule_id=%s kind=vendor -> %s",
+                rule.id, rule.category,
             )
             return rule.category, rule.property_id, rule.activity_id
 
@@ -69,8 +69,8 @@ async def classify(
         if rule:
             await classification_rule_repo.increment_applied(db, rule)
             logger.info(
-                "Classification rule matched: sender %r -> %s",
-                email_sender, rule.category,
+                "Classification rule matched: rule_id=%s kind=sender -> %s",
+                rule.id, rule.category,
             )
             return rule.category, rule.property_id, rule.activity_id
 
@@ -81,8 +81,8 @@ async def classify(
         if rule:
             await classification_rule_repo.increment_applied(db, rule)
             logger.info(
-                "Classification rule matched: filename %r -> %s",
-                filename, rule.category,
+                "Classification rule matched: rule_id=%s kind=filename -> %s",
+                rule.id, rule.category,
             )
             return rule.category, rule.property_id, rule.activity_id
 

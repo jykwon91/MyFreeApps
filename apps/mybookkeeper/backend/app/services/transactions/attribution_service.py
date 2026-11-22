@@ -117,10 +117,9 @@ async def _attribute_payment(
         # can't disambiguate. Refuse to guess — queue for manual review, the
         # same guard find_best_match applies to same-named tenants.
         logger.warning(
-            "Ambiguous payer alias for txn %s: payer_name=%r (handle=%r) maps "
-            "to multiple tenants — queuing for manual review instead of "
-            "auto-attributing.",
-            txn.id, payer_name, payer_handle,
+            "Ambiguous payer alias for txn %s: the payer maps to multiple "
+            "tenants — queuing for manual review instead of auto-attributing.",
+            txn.id,
         )
         await attribution_repo.create(
             db,
@@ -178,10 +177,10 @@ async def _attribute_payment(
         # queued "unmatched") so the host disambiguates via the picker rather
         # than the payment silently landing on the wrong same-named tenant.
         logger.warning(
-            "Ambiguous attribution for txn %s: payer_name=%r matches multiple "
-            "lease_signed tenants by name — queuing for manual review instead "
-            "of auto-attributing.",
-            txn.id, payer_name,
+            "Ambiguous attribution for txn %s: the payer name matches multiple "
+            "lease_signed tenants — queuing for manual review instead of "
+            "auto-attributing.",
+            txn.id,
         )
 
     if confidence == "auto_exact" and best is not None:

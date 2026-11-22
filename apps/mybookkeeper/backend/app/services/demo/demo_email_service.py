@@ -3,6 +3,8 @@
 import html as html_mod
 import logging
 
+from platform_shared.core.mask_email import mask_email
+
 from app.services.system import email_service
 
 logger = logging.getLogger(__name__)
@@ -88,7 +90,7 @@ async def send_demo_invite(
     subject = "You're invited to try MyBookkeeper! \U0001f389"
     success = await email_service.send_email([recipient_email], subject, html)
     if success:
-        logger.info("Demo invite sent to %s for account %s", recipient_email, login_email)
+        logger.info("Demo invite sent to %s", mask_email(recipient_email))
     else:
-        logger.warning("Failed to send demo invite to %s", recipient_email)
+        logger.warning("Failed to send demo invite to %s", mask_email(recipient_email))
     return success

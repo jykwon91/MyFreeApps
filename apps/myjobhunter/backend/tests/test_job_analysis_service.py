@@ -512,7 +512,8 @@ async def test_post_analyze_logs_why_once_before_returning_502(
     assert [r.name for r in warnings] == [_SERVICE_LOGGER]
     message = warnings[0].getMessage()
     assert f"user_id={user['id']}" in message
-    assert "unknown verdict: 'not_real'" in message
+    assert "unknown verdict (chars=8 " in message
+    assert "not_real" not in caplog.text
     assert jd_text not in caplog.text
 
 
@@ -528,7 +529,8 @@ async def test_post_analyze_logs_a_failed_url_fetch_once_without_its_query_befor
         with patch(
             "app.services.job_analysis.job_analysis_service.extract_from_url",
             new_callable=AsyncMock,
-            side_effect=JDFetchError(f"Upstream returned HTTP 503 for {url}"),
+            # What the fetcher raises: its messages already drop the query.
+            side_effect=JDFetchError("Upstream returned HTTP 503 for https://jobs.example.com/1"),
         ):
             async with authed as ac:
                 resp = await ac.post("/jobs/analyze", json={"url": url})

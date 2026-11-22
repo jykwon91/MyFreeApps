@@ -133,7 +133,7 @@ def _coerce_suggestion(raw: dict) -> SuggestedPlaceholder | None:
             input_type=input_type,
         )
     except Exception:  # noqa: BLE001
-        logger.warning("Skipping malformed AI suggestion: %r", raw)
+        logger.warning("Skipping malformed AI suggestion: type=%s", type(raw).__name__)
         return None
 
 

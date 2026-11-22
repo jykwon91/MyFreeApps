@@ -98,7 +98,7 @@ class UserManager(PlatformBaseUserManager[User]):
         account with no recovery path).
         """
         await send_verification_email(user.email, token)
-        logger.info("Verification email sent to %s", user.email)
+        logger.info("Verification email sent to user_id=%s", user.id)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.EMAIL_VERIFY_RESEND,
@@ -166,7 +166,7 @@ class UserManager(PlatformBaseUserManager[User]):
         self, user: User, request=None,
     ) -> None:
         """Called after a user successfully verifies their email."""
-        logger.info("User verified: %s", user.email)
+        logger.info("User verified: user_id=%s", user.id)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.EMAIL_VERIFY_SUCCESS,
