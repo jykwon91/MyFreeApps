@@ -78,7 +78,7 @@ async def recompute(
 
         tax_return.needs_recompute = False
 
-    await tax_validation_service.validate(organization_id, tax_return_id)
+    await tax_validation_service.validate_and_store(organization_id, tax_return_id)
 
     return forms_updated
 

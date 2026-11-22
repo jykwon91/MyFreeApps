@@ -181,7 +181,7 @@ class TestAssembleTaxData:
 
         with (
             patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
         ):
             data = await _assemble_tax_data(db, tax_return)
 
@@ -229,7 +229,7 @@ class TestAssembleTaxData:
 
         with (
             patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
         ):
             data = await _assemble_tax_data(db, tax_return)
 
@@ -252,7 +252,7 @@ class TestAssembleTaxData:
 
         with (
             patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
         ):
             data = await _assemble_tax_data(db, tax_return)
 
@@ -331,7 +331,7 @@ class TestAssembleTaxData:
 
         with (
             patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
         ):
             data = await _assemble_tax_data(db, tax_return)
 
@@ -380,7 +380,7 @@ class TestGenerateAdviceIntegration:
         with (
             patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
             patch("app.services.tax.tax_advisor_service.AsyncSessionLocal", _fake),
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
             patch.object(
                 tax_advisor_claude, "_create_with_backoff",
                 new_callable=AsyncMock, return_value=mock_response,

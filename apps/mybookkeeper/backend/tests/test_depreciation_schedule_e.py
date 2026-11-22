@@ -95,6 +95,7 @@ async def _recompute(db: AsyncSession, org: Organization, tax_return: TaxReturn)
     with (
         patch("app.services.tax.tax_recompute_service.unit_of_work", _fake),
         patch("app.services.tax.tax_validation.unit_of_work", _fake),
+        patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
     ):
         await tax_recompute_service.recompute(org.id, tax_return.id)
         return await tax_validation_service.validate(org.id, tax_return.id)

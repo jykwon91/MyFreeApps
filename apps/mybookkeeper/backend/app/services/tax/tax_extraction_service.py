@@ -12,6 +12,7 @@ from app.models.tax.tax_form_field_source import TaxFormFieldSource
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.mappers.tax_form_mapper import FieldValueColumns, columns_for_extracted_value
 from app.repositories import tax_return_repo, tax_form_repo
+from app.services.tax import tax_validation_service
 
 logger = logging.getLogger(__name__)
 
@@ -111,5 +112,7 @@ async def process_tax_document(
 
     if tax_return.status != TAX_RETURN_STATUS_FILED:
         await tax_return_repo.set_needs_recompute(db, tax_return, value=True)
+
+    await tax_validation_service.store_field_statuses(db, tax_return)
 
     return instance

@@ -34,7 +34,7 @@ from app.schemas.tax.source_document import (
     SourceDocumentsResponse,
     TaxSourceDocument,
 )
-from app.services.tax import tax_checklist
+from app.services.tax import tax_checklist, tax_validation_service
 
 logger = logging.getLogger(__name__)
 
@@ -250,10 +250,12 @@ async def override_field(
 
         _validate_override_values(field, values)
         column, value = _override_target(values)
-        return await tax_form_repo.apply_override(
+        overridden = await tax_form_repo.apply_override(
             db, field, column=column, value=value,
             reason=override_reason, user_id=ctx.user_id,
         )
+        await tax_validation_service.store_field_statuses(db, tax_return)
+        return overridden
 
 
 # Mapping of form type -> the field_id that represents the "key amount"
@@ -415,4 +417,5 @@ async def delete_instance(
             return False
 
         await tax_form_repo.delete_instance(db, instance)
+        await tax_validation_service.store_field_statuses(db, tax_return)
         return True

@@ -86,7 +86,7 @@ class TestW2WithholdingEstimation:
         db.add(_make_field(w2, "box_2", "Withheld", value_numeric=Decimal("20000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         overwith = [r for r in results if "overwithholding" in r.message.lower()]
@@ -108,7 +108,7 @@ class TestW2WithholdingEstimation:
         db.add(_make_field(w2, "box_2", "Withheld", value_numeric=Decimal("25000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         underwith = [r for r in results if "underpayment" in r.message.lower()]
@@ -146,7 +146,7 @@ class TestPALCarryforward:
         db.add(cf)
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         pal = [r for r in results if "passive activity loss carryforward" in r.message.lower() and "offset" in r.message.lower()]
@@ -179,7 +179,7 @@ class TestCapitalLossCarryforward:
         db.add(cf)
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         cap = [r for r in results if "capital loss carryforward" in r.message.lower()]
@@ -204,7 +204,7 @@ class TestEstimatedTaxPenalty:
         db.add(_make_field(sc, "line_29_net_profit", "Net profit", value_numeric=Decimal("50000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         est = [r for r in results if "estimated tax" in r.message.lower() and "no estimated" in r.message.lower()]
@@ -237,7 +237,7 @@ class TestEstimatedTaxPenalty:
             ))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         est = [r for r in results if "no estimated tax" in r.message.lower()]
@@ -267,7 +267,7 @@ class TestNIIT:
         db.add(_make_field(div, "box_1a", "Dividends", value_numeric=Decimal("50000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         niit = [r for r in results if "niit" in r.message.lower() or "net investment" in r.message.lower()]
@@ -299,7 +299,7 @@ class TestAdditionalMedicare:
         db.add(_make_field(se, "net_earnings", "SE earnings", value_numeric=Decimal("80000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         med = [r for r in results if "additional medicare" in r.message.lower()]
@@ -324,7 +324,7 @@ class TestQBIOpportunity:
         db.add(_make_field(se, "line_26", "Total rental", value_numeric=Decimal("30000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         qbi = [r for r in results if "qbi" in r.message.lower() or "199a" in r.message.lower()]
@@ -353,7 +353,7 @@ class TestFourteenDayRental:
         db.add(prop)
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)), \
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)), \
              patch("app.services.tax.tax_validation.rental_rules.booking_statement_repo") as mock_res:
             mock_res.total_nights_by_property = AsyncMock(return_value={prop.id: 10})
             results = await tax_validation_service.validate(test_org.id, tr.id)
@@ -380,7 +380,7 @@ class TestRentalWithout1099K:
         db.add(_make_field(se, "line_3", "Rents received", value_numeric=Decimal("25000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         k = [r for r in results if "1099-k" in r.message.lower() and "no 1099-k" in r.message.lower()]
@@ -406,7 +406,7 @@ class TestDepreciationDollarImpact:
         db.add(_make_field(se, "line_20", "Expenses", value_numeric=Decimal("15000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         dep = [r for r in results if "depreciation" in r.message.lower() and "no depreciation" in r.message.lower()]
@@ -479,7 +479,7 @@ class TestYoYExpenseAnomaly:
         async def _sum_expenses(db, org_id, year):
             return Decimal("10000.00") if year == 2024 else Decimal("20000.00")
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)), \
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)), \
              patch("app.services.tax.tax_validation.general_rules.transaction_repo") as mock_txn:
             mock_txn.sum_expenses_by_year = AsyncMock(side_effect=_sum_expenses)
             mock_txn.sum_by_category = AsyncMock(return_value=Decimal("0"))
@@ -502,7 +502,7 @@ class TestYoYExpenseAnomaly:
         ])
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         yoy = [r for r in results if "year-over-year" in r.message.lower()]
@@ -521,7 +521,7 @@ class TestYoYExpenseAnomaly:
         ])
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         assert not [r for r in results if "year-over-year" in r.message.lower()]
@@ -544,7 +544,7 @@ class TestCleaningFeeMismatch:
                 return Decimal("3000.00")
             return Decimal("0")
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)), \
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)), \
              patch("app.services.tax.tax_validation.rental_rules.transaction_repo") as mock_txn:
             mock_txn.sum_by_category = AsyncMock(side_effect=_sum)
             mock_txn.count_by_category = AsyncMock(return_value=0)
@@ -577,7 +577,7 @@ class TestMultiPropertyAllocation:
         db.add(_make_field(se2, "line_20", "Expenses", value_numeric=Decimal("0")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         alloc = [r for r in results if "no expenses" in r.message.lower() and "prop b" in r.message.lower()]
@@ -616,7 +616,7 @@ class TestDeMinimis:
         db.add(tr)
         db.add_all(transactions)
         await db.commit()
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(org.id, tr.id)
         return [r for r in results if "de minimis" in r.message.lower()]
 
@@ -686,7 +686,7 @@ class TestForeignTaxCredit:
         db.add(_make_field(div, "box_7", "Foreign tax", value_numeric=Decimal("500.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         ftc = [r for r in results if "foreign tax" in r.message.lower() and "credit" in r.message.lower()]
@@ -712,7 +712,7 @@ class TestEarlyWithdrawalPenalty:
         db.add(_make_field(int_inst, "box_2", "Penalty", value_numeric=Decimal("300.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         penalty = [r for r in results if "early withdrawal" in r.message.lower()]
@@ -738,7 +738,7 @@ class TestMortgageInsurancePremium:
         db.add(_make_field(m1098, "box_5", "PMI", value_numeric=Decimal("1200.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         pmi = [r for r in results if "mortgage insurance" in r.message.lower()]
@@ -763,7 +763,7 @@ class TestMealsDeduction:
         db.add(_make_field(sc, "line_29_net_profit", "Net profit", value_numeric=Decimal("50000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         meals = [r for r in results if "meals" in r.message.lower() and "50%" in r.message]
@@ -787,7 +787,7 @@ class TestHomeOfficeNotClaimed:
         db.add(_make_field(sc, "line_29_net_profit", "Net profit", value_numeric=Decimal("60000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         ho = [r for r in results if "home office" in r.message.lower()]
@@ -811,7 +811,7 @@ class TestBusinessMileageNotClaimed:
         db.add(_make_field(sc, "line_29_net_profit", "Net profit", value_numeric=Decimal("40000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         mileage = [r for r in results if "vehicle" in r.message.lower() or "mileage" in r.message.lower()]
@@ -835,7 +835,7 @@ class TestWashSale:
         db.add(_make_field(b, "wash_sale_loss_disallowed", "Wash sale", value_numeric=Decimal("2500.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         ws = [r for r in results if "wash sale" in r.message.lower()]
@@ -862,7 +862,7 @@ class TestStateWithholdingSummary:
         db.add(_make_field(w2, "box_17", "State withheld", value_numeric=Decimal("4000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         state = [r for r in results if "state tax withheld" in r.message.lower()]
@@ -889,7 +889,7 @@ class TestDuplicateEINAcrossForms:
         db.add(_make_field(inst2, "box_1", "NEC", value_numeric=Decimal("5000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         dup = [r for r in results if "12-3456789" in r.message and "multiple form types" in r.message.lower()]
@@ -921,7 +921,7 @@ class TestPropertyTaxSALT:
         db.add(_make_field(sa, "line_5b", "RE tax", value_numeric=Decimal("5000.00")))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         salt = [r for r in results if "salt" in r.message.lower() and "rental" in r.message.lower()]
@@ -951,7 +951,7 @@ class TestEstimatedPaymentTiming:
         ))
         await db.commit()
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_uow(db)):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         late = [r for r in results if "late estimated" in r.message.lower()]

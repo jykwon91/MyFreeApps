@@ -524,3 +524,64 @@ class TestFiledReturnIsNotFlaggedOrRecomputedAutomatically:
             await document_extraction_service.recompute_stale_unfiled_returns(test_org.id)
 
         recompute.assert_awaited_once_with(test_org.id, draft.id)
+
+
+class TestExtractionStoresFieldStatuses:
+    """Extraction saves each field's validation status itself, with no recompute or override."""
+
+    @staticmethod
+    async def _extract_w2(db: AsyncSession, org: Organization, tax_year: int, wages: float):
+        return await process_tax_document(
+            db,
+            organization_id=org.id,
+            document_id=uuid.uuid4(),
+            extraction_id=uuid.uuid4(),
+            document_type="w2",
+            tax_form_data={"issuer_name": "Acme", "tax_year": tax_year, "fields": {"box_1": wages}},
+        )
+
+    @staticmethod
+    async def _stored_fields(db: AsyncSession, instance_id: uuid.UUID) -> dict:
+        await db.commit()
+        db.expire_all()
+        return {f.field_id: f for f in await tax_form_repo.get_fields(db, instance_id)}
+
+    @pytest.mark.asyncio
+    async def test_new_form_fields_have_a_stored_status(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        instance = await self._extract_w2(db, test_org, 2025, 50000.0)
+
+        fields = await self._stored_fields(db, instance.id)
+
+        assert fields["box_1"].validation_status == "valid"
+
+    @pytest.mark.asyncio
+    async def test_new_form_restates_the_other_forms_it_affects(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        tax_return = await tax_return_repo.get_or_create_for_year(db, test_org.id, 2025)
+        form_1040 = await tax_return_repo.upsert_form_instance(db, tax_return.id, "1040", "computed")
+        line_1a = await tax_return_repo.upsert_field(
+            db, form_1040.id, "line_1a", "Wages", value_numeric=Decimal(45000),
+        )
+        await db.commit()
+
+        await self._extract_w2(db, test_org, 2025, 50000.0)
+
+        stored = await self._stored_fields(db, form_1040.id)
+        assert stored["line_1a"].id == line_1a.id
+        assert stored["line_1a"].validation_status == "error"
+        assert "does not match" in stored["line_1a"].validation_message
+
+    @pytest.mark.asyncio
+    async def test_a_filed_year_gets_statuses_without_being_recomputed(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        db.add(TaxReturn(organization_id=test_org.id, tax_year=2024, status="filed", needs_recompute=False))
+        await db.commit()
+
+        instance = await self._extract_w2(db, test_org, 2024, 1.0)
+
+        fields = await self._stored_fields(db, instance.id)
+        assert fields["box_1"].validation_status == "valid"
