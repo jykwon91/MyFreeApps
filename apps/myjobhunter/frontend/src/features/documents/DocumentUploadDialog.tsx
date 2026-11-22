@@ -1,12 +1,14 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useState, useRef } from "react";
-import { LoadingButton, ModalDialog, showError, showSuccess, extractErrorMessage, useRadioGroup } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, ModalDialog, showError, showSuccess, extractErrorMessage, useRadioGroup } from "@platform/ui";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
+import { DOCUMENT_UPLOAD_PROBLEM_MESSAGES } from "@myjobhunter/api-client/constants/documentUploadProblemMessages";
 import DocumentTitleField from "./DocumentTitleField";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { DOCUMENT_UPLOAD_EXTENSIONS, DOCUMENT_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/documentUploadLimits";
+import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUploadProblem";
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { useCreateDocumentMutation, useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 
@@ -29,6 +31,7 @@ export default function DocumentUploadDialog({
   const [kind, setKind] = useState<DocumentKind>("cover_letter");
   const [body, setBody] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [createDocument, { isLoading: creatingText }] = useCreateDocumentMutation();
@@ -42,8 +45,29 @@ export default function DocumentUploadDialog({
     setTitle("");
     setKind("cover_letter");
     setBody("");
+    clearFile();
+  }
+
+  function clearFile() {
     setSelectedFile(null);
+    setFileError(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      clearFile();
+      return;
+    }
+    const problem = documentUploadProblem({ mimeType: file.type, size: file.size });
+    if (problem) {
+      clearFile();
+      setFileError(DOCUMENT_UPLOAD_PROBLEM_MESSAGES[problem]);
+      return;
+    }
+    setFileError(undefined);
+    setSelectedFile(file);
   }
 
   if (!open) return null;
@@ -149,9 +173,11 @@ export default function DocumentUploadDialog({
               ref={fileInputRef}
               type="file"
               accept={[...DOCUMENT_UPLOAD_EXTENSIONS, ...DOCUMENT_UPLOAD_MIME_TYPES].join(",")}
-              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+              onChange={handleFileChange}
+              {...fieldFeedbackAria({ id: "new-doc-file", error: fileError })}
               className="w-full text-sm"
             />
+            <FieldFeedback id="new-doc-file" error={fileError} />
             {selectedFile ? (
               <p className="text-xs text-muted-foreground">
                 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)

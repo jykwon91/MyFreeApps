@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
+import { DOCUMENT_UPLOAD_MAX_BYTES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import DocumentUploadDialog from "../DocumentUploadDialog";
 
 // ---------------------------------------------------------------------------
@@ -219,5 +220,66 @@ describe("DocumentUploadDialog", () => {
     expect(screen.getByText("256 / 255")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /create/i }));
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  describe("file checks before sending", () => {
+    function chooseFile(file: File) {
+      fireEvent.change(screen.getByLabelText(/file/i), { target: { files: [file] } });
+    }
+
+    async function submitWithTitle(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(screen.getByLabelText(/title/i), "My Resume");
+      await user.click(screen.getByRole("button", { name: /upload/i }));
+    }
+
+    it("says a wrong type of file can't be uploaded, and never sends it", async () => {
+      const user = userEvent.setup();
+      const mockUpload = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({}) });
+      mockUseUploadDocumentMutation.mockReturnValue(
+        [mockUpload, { isLoading: false }] as unknown as ReturnType<typeof useUploadDocumentMutation>,
+      );
+      renderDialog();
+
+      chooseFile(new File(["x"], "photo.png", { type: "image/png" }));
+      await submitWithTitle(user);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("That type of file can't be uploaded. Choose a PDF, DOCX, or TXT file.");
+      expect(screen.getByLabelText(/file/i)).toHaveAttribute("aria-invalid", "true");
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it("says a file over the size limit is too large, and never sends it", async () => {
+      const user = userEvent.setup();
+      const mockUpload = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({}) });
+      mockUseUploadDocumentMutation.mockReturnValue(
+        [mockUpload, { isLoading: false }] as unknown as ReturnType<typeof useUploadDocumentMutation>,
+      );
+      renderDialog();
+
+      const big = new File(["x"], "big.pdf", { type: "application/pdf" });
+      Object.defineProperty(big, "size", { value: DOCUMENT_UPLOAD_MAX_BYTES + 1 });
+      chooseFile(big);
+      await submitWithTitle(user);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("That file is over 25 MB. Choose a smaller one.");
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it("clears the message and sends once a good file replaces a bad one", async () => {
+      const user = userEvent.setup();
+      const mockUpload = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({}) });
+      mockUseUploadDocumentMutation.mockReturnValue(
+        [mockUpload, { isLoading: false }] as unknown as ReturnType<typeof useUploadDocumentMutation>,
+      );
+      renderDialog();
+
+      chooseFile(new File(["x"], "photo.png", { type: "image/png" }));
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      chooseFile(new File(["hello"], "resume.pdf", { type: "application/pdf" }));
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      await submitWithTitle(user);
+
+      await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
+    });
   });
 });

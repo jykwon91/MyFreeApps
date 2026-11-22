@@ -28,6 +28,7 @@ import { renderApplicationDetail } from "../test-support/renderApplicationDetail
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { DOCUMENT_UPLOAD_PROBLEM_MESSAGES } from "@myjobhunter/api-client/constants/documentUploadProblemMessages";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -478,7 +479,7 @@ describe("uploading a file", () => {
     pick({ name: "huge.pdf", mimeType: PDF, size: DOCUMENT_UPLOAD_MAX_BYTES + 1 });
     await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
-    expect(await screen.findByText(DOCUMENTS.tooLarge)).toBeTruthy();
+    expect(await screen.findByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.size)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
     expect(sent.some(({ route }) => route === "POST /documents/upload")).toBe(false);
   });
@@ -490,7 +491,7 @@ describe("uploading a file", () => {
     pick({ name: "blank.pdf", mimeType: PDF, size: 0 });
     await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
-    expect(await screen.findByText(DOCUMENTS.emptyFile)).toBeTruthy();
+    expect(await screen.findByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.empty)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
     expect(sent.some(({ route }) => route === "POST /documents/upload")).toBe(false);
   });
@@ -502,14 +503,14 @@ describe("uploading a file", () => {
     pick({ name: "photo.png", mimeType: "application/octet-stream", size: 100 });
     await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
 
-    expect(await screen.findByText(DOCUMENTS.badType)).toBeTruthy();
+    expect(await screen.findByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type)).toBeTruthy();
     expect(screen.queryByTestId("upload-file")).toBeNull();
 
     // A Word file named for what it is goes through, even unlabelled.
     pick({ name: "letter.docx", mimeType: "application/octet-stream", size: 100 });
     await fireEvent.press(screen.getByRole("button", { name: `${DOCUMENTS.chooseFile}, required` }));
     expect(await screen.findByText("letter.docx (100 B)")).toBeTruthy();
-    expect(screen.queryByText(DOCUMENTS.badType)).toBeNull();
+    expect(screen.queryByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type)).toBeNull();
   });
 
   it("keeps the sheet open with the chosen file and says so when the upload fails", async () => {
@@ -536,7 +537,7 @@ describe("uploading a file", () => {
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
-    expect(await screen.findByText(DOCUMENTS.tooLarge)).toBeTruthy();
+    expect(await screen.findByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.size)).toBeTruthy();
   });
 
   it("says the file is empty when the server refuses it as empty", async () => {
@@ -549,8 +550,8 @@ describe("uploading a file", () => {
     await fireEvent.changeText(await screen.findByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
-    expect(await screen.findByText(DOCUMENTS.emptyFile)).toBeTruthy();
-    expect(screen.queryByText(DOCUMENTS.badType)).toBeNull();
+    expect(await screen.findByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.empty)).toBeTruthy();
+    expect(screen.queryByText(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type)).toBeNull();
   });
 });
 
