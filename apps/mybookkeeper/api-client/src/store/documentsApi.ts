@@ -2,7 +2,7 @@ import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeo
 import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { baseApi } from "@platform/core/store/baseApi";
 import { DOCUMENT_PAGE_SIZE } from "../constants/documentPaging";
-import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
+import { DOCUMENT_REMOVAL_TAGS } from "../constants/documentRemovalTags";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
@@ -80,13 +80,11 @@ export const documentsApi = baseApi.enhanceEndpoints({
     }),
     deleteDocument: builder.mutation<void, string>({
       query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
-      // Deleting a document soft-deletes its payments and their pending receipts.
-      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG, "TaxReturn"],
+      invalidatesTags: [...DOCUMENT_REMOVAL_TAGS],
     }),
     bulkDeleteDocuments: builder.mutation<BulkDeleteDocumentsResponse, string[]>({
       query: (ids) => ({ url: "/documents/bulk-delete", method: "POST", data: { ids } }),
-      // Deleting a document soft-deletes its payments and their pending receipts.
-      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG, "TaxReturn"],
+      invalidatesTags: [...DOCUMENT_REMOVAL_TAGS],
     }),
     reExtractDocument: builder.mutation<{ status: string }, string>({
       query: (id) => ({ url: `/documents/${id}/re-extract`, method: "POST" }),
@@ -101,7 +99,8 @@ export const documentsApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data: { is_escrow_paid },
       }),
-      invalidatesTags: ["Document", "Transaction", "Summary"],
+      // Marking reference-only soft-deletes the document's payments (set_escrow_paid), dismissing their pending receipts and flagging unfiled returns.
+      invalidatesTags: [...DOCUMENT_REMOVAL_TAGS],
     }),
     cancelBatch: builder.mutation<{ cancelled: number }, string>({
       query: (batchId) => ({ url: `/documents/batch-cancel/${batchId}`, method: "POST" }),
