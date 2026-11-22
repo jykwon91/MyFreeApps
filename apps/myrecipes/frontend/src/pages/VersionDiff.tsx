@@ -90,11 +90,11 @@ export default function VersionDiff() {
         <p className="text-sm text-muted-foreground">{summary.subtitle}</p>
       </header>
 
-      {summary.isIdentical ? (
+      {summary.isIdentical || summary.isReordered ? (
         <EmptyState
           icon={<GitCompare className="w-12 h-12" />}
-          heading={VERSION_COPY.identicalHeading}
-          body={VERSION_COPY.identicalBody}
+          heading={summary.isReordered ? VERSION_COPY.reorderedHeading : VERSION_COPY.identicalHeading}
+          body={summary.isReordered ? VERSION_COPY.reorderedBody : VERSION_COPY.identicalBody}
         />
       ) : (
         <div className="space-y-6">
@@ -123,9 +123,9 @@ export default function VersionDiff() {
               </p>
             ) : (
               <ul className="space-y-2">
-                {data.ingredient_changes.map((change) => (
+                {data.ingredient_changes.map((change, index) => (
                   <DiffRow
-                    key={change.lineage_key}
+                    key={`${index}-${change.lineage_key}`}
                     change={change.change}
                     before={ingredientChangeLine(change, "before", decimalSeparator)}
                     after={ingredientChangeLine(change, "after", decimalSeparator)}

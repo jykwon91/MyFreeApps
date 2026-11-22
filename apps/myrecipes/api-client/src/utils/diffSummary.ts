@@ -3,7 +3,7 @@ import { VERSION_COPY } from "../constants/versions";
 import type { DiffResponse } from "../types/recipe/diff";
 import type { DiffSummary } from "../types/recipe/diff-summary";
 
-/** The header of a diff: its two versions' labels and a count of what changed. */
+/** The header of a diff: its two versions' labels, a count of what changed, and whether only the order did. */
 export function diffSummary(diff: DiffResponse): DiffSummary {
   const fromLabel = diff.from_version_number === null ? VERSION_COPY.nothing : `v${diff.from_version_number}`;
   const toLabel = `v${diff.to_version_number}`;
@@ -12,6 +12,7 @@ export function diffSummary(diff: DiffResponse): DiffSummary {
   const stepCount = diff.step_changes.length;
   const total = fieldCount + ingredientCount + stepCount;
   const fieldPart = fieldCount === 0 ? "" : `${formatCount(fieldCount, "detail")}, `;
+  const isReordered = total === 0 && diff.order_changed;
   return {
     fromLabel,
     toLabel,
@@ -20,9 +21,11 @@ export function diffSummary(diff: DiffResponse): DiffSummary {
     ingredientCount,
     stepCount,
     total,
-    isIdentical: total === 0,
-    subtitle:
-      total === 0
+    isIdentical: total === 0 && !isReordered,
+    isReordered,
+    subtitle: isReordered
+      ? VERSION_COPY.onlyOrderChanged
+      : total === 0
         ? VERSION_COPY.noDifferences
         : `${formatCount(total, "change")} — ${fieldPart}${formatCount(ingredientCount, "ingredient")}, ${formatCount(stepCount, "step")}.`,
   };

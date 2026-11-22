@@ -3,9 +3,16 @@
 No DB access: it takes already-loaded version/ingredient/step rows. Per-version
 fields (servings, prep/cook minutes) are compared one by one; ingredients are
 matched by ``lineage_key`` (stable across versions, so a quantity edit reads
-as a *change* not remove+add); steps are matched by ``position``.
+as a *change* not remove+add; a key that repeats on a side, as versions saved
+before keys were checked may, is matched occurrence by occurrence, in order);
+steps are matched by ``position``. A version
+that only reorders ingredients or steps has no changes, so ``order_changed``
+says so separately rather than the diff reading as identical.
 """
 from __future__ import annotations
+
+import uuid
+from collections import Counter, defaultdict, deque
 
 from app.core.version_diff_fields import VERSION_DIFF_FIELDS
 from app.models.recipe.recipe_ingredient import RecipeIngredient
@@ -48,36 +55,82 @@ def _ingredient_equal(a: RecipeIngredient, b: RecipeIngredient) -> bool:
     return a.name == b.name and qa == qb and a.unit == b.unit and a.note == b.note
 
 
+def _match_ingredients(
+    before: list[RecipeIngredient], after: list[RecipeIngredient],
+) -> tuple[list[int | None], list[int]]:
+    """Match each new-version ingredient to an old one with the same lineage_key.
+
+    Returns, for each ingredient of ``after``, the index of its match in ``before`` (None
+    for an added one), and the indexes of ``before`` left unmatched (removed), in order. A
+    key that appears more than once on a side (versions saved before keys were checked could
+    repeat one) is matched occurrence by occurrence, so no row is dropped.
+    """
+    unmatched: dict[uuid.UUID, deque[int]] = defaultdict(deque)
+    for index, ing in enumerate(before):
+        unmatched[ing.lineage_key].append(index)
+    matches = [
+        unmatched[ing.lineage_key].popleft() if unmatched.get(ing.lineage_key) else None
+        for ing in after
+    ]
+    removed = sorted(index for indexes in unmatched.values() for index in indexes)
+    return matches, removed
+
+
 def diff_ingredients(
     before: list[RecipeIngredient], after: list[RecipeIngredient],
 ) -> list[IngredientChange]:
-    before_by_key = {i.lineage_key: i for i in before}
-    after_by_key = {i.lineage_key: i for i in after}
+    """Added and changed ingredients in the new version's order, then removed ones in the
+    old version's order. A repeated lineage_key is matched occurrence by occurrence, in
+    order, so every row shows. Both lists must be in position order."""
+    matches, removed = _match_ingredients(before, after)
 
     changes: list[IngredientChange] = []
-    # Added + changed (iterate the new version so added items keep their order).
-    for key, new_ing in after_by_key.items():
-        old_ing = before_by_key.get(key)
-        if old_ing is None:
-            changes.append(
-                IngredientChange(lineage_key=key, change="added", after=_snapshot(new_ing))
-            )
-        elif not _ingredient_equal(old_ing, new_ing):
+    for new_ing, old_index in zip(after, matches):
+        if old_index is None:
             changes.append(
                 IngredientChange(
-                    lineage_key=key,
+                    lineage_key=new_ing.lineage_key, change="added", after=_snapshot(new_ing),
+                )
+            )
+        elif not _ingredient_equal(before[old_index], new_ing):
+            changes.append(
+                IngredientChange(
+                    lineage_key=new_ing.lineage_key,
                     change="changed",
-                    before=_snapshot(old_ing),
+                    before=_snapshot(before[old_index]),
                     after=_snapshot(new_ing),
                 )
             )
-    # Removed.
-    for key, old_ing in before_by_key.items():
-        if key not in after_by_key:
-            changes.append(
-                IngredientChange(lineage_key=key, change="removed", before=_snapshot(old_ing))
+    for old_index in removed:
+        old_ing = before[old_index]
+        changes.append(
+            IngredientChange(
+                lineage_key=old_ing.lineage_key, change="removed", before=_snapshot(old_ing),
             )
+        )
     return changes
+
+
+def order_changed(
+    before_ingredients: list[RecipeIngredient],
+    after_ingredients: list[RecipeIngredient],
+    before_steps: list[RecipeStep],
+    after_steps: list[RecipeStep],
+) -> bool:
+    """Whether the new version lists the same ingredients, or the same steps, in another order.
+
+    Ingredients: the ones both versions share (by lineage_key) come in a different order.
+    Steps are matched by position, so a reorder already shows as step changes; this also
+    reports it when the two versions have the same instructions in a different order.
+    All lists must be in position order.
+    """
+    matches, _ = _match_ingredients(before_ingredients, after_ingredients)
+    old_indexes = [index for index in matches if index is not None]
+    if old_indexes != sorted(old_indexes):
+        return True
+    before_text = [step.instruction for step in before_steps]
+    after_text = [step.instruction for step in after_steps]
+    return before_text != after_text and Counter(before_text) == Counter(after_text)
 
 
 def diff_steps(

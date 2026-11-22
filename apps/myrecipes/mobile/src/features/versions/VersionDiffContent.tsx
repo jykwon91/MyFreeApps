@@ -22,7 +22,9 @@ export default function VersionDiffContent({ diff, recipeId, isOwner }: VersionD
         </Text>
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{summary.subtitle}</Text>
       </View>
-      {summary.isIdentical ? (
+      {summary.isReordered ? (
+        <EmptyState body={VERSION_COPY.reorderedBody} heading={VERSION_COPY.reorderedHeading} />
+      ) : summary.isIdentical ? (
         <EmptyState body={VERSION_COPY.identicalBody} heading={VERSION_COPY.identicalHeading} />
       ) : (
         <>

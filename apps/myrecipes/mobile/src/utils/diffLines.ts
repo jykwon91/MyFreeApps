@@ -16,8 +16,9 @@ export function diffLines(diff: DiffResponse): DiffLines {
       before: fieldChangeValue(change, "before"),
       after: fieldChangeValue(change, "after"),
     })),
-    ingredients: diff.ingredient_changes.map((change) => ({
-      key: change.lineage_key,
+    // An older version can repeat a lineage key, so the index keeps each row's key unique.
+    ingredients: diff.ingredient_changes.map((change, index) => ({
+      key: `${index}-${change.lineage_key}`,
       change: change.change,
       before: ingredientChangeLine(change, "before", decimalSeparator),
       after: ingredientChangeLine(change, "after", decimalSeparator),

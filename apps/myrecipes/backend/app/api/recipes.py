@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, current_user_optional
 from app.core.config import settings
+from app.core.invalid_lineage_key_error import InvalidLineageKeyError
 from app.core.invalid_recipe_cursor_error import InvalidRecipeCursorError
 from app.core.recipe_list_constants import DEFAULT_RECIPE_PAGE_SIZE, MAX_RECIPE_PAGE_SIZE
 from app.core.rate_limit import check_photo_import_rate_limit
@@ -198,7 +199,10 @@ async def create_recipe(
     payload: RecipeCreateRequest,
     user: User = Depends(current_active_user),
 ) -> RecipeDetailResponse:
-    return await recipe_service.create_recipe(user.id, payload)
+    try:
+        return await recipe_service.create_recipe(user.id, payload)
+    except InvalidLineageKeyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @auth_router.post(
@@ -272,6 +276,8 @@ async def create_version(
         version = await recipe_service.create_version(user.id, recipe_id, payload)
     except InvalidBaseVersionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except InvalidLineageKeyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if version is None:
         raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
     return version

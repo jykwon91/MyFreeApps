@@ -44,6 +44,7 @@ const DIFF = {
     { lineage_key: "lk-basil", change: "added", before: null, after: { name: "basil", quantity: null, unit: null, note: "torn" } },
   ],
   step_changes: [{ position: 2, change: "removed", before: "Stir often.", after: null }],
+  order_changed: false,
 };
 const RECIPE = { id: "r1", title: "Tomato soup", is_owner: false, latest_version: null };
 
@@ -194,6 +195,38 @@ describe("VersionDiffScreen", () => {
     expect(await screen.findByRole("header", { name: "Identical" })).toBeTruthy();
     expect(screen.getByText("No differences between these versions.")).toBeTruthy();
     expect(screen.queryByRole("header", { name: "Ingredients" })).toBeNull();
+  });
+
+  it("says a version that only reordered ingredients or steps is in a different order, not identical", async () => {
+    diffReply = { status: 200, data: { ...DIFF, ingredient_changes: [], step_changes: [], order_changed: true } };
+    await show();
+
+    expect(await screen.findByRole("header", { name: "Reordered" })).toBeTruthy();
+    expect(screen.getByText("Only the order changed.")).toBeTruthy();
+    expect(screen.getByText("Same ingredients and steps, in a different order.")).toBeTruthy();
+    expect(screen.queryByRole("header", { name: "Identical" })).toBeNull();
+  });
+
+  it("shows every ingredient row even when an older version repeated a lineage key", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    const pepper = { ...SALT, name: "pepper" };
+    diffReply = {
+      status: 200,
+      data: {
+        ...DIFF,
+        ingredient_changes: [
+          { lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } },
+          { lineage_key: "lk-salt", change: "added", before: null, after: pepper },
+        ],
+      },
+    };
+    await show();
+
+    expect(await screen.findByLabelText("Changed: 1 tsp salt to 2 tsp salt")).toBeTruthy();
+    expect(screen.getByLabelText("Added: 1 tsp pepper")).toBeTruthy();
+    // Two rows sharing a React key can be merged or dropped when the list updates.
+    expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/same key/);
+    consoleError.mockRestore();
   });
 
   it("compares the first version against nothing, with everything added", async () => {
