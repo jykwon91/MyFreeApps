@@ -11,6 +11,11 @@ export const DIFF_PERMANENT_ERROR_STATUSES: readonly number[] = [400, 404, 422];
 /** The version timeline and diff (GET /recipes/{id}/versions, .../diff), worded the same on the website and the phone. */
 export const VERSION_COPY = {
   latest: "latest",
+  listLoading: "Loading versions",
+  listLoadFailedHeading: "Can't load versions",
+  listLoadFailedBody: "Check your connection and try again.",
+  listUpdateFailed: "Couldn't update the versions. Check your connection and try again.",
+  tryAgain: "Try again",
   originalRecipe: "Original recipe",
   noChangeNote: "No change note",
   compare: "Compare",

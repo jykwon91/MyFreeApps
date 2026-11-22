@@ -191,3 +191,85 @@ describe("RecipeDetail when the recipe is refetched", () => {
     expect(screen.getByRole("button", { name: /Try again/ })).toBeDisabled();
   });
 });
+
+describe("RecipeDetail cook log", () => {
+  const COOK = { id: "c1", version_id: "v2", cooked_at: "2026-11-12T00:00:00Z", rating: 4, outcome_notes: "Needed more salt", created_at: "2026-11-12T00:00:00Z" };
+  const EMPTY_TEXT = /No cooks logged yet/;
+
+  beforeEach(() => answerVersions({ v2: "loaded" }));
+
+  it("shows a skeleton, not the empty message, while the cook log loads", () => {
+    useListRecipeCooksQuery.mockReturnValue({ data: undefined, isError: false, isFetching: true });
+    renderPage();
+
+    expect(screen.getByLabelText("Loading cook log")).toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_TEXT)).not.toBeInTheDocument();
+  });
+
+  it("says it couldn't load, not that nothing is logged, and tries again", async () => {
+    const refetch = vi.fn();
+    useListRecipeCooksQuery.mockReturnValue({ data: undefined, isError: true, isFetching: false, refetch });
+    renderPage();
+
+    expect(screen.getByText("Couldn't load your cook log.")).toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_TEXT)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cooks on screen, with a note, when a refetch fails", () => {
+    useListRecipeCooksQuery.mockReturnValue({ data: [COOK], isError: true, isFetching: false, refetch: vi.fn() });
+    renderPage();
+
+    expect(screen.getByText("Needed more salt")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't update your cook log. Check your connection and try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load your cook log.")).not.toBeInTheDocument();
+  });
+
+  it("shows the empty message only for a cook log that came back empty", () => {
+    useListRecipeCooksQuery.mockReturnValue({ data: [], isError: false, isFetching: false });
+    renderPage();
+
+    expect(screen.getByText(EMPTY_TEXT)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Loading cook log")).not.toBeInTheDocument();
+  });
+});
+
+describe("RecipeDetail version timeline", () => {
+  beforeEach(() => answerVersions({ v2: "loaded" }));
+
+  it("shows a skeleton, not an empty rail, while the versions load", () => {
+    useListVersionsQuery.mockReturnValue({ data: undefined, isError: false, isFetching: true });
+    renderPage();
+
+    expect(screen.getByLabelText("Loading versions")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compare" })).not.toBeInTheDocument();
+  });
+
+  it("says it couldn't load the versions and tries again", async () => {
+    const refetch = vi.fn();
+    useListVersionsQuery.mockReturnValue({ data: undefined, isError: true, isFetching: false, refetch });
+    renderPage();
+
+    expect(screen.getByText("Can't load versions")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the versions on screen, with a note, when a refetch fails", () => {
+    useListVersionsQuery.mockReturnValue({ data: SUMMARIES, isError: true, isFetching: false, refetch: vi.fn() });
+    renderPage();
+
+    expect(screen.getByRole("button", { name: /^v2/ })).toBeInTheDocument();
+    expect(screen.getByText("Couldn't update the versions. Check your connection and try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Can't load versions")).not.toBeInTheDocument();
+  });
+
+  it("lists the versions when they load, with no note", () => {
+    useListVersionsQuery.mockReturnValue({ data: SUMMARIES, isError: false, isFetching: false });
+    renderPage();
+
+    expect(screen.getByRole("button", { name: /^v1/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't update the versions/)).not.toBeInTheDocument();
+  });
+});

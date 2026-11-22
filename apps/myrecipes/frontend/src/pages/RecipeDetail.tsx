@@ -18,7 +18,7 @@ import {
 } from "@myrecipes/api-client/store/recipesApi";
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
-import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import { deleteFailureOutcome } from "@myrecipes/api-client/utils/deleteFailureOutcome";
 import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
@@ -27,7 +27,9 @@ import RecipeLoadFailed from "@/features/recipes/RecipeLoadFailed";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
 import SelectedVersionPanel from "@/features/recipes/SelectedVersionPanel";
-import CookLogHistory from "@/features/recipes/CookLogHistory";
+import CookLogSection from "@/features/recipes/CookLogSection";
+import SectionLoadFailed from "@/features/recipes/SectionLoadFailed";
+import VersionTimelineSkeleton from "@/features/recipes/VersionTimelineSkeleton";
 import CookLogModal from "@/features/recipes/CookLogModal";
 import EditRecipeMetaModal from "@/features/recipes/EditRecipeMetaModal";
 
@@ -129,7 +131,6 @@ export default function RecipeDetail() {
   }
 
   const recipe = recipeQuery.data;
-  const versions = versionsQuery.data ?? [];
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -209,26 +210,42 @@ export default function RecipeDetail() {
           />
 
           {isOwner && (
-            <section className="bg-card border rounded-lg p-6">
-              <h2 className="text-base font-medium mb-4">{COOK_LOG_MESSAGES.historyTitle}</h2>
-              <CookLogHistory
-                recipeId={recipeId}
-                cooks={cooksQuery.data ?? []}
-                versionNumberById={versionNumberById}
-              />
-            </section>
+            <CookLogSection
+              recipeId={recipeId}
+              cooks={cooksQuery.data}
+              isError={cooksQuery.isError}
+              isFetching={cooksQuery.isFetching}
+              onRetry={() => void cooksQuery.refetch()}
+              versionNumberById={versionNumberById}
+            />
           )}
         </div>
 
         <div className="lg:col-span-1">
-          <VersionTimeline
-            versions={versions}
-            selectedId={effectiveVersionId}
-            compareIds={compareIds}
-            onSelect={setSelectedVersionId}
-            onToggleCompare={toggleCompare}
-            onCompare={runCompare}
-          />
+          {versionsQuery.data ? (
+            <VersionTimeline
+              versions={versionsQuery.data}
+              selectedId={effectiveVersionId}
+              compareIds={compareIds}
+              onSelect={setSelectedVersionId}
+              onToggleCompare={toggleCompare}
+              onCompare={runCompare}
+              isStale={versionsQuery.isError}
+            />
+          ) : versionsQuery.isError ? (
+            <section className="bg-card border rounded-lg p-5 space-y-4">
+              <h2 className="text-base font-medium">Timeline</h2>
+              <SectionLoadFailed
+                heading={VERSION_COPY.listLoadFailedHeading}
+                message={VERSION_COPY.listLoadFailedBody}
+                retryLabel={VERSION_COPY.tryAgain}
+                isRetrying={versionsQuery.isFetching}
+                onRetry={() => void versionsQuery.refetch()}
+              />
+            </section>
+          ) : (
+            <VersionTimelineSkeleton />
+          )}
         </div>
       </div>
 

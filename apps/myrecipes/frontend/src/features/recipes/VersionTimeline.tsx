@@ -1,5 +1,5 @@
 import { GitCompare } from "lucide-react";
-import { Button, formatDate } from "@platform/ui";
+import { Button, StaleDataBanner, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
 import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import type { VersionSummary } from "@myrecipes/api-client/types/recipe/version";
@@ -15,6 +15,8 @@ interface Props {
   onSelect: (versionId: string) => void;
   onToggleCompare: (versionId: string) => void;
   onCompare: () => void;
+  /** A refresh of the list failed while these versions stayed on screen. */
+  isStale: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export default function VersionTimeline({
   onSelect,
   onToggleCompare,
   onCompare,
+  isStale,
 }: Props) {
   const ordered = newestFirst(versions);
 
@@ -58,6 +61,8 @@ export default function VersionTimeline({
           </span>
         </Button>
       </div>
+
+      {isStale ? <StaleDataBanner message={VERSION_COPY.listUpdateFailed} /> : null}
 
       <ol className="space-y-2">
         {ordered.map((version, idx) => {
