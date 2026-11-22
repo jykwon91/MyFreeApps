@@ -15,6 +15,7 @@ import { HOME_PERIODS, HOME_RECEIPTS_ARGS, HOME_SECTION_RETRY, MONEY_ANALYSIS_LI
 import { MONEY_ANALYSIS_MESSAGES } from "../../constants/moneyAnalysis";
 import { useToday } from "../../lib/useToday";
 import type { AnalysisScope } from "../../types/AnalysisScope";
+import DemoWelcomeNotice from "../demoWelcome/DemoWelcomeNotice";
 import PropertyPickerField from "../analyticsControls/PropertyPickerField";
 import CategoryPickerField from "../moneyAnalysis/CategoryPickerField";
 import { isEmptySummary } from "../moneyAnalysis/moneyAnalysisDisplay";
@@ -108,6 +109,7 @@ export default function HomeScreen() {
     >
       <WorkspaceOfflineNotice />
       <StaleDataBanner isShown={isShowingOldData} />
+      <DemoWelcomeNotice />
       {hasNothingYet ? (
         <EmptyState
           action={canWrite ? { label: "Take a photo", onPress: () => router.push("/camera") } : undefined}
