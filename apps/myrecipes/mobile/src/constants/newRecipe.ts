@@ -40,6 +40,7 @@ export const NEW_RECIPE_MESSAGES = {
   create: "Create recipe",
   creating: "Creating…",
   created: "Recipe created.",
+  chooseDifferentPhoto: "Choose a different photo",
 } as const;
 
 /** Over a draft that came back thin, so it's checked before it's created. */
@@ -72,6 +73,14 @@ export const DRAFT_DISCARD_COPY: Record<DraftOrigin, DiscardCopy> = {
     keepEditing: "Stay here",
     discard: "Leave",
   },
+};
+
+/** What's asked before a photo's draft is thrown away to pick another photo. */
+export const CHOOSE_AGAIN_DISCARD_COPY: DiscardCopy = {
+  discardTitle: "Choose a different photo?",
+  discardBody: "This recipe won't be created, and I'd have to read the new photo.",
+  keepEditing: "Stay here",
+  discard: "Choose another",
 };
 
 /** How tall a box for a description or a step starts, so it reads as somewhere to write. */
