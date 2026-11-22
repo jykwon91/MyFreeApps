@@ -297,13 +297,46 @@ describe("MGA Loot verdicts", () => {
     expect(line).toContain("use: +280 attack power for 20s every 2min = +46.7 attack power");
   });
 
-  it("still can't judge an effect its data couldn't value (Fiery War Axe)", () => {
+  it("scores a proc with no rate in the data at the Classic server's own rule (Fiery War Axe)", () => {
     const AXE = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 1`;
     const [line] = run(
       `items[870] = { ${AXE}, ${strength(20)}, lines = { "Chance on hit: Hurls a fiery ball that causes 155 to 197 Fire damage." } }; rolls[1] = 870; talents = { 31, 20, 0 }; ` +
         `items[16] = { ${AXE}, ${strength(10)} }; equipped[16] = 16`,
     );
-    expect(line).toContain("Can't judge: this item has \"Chance on hit: Hurls a fiery ball");
+    expect(line).toContain("Upgrade");
+    expect(line).toContain("1.08 PPM (Classic server rule)");
+    expect(line).not.toContain("Can't judge");
+  });
+
+  it("calls a downgrade when only your worn item has the uncounted effect (War Staff vs Zum'rah's Vexing Cane)", () => {
+    const STAFF = `loc = "INVTYPE_2HWEAPON", classID = 2, subclassID = 10`;
+    const [line] = run(
+      `items[854] = { ${STAFF} }; rolls[1] = 854; talents = { 31, 20, 0 }; ` +
+        `items[18082] = { ${STAFF}, ${strength(20)}, lines = { "Equip: Chance on harmful spell cast to summon a Zombie Troll of Zum'rah for 20 sec." } }; equipped[16] = 18082`,
+    );
+    expect(line).toMatch(/Downgrade -\d+% vs/);
+    expect(line).toContain("which only widens the gap");
+    expect(line).not.toContain("Can't judge");
+  });
+
+  it("calls an upgrade when only the new item has the uncounted effect and it already wins on stats", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const [line] = run(
+      `items[19019] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts your enemy with lightning, dealing 300 Nature damage and then jumping to additional nearby enemies." } }; rolls[1] = 19019; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
+    );
+    expect(line).toMatch(/Upgrade \+\d+% over/);
+    expect(line).toContain("which only adds to it");
+    expect(line).not.toContain("Can't judge");
+  });
+
+  it("still can't judge when an uncounted effect could flip the verdict (Thunderfury's slow, weaker on stats)", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const [line] = run(
+      `items[19019] = { ${SWORD}, ${strength(10)}, lines = { "Chance on hit: Blasts your enemy with lightning, dealing 300 Nature damage and then jumping to additional nearby enemies." } }; rolls[1] = 19019; talents = { 31, 20, 0 }; ` +
+        `items[16] = { ${SWORD}, ${strength(20)} }; equipped[16] = 16`,
+    );
+    expect(line).toContain("Can't judge: this item has \"Chance on hit: Blasts your enemy");
     expect(line).not.toContain("Upgrade");
   });
 

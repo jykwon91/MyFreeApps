@@ -13,7 +13,9 @@ Every conversion turns an effect into a steady per-fight equivalent of a stat th
   A chance-on-hit item spell whose client data has neither (``ProcChance`` 101 is "not set") takes the item's
   PPM from cmangos classic-db's ``item_template.spellppmRate`` — the client carries none — and the note says
   "Classic rate" (an item Forever gave a renumbered proc spell takes it when both sides have exactly one
-  chance on hit). An Equip proc aura with no client rate likewise takes cmangos' ``spell_proc_event``
+  chance on hit). With no Classic rate either, a chance-on-hit item spell takes the Classic server's own rule
+  for items with no rate, ``CLASSIC_SERVER_ITEM_PPM`` (1.08 PPM, from cmangos ``GetWeaponProcChance``), and the
+  note says "Classic server rule". An Equip proc aura with no client rate likewise takes cmangos' ``spell_proc_event``
   ``ppmRate`` / ``CustomChance`` for that aura spell. With no rate anywhere the effect is unresolved: no rate is
   ever made up — ``ProcChance`` 101 ("not set") is never read as a number.
   An internal cooldown (``SpellAuraOptions.ProcCategoryRecovery``) caps the rate.
@@ -42,6 +44,7 @@ from dataclasses import dataclass
 
 from scripts.wow_loot.effect_model import (
     ASSUMED_SECONDS_PER_HIT,
+    CLASSIC_SERVER_ITEM_PPM,
     NO_RATE,
     NONE,
     PERCENT_KEYS,
@@ -269,6 +272,8 @@ def effect_entries(item: Item, effect: ItemSpell, book: Mapping[int, Spell]) -> 
         entries = _equip_entries(item, spell, parts)
     elif effect.trigger == TRIGGER_CHANCE_ON_HIT:
         rate = proc_rate(item, spell.proc_chance, spell.ppm, spell.proc_icd_ms, effect.classic_ppm)
+        if rate is None and spell.proc_chance >= NO_RATE:
+            rate = Rate(CLASSIC_SERVER_ITEM_PPM / 60, f"{CLASSIC_SERVER_ITEM_PPM:g} PPM (Classic server rule)")
         if rate is None:
             entries = [Entry(UNRESOLVED, 0, f"{spell.name}: the data gives no proc rate")]
         else:

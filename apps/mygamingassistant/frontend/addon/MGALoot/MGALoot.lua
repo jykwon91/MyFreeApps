@@ -468,8 +468,27 @@ local function judge(link, brief)
     text = GREY .. "Can't compare: " .. old.blocked .. "|r"
   elseif not old.link then
     text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
+  elseif #unscored == 0 and #old.unscored > 0 and old.score > 0 and percentText(new, old.score) <= -SIDEGRADE_PCT then
+    -- Only your worn item has an effect MGA Loot can't count, and it's already better on the rest:
+    -- that effect only widens the gap, so the downgrade stands.
+    local shown
+    pct, shown = percentText(new, old.score)
+    text, kind = RED .. "Downgrade " .. shown .. " vs|r " .. old.link, "downgrade"
+    text = text .. "\n" .. GREY .. "and yours also has " .. table.concat(old.unscored, ", ") .. ", which only widens the gap|r"
+  elseif #old.unscored == 0 and #unscored > 0 and (old.score <= 0 and new > 0 or old.score > 0 and percentText(new, old.score) >= SIDEGRADE_PCT) then
+    -- Only this item has an uncounted effect, and it already wins on the rest: the effect only adds to it.
+    if old.score > 0 then
+      local shown
+      pct, shown = percentText(new, old.score)
+      text = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link
+    else
+      pct = EMPTY_SLOT_PCT
+      text = GREEN .. "Upgrade over|r " .. old.link
+    end
+    kind = "upgrade"
+    text = text .. "\n" .. GREY .. "and it also has " .. table.concat(unscored, ", ") .. ", which only adds to it|r"
   elseif #unscored > 0 or #old.unscored > 0 then
-    -- A verdict that leaves part of either item out would mislead: say what it can't count instead.
+    -- An uncounted effect could flip the verdict: say what it can't count instead.
     local whose = #unscored > 0 and ("this item has " .. table.concat(unscored, ", "))
       or (old.link .. " has " .. table.concat(old.unscored, ", "))
     text = YELLOW .. "Can't judge:|r " .. whose .. YELLOW .. ", which MGA Loot can't count|r"
