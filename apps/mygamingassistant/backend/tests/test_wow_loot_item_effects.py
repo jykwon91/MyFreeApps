@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from scripts.wow_loot.effect_values import (
+from scripts.wow_loot.effect_model import (
     AURA_ATTACK_POWER,
     AURA_DUMMY,
     AURA_PROC_TRIGGER,
@@ -26,9 +26,8 @@ from scripts.wow_loot.effect_values import (
     Item,
     ItemSpell,
     Spell,
-    item_entries,
-    proc_rate,
 )
+from scripts.wow_loot.effect_values import item_entries, proc_rate
 from scripts.wow_loot.item_effects import OUT, classic_item_ppm
 
 ENEMY = 6

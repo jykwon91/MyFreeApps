@@ -21,7 +21,7 @@ from scripts.wow_food.build import WOW_DATA_DIR
 from scripts.wow_items.client_ids import STAT_KEY_BY_CLIENT_ID
 from scripts.wow_items.forever_items import ForeverTables, Row, hotfix_cache_path, load_forever_tables
 from scripts.wow_items.formula import stat_lines
-from scripts.wow_loot.effect_values import (
+from scripts.wow_loot.effect_model import (
     ASSUMED_SECONDS_PER_HIT,
     NONE,
     TRIGGER_CHANCE_ON_HIT,
@@ -33,8 +33,8 @@ from scripts.wow_loot.effect_values import (
     Item,
     ItemSpell,
     Spell,
-    item_entries,
 )
+from scripts.wow_loot.effect_values import item_entries
 from scripts.wow_world_map.sources import CMANGOS_COMMIT, cmangos_dump
 from scripts.wow_world_map.sql_dump import read_dump
 
