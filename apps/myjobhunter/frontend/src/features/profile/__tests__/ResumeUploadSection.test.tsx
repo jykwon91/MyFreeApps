@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DOCUMENT_DOWNLOAD_MESSAGES } from "@/constants/document-download-messages";
 import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
@@ -312,5 +313,51 @@ describe("ResumeUploadSection", () => {
 
     await userEvent.upload(screen.getByTestId("file-input"), new File(["%PDF-1.4 two"], "two.pdf", { type: "application/pdf" }));
     await waitFor(() => expect(uploadTrigger).toHaveBeenCalledTimes(2));
+  });
+
+  describe("download original", () => {
+    const tab = { opener: {}, close: vi.fn(), location: { href: "" } };
+
+    function stubDownloadUrl(url: string) {
+      const trigger = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ url }) });
+      setupDefaultMocks();
+      mockUseListResumeJobs.mockReturnValue({
+        data: [STUB_JOB],
+        isLoading: false,
+      } as unknown as ReturnType<typeof useListResumeJobsQuery>);
+      mockUseLazyGetDownloadUrl.mockReturnValue(
+        [trigger, { isUninitialized: true }, vi.fn()] as unknown as ReturnType<typeof useLazyGetResumeDownloadUrlQuery>,
+      );
+      return trigger;
+    }
+
+    async function pressDownload() {
+      render(<ResumeUploadSection profileId="profile-1" />);
+      const { onDownload } = mockResumeJobRow.mock.calls[0][0];
+      await onDownload(STUB_JOB.id);
+    }
+
+    beforeEach(() => {
+      tab.location.href = "";
+      vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    });
+
+    it("opens the tab in the click and sends it to the fresh link", async () => {
+      const trigger = stubDownloadUrl("https://files.example.com/resume.pdf");
+      await pressDownload();
+
+      expect(window.open).toHaveBeenCalledWith("", "_blank");
+      expect(trigger).toHaveBeenCalledWith("job-1");
+      expect(tab.location.href).toBe("https://files.example.com/resume.pdf");
+    });
+
+    it("refuses a link that isn't http(s)", async () => {
+      stubDownloadUrl("javascript:alert(1)");
+      await pressDownload();
+
+      expect(tab.location.href).toBe("");
+      expect(tab.close).toHaveBeenCalled();
+      expect(mockShowError).toHaveBeenCalledWith(DOCUMENT_DOWNLOAD_MESSAGES.unsafeLink);
+    });
   });
 });

@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { FileText } from "lucide-react";
-import { FileUploadDropzone, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { FileUploadDropzone, showError, showSuccess } from "@platform/ui";
 import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
+import { useFileDownload } from "@/hooks/useFileDownload";
 import ResumeJobRow from "@/features/profile/ResumeJobRow";
 import ResumeUploadSectionSkeleton from "@/features/profile/ResumeUploadSectionSkeleton";
 import {
@@ -38,7 +38,7 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
 
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
   const [getDownloadUrl] = useLazyGetResumeDownloadUrlQuery();
-  const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
+  const { download: handleDownload, downloadingId } = useFileDownload((jobId) => getDownloadUrl(jobId).unwrap());
 
   if (isLoading) {
     return <ResumeUploadSectionSkeleton />;
@@ -62,18 +62,6 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
           ? unsureSavedMessage(LOST_CREATE_CHECK_WHERE.resumes, isNoResponse(err))
           : aiActionErrorMessage(err, "resumeUpload", "Upload failed: "),
       );
-    }
-  }
-
-  async function handleDownload(jobId: string) {
-    setDownloadingJobId(jobId);
-    try {
-      const result = await getDownloadUrl(jobId).unwrap();
-      window.open(result.url, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      showError(`Download failed: ${extractErrorMessage(err)}`);
-    } finally {
-      setDownloadingJobId(null);
     }
   }
 
@@ -104,7 +92,7 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
               key={job.id}
               job={job}
               onDownload={handleDownload}
-              isDownloading={downloadingJobId === job.id}
+              isDownloading={downloadingId === job.id}
             />
           ))}
         </div>
