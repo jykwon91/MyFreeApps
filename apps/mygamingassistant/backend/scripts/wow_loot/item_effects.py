@@ -22,6 +22,7 @@ import argparse
 import json
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
+from dataclasses import replace
 from pathlib import Path
 
 from scripts.wow_food.build import WOW_DATA_DIR
@@ -51,17 +52,18 @@ from scripts.wow_loot.effect_model import (
     World,
 )
 from scripts.wow_loot.budget import MIN_SAMPLE, Budget, budget_samples, effect_points
+from scripts.wow_loot.class_spell import ClassSpell, class_spells
 from scripts.wow_loot.effect_values import item_entries
 from scripts.wow_loot.mobs import mob_world, normal_mobs, summoned_creature, unique_names
 from scripts.wow_rares.creature_cache import creature_cache_path, read_creature_cache
-from scripts.wow_world_map.sources import CMANGOS_COMMIT, cmangos_dump
+from scripts.wow_world_map.sources import CMANGOS_COMMIT, cmangos_dump, wago_table
 from scripts.wow_world_map.sql_dump import read_dump
 
 OUT = WOW_DATA_DIR / "lootAddon" / "itemEffects.json"
 TABLES = (
     "Item", "ItemSparse", "ItemEffect", "ItemXItemEffect", "SpellName", "SpellEffect", "SpellMisc",
     "SpellDuration", "SpellAuraOptions", "SpellProcsPerMinute", "SpellCooldowns", "SpellShapeshift",
-    "SpellEquippedItems", "Spell",
+    "SpellEquippedItems", "Spell", "SkillLineAbility", "SpellCastTimes", "SpellLevels", "SpellPower",
 )
 # Item.InventoryType values a character can wear (no shirts, tabards, bags or ammo).
 EQUIPPABLE = frozenset({1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 25, 26, 28})
@@ -100,9 +102,11 @@ class SpellBook(Mapping[int, Spell]):
         tables: ForeverTables,
         classic_events: Mapping[int, tuple[float, float]],
         creatures: Callable[[int], Creature] | None = None,
+        families: Mapping[int, int] | None = None,
     ) -> None:
         self._classic_events = classic_events
         self._creatures = creatures
+        self._families = families or {}
         self._names = {_int(r["ID"]): r["Name_lang"] for r in tables.table("SpellName")}
         self._descriptions = {_int(r["ID"]): r.get("Description_lang") or "" for r in tables.table("Spell")}
         self._effects: dict[int, list[Row]] = {}
@@ -166,6 +170,7 @@ class SpellBook(Mapping[int, Spell]):
             when_hit=bool(proc_mask & PROC_WHEN_HIT_BITS),
             chance_worded="chance" in self._descriptions.get(spell_id, "").lower(),
             creatures=tuple(self._creatures(c) for c in summoned) if self._creatures else (),
+            family=self._families.get(spell_id, 0),
             effects=tuple(
                 EffectRow(
                     effect=_int(r["Effect"]),
@@ -176,6 +181,10 @@ class SpellBook(Mapping[int, Spell]):
                     trigger=_int(r["EffectTriggerSpell"]),
                     target=_int(r["ImplicitTarget_0"]),
                     target2=_int(r["ImplicitTarget_1"]),
+                    class_mask=(
+                        _int(r["EffectSpellClassMask_0"]), _int(r["EffectSpellClassMask_1"]),
+                        _int(r["EffectSpellClassMask_2"]), _int(r["EffectSpellClassMask_3"]),
+                    ),
                 )
                 for r in rows
             ),
@@ -259,8 +268,9 @@ def build_effects(
     creatures: Callable[[int], Creature] | None = None,
     world: World = World(),
     budget: tuple[BudgetTables, Budget] | None = None,
+    families: Mapping[int, int] | None = None,
 ) -> dict[int, list[Entry]]:
-    book = SpellBook(tables, classic_events, creatures)
+    book = SpellBook(tables, classic_events, creatures, families)
     items = tables.rows["Item"]
     sparse = tables.rows["ItemSparse"]
     out: dict[int, list[Entry]] = {}
@@ -303,6 +313,44 @@ def summary(effects: Mapping[int, list[Entry]]) -> Counter[str]:
     return kinds
 
 
+def class_mod_summary(effects: Mapping[int, list[Entry]]) -> Counter[str]:
+    """Class-spell modifier entries: valued, or not computable from the data."""
+    kinds: Counter[str] = Counter()
+    for entries in effects.values():
+        for e in entries:
+            if e.cls:
+                kinds["class-spell changes not computable" if e.stat == UNRESOLVED else "class-spell changes valued"] += 1
+    return kinds
+
+
+def load_class_spells(tables: ForeverTables, options: list[Row]) -> tuple[ClassSpell, ...]:
+    effects: dict[int, list[Row]] = {}
+    for row in tables.table("SpellEffect"):
+        if row["DifficultyID"] == BASE_DIFFICULTY:
+            effects.setdefault(_int(row["SpellID"]), []).append(row)
+    return class_spells(
+        options,
+        tables.table("SkillLineAbility"),
+        {_int(r["ID"]): r["Name_lang"] for r in tables.table("SpellName")},
+        effects,
+        tables.table("SpellMisc"),
+        tables.table("SpellCastTimes"),
+        {_int(r["ID"]): _int(r["Duration"]) for r in tables.table("SpellDuration")},
+        tables.table("SpellCooldowns"),
+        tables.table("SpellLevels"),
+        tables.table("SpellPower"),
+    )
+
+
+def entry_json(e: Entry) -> dict[str, object]:
+    out: dict[str, object] = {"stat": e.stat, "value": e.value, "note": e.note}
+    if e.pvp:
+        out["pvp"] = True
+    if e.cls:
+        out["class"] = e.cls
+    return out
+
+
 def write_effects(path: Path, payload: dict) -> None:
     """The JSON with one item per line, so a diff shows which items changed."""
     items = payload.pop("items")
@@ -333,7 +381,9 @@ def main() -> None:
     client_names = {c.creature_id: (c.name, c.creature_type) for c in cache.creatures.values()}
     dump = read_dump(cmangos_dump(), {"item_template", "spell_proc_event", "creature_template", "creature"})
     templates = {int(t["Entry"]): t for t in dump["creature_template"]}
-    world = mob_world(normal_mobs(dump["creature"], templates))
+    # SpellClassOptions isn't in the client cache's table list: wago.tools' export with hotfixes.
+    options = wago_table("SpellClassOptions", hotfixes=True)
+    world = replace(mob_world(normal_mobs(dump["creature"], templates)), class_spells=load_class_spells(tables, options))
     budget_tables = load_tables()
     effect_items = {_int(r["ItemID"]) for r in tables.table("ItemXItemEffect")}
     classic_items = {int(r["entry"]): r for r in dump["item_template"]}
@@ -344,6 +394,7 @@ def main() -> None:
     effects = build_effects(
         tables, classic_item_procs(dump["item_template"]), classic_proc_events(dump["spell_proc_event"]),
         creature_lookup(templates, client_names), world, (budget_tables, budget),
+        {_int(r["SpellID"]): _int(r["SpellClassSet"]) for r in options},
     )
     write_effects(OUT, {
         "source": (
@@ -367,16 +418,18 @@ def main() -> None:
             "budget = stat points the item lacks next to no-effect items of its slot group, quality and item level "
             f"(budget: group -> quality -> item level -> median stat points, at least {MIN_SAMPLE} items a cell), "
             "MGA Loot's estimate for the effects marked unresolved; pvp: true = worth more against players than this "
-            "PvE value (control, immunities, damage shields and when-hit procs, armor and resistance cuts), a label only. "
+            "PvE value (control, immunities, damage shields and when-hit procs, armor and resistance cuts), a label only; "
+            "class = the class it counts for (a change to that class's spells), every other class counts it as 0. "
             f"A non-weapon's chance per hit assumes a hit every {ASSUMED_SECONDS_PER_HIT}s, "
             f"a chance per cast a cast every {ASSUMED_SECONDS_PER_CAST}s."
         ),
         "items": {
-            str(item_id): [{"stat": e.stat, "value": e.value, "note": e.note, **({"pvp": True} if e.pvp else {})} for e in entries]
+            str(item_id): [entry_json(e) for e in entries]
             for item_id, entries in effects.items()
         },
     })
     print(f"{len(effects):,} items with effect data: " + ", ".join(f"{n:,} {k}" for k, n in summary(effects).most_common()))
+    print(", ".join(f"{n:,} {k}" for k, n in class_mod_summary(effects).most_common()))
 
 
 if __name__ == "__main__":

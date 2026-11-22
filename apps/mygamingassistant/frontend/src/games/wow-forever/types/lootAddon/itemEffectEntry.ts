@@ -5,4 +5,6 @@ export interface ItemEffectEntry {
   note: string;
   /** Worth a lot more against players than its PvE value (control, immunities, damage shields, armor cuts...). */
   pvp?: true;
+  /** A change to this class's spells (class token, e.g. "warlock"): every other class counts it as 0. */
+  class?: string;
 }

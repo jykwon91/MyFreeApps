@@ -402,6 +402,20 @@ describe("MGA Loot verdicts", () => {
     expect(warrior).toContain("About the same");
   });
 
+  it("counts a change to class spells only for that class (Zandalarian Shadow Mastery Talisman's Kick)", () => {
+    const TRINKET = `loc = "INVTYPE_TRINKET", ${ARMOR}, subclassID = 0`;
+    const TALISMAN = `items[19617] = { ${TRINKET}, ${strength(10)} }; rolls[1] = 19617; talents = { 31, 20, 0 }; `;
+    const WORN = `items[13] = { ${TRINKET}, ${strength(10)} }; items[14] = { ${TRINKET}, ${strength(10)} }; equipped[13] = 13; equipped[14] = 14`;
+    const [rogue] = run(`${TALISMAN}me.class = "ROGUE"; ${WORN}`);
+    expect(rogue).toContain("Improved Kick: Kick");
+    expect(rogue).not.toContain("only for rogues");
+    expect(rogue).not.toContain("About the same");
+    const [warrior] = run(`${TALISMAN}${WORN}`);
+    expect(warrior).toContain("(only for rogues, so it counts 0)");
+    expect(warrior).toContain("About the same");
+    expect(warrior).not.toContain("estimated from item level");
+  });
+
   it("turns armor off the target into a share of weapon DPS against mobs your level", () => {
     const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
     const sword = (id: number): string => `items[${id}] = { ${SWORD}, stats = { ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 40 } }`;

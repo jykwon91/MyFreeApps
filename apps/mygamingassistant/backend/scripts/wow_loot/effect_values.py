@@ -65,6 +65,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
+from scripts.wow_loot.class_mods import class_mod_entries
+from scripts.wow_loot.class_spell import FAMILY_CLASS
 from scripts.wow_loot.creature_types import band_of
 from scripts.wow_loot.effect_model import (
     ASSUMED_SECONDS_PER_CAST,
@@ -80,6 +82,7 @@ from scripts.wow_loot.effect_model import (
     USE_TRIGGERS,
     ArmorCut,
     Buff,
+    ClassMod,
     Control,
     Damage,
     Entry,
@@ -225,6 +228,11 @@ def _enemy_entry(part: object, uptime: float, when: str, world: World) -> Entry 
     return None
 
 
+def _passing_class_mod(part: ClassMod) -> Entry:
+    """A class-spell change that only lasts a while (a Use or a proc): its class is known, its worth isn't."""
+    return Entry(UNRESOLVED, 0, f"{part.name}: changes class spells only for a while", cls=FAMILY_CLASS.get(part.family, ""))
+
+
 def _proc_entries(
     item: Item, parts: tuple | list, rate: Rate, prefix: str, world: World = World(), cast: bool = False,
 ) -> list[Entry]:
@@ -271,6 +279,8 @@ def _proc_entries(
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries.append(_passing_class_mod(part))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{prefix}: an effect inside a proc the data can't resolve"))
     return entries
@@ -325,6 +335,8 @@ def _use_entries(item: Item, effect: ItemSpell, spell: Spell, parts: list[object
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries.append(_passing_class_mod(part))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: a use effect the data can't resolve"))
     return entries
@@ -368,6 +380,8 @@ def _equip_entries(item: Item, spell: Spell, parts: list[object], world: World =
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries += class_mod_entries(part, world.class_spells)
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: an equip effect the data can't resolve"))
     return entries

@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from scripts.wow_loot.class_spell import ClassSpell, changed_spells, class_spells
 from scripts.wow_loot.effect_model import (
     AURA_ATTACK_POWER,
     AURA_DUMMY,
@@ -423,6 +424,17 @@ def test_committed_pvp_marks() -> None:
     assert "pvp" not in _item(21180)[0]
 
 
+def test_committed_class_spell_modifiers_count_for_their_class() -> None:
+    # Totem of Rage's flat shock damage: a shaman's, valued at Earth Shock every 6s.
+    shock = _item(22395)[0]
+    assert shock["class"] == "shaman"
+    assert shock["stat"] == "spell_dps"
+    assert shock["value"] > 0
+    assert "Earth Shock" in shock["note"]
+    # The rogue's Kick cooldown cut counts for rogues.
+    assert _item(19617)[0]["class"] == "rogue"
+
+
 def test_committed_water_breathing_item() -> None:
     assert _item(9452) == [{"stat": "none", "value": 0, "note": "Water Breathing: no combat value"}]
 
@@ -433,8 +445,112 @@ def test_committed_entries_are_well_formed() -> None:
     for item_id, entries in items.items():
         assert entries, item_id
         for entry in entries:
-            assert set(entry) <= {"stat", "value", "note", "pvp"}, item_id
+            assert set(entry) <= {"stat", "value", "note", "pvp", "class"}, item_id
             assert entry.get("pvp", True) is True, item_id
             assert entry["note"], item_id
             if entry["stat"] in (NONE, UNRESOLVED):
                 assert entry["value"] == 0, item_id
+
+
+# --- Class-spell modifiers ------------------------------------------------------------------
+
+AURA_ADD_FLAT_MODIFIER = 107
+AURA_ADD_PCT_MODIFIER = 108
+SHAMAN_FAMILY = 11
+PRIEST_FAMILY = 6
+SHOCK_MASK = (0x100000, 0, 0, 0)
+NATURE = 8
+EARTH_SHOCK = ClassSpell(8046, "Earth Shock", SHAMAN_FAMILY, SHOCK_MASK, "shaman", school_mask=NATURE,
+                         cooldown_ms=6000, mana_cost=345, direct=517)
+LIGHTNING_BOLT = ClassSpell(15208, "Lightning Bolt", SHAMAN_FAMILY, (0x1, 0, 0, 0), "shaman", school_mask=NATURE,
+                            cast_ms=3000, mana_cost=265, direct=419)
+SHAMAN_WORLD = World(class_spells=(EARTH_SHOCK, LIGHTNING_BOLT))
+
+
+def _modifier(aura: int, op: int, amount: float, mask: tuple[int, int, int, int]) -> EffectRow:
+    return EffectRow(EFFECT_APPLY_AURA, aura, amount, op, 0, 0, CASTER_TARGET, class_mask=mask)
+
+
+def _equip_mod(row: EffectRow, family: int = SHAMAN_FAMILY) -> list[Entry]:
+    spell = Spell(60, "Shock Totem", effects=(row,), family=family)
+    return _entries(ARMOUR, ItemSpell(60, TRIGGER_ON_EQUIP), spell, world=SHAMAN_WORLD)
+
+
+def test_flat_spell_damage_is_extra_per_cast_over_its_cooldown_for_its_class() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 0, 30, SHOCK_MASK))
+    assert entry.stat == "spell_dps"
+    assert entry.value == 5.0
+    assert entry.cls == "shaman"
+    assert "Earth Shock" in entry.note
+
+
+def test_percent_spell_damage_is_a_share_of_the_base_amount() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_PCT_MODIFIER, 0, 10, SHOCK_MASK))
+    assert entry.value == pytest.approx(51.7 / 6, abs=0.001)
+
+
+def test_mana_cost_cut_is_mp5() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 14, -60, SHOCK_MASK))
+    assert entry.stat == "mp5"
+    assert entry.value == 50.0
+    assert entry.cls == "shaman"
+
+
+def test_cooldown_cut_is_more_casts() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 11, -1000, SHOCK_MASK))
+    assert entry.value == pytest.approx(517 * (1 / 5 - 1 / 6), abs=0.001)
+
+
+def test_spell_with_no_cooldown_is_not_computable_for_its_class() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 0, 30, (0x1, 0, 0, 0)))
+    assert entry.stat == UNRESOLVED
+    assert entry.cls == "shaman"
+    assert "no cooldown" in entry.note
+
+
+def test_crit_chance_change_is_not_computable_for_its_class() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 7, 5, SHOCK_MASK))
+    assert entry.stat == UNRESOLVED
+    assert entry.cls == "shaman"
+    assert "critical strike chance of Earth Shock" in entry.note
+
+
+def test_change_to_spells_the_data_does_not_list_is_not_computable() -> None:
+    [entry] = _equip_mod(_modifier(AURA_ADD_FLAT_MODIFIER, 0, 30, SHOCK_MASK), family=PRIEST_FAMILY)
+    assert entry.stat == UNRESOLVED
+    assert entry.cls == "priest"
+
+
+def test_change_to_several_spells_counts_at_the_one_it_adds_most_to() -> None:
+    frost = ClassSpell(10473, "Frost Shock", SHAMAN_FAMILY, SHOCK_MASK, "shaman", school_mask=16,
+                       cooldown_ms=6000, mana_cost=325, direct=486)
+    spells = (EARTH_SHOCK, frost)
+    spell = Spell(61, "Shock Totem", effects=(_modifier(AURA_ADD_PCT_MODIFIER, 0, 10, SHOCK_MASK),), family=SHAMAN_FAMILY)
+    [entry] = _entries(ARMOUR, ItemSpell(61, TRIGGER_ON_EQUIP), spell, world=World(class_spells=spells))
+    assert "Earth Shock" in entry.note
+    assert "the most of the 2 spells" in entry.note
+
+
+def test_changed_spells_match_family_and_any_mask_word() -> None:
+    other_family = ClassSpell(1, "Earth Shock", PRIEST_FAMILY, SHOCK_MASK, "priest")
+    assert changed_spells((EARTH_SHOCK, LIGHTNING_BOLT, other_family), SHAMAN_FAMILY, SHOCK_MASK) == [EARTH_SHOCK]
+
+
+def _option(spell_id: int, family: int, mask0: int) -> dict[str, str]:
+    return {"SpellID": str(spell_id), "SpellClassSet": str(family), "SpellClassMask_0": str(mask0),
+            "SpellClassMask_1": "0", "SpellClassMask_2": "0", "SpellClassMask_3": "0"}
+
+
+def test_class_spells_keep_the_owning_class_top_rank_by_level_60() -> None:
+    shaman_bit, priest_bit = 64, 16
+    options = [_option(1, SHAMAN_FAMILY, 0x100000), _option(2, SHAMAN_FAMILY, 0x100000),
+               _option(3, SHAMAN_FAMILY, 0x100000), _option(4, SHAMAN_FAMILY, 0x2)]
+    abilities = [{"Spell": "1", "ClassMask": str(shaman_bit)}, {"Spell": "2", "ClassMask": str(shaman_bit)},
+                 {"Spell": "3", "ClassMask": str(shaman_bit)}, {"Spell": "4", "ClassMask": str(priest_bit)}]
+    names = {1: "Earth Shock", 2: "Earth Shock", 3: "Earth Shock", 4: "Not a shaman spell"}
+    damage = {"Effect": "2", "EffectAura": "0", "EffectBasePointsF": "100", "EffectAuraPeriod": "0"}
+    effects = {i: [damage] for i in names}
+    levels = [{"SpellID": "1", "BaseLevel": "4"}, {"SpellID": "2", "BaseLevel": "52"},
+              {"SpellID": "3", "BaseLevel": "62"}]
+    [spell] = class_spells(options, abilities, names, effects, [], [], {}, [], levels, [])
+    assert (spell.id, spell.cls, spell.direct) == (2, "shaman", 100)
