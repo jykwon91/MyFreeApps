@@ -10,15 +10,19 @@
 -- a note saying how. An effect the data can't value is estimated from the
 -- item's level: the stat points it lacks next to items of its slot, quality
 -- and level with no effect (MGALootBudget), at your average stat weight.
--- Weights and models are PvE ("PvE values" in the tags); an effect worth a lot
--- more against players (control, immunities, damage shields, armor cuts) says
--- "(worth more in PvP)". That is a label only: there are no PvP weights.
+-- Plain stat lines GetItemStats doesn't return ("Increases healing done by up
+-- to 13 and damage done by up to 4 ...") are read from the tooltip text.
+-- Weights and models are PvE (the first grey line says so); an effect worth a
+-- lot more against players (control, immunities, damage shields, armor cuts)
+-- says "(worth more in PvP)". That is a label only: there are no PvP weights.
 -- A change to one class's spells (an entry's `class`) counts only for that
 -- class; anyone else counts it as 0, and it never makes them an estimate.
 --
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
---   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
---   pickup or equip, the level it needs, and how each effect was counted.
+--   "About the same", "Your slot is empty" or "Can't use", then up to three
+--   grey lines, one fact each: which stat values it scored with, what each
+--   effect adds (biggest first), and binding / level needed. More than that
+--   ends "+N more with /mgaloot check", which prints them all.
 --   On an item's tooltip: the same verdict (the tooltip already shows binding and
 --   level), except on the items you're wearing.
 --   /mgaloot              which weights it's using
@@ -34,9 +38,11 @@ local ADDON = "MGA Loot"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local MAX_LEVEL = 60
 -- Every weight and model is for fighting mobs; PvP is a label, never a number.
-local PVE_TAG = "PvE values"
 local PVP_NOTE = " (worth more in PvP)"
-local OTHER_CLASS_NOTE = " (only for %ss, so it counts 0)"
+-- Grey lines under a verdict, at most this many; the rest are counted on a last line and shown by /mgaloot check.
+local MAX_GREY_LINES = 3
+-- How an effect note's "proc:" / "use:" / "equip:" start reads in a sentence.
+local KIND_NAME = { proc = "proc", use = "Use effect", equip = "Equip effect" }
 -- Closer than this (percent) is "about the same": the weights aren't that exact.
 local SIDEGRADE_PCT = 5
 -- Past this the old item scores next to nothing, so a percentage means little.
@@ -156,7 +162,7 @@ local WEAPON_TYPE = {
 }
 local TWO_HANDED = { [1] = true, [5] = true, [6] = true, [8] = true, [10] = true }
 local RANGED_WEAPON = { [2] = true, [3] = true, [16] = true, [18] = true, [19] = true }
-local BIND_TEXT = { [1] = "binds on pickup", [2] = "binds when equipped" }
+local BIND_TEXT = { [1] = "Binds on pickup", [2] = "Binds when equipped" }
 -- Equip lines that are a plain number come through GetItemStats: "+40 Attack Power.", "Increased Defense +7.",
 -- "Increases healing done ... by up to 22.", "Increases the block value of your shield by 10.", "Restores 4 mana per 5 sec.".
 local STAT_LINES = {
@@ -164,6 +170,28 @@ local STAT_LINES = {
   "^Equip: Increases .- by up to %d+%.$", "^Equip: Restores %d+ mana per 5 sec%.$",
 }
 local EFFECT_LINES = { "^Equip:", "^Use:", "^Chance on hit:" }
+-- Equip lines that are a plain stat but that GetItemStats may not return (Forever items often don't): read from
+-- the tooltip as weight keys, and counted only when GetItemStats or the effect data hasn't counted that key.
+-- "Damage and healing" is the same spell_power key ITEM_MOD_SPELL_POWER_SHORT gives.
+local SCHOOL_KEY = {
+  Holy = "holy_spell_damage", Fire = "fire_spell_damage", Nature = "nature_spell_damage",
+  Frost = "frost_spell_damage", Shadow = "shadow_spell_damage", Arcane = "arcane_spell_damage",
+}
+local TEXT_STATS = {
+  { "^Equip: Increases healing done by up to (%d+) and damage done by up to (%d+) for all magical spells and effects%.$",
+    "healing", "spell_damage" },
+  { "^Equip: Increases damage and healing done by magical spells and effects by up to (%d+)%.$", "spell_power" },
+  { "^Equip: Increases healing done by spells and effects by up to (%d+)%.$", "healing" },
+  { "^Equip: Increases damage done by magical spells and effects by up to (%d+)%.$", "spell_damage" },
+  { "^Equip: %+(%d+) ranged Attack Power%.$", "ranged_attack_power" },
+  { "^Equip: %+(%d+) Attack Power%.$", "attack_power" },
+  { "^Equip: Increases ranged attack power by (%d+)%.$", "ranged_attack_power" },
+  { "^Equip: Increases attack power by (%d+)%.$", "attack_power" },
+  { "^Equip: Restores (%d+) mana per 5 sec%.$", "mp5" },
+  { "^Equip: Increased Defense %+(%d+)%.$", "defense" },
+  { "^Equip: Increases the block value of your shield by (%d+)%.$", "block_value" },
+}
+local SCHOOL_TEXT = "^Equip: Increases damage done by (%a+) spells and effects by up to (%d+)%.$"
 
 MGALootSettings = MGALootSettings or {}
 
@@ -200,6 +228,21 @@ local function tooltipLines(link)
     if line.leftText then table.insert(lines, line.leftText) end
   end
   return lines
+end
+
+-- A tooltip line's plain stats as {key, amount} pairs; nil when it isn't one.
+local function textStats(line)
+  for _, t in ipairs(TEXT_STATS) do
+    local a, b = line:match(t[1])
+    if a then
+      local out = { { t[2], tonumber(a) } }
+      if t[3] then table.insert(out, { t[3], tonumber(b) }) end
+      return out
+    end
+  end
+  local school, n = line:match(SCHOOL_TEXT)
+  if school and SCHOOL_KEY[school] then return { { SCHOOL_KEY[school], tonumber(n) } } end
+  return nil
 end
 
 local function matchesAny(text, patterns)
@@ -253,14 +296,19 @@ local function talentSpec(class)
   return best
 end
 
--- The weights to score with and how to label them.
+-- A grey line's text inside a chat sentence: "Scored for Arms ..." -> "scored for Arms ...".
+local function sentenceCase(text)
+  return (text:gsub("^%u", string.lower))
+end
+
+-- The weights to score with and the grey line that says which.
 local function weightsFor(me)
   if me.level < MAX_LEVEL then
-    return me.class.leveling, "leveling estimate"
+    return me.class.leveling, "Scored with leveling stat values (PvE)"
   end
   local spec = (MGALootSettings.spec and specById(me.class, MGALootSettings.spec)) or talentSpec(me.class)
-  if spec then return spec.weights, "as " .. spec.name end
-  return me.class.leveling, "leveling weights: set your spec with /mgaloot spec"
+  if spec then return spec.weights, "Scored for " .. spec.name .. " (raid stat values, PvE)" end
+  return me.class.leveling, "Scored with leveling stat values (PvE): set your spec with /mgaloot spec"
 end
 
 local function contains(list, value)
@@ -364,27 +412,50 @@ local function budgetPoints(info)
   return levels[math.min(info.itemLevel, MGALootBudgetTop or #levels)] or 0
 end
 
+-- An effect note in plain words, the meaning first: "proc: 140 Fire dmg at 1 PPM = +2.3 DPS" reads
+-- "+2.3 DPS from this item's proc: 140 Fire dmg at 1 PPM"; "Improved Kick: Kick every 9.5s = +0.4 DPS" reads
+-- "+0.4 DPS from Improved Kick: Kick every 9.5s". A note with no result is already a sentence about its effect.
+local function plainNote(note)
+  local head, rest = note:match("^([^:]+): (.+)$")
+  if not rest then return note end
+  local detail, result = rest:match("^(.*) = (.-)$")
+  if not result then return note end
+  local who = KIND_NAME[head] and ("this item's " .. KIND_NAME[head]) or head
+  return result .. " from " .. who .. ": " .. detail
+end
+
+local function otherClassNote(note, class)
+  local head = note:match("^([^:]+):")
+  return (KIND_NAME[head] and ("This item's " .. KIND_NAME[head]) or head or "This item's effect")
+    .. " only helps " .. class .. "s, so it counts 0"
+end
+
 -- Add MGALootEffects' values for this item (what its Use, Chance on hit and Equip lines are worth).
 -- Returns whether the data has the item, what its valued effects add, and the stat points its item-level
 -- estimate gives (nil when every effect is valued).
-local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
+local function scoreEffects(id, stats, equipLoc, w, chance, notes, level, counted)
   local entries = MGALootEffects and id and MGALootEffects[id]
   if not entries then return false, 0 end
-  local budget, estimateForMe
+  -- The effects the item-level estimate stands in for, by name: the guess line names them, so their own
+  -- "the data can't ..." notes would only repeat it.
+  local budget, guessed = nil, {}
   local myClass = player().classId
   local weaponDps = RANGED_LOC[equipLoc] and w.ranged or w.melee
   local spellDps = (w.stats.spell_damage or 0) * SPELL_DAMAGE_PER_DPS
   local rangedFirst = w.ranged > w.melee
   local add = 0
   for _, e in ipairs(entries) do
+    counted[e.stat] = true
     local ranged = EFFECT_RANGED[e.stat]
     local note = e.note
+    local before = add
     if e.class and e.class ~= myClass then
-      note = note .. OTHER_CLASS_NOTE:format(e.class)
+      note = otherClassNote(note, e.class)
     elseif e.stat == "budget" then
       budget, note = e.value, nil
     elseif e.stat == "unresolved" then
-      estimateForMe = true
+      table.insert(guessed, note:match("^([^:]+):") or "effect")
+      note = nil
     elseif e.stat == "dps" then
       add = add + e.value * weaponDps
     elseif e.stat == "spell_dps" then
@@ -408,11 +479,15 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
     elseif e.stat ~= "none" then
       add = add + e.value * (w.stats[e.stat] or 0)
     end
-    if note and e.pvp then note = note .. PVP_NOTE end
-    if note then table.insert(notes, note) end
+    if note then
+      if not (e.class and e.class ~= myClass) then note = plainNote(note) end
+      if e.pvp then note = note .. PVP_NOTE end
+      table.insert(notes, { text = note, value = add - before })
+    end
   end
   -- The estimate pays for the effects the data can't value; only those that count for you.
-  return true, add, estimateForMe and budget or nil
+  if #guessed == 0 then return true, add, nil end
+  return true, add, budget, #guessed == 1 and guessed[1] or "effects"
 end
 
 -- Score with these weights. Also returns notes on how it counted creature-type stats, stats it has no
@@ -423,8 +498,15 @@ local function score(link, equipLoc, w, level)
   local total, notes = 0, {}
   local chance = {}
   local averageWeight = averageStatWeight(w)
-  local effectsCovered, effectsValue, budget = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes, level)
-  local uncountedLine = false
+  -- Weight keys already counted, so a tooltip line with the same stat never counts twice.
+  local counted = {}
+  for key in pairs(stats) do
+    if STAT[key] then counted[STAT[key]] = true end
+  end
+  local effectsCovered, effectsValue, budget, guessName = scoreEffects(itemId(link), stats, equipLoc, w, chance, notes, level, counted)
+  -- The first effect line nothing counts ("Equip", "Use", "Chance on hit"), for the estimate's note.
+  local uncountedLine
+  local textPoints = 0
   total = total + effectsValue
   for key, amount in pairs(stats) do
     local vsStat, vsKind = key:match("^ITEM_MOD_(%u+_%u+)_VS_(%u+)_SHORT$")
@@ -439,12 +521,15 @@ local function score(link, equipLoc, w, level)
     elseif vsStat and VS_BASE[vsStat] then
       local share = creatureShare(level, vsKind)
       total = total + amount * (w.stats[VS_BASE[vsStat]] or 0) * share
-      table.insert(notes, (_G[key] or key) .. " counted at " .. floor(share * 100 + 0.5) .. "% (" .. plural(vsKind):lower() .. " among mobs your level)")
+      table.insert(notes, {
+        text = (_G[key] or key) .. " counted at " .. floor(share * 100 + 0.5) .. "% (" .. plural(vsKind):lower() .. " among mobs your level)",
+        value = amount * (w.stats[VS_BASE[vsStat]] or 0) * share,
+      })
     elseif NOT_POINTS[key] then
-      table.insert(notes, (_G[key] or key) .. " has no stat weight, so it counts as 0")
+      table.insert(notes, { text = (_G[key] or key) .. " has no stat value, so it counts 0", value = 0 })
     else
       total = total + amount * averageWeight
-      table.insert(notes, (_G[key] or key) .. " counted at your average stat weight")
+      table.insert(notes, { text = (_G[key] or key) .. " counted like an average stat", value = amount * averageWeight })
     end
   end
   for _, line in ipairs(tooltipLines(link) or {}) do
@@ -457,24 +542,46 @@ local function score(link, equipLoc, w, level)
         break
       end
     end
+    local parsed = not matched and textStats(line)
+    if parsed then
+      matched = true
+      for _, kv in ipairs(parsed) do
+        local key, amount = kv[1], kv[2]
+        if not counted[key] then
+          counted[key] = true
+          total = total + amount * (w.stats[key] or 0)
+          textPoints = textPoints + amount
+        end
+      end
+    end
     if not matched and not effectsCovered and matchesAny(line, EFFECT_LINES) and not matchesAny(line, STAT_LINES) then
-      uncountedLine = true
+      uncountedLine = uncountedLine or line:match("^([^:]+):")
     end
   end
   for stat, pct in pairs(chance) do
     total = total + pct * (w.stats[stat] or 0)
   end
   if uncountedLine and not budget then
-    budget = math.max(0, budgetPoints(itemInfo(link)) - statPoints(stats))
+    budget = math.max(0, budgetPoints(itemInfo(link)) - statPoints(stats) - textPoints)
   end
   if budget then
     -- The budget pays for every effect on the item, so what the valued ones add already counts toward it.
     local worth = math.max(0, budget * averageWeight - effectsValue)
     total = total + worth
     local points = averageWeight > 0 and floor(worth / averageWeight + 0.5) or 0
-    table.insert(notes, "effect estimated from item level: worth ~" .. points .. " stat points")
+    local what = "This item's " .. (guessName or (uncountedLine and (uncountedLine .. " effect")) or "effect")
+    local verb = guessName == "effects" and { "are", "add" } or { "is", "adds" }
+    table.insert(notes, {
+      text = points > 0 and (what .. " " .. verb[1] .. " a guess: about " .. points .. " stats' worth, judging by item level")
+        or (what .. " " .. verb[2] .. " little, judging by item level"),
+      value = worth,
+    })
   end
-  table.sort(notes)
+  -- Biggest first: those are the lines worth reading when there isn't room for all of them.
+  table.sort(notes, function(a, b)
+    if a.value ~= b.value then return a.value > b.value end
+    return a.text < b.text
+  end)
   return total, notes
 end
 
@@ -543,35 +650,51 @@ local function percentText(new, old)
   return pct, (pct > 0 and "+" or "") .. pct .. "%"
 end
 
+-- The grey lines under a verdict, each its own line: at most MAX_GREY_LINES, the last of them then counting
+-- the rest, unless `full`.
+local function greyLines(lines, full)
+  local shown = {}
+  for i, line in ipairs(lines) do
+    if not full and #lines > MAX_GREY_LINES and i == MAX_GREY_LINES then
+      table.insert(shown, "+" .. (#lines - i + 1) .. " more with /mgaloot check")
+      break
+    end
+    table.insert(shown, line)
+  end
+  if #shown == 0 then return "" end
+  return "\n" .. GREY .. table.concat(shown, "|r\n" .. GREY) .. "|r"
+end
+
 -- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
 -- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare);
 -- `needs` is the level it needs when above yours. `brief` leaves out the binding and
--- level tags, for a tooltip that already shows them.
-local function judge(link, brief)
+-- level line, for a tooltip that already shows them; `full` shows every grey line (/mgaloot check).
+local function judge(link, brief, full)
   local info = itemInfo(link)
   if not info then return { text = GREY .. "Checking the item...|r", pending = true } end
   if not SLOTS[info.equipLoc] then return nil end
   local me = player()
   if not me.class then return nil end
 
-  local tags = {}
   local needs = info.minLevel > me.level and info.minLevel or nil
+  local facts = {}
   if not brief then
-    if BIND_TEXT[info.bindType] then table.insert(tags, BIND_TEXT[info.bindType]) end
-    if needs then table.insert(tags, "needs level " .. needs) end
+    if BIND_TEXT[info.bindType] then table.insert(facts, BIND_TEXT[info.bindType]) end
+    if needs then table.insert(facts, (#facts > 0 and "needs" or "Needs") .. " level " .. needs) end
   end
+  local factLine = #facts > 0 and table.concat(facts, ", ") or nil
   local why = cantUse(info, me)
   if why then
-    return { text = RED .. "Can't use:|r " .. why .. (#tags > 0 and (GREY .. " · " .. table.concat(tags, " · ") .. "|r") or "") }
+    return { text = RED .. "Can't use:|r " .. why .. greyLines({ factLine }, full) }
   end
   if not statsApi() then return { text = GREY .. "Can't compare: this client doesn't give addons item stats|r" } end
 
   local w, label = weightsFor(me)
   local text, kind, pct
   local new, notes = score(link, info.equipLoc, w, me.level)
-  table.insert(tags, 1, label)
-  table.insert(tags, 2, PVE_TAG)
-  for _, note in ipairs(notes) do table.insert(tags, note) end
+  local lines = { label }
+  for _, note in ipairs(notes) do table.insert(lines, note.text) end
+  table.insert(lines, factLine)
   local old = replaced(info, w, me, link)
   if old.blocked then
     text = GREY .. "Can't compare: " .. old.blocked .. "|r"
@@ -601,7 +724,7 @@ local function judge(link, brief)
     local colour = otherPct >= SIDEGRADE_PCT and GREEN or (otherPct <= -SIDEGRADE_PCT and RED or YELLOW)
     text = text .. "\n" .. colour .. otherShown .. " vs|r " .. other.link .. GREY .. " (your other one)|r"
   end
-  if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end
+  text = text .. greyLines(lines, full)
   return { text = text, kind = kind, pct = pct, needs = needs }
 end
 
@@ -792,11 +915,11 @@ local function bags()
     end
   end
   table.sort(upgrades, biggestFirst)
-  local _, label = weightsFor(me)
+  local label = sentenceCase(select(2, weightsFor(me)))
   if #upgrades == 0 then
-    say("nothing in your bags is an upgrade (" .. label .. ").")
+    say("nothing in your bags is an upgrade, " .. label .. ".")
   else
-    say("upgrades in your bags (" .. label .. "):")
+    say("upgrades in your bags, " .. label .. ":")
     for _, found in ipairs(upgrades) do
       local needs = found.verdict.needs and (GREY .. " (needs level " .. found.verdict.needs .. ")|r") or ""
       say(found.link .. " " .. firstLine(found.verdict.text) .. needs)
@@ -808,7 +931,7 @@ end
 local function status()
   local me = player()
   if not me.class then return say("doesn't know your class.") end
-  local _, label = weightsFor(me)
+  local label = sentenceCase(select(2, weightsFor(me)))
   local spec = me.level >= MAX_LEVEL and (" Spec: " .. (MGALootSettings.spec or "auto from talents") .. ".") or ""
   say("level " .. me.level .. " " .. me.classId .. ", " .. label .. "." .. spec)
 end
@@ -843,9 +966,15 @@ SlashCmdList.MGALOOT = function(msg)
   if command == "check" then
     local link = rest:match("(|c%x+|Hitem:.-|h.-|h|r)") or rest:match("(item:[%d:%-]+)")
     if not link then return say("put an item link after /mgaloot check.") end
-    local verdict = judge(link)
+    local verdict = judge(link, false, true)
     if verdict and verdict.pending then return say("the game hasn't loaded " .. link .. " yet: check it again in a moment.") end
-    return say(link .. " " .. (verdict and verdict.text:gsub("\n", " — ") or "isn't gear."))
+    if not verdict then return say(link .. " isn't gear.") end
+    local first = true
+    for line in verdict.text:gmatch("[^\n]+") do
+      say(first and (link .. " " .. line) or line)
+      first = false
+    end
+    return
   end
   status()
 end

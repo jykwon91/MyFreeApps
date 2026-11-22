@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot explains itself in plain words, and reads spell damage lines",
+    "summary": "Some items give their stats only as a tooltip line the game doesn't hand to addons as a stat, like Gemburst Circlet's \"Increases healing done by up to 13 and damage done by up to 4 for all magical spells and effects\". MGA Loot now reads those lines and scores them exactly, so the circlet gets a real verdict instead of an estimate. It reads spell damage and healing (all schools or one), attack power, mana per 5, defense and block value, and never counts a stat twice when the game also gives it. The grey lines under a verdict are rewritten too: one plain fact per line, at most three (the biggest first, the rest with /mgaloot check), starting with what it scored with, like \"Scored for Arms (raid stat values, PvE)\".",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot counts changes to your class spells",
     "summary": "Items that change one class's spells, like a totem that adds damage to your shocks or a talisman that cuts Kick's cooldown, now count for that class only. Where the game files give the spell's damage, cast time and cooldown, MGA Loot works out what the change adds: \"+10.6 damage on Earth Shock (top rank, every 6s) = +1.8 spell DPS\". Any other class counts it as 0 and the note says who it's for. A change the files can't put a number on, like more crit chance or a longer duration, is estimated from item level, and only for that class.",
     "to": "/wow-forever/compare"
