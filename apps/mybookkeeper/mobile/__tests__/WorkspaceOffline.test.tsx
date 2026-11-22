@@ -14,7 +14,7 @@ import { MEMBERS_MESSAGES } from "../src/constants/members";
 import { SAVED_WORKSPACE_FILE, WORKSPACE_MESSAGES as MESSAGES } from "../src/constants/workspace";
 import CaptureScreen from "../src/features/capture/CaptureScreen";
 import { pendingUploads } from "../src/features/capture/uploadQueueFiles";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadsReset } from "../src/features/capture/uploadsSlice";
 import { useResumeUploads } from "../src/features/capture/useResumeUploads";
 import { saveWorkspace } from "../src/features/workspace/savedWorkspace";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
@@ -81,7 +81,7 @@ function reply(config: InternalAxiosRequestConfig, answer: Answer, data: unknown
 
 const adapter: AxiosAdapter = (config) => {
   if (config.url === "/organizations") return reply(config, server.organizations, server.workspaces);
-  if (config.url?.startsWith("/documents/upload")) {
+  if (config.url === "/documents/upload") {
     if (!server.uploadsOnline) return reply(config, "offline", null);
     server.uploadedFor.push(config.headers["X-Organization-Id"]);
     return reply(config, 202, { document_id: "d", batch_id: null, batch_total: 1 });
@@ -137,7 +137,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen(null));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
   server = { organizations: "offline", workspaces: [MINE, OTHER], uploadsOnline: false, uploadedFor: [] };
   api.defaults.adapter = adapter;
 });

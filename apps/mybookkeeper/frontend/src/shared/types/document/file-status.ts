@@ -1,4 +1,4 @@
-import { UPLOAD_OUTCOMES } from "./upload-outcome";
+import { UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/types/document/UploadOutcome";
 
 export const FILE_STATUSES = {
   UPLOADING: "uploading",

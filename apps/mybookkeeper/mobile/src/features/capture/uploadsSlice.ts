@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { PendingUpload } from "../../types/PendingUpload";
 import type { UploadBatchStart } from "../../types/UploadBatchStart";
+import type { UploadDocumentRead } from "../../types/UploadDocumentRead";
+import type { UploadDocumentSent } from "../../types/UploadDocumentSent";
 import type { UploadFilePercent } from "../../types/UploadFilePercent";
 import type { UploadFileStatus } from "../../types/UploadFileStatus";
 import type { UploadFileStatusChange } from "../../types/UploadFileStatusChange";
@@ -13,7 +15,7 @@ function isFinished(status: UploadFileStatus): boolean {
   return status === "done" || status === "failed" || status === "cancelled";
 }
 
-/** Sent, but still being read: it stays listed, since it can still be stopped. */
+/** Sent, but still being read: it stays listed, to say what came of it (and a zip can still be stopped). */
 function isReading(status: UploadFileStatus): boolean {
   return status === "reading";
 }
@@ -35,7 +37,7 @@ const uploadsSlice = createSlice({
     uploadFilesQueued(state, { payload }: PayloadAction<PendingUpload[]>) {
       for (const { uri, name } of payload) {
         const listed = state.files.find((file) => file.uri === uri);
-        if (!listed) state.files.push({ uri, name, status: "queued", percent: null, batchId: null });
+        if (!listed) state.files.push({ uri, name, status: "queued", percent: null, batchId: null, documentId: null, outcome: null });
         else if (listed.status === "failed") Object.assign(listed, { status: "queued", percent: null });
       }
     },
@@ -46,6 +48,15 @@ const uploadsSlice = createSlice({
     uploadBatchStarted(state, { payload }: PayloadAction<UploadBatchStart>) {
       const listed = state.files.find((file) => file.uri === payload.uri);
       if (listed) Object.assign(listed, { status: "reading", percent: null, batchId: payload.batchId });
+    },
+    uploadDocumentSent(state, { payload }: PayloadAction<UploadDocumentSent>) {
+      const listed = state.files.find((file) => file.uri === payload.uri);
+      if (listed) Object.assign(listed, { status: "reading", percent: null, documentId: payload.documentId });
+    },
+    /** The file has been read: what came of it stays up as long as the "got it" message does. */
+    uploadDocumentRead(state, { payload }: PayloadAction<UploadDocumentRead>) {
+      const listed = state.files.find((file) => file.uri === payload.uri);
+      if (listed?.status === "reading") Object.assign(listed, { status: "done", documentId: null, outcome: payload.outcome });
     },
     /** Every document in the zip has been read, or failed to be. */
     uploadBatchRead(state, { payload: uri }: PayloadAction<string>) {
@@ -95,6 +106,8 @@ export const {
   uploadBatchRead,
   uploadBatchStarted,
   uploadBlocked,
+  uploadDocumentRead,
+  uploadDocumentSent,
   uploadDrainEnded,
   uploadFileChanged,
   uploadFileProgressed,

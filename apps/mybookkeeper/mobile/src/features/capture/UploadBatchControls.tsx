@@ -5,10 +5,10 @@ import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch } from "react-redux";
 import {
-  BATCH_STATUS_POLL_MS,
   CANCEL_BATCH_FAILED,
   CANCEL_BATCH_LABEL,
   CANCELLING_BATCH_LABEL,
+  READ_STATUS_POLL_MS,
   batchCancelledMessage,
   batchReadProgressLabel,
   batchReadingStartedMessage,
@@ -29,7 +29,7 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   const { colors, spacing, fontSize } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
-  const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: BATCH_STATUS_POLL_MS, skipPollingIfUnfocused: true });
+  const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: READ_STATUS_POLL_MS, skipPollingIfUnfocused: true });
   const [cancelBatch, { isLoading: isCancelling }] = useCancelBatchMutation();
 
   const progress = batch ? batchReadProgressLabel(batch.completed, batch.total) : "";

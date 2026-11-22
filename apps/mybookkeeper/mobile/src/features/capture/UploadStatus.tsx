@@ -18,13 +18,14 @@ export default function UploadStatus() {
   const { phase, rejections, files, blockedReason } = useSelector((state: RootState) => state.uploads);
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
 
-  // A zip read or cancelled after the "got it" message has gone is cleared the same way, a moment later.
-  const hasSettledFiles = files.some((file) => file.status === "done" || file.status === "cancelled");
+  // A file read or a zip cancelled after the "got it" message has gone is cleared the same way, a moment later.
+  // Each one that settles starts the wait again, so what came of the last one is up as long as the first.
+  const settledCount = files.filter((file) => file.status === "done" || file.status === "cancelled").length;
   useEffect(() => {
-    if (phase !== "sent" && !(phase === "idle" && hasSettledFiles)) return;
+    if (phase !== "sent" && !(phase === "idle" && settledCount > 0)) return;
     const timer = setTimeout(() => dispatch(uploadSentSettled()), SENT_MESSAGE_MS);
     return () => clearTimeout(timer);
-  }, [dispatch, phase, hasSettledFiles]);
+  }, [dispatch, phase, settledCount]);
 
   const progress = phase === "sending" ? SENDING_MESSAGE : phase === "sent" ? SENT_MESSAGE : undefined;
   useAnnouncement(progress, "polite");

@@ -12,7 +12,7 @@ import { store } from "../src/lib/store";
 
 const POLL_MS = 20;
 
-jest.mock("../src/constants/capture", () => ({ ...jest.requireActual("../src/constants/capture"), BATCH_STATUS_POLL_MS: 20 }));
+jest.mock("../src/constants/capture", () => ({ ...jest.requireActual("../src/constants/capture"), READ_STATUS_POLL_MS: 20 }));
 
 const originalAdapter = api.defaults.adapter;
 const pause = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));

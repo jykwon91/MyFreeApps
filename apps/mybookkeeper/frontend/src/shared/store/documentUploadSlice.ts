@@ -2,7 +2,7 @@ import { formatCount } from "@/shared/utils/count";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
 import type { UploadState } from "@/shared/types/document/upload-state";
-import type { UploadOutcome } from "@/shared/types/document/upload-outcome";
+import type { UploadOutcome } from "@mybookkeeper/api-client/types/document/UploadOutcome";
 
 interface DocumentUploadSliceState {
   current: UploadState | null;

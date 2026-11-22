@@ -7,7 +7,7 @@ import { AccessibilityInfo, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { UPLOAD_PROCESSING_LABEL } from "../src/constants/capture";
 import CaptureScreen from "../src/features/capture/CaptureScreen";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadsReset } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -91,7 +91,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
 });
 
 afterEach(() => {
@@ -267,11 +267,13 @@ describe("CaptureScreen", () => {
     expect(await screen.findByRole("button", { name: "Done (1)" })).toBeTruthy();
   });
 
-  it("shows each file go from waiting to sending to sent", async () => {
+  it("shows each file go from waiting to sending to being read", async () => {
     pickerReturns({ uri: "cache:/lease.docx", name: "lease.docx", size: 100 }, { uri: "cache:/bank.csv", name: "bank.csv", size: 100 });
     const releases: (() => void)[] = [];
     const sent: string[] = [];
     const adapter: AxiosAdapter = (config) => {
+      // Checks on what's being read stay unanswered: this is about the sending.
+      if (config.url !== "/documents/upload") return new Promise(() => {});
       sent.push((config.data as unknown as { getParts: () => { name: string }[] }).getParts()[0].name);
       config.onUploadProgress?.({ loaded: 25, total: 100, bytes: 25, lengthComputable: true });
       return new Promise((resolve) => {
@@ -289,11 +291,11 @@ describe("CaptureScreen", () => {
     expect(screen.getByLabelText(`${second}, Waiting to send`)).toBeTruthy();
 
     await act(async () => releases[0]());
-    expect(await screen.findByLabelText(`${first}, Sent`)).toBeTruthy();
+    expect(await screen.findByLabelText(`${first}, Reading…`)).toBeTruthy();
     expect(await screen.findByLabelText(`${second}, Sending… 25%`)).toBeTruthy();
 
     await act(async () => releases[1]());
-    expect(await screen.findByLabelText(`${second}, Sent`)).toBeTruthy();
+    expect(await screen.findByLabelText(`${second}, Reading…`)).toBeTruthy();
     expect(sent).toEqual([first, second]);
     expect(await screen.findByText("Got it. I'm reading it now.")).toBeTruthy();
   });
@@ -302,6 +304,7 @@ describe("CaptureScreen", () => {
     pickerReturns({ uri: "cache:/lease.docx", name: "lease.docx", size: 100 });
     const releases: (() => void)[] = [];
     const adapter: AxiosAdapter = (config) => {
+      if (config.url !== "/documents/upload") return new Promise(() => {});
       config.onUploadProgress?.({ loaded: 100, total: 100, bytes: 100, lengthComputable: true });
       return new Promise((resolve) => {
         releases.push(() => resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config }));
@@ -314,7 +317,7 @@ describe("CaptureScreen", () => {
     expect(screen.queryByText("Sending… 100%")).toBeNull();
 
     await act(async () => releases[0]());
-    expect(await screen.findByLabelText("lease.docx, Sent")).toBeTruthy();
+    expect(await screen.findByLabelText("lease.docx, Reading…")).toBeTruthy();
   });
 
   it("shows a file the server refused as failed, with its reason", async () => {

@@ -1,4 +1,5 @@
 import { DOCUMENT_UPLOAD_KINDS_LABEL, DOCUMENT_UPLOAD_MAX_LABEL, DOCUMENT_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/documentUpload";
+import { UPLOAD_OUTCOME_MESSAGES } from "@mybookkeeper/api-client/constants/uploadOutcomeMessages";
 import type { UploadFileProgress } from "../types/UploadFileProgress";
 
 export const MAX_FILES_AT_ONCE = 10;
@@ -35,8 +36,8 @@ export const UPLOAD_BLOCKED_REASONS = {
 export const SIGN_IN_AGAIN_MESSAGE = "Your session has ended. Your files are saved here, and I'll send them once you sign in again.";
 export const REMOVE_BLOCKED_FILES_LABEL = "Remove them";
 export const KEEP_BLOCKED_FILES_LABEL = "Keep them";
-/** How often a zip being read is checked on, the same as on the web. */
-export const BATCH_STATUS_POLL_MS = 3000;
+/** How often a sent file or zip being read is checked on, the same as on the web. */
+export const READ_STATUS_POLL_MS = 3000;
 export const CANCEL_BATCH_LABEL = "Cancel";
 export const CANCELLING_BATCH_LABEL = "Cancelling…";
 export const CANCEL_BATCH_FAILED = "I couldn't stop that upload. Want to try again?";
@@ -90,7 +91,7 @@ export function uploadFileStatusLabel(file: UploadFileProgress): string {
     case "reading":
       return "Reading…";
     case "done":
-      return "Sent";
+      return file.outcome ? UPLOAD_OUTCOME_MESSAGES[file.outcome] : "Sent";
     case "failed":
       return "Couldn't send";
     case "cancelled":

@@ -5,7 +5,7 @@ import type { AxiosAdapter } from "axios";
 import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { drainUploadQueue } from "../src/features/capture/drainUploadQueue";
 import { addToQueue, clearUploadQueue, pendingUploads } from "../src/features/capture/uploadQueueFiles";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadsReset } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -49,7 +49,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
 });
 
 afterEach(() => {
