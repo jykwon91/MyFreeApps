@@ -90,6 +90,28 @@ describe("the Practice tab", () => {
     expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
   });
 
+  it("says when the tutor is switched off, and still lists the scenarios", async () => {
+    serveCatalog({ "GET /usage/today": () => ({ status: 200, data: { ...USAGE_LEFT, tutor_available: false } }) });
+    await renderApp();
+
+    expect(await screen.findByText(sessionBlockMessage("unavailable"))).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
+  });
+
+  it("says quietly when today's usage can't load, keeps the scenarios, and tries again", async () => {
+    let isDown = true;
+    serveCatalog({ "GET /usage/today": downWhile(() => isDown, { status: 200, data: USAGE_USED_UP }) });
+    await renderApp();
+
+    expect(await screen.findByText(CATALOG_COPY.usageUnavailable)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
+
+    isDown = false;
+    await fireEvent.press(screen.getByRole("button", { name: CATALOG_COPY.retry }));
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
+    expect(screen.queryByText(CATALOG_COPY.usageUnavailable)).toBeNull();
+  });
+
   it("checks today's usage again when the learner comes back to the app", async () => {
     let usage = USAGE_LEFT;
     const sent = serveCatalog({ "GET /usage/today": () => ({ status: 200, data: usage }) });

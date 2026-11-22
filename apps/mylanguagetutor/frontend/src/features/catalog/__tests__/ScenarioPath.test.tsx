@@ -24,13 +24,14 @@ const refetchUsage = vi.fn();
 let languages: { data: Language[] | undefined; isError: boolean };
 let scenarios: { data: Scenario[] | undefined; isError: boolean };
 let usage: UsageToday | undefined;
+let usageFailed = false;
 
 vi.mock("@mylanguagetutor/api-client/store/catalogApi", () => ({
   useListLanguagesQuery: () => ({ ...languages, error: undefined, refetch: refetchLanguages }),
   useListScenariosQuery: () => ({ ...scenarios, error: undefined, refetch: refetchScenarios }),
 }));
 vi.mock("@mylanguagetutor/api-client/store/usageApi", () => ({
-  useGetUsageTodayQuery: () => ({ data: usage, refetch: refetchUsage }),
+  useGetUsageTodayQuery: () => ({ data: usage, isError: usageFailed, refetch: refetchUsage }),
 }));
 
 const PROFILE: Profile = { language_code: "es", level: "some_phrases", updated_at: "2026-11-01T00:00:00Z" };
@@ -57,6 +58,7 @@ function renderPath() {
 describe("ScenarioPath", () => {
   beforeEach(() => {
     for (const refetch of [refetchLanguages, refetchScenarios, refetchUsage]) refetch.mockReset();
+    usageFailed = false;
     languages = { data: [SPANISH], isError: false };
     scenarios = { data: SCENARIOS, isError: false };
     usage = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true, session_limit_reached: false };
@@ -100,6 +102,26 @@ describe("ScenarioPath", () => {
 
     expect(screen.getByText(sessionBlockMessage("daily_limit"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Greetings/ })).toBeInTheDocument();
+  });
+
+  it("says when the tutor is switched off, and still lists the scenarios", () => {
+    usage = { remaining_fraction: 0.9, cap_reached: false, tutor_available: false, session_limit_reached: false };
+    renderPath();
+
+    expect(screen.getByText(sessionBlockMessage("unavailable"))).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Greetings/ })).toBeInTheDocument();
+  });
+
+  it("says quietly when today's usage can't load, keeps the scenarios, and tries again", () => {
+    usage = undefined;
+    usageFailed = true;
+    renderPath();
+
+    expect(screen.getByText(CATALOG_COPY.usageUnavailable)).toBeInTheDocument();
+    expect(screen.queryByText(CATALOG_COPY.loadFailed)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Greetings/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: CATALOG_COPY.retry }));
+    expect(refetchUsage).toHaveBeenCalledTimes(1);
   });
 
   it("says when the scenarios can't load, and tries the catalog and usage again", () => {

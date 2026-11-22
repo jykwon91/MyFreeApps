@@ -68,13 +68,28 @@ describe("useScenarioPath", () => {
     expect(result.current.error).toBe(failure);
   });
 
-  it("says when today's practice is used up", () => {
+  it("says why the learner can't be answered today: practice used up, or the tutor off", () => {
     const { result, rerender } = renderHook(() => useScenarioPath(PROFILE));
-    expect(result.current.isCapReached).toBe(false);
+    expect(result.current.block).toBeNull();
 
     api.usage.data = { remaining_fraction: 0, cap_reached: true, tutor_available: true, session_limit_reached: false };
     rerender();
-    expect(result.current.isCapReached).toBe(true);
+    expect(result.current.block).toBe("daily_limit");
+
+    api.usage.data = { remaining_fraction: 0.9, cap_reached: false, tutor_available: false, session_limit_reached: false };
+    rerender();
+    expect(result.current.block).toBe("unavailable");
+  });
+
+  it("says when today's usage couldn't load, unless an earlier answer is still held", () => {
+    api.usage = { ...api.usage, isError: true };
+    const { result, rerender } = renderHook(() => useScenarioPath(PROFILE));
+    expect(result.current.isUsageError).toBe(true);
+    expect(result.current.block).toBeNull();
+
+    api.usage.data = { remaining_fraction: 0.9, cap_reached: false, tutor_available: true, session_limit_reached: false };
+    rerender();
+    expect(result.current.isUsageError).toBe(false);
   });
 
   it("reloads the catalog and today's usage together", async () => {

@@ -5,14 +5,14 @@
  * Try again recovers; the loading skeleton lines up with the loaded list.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE } from "./constants/blockCopy";
+import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, UNAVAILABLE_COPY } from "./constants/blockCopy";
 import { LESSONS_LOAD_FAILED } from "./constants/onboardingCopy";
-import { GET_PROFILE, LIST_SCENARIOS } from "./constants/stubbedEndpoints";
+import { GET_PROFILE, GET_USAGE_TODAY, LIST_SCENARIOS } from "./constants/stubbedEndpoints";
 import { PHONE_VIEWPORT, TABLET_VIEWPORT } from "./constants/viewports";
 import { SCENARIOS } from "./fixtures/catalogFixtures";
 import { expectSkeletonRowsLineUp } from "./fixtures/skeletonAlignment";
 import { signedInTutor } from "./fixtures/signedInTutor";
-import { CAP_REACHED, PLENTY_LEFT } from "./fixtures/tutorFixtures";
+import { CAP_REACHED, PLENTY_LEFT, TUTOR_OFF } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
 
@@ -60,6 +60,27 @@ test("the cap notice on the scenario path lifts by itself when the reset passes 
   await page.clock.fastForward("09:01:00");
   await expect(page.getByText(/You've used today's practice time/)).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
+});
+
+test("a learner is told the tutor is switched off before they pick a scenario", async ({ page }) => {
+  await signedInTutor(page, { usage: TUTOR_OFF });
+
+  await page.goto("/scenarios");
+  await expect(page.getByText(UNAVAILABLE_COPY, { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
+});
+
+test("a failed usage load is said quietly, keeps the scenarios, and Try again shows the real notice", async ({ page }) => {
+  const api = await signedInTutor(page, { usage: CAP_REACHED, failWith: [GET_USAGE_TODAY] });
+
+  await page.goto("/scenarios");
+  await expect(page.getByText("Couldn't check today's practice time.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Greetings/ })).toBeVisible();
+
+  api.stopFailing(GET_USAGE_TODAY);
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText(/You've used today's practice time/)).toBeVisible();
+  await expect(page.getByText("Couldn't check today's practice time.")).toHaveCount(0);
 });
 
 for (const failing of [LIST_SCENARIOS, GET_PROFILE]) {

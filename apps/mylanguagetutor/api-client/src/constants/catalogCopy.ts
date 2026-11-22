@@ -4,6 +4,8 @@ export const CATALOG_COPY = {
   retry: "Try again",
   /** Above a list that stays on screen after a refresh failed. */
   showingLastLoaded: "You're offline, or I can't reach the server. This is what I last loaded.",
+  /** The scenario list's quiet notice when today's practice time can't be checked. */
+  usageUnavailable: "Couldn't check today's practice time.",
   noLanguages: "No languages are available yet.",
   pickScenario: "Pick a scenario. Each one is a short conversation with a few goals to cover.",
   changeLevel: "Change level",
