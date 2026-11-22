@@ -173,10 +173,15 @@ async def build_export(
     user: User,
     organization_id: uuid.UUID,
 ) -> dict:
-    """Assemble the full data export for a user."""
+    """Assemble the user's data export for one organization.
+
+    Every section is scoped to ``organization_id`` (the org the caller is a
+    current member of), so data the user created in an org they have since
+    left is never exported.
+    """
     properties = await property_repo.list_by_org(db, organization_id)
-    documents = await document_repo.list_by_user(db, user.id)
-    transactions = await transaction_repo.list_by_user(db, user.id)
+    documents = await document_repo.list_by_org_and_user(db, organization_id, user.id)
+    transactions = await transaction_repo.list_by_org_and_user(db, organization_id, user.id)
     integrations = await integration_repo.list_by_org(db, organization_id)
 
     await log_auth_event(

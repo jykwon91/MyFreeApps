@@ -4,6 +4,8 @@ Tests cover:
 - Export returns the expected top-level keys and user data
 - Export excludes sensitive fields (hashed_password, TOTP secret, OAuth tokens)
 - Export only returns the authenticated user's data (not another user's)
+- Export only returns documents and transactions from the requested org, so
+  a member removed from an org no longer exports that org's data
 - Unauthenticated request → 401
 """
 import uuid
@@ -47,12 +49,84 @@ def _make_org(user_id: uuid.UUID) -> Organization:
     return Organization(id=uuid.uuid4(), name="Test Workspace", created_by=user_id)
 
 
-def _make_context(user: User, org: Organization) -> RequestContext:
+def _make_context(
+    user: User, org: Organization, role: OrgRole = OrgRole.OWNER,
+) -> RequestContext:
     return RequestContext(
         organization_id=org.id,
         user_id=user.id,
-        org_role=OrgRole.OWNER,
+        org_role=role,
     )
+
+
+def _make_document(org: Organization, user: User, file_name: str) -> Document:
+    return Document(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        file_name=file_name,
+        file_type="pdf",
+        status="processed",
+    )
+
+
+def _make_transaction(org: Organization, user: User, vendor: str) -> Transaction:
+    return Transaction(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        transaction_date=date(2024, 6, 15),
+        tax_year=2024,
+        vendor=vendor,
+        amount="125.00",
+        transaction_type="expense",
+        category="maintenance",
+        status="approved",
+    )
+
+
+async def _seed_two_org_user(
+    db: AsyncSession, *, still_member_of_b: bool,
+) -> tuple[User, Organization, Organization]:
+    """User U owns personal org A and created data in org B (owned by someone else).
+
+    When ``still_member_of_b`` is False, U's membership of B has been removed
+    but the documents and transactions U created there remain in B.
+    """
+    user = _make_user(email="two-org-user@example.com")
+    owner_b = _make_user(email="org-b-owner@example.com")
+    db.add_all([user, owner_b])
+    org_a = _make_org(user.id)
+    org_b = Organization(id=uuid.uuid4(), name="Org B", created_by=owner_b.id)
+    db.add_all([org_a, org_b])
+    await db.flush()
+
+    db.add(OrganizationMember(organization_id=org_a.id, user_id=user.id, org_role="owner"))
+    db.add(OrganizationMember(organization_id=org_b.id, user_id=owner_b.id, org_role="owner"))
+    if still_member_of_b:
+        db.add(OrganizationMember(organization_id=org_b.id, user_id=user.id, org_role="user"))
+
+    db.add_all([
+        _make_document(org_a, user, "org_a_doc.pdf"),
+        _make_document(org_b, user, "org_b_doc.pdf"),
+        _make_transaction(org_a, user, "Org A Vendor"),
+        _make_transaction(org_b, user, "Org B Vendor"),
+    ])
+    await db.commit()
+    return user, org_a, org_b
+
+
+async def _export_as(db: AsyncSession, user: User, ctx: RequestContext) -> dict:
+    app.dependency_overrides[current_active_user] = lambda: user
+    app.dependency_overrides[current_org_member] = lambda: ctx
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/users/me/export")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    return response.json()
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +287,30 @@ async def test_export_only_returns_own_data(db: AsyncSession) -> None:
     data = response.json()
     file_names = [d["file_name"] for d in data["documents"]]
     assert "user_b_secret.pdf" not in file_names
+
+
+# ---------------------------------------------------------------------------
+# GET /users/me/export — org scoping (removed members, current members)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_removed_member_export_excludes_former_org_data(db: AsyncSession) -> None:
+    user, org_a, _org_b = await _seed_two_org_user(db, still_member_of_b=False)
+
+    data = await _export_as(db, user, _make_context(user, org_a))
+
+    assert [d["file_name"] for d in data["documents"]] == ["org_a_doc.pdf"]
+    assert [t["vendor"] for t in data["transactions"]] == ["Org A Vendor"]
+
+
+@pytest.mark.anyio
+async def test_current_member_export_of_org_includes_their_data_there(db: AsyncSession) -> None:
+    user, _org_a, org_b = await _seed_two_org_user(db, still_member_of_b=True)
+
+    data = await _export_as(db, user, _make_context(user, org_b, OrgRole.USER))
+
+    assert [d["file_name"] for d in data["documents"]] == ["org_b_doc.pdf"]
+    assert [t["vendor"] for t in data["transactions"]] == ["Org B Vendor"]
 
 
 # ---------------------------------------------------------------------------

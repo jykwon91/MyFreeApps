@@ -465,14 +465,14 @@ async def count_retry_pending(
     return result.scalar_one()
 
 
-async def list_by_user(
-    db: AsyncSession,
-    user_id: uuid.UUID,
+async def list_by_org_and_user(
+    db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID,
 ) -> Sequence[Document]:
-    """Return all non-deleted documents owned by a user (for data export)."""
+    """Return a user's non-deleted documents in one organization (for data export)."""
     result = await db.execute(
         select(Document)
-        .where(Document.user_id == user_id, Document.deleted_at.is_(None))
+        .where(Document.organization_id == organization_id, Document.user_id == user_id)
+        .where(Document.deleted_at.is_(None))
         .order_by(Document.created_at.desc())
     )
     return result.scalars().all()
