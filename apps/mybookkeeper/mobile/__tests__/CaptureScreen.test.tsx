@@ -7,7 +7,7 @@ import { AccessibilityInfo, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { UPLOAD_PROCESSING_LABEL } from "../src/constants/capture";
 import CaptureScreen from "../src/features/capture/CaptureScreen";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadsReset } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -91,7 +91,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
 });
 
 afterEach(() => {

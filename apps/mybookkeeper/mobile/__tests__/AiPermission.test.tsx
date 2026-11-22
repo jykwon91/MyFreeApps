@@ -13,7 +13,7 @@ import { allowAi, hasAiPermission, stopAi } from "../src/features/aiPermission/a
 import AiPermissionPanel from "../src/features/aiPermission/AiPermissionPanel";
 import { drainUploadQueue } from "../src/features/capture/drainUploadQueue";
 import { addToQueue, pendingUploads } from "../src/features/capture/uploadQueueFiles";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadsReset } from "../src/features/capture/uploadsSlice";
 import UploadStatus from "../src/features/capture/UploadStatus";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -86,7 +86,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
 });
 
 afterEach(() => {
