@@ -34,6 +34,7 @@ from platform_shared.auth.session_invalidation import SessionInvalidationMixin
 from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
 from platform_shared.auth.user_manager import PlatformBaseUserManager
 from platform_shared.core.permissions import make_decode_token_auth_time, make_strict_superuser_gate
+from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.db.models.auth_event import AuthEvent
 from platform_shared.services.refresh_session_service import RefreshSessionService
 from platform_shared.services.totp_account_service import TotpAccountService
@@ -302,6 +303,7 @@ async def make_stack(*, pool_size: int, check_tokens: bool = False) -> AsyncIter
         await connection.execute(text(f"CREATE SCHEMA {schema}"))
         await connection.run_sync(_Base.metadata.create_all)
         await connection.run_sync(AuthEvent.__table__.create)
+        await connection.run_sync(AuditLog.__table__.create)
 
     stack = RealAuthStack(engine, check_tokens=check_tokens)
     try:

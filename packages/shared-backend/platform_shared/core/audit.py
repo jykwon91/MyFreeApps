@@ -163,9 +163,14 @@ def reset_registry() -> None:
     _listeners_registered = False
 
 
+def format_record_id(pk_values: Iterable[Any]) -> str:
+    """The ``audit_logs.record_id`` for a row with these primary-key values."""
+    return ",".join(str(value) for value in pk_values)
+
+
 def _get_record_id(target: Any) -> str:
     pk = inspect(target.__class__).primary_key
-    return ",".join(str(getattr(target, col.name, "")) for col in pk)
+    return format_record_id(getattr(target, col.name, "") for col in pk)
 
 
 def _serialize(value: Any) -> str | None:

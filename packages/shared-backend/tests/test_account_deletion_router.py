@@ -1,4 +1,4 @@
-"""The shared ``DELETE /users/me`` route locks the user row before preparing the delete."""
+"""The shared ``DELETE /users/me`` route locks the user row, then captures, prepares, deletes and erases in order."""
 import contextlib
 import uuid
 from collections.abc import AsyncIterator
@@ -31,6 +31,13 @@ def test_user_row_is_locked_before_prepare_deletion_runs() -> None:
     async def delete_account(_db: Any, _user: Any) -> None:
         calls.append("delete")
 
+    async def capture_deletion_scope(_db: Any, _user: Any) -> Any:
+        calls.append("capture")
+        return "scope"
+
+    async def erase_audit_history(_db: Any, _user: Any, scope: Any) -> None:
+        calls.append(f"erase:{scope}")
+
     @contextlib.asynccontextmanager
     async def unit_of_work() -> AsyncIterator[Any]:
         yield db
@@ -62,6 +69,8 @@ def test_user_row_is_locked_before_prepare_deletion_runs() -> None:
 
     with (
         patch("platform_shared.api.account_deletion_router.delete_account", delete_account),
+        patch("platform_shared.api.account_deletion_router.capture_deletion_scope", capture_deletion_scope),
+        patch("platform_shared.api.account_deletion_router.erase_audit_history", erase_audit_history),
         patch("platform_shared.auth.released_current_user.release_connection", AsyncMock()),
     ):
         response = TestClient(app).request(
@@ -69,4 +78,4 @@ def test_user_row_is_locked_before_prepare_deletion_runs() -> None:
         )
 
     assert response.status_code == 204
-    assert calls == ["lock:True", "prepare", "delete", "after_commit"]
+    assert calls == ["lock:True", "capture", "prepare", "delete", "erase:scope", "after_commit"]

@@ -133,6 +133,8 @@
         "test_user_name_schema.py",
         "test_account_lockout.py",
         "test_account_deletion.py",
+        "test_account_deletion_audit_erasure.py",
+        "test_account_deletion_audit_erasure_postgres.py",
         "test_data_export.py",
         "test_email_verification.py",
         "test_auth_email_delivery.py",
