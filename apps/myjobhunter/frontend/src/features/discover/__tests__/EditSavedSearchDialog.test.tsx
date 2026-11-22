@@ -243,6 +243,12 @@ describe("EditSavedSearchDialog", () => {
   // ---------------------------------------------------------------------------
 
   describe("pre-fill from existing source", () => {
+    it("shows the source's display name, not its raw key", () => {
+      render(<EditSavedSearchDialog source={makeJSearchSource()} open={true} onClose={onClose} />);
+
+      expect((screen.getByLabelText("Job source (read-only)") as HTMLInputElement).value).toBe("JSearch");
+    });
+
     it("pre-fills the name field from the existing source", () => {
       render(
         <EditSavedSearchDialog
@@ -356,7 +362,7 @@ describe("EditSavedSearchDialog", () => {
         /job source \(read-only\)/i,
       ) as HTMLInputElement;
       expect(sourceInput.disabled).toBe(true);
-      expect(sourceInput.value).toBe("Jsearch");
+      expect(sourceInput.value).toBe("JSearch");
     });
   });
 
