@@ -260,15 +260,17 @@ describe("HomeScreen", () => {
     server.summary = { revenue: 1, expenses: 0, profit: 1, by_property: [] };
     await renderScreen();
     await screen.findByText("+$1.00");
+    // Changing what the server holds before the Waiting card has loaded would be a change the first load can pick up, not one a pull has to fetch.
+    await screen.findByText("You're all caught up.");
     server.summary = { revenue: 2, expenses: 0, profit: 2, by_property: [] };
     server.documents = [{ id: "d1", status: "failed" }];
     server.transactions.push(aTransaction({ status: "pending" }));
     server.pendingReceipts = 1;
     await pull();
     expect(await screen.findByText("+$2.00")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "1 rent receipt waiting to send" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "1 transaction to review" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "1 document needs a look" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "1 rent receipt waiting to send" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "1 transaction to review" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "1 document needs a look" })).toBeTruthy();
   });
 
   it("refreshes every query the Waiting card reads on a pull", async () => {

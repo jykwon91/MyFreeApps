@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import { Provider } from "react-redux";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
 import PeopleScreen from "../src/features/people/PeopleScreen";
+import { noPaymentsFrom } from "../src/constants/tenantPayments";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -151,8 +152,9 @@ describe("tenants", () => {
     it("reloads their payments when the page is pulled", async () => {
       const server = startApplicantServer([aTenant()]);
       await renderDetail();
-      await screen.findByText("Payments");
-      await waitFor(() => expect(server.requests.filter((request) => request.url === "/transactions")).toHaveLength(1));
+      // The heading shows while the payments are still loading, and a pull then has nothing to reload yet.
+      await screen.findByText(noPaymentsFrom(aTenant().legal_name ?? "them"));
+      expect(server.requests.filter((request) => request.url === "/transactions")).toHaveLength(1);
 
       const scroller = screen.getByTestId("applicant-detail");
       await act(async () => scroller.props.refreshControl.props.onRefresh());
