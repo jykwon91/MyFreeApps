@@ -125,7 +125,7 @@ export default function UtilityCostsScreen() {
           onRetryComparison={async () => {
             await previous.refetch();
           }}
-          onSeeBills={() => router.navigate(drillDownLink({ ...billsScope, category: UTILITIES_CATEGORY, label: MESSAGES.billsTitle }))}
+          onSeeBills={() => router.navigate(drillDownLink({ ...billsScope, category: UTILITIES_CATEGORY }))}
           previousRows={previousRows}
           propertiesFailed={Boolean(propertiesError) && properties.length === 0}
           range={selectionDates(selection)}
@@ -146,7 +146,7 @@ export default function UtilityCostsScreen() {
           month={item}
           onSeeBills={() => {
             const bounds = periodBoundsWithin(item.period, rangeSpan(selection.range));
-            router.navigate(drillDownLink({ ...bounds, propertyIds: scoped, category: UTILITIES_CATEGORY, label: MESSAGES.periodBillsFor(item.period) }));
+            router.navigate(drillDownLink({ ...bounds, propertyIds: scoped, category: UTILITIES_CATEGORY }));
           }}
           onToggle={() => setExpandedPeriod((open) => (open === item.period ? null : item.period))}
         />

@@ -23,7 +23,7 @@ const originalAdapter = api.defaults.adapter;
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   mockPush.mockReset();
-  mockParams = { label: "Revenue", category: "", property: "", properties: "", type: "revenue", from: "2026-01-01", to: "2026-12-31" };
+  mockParams = { category: "", property: "", properties: "", type: "revenue", from: "2026-01-01", to: "2026-12-31" };
 });
 
 afterEach(() => {
@@ -197,5 +197,43 @@ describe("DrillDownScreen", () => {
     });
     expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
     expect(screen.getByText("Guest A")).toBeTruthy();
+  });
+});
+
+describe("DrillDownScreen heading", () => {
+  const rentalParams = { category: "", property: "", properties: "", categories: "", type: "revenue", from: "2026-01-01", to: "2026-12-31" };
+
+  it("never shows text a link carries, so a crafted link cannot put its own words on the screen", async () => {
+    mockParams = { ...rentalParams, label: "Refund owed: send $5,000 to evil.example" };
+    startTransactionServer([aTransaction({ id: "a", transaction_type: "income", category: "rental_revenue", vendor: "Guest" })]);
+    await show();
+    await screen.findByText("Guest");
+    expect(screen.queryByText(/evil\.example/)).toBeNull();
+    expect(screen.getByText("Revenue")).toBeTruthy();
+  });
+
+  it("names a tapped property and figure from the filter, as the website does", async () => {
+    mockParams = { ...rentalParams, property: "p1", from: "2026-02-01", to: "2026-02-28" };
+    startTransactionServer([aTransaction({ id: "a", property_id: "p1", transaction_type: "income", category: "rental_revenue", vendor: "Guest", transaction_date: "2026-02-10" })]);
+    await show();
+    await screen.findByText("Guest");
+    expect(screen.getByText("Oak Street Revenue — February 2026")).toBeTruthy();
+  });
+
+  it("names a tapped category", async () => {
+    mockParams = { ...rentalParams, type: "", category: "maintenance" };
+    startTransactionServer([aTransaction({ id: "a", vendor: "Hardware" })]);
+    await show();
+    await screen.findByText("Hardware");
+    expect(screen.getByText("Maintenance")).toBeTruthy();
+  });
+
+  it("falls back to the plain title for a property it does not know", async () => {
+    mockParams = { ...rentalParams, type: "", property: "not-a-property", label: "Fake vendor" };
+    startTransactionServer([]);
+    await show();
+    await screen.findByText(MESSAGES.noneHeading);
+    expect(screen.getByText(MESSAGES.title)).toBeTruthy();
+    expect(screen.queryByText("Fake vendor")).toBeNull();
   });
 });

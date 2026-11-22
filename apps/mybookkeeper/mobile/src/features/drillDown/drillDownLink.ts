@@ -1,12 +1,11 @@
-import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
+import type { DrillDownScope } from "@mybookkeeper/api-client/types/analytics/drill-down-scope";
 import type { DrillDownParams } from "../../types/DrillDownParams";
 
 /** The screen that lists the approved transactions behind a number. */
 export const DRILL_DOWN_PATH = "/analytics/drill-down";
 
-export function drillDownLink(filter: DrillDownFilter): string {
+export function drillDownLink(filter: DrillDownScope): string {
   const params: DrillDownParams = {
-    label: filter.label,
     category: filter.category ?? "",
     property: filter.propertyId ?? "",
     properties: filter.propertyIds?.join(",") ?? "",
@@ -18,9 +17,8 @@ export function drillDownLink(filter: DrillDownFilter): string {
   return `${DRILL_DOWN_PATH}?${new URLSearchParams(params).toString()}`;
 }
 
-export function drillDownFilterFromParams(params: Partial<DrillDownParams>): DrillDownFilter {
+export function drillDownFilterFromParams(params: Partial<DrillDownParams>): DrillDownScope {
   return {
-    label: params.label ?? "",
     category: params.category || undefined,
     propertyId: params.property || undefined,
     propertyIds: params.properties ? params.properties.split(",").filter(Boolean) : undefined,

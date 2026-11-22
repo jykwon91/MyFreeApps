@@ -66,7 +66,7 @@ export const MONEY_ANALYSIS_MESSAGES = {
   retryYears: "Try again to load the years",
   propertyLimit: (limit: number) => `I can look at up to ${limit} properties at a time here. Turn one off to choose another.`,
   monthDrillLabel: (what: string, month: string) => `${what} \u2014 ${month}`,
-  propertyMonthDrillLabel: (property: string, what: string, month: string) => `${property} ${what} \u2014 ${month}`,
+  propertyDrillLabel: (property: string, what: string) => `${property} ${what}`,
 } as const;
 
 /** The words that say how a number moved against the earlier stretch. */

@@ -14,6 +14,7 @@ import { TransactionSkeletonRow } from "../transactions/TransactionsSkeleton";
 import { propertyLabel } from "../transactions/transactionDisplay";
 import DrillDownEmptyList from "./DrillDownEmptyList";
 import DrillDownHeadline from "./DrillDownHeadline";
+import { drillDownHeading } from "./drillDownHeading";
 import { drillDownFilterFromParams } from "./drillDownLink";
 
 /** The approved transactions a number on the analytics screen was added up from, a page at a time, with the server's count and total. */
@@ -43,7 +44,7 @@ export default function DrillDownScreen() {
         <View style={{ gap: spacing.xs, padding: spacing.lg }}>
           <StaleDataBanner isShown={Boolean(list.error) && isCurrent && !list.isLoadMoreError} />
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {filter.label}
+            {drillDownHeading(filter, properties)}
           </Text>
           <DrillDownHeadline amountTotal={list.amountTotal} count={list.total} isShown={isCurrent} />
         </View>

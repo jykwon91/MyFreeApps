@@ -78,7 +78,7 @@ describe("changeDisplay", () => {
 
 describe("drill-down links", () => {
   it("carries the filter in the address and reads it back", () => {
-    const filter = { label: "Elm St, Revenue", propertyId: "p1", type: "revenue" as const, startDate: "2026-01-01", endDate: "2026-02-01", propertyIds: ["p1", "p2"] };
+    const filter = { propertyId: "p1", type: "revenue" as const, startDate: "2026-01-01", endDate: "2026-02-01", propertyIds: ["p1", "p2"] };
     const url = new URL(`http://x${drillDownLink(filter)}`);
     expect(url.pathname).toBe("/analytics/drill-down");
     const params = Object.fromEntries(url.searchParams.entries());
@@ -86,18 +86,18 @@ describe("drill-down links", () => {
   });
 
   it("leaves out what is not set, and ignores a type it does not know", () => {
-    const filter = drillDownFilterFromParams({ label: "x", type: "bogus", category: "", from: "" });
-    expect(filter).toEqual({ label: "x", category: undefined, propertyId: undefined, propertyIds: undefined, categories: undefined, type: undefined, startDate: undefined, endDate: undefined });
+    const filter = drillDownFilterFromParams({ type: "bogus", category: "", from: "" });
+    expect(filter).toEqual({ category: undefined, propertyId: undefined, propertyIds: undefined, categories: undefined, type: undefined, startDate: undefined, endDate: undefined });
   });
 
   it("builds each drill-down over the dates and properties the numbers were added up over", () => {
     const scope = { startDate: "2026-01-01", endDate: "2026-11-09", propertyIds: ["p2"] };
     expect(kindDrillDown("expenses", scope)).toMatchObject({ type: "expenses", ...scope });
-    expect(categoryDrillDown("maintenance", scope)).toMatchObject({ category: "maintenance", label: "Maintenance", ...scope });
-    expect(propertyDrillDown("p1", "Elm St", scope)).toEqual({ propertyId: "p1", label: "Elm St", startDate: "2026-01-01", endDate: "2026-11-09" });
+    expect(categoryDrillDown("maintenance", scope)).toMatchObject({ category: "maintenance", ...scope });
+    expect(propertyDrillDown("p1", scope)).toEqual({ propertyId: "p1", startDate: "2026-01-01", endDate: "2026-11-09" });
     expect(monthDrillDown("2026-02", "revenue", scope)).toMatchObject({ type: "revenue", startDate: "2026-02-01", endDate: "2026-02-28", propertyIds: ["p2"] });
     expect(monthDrillDown("2026-02", { category: "utilities" }, scope)).toMatchObject({ category: "utilities", startDate: "2026-02-01", endDate: "2026-02-28" });
-    expect(propertyMonthDrillDown("p1", "Elm St", "2026-02", "expenses", scope)).toMatchObject({ propertyId: "p1", type: "expenses", startDate: "2026-02-01", endDate: "2026-02-28" });
+    expect(propertyMonthDrillDown("p1", "2026-02", "expenses", scope)).toMatchObject({ propertyId: "p1", type: "expenses", startDate: "2026-02-01", endDate: "2026-02-28" });
   });
 
   it("stops the current month at the end of the range, and starts a month where the range starts", () => {
@@ -106,7 +106,7 @@ describe("drill-down links", () => {
     expect(monthDrillDown("2026-11", { category: "utilities" }, toDate)).toMatchObject({ endDate: "2026-11-09" });
     const fromMid = { startDate: "2026-03-15", endDate: "2026-06-30" };
     expect(monthDrillDown("2026-03", "expenses", fromMid)).toMatchObject({ startDate: "2026-03-15", endDate: "2026-03-31" });
-    expect(propertyMonthDrillDown("p1", "Elm St", "2026-03", "revenue", fromMid)).toMatchObject({ startDate: "2026-03-15", endDate: "2026-03-31" });
+    expect(propertyMonthDrillDown("p1", "2026-03", "revenue", fromMid)).toMatchObject({ startDate: "2026-03-15", endDate: "2026-03-31" });
   });
 
   it("carries the categories left on into a revenue or expenses figure, and into a month of it", () => {

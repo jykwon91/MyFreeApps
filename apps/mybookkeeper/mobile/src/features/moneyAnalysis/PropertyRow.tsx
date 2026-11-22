@@ -32,7 +32,7 @@ export default function PropertyRow({ property, previous, isComparing, monthly, 
   const [isOpen, setIsOpen] = useState(false);
   const name = property.name || MESSAGES.noProperty;
   const open = (kind?: "revenue" | "expenses") => {
-    const filter = propertyDrillDown(property.property_id, name, scope);
+    const filter = propertyDrillDown(property.property_id, scope);
     router.navigate(drillDownLink(kind ? { ...filter, type: kind } : filter));
   };
 
@@ -72,8 +72,8 @@ export default function PropertyRow({ property, previous, isComparing, monthly, 
               {monthsNewestFirst(monthly.months).map((month) => (
                 <View key={month.month}>
                   <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground, paddingTop: spacing.sm }}>{monthName(month.month, "long")}</Text>
-                  <HomeLinkRow detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "revenue", scope)))} />
-                  <HomeLinkRow detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "expenses", scope)))} />
+                  <HomeLinkRow detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, month.month, "revenue", scope)))} />
+                  <HomeLinkRow detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, month.month, "expenses", scope)))} />
                 </View>
               ))}
             </View>
