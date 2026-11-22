@@ -21,8 +21,6 @@ from __future__ import annotations
 
 import io
 import logging
-import re
-from fractions import Fraction
 from typing import Any
 
 from PIL import Image, ImageOps
@@ -41,6 +39,7 @@ from app.schemas.recipe.extraction_schemas import (
     DraftStep,
     RecipeDraftResponse,
 )
+from app.services.recipe.draft_value_coercion import coerce_minutes, coerce_quantity
 from app.services.recipe.recipe_extraction_prompt import RECIPE_EXTRACTION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -180,42 +179,6 @@ def _clean_required_str(value: Any, max_len: int) -> str:
     return _clean_optional_str(value, max_len) or ""
 
 
-def _coerce_int(value: Any) -> int | None:
-    if isinstance(value, bool):  # bool is an int subclass — reject explicitly
-        return None
-    if isinstance(value, int):
-        return value if value >= 0 else None
-    if isinstance(value, float):
-        return int(value) if value >= 0 else None
-    if isinstance(value, str):
-        match = re.match(r"\s*(\d+)", value)  # leading integer, e.g. "30 min"
-        if match:
-            return int(match.group(1))
-    return None
-
-
-def _coerce_quantity(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value) if value >= 0 else None
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if not text:
-        return None
-    try:  # plain decimal, e.g. "1.5"
-        as_float = float(text)
-        return as_float if as_float >= 0 else None
-    except ValueError:
-        pass
-    try:  # fraction or mixed number, e.g. "1/2" or "1 1/2"
-        total = float(sum(Fraction(part) for part in text.split()))
-        return total if total >= 0 else None
-    except (ValueError, ZeroDivisionError):
-        return None
-
-
 def _coerce_ingredients(value: Any) -> list[DraftIngredient]:
     if not isinstance(value, list):
         return []
@@ -229,7 +192,7 @@ def _coerce_ingredients(value: Any) -> list[DraftIngredient]:
         out.append(
             DraftIngredient(
                 name=name,
-                quantity=_coerce_quantity(item.get("quantity")),
+                quantity=coerce_quantity(item.get("quantity")),
                 unit=_clean_optional_str(item.get("unit"), 50),
                 note=_clean_optional_str(item.get("note"), 255),
             )
@@ -261,8 +224,8 @@ def _coerce_draft(data: Any) -> RecipeDraftResponse:
         description=_clean_optional_str(data.get("description"), 5000),
         source=_clean_optional_str(data.get("source"), 1000),
         servings=_clean_optional_str(data.get("servings"), 50),
-        prep_minutes=_coerce_int(data.get("prep_minutes")),
-        cook_minutes=_coerce_int(data.get("cook_minutes")),
+        prep_minutes=coerce_minutes(data.get("prep_minutes")),
+        cook_minutes=coerce_minutes(data.get("cook_minutes")),
         ingredients=_coerce_ingredients(data.get("ingredients")),
         steps=_coerce_steps(data.get("steps")),
     )

@@ -475,6 +475,8 @@ async def list_cooks(
     if recipe is None:
         return None
     if version_id is not None:
+        if not await recipe_version_repository.exists_for_recipe(db, version_id, recipe_id, user_id):
+            return None
         cooks = await cook_log_repository.list_by_version(db, version_id, user_id)
     else:
         cooks = await cook_log_repository.list_by_recipe(db, recipe_id, user_id)

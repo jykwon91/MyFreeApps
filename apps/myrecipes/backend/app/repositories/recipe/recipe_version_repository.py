@@ -26,6 +26,20 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
+async def exists_for_recipe(
+    db: AsyncSession, version_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID,
+) -> bool:
+    """True when ``version_id`` is a version of ``recipe_id`` owned by the user."""
+    result = await db.execute(
+        select(RecipeVersion.id).where(
+            RecipeVersion.id == version_id,
+            RecipeVersion.recipe_id == recipe_id,
+            RecipeVersion.user_id == user_id,
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def list_by_recipe(
     db: AsyncSession, recipe_id: uuid.UUID, user_id: uuid.UUID,
 ) -> list[RecipeVersion]:

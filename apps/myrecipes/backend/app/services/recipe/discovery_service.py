@@ -62,6 +62,7 @@ from app.schemas.recipe.extraction_schemas import (
     RecipeDraftResponse,
 )
 from app.services.recipe import discovery_image_service
+from app.services.recipe.draft_value_coercion import coerce_minutes, coerce_quantity
 from app.services.recipe.discovery_prompts import (
     DISCOVERY_DETAIL_PROMPT,
     DISCOVERY_DETAIL_SCHEMA,
@@ -260,23 +261,6 @@ def _clean_str(value: Any, max_len: int) -> str | None:
     return text[:max_len]
 
 
-def _clean_int(value: Any, *, maximum: int) -> int | None:
-    if isinstance(value, bool):  # bool is an int subclass — reject explicitly
-        return None
-    if isinstance(value, (int, float)):
-        number = int(value)
-        return number if 0 <= number <= maximum else None
-    return None
-
-
-def _clean_float(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value) if value >= 0 else None
-    return None
-
-
 def _clean_http_url(value: Any) -> str | None:
     """A syntactically valid absolute http(s) URL, or None.
 
@@ -369,7 +353,7 @@ def _coerce_results(data: Any) -> tuple[list[DiscoveredRecipe], list[str | None]
                 why_notable=_clean_str(item.get("why_notable"), 400),
                 # 3 days — long enough for a cure or a proof, short enough to
                 # catch a model that emitted milliseconds.
-                total_minutes=_clean_int(item.get("total_minutes"), maximum=4320),
+                total_minutes=coerce_minutes(item.get("total_minutes"), 4320),
                 difficulty=(
                     difficulty if difficulty in _DIFFICULTIES else None
                 ),
@@ -416,7 +400,7 @@ def _coerce_ingredients(value: Any) -> list[DraftIngredient]:
         out.append(
             DraftIngredient(
                 name=name,
-                quantity=_clean_float(item.get("quantity")),
+                quantity=coerce_quantity(item.get("quantity")),
                 unit=_clean_str(item.get("unit"), 50),
                 note=_clean_str(item.get("note"), 255),
             )
@@ -448,8 +432,8 @@ def _coerce_draft(data: Any, *, fallback_title: str) -> RecipeDraftResponse:
         description=_clean_str(data.get("description"), 5000),
         source=_clean_str(data.get("source"), 1000),
         servings=_clean_str(data.get("servings"), 50),
-        prep_minutes=_clean_int(data.get("prep_minutes"), maximum=4320),
-        cook_minutes=_clean_int(data.get("cook_minutes"), maximum=4320),
+        prep_minutes=coerce_minutes(data.get("prep_minutes"), 4320),
+        cook_minutes=coerce_minutes(data.get("cook_minutes"), 4320),
         ingredients=_coerce_ingredients(data.get("ingredients")),
         steps=_coerce_steps(data.get("steps")),
     )

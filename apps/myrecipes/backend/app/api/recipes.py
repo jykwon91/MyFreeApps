@@ -78,6 +78,7 @@ auth_router = APIRouter(
 
 _RECIPE_NOT_FOUND = "Recipe not found"
 _VERSION_NOT_FOUND = "Version not found"
+_RECIPE_OR_VERSION_NOT_FOUND = "Recipe or version not found"
 _COOK_NOT_FOUND = "Cook log not found"
 
 
@@ -326,7 +327,7 @@ async def list_version_cooks(
 ) -> list[CookLogResponse]:
     cooks = await recipe_service.list_cooks(db, user.id, recipe_id, version_id)
     if cooks is None:
-        raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
+        raise HTTPException(status_code=404, detail=_RECIPE_OR_VERSION_NOT_FOUND)
     return cooks
 
 
