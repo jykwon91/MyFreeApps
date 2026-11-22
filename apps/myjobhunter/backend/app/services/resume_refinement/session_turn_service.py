@@ -34,6 +34,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.models.resume_refinement.session import ResumeRefinementSession
 from app.repositories.resume_refinement import (
     session_repo,
@@ -103,6 +104,7 @@ async def accept_pending(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -164,6 +166,7 @@ async def accept_flagged(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -212,6 +215,7 @@ async def accept_custom(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -271,6 +275,7 @@ async def request_alternative(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=hint, use_cache=False,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -311,6 +316,7 @@ async def skip_target(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=True,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -376,6 +382,7 @@ async def navigate(
     # writes the result back to the cache for future navigations.
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=False,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)
 
@@ -433,6 +440,7 @@ async def create_target_from_line(
                 return await _with_turns(db, cached)
         session = await _generate_next_proposal(
             db, session, user_id=user_id, hint=None, use_cache=False,
+            retry_policy=REQUEST_PATH_CLAUDE_RETRY,
         )
         return await _with_turns(db, session)
 
@@ -463,5 +471,6 @@ async def create_target_from_line(
 
     session = await _generate_next_proposal(
         db, session, user_id=user_id, hint=None, use_cache=False,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     return await _with_turns(db, session)

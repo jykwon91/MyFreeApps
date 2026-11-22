@@ -23,6 +23,9 @@ import httpx2
 import pytest
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError, throttle
 
+from app.core.claude_retry_constants import WORKER_CLAUDE_RETRY
+from app.services.extraction import claude_service
+
 
 # ---------------------------------------------------------------------------
 # Claude calls go through the shared backoff — rate-limit warning visibility
@@ -58,8 +61,6 @@ def _reset_shared_throttle():
 
 
 async def _call_claude_with(create) -> dict:
-    from app.services.extraction import claude_service
-
     with (
         patch.object(
             claude_service, "_get_client",
@@ -70,7 +71,7 @@ async def _call_claude_with(create) -> dict:
     ):
         return await claude_service.call_claude(
             system_prompt="test", user_content="hello", context_type="test",
-            user_id=uuid.uuid4(),
+            user_id=uuid.uuid4(), retry_policy=WORKER_CLAUDE_RETRY,
         )
 
 

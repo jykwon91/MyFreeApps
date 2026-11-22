@@ -19,6 +19,7 @@ import httpx2
 import pytest
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.core.ai_failure_messages import (
     AI_BUSY_MESSAGE,
     AI_RETRY_AFTER_SECONDS,
@@ -97,6 +98,7 @@ class TestClaudeServiceClassifiesFailures:
             await claude_service.call_claude(
                 system_prompt="p", user_content="u", context_type="test",
                 user_id=uuid.uuid4(),
+                retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             )
 
         assert exc_info.value.kind is kind
@@ -117,6 +119,7 @@ class TestClaudeServiceClassifiesFailures:
             await claude_service.call_claude(
                 system_prompt="p", user_content="u", context_type="test",
                 user_id=uuid.uuid4(),
+                retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             )
 
         assert exc_info.value.kind is AnthropicFailureKind.UPSTREAM

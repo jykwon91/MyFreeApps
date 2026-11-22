@@ -26,6 +26,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.services.resume_refinement import (
     session_helpers,
     session_service,
@@ -329,6 +330,7 @@ async def test_generation_persists_guard_state_and_increments_count() -> None:
     ):
         await session_helpers._generate_next_proposal(
             db, session, user_id=session.user_id, hint=None, use_cache=True,
+            retry_policy=REQUEST_PATH_CLAUDE_RETRY,
         )
 
     # The rewrite saw the allowlist and the pre-existing flag count.

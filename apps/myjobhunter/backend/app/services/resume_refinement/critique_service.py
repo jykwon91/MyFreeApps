@@ -1,6 +1,7 @@
 """Critique service — runs the initial pass that produces improvement_targets.
 
-Called once per session at start. Walks the entire resume markdown and
+Called once per session at start, from the refinement-prepare worker
+(so a rate limit is waited out with ``WORKER_CLAUDE_RETRY``). Walks the entire resume markdown and
 asks Claude for a prioritized list of bullet/section targets to
 rewrite. Output is persisted on the session row; the rewrite loop then
 walks the targets one at a time.
@@ -10,6 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 
+from app.core.claude_retry_constants import WORKER_CLAUDE_RETRY
 from app.services.extraction.claude_service import call_claude_with_meta
 from app.services.extraction.prompts.resume_critique_prompt import (
     RESUME_CRITIQUE_PROMPT,
@@ -45,6 +47,7 @@ async def run_critique(
         user_content=f"Resume markdown:\n\n{resume_markdown}",
         context_type="resume_critique",
         user_id=user_id,
+        retry_policy=WORKER_CLAUDE_RETRY,
         context_id=session_id,
     )
 

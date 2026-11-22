@@ -11,6 +11,7 @@ import json
 import logging
 import uuid
 
+from app.core.claude_retry_policy import ClaudeRetryPolicy
 from app.services.extraction.claude_service import call_claude_with_meta
 from app.services.extraction.prompts.resume_rewrite_prompt import (
     RESUME_REWRITE_PROMPT,
@@ -27,6 +28,7 @@ async def run_rewrite(
     hint: str | None,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
+    retry_policy: ClaudeRetryPolicy,
     prior_context: list[dict] | None = None,
     confirmed_facts: list[str] | None = None,
     prior_flag_count: int = 0,
@@ -43,6 +45,8 @@ async def run_rewrite(
             session-level history of stated preferences.
         user_id: Scopes the extraction_log row.
         session_id: Used as ``context_id``.
+        retry_policy: ``REQUEST_PATH_CLAUDE_RETRY`` for a turn the user is
+            waiting on, ``WORKER_CLAUDE_RETRY`` during preparation.
         prior_context: Optional list of previous-turn distillations for
             session-level memory. Each entry is
             ``{"kind": str, "section": str | None, "text": str}``.
@@ -83,6 +87,7 @@ async def run_rewrite(
         user_content=user_content,
         context_type="resume_rewrite",
         user_id=user_id,
+        retry_policy=retry_policy,
         context_id=session_id,
     )
 

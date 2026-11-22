@@ -27,6 +27,7 @@ from typing import Any
 from platform_shared.db.session import release_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.claude_retry_constants import WORKER_CLAUDE_RETRY
 from app.models.profile.education import Education
 from app.models.profile.profile import Profile
 from app.models.profile.skill import Skill
@@ -208,6 +209,7 @@ async def prepare_session(
         await release_connection(db)
         session = await _generate_next_proposal(
             db, session, user_id=user_id, hint=None, use_cache=False,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
         session, ours = await lock_if_still_preparing(db, session, claimed_at)
         if not ours:
