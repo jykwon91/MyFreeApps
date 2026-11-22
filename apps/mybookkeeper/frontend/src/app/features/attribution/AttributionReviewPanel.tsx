@@ -1,4 +1,5 @@
 import { Inbox } from "lucide-react";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
@@ -6,12 +7,20 @@ import AttributionReviewItem from "./AttributionReviewItem";
 import AttributionReviewSkeleton from "./AttributionReviewSkeleton";
 
 export default function AttributionReviewPanel() {
-  const { data, isLoading } = useGetAttributionReviewQueueQuery();
+  const { data, isLoading, isFetching, refetch } = useGetAttributionReviewQueueQuery();
 
   if (isLoading) return <AttributionReviewSkeleton />;
 
-  const items = data?.items ?? [];
-  const pendingCount = data?.pending_count ?? 0;
+  // No queue to show: it failed to load (or a retry is running). Never read that as "all caught up".
+  // A failed refetch keeps the rows already loaded, like the other lists.
+  if (!data) {
+    return (
+      <LoadErrorAlert message="I couldn't load your payments to review." isRetrying={isFetching} onRetry={() => void refetch()} />
+    );
+  }
+
+  const items = data.items;
+  const pendingCount = data.pending_count;
 
   return (
     <section className="space-y-3">

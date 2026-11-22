@@ -1,6 +1,7 @@
 import { infiniteQueryData } from "@/test/rtk-infinite-query-data";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -223,5 +224,56 @@ describe("AttributionReviewPanel", () => {
     renderWithProviders(<AttributionReviewPanel />);
     expect(screen.queryByRole("combobox", { name: /pick a tenant/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Link$/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("AttributionReviewPanel load failure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows an error with Retry, not 'All caught up', when the queue fails to load", async () => {
+    const refetch = vi.fn();
+    vi.mocked(useGetAttributionReviewQueueQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useGetAttributionReviewQueueQuery>);
+
+    renderWithProviders(<AttributionReviewPanel />);
+    expect(screen.getByRole("alert")).toHaveTextContent("I couldn't load your payments to review.");
+    expect(screen.queryByText(/All caught up/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error up while a retry is running", () => {
+    vi.mocked(useGetAttributionReviewQueueQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      isFetching: true,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetAttributionReviewQueueQuery>);
+
+    renderWithProviders(<AttributionReviewPanel />);
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByText(/All caught up/)).not.toBeInTheDocument();
+  });
+
+  it("keeps loaded rows when a refetch fails", () => {
+    vi.mocked(useGetAttributionReviewQueueQuery).mockReturnValue({
+      data: queueWithItems,
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetAttributionReviewQueueQuery>);
+
+    renderWithProviders(<AttributionReviewPanel />);
+    expect(screen.getByText("Alice Johnsn")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
