@@ -1,5 +1,5 @@
 import api from "@platform/core/lib/api";
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
 import { drillDownFilterFromParams } from "../src/features/drillDown/drillDownLink";
 import type { DrillDownParams } from "../src/types/DrillDownParams";
@@ -157,6 +157,19 @@ describe("Home filters", () => {
     expect(openedDrillDown()).toMatchObject({ propertyIds: ["p2"], startDate: `${year}-02-01`, endDate: `${year}-02-28` });
   });
 
+  it("shows the totals for no property filter when every property is chosen, as the list behind them does", async () => {
+    const server = startTransactionServer([], TWO_PROPERTIES);
+    server.summary = { revenue: 500, expenses: 0, profit: 500 };
+    await renderHome();
+    await screen.findByText("+$500.00");
+    server.summary = { revenue: 200, expenses: 0, profit: 200 };
+    await chooseProperty("Oak Ave");
+    await screen.findByText("+$200.00");
+    await chooseProperty("Elm St");
+    expect(await screen.findByText("+$500.00")).toBeTruthy();
+    expect(summaryUrls(server).some((url) => url.includes("property_ids=p2&property_ids=p1"))).toBe(false);
+  });
+
   it("keeps opening the transactions list when every property is chosen", async () => {
     const server = startTransactionServer([], TWO_PROPERTIES);
     server.summary = { revenue: 9000, expenses: 1500, profit: 7500, by_category: SPENDING };
@@ -164,7 +177,6 @@ describe("Home filters", () => {
     await screen.findByRole("button", { name: "Utilities, 300 dollars" });
     await chooseProperty("Oak Ave");
     await chooseProperty("Elm St");
-    await waitFor(() => expect(summaryUrls(server).at(-1)).toMatch(/property_ids=p2&property_ids=p1$/));
     await fireEvent.press(await screen.findByRole("button", { name: "Utilities, 300 dollars" }));
     expect(mockNavigate.mock.calls.at(-1)?.[0]).toMatch(/^\/money\?segment=transactions.*&category=utilities&/);
   });
