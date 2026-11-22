@@ -13,7 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { IMPORT_RECIPE_MESSAGES as MESSAGES } from "../src/constants/importRecipe";
-import { DRAFT_DISCARD_COPY, DRAFT_FILLED_IN, DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
+import { CHOOSE_AGAIN_DISCARD_COPY, DRAFT_DISCARD_COPY, DRAFT_FILLED_IN, DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import ImportRecipeScreen from "../src/features/importRecipe/ImportRecipeScreen";
 import { usePhotoImport } from "../src/features/importRecipe/usePhotoImport";
 import { makeStore } from "../src/lib/store";
@@ -345,6 +345,34 @@ describe("reading the photo", () => {
     expect(mockRepeat).not.toHaveBeenCalled();
     await act(async () => alertButton(copy.discard).onPress?.());
     expect(mockRepeat).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes back to the photo step with the draft cleared when a different photo is chosen from the review", async () => {
+    await show();
+    await press(MESSAGES.choosePhoto);
+    await press(MESSAGES.extract);
+    expect(await screen.findByLabelText("Title, required")).toBeTruthy();
+
+    await press(NEW_RECIPE_MESSAGES.chooseDifferentPhoto);
+    // Asks first, since the read would be lost.
+    const copy = CHOOSE_AGAIN_DISCARD_COPY;
+    expect(alert).toHaveBeenCalledWith(copy.discardTitle, copy.discardBody, expect.any(Array));
+    expect(screen.getByLabelText("Title, required")).toBeTruthy();
+    await act(async () => alertButton(copy.discard).onPress?.());
+
+    expect(screen.getByRole("button", { name: MESSAGES.takePhoto })).toBeTruthy();
+    expect(screen.queryByLabelText("Title, required")).toBeNull();
+    expect(mockGuard.prevent).toBe(false);
+    expect(mockRepeat).not.toHaveBeenCalled();
+  });
+
+  it("stays on the review when the question is answered Stay here", async () => {
+    await show();
+    await press(MESSAGES.choosePhoto);
+    await press(MESSAGES.extract);
+    await press(NEW_RECIPE_MESSAGES.chooseDifferentPhoto);
+    expect(alertButton(CHOOSE_AGAIN_DISCARD_COPY.keepEditing).style).toBe("cancel");
+    expect(screen.getByLabelText("Title, required")).toBeTruthy();
   });
 
   it("stops asking once the recipe is created", async () => {

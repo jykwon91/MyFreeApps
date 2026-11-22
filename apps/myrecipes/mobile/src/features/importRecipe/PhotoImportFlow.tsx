@@ -23,7 +23,7 @@ export default function PhotoImportFlow() {
     ]);
   });
 
-  if (state.step === "review") return <NewRecipeForm seed={{ draft: state.draft, origin: "photo" }} />;
+  if (state.step === "review") return <NewRecipeForm onChooseAgain={chooseAgain} seed={{ draft: state.draft, origin: "photo" }} />;
 
   return (
     <ScrollView
