@@ -182,6 +182,56 @@ describe("RentalRoiScreen", () => {
     expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(expect.stringContaining(screen.getByTestId("rental-roi-headline-title").props.children), { queue: true });
   });
 
+  it("keeps the target input and the old figures on screen while a new target loads", async () => {
+    const server = serve();
+    await render(tree());
+    await screen.findByTestId("rental-roi-headline");
+    const before = screen.getByTestId("rental-roi-target-input");
+    const oldTitle = screen.getByTestId("rental-roi-headline-title").props.children;
+    const reads = server.reads.length;
+    server.never = true;
+    await act(async () => {
+      fireEvent.changeText(before, "12");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    await waitFor(() => expect(server.reads.length).toBe(reads));
+    expect(await screen.findByText(MESSAGES.updatingLabel)).toBeTruthy();
+    expect(screen.getByTestId("rental-roi-target-input")).toBe(before);
+    expect(screen.getByTestId("rental-roi-headline-title").props.children).toBe(oldTitle);
+    expect(screen.queryByTestId("rental-roi-skeleton")).toBeNull();
+  });
+
+  it("shows the skeleton below the target input on first load", async () => {
+    const server = serve();
+    server.never = true;
+    await render(tree());
+    expect(screen.getByTestId("rental-roi-skeleton")).toBeTruthy();
+    expect(screen.getByTestId("rental-roi-target-input")).toBeTruthy();
+  });
+
+  it("shows an inline error under the input when a new target fails, so the target can be changed", async () => {
+    const server = serve();
+    await render(tree());
+    await screen.findByTestId("rental-roi-headline");
+    const input = screen.getByTestId("rental-roi-target-input");
+    server.status = 500;
+    await act(async () => {
+      fireEvent.changeText(input, "12");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    expect(await screen.findByText(MESSAGES.couldntLoad)).toBeTruthy();
+    expect(screen.getByTestId("rental-roi-target-input")).toBe(input);
+    expect(screen.queryByTestId("rental-roi-headline")).toBeNull();
+    server.status = 200;
+    server.response = aResponse();
+    await act(async () => {
+      fireEvent.changeText(input, "9");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    expect(await screen.findByTestId("rental-roi-headline")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntLoad)).toBeNull();
+  });
+
   it("shows the unassigned revenue note and links to transactions", async () => {
     serve(aResponse({ unassigned_revenue_monthly_cents: 50000 }));
     await render(tree());
