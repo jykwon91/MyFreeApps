@@ -1,4 +1,4 @@
-import { LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
+import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import { Chip, ClampedText, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
@@ -35,6 +35,9 @@ export default function ListingRow({ listing, propertyName, onPress }: ListingRo
           {propertyName}
         </ClampedText>
       ) : null}
+      <ClampedText numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        {LISTING_ROOM_TYPE_LABELS[listing.room_type]}
+      </ClampedText>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
         <Chip label={LISTING_STATUS_LABELS[listing.status]} />
         <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{monthlyRateText(listing.monthly_rate)}</Text>

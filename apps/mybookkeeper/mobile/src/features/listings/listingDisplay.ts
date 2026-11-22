@@ -1,4 +1,4 @@
-import { LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
+import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
@@ -33,7 +33,7 @@ export function stayLimits(listing: Pick<ListingResponse, "min_stay_days" | "max
 }
 
 export function listingRowLabel(listing: ListingSummary, propertyName: string | null): string {
-  return [listing.title, propertyName, LISTING_STATUS_LABELS[listing.status], monthlyRateText(listing.monthly_rate)].filter(Boolean).join(", ");
+  return [listing.title, propertyName, LISTING_ROOM_TYPE_LABELS[listing.room_type], LISTING_STATUS_LABELS[listing.status], monthlyRateText(listing.monthly_rate)].filter(Boolean).join(", ");
 }
 
 export function noListingsWithStatus(status: ListingStatus): string {
