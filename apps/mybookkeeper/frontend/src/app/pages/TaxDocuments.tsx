@@ -3,6 +3,7 @@ import { ChevronDown, X } from "lucide-react";
 import { AlertBox } from "@platform/ui";
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
+import { taxReturnYears } from "@mybookkeeper/api-client/utils/taxReturnYears";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import TaxDocumentsContent from "@/app/features/tax/TaxDocumentsContent";
@@ -22,10 +23,7 @@ export default function TaxDocuments() {
     selectedYear ? { tax_year: selectedYear } : undefined,
   );
 
-  const availableYears = useMemo(() => {
-    const years = [...new Set(taxReturns.map((r) => r.tax_year))].sort((a, b) => b - a);
-    return years;
-  }, [taxReturns]);
+  const availableYears = useMemo(() => taxReturnYears(taxReturns), [taxReturns]);
 
   const handleViewDocument = useCallback((documentId: string) => {
     setViewingDocId(documentId);

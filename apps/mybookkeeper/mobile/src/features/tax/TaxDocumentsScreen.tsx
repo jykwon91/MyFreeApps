@@ -1,4 +1,6 @@
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
+import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
+import { taxReturnYears } from "@mybookkeeper/api-client/utils/taxReturnYears";
 import { EmptyState, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
@@ -15,7 +17,6 @@ import TaxDocumentRowView from "./TaxDocumentRowView";
 import TaxDocumentsSkeleton from "./TaxDocumentsSkeleton";
 import { taxDocumentRowKey, taxDocumentSections } from "./taxDocumentsDisplay";
 import TaxMissingRowView from "./TaxMissingRowView";
-import { taxYears } from "./taxReportDisplay";
 
 export default function TaxDocumentsScreen() {
   const { colors, spacing, fontSize } = useTheme();
@@ -24,11 +25,16 @@ export default function TaxDocumentsScreen() {
   const [chosenYear, setChosenYear] = useState<number | null | "all">(null);
   const [isChoosingYear, setIsChoosingYear] = useState(false);
   const year = chosenYear === "all" ? null : (chosenYear ?? today.getFullYear() - 1);
+  const { data: taxReturns } = useListTaxReturnsQuery();
   const { currentData, error, isFetching, refetch } = useListTaxDocumentsQuery(year === null ? undefined : { tax_year: year });
   const { refresh, refreshControl } = useRefresh(refetch, error);
 
   const sections = useMemo<readonly TaxDocumentSection[]>(() => (currentData ? taxDocumentSections(currentData, year === null) : []), [currentData, year]);
-  const yearOptions = [{ value: ALL_YEARS, label: MESSAGES.allYears }, ...taxYears(today).map((option) => ({ value: String(option), label: String(option) }))];
+  // The same years the web lists; the shown year stays selectable while the returns load.
+  const years = taxReturnYears(taxReturns ?? []);
+  if (year !== null && !years.includes(year)) years.push(year);
+  years.sort((a, b) => b - a);
+  const yearOptions = [{ value: ALL_YEARS, label: MESSAGES.allYears }, ...years.map((option) => ({ value: String(option), label: String(option) }))];
   const checklist = currentData?.checklist ?? [];
   const missingCount = checklist.filter((item) => item.status === "missing").length;
   const yearText = year === null ? MESSAGES.allYears : String(year);
