@@ -650,10 +650,8 @@ local function percentText(new, old)
   return pct, (pct > 0 and "+" or "") .. pct .. "%"
 end
 
--- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
--- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare);
--- `needs` is the level it needs when above yours. `brief` leaves out the binding and
--- level line, for a tooltip that already shows them; `full` shows every grey line (/mgaloot check).
+-- The grey lines under a verdict, each its own line: at most MAX_GREY_LINES, the last of them then counting
+-- the rest, unless `full`.
 local function greyLines(lines, full)
   local shown = {}
   for i, line in ipairs(lines) do
@@ -667,6 +665,10 @@ local function greyLines(lines, full)
   return "\n" .. GREY .. table.concat(shown, "|r\n" .. GREY) .. "|r"
 end
 
+-- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
+-- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare);
+-- `needs` is the level it needs when above yours. `brief` leaves out the binding and
+-- level line, for a tooltip that already shows them; `full` shows every grey line (/mgaloot check).
 local function judge(link, brief, full)
   local info = itemInfo(link)
   if not info then return { text = GREY .. "Checking the item...|r", pending = true } end
