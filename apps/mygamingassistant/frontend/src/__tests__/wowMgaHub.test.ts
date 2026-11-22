@@ -9,6 +9,8 @@ import lootBindings from "../../addon/MGALoot/Bindings.xml?raw";
 import lootHub from "../../addon/MGALoot/MGAHub.lua?raw";
 import pricesBindings from "../../addon/MGAPrices/Bindings.xml?raw";
 import pricesHub from "../../addon/MGAPrices/MGAHub.lua?raw";
+import waypointsBindings from "../../addon/MGAWaypoints/Bindings.xml?raw";
+import waypointsHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_HUB_FRAME_STUBS, WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
 
@@ -60,6 +62,7 @@ describe("the MGA hub's copies", () => {
     "MGADungeonQuests": [dungeonQuestsHub, dungeonQuestsBindings],
     "MGALoot": [lootHub, lootBindings],
     "MGAPrices": [pricesHub, pricesBindings],
+    "MGAWaypoints": [waypointsHub, waypointsBindings],
   };
 
   it.each(Object.entries(copies))("%s ships MGAHub.lua and Bindings.xml identical to addon/shared (edit the shared file, then copy it over)", (_addon, [hub, bindings]) => {

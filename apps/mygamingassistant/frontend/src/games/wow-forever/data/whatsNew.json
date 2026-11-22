@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-22",
+    "title": "New MGA Waypoints addon: pick a place, follow the arrow",
+    "summary": "Click the MGA minimap button, choose Go to..., and pick your class trainer, the nearest flight master, a repair vendor, a profession trainer, a dungeon door or any named place. An arrow on your screen points the way with the yards left, and pins appear on your minimap and World Map. It clears itself when you arrive. On another continent it points you at the boat or zeppelin. Download it from the World Map page.",
+    "to": "/wow-forever/map"
+  },
+  {
+    "date": "2026-11-22",
     "title": "MGA addons: one minimap button and a settings window, no commands needed",
     "summary": "Every MGA addon now shares one round MGA button on your minimap. Click it for a menu of what each addon you have installed can do (the dungeon journal, turn-ins, upgrades in your bags, the buff list). Right-click it, press its key binding, or open Options > AddOns > MGA for one settings window with a section per addon: your spec, tooltip verdicts, chat prices, buff reminders, map pins. The slash commands still work. Download the addons again to get it.",
     "to": "/wow-forever/dungeons?addon=open"
