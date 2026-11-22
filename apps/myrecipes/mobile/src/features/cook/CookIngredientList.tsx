@@ -2,8 +2,9 @@ import type { IngredientResponse } from "@myrecipes/api-client/types/recipe/ingr
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import { deviceDecimalSeparator, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { COOK_TARGET_HEIGHT } from "../../constants/cook";
+import { COOK_CHECKBOX_SIZE, COOK_TARGET_HEIGHT } from "../../constants/cook";
 import { byPosition } from "../../utils/byPosition";
+import CheckboxBox from "../checkbox/CheckboxBox";
 
 export default function CookIngredientList({
   checked,
@@ -14,7 +15,7 @@ export default function CookIngredientList({
   ingredients: IngredientResponse[];
   onToggle: (ingredientId: string) => void;
 }) {
-  const { colors, spacing, radius, fontSize } = useTheme();
+  const { colors, spacing, fontSize } = useTheme();
   const decimalSeparator = deviceDecimalSeparator();
 
   return (
@@ -38,19 +39,7 @@ export default function CookIngredientList({
               borderBottomColor: colors.border,
             }}
           >
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 2,
-                borderRadius: radius.sm,
-                borderColor: isChecked ? colors.foreground : colors.mutedForeground,
-              }}
-            >
-              {isChecked ? <Text style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "700" }}>✓</Text> : null}
-            </View>
+            <CheckboxBox isChecked={isChecked} size={COOK_CHECKBOX_SIZE} variant="outline" />
             <Text
               style={{
                 flex: 1,
