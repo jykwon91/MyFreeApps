@@ -10,7 +10,6 @@ export const MANAGE_RECIPE_MESSAGES = {
   cancel: "Cancel",
   deleting: "Deleting…",
   deleteHint: "Asks before deleting the recipe and its whole version history.",
-  gone: "This recipe was already deleted.",
 } as const;
 
 /** Names the delete's state in the cache, so the recipe screen can tell its own delete is under way. */

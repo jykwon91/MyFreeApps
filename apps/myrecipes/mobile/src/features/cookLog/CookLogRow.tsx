@@ -24,7 +24,7 @@ export default function CookLogRow({ recipeId, cook, versionNumber }: CookLogRow
     remove: SHARED.deleteConfirm,
     keep: MESSAGES.cancel,
     removed: SHARED.deleted,
-    gone: MESSAGES.gone,
+    gone: SHARED.gone,
     couldntRemove: SHARED.couldntDelete,
   });
 

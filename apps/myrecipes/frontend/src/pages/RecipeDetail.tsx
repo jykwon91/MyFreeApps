@@ -19,6 +19,7 @@ import {
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { deleteFailureOutcome } from "@myrecipes/api-client/utils/deleteFailureOutcome";
 import { isNotFoundError } from "@myrecipes/api-client/utils/isNotFoundError";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
@@ -90,8 +91,14 @@ export default function RecipeDetail() {
       await deleteRecipe(recipeId).unwrap();
       showSuccess(RECIPE_MANAGE_MESSAGES.deleted);
       navigate("/", { replace: true });
-    } catch {
-      showError(RECIPE_MANAGE_MESSAGES.couldntDelete);
+    } catch (error) {
+      const { isGone, message } = deleteFailureOutcome(error, RECIPE_MANAGE_MESSAGES);
+      if (!isGone) {
+        showError(message);
+        return;
+      }
+      showSuccess(message);
+      navigate("/", { replace: true });
     }
   }
 

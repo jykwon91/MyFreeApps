@@ -89,6 +89,12 @@ export async function stubRecipeRoutes(
   let loggedCooks = 0;
   const log: RecipeApiLog = { writes: [], reads: [] };
 
+  const removeElsewhere = (suffix: string) => {
+    const cookId = COOK_PATH.exec(suffix)?.[1];
+    if (cookId) cookLogs = cookLogs.filter((cook) => cook.id !== cookId);
+    else if (suffix === "") deleted = true;
+  };
+
   /** The recipe as the server sends it: cook rollups are the owner's. */
   const current = (): RecipeDetailResponse =>
     isOwner ? { ...recipe, best_rating: bestRatingOf(cookLogs), last_cooked_at: lastCookedAt(cookLogs) } : recipe;
@@ -113,7 +119,11 @@ export async function stubRecipeRoutes(
       const problem = validationProblem(method, suffix, body);
       if (problem) return route.fulfill(json({ detail: problem }, 422));
       const failure = failWith[`${method} ${suffix || "/"}`];
-      if (failure) return route.fulfill(json({ detail: "refused" }, failure));
+      if (failure) {
+        // A 404 on a delete means it was removed elsewhere: it is gone for the reads that follow too.
+        if (method === "DELETE" && failure === 404) removeElsewhere(suffix);
+        return route.fulfill(json({ detail: "refused" }, failure));
+      }
       if (deleted || !isOwner) return notFound();
 
       if (method === "PATCH" && suffix === "") {

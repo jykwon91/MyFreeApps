@@ -10,4 +10,5 @@ export const RECIPE_MANAGE_MESSAGES = {
   deleteConfirm: "Delete recipe",
   deleted: "Recipe deleted.",
   couldntDelete: "Couldn't delete this recipe — please try again.",
+  gone: "This recipe was already deleted.",
 } as const;

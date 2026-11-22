@@ -12,7 +12,6 @@ export const COOK_LOG_PHONE_MESSAGES = {
   tryAgain: "Try again",
   deleteRowLabel: (date: string) => `Delete cook log from ${date}`,
   deleteHint: "Asks before deleting this cook log.",
-  gone: "This cook log was already deleted.",
   rated: (rating: number) => `rated ${rating} out of 5`,
 } as const;
 

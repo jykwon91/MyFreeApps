@@ -25,7 +25,7 @@ export default function DeleteRecipeButton({ recipeId }: DeleteRecipeButtonProps
       remove: RECIPE_MANAGE_MESSAGES.deleteConfirm,
       keep: MESSAGES.cancel,
       removed: RECIPE_MANAGE_MESSAGES.deleted,
-      gone: MESSAGES.gone,
+      gone: RECIPE_MANAGE_MESSAGES.gone,
       couldntRemove: RECIPE_MANAGE_MESSAGES.couldntDelete,
     },
     {
