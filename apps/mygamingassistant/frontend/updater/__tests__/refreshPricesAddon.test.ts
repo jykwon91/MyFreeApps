@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import { addonPriceLua } from "@/games/wow-forever/lib/auctionHouse/addonPriceLua";
 import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadDisenchantTables";
+import { loadQuestItemObjectives } from "@/games/wow-forever/lib/auctionHouse/loadQuestItemObjectives";
 import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { refreshPricesAddon } from "../refreshPricesAddon";
@@ -40,7 +41,10 @@ describe("the MGA Prices updater", () => {
 
     const houses = await Promise.all((["alliance", "horde", "neutral"] as const).map((faction) => fakeHouse({ server: "pvp", faction })));
     expect(written).toBe(path.join(addons, "MGAPrices", "Data.lua"));
-    expect(await readFile(written, "utf8")).toBe(addonPriceLua(houses, await loadAllCraftingData(), loadDisenchantTables()));
+    const data = await readFile(written, "utf8");
+    expect(data).toBe(addonPriceLua(houses, await loadAllCraftingData(), loadDisenchantTables(), await loadQuestItemObjectives()));
+    // Linen Cloth is on sale, and quests ask for it: the hourly refresh keeps the quest AH list.
+    expect(data).toContain("  questItems = {");
     expect(await readFile(path.join(addons, "MGAPrices", "MGAPrices.lua"), "utf8")).toBe("-- addon code");
     expect((await readdir(path.join(addons, "MGAPrices"))).sort()).toEqual(["Data.lua", "MGAPrices.lua"]);
   });
