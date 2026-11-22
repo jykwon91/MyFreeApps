@@ -1,3 +1,5 @@
+import addonBindings from "../../../../../addon/MGABuffs/Bindings.xml?raw";
+import addonHub from "../../../../../addon/MGABuffs/MGAHub.lua?raw";
 import addonLua from "../../../../../addon/MGABuffs/MGABuffs.lua?raw";
 import addonToc from "../../../../../addon/MGABuffs/MGABuffs.toc?raw";
 
@@ -9,5 +11,7 @@ export const BUFFS_ADDON_ZIP_NAME = "MGABuffs.zip";
 /** The addon's files, from `apps/mygamingassistant/frontend/addon/MGABuffs`. */
 export const BUFFS_ADDON_FILES: Readonly<Record<string, string>> = {
   "MGABuffs.toc": addonToc,
+  "MGAHub.lua": addonHub,
+  "Bindings.xml": addonBindings,
   "MGABuffs.lua": addonLua,
 };

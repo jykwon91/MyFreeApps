@@ -2,6 +2,7 @@ import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadD
 import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGAPrices/MGAPrices.lua?raw";
+import hubLua from "../../addon/MGAPrices/MGAHub.lua?raw";
 import addonToc from "../../addon/MGAPrices/MGAPrices.toc?raw";
 import emptyData from "../../addon/MGAPrices/Data.lua?raw";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
@@ -40,6 +41,7 @@ const ALLIANCE_EPOCH = Date.parse(ALLIANCE_AT) / 1000;
 function tooltip(scenario: string, data = DATA): string[] {
   return runAddonLua([
     ["Data.lua", data],
+    ["MGAHub.lua", hubLua],
     ["MGAPrices.lua", addonLua],
     ["scenario", `NOW = ${ALLIANCE_EPOCH + 2 * HOUR}\n${scenario}`],
   ]);
@@ -59,6 +61,7 @@ describe("the reload reminder", () => {
   const remind = (age: number) =>
     runAddonLua([
       ["Data.lua", TICKER + DATA],
+      ["MGAHub.lua", hubLua],
       ["MGAPrices.lua", addonLua],
       ["scenario", `NOW = ${ALLIANCE_EPOCH + age}; tick(); tick()`],
     ]).filter((l) => l.includes("/reload"));
@@ -77,7 +80,7 @@ describe("the reload reminder", () => {
 describe("the download", () => {
   it("is the addon folder with today's prices in Data.lua", () => {
     const files = unzipSync(pricesAddonZip(HOUSES, NO_CRAFTING));
-    expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual(["MGAPrices/Data.lua", "MGAPrices/MGAPrices.lua", "MGAPrices/MGAPrices.toc"]);
+    expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual(["MGAPrices/Bindings.xml", "MGAPrices/Data.lua", "MGAPrices/MGAHub.lua", "MGAPrices/MGAPrices.lua", "MGAPrices/MGAPrices.toc"]);
     expect(strFromU8(files["MGAPrices/Data.lua"])).toBe(DATA);
     expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toBe(addonToc);
   });
@@ -85,7 +88,7 @@ describe("the download", () => {
   it("loads every file named in the .toc, for the Forever client", () => {
     expect(addonToc).toMatch(/^## Interface: 16001$/m);
     const listed = addonToc.split(/\r?\n/).filter((l) => l && !l.startsWith("#"));
-    expect(listed).toEqual(["Data.lua", "MGAPrices.lua"]);
+    expect(listed).toEqual(["MGAHub.lua", "Data.lua", "MGAPrices.lua"]);
   });
 });
 
@@ -173,7 +176,7 @@ describe("MGA Prices in the game's tooltips", () => {
   });
 
   it("explains itself before any prices are downloaded, and /mgaprices says what's loaded", () => {
-    expect(tooltip("hover(GameTooltip, 2589)", emptyData)).toEqual(["MGA Prices: no prices loaded — /mgaprices"]);
+    expect(tooltip("hover(GameTooltip, 2589)", emptyData)).toEqual(["MGA Prices: no prices loaded — see MGA settings"]);
     const status = tooltip('SlashCmdList.MGAPRICES("")');
     expect(status[0]).toBe("chat: |cff33aaffMGA Prices:|r Alliance: 1 item, updated 2 hours ago.");
     expect(status[1]).toBe("chat: |cff33aaffMGA Prices:|r Horde: 1 item, updated 1 hour ago.");
@@ -404,6 +407,7 @@ describe("disenchant verdict", () => {
   function deTooltip(scenario: string, data = DE_DATA): string[] {
     return runAddonLua([
       ["Data.lua", data],
+      ["MGAHub.lua", hubLua],
       ["MGAPrices.lua", addonLua],
       ["scenario", `NOW = ${ALLIANCE_EPOCH + 2 * HOUR}\n${scenario}`],
     ]);
@@ -564,6 +568,7 @@ const QUEST_DATA = addonPriceLua(QUEST_HOUSES, NO_CRAFTING, undefined, QUEST_ITE
 function qTooltip(scenario: string, data = QUEST_DATA): string[] {
   return runAddonLua([
     ["Data.lua", data],
+    ["MGAHub.lua", hubLua],
     ["MGAPrices.lua", addonLua],
     ["scenario", `NOW = ${ALLIANCE_EPOCH + 2 * HOUR}\n${scenario}`],
   ]);
@@ -625,5 +630,14 @@ describe("quest giver detail AH block (QUEST_DETAIL event)", () => {
   it("shows nothing for a quest with no items on sale at the quest giver", () => {
     const lines = qTooltip(`triggerQuestDetail(55)`);
     expect(lines.filter((l) => l.startsWith("qdetail:"))).toHaveLength(0);
+  });
+});
+
+describe("MGA Prices in the MGA settings", () => {
+  const settings = (then: string) => tooltip(`fire("PLAYER_LOGIN"); ${then}`);
+
+  it("saves the chat prices checkbox in the same setting /mgaprices chat does", () => {
+    expect(settings('click(MGAPricesOptions_chat); table.insert(out, tostring(MGAPricesSettings.chat))').slice(-1)[0]).toBe("false");
+    expect(settings('SlashCmdList.MGAPRICES("chat"); table.insert(out, tostring(MGAPricesSettings.chat))').slice(-1)[0]).toBe("false");
   });
 });

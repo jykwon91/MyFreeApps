@@ -1,3 +1,5 @@
+import { WOW_HUB_FRAME_STUBS, WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
+
 /**
  * Just enough of the WoW client API for the MGA Prices addon to run under
  * fengari: tooltips record each line they're given into `out`, `hover(tip, id)`
@@ -6,6 +8,8 @@
  * message filters; `enterLink(frame, link)` / `leaveLink(frame)` hover a link.
  */
 export const WOW_TOOLTIP_STUBS = `
+${WOW_HUB_FRAME_STUBS}
+${WOW_HUB_HELPERS}
 floor = math.floor
 NOW = 0
 time = function() return NOW end
@@ -83,7 +87,6 @@ CHAT_FRAMES = { "ChatFrame1" }
 ChatFrame1 = tip("ChatFrame1")
 function enterLink(frame, link) frame.scripts.OnHyperlinkEnter(frame, link) end
 function leaveLink(frame) frame.scripts.OnHyperlinkLeave(frame) end
-CreateFrame = function() return { RegisterEvent = function() end, SetScript = function() end } end
 function hover(t, id)
   if t.scripts.OnTooltipCleared then t.scripts.OnTooltipCleared(t) end
   for _, f in ipairs(postcalls) do f(t, { id = id }) end
@@ -117,22 +120,6 @@ QuestLogDetailScrollChildFrame = makeQuestScrollFrame("qlog")
 QuestObjectivesText = { SetPoint = function() end }
 QuestFrameDetailPanel = makeQuestScrollFrame("qdetail")
 QuestDetailObjectivesText = { SetPoint = function() end }
--- Override CreateFrame to track event handlers so fire() can dispatch to them.
--- The existing MODIFIER_STATE_CHANGED frame was already created above with the old no-op
--- CreateFrame; this override only affects future CreateFrame calls (from the addon).
-local _eventFrames = {}
-CreateFrame = function()
-  local f = { _events = {}, _script = nil }
-  function f:RegisterEvent(e) self._events[e] = true end
-  function f:SetScript(k, fn) if k == "OnEvent" then self._script = fn end end
-  table.insert(_eventFrames, f)
-  return f
-end
-function fire(event, ...)
-  for _, f in ipairs(_eventFrames) do
-    if f._events[event] and f._script then f._script(f, event, ...) end
-  end
-end
 -- Quest log state: the addon reads GetQuestLogSelection() + C_QuestLog.GetQuestIDForLogIndex().
 local _logQuestId = 0
 GetQuestLogSelection = function() return _logQuestId > 0 and 1 or 0 end

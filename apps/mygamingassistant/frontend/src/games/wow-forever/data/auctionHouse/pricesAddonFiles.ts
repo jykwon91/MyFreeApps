@@ -1,3 +1,5 @@
+import addonBindings from "../../../../../addon/MGAPrices/Bindings.xml?raw";
+import addonHub from "../../../../../addon/MGAPrices/MGAHub.lua?raw";
 import addonLua from "../../../../../addon/MGAPrices/MGAPrices.lua?raw";
 import addonToc from "../../../../../addon/MGAPrices/MGAPrices.toc?raw";
 
@@ -12,5 +14,7 @@ export const PRICES_ADDON_DATA_FILE = "Data.lua";
 /** The addon's own files, from `apps/mygamingassistant/frontend/addon/MGAPrices`. */
 export const PRICES_ADDON_FILES: Readonly<Record<string, string>> = {
   "MGAPrices.toc": addonToc,
+  "MGAHub.lua": addonHub,
+  "Bindings.xml": addonBindings,
   "MGAPrices.lua": addonLua,
 };

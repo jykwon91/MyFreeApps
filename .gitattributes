@@ -14,3 +14,5 @@ apps/mygamingassistant/frontend/addon/**/*.toc text eol=lf
 # it rejects any script containing control characters -- CR counts. Checking one
 # out with CRLF on Windows makes it unlaunchable, so pin LF at the source.
 apps/*/backend/scripts/*-spans/_raw/*.js text eol=lf
+# The MGA hub copies (Bindings.xml next to MGAHub.lua) are compared byte-for-byte by a vitest drift test.
+apps/mygamingassistant/frontend/addon/**/*.xml text eol=lf

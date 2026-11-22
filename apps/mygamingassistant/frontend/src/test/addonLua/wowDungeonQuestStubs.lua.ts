@@ -1,3 +1,5 @@
+import { WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
+
 /**
  * Just enough of the WoW client API for the MGA Dungeon Quests addon to run under fengari. Tests set
  * `player` (faction, class, level, skills = { {name, rank} }), `completed[questId] = true` (turned in), `questLog = { {id, complete} }`,
@@ -101,6 +103,9 @@ local function newObject(kind, name, parent)
     if self.name == "MGADungeonQuestsFrame" then out[#out + 1] = "hidden" end
   end
   function methods:IsShown() return self.shownFlag end
+  function methods:SetChecked(on) self.checked = on and true or false end
+  function methods:GetChecked() return self.checked end
+  function methods:GetWidth() return rawget(self, "width") or 1000 end
   function methods:SetText(t)
     self.text = t
     if self.isWindowText then
@@ -110,13 +115,13 @@ local function newObject(kind, name, parent)
   function methods:GetStringHeight() return 100 end
   function methods:CreateFontString()
     local fs = newObject("FontString", nil, self)
-    fs.isWindowText = self.parent ~= nil and self.parent.kind == "ScrollFrame"
+    local owner = rawget(self, "parent")
+    fs.isWindowText = owner ~= nil and owner.kind == "ScrollFrame"
     return fs
   end
   function methods:CreateTexture() return newObject("Texture", nil, self) end
   function methods:SetTexture(file) self.file = file end
   function methods:GetFrameLevel() return 1 end
-  function methods:GetWidth() return 1000 end
   function methods:GetHeight() return 500 end
   function methods:SetPoint(...) self.point = { ... } end
   function methods:HookScript(k, fn) self.hooks = rawget(self, "hooks") or {}; self.hooks[k] = fn end
@@ -129,6 +134,10 @@ local function newObject(kind, name, parent)
   return o
 end
 function CreateFrame(kind, name, parent) return newObject(kind, name, parent) end
+function CreateFrame(kind, name, parent) local o = newObject(kind, name, parent); if name then _G[name] = o end; return o end
+Minimap = newObject("Frame", "Minimap", UIParent)
+function GetCursorPosition() return 0, 0 end
+${WOW_HUB_HELPERS}
 function hooksecurefunc(t, name, fn)
   local old = t[name]
   t[name] = function(...) local r = old(...); fn(...); return r end

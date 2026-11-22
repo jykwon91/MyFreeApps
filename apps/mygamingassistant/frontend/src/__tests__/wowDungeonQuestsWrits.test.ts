@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
+import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DUNGEON_QUEST_STUBS } from "@/test/addonLua/wowDungeonQuestStubs.lua";
@@ -37,6 +38,7 @@ function run(script: string, setup = ""): string[] {
       ["Data.lua", addonData],
       ["TurnIns.lua", "MGADungeonQuestsTurnIns = {}"],
       ["setup", `${SETUP}; ${setup}`],
+      ["MGAHub.lua", hubLua],
       ["MGADungeonQuests.lua", addonLua],
       ["load", 'fire("PLAYER_ENTERING_WORLD", false, true)'],
       ["clear", "clear()"],

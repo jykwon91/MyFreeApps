@@ -230,9 +230,11 @@ test("the addon link opens the Dungeons page with the MGA Dungeon Quests card op
   const files = unzipSync(readFileSync(await download.path()));
   expect(Object.keys(files).sort()).toEqual([
     "MGADungeonQuests/",
+    "MGADungeonQuests/Bindings.xml",
     "MGADungeonQuests/Data.lua",
     "MGADungeonQuests/MGADungeonQuests.lua",
     "MGADungeonQuests/MGADungeonQuests.toc",
+    "MGADungeonQuests/MGAHub.lua",
     "MGADungeonQuests/TurnIns.lua",
   ]);
   expect(strFromU8(files["MGADungeonQuests/Data.lua"])).toContain('{id = 166, title = "The Defias Brotherhood"');

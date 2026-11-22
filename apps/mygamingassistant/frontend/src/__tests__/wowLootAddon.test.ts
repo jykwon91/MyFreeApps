@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import { lootAddonZip } from "@/games/wow-forever/lib/lootAddon/lootAddonZip";
 import addonLua from "../../addon/MGALoot/MGALoot.lua?raw";
+import hubLua from "../../addon/MGALoot/MGAHub.lua?raw";
 import addonToc from "../../addon/MGALoot/MGALoot.toc?raw";
 import { lootAddonDataLua } from "@/games/wow-forever/lib/lootAddon/lootAddonDataLua";
 import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
@@ -32,6 +33,7 @@ function runRaw(setup: string, then: string): string[] {
     [
       ["Data.lua", lootAddonDataLua()],
       ["setup", setup],
+      ["MGAHub.lua", hubLua],
       ["MGALoot.lua", addonLua],
       ["then", then],
     ],
@@ -52,13 +54,14 @@ describe("MGA Loot data", () => {
     }
   });
 
-  it("loads Data.lua before the addon", () => {
+  it("loads the hub, then Data.lua, before the addon", () => {
+    expect(addonToc.indexOf("MGAHub.lua")).toBeLessThan(addonToc.indexOf("Data.lua"));
     expect(addonToc.indexOf("Data.lua")).toBeLessThan(addonToc.indexOf("MGALoot.lua"));
   });
 
   it("zips the addon inside its folder", () => {
     const files = unzipSync(lootAddonZip());
-    expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Data.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
+    expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Bindings.xml", "MGALoot/Data.lua", "MGALoot/MGAHub.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
     expect(strFromU8(files["MGALoot/Data.lua"])).toBe(lootAddonDataLua());
   });
 });
@@ -654,7 +657,7 @@ describe("/mgaloot bags", () => {
 
   it("counts items the game hasn't loaded yet", () => {
     const lines = run(bagsSetup("{ [0] = { 100, 105 } }", `items[105] = { ${CHEST}, loading = true }`), bags);
-    expect(lines[lines.length - 1]).toBe("chat: MGA Loot: 1 more still loading: run /mgaloot bags again in a moment.");
+    expect(lines[lines.length - 1]).toBe("chat: MGA Loot: 1 more still loading: open it again from the MGA menu in a moment.");
   });
 
   it("reads bags with the older global API too, and says so when there is none", () => {
@@ -664,5 +667,20 @@ describe("/mgaloot bags", () => {
     expect(run(bagsSetup("{ [0] = { 100 } }", "C_Container = nil"), bags)).toEqual([
       "chat: MGA Loot: this client doesn't let addons read your bags.",
     ]);
+  });
+});
+
+describe("MGA Loot in the MGA hub", () => {
+  const open = `fire("PLAYER_LOGIN"); MGAHub.OpenMenu()`;
+
+  it("adds Upgrades in your bags under a Loot heading", () => {
+    expect(run("", `${open}; table.insert(out, table.concat(menuLines(), " | "))`).slice(-1)[0]).toBe("[Loot] | Upgrades in your bags | - | Settings");
+  });
+
+  it("saves the spec and tooltip choices in the same settings the slash command does", () => {
+    const viaSettings = run("", `fire("PLAYER_LOGIN"); click(MGALootOptions_spec); clickRow("Arms"); click(MGALootOptions_tooltip); table.insert(out, tostring(MGALootSettings.spec) .. " " .. tostring(MGALootSettings.tooltip))`);
+    const viaSlash = run("", `SlashCmdList.MGALOOT("spec arms"); SlashCmdList.MGALOOT("tooltip off"); table.insert(out, tostring(MGALootSettings.spec) .. " " .. tostring(MGALootSettings.tooltip))`);
+    expect(viaSettings.slice(-1)[0]).toBe("arms false");
+    expect(viaSlash.slice(-1)[0]).toBe("arms false");
   });
 });

@@ -1738,7 +1738,7 @@ local function remind()
   reminded = d
   local left = M.ToPickUp(d, M.QuestsInLog())
   if left > 0 then
-    say(d.name .. ": " .. left .. (left == 1 and " quest" or " quests") .. " for it you haven't picked up. /mgadq to see them.")
+    say(d.name .. ": " .. left .. (left == 1 and " quest" or " quests") .. " for it you haven't picked up. The MGA menu opens the journal.")
   end
 end
 
@@ -1824,6 +1824,18 @@ local function writsCommand()
   if #unplaced > 0 then say("the game hasn't marked where these go yet: " .. table.concat(unplaced, ", ") .. ".") end
 end
 
+-- The settings the slash command and the MGA settings window both change.
+local function setPins(on)
+  MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
+  MGADungeonQuestsSettings.turnInPins = on
+  M.DrawTurnInPins()
+end
+
+local function setRemind(on)
+  MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
+  MGADungeonQuestsSettings.remind = on
+end
+
 SLASH_MGADUNGEONQUESTS1 = "/mgadq"
 SLASH_MGADUNGEONQUESTS2 = "/mgadungeonquests"
 SlashCmdList.MGADUNGEONQUESTS = function(msg)
@@ -1841,14 +1853,11 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
   elseif word == "turnin" or word == "turnins" or word == "turn-in" or word == "turn-ins" then
     M.StartTurnIns()
   elseif word == "pins" then
-    MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
-    MGADungeonQuestsSettings.turnInPins = rest:lower() ~= "off"
-    say("World Map pins on your finished quests " .. (MGADungeonQuestsSettings.turnInPins and "on." or "off."))
-    M.DrawTurnInPins()
+    setPins(rest:lower() ~= "off")
+    say("World Map pins on your finished quests " .. (pinsOn() and "on." or "off."))
   elseif word == "remind" then
-    MGADungeonQuestsSettings = MGADungeonQuestsSettings or {}
-    MGADungeonQuestsSettings.remind = rest:lower() ~= "off"
-    say("reminder on entering a dungeon " .. (MGADungeonQuestsSettings.remind and "on." or "off."))
+    setRemind(rest:lower() ~= "off")
+    say("reminder on entering a dungeon " .. (remindersOn() and "on." or "off."))
   elseif word == "focus" then
     M.SetFocus(rest:lower() ~= "off")
     say("dungeon focus " .. (focusOn() and "on: inside a dungeon you'll see only its quests." or "off."))
@@ -1859,6 +1868,31 @@ SlashCmdList.MGADUNGEONQUESTS = function(msg)
     if d then M.Show(d) else say("no dungeon matches \"" .. msg .. "\". /mgadq list shows them all.") end
   end
 end
+
+-- The MGA button's menu and settings window.
+local UI = MGAHub.UI
+
+MGAHub.Register({
+  name = "Dungeon Quests",
+  order = 10,
+  menu = {
+    { text = "Dungeon journal", func = function() M.Show(currentDungeon()) end },
+    { text = "Turn in finished quests", func = M.StartTurnIns },
+    { text = "Crafting writs", func = writsCommand },
+  },
+  settings = function(section, top)
+    local pins = UI.Check(section, "MGADungeonQuestsOptions_pins", "Show finished quests on the World Map", "A pin where each one is handed in", top, -10, setPins)
+    local remind = UI.Check(section, "MGADungeonQuestsOptions_remind", "Remind me of a dungeon's quests when I walk in", nil, pins, -6, setRemind)
+    local focus = UI.Check(section, "MGADungeonQuestsOptions_focus", "Inside a dungeon, track only its quests", nil, remind, -6, M.SetFocus)
+    function section.refresh()
+      pins:SetChecked(pinsOn())
+      remind:SetChecked(remindersOn())
+      focus:SetChecked(focusOn())
+    end
+    section.refresh()
+    return 130
+  end,
+})
 
 -- Items arrive from the server one by one: redraw the Loot tab once for a batch of them.
 local lootRedrawQueued = false

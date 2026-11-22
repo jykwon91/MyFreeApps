@@ -1,3 +1,5 @@
+import { WOW_HUB_FRAME_STUBS, WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
+
 /**
  * Just enough of the WoW client API for the MGA Loot addon to run under
  * fengari. Tests fill `items[id]` (info + `stats` + tooltip `lines`),
@@ -124,9 +126,6 @@ C_Container = {
   GetContainerItemLink = function(bag, slot) local id = bagItems[bag] and bagItems[bag][slot]; return id and link(id) or nil end,
 }
 
-local handler
-CreateFrame = function()
-  return { RegisterEvent = function() end, SetScript = function(_, _, fn) handler = fn end }
-end
-function fire(event, ...) handler(nil, event, ...) end
+${WOW_HUB_FRAME_STUBS}
+${WOW_HUB_HELPERS}
 `;
