@@ -13,6 +13,7 @@ import { recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeCreate } from "./fixtures/stubRecipeCreate";
 import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 import { RECIPE_FORM_PROBLEMS, RECIPE_INGREDIENTS_MAX } from "@myrecipes/api-client/constants/recipeForm";
+import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 
 const CREATED_ID = recipeIdAt(2);
 const DRAFT = {
@@ -24,7 +25,7 @@ const DRAFT = {
   cook_minutes: 25,
   ingredients: [{ name: "tomatoes", quantity: 2, unit: "cans", note: null }],
   steps: [{ instruction: "Simmer." }],
-};
+} satisfies RecipeExtractionDraft;
 // A 1x1 PNG: the picker only checks the type and size, and the read is stubbed.
 const PHOTO = {
   name: "card.png",
@@ -33,7 +34,7 @@ const PHOTO = {
 };
 
 /** POST /recipes/extract answers each status in turn; POST /recipes creates from what was posted. */
-async function stubImport(page: Page, extractStatuses: number[], draft: typeof DRAFT = DRAFT) {
+async function stubImport(page: Page, extractStatuses: number[], draft: RecipeExtractionDraft = DRAFT) {
   const extracts: string[] = [];
   await page.route(new RegExp(`${DEFAULT_API_BASE}/recipes/extract$`), (route) => {
     extracts.push(route.request().headers()["content-type"] ?? "");
