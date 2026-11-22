@@ -17,7 +17,8 @@ from tests.test_channel_sync_service import (  # noqa: F401 — fixture re-expor
 )
 
 SECRET = "s3cr3t-calendar-token-9f8e7d"
-FEED_URL = f"https://www.airbnb.com/calendar/ical/12345.ics?s={SECRET}"
+FEED_PATH = "/calendar/ical/12345.ics"
+FEED_URL = f"https://www.airbnb.com{FEED_PATH}?s={SECRET}"
 
 
 class TestRedactUrl:
@@ -95,7 +96,8 @@ class TestPollOneNeverLogsFeedSecret:
             assert SECRET not in record.getMessage()
             assert record.exc_info is None  # Sentry would serialise the exception message
         assert SECRET not in caplog.text
-        assert "12345" not in caplog.text
+        # The whole path, not just "12345": a log line's microsecond timestamp can contain those digits.
+        assert FEED_PATH not in caplog.text
 
         after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert after is not None
