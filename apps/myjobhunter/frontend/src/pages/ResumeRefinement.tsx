@@ -22,6 +22,8 @@ export default function ResumeRefinement() {
   const {
     currentData: session,
     error,
+    isFetching,
+    refetch,
   } = useGetRefinementSessionQuery(sessionId ?? "", {
     skip: !sessionId,
     pollingInterval: sessionId ? REFINEMENT_POLL_INTERVAL_MS : 0,
@@ -44,7 +46,7 @@ export default function ResumeRefinement() {
 
   // A failed poll keeps the session on screen; only a session that is gone (404) or never loaded is replaced.
   if (error && (!session || isNotFound(error))) {
-    return <SessionLoadErrorView onStartNew={handleStartNew} />;
+    return <SessionLoadErrorView isGone={isNotFound(error)} isRetrying={isFetching} onRetry={() => void refetch()} onStartNew={handleStartNew} />;
   }
 
   if (!session) {
