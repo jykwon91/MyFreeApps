@@ -1,8 +1,8 @@
 """Rate-limit + CAPTCHA dependencies.
 
 Thin wrappers around ``platform_shared`` services that close over app-local
-``settings``. The scaffold has no public registration (single-user app) so the
-Turnstile gate is only wired on forgot-password (for the admin operator).
+``settings``. Public registration is open, so the Turnstile gate guards both
+registration and forgot-password.
 
 Mirrors apps/myjobhunter/backend/app/core/rate_limit.py (name + thresholds only).
 """
@@ -81,7 +81,7 @@ extract_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 
 
 # ---------------------------------------------------------------------------
-# Turnstile (wired on forgot-password only — no public registration)
+# Turnstile (wired on registration and forgot-password)
 # ---------------------------------------------------------------------------
 
 

@@ -1,6 +1,6 @@
 """Permission dependencies.
 
-Single-user app — the operator is the sole superuser. Mirrors MJH's
+Multi-user app — accounts hold a role (user or superuser). Mirrors MJH's
 permission module structure.
 """
 from __future__ import annotations
