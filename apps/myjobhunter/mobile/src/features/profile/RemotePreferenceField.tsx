@@ -1,3 +1,4 @@
+import { REMOTE_PREFERENCE_MESSAGES } from "@myjobhunter/api-client/constants/remotePreferenceMessages";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import type { RemotePreference } from "@myjobhunter/api-client/types/profile/remote-preference";
 import { isRemotePreference } from "@myjobhunter/api-client/utils/isRemotePreference";
@@ -22,7 +23,7 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
   // A second tap can land before the disabled state renders; this stops it sending a second save.
   const isSaving = useRef(false);
   const saved = isRemotePreference(preference) ? preference : "";
-  useAnnouncement(isLoading ? MESSAGES.remoteSaving : undefined, "polite");
+  useAnnouncement(isLoading ? REMOTE_PREFERENCE_MESSAGES.saving : undefined, "polite");
 
   // Once the saved profile has caught up with the tap, there's nothing pending any more.
   if (pending !== null && pending === saved) setPending(null);
@@ -33,12 +34,12 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
     setPending(next);
     try {
       const updated = await updateProfile({ remote_preference: next }).unwrap();
-      showToast(MESSAGES.remoteSaved);
+      showToast(REMOTE_PREFERENCE_MESSAGES.saved);
       // The cache holds what the server saved; if that isn't the tapped choice, show what was saved.
       if (updated.remote_preference !== next) setPending(null);
     } catch (error) {
       setPending(null);
-      const message = repeatableWriteFailure(error, () => MESSAGES.couldntSaveRemote);
+      const message = repeatableWriteFailure(error, () => REMOTE_PREFERENCE_MESSAGES.couldntSave);
       if (message) showToast(message, "error");
     } finally {
       isSaving.current = false;
@@ -56,7 +57,7 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
       />
       {isLoading ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-          {MESSAGES.remoteSaving}
+          {REMOTE_PREFERENCE_MESSAGES.saving}
         </Text>
       ) : null}
     </View>

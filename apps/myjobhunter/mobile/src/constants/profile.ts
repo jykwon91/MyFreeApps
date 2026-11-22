@@ -29,7 +29,4 @@ export const PROFILE_MESSAGES = {
   locationsLabel: "Locations",
   noLocations: "No target locations set",
   remoteLabel: "Remote preference",
-  remoteSaving: "Saving your remote preference…",
-  remoteSaved: "Remote preference saved.",
-  couldntSaveRemote: "I couldn't save your remote preference. Want to try again?",
 } as const;
