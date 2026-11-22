@@ -2,6 +2,9 @@
 
 import datetime as _dt
 
+from app.core.document_constants import EXTRACTION_CLAIM_LIFETIME_SECONDS
+from app.models.extraction.extraction_failure_kind import ExtractionFailureKind
+
 GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR = "Gmail connection expired — please disconnect and reconnect"
 GMAIL_AUTH_EXPIRED_API_DETAIL = "Gmail connection expired, please reconnect"
 # 424 Failed Dependency, never 401: the app session is fine, Gmail is what failed, and
@@ -22,6 +25,54 @@ GMAIL_LABEL_NOT_FOUND_MESSAGE = (
     "Check the spelling, or clear the label to sync every email."
 )
 UNREADABLE_EMAIL_PHOTO_ERROR = "Couldn't read this photo, so I didn't save it"
+
+# -- Claude extraction retries for a fetched email --
+#
+# A retryable failure (Claude rate limited, overloaded or unreachable, the read
+# timing out, or an unreadable reply) puts the row back in the queue,
+# waiting out the delay in app/services/extraction/claude_retry_policy.py. The
+# drain waits for these retries, so all attempts run inside one sync. Every
+# claim counts as an attempt, so an email whose read keeps killing the worker
+# is bounded too. A reply cut off at the output limit fails at once: the same
+# email is cut off the same way every time.
+EMAIL_EXTRACTION_MAX_ATTEMPTS = 4
+# While the drain waits (for a retry, or out an Anthropic rate limit), it checks
+# this often whether the sync was cancelled, and marks the sync as still going.
+EMAIL_EXTRACTION_WAIT_CHECK_SECONDS = 5
+
+# A running sync touches its last_progress_at for every email it fetches or
+# reads and every few seconds while it waits, so the longest it goes quiet
+# while alive is one email's read (EXTRACTION_TIMEOUT_SECONDS). Quiet for
+# longer than that plus a margin, it died, and discovery marks it "Timed out".
+# Its unfinished claims are taken back by the next drain's claim query.
+SYNC_STALE_AFTER_SECONDS = EXTRACTION_CLAIM_LIFETIME_SECONDS
+
+# What the Sync Sessions panel says about an email whose read failed. The
+# details (exception, Anthropic error type) are logged, not shown.
+EMAIL_EXTRACTION_FAILURE_MESSAGES: dict[ExtractionFailureKind, str] = {
+    ExtractionFailureKind.BUSY: "The AI reader was busy, so I couldn't read this email.",
+    ExtractionFailureKind.TIMED_OUT: "Reading this email took too long.",
+    ExtractionFailureKind.UNREADABLE: "I couldn't make sense of what I read in this email.",
+    ExtractionFailureKind.CUT_OFF: (
+        "This email has more in it than I can read in one go, so trying again won't help. "
+        "If it has a long attachment, upload that in smaller parts instead."
+    ),
+    ExtractionFailureKind.MISCONFIGURED: (
+        "The AI reader isn't connected properly, so I couldn't read this email. "
+        "Contact support if this keeps happening."
+    ),
+    ExtractionFailureKind.REJECTED: "The AI reader couldn't take this email's content, so I couldn't read it.",
+    ExtractionFailureKind.OTHER: "Something went wrong while reading this email.",
+}
+EMAIL_EXTRACTION_INTERRUPTED_ERROR = "Reading this email kept stopping partway through."
+EMAIL_EXTRACTION_WILL_RETRY_SUFFIX = " I'll try again shortly."
+EMAIL_EXTRACTION_GAVE_UP_SUFFIX = " I tried {attempts} times. Retry it when you're ready."
+EMAIL_EXTRACTION_FAILED_SUFFIX = " Retry it when you're ready."
+# Failures a retry can't fix; their message says what to do instead.
+EMAIL_EXTRACTION_NO_RETRY_HINT_KINDS: frozenset[ExtractionFailureKind] = frozenset({ExtractionFailureKind.CUT_OFF})
+EMAIL_NO_CONTENT_ERROR = "No raw content to extract"
+# A sync log closed because the scheduler stopped (a deploy) mid-sync.
+EMAIL_SYNC_INTERRUPTED_ERROR = "Interrupted by restart"
 
 
 # -- Bounce / non-deliverable email detection signals --

@@ -193,6 +193,27 @@ class TestExtractRecipePhoto:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
+    async def test_reply_cut_off_at_max_tokens_returns_422(self, user_factory, as_user, monkeypatch) -> None:
+        # A cut-off reply is never parsed: the JSON scan could pass off a
+        # fragment of it as the recipe.
+        block = MagicMock(
+            type="text",
+            text='{"title": "Soup", "steps": [{"title": "Broth", "instruction": "Simmer."}, {"instr',
+        )
+        message = MagicMock(content=[block], stop_reason="max_tokens")
+        message.usage.input_tokens = 10
+        message.usage.output_tokens = 4096
+        client = MagicMock()
+        client.messages.create = AsyncMock(return_value=message)
+        service = ExtractionService(api_key="sk-ant-test", model=pes._MODEL)
+        service._client = client
+        monkeypatch.setattr(pes, "_extraction", service)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/recipes/extract", files=_files())
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
     async def test_api_error_returns_503(self, user_factory, as_user, monkeypatch) -> None:
         _mock_extraction(
             monkeypatch,

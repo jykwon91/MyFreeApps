@@ -39,6 +39,7 @@ from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
 from platform_shared.extraction.errors import (
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    ExtractionTruncatedError,
     extraction_error_from_anthropic,
 )
 from platform_shared.extraction.json_extract import find_json
@@ -91,6 +92,13 @@ class ExtractionService:
             )
         return self._client
 
+    def _client_for(self, max_retries: int | None) -> Any:
+        client = self._get_client()
+        if max_retries is None:
+            return client
+        # A copy with its own retry setting that shares the httpx pool.
+        return client.with_options(max_retries=max_retries)
+
     def _require_ready(self) -> None:
         if not self.model:
             raise ValueError(
@@ -113,17 +121,28 @@ class ExtractionService:
         *,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         on_rate_limit: OnRateLimit | None = None,
+        max_wait_seconds: float | None = None,
+        max_retries: int | None = None,
     ) -> ExtractionResponse:
         """Extract structured data from a plain-text document.
+
+        ``max_wait_seconds`` bounds the throttle and 429 backoff sleeps (see
+        ``create_with_backoff``); ``None`` keeps the unbounded default.
+        ``max_retries`` overrides the SDK's own retries (2 by default, each
+        after a sleep) for this call; ``None`` keeps the SDK default. A caller
+        with its own retry schedule passes 0 so one call is one request.
 
         Raises:
             ExtractionError: the Anthropic call failed; ``kind`` / ``is_transient``
                 say whether to retry.
-            ExtractionParseError: the reply was not JSON.
+            ExtractionParseError: the reply was not JSON
+                (ExtractionTruncatedError: it was cut off at ``max_tokens``).
         """
         self._require_ready()
         message = await self._create(
+            max_retries=max_retries,
             on_rate_limit=on_rate_limit,
+            max_wait_seconds=max_wait_seconds,
             model=self.model,
             max_tokens=max_tokens,
             system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
@@ -139,8 +158,13 @@ class ExtractionService:
         *,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         on_rate_limit: OnRateLimit | None = None,
+        max_wait_seconds: float | None = None,
+        max_retries: int | None = None,
     ) -> ExtractionResponse:
-        """Extract structured data from an image or PDF document."""
+        """Extract structured data from an image or PDF document.
+
+        ``max_wait_seconds`` and ``max_retries``: as for ``extract_text``.
+        """
         self._require_ready()
         file_b64 = base64.standard_b64encode(file_bytes).decode()
 
@@ -151,7 +175,9 @@ class ExtractionService:
         }
 
         message = await self._create(
+            max_retries=max_retries,
             on_rate_limit=on_rate_limit,
+            max_wait_seconds=max_wait_seconds,
             model=self.model,
             max_tokens=max_tokens,
             system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
@@ -163,6 +189,8 @@ class ExtractionService:
         self,
         *,
         on_rate_limit: OnRateLimit | None,
+        max_wait_seconds: float | None,
+        max_retries: int | None,
         **kwargs: Any,
     ) -> "Message":
         """``create_with_backoff`` with every SDK error raised as a classified ``ExtractionError``."""
@@ -170,7 +198,10 @@ class ExtractionService:
 
         try:
             return await create_with_backoff(
-                self._get_client(), on_rate_limit=on_rate_limit, **kwargs
+                self._client_for(max_retries),
+                on_rate_limit=on_rate_limit,
+                max_wait_seconds=max_wait_seconds,
+                **kwargs,
             )
         except anthropic.APIError as exc:
             raise extraction_error_from_anthropic(
@@ -181,20 +212,35 @@ class ExtractionService:
 def _parse_message(message: "Message") -> ExtractionResponse:
     """Pull JSON out of the model response. Domain-free.
 
-    Parse failure raises ExtractionParseError so the caller can apply a
-    domain-specific fallback (the pre-extraction code returned a
-    low-confidence placeholder dict here; that policy now lives in the
-    MyBookkeeper wrapper).
+    A reply cut off at ``max_tokens`` raises ExtractionTruncatedError
+    without being parsed, and an unparseable one raises
+    ExtractionParseError, so the caller decides what a failed read means
+    for its domain. The reply's text is every text block joined, so a
+    non-text first block (e.g. a tool or thinking block) can't hide it.
     """
-    try:
-        parsed = find_json(message.content[0].text)
-    except (json.JSONDecodeError, IndexError, AttributeError) as e:
-        raw_text = message.content[0].text[:500] if message.content else "EMPTY"
-        logger.error("Failed to parse extraction response: %s — raw: %s", e, raw_text)
-        raise ExtractionParseError(f"Could not parse model response as JSON: {e}") from e
-
     input_tokens = message.usage.input_tokens
     output_tokens = message.usage.output_tokens
+    text = "".join(block.text for block in message.content if block.type == "text")
+
+    if message.stop_reason == "max_tokens":
+        logger.error(
+            "Extraction response cut off at max_tokens: model=%s input_tokens=%d output_tokens=%d",
+            message.model, input_tokens, output_tokens,
+        )
+        raise ExtractionTruncatedError(
+            f"Model response was cut off at max_tokens after {output_tokens} output tokens",
+            error_type="max_tokens",
+        )
+
+    try:
+        parsed = find_json(text)
+    except json.JSONDecodeError as e:
+        logger.error(
+            "Failed to parse extraction response: %s — model=%s input_tokens=%d output_tokens=%d raw: %s",
+            e, message.model, input_tokens, output_tokens, text[:500] or "EMPTY",
+        )
+        raise ExtractionParseError(f"Could not parse model response as JSON: {e}") from e
+
     return ExtractionResponse(
         data=parsed,
         input_tokens=input_tokens,

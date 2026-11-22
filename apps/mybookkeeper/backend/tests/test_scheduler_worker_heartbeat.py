@@ -38,6 +38,7 @@ def heartbeat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]
         patch(f"{_WORKER}.HEARTBEAT_INTERVAL_SECONDS", 0.01),
         patch(f"{_WORKER}.init_sentry", MagicMock()),
         patch(f"{_WORKER}.engine", MagicMock(dispose=AsyncMock())),
+        patch(f"{_WORKER}.sync_all_gmail", AsyncMock()),
     ):
         yield path
 
@@ -56,7 +57,7 @@ async def test_heartbeat_advances_during_a_long_tick(heartbeat: Path) -> None:
 
     async def _long_tick(*, full_cycle: bool, transparency_sync: bool) -> bool:
         _mark_stale(heartbeat)
-        await asyncio.sleep(0.2)  # a Gmail sync still running
+        await asyncio.sleep(0.2)  # a slow tick (channel feeds, the cost sync)
         seen.append(heartbeat.stat().st_mtime)
         stop.set()
         return False

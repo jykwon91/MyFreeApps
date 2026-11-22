@@ -20,3 +20,13 @@ HEARTBEAT_INTERVAL_SECONDS: Final = 30
 HEARTBEAT_MAX_AGE_SECONDS: Final = HEARTBEAT_INTERVAL_SECONDS * 6
 
 HEARTBEAT_PATH: Final = Path(tempfile.gettempdir()) / "mbk-scheduler-heartbeat"
+
+# A Gmail sync still running this many full intervals after it started is
+# taken as hung: the scheduler cancels it (the sync hands its email back and
+# closes its log) and starts a new one. Below that a full cycle that finds it
+# running only logs an error. Two days at the default daily interval.
+GMAIL_SYNC_HARD_CAP_FULL_INTERVALS: Final = 2
+
+# How long the scheduler waits for a cancelled Gmail sync to unwind (its
+# clean-up writes) before it starts the next one anyway.
+GMAIL_SYNC_CANCEL_GRACE_SECONDS: Final = 30

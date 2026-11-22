@@ -1,11 +1,22 @@
+import asyncio
 import logging
 
 from app.core.context import worker_context
 from app.db.session import AsyncSessionLocal
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import organization_repo
-from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
-from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError, GmailTemporarilyUnavailableError
+from app.services.email.email_processor_service import (
+    close_interrupted_sync_log,
+    discover_gmail_emails,
+    drain_claude_extraction,
+    drain_gmail_fetch,
+    finalize_sync_log,
+)
+from app.services.email.exceptions import (
+    GmailAuthExpiredError,
+    GmailLabelNotFoundError,
+    GmailTemporarilyUnavailableError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +31,11 @@ async def sync_gmail_connection(target: GmailSyncTarget) -> None:
     Google (password change, revoke, or test-app expiry). The discovery
     service already records a failed sync_log row; the worker logs a warning
     and returns cleanly so the scheduler loop keeps running for other orgs.
+
+    Cancelled mid-sync (the scheduler stopping for a deploy), the sync log is
+    closed as interrupted before the cancel goes on, so the next discovery
+    starts a fresh sync instead of skipping one that will never finish. The
+    email being read is handed back by the drain itself.
     """
     async with AsyncSessionLocal() as db:
         member = await organization_repo.get_member(db, target.organization_id, target.user_id)
@@ -51,7 +67,12 @@ async def sync_gmail_connection(target: GmailSyncTarget) -> None:
         return
 
     sync_log_id = result.sync_log_id
-    await drain_gmail_fetch(ctx, sync_log_id=sync_log_id)
-    await drain_claude_extraction(ctx, sync_log_id=sync_log_id)
-    if sync_log_id is not None:
-        await finalize_sync_log(sync_log_id, ctx)
+    try:
+        await drain_gmail_fetch(ctx, sync_log_id=sync_log_id)
+        await drain_claude_extraction(ctx, sync_log_id=sync_log_id)
+        if sync_log_id is not None:
+            await finalize_sync_log(sync_log_id, ctx)
+    except asyncio.CancelledError:
+        if sync_log_id is not None:
+            await asyncio.shield(close_interrupted_sync_log(sync_log_id))
+        raise

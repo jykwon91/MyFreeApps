@@ -1,13 +1,10 @@
 """Is the extraction worker currently reading a document?"""
 from datetime import datetime, timedelta, timezone
 
-from app.core.document_constants import (
-    EXTRACTION_TIMEOUT_SECONDS,
-    STALE_EXTRACTION_MARGIN_SECONDS,
-)
+from app.core.document_constants import EXTRACTION_CLAIM_LIFETIME_SECONDS
 from app.models.documents.document import Document
 
-_CLAIM_LIFETIME = timedelta(seconds=EXTRACTION_TIMEOUT_SECONDS + STALE_EXTRACTION_MARGIN_SECONDS)
+_CLAIM_LIFETIME = timedelta(seconds=EXTRACTION_CLAIM_LIFETIME_SECONDS)
 
 
 def is_claimed_by_worker(doc: Document, now: datetime | None = None) -> bool:

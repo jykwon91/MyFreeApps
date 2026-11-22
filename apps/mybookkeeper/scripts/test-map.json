@@ -315,7 +315,9 @@
         "backend/app/models/email/",
         "backend/app/repositories/email/",
         "backend/app/services/email/",
-        "backend/app/workers/email_sync_worker.py"
+        "backend/app/workers/email_sync_worker.py",
+        "backend/app/core/email_queue_enums.py",
+        "backend/alembic/versions/emailqueueretry261121_email_queue_extraction_attempts.py"
       ],
       "backend_tests": [
         "test_email_queue_split.py",
@@ -337,7 +339,11 @@
         "test_silent_fail_audit_fixes.py",
         "services/email/test_bounce_detector.py",
         "services/email/test_discovery_bounce_filter.py",
-        "services/email/test_app_sent_email_filter.py"
+        "services/email/test_app_sent_email_filter.py",
+        "test_email_extraction_retry.py",
+        "test_email_queue_retry_migration.py",
+        "test_scheduler_worker_gmail_task.py",
+        "test_email_sync_interrupted.py"
       ],
       "frontend_tests": [
         "EmailQueueSection.test.tsx"
@@ -374,7 +380,12 @@
         "test_utility_account_service.py",
         "test_utility_account_link_repo.py",
         "test_metered_usage_extraction.py",
-        "test_dedup_copy_user_edits.py"
+        "test_dedup_copy_user_edits.py",
+        "test_email_extraction_retry.py",
+        "test_pdf_unreadable_text_reply.py",
+        "test_claude_service_legacy_mapping.py",
+        "test_document_draft_reader.py",
+        "test_upload_processor_retries.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [
@@ -450,7 +461,8 @@
         "test_gmail_oauth_callback.py",
         "test_oauth_callback_logging.py",
         "test_gmail_connect_return.py",
-        "test_gmail_connect_complete.py"
+        "test_gmail_connect_complete.py",
+        "test_email_extraction_retry.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",
@@ -2454,6 +2466,7 @@
         "backend/app/workers/upload_processor_worker.py",
         "backend/app/workers/upload_processor_healthcheck.py",
         "backend/app/core/scheduler_worker_constants.py",
+        "backend/app/models/integrations/gmail_sync_run.py",
         "backend/app/core/upload_processor_constants.py",
         "backend/app/core/upload_processor_guard.py",
         "backend/app/core/upload_heartbeat_too_short_error.py"
@@ -2462,7 +2475,9 @@
         "test_scheduler_worker_heartbeat.py",
         "test_scheduler_worker_cycle_isolation.py",
         "test_scheduler_worker_transparency.py",
+        "test_scheduler_worker_gmail_task.py",
         "test_upload_processor_heartbeat.py",
+        "test_upload_processor_retries.py",
         "test_self_healing.py",
         "test_lease_auto_end_scheduler.py",
         "test_utility_plan_scheduler.py"

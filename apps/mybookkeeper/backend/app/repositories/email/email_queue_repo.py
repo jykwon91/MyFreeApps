@@ -2,11 +2,12 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, or_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
+from app.core.datetime_utils import as_utc
 from app.models.email.email_queue import EmailQueue
 
 
@@ -35,20 +36,24 @@ async def get_message_ids(db: AsyncSession, organization_id: uuid.UUID) -> set[s
     """Return message_ids that should be EXCLUDED from re-fetch.
 
     Excludes:
-      - Rows currently in flight (``fetched``, ``extracting``)
+      - Rows currently in flight (``fetched``, ``extracting``). A ``fetched``
+        row may be waiting out a retry delay (``next_attempt_at``); the
+        extraction drain picks it up again, not discovery.
       - Rows that successfully produced a Document (``done``)
+      - ``dismissed`` rows: the user dismissed the email while it was being
+        read, so it must not come back.
+      - ``failed`` rows. A row is ``failed`` once its automatic retries ran
+        out (or the failure can't be fixed by retrying), and it stays visible
+        in the Sync Sessions panel until the user retries or dismisses it.
+        Re-listing it would do nothing anyway: the insert hits the unique key
+        on ``(user_id, message_id, attachment_id)``, so the sync would report
+        the email as queued while nothing was read.
 
     Does NOT exclude:
-      - ``failed`` rows — let them be retried
       - ``skipped`` rows — re-fetch so the current prompt gets another chance
         (these are emails the extractor classified as duplicates/no-op; if the
         prompt has improved since, we want a re-run. Token cost is bounded
         because legit duplicates re-skip quickly.)
-
-    The status filter here is the systemic fix for the
-    'fetched-once-locked-forever' lockout: if an email was previously fetched
-    but no Document survived (silent skip / extraction error), the message is
-    eligible for re-fetch on the next sync.
 
     ``processed_as_booking`` is treated the same as ``done`` — the email was
     routed through the booking pipeline and should not be re-fetched.
@@ -56,7 +61,7 @@ async def get_message_ids(db: AsyncSession, organization_id: uuid.UUID) -> set[s
     result = await db.execute(
         select(EmailQueue.message_id).where(
             EmailQueue.organization_id == organization_id,
-            EmailQueue.status.in_(("fetched", "extracting", "done", "processed_as_booking")),
+            EmailQueue.status.in_(("fetched", "extracting", "done", "processed_as_booking", "failed", "dismissed")),
         )
     )
     return {row[0] for row in result.all()}
@@ -150,20 +155,147 @@ async def claim_next_pending(
 
 
 async def claim_next_fetched(
-    db: AsyncSession, organization_id: uuid.UUID
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    *,
+    now: datetime,
+    stale_before: datetime,
 ) -> EmailQueue | None:
+    """Claim the oldest row that is ready to read, counting it as an attempt.
+
+    Ready: ``fetched`` and due (never tried, or past its retry time), or an
+    ``extracting`` claim from before ``stale_before`` (or with no claim time),
+    which a drain that died left behind. The claim stamps ``claimed_at`` so
+    the result is only written while this claim still holds.
+    """
     result = await db.execute(
         select(EmailQueue)
         .options(undefer(EmailQueue.raw_content))
         .where(
             EmailQueue.organization_id == organization_id,
-            EmailQueue.status == "fetched",
+            or_(
+                (EmailQueue.status == "fetched") & or_(
+                    EmailQueue.next_attempt_at.is_(None),
+                    EmailQueue.next_attempt_at <= now,
+                ),
+                (EmailQueue.status == "extracting") & or_(
+                    EmailQueue.claimed_at.is_(None),
+                    EmailQueue.claimed_at < stale_before,
+                ),
+            ),
         )
         .order_by(EmailQueue.created_at.asc())
         .limit(1)
         .with_for_update(skip_locked=True)
     )
+    item = result.scalar_one_or_none()
+    if item is not None:
+        item.status = "extracting"
+        item.claimed_at = now
+        item.attempts += 1
+        item.next_attempt_at = None
+    return item
+
+
+async def lock_claim(
+    db: AsyncSession, item_id: uuid.UUID, claimed_at: datetime,
+) -> EmailQueue | None:
+    """Lock the row if it is still ``extracting`` under this claim.
+
+    None when it was dismissed, deleted or reclaimed meanwhile: the read's
+    result must then be dropped, not written.
+    """
+    result = await db.execute(
+        select(EmailQueue)
+        .where(
+            EmailQueue.id == item_id,
+            EmailQueue.status == "extracting",
+            EmailQueue.claimed_at == claimed_at,
+        )
+        .with_for_update()
+    )
     return result.scalar_one_or_none()
+
+
+async def next_retry_at(db: AsyncSession, organization_id: uuid.UUID) -> datetime | None:
+    """When the soonest fetched row that is waiting out a retry delay becomes due."""
+    result = await db.execute(
+        select(func.min(EmailQueue.next_attempt_at)).where(
+            EmailQueue.organization_id == organization_id,
+            EmailQueue.status == "fetched",
+            EmailQueue.next_attempt_at > datetime.now(timezone.utc),
+        )
+    )
+    retry_at = result.scalar_one_or_none()
+    return as_utc(retry_at) if retry_at is not None else None
+
+
+async def record_failed_attempt(
+    db: AsyncSession,
+    item_id: uuid.UUID,
+    claimed_at: datetime,
+    *,
+    error: str,
+    retry_at: datetime | None,
+) -> bool:
+    """End a claim whose read failed. False if the claim no longer holds.
+
+    With ``retry_at`` the row goes back to ``fetched`` (its content is kept)
+    and is claimed again once that time passes; without it the row is
+    ``failed`` until the user retries it.
+    """
+    result = await db.execute(
+        update(EmailQueue)
+        .where(
+            EmailQueue.id == item_id,
+            EmailQueue.status == "extracting",
+            EmailQueue.claimed_at == claimed_at,
+        )
+        .values(
+            status="fetched" if retry_at is not None else "failed",
+            error=error[:1000],
+            next_attempt_at=retry_at,
+        )
+    )
+    return result.rowcount > 0
+
+
+async def release_claim(
+    db: AsyncSession, item_id: uuid.UUID, claimed_at: datetime, *, retry_at: datetime,
+) -> bool:
+    """Hand a claim back without counting it: the read never reached Claude.
+
+    The row goes back to ``fetched``, due at ``retry_at``, with the claim's
+    attempt taken off again. False if the claim no longer holds.
+    """
+    result = await db.execute(
+        update(EmailQueue)
+        .where(
+            EmailQueue.id == item_id,
+            EmailQueue.status == "extracting",
+            EmailQueue.claimed_at == claimed_at,
+        )
+        .values(
+            status="fetched",
+            attempts=EmailQueue.attempts - 1,
+            next_attempt_at=retry_at,
+        )
+    )
+    return result.rowcount > 0
+
+
+async def dismiss_if_extracting(db: AsyncSession, item_id: uuid.UUID) -> bool:
+    """Mark a row that is being read ``dismissed``, ending its claim. False if it isn't being read.
+
+    The drain then drops whatever it read (it writes only while its claim
+    holds), and the email is not fetched again.
+    """
+    result = await db.execute(
+        update(EmailQueue)
+        .where(EmailQueue.id == item_id, EmailQueue.status == "extracting")
+        .values(status="dismissed", error=None)
+    )
+    return result.rowcount > 0
 
 
 async def delete_item(db: AsyncSession, item: EmailQueue) -> None:
@@ -248,24 +380,14 @@ async def count_pending_for_sync(
 async def list_recent(
     db: AsyncSession, organization_id: uuid.UUID, limit: int = 100
 ) -> Sequence[EmailQueue]:
+    """The queue as the user sees it. A dismissed row stays only so the email isn't fetched again."""
     result = await db.execute(
         select(EmailQueue)
-        .where(EmailQueue.organization_id == organization_id)
+        .where(EmailQueue.organization_id == organization_id, EmailQueue.status != "dismissed")
         .order_by(EmailQueue.created_at.desc())
         .limit(limit)
     )
     return result.scalars().all()
-
-
-async def cancel_active(db: AsyncSession, organization_id: uuid.UUID) -> None:
-    await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.organization_id == organization_id,
-            EmailQueue.status.in_(["pending", "extracting"]),
-        )
-        .values(status="failed", error="Cancelled by user")
-    )
 
 
 async def retry_item(db: AsyncSession, item: EmailQueue) -> str:
@@ -275,6 +397,8 @@ async def retry_item(db: AsyncSession, item: EmailQueue) -> str:
         new_status = "pending"
     item.status = new_status
     item.error = None
+    item.attempts = 0
+    item.next_attempt_at = None
     return new_status
 
 
@@ -287,7 +411,7 @@ async def retry_all_failed(db: AsyncSession, organization_id: uuid.UUID) -> None
             EmailQueue.status == "failed",
             EmailQueue.raw_content.isnot(None),
         )
-        .values(status="fetched", error=None)
+        .values(status="fetched", error=None, attempts=0, next_attempt_at=None)
     )
     # Items without raw_content -> pending
     await db.execute(
@@ -297,7 +421,7 @@ async def retry_all_failed(db: AsyncSession, organization_id: uuid.UUID) -> None
             EmailQueue.status == "failed",
             EmailQueue.raw_content.is_(None),
         )
-        .values(status="pending", error=None)
+        .values(status="pending", error=None, attempts=0, next_attempt_at=None)
     )
 
 

@@ -33,13 +33,14 @@ async def count_running(
 async def timeout_stuck(
     db: AsyncSession, organization_id: uuid.UUID, provider: str, cutoff: datetime
 ) -> None:
+    """Fail running syncs that have made no progress since ``cutoff``."""
     await db.execute(
         update(SyncLog)
         .where(
             SyncLog.organization_id == organization_id,
             SyncLog.provider == provider,
             SyncLog.status == "running",
-            SyncLog.started_at < cutoff,
+            func.coalesce(SyncLog.last_progress_at, SyncLog.started_at) < cutoff,
         )
         .values(
             status="failed",
@@ -94,6 +95,18 @@ async def cancel_running(
     )
 
 
+async def close_if_running(
+    db: AsyncSession, sync_log_id: int, status: str, *, error: str,
+) -> bool:
+    """End a sync log that is still ``running``. False if it had already ended."""
+    result = await db.execute(
+        update(SyncLog)
+        .where(SyncLog.id == sync_log_id, SyncLog.status == "running")
+        .values(status=status, error=error, completed_at=datetime.now(timezone.utc))
+    )
+    return result.rowcount > 0
+
+
 async def list_recent(
     db: AsyncSession,
     organization_id: uuid.UUID,
@@ -129,6 +142,15 @@ async def increment_records(
     db: AsyncSession, log: SyncLog, count: int
 ) -> None:
     log.records_added = log.records_added + count
+
+
+async def touch_progress(db: AsyncSession, sync_log_id: int) -> None:
+    """Record that the sync is still working, so it is not timed out as stuck."""
+    await db.execute(
+        update(SyncLog)
+        .where(SyncLog.id == sync_log_id)
+        .values(last_progress_at=datetime.now(timezone.utc))
+    )
 
 
 async def is_cancelled(db: AsyncSession, sync_log_id: int) -> bool:

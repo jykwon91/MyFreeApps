@@ -120,7 +120,6 @@ class Settings(BaseAppSettings):
     max_spreadsheet_chars: int = 8000
     claude_timeout_seconds: float = 600.0  # 10 min per extraction call
     email_fetch_timeout_seconds: int = 120
-    email_extraction_timeout_seconds: int = 120
     run_upload_worker: bool = True
     demo_max_uploads_per_day: int = 5
     max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB

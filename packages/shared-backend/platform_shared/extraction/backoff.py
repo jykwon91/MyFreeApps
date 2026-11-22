@@ -1,10 +1,18 @@
 """Process-global throttle + exponential backoff around an Anthropic call.
 
-Extracted verbatim from MyBookkeeper's claude_service so it can be
-shared by any app that calls the Anthropic API. The retry semantics are
-byte-for-byte the pre-extraction behaviour: a single process-global
-throttle, 5 attempts, ``retry-after`` header honoured, otherwise
-``60 * 2**attempt`` backoff, the 5th attempt re-raises.
+Extracted from MyBookkeeper's claude_service so it can be shared by any app
+that calls the Anthropic API. With the defaults the retry semantics are the
+pre-extraction behaviour: a single process-global throttle that every call
+waits out first, 5 attempts, the ``retry-after`` header honoured, otherwise
+``60 * 2**attempt`` backoff, and the 5th attempt re-raises.
+
+A caller running under its own time limit (a queue item, a request) passes
+``max_wait_seconds``, the most this call may sleep in total. When the
+throttle has longer left than that, the call raises ``RateLimitPausedError``
+(kind ``RATE_LIMITED``) without sending the request; a 429 whose wait would
+overrun the budget re-raises instead of sleeping. Either way the caller's own
+retry schedule takes over. ``rate_limit_pause_seconds()`` says how long the
+throttle has left, so a queue can wait before claiming work at all.
 
 ``anthropic`` is imported lazily inside ``create_with_backoff`` so apps
 that never call Claude don't need the SDK installed (mirrors how
@@ -26,6 +34,8 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from platform_shared.extraction.errors import RateLimitPausedError
 
 if TYPE_CHECKING:
     from anthropic.types import Message
@@ -57,9 +67,22 @@ class RateLimitEvent:
     max_attempts: int
     wait_seconds: float
     consecutive_429s: int
+    # False when this 429 is re-raised instead of waited out: it was the last
+    # attempt, or the wait would overrun the caller's ``max_wait_seconds``.
+    will_retry: bool
 
 
 OnRateLimit = Callable[[RateLimitEvent], Awaitable[None]]
+
+
+def rate_limit_pause_seconds() -> float:
+    """Seconds until the shared throttle lets the next Anthropic call through.
+
+    0 when no rate limit is in force. A queue that retries items itself
+    reads this before claiming one, and waits instead of starting a call
+    that would only be rate limited and charged an attempt.
+    """
+    return max(0.0, throttle.resume_at - time.monotonic())
 
 
 async def create_with_backoff(
@@ -67,6 +90,7 @@ async def create_with_backoff(
     *,
     on_rate_limit: OnRateLimit | None = None,
     max_attempts: int = 5,
+    max_wait_seconds: float | None = None,
     **kwargs: Any,
 ) -> "Message":
     """Call ``client.messages.create(**kwargs)`` with throttle + backoff.
@@ -78,15 +102,27 @@ async def create_with_backoff(
             and swallowed so observability never breaks the backoff.
         max_attempts: Total attempts before the final 429 re-raises
             (default 5 — the pre-extraction value).
+        max_wait_seconds: The most this call may sleep in total, on the
+            shared throttle and between 429 retries. ``None`` (default)
+            is unbounded. When the throttle has longer left than this,
+            ``RateLimitPausedError`` is raised and no request is sent; a
+            429 whose wait would overrun it re-raises at once.
         **kwargs: Forwarded verbatim to ``client.messages.create``.
     """
     import anthropic
 
-    now = time.monotonic()
-    if now < throttle.resume_at:
-        delay = throttle.resume_at - now
+    waited = 0.0
+    delay = rate_limit_pause_seconds()
+    if delay > 0:
+        if max_wait_seconds is not None and delay > max_wait_seconds:
+            logger.info(
+                "Throttle active for another %.0fs, longer than the %.0fs wait budget; not sending the request",
+                delay, max_wait_seconds,
+            )
+            raise RateLimitPausedError(delay)
         logger.info("Throttle active, waiting %.0fs before Anthropic request", delay)
         await asyncio.sleep(delay)
+        waited += delay
 
     for attempt in range(max_attempts):
         try:
@@ -98,10 +134,20 @@ async def create_with_backoff(
             retry_after = getattr(getattr(e, "response", None), "headers", {}).get("retry-after")
             wait = float(retry_after) if retry_after else 60 * (2 ** attempt)
             throttle.resume_at = time.monotonic() + wait
-            logger.warning(
-                "Rate limited by Anthropic, waiting %.0fs (attempt %d/%d, consecutive 429s: %d)",
-                wait, attempt + 1, max_attempts, throttle.consecutive_429s,
-            )
+            over_budget = max_wait_seconds is not None and waited + wait > max_wait_seconds
+            will_retry = attempt < max_attempts - 1 and not over_budget
+            if will_retry:
+                logger.warning(
+                    "Rate limited by Anthropic, waiting %.0fs (attempt %d/%d, consecutive 429s: %d, request_id=%s)",
+                    wait, attempt + 1, max_attempts, throttle.consecutive_429s, getattr(e, "request_id", None),
+                )
+            else:
+                logger.warning(
+                    "Rate limited by Anthropic, not retrying (%s; Anthropic asks for %.0fs; "
+                    "consecutive 429s: %d, request_id=%s)",
+                    "wait budget exceeded" if over_budget else f"attempt {attempt + 1} was the last",
+                    wait, throttle.consecutive_429s, getattr(e, "request_id", None),
+                )
             if on_rate_limit is not None:
                 try:
                     await on_rate_limit(
@@ -110,6 +156,7 @@ async def create_with_backoff(
                             max_attempts=max_attempts,
                             wait_seconds=wait,
                             consecutive_429s=throttle.consecutive_429s,
+                            will_retry=will_retry,
                         )
                     )
                 except Exception:
@@ -118,9 +165,10 @@ async def create_with_backoff(
                         throttle.consecutive_429s,
                         exc_info=True,
                     )
-            if attempt == max_attempts - 1:
+            if not will_retry:
                 raise
             await asyncio.sleep(wait)
+            waited += wait
         except anthropic.APIStatusError as e:
             # Non-429 documented API error (auth, invalid_request,
             # overloaded, ...). Log the structured error type, the real HTTP

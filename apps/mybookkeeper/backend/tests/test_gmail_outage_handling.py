@@ -224,9 +224,14 @@ async def test_the_drain_stops_without_a_reconnect_prompt_and_fails_the_running_
 
     fetch["mp"].setattr(email_fetch_service, "_fail_running_sync_log", fail_log)
     fetch["mp"].setattr(email_fetch_service.sync_log_repo, "is_cancelled", AsyncMock(return_value=False))
+    touch_progress = AsyncMock()
+    fetch["mp"].setattr(email_fetch_service.sync_log_repo, "touch_progress", touch_progress)
 
     await email_fetch_service.drain_gmail_fetch(fetch["ctx"], sync_log_id=7)
 
     assert failed_logs == [(7, GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR)]
+    # The drain marked the sync as still going before it stopped.
+    touch_progress.assert_awaited_once()
+    assert touch_progress.await_args.args[1] == 7
     assert fetch["reauth_marks"] == []
     assert fetch["marks"] == []

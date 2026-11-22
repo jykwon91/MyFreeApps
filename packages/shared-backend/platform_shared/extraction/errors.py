@@ -71,6 +71,36 @@ class ExtractionParseError(ExtractionError):
     """
 
 
+class ExtractionTruncatedError(ExtractionParseError):
+    """Raised when the model stopped at ``max_tokens`` before finishing its reply.
+
+    A cut-off reply is never parsed: the JSON scan would happily return the
+    first complete nested object of a truncated list, silently dropping the
+    rest. Subclasses ExtractionParseError so callers that already treat an
+    unparseable reply as a failure handle this one the same way.
+    """
+
+
+class RateLimitPausedError(ExtractionError):
+    """Raised, without calling the API, when the shared throttle outlasts the caller's wait budget.
+
+    Anthropic rate limited an earlier call and asked us to hold off for longer
+    than this caller may wait, so the request was never sent. ``kind`` is
+    ``RATE_LIMITED`` (transient); ``retry_after_seconds`` is how long the
+    throttle has left, so a queue can schedule its next try for when the
+    throttle lifts. No request was made, so a queue counting attempts should
+    not count this one.
+    """
+
+    def __init__(self, retry_after_seconds: float) -> None:
+        super().__init__(
+            f"Anthropic rate limit in force for another {retry_after_seconds:.0f}s; request not sent",
+            error_type="rate_limit_error",
+            kind=AnthropicFailureKind.RATE_LIMITED,
+        )
+        self.retry_after_seconds = retry_after_seconds
+
+
 def extraction_error_from_anthropic(
     exc: "anthropic.APIError",
     *,

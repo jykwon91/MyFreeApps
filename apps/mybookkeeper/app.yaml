@@ -41,7 +41,7 @@ workers:
     # covers an hourly reminders tick (DB queries + a few SMS hand-offs) and
     # the daily cost sync (usually one Anthropic cost-API page, 30s timeout per
     # request, + one MinIO read and write), which normally take seconds;
-    # compose's 10s default could kill either mid-write. A full Gmail sync can run longer and is killed anyway;
+    # compose's 10s default could kill either mid-write. A Gmail sync (its own task) is cancelled at stop;
     # the next full cycle resumes its queue.
     stop_grace_period: 60s
 # No app-specific post-deploy steps — deploy runs migrate only.

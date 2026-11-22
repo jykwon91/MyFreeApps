@@ -23,6 +23,7 @@ from app.services.email.constants import (
     EMAIL_FILTER_LOG_SUBJECT_MAX_LEN,
     GMAIL_LABEL_NOT_FOUND_MESSAGE,
     GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+    SYNC_STALE_AFTER_SECONDS,
 )
 from app.services.email.exceptions import (
     GmailAuthExpiredError,
@@ -94,14 +95,12 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
             return DiscoveryOutcome(DiscoverResult("skipped", reason="no_integration"))
 
         now = datetime.now(timezone.utc)
-        stuck_cutoff = now - timedelta(minutes=30)
+        stuck_cutoff = now - timedelta(seconds=SYNC_STALE_AFTER_SECONDS)
         await sync_log_repo.timeout_stuck(db, org_id, "gmail", stuck_cutoff)
 
         running = await sync_log_repo.count_running(db, org_id, "gmail")
         if running:
             return DiscoveryOutcome(DiscoverResult("skipped", reason="sync_already_running"))
-
-        await email_queue_repo.reset_stuck(db, org_id, ["extracting"], "fetched")
 
         connection = GmailConnectionSnapshot.of(integration)
         service, creds = get_gmail_service(integration.access_token, integration.refresh_token)

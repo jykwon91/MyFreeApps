@@ -5,8 +5,12 @@ row would lock its message_id out of re-fetch forever — even rows whose
 extraction silently produced zero Documents (e.g. payment-confirmation
 duplicates that were misclassified). After the fix, only rows that are
 in-flight (``fetched``, ``extracting``) or successfully produced a Document
-(``done``) lock the message_id. ``skipped`` and ``failed`` rows are
-re-fetchable.
+(``done``) lock the message_id. ``skipped`` rows are re-fetchable.
+
+``failed`` rows are locked out too: re-listing one did nothing (the insert hits
+the unique key) while the sync counted it as queued. A failed row now waits,
+visible, for the user's retry; automatic retries happen on the ``fetched`` row
+before it ever becomes ``failed`` (see test_email_extraction_retry.py).
 """
 from __future__ import annotations
 
@@ -98,7 +102,7 @@ class TestGetMessageIdsStatusFilter:
         assert "msg-skipped" not in ids
 
     @pytest.mark.asyncio
-    async def test_failed_rows_are_refetchable(
+    async def test_failed_rows_wait_for_the_users_retry(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         await _insert_queue_row(
@@ -106,7 +110,7 @@ class TestGetMessageIdsStatusFilter:
             message_id="msg-failed", status="failed",
         )
         ids = await email_queue_repo.get_message_ids(db, test_org.id)
-        assert "msg-failed" not in ids
+        assert "msg-failed" in ids
 
     @pytest.mark.asyncio
     async def test_org_isolation(
