@@ -24,6 +24,7 @@ import type { NewLeaseRouteParams } from "../src/types/NewLeaseRouteParams";
 import { aLease } from "../test-support/aLease";
 import { holdWrites } from "../test-support/holdWrites";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -439,7 +440,7 @@ describe("what goes in the lease", () => {
     expect(screen.getByText(MESSAGES.needMoreAnswers)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
 
-    await fireEvent.changeText(screen.getByLabelText("Deposit"), "$1,000");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel("Deposit")), "$1,000");
     await pressCreate();
     await screen.findByText("lease-new1");
     expect(sent(server.creates[0]).values).toEqual({ Rent: "1,500.50", Deposit: "$1,000" });
@@ -454,7 +455,7 @@ describe("what goes in the lease", () => {
     expect(screen.getByText("That isn't a number I can read. Use digits, like 1500 or 1.500,50.", SHOWN)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
 
-    await fireEvent.changeText(screen.getByLabelText("Deposit"), "1.000,50");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel("Deposit")), "1.000,50");
     await pressCreate();
     await screen.findByText("lease-new1");
     expect(sent(server.creates[0]).values).toEqual({ Rent: "1500.00", Deposit: "1.000,50" });

@@ -29,6 +29,7 @@ import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { DOCUMENT_UPLOAD_PROBLEM_MESSAGES } from "@myjobhunter/api-client/constants/documentUploadProblemMessages";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -158,10 +159,10 @@ describe("the activity timeline", () => {
 
     // Opens on now, so When needs no choosing.
     await fireEvent.press(screen.getByRole("radio", { name: "Interview scheduled" }));
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.durationLabel), "60");
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.locationLabel), "  https://zoom.example.com/1  ");
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), "Ada\n\n Grace ");
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.noteLabel), " First round ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.durationLabel)), "60");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.locationLabel)), "  https://zoom.example.com/1  ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.interviewersLabel)), "Ada\n\n Grace ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.noteLabel)), " First round ");
     const submit = () => screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!;
     await fireEvent.press(submit());
 
@@ -190,32 +191,32 @@ describe("the activity timeline", () => {
     await fireEvent.press(await screen.findByRole("button", { name: EVENTS.logEvent }));
     await fireEvent.press(screen.getByRole("radio", { name: "Interview completed" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Video" }));
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.durationLabel), "2000");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.durationLabel)), "2000");
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
     expect(await screen.findByText("Between 1 and 1440.", SHOWN)).toBeTruthy();
 
     // The backend takes up to 20 interviewers of up to 200 characters each.
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), Array.from({ length: 21 }, (_, i) => `Person ${i}`).join("\n"));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.interviewersLabel)), Array.from({ length: 21 }, (_, i) => `Person ${i}`).join("\n"));
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
     expect(await screen.findByText(tooManyInterviewersMessage(INTERVIEWERS_MAX), SHOWN)).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), "x".repeat(INTERVIEWER_NAME_MAX_LENGTH + 1));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.interviewersLabel)), "x".repeat(INTERVIEWER_NAME_MAX_LENGTH + 1));
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
     expect(await screen.findByText(interviewerNameTooLongMessage(INTERVIEWER_NAME_MAX_LENGTH), SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText(EVENTS.noteLabel).props.maxLength).toBeUndefined();
+    expect(screen.getByLabelText(fieldLabel(EVENTS.noteLabel)).props.maxLength).toBeUndefined();
     expect(sent.some(({ route }) => route === `POST /applications/${ID}/events`)).toBe(false);
 
     // A note or location over the limit is kept whole, named, and blocks the save.
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), "Sam");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.interviewersLabel)), "Sam");
     const tooLongNote = "😀".repeat(EVENT_NOTE_MAX_LENGTH + 1);
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.noteLabel), tooLongNote);
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.locationLabel), "x".repeat(INTERVIEW_LOCATION_MAX_LENGTH + 1));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.noteLabel)), tooLongNote);
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.locationLabel)), "x".repeat(INTERVIEW_LOCATION_MAX_LENGTH + 1));
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
     expect(await screen.findByText("Keep this to 5,000 characters or fewer.", SHOWN)).toBeTruthy();
     expect(screen.getByText("Keep this to 1,024 characters or fewer.", SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText(EVENTS.noteLabel).props.value).toBe(tooLongNote);
+    expect(screen.getByLabelText(fieldLabel(EVENTS.noteLabel)).props.value).toBe(tooLongNote);
     expect(sent.some(({ route }) => route === `POST /applications/${ID}/events`)).toBe(false);
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.noteLabel), "");
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.locationLabel), "");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.noteLabel)), "");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.locationLabel)), "");
 
     await fireEvent.press(screen.getByRole("radio", { name: "Follow-up sent" }));
     expect(screen.queryByLabelText(EVENTS.durationLabel)).toBeNull();
@@ -261,7 +262,7 @@ describe("the activity timeline", () => {
 
     expect(screen.getByDisplayValue("45")).toBeTruthy();
     expect(screen.getByDisplayValue("https://meet.example.com/abc")).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText(EVENTS.durationLabel), "90");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EVENTS.durationLabel)), "90");
     await fireEvent.press(screen.getByRole("button", { name: EVENTS.saveChanges }));
 
     expect(await screen.findByText(EVENTS.updated)).toBeTruthy();
@@ -319,8 +320,8 @@ describe("the documents", () => {
     expect(await screen.findByText(DOCUMENTS.titleRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(DOCUMENTS.contentRequired, SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`), "Thank-you note");
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.contentLabel}, required`), "Thanks for your time.");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)), "Thank-you note");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.contentLabel}, required`)), "Thanks for your time.");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.create }));
 
     expect(await screen.findByText(DOCUMENTS.created)).toBeTruthy();
@@ -336,7 +337,7 @@ describe("the documents", () => {
 
     expect(screen.getByText(`resume.pdf — ${DOCUMENTS.fileContent}`)).toBeTruthy();
     expect(screen.queryByLabelText(DOCUMENTS.contentLabel)).toBeNull();
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`), "Resume for Stripe");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)), "Resume for Stripe");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.saveChanges }));
 
     expect(await screen.findByText(DOCUMENTS.updated)).toBeTruthy();
@@ -405,7 +406,7 @@ describe("uploading a file", () => {
     });
     expect(await screen.findByText("resume.pdf (20.0 KB)")).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`), " Resume for Stripe ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)), " Resume for Stripe ");
     await fireEvent.press(screen.getByRole("radio", { name: "Tailored Resume" }));
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.uploadSubmit }));
 
@@ -442,12 +443,12 @@ describe("uploading a file", () => {
     serve(applicationDetailRoutes(STRIPE));
     await renderApplicationDetail(ID);
     await openUpload();
-    const title = screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`);
+    const title = screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`));
     expect(title.props.maxLength).toBeUndefined();
     const tooLong = "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH + 1);
     await fireEvent.changeText(title, tooLong);
     expect(await screen.findByText("Keep this to 255 characters or fewer.", SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`).props.value).toBe(tooLong);
+    expect(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)).props.value).toBe(tooLong);
     await fireEvent.changeText(title, "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH));
     expect(screen.queryByText(/Keep this to/, SHOWN)).toBeNull();
     jest.mocked(DocumentPicker.getDocumentAsync).mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));

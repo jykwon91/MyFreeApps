@@ -232,7 +232,7 @@ it("says when notes are too long, keeps all of them and won't save", async () =>
   await fireEvent.changeText(field, `${tooLong}😀`);
   expect(await screen.findByText("5,002 / 5,000", { includeHiddenElements: true })).toBeTruthy();
   expect(screen.getAllByText(/Keep this to/, SHOWN)).toHaveLength(1);
-  expect(screen.getByDisplayValue(`${tooLong}😀`).props.accessibilityHint).toBe("Keep this to 5,000 characters or fewer.");
+  expect(screen.getByDisplayValue(`${tooLong}😀`).props.accessibilityLabel).toMatch(/, error: Keep this to 5,000 characters or fewer\.$/);
   expect(screen.getByRole("button", { name: NOTES.save })).toBeDisabled();
   expect(sent.some(({ route }) => route === `PATCH /applications/${ID}`)).toBe(false);
 });

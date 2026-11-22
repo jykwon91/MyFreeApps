@@ -38,6 +38,7 @@ import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -134,7 +135,7 @@ async function readLink(link = LINK): Promise<void> {
 }
 
 function field(label: string) {
-  return screen.getByLabelText(label);
+  return screen.getByLabelText(fieldLabel(label));
 }
 
 function requestsTo(sent: ReturnType<typeof serve>, route: string) {

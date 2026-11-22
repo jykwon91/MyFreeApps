@@ -18,6 +18,7 @@ import { store } from "../src/lib/store";
 import { anApplicant, noPrivateDetails, startApplicantServer } from "../test-support/applicantsServer";
 import type { FakeApplicantServer } from "../test-support/applicantsServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 const mockFocus: { blur?: () => void } = {};
 const mockLeave: { active: boolean; blocked?: (event: { repeat: () => void }) => void } = { active: false };
@@ -414,7 +415,7 @@ describe("ApplicantPrivateDetails", () => {
     }
 
     async function editEmail(text: string) {
-      await fireEvent.changeText(screen.getByLabelText("Email"), text);
+      await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), text);
       await fireEvent.press(screen.getByRole("button", { name: "Save" }));
     }
 
@@ -436,7 +437,7 @@ describe("ApplicantPrivateDetails", () => {
       await renderIt(withReport, true);
       await showDetails();
       await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
-      expect(screen.getByLabelText("Email").props.value).toBe("dana@example.com");
+      expect(screen.getByLabelText(fieldLabel("Email")).props.value).toBe("dana@example.com");
       await editEmail("   ");
       expect(await screen.findByText("Email removed")).toBeTruthy();
       expect(emailWrites(server)).toEqual([{ contact_email: null }]);
@@ -451,7 +452,7 @@ describe("ApplicantPrivateDetails", () => {
       await fireEvent.press(screen.getByRole("button", { name: "Add email" }));
       await editEmail("not-an-email");
       expect(await screen.findByText("That doesn't look like an email address.", SHOWN)).toBeTruthy();
-      expect(screen.getByLabelText("Email").props.value).toBe("not-an-email");
+      expect(screen.getByLabelText(fieldLabel("Email")).props.value).toBe("not-an-email");
       expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     });
 
@@ -475,11 +476,11 @@ describe("ApplicantPrivateDetails", () => {
       await renderIt(withReport, true);
       await showDetails();
       await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
-      await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+      await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), "other@example.com");
       await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
       expect(emailWrites(server)).toEqual([]);
       await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
-      expect(screen.getByLabelText("Email").props.value).toBe("dana@example.com");
+      expect(screen.getByLabelText(fieldLabel("Email")).props.value).toBe("dana@example.com");
     });
 
     describe("leaving with an unsent change", () => {
@@ -508,13 +509,13 @@ describe("ApplicantPrivateDetails", () => {
 
       it("asks before throwing away a typed address; keep stays, discard leaves", async () => {
         await startEditing();
-        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+        await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), "other@example.com");
         expect(mockLeave.active).toBe(true);
         await goBack();
         expect(Alert.alert).toHaveBeenCalledWith("Discard your changes?", "I haven't saved them yet.", expect.any(Array));
         await pressAlert("Keep editing");
         expect(repeat).not.toHaveBeenCalled();
-        expect(screen.getByLabelText("Email").props.value).toBe("other@example.com");
+        expect(screen.getByLabelText(fieldLabel("Email")).props.value).toBe("other@example.com");
         await goBack();
         await pressAlert("Discard");
         expect(repeat).toHaveBeenCalledTimes(1);
@@ -523,8 +524,8 @@ describe("ApplicantPrivateDetails", () => {
       it("doesn't ask when nothing was typed", async () => {
         await startEditing();
         expect(mockLeave.active).toBe(false);
-        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
-        await fireEvent.changeText(screen.getByLabelText("Email"), "dana@example.com");
+        await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), "other@example.com");
+        await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), "dana@example.com");
         expect(mockLeave.active).toBe(false);
       });
 
@@ -537,7 +538,7 @@ describe("ApplicantPrivateDetails", () => {
 
       it("doesn't ask after cancel", async () => {
         await startEditing();
-        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+        await fireEvent.changeText(screen.getByLabelText(fieldLabel("Email")), "other@example.com");
         await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
         expect(mockLeave.active).toBe(false);
       });

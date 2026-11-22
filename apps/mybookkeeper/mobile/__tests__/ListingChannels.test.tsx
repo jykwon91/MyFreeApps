@@ -9,6 +9,7 @@ import { holdWrites } from "../test-support/holdWrites";
 import { aChannel, aChannelListing, aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
@@ -24,7 +25,7 @@ const button = (name: string) => screen.getByRole("button", { name });
 const furnished = aChannel("c1", "Furnished");
 const airbnb = aChannel("c2", "Airbnb");
 const icalOnly = aChannel("c3", "Direct", { supports_ical_import: false });
-const url = () => screen.getByLabelText(`${MESSAGES.externalUrl}, required`);
+const url = () => screen.getByLabelText(fieldLabel(`${MESSAGES.externalUrl}, required`));
 const channelsServer = (listingChannels = [aChannelListing("cl1", furnished)], role = "owner") =>
   startListingsServer({ role, listings: [aListing()], channels: [furnished, airbnb, icalOnly], channelListings: listingChannels });
 

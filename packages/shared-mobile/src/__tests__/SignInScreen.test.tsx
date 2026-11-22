@@ -9,6 +9,7 @@ import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
 import { forgetFocusedFields, lastFocusedField } from "../../test-support/focusedField";
 import { SHOWN } from "../../test-support/shown";
+import { fieldLabel } from "../../test-support/fieldLabelPattern";
 
 jest.mock("../auth/mobileAuthApi", () => ({
   ...jest.requireActual("../auth/mobileAuthApi"),
@@ -153,7 +154,7 @@ describe("SignInScreen", () => {
     await renderScreen(jest.fn().mockResolvedValue(failed(failure)));
     await fillAndSubmit();
     expect(screen.getByText(message, { ...SHOWN, exact: false })).toBeTruthy();
-    expect(screen.getByLabelText("Password").props.value).toBe("secret");
+    expect(screen.getByLabelText(fieldLabel("Password")).props.value).toBe("secret");
   });
 
   describe("resending the verification email", () => {
@@ -252,7 +253,7 @@ describe("SignInScreen", () => {
       await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123456");
       await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
       expect(screen.getByText(/Each code works once/, SHOWN)).toBeTruthy();
-      expect(screen.getByLabelText("Authentication code").props.value).toBe("");
+      expect(screen.getByLabelText(fieldLabel("Authentication code")).props.value).toBe("");
     });
 
     it("takes a recovery code", async () => {

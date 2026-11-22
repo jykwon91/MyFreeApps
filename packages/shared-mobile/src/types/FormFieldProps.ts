@@ -4,7 +4,7 @@ import type { StyleProp, TextInput, TextInputProps, ViewStyle } from "react-nati
 export interface FormFieldProps extends Omit<TextInputProps, "style"> {
   label: string;
   /**
-   * Replaces `hint`, and becomes the input's accessibility hint. Screen readers read it once, politely,
+   * Replaces the visible `hint` and is added to the input's accessibility label ("Email, error: ..."), so it is heard even with hints off; the accessibility hint stays. Screen readers also announce it once, politely,
    * when it appears or changes; errors that appear in several fields at once are read as one summary.
    */
   error?: string;

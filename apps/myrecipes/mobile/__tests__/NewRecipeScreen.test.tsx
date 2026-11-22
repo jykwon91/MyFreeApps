@@ -19,6 +19,7 @@ import { makeStore } from "../src/lib/store";
 import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { timeOutPostsTo } from "@platform/mobile/test-support/timeOutWrites";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -103,7 +104,7 @@ function holdResponses(): () => void {
 }
 
 async function type(label: string, text: string) {
-  await fireEvent.changeText(screen.getByLabelText(label), text);
+  await fireEvent.changeText(screen.getByLabelText(fieldLabel(label)), text);
 }
 
 async function press(name: string) {

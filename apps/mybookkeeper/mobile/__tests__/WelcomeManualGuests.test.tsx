@@ -317,7 +317,7 @@ describe("emailing the guide", () => {
     await fireEvent.press(button(EMAIL.send));
     const reason = screen.getByText("Choose which room's guide to send.", SHOWN);
     expect(reason).toBeTruthy();
-    expect(screen.getByRole("button", { name: new RegExp(EMAIL.roomLabel) }).props.accessibilityHint).toBe("Choose which room's guide to send.");
+    expect(screen.getByRole("button", { name: new RegExp(EMAIL.roomLabel) }).props.accessibilityLabel).toMatch(/, error: Choose which room's guide to send\.$/);
     expect(writesTo(server)).toHaveLength(0);
   });
 

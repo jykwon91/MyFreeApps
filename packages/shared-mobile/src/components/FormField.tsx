@@ -32,8 +32,8 @@ export default function FormField({
           placeholderTextColor={colors.mutedForeground}
           {...inputProps}
           multiline={multiline}
-          accessibilityLabel={accessibilityLabel ?? requiredFieldLabel(label, required)}
-          accessibilityHint={error ?? accessibilityHint ?? hint}
+          accessibilityLabel={requiredFieldLabel(accessibilityLabel ?? label, accessibilityLabel ? false : required, error)}
+          accessibilityHint={accessibilityHint ?? hint}
           style={[
             {
               minHeight: multiline ? MULTILINE_FIELD_MIN_HEIGHT : MIN_TOUCH_TARGET,
