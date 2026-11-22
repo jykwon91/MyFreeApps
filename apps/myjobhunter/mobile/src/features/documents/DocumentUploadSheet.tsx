@@ -8,14 +8,13 @@ import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUpl
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
-import { FieldError, FieldLabel, filePart, FormField, FormSheet, LoadingButton, requiredFieldLabel, useFieldChain, useTheme, useToast, type FileForUpload } from "@platform/mobile";
+import { ChoiceGroup, FieldError, FieldLabel, filePart, FormField, FormSheet, LoadingButton, requiredFieldLabel, useFieldChain, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { documentUploadFailure } from "../../lib/documentUploadFailure";
 import { pickDocumentFile } from "../../lib/pickDocumentFile";
 import type { DocumentUploadSheetProps } from "../../types/DocumentUploadSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /** The website's file upload: a PDF, DOCX or TXT up to 25 MB, with a title and type, linked to the application when given. */

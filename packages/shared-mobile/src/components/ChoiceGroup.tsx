@@ -1,6 +1,10 @@
-import { FieldError, FieldLabel, OptionRow, requiredFieldLabel, useTheme } from "@platform/mobile";
 import { View } from "react-native";
-import type { ChoiceGroupProps } from "../../types/ChoiceGroupProps";
+import { useTheme } from "../theme/useTheme";
+import { requiredFieldLabel } from "../utils/requiredFieldLabel";
+import FieldError from "./FieldError";
+import FieldLabel from "./FieldLabel";
+import OptionRow from "./OptionRow";
+import type { ChoiceGroupProps } from "../types/ChoiceGroupProps";
 
 /** One choice from a short list, every option on screen: the phone's form of a select. */
 export default function ChoiceGroup<Value extends string>({ label, options, value, onChange, required = false, error, disabled = false }: ChoiceGroupProps<Value>) {

@@ -4,14 +4,13 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { skillCreateRequest } from "@myjobhunter/api-client/utils/skillCreateRequest";
 import { skillNameProblem } from "@myjobhunter/api-client/utils/skillNameProblem";
-import { FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, useFieldChain, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SKILL_MESSAGES as MESSAGES } from "../../constants/profileSkills";
 import { SKILL_YEAR_CHOICES } from "../../constants/skillYearChoices";
 import { createFailure } from "../../lib/writeFailure";
 import type { SkillSheetProps } from "../../types/SkillSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /** Adds a skill, with its years if known. A skill you have already is caught before it is sent. */

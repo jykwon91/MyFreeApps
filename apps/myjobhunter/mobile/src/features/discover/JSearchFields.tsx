@@ -1,8 +1,7 @@
 import { INDUSTRY_CHIPS } from "@myjobhunter/api-client/constants/industryChips";
 import { COUNTRY_OPTIONS, DATE_POSTED_OPTIONS, EMPLOYMENT_TYPE_OPTIONS, EXPERIENCE_OPTIONS } from "@myjobhunter/api-client/constants/jsearchFilterOptions";
-import { FIELD_PRESETS, FormField, SwitchRow } from "@platform/mobile";
+import { ChoiceGroup, FIELD_PRESETS, FormField, SwitchRow } from "@platform/mobile";
 import ChipListField from "../../components/forms/ChipListField";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import ToggleChipsField from "../../components/forms/ToggleChipsField";
 import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSearchSheet";
 import type { JSearchFieldsProps } from "../../types/JSearchFieldsProps";

@@ -1,12 +1,11 @@
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import type { Seniority } from "@myjobhunter/api-client/types/profile/seniority";
 import { isSeniority } from "@myjobhunter/api-client/utils/isSeniority";
-import { FormField, FormSheet, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { SENIORITY_CHOICES } from "../../constants/seniorityChoices";
 import type { AboutSheetProps } from "../../types/AboutSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 

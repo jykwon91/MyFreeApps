@@ -1,14 +1,13 @@
 import { mortgageProblemMessages } from "@mybookkeeper/api-client/constants/mortgageProblemMessages";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
-import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
-import { FIELD_PRESETS, FieldError, FormField, OptionRow, useFieldChain, useTheme } from "@platform/mobile";
+import { ChoiceGroup, FIELD_PRESETS, FormField, useFieldChain, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
   MORTGAGE_FORM_MESSAGES as MESSAGES,
   MORTGAGE_NOTES_MAX_LENGTH,
-  MORTGAGE_RATE_TYPE_LABELS,
+  MORTGAGE_RATE_TYPE_OPTIONS,
   MORTGAGE_TEXT_MAX_LENGTH,
 } from "../../constants/mortgageForm";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -57,23 +56,9 @@ export default function MortgageFormFields({ values, onChange, problems, isBusy,
         value={values.interestRate}
       />
 
-      <View accessibilityHint={problemText("rateType")} accessibilityLabel={MESSAGES.rateType} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
-        <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{`${MESSAGES.rateType} *`}</Text>
-        {MORTGAGE_RATE_TYPES.map((choice) => (
-          <OptionRow
-            isSelected={values.rateType === choice}
-            key={choice}
-            label={MORTGAGE_RATE_TYPE_LABELS[choice]}
-            onPress={() => {
-              if (!isBusy) onChange("rateType", choice);
-            }}
-          />
-        ))}
-        {problems.rateType ? (
-          <FieldError message={problemText("rateType")} name={MESSAGES.rateType} />
-        ) : (
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.rateTypeHint}</Text>
-        )}
+      <View style={{ gap: spacing.xs }}>
+        <ChoiceGroup disabled={isBusy} error={problemText("rateType")} label={MESSAGES.rateType} onChange={(choice) => onChange("rateType", choice)} options={MORTGAGE_RATE_TYPE_OPTIONS} required value={values.rateType} />
+        {problems.rateType ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.rateTypeHint}</Text>}
       </View>
 
       {values.rateType === "arm" ? (

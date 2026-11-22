@@ -1,4 +1,4 @@
-import type { SheetOption } from "@platform/mobile";
+import type { SheetOption } from "./SheetOption";
 
 export interface ChoiceGroupProps<Value extends string> {
   label: string;

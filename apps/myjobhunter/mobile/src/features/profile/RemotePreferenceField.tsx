@@ -2,13 +2,12 @@ import { REMOTE_PREFERENCE_MESSAGES } from "@myjobhunter/api-client/constants/re
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import type { RemotePreference } from "@myjobhunter/api-client/types/profile/remote-preference";
 import { isRemotePreference } from "@myjobhunter/api-client/utils/isRemotePreference";
-import { useAnnouncement, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, useAnnouncement, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { REMOTE_CHOICES } from "../../constants/remoteChoices";
 import type { RemotePreferenceFieldProps } from "../../types/RemotePreferenceFieldProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
 
 /**

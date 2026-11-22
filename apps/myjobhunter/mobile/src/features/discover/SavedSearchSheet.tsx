@@ -27,10 +27,9 @@ import { savedSearchFormValues } from "@myjobhunter/api-client/utils/savedSearch
 import { savedSearchNameProblem } from "@myjobhunter/api-client/utils/savedSearchNameProblem";
 import { savedSearchPatch } from "@myjobhunter/api-client/utils/savedSearchPatch";
 import { savedSearchProblem } from "@myjobhunter/api-client/utils/savedSearchProblem";
-import { FormField, FormSheet, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { REFRESH_FREQUENCY_OPTIONS } from "../../constants/refreshFrequency";
 import { SAVED_SEARCH_SHEET_MESSAGES as MESSAGES } from "../../constants/savedSearchSheet";

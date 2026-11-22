@@ -5,14 +5,13 @@ import type { DocumentKind } from "@myjobhunter/api-client/types/document/docume
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { documentChangesRequest } from "@myjobhunter/api-client/utils/documentChangesRequest";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
-import { FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
 import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { DocumentSheetProps } from "../../types/DocumentSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /** Writes a text document, linked to the application when given, or edits one: its title, type and (for text) content. */

@@ -1,6 +1,7 @@
 import { unsureRepeatableMessage } from "@platform/core/utils/unsureRepeatableMessage";
 import { documentReaderMessages } from "./documentReader";
-import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import { MORTGAGE_RATE_TYPES, type MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import type { SheetOption } from "@platform/mobile";
 
 export const MORTGAGE_NOTES_MAX_LENGTH = 5000;
 export const MORTGAGE_TEXT_MAX_LENGTH = 255;
@@ -10,6 +11,8 @@ export const MORTGAGE_RATE_TYPE_LABELS: Record<MortgageRateType, string> = {
   fixed: "Fixed for the life of the loan",
   arm: "Adjustable (ARM)",
 };
+
+export const MORTGAGE_RATE_TYPE_OPTIONS: readonly SheetOption<string>[] = MORTGAGE_RATE_TYPES.map((value) => ({ value, label: MORTGAGE_RATE_TYPE_LABELS[value] }));
 
 export const MORTGAGE_FORM_MESSAGES = {
   titleNew: "Add mortgage",
