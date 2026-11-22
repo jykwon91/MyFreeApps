@@ -7,6 +7,7 @@ import { propertiesApi } from "@mybookkeeper/api-client/store/propertiesApi";
 import { filterSummary, hasCalendarFilters, NO_CALENDAR_FILTERS, toggleValue, withKnownProperties } from "../src/features/calendar/calendarFilters";
 import { monthFromParts, yearBounds } from "../src/features/calendar/calendarJump";
 import CalendarScreen from "../src/features/calendar/CalendarScreen";
+import { calendarFiltersChanged } from "../src/features/calendar/calendarFiltersSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { monthOf, shiftMonth } from "../src/lib/localDate";
 import { store } from "../src/lib/store";
@@ -40,6 +41,7 @@ function thisMonthsBooking() {
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
+  store.dispatch(calendarFiltersChanged(NO_CALENDAR_FILTERS));
 });
 
 afterEach(() => {
@@ -111,6 +113,32 @@ describe("filtering the calendar", () => {
     expect(await screen.findByRole("button", { name: "Filters, currently none" })).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "Oak Flat" })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Airbnb" })).not.toBeChecked();
+  });
+
+  it("keeps the filters when you leave the calendar and come back", async () => {
+    startCalendarServer({ properties: TWO_PROPERTIES, events: [thisMonthsBooking()] });
+    const first = await render(
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <CalendarScreen />
+        </ToastProvider>
+      </Provider>,
+    );
+    await fireEvent.press(await screen.findByRole("button", { name: FILTERS_BUTTON }));
+    await fireEvent.press(await screen.findByRole("checkbox", { name: "Oak Flat" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Done" }));
+    await screen.findByRole("button", { name: "Filters, currently Oak Flat" });
+    await screen.findByText("Maple Room");
+    await first.unmount();
+    await renderScreen();
+    expect(await screen.findByRole("button", { name: "Filters, currently Oak Flat" })).toBeTruthy();
+    await screen.findByText("Maple Room");
+  });
+
+  it("opens unfiltered when nothing has been chosen", async () => {
+    startCalendarServer({ properties: TWO_PROPERTIES, events: [thisMonthsBooking()] });
+    await renderScreen();
+    expect(await screen.findByRole("button", { name: "Filters, currently none" })).toBeTruthy();
   });
 
   it("offers no property section with a single property, but still the sources", async () => {

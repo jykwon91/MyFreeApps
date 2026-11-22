@@ -7,6 +7,8 @@ import { API_BASE_URL } from "../constants/api";
 import { stopAi } from "../features/aiPermission/aiPermission";
 import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadsReset } from "../features/capture/uploadsSlice";
+import { NO_CALENDAR_FILTERS } from "../features/calendar/calendarFilters";
+import calendarFilters, { calendarFiltersChanged } from "../features/calendar/calendarFiltersSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import { clearReplyRequestIds } from "../features/inquiries/replyRequestIds";
@@ -30,7 +32,7 @@ configurePlatform({
 
 export function makeStore() {
   return configureStore({
-    reducer: { [baseApi.reducerPath]: baseApi.reducer, uploads, workspace },
+    reducer: { [baseApi.reducerPath]: baseApi.reducer, uploads, workspace, calendarFilters },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
   });
 }
@@ -43,6 +45,7 @@ onAccountLeft(session, () => {
   store.dispatch(workspaceChosen(null));
   store.dispatch(workspaceLost(null));
   store.dispatch(uploadsReset());
+  store.dispatch(calendarFiltersChanged(NO_CALENDAR_FILTERS));
   // Each has to run whatever the others do: these are someone's records. Nothing may
   // escape either, or the session's next listener, which clears the cache, never runs.
   for (const clear of [clearDocumentFiles, clearDataExportFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, clearSavedWorkspace, stopAi]) {
