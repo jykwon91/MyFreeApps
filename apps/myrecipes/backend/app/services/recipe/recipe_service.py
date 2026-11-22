@@ -37,47 +37,21 @@ from app.schemas.recipe.recipe_schemas import (
     RecipeUpdateRequest,
 )
 from app.schemas.recipe.version_schemas import (
-    IngredientInput,
-    StepInput,
     VersionCreateRequest,
     VersionResponse,
     VersionSummary,
 )
 from app.services.recipe import recipe_mappers, version_diff
+from app.services.recipe.version_snapshots import (
+    check_lineage_keys,
+    make_ingredients,
+    make_steps,
+)
 
 
 class InvalidBaseVersionError(ValueError):
     """Raised when a tweak/diff references a base version that doesn't exist
     for this recipe. The route maps it to HTTP 400."""
-
-
-# ---------------------------------------------------------------------------
-# Snapshot builders (pure)
-# ---------------------------------------------------------------------------
-
-
-def _make_ingredients(
-    version_id: uuid.UUID, inputs: list[IngredientInput],
-) -> list[RecipeIngredient]:
-    return [
-        RecipeIngredient(
-            version_id=version_id,
-            lineage_key=ing.lineage_key or uuid.uuid4(),
-            position=i,
-            name=ing.name,
-            quantity=ing.quantity,
-            unit=ing.unit,
-            note=ing.note,
-        )
-        for i, ing in enumerate(inputs, start=1)
-    ]
-
-
-def _make_steps(version_id: uuid.UUID, inputs: list[StepInput]) -> list[RecipeStep]:
-    return [
-        RecipeStep(version_id=version_id, position=i, instruction=s.instruction)
-        for i, s in enumerate(inputs, start=1)
-    ]
 
 
 async def _build_detail(
@@ -143,7 +117,11 @@ async def _build_detail(
 async def create_recipe(
     user_id: uuid.UUID, req: RecipeCreateRequest,
 ) -> RecipeDetailResponse:
-    """Create a recipe and its first version (v1) atomically."""
+    """Create a recipe and its first version (v1) atomically.
+
+    Raises InvalidLineageKeyError if an ingredient carries a lineage_key (v1 has no base).
+    """
+    check_lineage_keys(req.ingredients, None)
     async with unit_of_work() as db:
         recipe = Recipe(
             user_id=user_id,
@@ -165,9 +143,9 @@ async def create_recipe(
         )
         await recipe_version_repository.create(db, version)
         await recipe_version_repository.add_ingredients(
-            db, _make_ingredients(version.id, req.ingredients)
+            db, make_ingredients(version.id, req.ingredients)
         )
-        await recipe_version_repository.add_steps(db, _make_steps(version.id, req.steps))
+        await recipe_version_repository.add_steps(db, make_steps(version.id, req.steps))
 
         versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
         detail = await _build_detail(db, recipe, versions, user_id)
@@ -286,7 +264,8 @@ async def create_version(
     """Create a new version (a tweak). Returns None if the recipe is missing.
 
     Raises InvalidBaseVersionError if ``base_version_id`` is given but doesn't
-    belong to this recipe.
+    belong to this recipe, and InvalidLineageKeyError if an ingredient's
+    lineage_key repeats or isn't one of the base version's.
     """
     async with unit_of_work() as db:
         # Lock the recipe row so two concurrent saves can't read the same max version number.
@@ -301,6 +280,10 @@ async def create_version(
                 raise InvalidBaseVersionError("base_version_id is not a version of this recipe")
         else:
             base = await recipe_version_repository.get_latest(db, recipe_id, user_id)
+        base_ingredients = (
+            await recipe_version_repository.get_ingredients(db, base.id) if base else []
+        )
+        check_lineage_keys(req.ingredients, base_ingredients)
 
         next_number = await recipe_version_repository.max_version_number(db, recipe_id) + 1
         version = RecipeVersion(
@@ -316,8 +299,8 @@ async def create_version(
         )
         await recipe_version_repository.create(db, version)
 
-        ingredients = _make_ingredients(version.id, req.ingredients)
-        steps = _make_steps(version.id, req.steps)
+        ingredients = make_ingredients(version.id, req.ingredients)
+        steps = make_steps(version.id, req.steps)
         await recipe_version_repository.add_ingredients(db, ingredients)
         await recipe_version_repository.add_steps(db, steps)
         # A tweak changes the recipe's content, so it moves to the top of the library list.
@@ -431,6 +414,9 @@ async def diff_public_versions(
         field_changes=version_diff.diff_fields(from_version, to_version),
         ingredient_changes=version_diff.diff_ingredients(from_ingredients, to_ingredients),
         step_changes=version_diff.diff_steps(from_steps, to_steps),
+        order_changed=version_diff.order_changed(
+            from_ingredients, to_ingredients, from_steps, to_steps,
+        ),
     )
 
 

@@ -71,3 +71,6 @@ class DiffResponse(BaseModel):
     field_changes: list[FieldChange] = []
     ingredient_changes: list[IngredientChange] = []
     step_changes: list[StepChange] = []
+    # The same ingredients or steps in another order. A reorder is not an added,
+    # removed or changed row, so without this a reorder-only version reads as identical.
+    order_changed: bool = False

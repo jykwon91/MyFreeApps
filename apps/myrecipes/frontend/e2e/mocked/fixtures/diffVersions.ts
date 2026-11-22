@@ -1,6 +1,6 @@
 /**
  * What the server's diff of two versions says (backend services/recipe/version_diff.py): servings and
- * prep/cook minutes compare one by one, ingredients match by lineage_key, steps by position.
+ * prep/cook minutes compare one by one, ingredients match by lineage_key, steps by position, and order_changed flags a reorder.
  */
 import type {
   DiffResponse,
@@ -60,6 +60,18 @@ function stepChanges(from: VersionResponse["steps"], to: VersionResponse["steps"
   });
 }
 
+/** The same ingredients (by lineage_key) or the same steps, in another order. */
+function orderChanged(from: VersionResponse | null, to: VersionResponse): boolean {
+  const fromKeys = (from?.ingredients ?? []).map((ingredient) => ingredient.lineage_key);
+  const toKeys = to.ingredients.map((ingredient) => ingredient.lineage_key);
+  const shared = (keys: string[], other: string[]) => keys.filter((key) => other.includes(key));
+  if (shared(fromKeys, toKeys).join() !== shared(toKeys, fromKeys).join()) return true;
+  const fromSteps = (from?.steps ?? []).map((step) => step.instruction);
+  const toSteps = to.steps.map((step) => step.instruction);
+  const sorted = (steps: string[]) => [...steps].sort().join("\n");
+  return fromSteps.join("\n") !== toSteps.join("\n") && sorted(fromSteps) === sorted(toSteps);
+}
+
 /** `from` is null for the first version, which has nothing before it: everything is added. */
 export function diffVersions(from: VersionResponse | null, to: VersionResponse): DiffResponse {
   return {
@@ -70,5 +82,6 @@ export function diffVersions(from: VersionResponse | null, to: VersionResponse):
     field_changes: fieldChanges(from, to),
     ingredient_changes: ingredientChanges(from?.ingredients ?? [], to.ingredients),
     step_changes: stepChanges(from?.steps ?? [], to.steps),
+    order_changed: orderChanged(from, to),
   };
 }

@@ -2,7 +2,8 @@
  * No-backend E2E for the version timeline and /recipes/:id/versions/:vid/diff:
  * picking two versions opens the newer one against the older, the diff reads
  * with the copy shared with the phone, a tweak that only changes servings or
- * times shows those changes, and a version that's gone says so.
+ * times shows those changes, a reorder-only tweak isn't called identical, and a
+ * version that's gone says so.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -28,6 +29,9 @@ const VERSION_COPY = {
     "One of these versions isn't part of this recipe, or no longer exists. Go back and pick two versions to compare.",
   recipeOrVersionGone: "This recipe or one of its versions no longer exists.",
   identicalHeading: "Identical",
+  onlyOrderChanged: "Only the order changed.",
+  reorderedHeading: "Reordered",
+  reorderedBody: "Same ingredients and steps, in a different order.",
   details: "Details",
 } as const;
 
@@ -124,4 +128,21 @@ test("shows a tweak that only changed servings and cook time instead of calling 
   await expect(page.getByRole("heading", { name: VERSION_COPY.identicalHeading })).toHaveCount(0);
   const details = page.locator("section").filter({ has: page.getByRole("heading", { name: VERSION_COPY.details }) });
   await expect(details.getByRole("listitem")).toHaveText(["~Changed:Servings:48", "~Changed:Cook time:25 min45 min"]);
+});
+
+test("says a tweak that only reordered the ingredients is in a different order, not identical", async ({ page }) => {
+  await stubSignedInShell(page);
+  const v1 = versionOf(RECIPE_ID, 1);
+  const reordered = [...v1.ingredients].reverse().map((ingredient, position) => ({ ...ingredient, position }));
+  await stubRecipeApi(page, RECIPE_ID, {
+    isOwner: false,
+    versions: [v1, versionOf(RECIPE_ID, 2, { change_note: "Salt first", ingredients: reordered })],
+  });
+
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(2)}/diff`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("v1 to v2");
+  await expect(page.getByText(VERSION_COPY.onlyOrderChanged)).toBeVisible();
+  await expect(page.getByRole("heading", { name: VERSION_COPY.reorderedHeading })).toBeVisible();
+  await expect(page.getByText(VERSION_COPY.reorderedBody)).toBeVisible();
+  await expect(page.getByRole("heading", { name: VERSION_COPY.identicalHeading })).toHaveCount(0);
 });

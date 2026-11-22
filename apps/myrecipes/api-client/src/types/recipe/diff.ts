@@ -36,4 +36,9 @@ export interface DiffResponse {
   field_changes: FieldChange[];
   ingredient_changes: IngredientChange[];
   step_changes: StepChange[];
+  /**
+   * The same ingredients or steps in another order. A reorder isn't an entry above, so it's flagged here.
+   * The web and phone show "Reordered" only when nothing else changed; otherwise the changes show as usual.
+   */
+  order_changed: boolean;
 }

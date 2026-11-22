@@ -22,6 +22,7 @@ function diff(patch: Partial<DiffResponse> = {}): DiffResponse {
     field_changes: [],
     ingredient_changes: [],
     step_changes: [],
+    order_changed: false,
     ...patch,
   };
 }
@@ -46,6 +47,7 @@ describe("diffSummary", () => {
       stepCount: 1,
       total: 3,
       isIdentical: false,
+      isReordered: false,
       subtitle: "3 changes — 2 ingredients, 1 step.",
     });
   });
@@ -75,6 +77,25 @@ describe("diffSummary", () => {
     expect(summary.isIdentical).toBe(true);
     expect(summary.total).toBe(0);
     expect(summary.subtitle).toBe(VERSION_COPY.noDifferences);
+  });
+
+  it("doesn't call a version that only reorders ingredients or steps identical", () => {
+    const summary = diffSummary(diff({ order_changed: true }));
+    expect(summary.isIdentical).toBe(false);
+    expect(summary.isReordered).toBe(true);
+    expect(summary.total).toBe(0);
+    expect(summary.subtitle).toBe("Only the order changed.");
+    expect(VERSION_COPY.reorderedHeading).toBe("Reordered");
+    expect(VERSION_COPY.reorderedBody).toBe("Same ingredients and steps, in a different order.");
+  });
+
+  it("counts changes as usual when the order changed too", () => {
+    const summary = diffSummary(
+      diff({ order_changed: true, step_changes: [{ position: 1, change: "changed", before: "Stir.", after: "Fry." }] }),
+    );
+    expect(summary.isReordered).toBe(false);
+    expect(summary.isIdentical).toBe(false);
+    expect(summary.subtitle).toBe("1 change — 0 ingredients, 1 step.");
   });
 
   it("compares the first version against nothing", () => {

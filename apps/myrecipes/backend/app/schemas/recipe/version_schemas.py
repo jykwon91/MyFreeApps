@@ -26,7 +26,8 @@ class IngredientInput(BaseModel):
 
     ``lineage_key`` is optional: carry it over from a base version's ingredient
     so the diff engine tracks "same ingredient, changed"; omit it for a brand
-    new ingredient and the backend assigns a fresh key.
+    new ingredient and the backend assigns a fresh key. A key the base version
+    doesn't have, or one used twice, is a 422 (``version_snapshots``).
     """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)

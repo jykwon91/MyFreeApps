@@ -37,6 +37,7 @@ const DIFF: DiffResponse = {
   field_changes: [],
   ingredient_changes: [{ lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } }],
   step_changes: [{ position: 1, change: "removed", before: "Stir.", after: null }],
+  order_changed: false,
 };
 
 function answer(query: Partial<DiffQuery>, isOwner = false) {
@@ -122,6 +123,35 @@ describe("VersionDiff", () => {
     renderDiff();
     expect(screen.getByText(VERSION_COPY.noDifferences)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: VERSION_COPY.identicalHeading })).toBeInTheDocument();
+  });
+
+  it("says a version that only reordered ingredients or steps is in a different order, not identical", () => {
+    answer({ data: { ...DIFF, ingredient_changes: [], step_changes: [], order_changed: true } });
+    renderDiff();
+    expect(screen.getByText("Only the order changed.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reordered" })).toBeInTheDocument();
+    expect(screen.getByText("Same ingredients and steps, in a different order.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: VERSION_COPY.identicalHeading })).not.toBeInTheDocument();
+  });
+
+  it("shows every ingredient row even when an older version repeated a lineage key", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    answer({
+      data: {
+        ...DIFF,
+        ingredient_changes: [
+          { lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } },
+          { lineage_key: "lk-salt", change: "added", before: null, after: { ...SALT, name: "pepper" } },
+        ],
+        step_changes: [],
+      },
+    });
+    renderDiff();
+    expect(screen.getByText("2 tsp salt")).toBeInTheDocument();
+    expect(screen.getByText("1 tsp pepper")).toBeInTheDocument();
+    // Two rows sharing a React key can be merged or dropped when the list updates.
+    expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/same key/);
+    consoleError.mockRestore();
   });
 
   it.each([
