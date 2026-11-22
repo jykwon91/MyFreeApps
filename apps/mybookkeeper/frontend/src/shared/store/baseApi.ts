@@ -4,7 +4,7 @@ import "@/shared/lib/api";
 
 export const tagTypes = [
   "Document", "Property", "Summary", "Integration", "Auth", "AdminUsers", "AdminStats",
-  "AdminOrgs", "Organization", "Members", "Invites", "Transaction", "BookingStatement",
+  "AdminOrgs", "Organization", "Members", "Invites", "Transaction",
   "Reconciliation", "TaxReturn", "ClassificationRule", "Health", "Cost", "TaxProfile",
   "Demo", "TaxAdvisor", "Totp", "Listing", "Inquiry", "ReplyTemplate", "Applicant",
   "Vendor", "Screening", "Channel", "ChannelListing", "Calendar", "BlackoutAttachments",

@@ -73,12 +73,6 @@ describe("listingsApi writes", () => {
     expect(request.timeout).toBe(LISTING_PHOTO_UPLOAD_TIMEOUT_MS);
   });
 
-  it("updates a photo, sending only what was given", async () => {
-    const request = await send("updateListingPhoto", { listingId: "l1", photoId: "p1", display_order: 0 });
-    expect([request.method, request.url]).toEqual(["patch", "/listings/l1/photos/p1"]);
-    expect(sentBody(request)).toEqual({ display_order: 0 });
-  });
-
   it("deletes a photo", async () => {
     const request = await send("deleteListingPhoto", { listingId: "l1", photoId: "p1" });
     expect([request.method, request.url]).toEqual(["delete", "/listings/l1/photos/p1"]);

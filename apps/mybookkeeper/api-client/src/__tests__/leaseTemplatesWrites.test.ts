@@ -80,7 +80,7 @@ describe("leaseTemplatesApi writes", () => {
   it("a write refreshes the list and the template read, and a delete only the list", async () => {
     const store = aStore();
     await store.dispatch(leaseTemplatesApi.endpoints.getLeaseTemplateById.initiate("t1"));
-    await store.dispatch(leaseTemplatesApi.endpoints.getLeaseTemplates.initiate());
+    await store.dispatch(leaseTemplatesApi.endpoints.listLeaseTemplatePages.initiate(undefined, { initialPageParam: 0 }));
     requests.length = 0;
     await store.dispatch(leaseTemplatesApi.endpoints.updateLeasePlaceholder.initiate({ templateId: "t1", placeholderId: "p1", data: { required: true } }));
     await new Promise((resolve) => setTimeout(resolve, 0));

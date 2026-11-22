@@ -39,8 +39,6 @@ vi.mock("@/shared/store/costsApi", () => ({
   useGetCostTimelineQuery: vi.fn(() => ({ data: mockTimeline, isError: false })),
   useGetCostThresholdsQuery: vi.fn(() => ({ data: mockThresholds })),
   useUpdateCostThresholdsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useGetSmtpStatusQuery: vi.fn(() => ({ data: null })),
-  useTestSmtpMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/hooks/useToast", () => ({

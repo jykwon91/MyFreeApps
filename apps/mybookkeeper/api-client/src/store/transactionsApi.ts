@@ -11,7 +11,6 @@ import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairs
 import type { ImportResult } from "../types/transaction/ImportResult";
 import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicatesRequest";
 import type { MergeDuplicatesResponse } from "../types/transaction/MergeDuplicatesResponse";
-import type { ScheduleEReport } from "../types/transaction/ScheduleEReport";
 import type { Transaction } from "../types/transaction/transaction";
 import type { TransactionListPage } from "../types/transaction/TransactionListPage";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
@@ -140,10 +139,6 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       // Deleting a payment drops its pending rent receipt.
       invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
-    getScheduleEReport: builder.query<ScheduleEReport, number>({
-      query: (taxYear) => ({ url: "/transactions/schedule-e", params: { tax_year: taxYear } }),
-      providesTags: ["Transaction"],
-    }),
     getDuplicates: builder.query<DuplicatePairsResponse, void>({
       query: () => ({ url: "/transactions/duplicates" }),
       providesTags: [{ type: "Transaction", id: "DUPLICATES" }],
@@ -180,7 +175,6 @@ export const {
   useBulkApproveTransactionsMutation,
   useBulkDeleteTransactionsMutation,
   useBulkSetCapitalImprovementMutation,
-  useGetScheduleEReportQuery,
   useGetDuplicatesQuery,
   useKeepDuplicateMutation,
   useDismissDuplicateMutation,

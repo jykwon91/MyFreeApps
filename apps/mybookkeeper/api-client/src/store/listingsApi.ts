@@ -12,7 +12,6 @@ import type { ListingExternalIdUpdateRequest } from "../types/listing/listing-ex
 import type { ListingPhoto } from "../types/listing/listing-photo";
 import type { ListingPhotoDeleteArgs } from "../types/listing/listing-photo-delete-args";
 import type { ListingPhotoOrderArgs } from "../types/listing/listing-photo-order-args";
-import type { ListingPhotoUpdateArgs } from "../types/listing/listing-photo-update-args";
 import type { ListingUpdateRequest } from "../types/listing/listing-update-request";
 import type { ListingListArgs } from "../types/listing/listing-list-args";
 import type { ListingListResponse } from "../types/listing/listing-list-response";
@@ -102,17 +101,6 @@ export const listingsApi = baseApi.enhanceEndpoints({
       query: ({ listingId, photoIds }) => ({ url: `/listings/${listingId}/photos/order`, method: "PUT", data: { photo_ids: photoIds } }),
       invalidatesTags: (_result, _err, arg) => [{ type: "Listing", id: arg.listingId }],
     }),
-    updateListingPhoto: builder.mutation<ListingPhoto, ListingPhotoUpdateArgs>({
-      query: ({ listingId, photoId, caption, display_order }) => ({
-        url: `/listings/${listingId}/photos/${photoId}`,
-        method: "PATCH",
-        data: {
-          ...(caption !== undefined ? { caption } : {}),
-          ...(display_order !== undefined ? { display_order } : {}),
-        },
-      }),
-      invalidatesTags: (_result, _err, arg) => [{ type: "Listing", id: arg.listingId }],
-    }),
     createListingExternalId: builder.mutation<ListingExternalId, { listingId: string; data: ListingExternalIdCreateRequest }>({
       query: ({ listingId, data }) => ({ url: `/listings/${listingId}/external-ids`, method: "POST", data }),
       invalidatesTags: (_result, _err, arg) => [{ type: "Listing", id: arg.listingId }],
@@ -185,7 +173,6 @@ export const {
   useUploadListingPhotosMutation,
   useDeleteListingPhotoMutation,
   useReorderListingPhotosMutation,
-  useUpdateListingPhotoMutation,
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,
   useDeleteListingExternalIdMutation,
