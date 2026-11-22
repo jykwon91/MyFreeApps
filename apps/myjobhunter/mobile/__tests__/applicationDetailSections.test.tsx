@@ -5,6 +5,7 @@ import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/doc
 import { DOCUMENTS_PAGE_SIZE } from "@myjobhunter/api-client/constants/documentsPaging";
 import { DOCUMENT_UPLOAD_MAX_BYTES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import { INTERVIEW_LOCATION_MAX_LENGTH, INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
+import { OCCURRED_AT_HINT } from "@myjobhunter/api-client/constants/eventTimeMessages";
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import * as DocumentPicker from "expo-document-picker";
@@ -138,6 +139,15 @@ describe("the activity timeline", () => {
     fails = false;
     await fireEvent.press(screen.getByRole("button", { name: EVENTS.tryAgain }));
     expect(await screen.findByTestId("event-e-applied")).toBeTruthy();
+  });
+
+  it("tells people under When that an upcoming interview's time goes in the interview's date field", async () => {
+    serve(applicationDetailRoutes(STRIPE));
+    await renderApplicationDetail(ID);
+    await fireEvent.press(await screen.findByRole("button", { name: EVENTS.logEvent }));
+
+    expect(screen.getByText(OCCURRED_AT_HINT)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change when, required" }).props.accessibilityHint).toBe(OCCURRED_AT_HINT);
   });
 
   it("logs an interview with its details, after asking for the interview type", async () => {

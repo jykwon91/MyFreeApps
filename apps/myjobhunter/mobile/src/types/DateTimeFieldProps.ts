@@ -8,6 +8,8 @@ export interface DateTimeFieldProps {
   /** A required field can't be cleared. */
   required?: boolean;
   error?: string;
+  /** Quiet help under the field, replaced by the error when there is one. */
+  hint?: string;
   /** Locks the buttons and closes the picker, for while the form is saving. */
   disabled?: boolean;
 }

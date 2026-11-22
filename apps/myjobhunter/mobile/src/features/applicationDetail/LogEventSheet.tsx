@@ -1,3 +1,4 @@
+import { OCCURRED_AT_HINT } from "@myjobhunter/api-client/constants/eventTimeMessages";
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { characterCounter } from "@platform/core/utils/characterCounter";
@@ -47,7 +48,7 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
         required
         value={values.event_type}
       />
-      <DateTimeField disabled={isLoading} error={errors.occurred_at} label={MESSAGES.whenLabel} maximumDate={new Date()} onChange={(next) => change("occurred_at", next)} required value={values.occurred_at} />
+      <DateTimeField disabled={isLoading} error={errors.occurred_at} hint={OCCURRED_AT_HINT} label={MESSAGES.whenLabel} maximumDate={new Date()} onChange={(next) => change("occurred_at", next)} required value={values.occurred_at} />
       {form.hasInterviewFields ? <InterviewDetailsFields disabled={isLoading} errors={errors} onChange={change} values={values} /> : null}
       <FormField
         editable={!isLoading}

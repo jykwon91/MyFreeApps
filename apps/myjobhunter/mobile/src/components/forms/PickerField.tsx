@@ -21,6 +21,7 @@ export default function PickerField({
   openAndroid,
   required = false,
   error,
+  hint,
   disabled = false,
 }: PickerFieldProps) {
   const { colors, spacing, fontSize } = useTheme();
@@ -48,7 +49,7 @@ export default function PickerField({
       <Text style={{ fontSize: fontSize.md, color: hasValue ? colors.foreground : colors.mutedForeground }}>{valueText ?? MESSAGES.notSet}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton
-          accessibilityHint={error}
+          accessibilityHint={error ?? hint}
           accessibilityLabel={requiredFieldLabel(`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`, required)}
           disabled={disabled}
           onPress={press}
@@ -87,6 +88,7 @@ export default function PickerField({
           value={pickerDate}
         />
       ) : null}
+      {hint && !error ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{hint}</Text> : null}
       <FieldError message={error} name={label} size="sm" />
     </View>
   );
