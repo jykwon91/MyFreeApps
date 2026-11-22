@@ -17,7 +17,7 @@ function epochSeconds(iso: string | null): number | null {
  * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = {[resultId] = {min, max, chance}}`;
  * a third `true` marks gear Forever added, whose table is an estimate. Only written when the tables map is non-empty.
  */
-function disenchantLines(de: DisenchantTables): string[] {
+function disenchantLines(de: DisenchantTables, names: ReadonlyMap<number, string>): string[] {
   const tableIds = Object.keys(de.tables);
   if (tableIds.length === 0) return [];
 
@@ -32,6 +32,13 @@ function disenchantLines(de: DisenchantTables): string[] {
       lines.push(`      [${resultId}] = {${counts[0]}, ${counts[1]}, ${counts[2]}},`);
     }
     lines.push("    },");
+  }
+  lines.push("  },", "  deNames = {");
+  // The materials' names, so the tooltip can list what disenchanting gives (from the price lists: the client may not have them cached).
+  const resultIds = new Set(Object.values(de.tables).flatMap((t) => Object.keys(t).map(Number)));
+  for (const id of [...resultIds].sort((a, b) => a - b)) {
+    const name = names.get(id);
+    if (name) lines.push(`    [${id}] = ${luaString(name)},`);
   }
   lines.push("  },");
   return lines;
@@ -94,7 +101,8 @@ function questItemsLines(
  * a price is.
  *
  * `deItems[itemId] = {tableId, skill}` and `deTables[tableId] = { [resultId] = {min, max, chance} }`
- * carry the disenchant loot tables for the three-way Disenchant/AH/Vendor verdict. Only written
+ * carry the disenchant loot tables for the three-way Disenchant/AH/Vendor verdict, and `deNames[resultId]` the
+ * materials' names so the tooltip can list them. Only written
  * when `disenchant` is provided and non-empty.
  *
  * `questItems[questId] = {{itemId, count}, ...}` for quests whose item objectives are on sale in at
@@ -133,7 +141,11 @@ export function addonPriceLua(
   }
   if (stamps.length > 0) out.push(`  updated = ${Math.min(...stamps)},`);
   out.push(...reagentLines(crafting));
-  if (disenchant) out.push(...disenchantLines(disenchant));
+  if (disenchant) {
+    const names = new Map<number, string>();
+    for (const response of houses) for (const p of mapPriceList(response).byId.values()) if (p.name) names.set(p.itemId, p.name);
+    out.push(...disenchantLines(disenchant, names));
+  }
   if (questItems && questItems.size > 0) out.push(...questItemsLines(houses, questItems));
   out.push("  houses = {", ...houseLines, "  },", "}", "");
   return out.join("\n");

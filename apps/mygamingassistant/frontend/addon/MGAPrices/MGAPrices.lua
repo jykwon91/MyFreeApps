@@ -173,6 +173,24 @@ local function disenchantEV(itemId, house)
   return ev, anyMissing
 end
 
+-- What disenchanting gives, one material per line: "  1-2 Vision Dust · 75%   18s each".
+-- Most likely first, so the player can weigh selling against disenchanting themselves.
+local function addMaterials(tooltip, itemId)
+  local de = MGAPricesData and MGAPricesData.deItems and MGAPricesData.deItems[itemId]
+  local deTable = de and MGAPricesData.deTables and MGAPricesData.deTables[de[1]]
+  if not deTable then return end
+  local house = playerHouse()
+  local rows = {}
+  for resultId, entry in pairs(deTable) do table.insert(rows, { id = resultId, min = entry[1], max = entry[2], chance = entry[3] }) end
+  table.sort(rows, function(a, b) return a.chance > b.chance end)
+  for _, r in ipairs(rows) do
+    local name = (MGAPricesData.deNames and MGAPricesData.deNames[r.id]) or (getItemInfo and getItemInfo(r.id)) or ("item " .. r.id)
+    local amount = r.min == r.max and tostring(r.min) or (r.min .. "-" .. r.max)
+    local price = houseRow(house, r.id)
+    line(tooltip, "  " .. amount .. " " .. name .. " · " .. r.chance .. "%", price and (money(price[1]) .. " each") or "not on sale", MUTED, MUTED)
+  end
+end
+
 -- Disenchant / Sell on AH / Vendor it: pick the best option.
 -- market=nil means the item can't be auctioned (BoP or not listed).
 -- Shows at most one verdict line and one detail line.
@@ -295,6 +313,7 @@ local function addYourHouse(tooltip, itemId)
   end
   line(tooltip, "Cheapest · on sale", money(cheapest) .. " · " .. quantity, MUTED, MUTED)
   addVerdict(tooltip, itemId, market, data.cut, count)
+  addMaterials(tooltip, itemId)
 end
 
 local function addEveryHouse(tooltip, itemId)
@@ -356,6 +375,7 @@ local function addPrice(tooltip, itemId)
     local deEntry = MGAPricesData.deItems and MGAPricesData.deItems[itemId]
     if deEntry then
       addVerdict(tooltip, itemId, nil, nil, stackCount(tooltip))
+      addMaterials(tooltip, itemId)
     elseif tooltip == ItemRefTooltip then
       line(tooltip, "Auction", "can't be sold (binds when picked up)", LABEL, MUTED)
     end

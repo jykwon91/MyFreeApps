@@ -409,6 +409,11 @@ describe("disenchant verdict", () => {
     ]);
   }
 
+  /** The verdict lines, without the indented material list under them. */
+  function verdictOnly(lines: string[]): string[] {
+    return lines.filter((l) => !l.startsWith("  "));
+  }
+
   it("writes deItems and deTables into Data.lua, omitting them without disenchant data", () => {
     expect(DE_DATA).toContain("  deItems = {");
     expect(DE_DATA).toContain("    [5101] = {4, 25},");
@@ -428,6 +433,23 @@ describe("disenchant verdict", () => {
     const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 25; hover(GameTooltip, ${DE_ITEM})`);
     expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
     expect(lines.some((l) => /Sell on AH|Vendor it/.test(l))).toBe(false);
+  });
+
+  it("lists the materials disenchanting gives, most likely first, with each one's price", () => {
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; enchSkill = 25; hover(GameTooltip, ${DE_ITEM})`);
+    const materials = lines.filter((l) => l.startsWith("  "));
+    expect(materials).toEqual([
+      "  1-2 Soul Dust · 75% | 200c each",
+      "  1 Strange Dust · 20% | 100c each",
+      // No price list names it, so the name comes from the client's item cache (the test client calls every item "x").
+      "  1 x · 5% | not on sale",
+    ]);
+    expect(DE_DATA).toContain('    [11083] = "Soul Dust",');
+  });
+
+  it("lists the materials for a player without Enchanting too", () => {
+    const lines = deTooltip(`sell[${DE_ITEM}] = 20; hover(GameTooltip, ${DE_ITEM})`);
+    expect(lines).toContain("  1-2 Soul Dust · 75% | 200c each");
   });
 
   it("falls back to AH vs vendor when AH nets more than 10% over both vendor and disenchanting", () => {
@@ -491,14 +513,14 @@ describe("disenchant verdict", () => {
   it("shows the disenchant verdict for a bind-on-pickup item a player with Enchanting can DE", () => {
     // BoP: no AH option. Only disenchant vs vendor — DE wins here.
     const lines = deTooltip(`sell[${DE_ITEM_FREE}] = 20; bind[${DE_ITEM_FREE}] = 1; enchSkill = 1; hover(GameTooltip, ${DE_ITEM_FREE})`);
-    expect(lines).toEqual([`Disenchant | ~${DE_EV}c`]);
+    expect(verdictOnly(lines)).toEqual([`Disenchant | ~${DE_EV}c`]);
   });
 
   it("marks an item Forever added with ~ even when every material is priced: its table is an estimate", () => {
     const lines = deTooltip(`sell[5103] = 20; bind[5103] = 1; enchSkill = 1; hover(GameTooltip, 5103)`);
-    expect(lines).toEqual([`Disenchant | ~${DE_EV}c`]);
+    expect(verdictOnly(lines)).toEqual([`Disenchant | ~${DE_EV}c`]);
     const classic = addonPriceLua(DE_HOUSES, NO_CRAFTING, { ...DE_TABLES, items: { "5103": [5, 0] }, estimated: new Set() });
-    expect(deTooltip(`sell[5103] = 20; bind[5103] = 1; enchSkill = 1; hover(GameTooltip, 5103)`, classic)).toEqual([`Disenchant | ${DE_EV}c`]);
+    expect(verdictOnly(deTooltip(`sell[5103] = 20; bind[5103] = 1; enchSkill = 1; hover(GameTooltip, 5103)`, classic))).toEqual([`Disenchant | ${DE_EV}c`]);
   });
 
   it("the bundled tables give gear Forever added Classic's table for its quality, level and type, marked estimated", () => {
@@ -513,7 +535,7 @@ describe("disenchant verdict", () => {
 
   it("shows vendor vs disenchant for a BoP item when the player has no Enchanting", () => {
     const lines = deTooltip(`sell[${DE_ITEM_FREE}] = 20; bind[${DE_ITEM_FREE}] = 1; hover(GameTooltip, ${DE_ITEM_FREE})`);
-    expect(lines).toEqual(["Vendor it | vendor 20c", "Disenchant | need Enchanting"]);
+    expect(verdictOnly(lines)).toEqual(["Vendor it | vendor 20c", "Disenchant | need Enchanting"]);
   });
 });
 
