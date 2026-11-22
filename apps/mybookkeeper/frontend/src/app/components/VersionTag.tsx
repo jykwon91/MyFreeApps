@@ -1,4 +1,4 @@
-import { useGetVersionQuery } from "@/shared/store/versionApi";
+import { useGetVersionQuery } from "@mybookkeeper/api-client/store/versionApi";
 
 export default function VersionTag() {
   const { data } = useGetVersionQuery();

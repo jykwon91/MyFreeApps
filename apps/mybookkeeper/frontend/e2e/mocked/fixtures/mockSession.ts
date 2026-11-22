@@ -16,7 +16,7 @@ import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRol
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import type { TaxProfile } from "@/shared/types/organization/tax-profile";
 import type { UserProfile } from "@/shared/types/user";
-import type { VersionInfo } from "@/shared/types/version/version-info";
+import type { VersionInfo } from "@mybookkeeper/api-client/types/version/version-info";
 import { stubDashboardReads } from "./mockDashboard";
 
 export const ORG_ID = "00000000-0000-0000-0000-000000000010";

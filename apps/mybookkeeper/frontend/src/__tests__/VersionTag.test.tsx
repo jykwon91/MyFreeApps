@@ -4,7 +4,7 @@ import VersionTag from "@/app/components/VersionTag";
 
 const mockUseGetVersionQuery = vi.fn();
 
-vi.mock("@/shared/store/versionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/versionApi", () => ({
   useGetVersionQuery: (...args: unknown[]) => mockUseGetVersionQuery(...args),
 }));
 

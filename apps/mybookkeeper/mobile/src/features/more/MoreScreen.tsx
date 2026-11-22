@@ -1,4 +1,4 @@
-import { AccountSettings, AppVersion, KeyboardAwareScroll, MoreMenuGroups, SearchField, ThemeSettings, useTheme } from "@platform/mobile";
+import { AccountSettings, KeyboardAwareScroll, MoreMenuGroups, SearchField, ThemeSettings, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -12,6 +12,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import WorkspaceSection from "../workspace/WorkspaceSection";
 import MoreSearchResults from "./MoreSearchResults";
+import ServerAppVersion from "./ServerAppVersion";
 
 export default function MoreScreen() {
   const { colors, spacing } = useTheme();
@@ -48,7 +49,7 @@ export default function MoreScreen() {
           <>
             <ThemeSettings />
             <AccountSettings appName="MyBookkeeper" onDeleteAccount={() => router.push("/delete-account")} />
-            <AppVersion />
+            <ServerAppVersion />
           </>
         )}
       </KeyboardAwareScroll>

@@ -7,7 +7,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { VERSION_INFO, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
-import type { VersionInfo } from "@/shared/types/version/version-info";
+import type { VersionInfo } from "@mybookkeeper/api-client/types/version/version-info";
 
 async function openApp(page: Page, version: VersionInfo) {
   await plantAuth(page);
