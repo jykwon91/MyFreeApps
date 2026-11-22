@@ -2,6 +2,14 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FlaskConical, Upload, Settings, ShieldCheck } from "lucide-react";
 import { Button } from "@platform/ui";
+import {
+  DEMO_WELCOME_DESCRIPTION,
+  DEMO_WELCOME_DISMISS,
+  DEMO_WELCOME_EDIT,
+  DEMO_WELCOME_FEATURES,
+  DEMO_WELCOME_TITLE,
+  DEMO_WELCOME_UPLOAD,
+} from "@mybookkeeper/api-client/constants/demoWelcome";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 
 const STORAGE_KEY = "demo-welcome-dismissed";
@@ -28,30 +36,30 @@ export default function DemoWelcomeDialog() {
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
           <Dialog.Title className="text-lg font-semibold flex items-center gap-2">
             <FlaskConical size={20} className="text-primary" />
-            Welcome to the sandbox!
+            {DEMO_WELCOME_TITLE}
           </Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground mt-2">
-            This is a demo environment — feel free to experiment. Nothing you do here will affect real data.
+            {DEMO_WELCOME_DESCRIPTION}
           </Dialog.Description>
 
           <ul className="mt-4 space-y-3">
             <li className="flex items-start gap-3 text-sm">
               <Upload size={16} className="text-primary mt-0.5 shrink-0" />
-              <span>Upload your own documents — invoices, receipts, tax forms — and see how the AI extracts data automatically.</span>
+              <span>{DEMO_WELCOME_UPLOAD}</span>
             </li>
             <li className="flex items-start gap-3 text-sm">
               <Settings size={16} className="text-primary mt-0.5 shrink-0" />
-              <span>Test out all features — properties, transactions, tax reports, Gmail sync, and more.</span>
+              <span>{DEMO_WELCOME_FEATURES}</span>
             </li>
             <li className="flex items-start gap-3 text-sm">
               <ShieldCheck size={16} className="text-primary mt-0.5 shrink-0" />
-              <span>Edit, delete, or change anything. The sample data is yours to play with.</span>
+              <span>{DEMO_WELCOME_EDIT}</span>
             </li>
           </ul>
 
           <div className="flex justify-end mt-6">
             <Button size="sm" onClick={handleDismiss}>
-              Got it, let me explore
+              {DEMO_WELCOME_DISMISS}
             </Button>
           </div>
         </Dialog.Content>
