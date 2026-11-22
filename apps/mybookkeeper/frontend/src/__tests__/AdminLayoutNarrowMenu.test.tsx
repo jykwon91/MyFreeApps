@@ -29,7 +29,7 @@ vi.mock("@/shared/hooks/useCurrentUser", () => ({
 vi.mock("@/shared/store/healthApi", () => ({
   useGetHealthSummaryQuery: () => ({ data: undefined }),
 }));
-vi.mock("@/shared/store/versionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/versionApi", () => ({
   useGetVersionQuery: () => ({ data: undefined }),
 }));
 

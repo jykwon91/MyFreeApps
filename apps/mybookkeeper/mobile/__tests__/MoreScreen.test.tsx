@@ -19,6 +19,7 @@ jest.mock("@platform/mobile", () => {
     AccountSettings: () => <MockText>Account section</MockText>,
   };
 });
+jest.mock("../src/features/more/ServerAppVersion", () => ({ __esModule: true, default: () => <MockText>Version 1.0.0</MockText> }));
 jest.mock("../src/features/workspace/WorkspaceSection", () => ({ __esModule: true, default: () => <MockText>Workspace section</MockText> }));
 jest.mock("../src/features/workspace/useIsAdmin", () => ({ useIsAdmin: jest.fn() }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));

@@ -2362,8 +2362,9 @@
       "source_paths": [
         "backend/app/main.py",
         "frontend/src/app/components/VersionTag.tsx",
-        "frontend/src/shared/store/versionApi.ts",
-        "frontend/src/shared/types/version/"
+        "api-client/src/store/versionApi.ts",
+        "api-client/src/types/version/",
+        "mobile/src/features/more/ServerAppVersion.tsx"
       ],
       "backend_tests": [
         "test_version_endpoint.py",
