@@ -1,5 +1,7 @@
 export const INQUIRY_CREATE_MESSAGES = {
   addInquiry: "Add inquiry",
+  templates: "Templates",
+  templatesHint: "Opens your saved reply templates",
   addHint: "For someone who called, texted or reached you another way",
   save: "Save inquiry",
   saving: "Saving…",

@@ -4,6 +4,9 @@ import type { ReplyTemplateFailure } from "@mybookkeeper/api-client/types/inquir
 import type { ReplyTemplateField } from "../types/ReplyTemplateField";
 import type { ReplyTemplateVariable } from "../types/ReplyTemplateVariable";
 
+/** The phone screen the web Templates button opens. */
+export const REPLY_TEMPLATES_LINK = "/reply-templates";
+
 export const REPLY_TEMPLATE_NAME_MAX_LENGTH = 100;
 export const REPLY_TEMPLATE_SUBJECT_MAX_LENGTH = 500;
 export const REPLY_TEMPLATE_BODY_MAX_LENGTH = 10000;

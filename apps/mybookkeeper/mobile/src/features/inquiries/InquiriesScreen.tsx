@@ -10,6 +10,7 @@ import { FlatList, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_GMAIL_VIEW_ONLY_BODY, INQUIRY_EMPTY_GMAIL_WORDS, INQUIRY_EMPTY_WORDS, INQUIRY_LOADING_MESSAGES, INQUIRY_VIEWS, InquiryViewMode } from "../../constants/inquiries";
 import { INQUIRY_CREATE_MESSAGES } from "../../constants/inquiryCreate";
 import { INTEGRATIONS_LINK } from "../../constants/home";
+import { REPLY_TEMPLATES_LINK } from "../../constants/replyTemplates";
 import { canLoadMore } from "../../lib/canLoadMore";
 import { hasCurrentPages } from "../../lib/hasCurrentPages";
 import type { InquiryView } from "../../types/InquiryView";
@@ -95,6 +96,9 @@ export default function InquiriesScreen({
                 {INQUIRY_CREATE_MESSAGES.addInquiry}
               </LoadingButton>
             ) : null}
+            <LoadingButton accessibilityHint={INQUIRY_CREATE_MESSAGES.templatesHint} accessibilityLabel={INQUIRY_CREATE_MESSAGES.templates} onPress={() => router.push(REPLY_TEMPLATES_LINK)} variant="secondary">
+              {INQUIRY_CREATE_MESSAGES.templates}
+            </LoadingButton>
             <SegmentedControl accessibilityLabel="Which inquiries to show" onChange={onViewChange} segments={INQUIRY_VIEWS} value={view} />
             <LoadingButton onPress={() => setIsStageSheetOpen(true)} variant="secondary">
               {`Stage: ${stage ? stageLabel(stage) : "All"}`}

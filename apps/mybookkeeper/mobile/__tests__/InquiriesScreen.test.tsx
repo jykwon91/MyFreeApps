@@ -45,6 +45,13 @@ function manyInquiries(count: number) {
 }
 
 describe("InquiriesScreen", () => {
+  it("has a Templates shortcut that opens the reply templates", async () => {
+    startInquiryServer([anInquiry()]);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Templates" }));
+    expect(mockPush).toHaveBeenCalledWith("/reply-templates");
+  });
+
   it("lists who asked and opens the one tapped", async () => {
     startInquiryServer([anInquiry()]);
     await renderScreen();
