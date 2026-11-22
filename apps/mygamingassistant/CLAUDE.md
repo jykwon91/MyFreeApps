@@ -1964,7 +1964,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the % vs the stronger one, `(your other one)`), a two-hander with main + off
   hand, a one-hander with the off hand only when you dual wield a weapon
   there; armor never compares with a two-hander; "already wear it" only
-  blocks Unique items; trinkets get no score. Spec at 60 = `/mgaloot spec <id>`
+  blocks Unique items. Since 1.4.0 Use / Chance on hit / Equip effects are scored from
+  `MGALootEffects` (Data.lua, from `data/lootAddon/itemEffects.json`, **GENERATED** by
+  `python -m scripts.wow_loot.item_effects [--hotfix-cache PATH]`: client ItemEffect +
+  Spell* tables with hotfixes, cmangos `item_template.spellppmRate` / `spell_proc_event`
+  only when the client gives no proc rate; conversions in `wow_loot/effect_values.py`'s
+  docstring). Each entry is a weight key (`dps` = weapon-DPS weight by slot, `dps_pct` =
+  share of weapon DPS, `ranged_*` = only for ranged-first weights, `none` = no combat
+  value, `unresolved` = the data can't value it) plus a note shown in the tags. An item
+  with data and no `unresolved` entry has its effect lines covered; otherwise they stay
+  "Can't judge". ProcChance 101 means "not set" and is never a number; a missing rate
+  is unresolved, never guessed. Trinkets are scored like rings. Spec at 60 = `/mgaloot spec <id>`
   (saved in `MGALootSettings`) else the talent tab with the most points.
   `/mgaloot check <link>` judges any item. Since 1.1.0 the same verdict (`judge(link, true)`:
   no bind/level tags, the tooltip has them) is added to every GameTooltip /

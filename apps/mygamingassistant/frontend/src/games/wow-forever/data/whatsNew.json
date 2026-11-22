@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot scores Use, Chance on hit and Equip effects",
+    "summary": "MGA Loot now counts an item's effects at what they're worth on average, worked out from the game files: a fire proc as the DPS it adds, an on-use trinket as its stat over its cooldown, an Equip aura as its stat. Each effect's working shows under the verdict (like \"proc: 140 Fire dmg at 1 PPM = +2.3 DPS\"), and trinkets now get a verdict too. Effects with no combat value (water breathing, mount speed) say so, and the few the game files can't value still say Can't judge.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Prices shows auction house items in your quest log",
     "summary": "When you open a quest in the log or at a quest giver, MGA Prices now adds a small block under the objectives listing any item you need that's on sale at your faction's auction house — item name, how many are listed, and the cheapest price. If nothing is on sale, the block stays hidden. Saves farming runs for items you can just buy.",
     "to": "/wow-forever/auction-house"
