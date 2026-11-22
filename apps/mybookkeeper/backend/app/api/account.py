@@ -9,19 +9,17 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from platform_shared.api.account_deletion_router import (
     build_account_deletion_router,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, get_user_manager
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import get_db, unit_of_work
 from app.models.user.user import User
-from app.services.user import account_deletion_service, account_service
-from app.services.user import totp_service
+from app.services.user import account_deletion_service, account_service, totp_service
 
 router = APIRouter(tags=["account"])
 
@@ -63,7 +61,7 @@ async def export_my_data(
 
     Excludes all secrets (hashed_password, TOTP secret/recovery codes, OAuth tokens).
     """
-    payload = await account_service.build_export(db, current_user, ctx.organization_id)
+    payload = await account_service.build_export(db, current_user, ctx)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return JSONResponse(
         content=payload,
