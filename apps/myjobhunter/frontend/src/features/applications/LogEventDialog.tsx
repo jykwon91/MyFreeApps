@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
 import { LOGGABLE_EVENT_TYPES } from "@myjobhunter/api-client/constants/loggableEventTypes";
-import { OCCURRED_AT_IN_FUTURE_MESSAGE } from "@myjobhunter/api-client/constants/eventTimeMessages";
+import { OCCURRED_AT_HINT, OCCURRED_AT_IN_FUTURE_MESSAGE } from "@myjobhunter/api-client/constants/eventTimeMessages";
 import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
 import { defaultOccurredAt, emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { isOccurredAtInFuture } from "@myjobhunter/api-client/utils/isOccurredAtInFuture";
@@ -115,7 +115,7 @@ export default function LogEventDialog({
                 <FieldFeedback {...occurredAtFeedback} />
               ) : (
                 <p id="log-event-when-hint" className="text-xs text-muted-foreground mt-1">
-                  When it happened. Put an upcoming interview's time in the interview's date field.
+                  {OCCURRED_AT_HINT}
                 </p>
               )}
             </div>
