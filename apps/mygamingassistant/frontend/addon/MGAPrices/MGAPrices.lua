@@ -20,6 +20,10 @@ local ADDON = "MGA Prices"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local SITE = "mygamingassistant.myfreeapps.org/wow-forever/auction-house"
 local OLD_AFTER_SECONDS = 24 * 60 * 60
+-- The MGA updater rewrites Data.lua every hour, but the game only reads it at login or /reload.
+-- Past this age a newer file is probably waiting on disk, so say once to /reload.
+local RELOAD_AFTER_SECONDS = 90 * 60
+local RELOAD_CHECK_SECONDS = 5 * 60
 local HOUSES = { "alliance", "horde", "neutral" }
 local HOUSE_LABEL = { alliance = "Alliance", horde = "Horde", neutral = "Blackwater" }
 local BIND_ON_PICKUP = 1
@@ -412,6 +416,19 @@ events:SetScript("OnEvent", function(_, _, key)
     GameTooltip:RefreshData()
   end
 end)
+
+-- Reload reminder: once per session, when the loaded prices are old enough that the updater has newer ones.
+local reloadReminded = false
+local function remindReload()
+  local updated = MGAPricesData and MGAPricesData.updated
+  if reloadReminded or not updated or time() - updated < RELOAD_AFTER_SECONDS then return end
+  reloadReminded = true
+  say("these prices were " .. ageText(updated) .. ". If the MGA updater is running, it has newer ones (and any addon updates): type /reload to load them.")
+end
+if C_Timer and C_Timer.NewTicker then
+  C_Timer.NewTicker(RELOAD_CHECK_SECONDS, remindReload)
+end
+remindReload()
 
 -- Chat. MGAPricesSettings is saved between sessions (.toc SavedVariables).
 local function chatPricesOn()

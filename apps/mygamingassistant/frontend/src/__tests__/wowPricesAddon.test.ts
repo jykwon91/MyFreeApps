@@ -54,6 +54,26 @@ describe("addonPriceLua", () => {
   });
 });
 
+describe("the reload reminder", () => {
+  const TICKER = "C_Timer = { NewTicker = function(_, f) tick = f end }; ";
+  const remind = (age: number) =>
+    runAddonLua([
+      ["Data.lua", TICKER + DATA],
+      ["MGAPrices.lua", addonLua],
+      ["scenario", `NOW = ${ALLIANCE_EPOCH + age}; tick(); tick()`],
+    ]).filter((l) => l.includes("/reload"));
+
+  it("says once, in chat, to /reload when the loaded prices are old enough that the updater has newer ones", () => {
+    const lines = remind(2 * HOUR);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("updated 2 hours ago");
+  });
+
+  it("stays quiet while the loaded prices are fresh", () => {
+    expect(remind(HOUR)).toEqual([]);
+  });
+});
+
 describe("the download", () => {
   it("is the addon folder with today's prices in Data.lua", () => {
     const files = unzipSync(pricesAddonZip(HOUSES, NO_CRAFTING));
