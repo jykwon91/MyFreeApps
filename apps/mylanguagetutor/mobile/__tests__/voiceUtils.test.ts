@@ -1,9 +1,7 @@
-import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { Platform } from "react-native";
 import { LISTENING_AUDIO_SESSION, PHONE_VOICE_COPY } from "../src/constants/voice";
 import { hasInstalledLocale } from "../src/utils/hasInstalledLocale";
 import { heardFromResult } from "../src/utils/heardFromResult";
-import { phaseAnnouncement } from "../src/utils/phaseAnnouncement";
 import { privacyAckCovers } from "../src/utils/privacyAckCovers";
 import { recognitionOptions } from "../src/utils/recognitionOptions";
 import { recognizerPrivacy } from "../src/utils/recognizerPrivacy";
@@ -97,16 +95,3 @@ describe("recognitionOptions", () => {
   });
 });
 
-describe("phaseAnnouncement", () => {
-  it("tells screen readers the answer went off", () => {
-    expect(phaseAnnouncement("waiting", "voice")).toBe(VOICE_COPY.micLabels.waiting);
-  });
-
-  it.each(["idle", "listening", "replying", "speaking"] as const)("says nothing on %s", (phase) => {
-    expect(phaseAnnouncement(phase, "voice")).toBeUndefined();
-  });
-
-  it("says nothing while typing, which has its own Sending state", () => {
-    expect(phaseAnnouncement("waiting", "text")).toBeUndefined();
-  });
-});

@@ -17,7 +17,7 @@ interface TranscriptListProps {
   onSkipRetry: (key: string) => void;
 }
 
-/** The conversation so far; keeps the newest exchange in view. */
+/** The conversation so far; keeps the newest exchange in view. Not a live region: the practice screen announces the finished reply. */
 export default function TranscriptList({
   entries,
   languageName,
@@ -37,7 +37,7 @@ export default function TranscriptList({
   }, [entries, waiting]);
 
   return (
-    <div className="space-y-4" aria-live="polite">
+    <div className="space-y-4">
       <ol className="space-y-4">
         {entries.map((entry) => (
           <TranscriptItem

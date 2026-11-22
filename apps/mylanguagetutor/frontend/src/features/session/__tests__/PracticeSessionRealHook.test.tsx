@@ -44,6 +44,8 @@ vi.mock("@platform/core/store/baseQuery", () => ({
 }));
 
 const LANGUAGE: Language = { code: "es", display_name: "Spanish", dialect_label: "Latin American", stt_locale: "es-MX", tts_locale: "es-MX" };
+/** The transcript's own text, not the screen reader's copy of the finished reply in the live region. */
+const SHOWN = { ignore: '[data-testid="practice-announcer"]' };
 const SCENARIO: Scenario = { slug: "cafe", title: "At the café", goal: "Order a drink", goals: ["Greet", "Order"], order: 4 };
 
 /** A turn stream that sends the whole reply, then loses the connection before the corrections. */
@@ -132,7 +134,8 @@ describe("PracticeSession with the real conversation hook", () => {
     sendTypedTurn();
 
     expect(await screen.findByText(PRACTICE_COPY.correctionsMissing)).toBeInTheDocument();
-    expect(screen.getByText("¡Hola! ¿Qué quieres?")).toBeInTheDocument();
+    expect(screen.getByText("¡Hola! ¿Qué quieres?", SHOWN)).toBeInTheDocument();
+    expect(screen.getByTestId("practice-announcer")).toHaveTextContent(/^¡Hola! ¿Qué quieres\?$/);
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: PRACTICE_COPY.send })).toBeInTheDocument();
@@ -185,7 +188,7 @@ describe("PracticeSession when the turn's connection goes quiet", () => {
     );
 
     sendTypedTurn();
-    expect(await screen.findByText("¡Hola! Bien", { exact: false })).toBeInTheDocument();
+    expect(await screen.findByText("¡Hola! Bien", { ...SHOWN, exact: false })).toBeInTheDocument();
     expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
 
     await act(() => vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS));
@@ -193,7 +196,7 @@ describe("PracticeSession when the turn's connection goes quiet", () => {
     expect(screen.getByText(PRACTICE_COPY.replyCutOff)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
-    expect(await screen.findByText("¡Hola! Bienvenido.")).toBeInTheDocument();
+    expect(await screen.findByText("¡Hola! Bienvenido.", SHOWN)).toBeInTheDocument();
     expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).not.toBeInTheDocument();
     expect(turns).toEqual(["hola", "hola"]);

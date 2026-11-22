@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -231,6 +232,78 @@ describe("PracticeSession", () => {
     expect(screen.queryByRole("button", { name: "Tap to speak" })).not.toBeInTheDocument();
   });
 
+  describe("screen reader announcements", () => {
+    const LIVE = '[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]';
+
+    /** The text of every live region on the screen, which a screen reader would read as it changes. */
+    function liveTexts(container: HTMLElement): string[] {
+      return Array.from(container.querySelectorAll(LIVE), (region) => region.textContent ?? "");
+    }
+
+    function announcerText(): string {
+      return screen.getByTestId("practice-announcer").textContent ?? "";
+    }
+
+    function rerenderScreen(rerender: (ui: ReactElement) => void) {
+      rerender(
+        <MemoryRouter>
+          <PracticeSession language={LANGUAGE} scenario={SCENARIO} level="beginner" />
+        </MemoryRouter>,
+      );
+    }
+
+    beforeEach(() => {
+      localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
+    });
+
+    it("reads nothing the microphone is hearing, nor the microphone's label, while it listens", () => {
+      sessionState = { ...sessionState, entries: [TUTOR_TURN] };
+      recognition = { ...recognition, listening: true, interim: "Quiero un café" };
+      const { container } = renderScreen();
+
+      expect(screen.getByText("Quiero un café")).toBeInTheDocument();
+      expect(liveTexts(container).some((text) => text.includes("Quiero un café"))).toBe(false);
+      expect(liveTexts(container).some((text) => text.includes("Tap when you're done"))).toBe(false);
+      expect(screen.getByRole("button", { name: "Tap when you're done" })).toBeInTheDocument();
+    });
+
+    it("says the answer went off, reads no part of a reply while it streams, then reads the whole reply once", () => {
+      const pending: TranscriptEntry = { ...TUTOR_TURN, learnerText: "Quiero un café", replyText: "", status: "pending" };
+      sessionState = { ...sessionState, entries: [pending], requestPhase: "waiting" };
+      const { container, rerender } = renderScreen();
+      expect(announcerText()).toBe("Waiting for the tutor");
+
+      sessionState = { ...sessionState, entries: [{ ...pending, replyText: "¡Claro! ¿Algo" }], requestPhase: "replying" };
+      rerenderScreen(rerender);
+      expect(screen.getByText("¡Claro! ¿Algo")).toBeInTheDocument();
+      expect(liveTexts(container).some((text) => text.includes("¡Claro!"))).toBe(false);
+
+      const reply = "¡Claro! ¿Algo más?";
+      sessionState = { ...sessionState, entries: [{ ...pending, replyText: reply, status: "complete" }], requestPhase: "idle" };
+      rerenderScreen(rerender);
+      expect(announcerText()).toBe(reply);
+      expect(liveTexts(container).filter((text) => text.includes(reply))).toEqual([reply]);
+    });
+
+    it("keeps one live region mounted from the start, before anything is said", () => {
+      const { container } = renderScreen();
+
+      expect(container.querySelectorAll('[aria-live]:not([aria-live="off"])')).toHaveLength(1);
+      expect(announcerText()).toBe("");
+    });
+
+    it("says nothing about the phase when typing, but still reads the finished reply", () => {
+      recognition = { ...recognition, supported: false };
+      sessionState = { ...sessionState, entries: [{ ...TUTOR_TURN, replyText: "", status: "pending" }], requestPhase: "waiting" };
+      const { rerender } = renderScreen();
+      expect(announcerText()).toBe("");
+
+      sessionState = { ...sessionState, entries: [TUTOR_TURN], requestPhase: "idle" };
+      rerenderScreen(rerender);
+      expect(announcerText()).toBe(TUTOR_TURN.replyText);
+    });
+  });
+
   it("shows the scenario-complete state", () => {
     sessionState = { ...sessionState, scenarioState: { goals_met: [0, 1], complete: true } };
     renderScreen();
@@ -282,7 +355,8 @@ describe("CorrectionCard", () => {
     };
     renderScreen();
 
-    expect(screen.getByText("¡Hola! ¿Qué quieres?")).toBeInTheDocument();
+    // The screen reader's copy in the live region aside, the reply is shown once.
+    expect(screen.getByText("¡Hola! ¿Qué quieres?", { ignore: '[data-testid="practice-announcer"]' })).toBeInTheDocument();
     expect(screen.getByText("Suggestions for this reply didn't load.")).toBeInTheDocument();
     expect(screen.queryByText("The reply was cut off.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
