@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { cn } from "@platform/ui";
+import { StaleDataBanner, cn } from "@platform/ui";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
@@ -26,11 +26,17 @@ interface ScenarioPathProps {
 export default function ScenarioPath({ profile }: ScenarioPathProps) {
   const { languageName, scenarios, isError, isCapReached, refetch } = useScenarioPath(profile);
 
-  if (isError) return <CatalogError onRetry={() => void refetch()} />;
-  if (!scenarios) return <CatalogSkeleton />;
+  if (!scenarios) return isError ? <CatalogError onRetry={() => void refetch()} /> : <CatalogSkeleton />;
 
   return (
     <div className={CATALOG_PAGE}>
+      {isError && (
+        <StaleDataBanner
+          message={CATALOG_COPY.showingLastLoaded}
+          onRetry={() => void refetch()}
+          retryLabel={CATALOG_COPY.retry}
+        />
+      )}
       <div className={CATALOG_HEADER}>
         <h1 className="text-2xl font-semibold">{`${CATALOG_COPY.practicePrefix} ${languageName}`}</h1>
         <p className={cn(CATALOG_HEADER_LINE, "text-muted-foreground")}>

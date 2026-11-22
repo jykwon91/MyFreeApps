@@ -77,4 +77,21 @@ describe("OnboardingLanguage page", () => {
     fireEvent.click(screen.getByRole("button", { name: CATALOG_COPY.retry }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps the languages under a stale notice when a refresh fails, and Try again reloads", () => {
+    languages = { data: [SPANISH], isError: true };
+    renderPage();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CATALOG_COPY.showingLastLoaded);
+    expect(screen.queryByText(CATALOG_COPY.loadFailed)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Spanish/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: CATALOG_COPY.retry }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no stale notice when nothing failed", () => {
+    languages = { data: [SPANISH], isError: false };
+    renderPage();
+    expect(screen.queryByText(CATALOG_COPY.showingLastLoaded)).not.toBeInTheDocument();
+  });
 });

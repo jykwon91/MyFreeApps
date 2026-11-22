@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { StaleDataBanner } from "@platform/ui";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { useListLanguagesQuery } from "@mylanguagetutor/api-client/store/catalogApi";
@@ -12,8 +13,7 @@ export default function OnboardingLanguage() {
   const { data: languages, isError, refetch } = useListLanguagesQuery();
 
   let body;
-  if (isError) body = <CatalogError onRetry={() => void refetch()} />;
-  else if (!languages) body = <PageSkeleton />;
+  if (!languages) body = isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton />;
   else if (languages.length === 0) {
     body = <p className="text-sm text-muted-foreground">{CATALOG_COPY.noLanguages}</p>;
   } else {
@@ -44,6 +44,13 @@ export default function OnboardingLanguage() {
         <h1 className="text-2xl font-semibold">{ONBOARDING_COPY.languageHeading}</h1>
         <p className="text-sm text-muted-foreground">{ONBOARDING_COPY.languageIntro}</p>
       </div>
+      {languages && isError && (
+        <StaleDataBanner
+          message={CATALOG_COPY.showingLastLoaded}
+          onRetry={() => void refetch()}
+          retryLabel={CATALOG_COPY.retry}
+        />
+      )}
       {body}
     </div>
   );
