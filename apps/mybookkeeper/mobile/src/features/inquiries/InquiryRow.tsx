@@ -19,7 +19,7 @@ export default function InquiryRow({
 }) {
   const { colors, spacing, fontSize } = useTheme();
   const quality = qualityLabel(inquiry);
-  const spam = showSpam ? spamLabel(inquiry.spam_status) : null;
+  const spam = showSpam ? spamLabel(inquiry) : null;
 
   return (
     <Pressable

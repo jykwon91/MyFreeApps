@@ -15,7 +15,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { deleteReplyDraft } from "./replyDrafts";
 import { moreOptions, stageOptions } from "./inquiryActionOptions";
 import InquiryContact from "./InquiryContact";
-import { inquirerName, receivedAgo, stageLabel, stayDates } from "./inquiryDisplay";
+import { flaggedBannerMessage, inquirerName, receivedAgo, stageLabel, stayDates } from "./inquiryDisplay";
 import InquiryExtras from "./InquiryExtras";
 import InquiryListingRow from "./InquiryListingRow";
 import InquiryMessages from "./InquiryMessages";
@@ -102,7 +102,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
                   ]
                 : undefined
             }
-            message={isFlagged ? "I flagged this as possible spam." : "This is marked as spam."}
+            message={isFlagged ? flaggedBannerMessage(inquiry.spam_score) : "This is marked as spam."}
           />
         ) : null}
 

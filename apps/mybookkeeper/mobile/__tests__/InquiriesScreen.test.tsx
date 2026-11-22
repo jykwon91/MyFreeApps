@@ -99,6 +99,14 @@ describe("InquiriesScreen", () => {
     expect(screen.getAllByText("Flagged")).toHaveLength(2);
   });
 
+  it("shows the spam score on a flagged row, and speaks it", async () => {
+    startInquiryServer([anInquiry({ spam_status: "flagged", spam_score: 41.6 })]);
+    await renderScreen("all");
+    await screen.findByText("Dana Reed");
+    expect(screen.getByRole("button", { name: /^Dana Reed, new, flagged · 42/ })).toBeTruthy();
+    expect(screen.getAllByText("Flagged · 42")).toHaveLength(1);
+  });
+
   it("changes view", async () => {
     startInquiryServer([anInquiry()]);
     await renderScreen();
