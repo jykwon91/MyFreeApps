@@ -5,12 +5,19 @@
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { EmptyState } from "@platform/ui";
+import DashboardStaleBanner from "@/features/dashboard/DashboardStaleBanner";
 
-export default function KanbanEmptyState() {
+interface KanbanEmptyStateProps {
+  /** True when a refresh failed, so the board may not really be empty. */
+  isStale?: boolean;
+}
+
+export default function KanbanEmptyState({ isStale = false }: KanbanEmptyStateProps) {
   const navigate = useNavigate();
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
+      {isStale ? <DashboardStaleBanner /> : null}
       <EmptyState
         icon={<Search className="w-12 h-12" />}
         heading="Your hunt starts here"

@@ -79,7 +79,7 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
   }
 
   if (items.length === 0) {
-    return <KanbanEmptyState />;
+    return <KanbanEmptyState isStale={isStale} />;
   }
 
   if (isMobile) {

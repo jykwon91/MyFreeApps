@@ -61,3 +61,20 @@ test("a failed board load shows an error and Retry recovers", async ({ page }) =
   await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.getByText("Role 1")).toBeVisible();
 });
+
+test("a failed refresh over an empty board shows the stale banner with the empty state", async ({ page }) => {
+  await stubSignedInShell(page);
+  let failing = false;
+  await page.route(KANBAN_ENDPOINT, (route) =>
+    failing ? route.fulfill(json({ detail: "boom" }, 500)) : route.fulfill(json({ items: [] })),
+  );
+
+  await page.goto("/dashboard");
+  await expect(page.getByText("Your hunt starts here")).toBeVisible();
+  await expect(page.getByText(/couldn't refresh it/i)).toHaveCount(0);
+
+  failing = true;
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByText(/couldn't refresh it/i)).toBeVisible();
+  await expect(page.getByText("Your hunt starts here")).toBeVisible();
+});
