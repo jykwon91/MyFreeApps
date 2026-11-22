@@ -95,7 +95,7 @@ describe("a listing's photos", () => {
     await show(<ListingPhotosScreen id="l1" />);
     await fireEvent.press(await screen.findByRole("button", { name: "Photo 1 of 2, Cover" }));
     await screen.findByText("Photo 1 of 2");
-    for (const name of [MESSAGES.add, MESSAGES.select, MESSAGES.remove, MESSAGES.later, MESSAGES.makeCover]) {
+    for (const name of [MESSAGES.add, MESSAGES.remove, MESSAGES.later, MESSAGES.makeCover]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
     expect(button(MESSAGES.shareOne)).toBeTruthy();

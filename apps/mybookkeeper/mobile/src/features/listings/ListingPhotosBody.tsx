@@ -14,6 +14,7 @@ import ListingPhotoUploadRow from "./ListingPhotoUploadRow";
 import ListingPhotoViewer from "./ListingPhotoViewer";
 import { useListingPhotoActions } from "./useListingPhotoActions";
 import { useListingPhotoAdding } from "./useListingPhotoAdding";
+import { useSharePhotos } from "./useSharePhotos";
 
 export default function ListingPhotosBody({ listing }: { listing: ListingResponse }) {
   const { spacing, colors, fontSize } = useTheme();
@@ -26,6 +27,7 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const photos = sortPhotos(listing.photos);
   const actions = useListingPhotoActions(listing);
+  const sharing = useSharePhotos();
   const { uploads, picker, isAdding } = useListingPhotoAdding(listing.id);
   const viewingIndex = viewingId === null ? -1 : photos.findIndex((photo) => photo.id === viewingId);
   const isViewing = viewingIndex >= 0;
@@ -61,6 +63,10 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
     else setSelected(new Set(stillThere));
   }
 
+  async function shareSelected(): Promise<void> {
+    await sharing.share(photos.filter((photo) => selected.has(photo.id)));
+  }
+
   async function move(photo: ListingPhoto, to: number): Promise<void> {
     await actions.reorder(moveId(photos.map((p) => p.id), photos.indexOf(photo), to));
   }
@@ -79,7 +85,7 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
   useAnnouncement(selectionLine, "polite");
 
   const isEmpty = photos.length === 0 && uploads.items.length === 0 && !picker.preparing;
-  const busy = actions.isRemoving || actions.isReordering || actions.isRefreshing;
+  const busy = actions.isRemoving || actions.isReordering || actions.isRefreshing || sharing.isSharing;
   const problem = picker.problem ?? (isViewing ? null : actions.failure);
   const addSheet = (
     <ListingPhotoAddSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSelect={(source) => { setIsAddOpen(false); void picker.add(source); }} />
@@ -106,18 +112,18 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
   const header = (
     <>
       {problem ? <Banner message={problem} /> : null}
-      {canWrite ? (
-        <View style={{ gap: spacing.sm }}>
+      <View style={{ gap: spacing.sm }}>
+        {canWrite ? (
           <LoadingButton disabled={isSelecting} onPress={() => setIsAddOpen(true)}>
             {MESSAGES.add}
           </LoadingButton>
-          {photos.length > 0 ? (
-            <LoadingButton onPress={isSelecting ? stopSelecting : () => setIsSelecting(true)} variant="secondary">
-              {isSelecting ? MESSAGES.cancelSelect : MESSAGES.select}
-            </LoadingButton>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
+        {photos.length > 0 ? (
+          <LoadingButton onPress={isSelecting ? stopSelecting : () => setIsSelecting(true)} variant="secondary">
+            {isSelecting ? MESSAGES.cancelSelect : MESSAGES.select}
+          </LoadingButton>
+        ) : null}
+      </View>
       {picker.preparing ? (
         <Text accessibilityRole="progressbar" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
           {preparingLine}
@@ -136,13 +142,24 @@ export default function ListingPhotosBody({ listing }: { listing: ListingRespons
           <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{selectionLine}</Text>
           <LoadingButton
             disabled={selected.size === 0 || busy}
-            isLoading={actions.isRemoving}
-            loadingText={MESSAGES.removing}
-            onPress={() => askOnce(asking, removeManyTitle(selected.size), removeManyBody(selected.size), { text: MESSAGES.remove, style: "destructive", onPress: () => void removeSelected() })}
-            variant="destructive"
+            isLoading={sharing.isSharing}
+            loadingText={MESSAGES.sharing}
+            onPress={() => void shareSelected()}
+            variant="secondary"
           >
-            {MESSAGES.removeSelected}
+            {MESSAGES.shareSelected}
           </LoadingButton>
+          {canWrite ? (
+            <LoadingButton
+              disabled={selected.size === 0 || busy}
+              isLoading={actions.isRemoving}
+              loadingText={MESSAGES.removing}
+              onPress={() => askOnce(asking, removeManyTitle(selected.size), removeManyBody(selected.size), { text: MESSAGES.remove, style: "destructive", onPress: () => void removeSelected() })}
+              variant="destructive"
+            >
+              {MESSAGES.removeSelected}
+            </LoadingButton>
+          ) : null}
         </View>
       ) : null}
     </>
