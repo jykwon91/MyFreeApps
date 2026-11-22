@@ -95,8 +95,12 @@ end
 -- Returns the player's current Enchanting skill level, or nil if they have none.
 -- A collapsed header in the skills window hides its lines from GetSkillLineInfo, so
 -- collapsed headers are opened for the read and closed again after.
-local function enchantingSkill()
-  if not GetNumSkillLines then return nil end
+local ENCHANTING_SKILL_LINE = 333
+local DISENCHANT_SPELL = 13262
+
+-- Skills window: the Classic Era API. Expands collapsed headers to see the rank, then closes them again.
+local function enchantingFromSkillLines()
+  if not GetNumSkillLines or not GetSkillLineInfo then return nil end
   local opened = {}
   local i = 1
   while i <= GetNumSkillLines() do
@@ -119,6 +123,24 @@ local function enchantingSkill()
     end
   end
   return rank
+end
+
+-- Professions API: newer clients, which may not have the skills-window functions.
+local function enchantingFromProfessions()
+  if not GetProfessions or not GetProfessionInfo then return nil end
+  for _, index in pairs({ GetProfessions() }) do
+    local name, _, rank, _, _, _, skillLine = GetProfessionInfo(index)
+    if skillLine == ENCHANTING_SKILL_LINE or name == "Enchanting" then return rank end
+  end
+  return nil
+end
+
+-- Returns the player's Enchanting rank; math.huge when they know Disenchant but no API gives the rank; nil without it.
+local function enchantingSkill()
+  local rank = enchantingFromSkillLines() or enchantingFromProfessions()
+  if rank then return rank end
+  if IsPlayerSpell and IsPlayerSpell(DISENCHANT_SPELL) then return math.huge end
+  return nil
 end
 
 -- Returns the disenchant expected value (EV) in copper per item and whether any
