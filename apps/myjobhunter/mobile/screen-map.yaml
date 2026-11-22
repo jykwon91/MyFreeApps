@@ -30,7 +30,7 @@ routes:
   /documents:
     screen: (app)/documents
   /forgot-password:
-    not_on_mobile: Done on the website. Sign-in links there ("Forgot your password? Reset it on the website").
+    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on password-reset requests, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("Forgot your password? Reset it on the website").
   /login:
     screen: sign-in
   # The website embeds its resume upload here; on the phone the upload is on the Resume screen
@@ -40,7 +40,7 @@ routes:
   /profile:
     screen: (app)/(tabs)/profile
   /register:
-    not_on_mobile: Done on the website. Sign-in links there ("New here? Create an account on the website").
+    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on sign-up, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("New here? Create an account on the website").
   /reset-password:
     not_on_mobile: Opened from the link in the password-reset email, which goes to the website.
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its two columns are
