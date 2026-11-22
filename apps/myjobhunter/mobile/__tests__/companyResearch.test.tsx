@@ -2,6 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../src/constants/companyResearch";
+import { COMPANY_RESEARCH_READY_MESSAGE } from "@myjobhunter/api-client/constants/companyResearchMessages";
 import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { store } from "../src/lib/store";
@@ -131,7 +132,7 @@ it("offers a run when there's none, shows it working from the press, then shows 
   expect(runs(sent)).toHaveLength(1);
 
   await act(async () => answer());
-  expect(await screen.findByText(MESSAGES.ready)).toBeTruthy();
+  expect(await screen.findByText(COMPANY_RESEARCH_READY_MESSAGE)).toBeTruthy();
   expect(await research().findByText("Positive")).toBeTruthy();
   expect(research().getByText(MESSAGES.lastRun(formatShortDate("2026-10-20T12:00:00Z")))).toBeTruthy();
   for (const text of [
@@ -209,7 +210,7 @@ it("runs the research again from a result", async () => {
 
   await fireEvent.press(await research().findByRole("button", { name: MESSAGES.rerun }));
   expect(await research().findByText("Negative")).toBeTruthy();
-  expect(screen.getByText(MESSAGES.ready)).toBeTruthy();
+  expect(screen.getByText(COMPANY_RESEARCH_READY_MESSAGE)).toBeTruthy();
   expect(runs(sent)).toHaveLength(1);
 });
 
