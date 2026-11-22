@@ -10,13 +10,6 @@ export default function RentalRoiSkeleton() {
       <Skeleton height={28} width="75%" />
       <Skeleton height={14} width="55%" />
 
-      {/* Target input */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-        <Skeleton height={14} width="55%" />
-        <Skeleton height={40} width={72} />
-      </View>
-      <Skeleton height={12} width="80%" />
-
       {/* Cards */}
       {RENTAL_ROI_SKELETON_CARDS.map((i) => (
         <View
