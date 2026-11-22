@@ -17,6 +17,7 @@ jest.mock("../src/features/workspace/WorkspaceGate", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock("../src/features/workspace/WorkspaceLostToast", () => ({ __esModule: true, default: jest.fn(() => null) }));
+jest.mock("../src/features/integrations/GmailSyncWatcher", () => ({ __esModule: true, default: () => null }));
 
 const TENANT_TOAST = "Reply sent to Maria Lopez";
 
