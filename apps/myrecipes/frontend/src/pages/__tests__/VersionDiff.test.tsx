@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import type { DiffResponse } from "@myrecipes/api-client/types/recipe/diff";
+import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 import VersionDiff from "@/pages/VersionDiff";
 
 interface DiffQuery {
@@ -178,6 +179,24 @@ describe("VersionDiff", () => {
     answer({ isError: true, error: { status: 500 }, refetch: vi.fn(), isFetching: true });
     renderDiff();
     expect(screen.getByRole("button", { name: /Try again/ })).toBeDisabled();
+  });
+
+  it("keeps the diff on screen with a notice and Try again when a refresh fails", async () => {
+    const refetch = vi.fn();
+    answer({ data: DIFF, isError: true, error: { status: 500 }, refetch });
+    renderDiff();
+
+    expect(screen.getByText("2 tsp salt")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: VERSION_COPY.loadFailedHeading })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(STALE_DATA_MESSAGES.diff);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no notice while the diff refreshes fine", () => {
+    answer({ data: DIFF });
+    renderDiff();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it.each([400, 404, 422])("goes back to the recipe, with no retry, on a %i", async (status) => {

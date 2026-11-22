@@ -1,22 +1,18 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
-import { EmptyState, LoadMoreFooter, cn, useIsAuthenticated } from "@platform/ui";
+import { EmptyState, LoadMoreFooter, StaleDataBanner, cn, useIsAuthenticated } from "@platform/ui";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
+import { RECIPES_LIST_ERROR_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
 import { useDebouncedValue } from "@platform/ui";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
+import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 import { RECIPES_LIST_MESSAGES } from "@/constants/recipes-list-messages";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
-
-function errorBody(error: unknown): string {
-  if (error && typeof error === "object" && "status" in error) {
-    return `The server returned ${(error as { status?: number }).status}. Try refreshing.`;
-  }
-  return "Try refreshing the page.";
-}
 
 export default function Recipes() {
   const navigate = useNavigate();
@@ -100,8 +96,9 @@ export default function Recipes() {
     content = (
       <EmptyState
         icon={<ChefHat className="w-12 h-12 text-destructive" />}
-        heading="Couldn't load recipes"
-        body={errorBody(list.loadError)}
+        heading={RECIPES_LIST_ERROR_COPY.heading}
+        body={recipesListErrorMessage(list.loadError)}
+        action={{ label: STALE_DATA_MESSAGES.tryAgain, onClick: () => void list.refetch(), loading: list.isFetching }}
       />
     );
   } else if (recipes.length === 0 && hasSearch) {
@@ -122,8 +119,17 @@ export default function Recipes() {
       />
     );
   } else {
+    // A failed refresh (not a failed next page, which the footer reports) leaves the rows up.
+    const isStale = list.error !== undefined && !list.isLoadMoreError;
     content = (
       <div className="space-y-4">
+        {isStale ? (
+          <StaleDataBanner
+            message={STALE_DATA_MESSAGES.recipes}
+            onRetry={() => void list.refetch()}
+            retryLabel={STALE_DATA_MESSAGES.tryAgain}
+          />
+        ) : null}
         <div
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           aria-busy={list.isFiltering}

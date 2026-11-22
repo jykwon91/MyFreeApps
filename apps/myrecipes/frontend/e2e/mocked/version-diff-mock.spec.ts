@@ -146,3 +146,26 @@ test("says a tweak that only reordered the ingredients is in a different order, 
   await expect(page.getByText(VERSION_COPY.reorderedBody)).toBeVisible();
   await expect(page.getByRole("heading", { name: VERSION_COPY.identicalHeading })).toHaveCount(0);
 });
+
+test("a failed refresh keeps the diff on screen with a notice, and Try again clears it", async ({ page }) => {
+  await stubSignedInShell(page);
+  await stubRecipe(page);
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(3)}/diff?against=${versionIdOf(1)}`);
+  await expect(page.getByText("2 tsp salt")).toBeVisible();
+
+  // The next read of the diff fails, as when coming back to the tab with no connection.
+  let failing = true;
+  await page.route(`**/versions/${versionIdOf(3)}/diff*`, (route) =>
+    failing ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "boom" }) }) : route.fallback(),
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+
+  await expect(page.getByRole("status")).toHaveText(/Couldn't update this comparison/);
+  await expect(page.getByText("2 tsp salt")).toBeVisible();
+  await expect(page.getByRole("heading", { name: VERSION_COPY.loadFailedHeading })).toHaveCount(0);
+
+  failing = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByText("2 tsp salt")).toBeVisible();
+});

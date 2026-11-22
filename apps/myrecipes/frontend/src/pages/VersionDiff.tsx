@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, GitCompare } from "lucide-react";
-import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
+import { EmptyState, LoadingButton, Skeleton, StaleDataBanner } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { VERSION_COPY, VERSION_DIFF_FIELD_LABELS } from "@myrecipes/api-client/constants/versions";
 import { isDiffRetryable } from "@myrecipes/api-client/utils/isDiffRetryable";
@@ -10,6 +10,7 @@ import { fieldChangeValue } from "@myrecipes/api-client/utils/fieldChangeValue";
 import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import DiffRow from "@/features/recipes/DiffRow";
+import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 
 /**
  * The version diff — the signature screen. Renders field_changes (servings,
@@ -57,7 +58,8 @@ export default function VersionDiff() {
     );
   }
 
-  if (isError || !data) {
+  // A refresh that fails keeps the diff being read; the error panel is only for when there is none.
+  if (!data) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
         {backLink}
@@ -80,6 +82,14 @@ export default function VersionDiff() {
   return (
     <div className="p-4 sm:p-8 space-y-6">
       {backLink}
+
+      {isError ? (
+        <StaleDataBanner
+          message={STALE_DATA_MESSAGES.diff}
+          onRetry={() => void refetch()}
+          retryLabel={STALE_DATA_MESSAGES.tryAgain}
+        />
+      ) : null}
 
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold flex items-center gap-2">

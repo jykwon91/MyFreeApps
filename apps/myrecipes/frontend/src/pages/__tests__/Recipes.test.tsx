@@ -11,10 +11,12 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/ui";
 import api from "@/lib/api";
+import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeListPage } from "@myrecipes/api-client/types/recipe/recipe-list-page";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
+import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 import Recipes from "@/pages/Recipes";
 
 const auth = vi.hoisted(() => ({ isAuthenticated: true }));
@@ -162,6 +164,41 @@ describe("Recipes", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load more recipes.");
     expect(screen.getByRole("heading", { name: "Recipe 50" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("offers Try again when the list can't load, and shows the recipes once it does", async () => {
+    const user = userEvent.setup();
+    const working = respond;
+    respond = () => ({ status: 503, data: { detail: "down" } });
+    renderRecipes();
+
+    expect(await screen.findByText("Can't load recipes")).toBeInTheDocument();
+    respond = working;
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("heading", { name: "Recipe 1" })).toBeInTheDocument();
+    expect(screen.queryByText("Can't load recipes")).not.toBeInTheDocument();
+  });
+
+  it("keeps the recipes with a notice and Try again when a refresh fails", async () => {
+    const user = userEvent.setup();
+    const working = respond;
+    renderRecipes();
+    await screen.findByRole("heading", { name: "Recipe 50" });
+
+    respond = () => ({ status: 503, data: { detail: "down" } });
+    act(() => {
+      store.dispatch(recipesApi.util.invalidateTags([{ type: "Recipe", id: "LIST" }]));
+    });
+
+    expect(await screen.findByText(STALE_DATA_MESSAGES.recipes)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recipe 50" })).toBeInTheDocument();
+    expect(screen.queryByText("Can't load recipes")).not.toBeInTheDocument();
+
+    respond = working;
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(screen.queryByText(STALE_DATA_MESSAGES.recipes)).not.toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: "Recipe 50" })).toBeInTheDocument();
   });
 
   it("loads the public list and clears ?owner=me when signed out", async () => {

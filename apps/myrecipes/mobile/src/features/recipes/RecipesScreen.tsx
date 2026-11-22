@@ -1,5 +1,7 @@
+import { RECIPES_LIST_ERROR_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
+import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import {
@@ -63,7 +65,7 @@ export default function RecipesScreen() {
   const isSearchSettled = term === trimmed && !isPending && !hasListError;
   useAnnouncement(
     hasListError && !rows.length
-      ? "Can't load recipes"
+      ? RECIPES_LIST_ERROR_COPY.heading
       : (term || ownerMe) && list.hasData && isSearchSettled
         ? formatCount(list.total, "recipe")
         : undefined,
@@ -84,8 +86,8 @@ export default function RecipesScreen() {
         <View style={{ gap: spacing.lg }}>
           <EmptyState
             action={{ label: "Try again", onPress: () => refresh() }}
-            body="Check your connection and try again."
-            heading="Can't load recipes"
+            body={recipesListErrorMessage(list.error)}
+            heading={RECIPES_LIST_ERROR_COPY.heading}
           />
           {savedCopies.length ? (
             <SavedCookCopies copies={savedCopies} onOpen={(recipeId) => router.push(cookHref(recipeId))} />
