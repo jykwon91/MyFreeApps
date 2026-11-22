@@ -336,8 +336,20 @@ async def _record_scoring(
     pending: PendingClaudeScoring,
     scoring: inquiry_spam_scorer.ClaudeScoringResult | inquiry_spam_scorer.ClaudeScoringDegraded,
 ) -> PublicInquiryResult:
-    """Step 10 persistence: write the Claude assessment and the final triage status."""
+    """Step 10 persistence: write the Claude assessment and the final triage status.
+
+    The inquiry is re-read, locked, first: it was committed before the Claude
+    call, so the operator may have deleted it or triaged it by hand meanwhile.
+    """
     async with unit_of_work() as db:
+        inquiry = await inquiry_repo.get_for_spam_triage(db, pending.inquiry_id)
+        if inquiry is None:
+            # Deleted while it was scored: nothing to record or announce.
+            return PublicInquiryResult(
+                outcome=PublicInquiryOutcome.SUCCESS,
+                inquiry_id=pending.inquiry_id,
+                organization_id=pending.organization_id,
+            )
         if isinstance(scoring, inquiry_spam_scorer.ClaudeScoringDegraded):
             # The inquiry row was committed as ``unscored``; keep that status so
             # the operator still sees it (All / Inbox, not buried in Spam), and
@@ -357,9 +369,8 @@ async def _record_scoring(
                 outcome=PublicInquiryOutcome.SUCCESS,
                 inquiry_id=pending.inquiry_id,
                 organization_id=pending.organization_id,
-                spam_status="unscored",
-                notify_operator=True,
-                notify_subject_prefix="",
+                spam_status=inquiry.spam_status,
+                notify_operator=inquiry.spam_status == "unscored",
             )
 
         # Successful Claude run.
@@ -379,6 +390,15 @@ async def _record_scoring(
             },
         )
 
+        if inquiry.spam_status != "unscored":
+            # The operator triaged it by hand while it was scored: the score is
+            # kept for the audit trail, their decision stands, and they've seen it.
+            return PublicInquiryResult(
+                outcome=PublicInquiryOutcome.SUCCESS,
+                inquiry_id=pending.inquiry_id,
+                organization_id=pending.organization_id,
+                spam_status=inquiry.spam_status,
+            )
         if score < threshold:
             final_status = "spam"
             notify = False

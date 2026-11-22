@@ -1,18 +1,24 @@
 """The refinement-preparation worker against a real database.
 
-Only ``prepare_session`` is faked. A temporary failure puts the session back
-in the queue with a growing wait (so it is not re-claimed straight away),
+Only ``prepare_session`` (or its Claude call) is faked. A temporary failure
+puts the session back in the queue with a growing wait (so it is not
+re-claimed straight away),
 up to ``REFINEMENT_PREP_MAX_RETRIES``; a permanent one, or running out of
 retries, fails the session with our own copy, never the exception's text.
+A session deleted during preparation is a normal outcome, and a failure is
+recorded only while this run still holds the session's claim.
 """
 from __future__ import annotations
 
+import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ai_failure_messages import (
@@ -23,8 +29,9 @@ from app.core.ai_failure_messages import (
 )
 from app.core.job_failure_messages import REFINEMENT_PREP_FAILED_MESSAGE
 from app.core.refinement_prepare_constants import REFINEMENT_PREP_MAX_RETRIES
+from app.db.session import unit_of_work
 from app.models.resume_refinement.session import ResumeRefinementSession
-from app.services.resume_refinement import session_lifecycle_service
+from app.services.resume_refinement import critique_service, session_lifecycle_service
 from app.workers.refinement_prepare_worker import process_one_session
 
 
@@ -123,3 +130,50 @@ async def test_final_failure_stores_our_copy(
     assert session.status == "failed"
     assert session.error_message == expected
     assert session.preparation_retry_count == 0
+
+
+@pytest.mark.asyncio
+async def test_a_session_deleted_during_preparation_is_not_an_error(
+    db: AsyncSession, user_factory, caplog: pytest.LogCaptureFixture,
+) -> None:
+    user = await user_factory()
+    session_id = await _preparing_session(db, user["id"])
+
+    async def _critique_while_the_session_is_deleted(**_: object) -> dict:
+        async with unit_of_work() as other:
+            await other.execute(delete(ResumeRefinementSession).where(ResumeRefinementSession.id == session_id))
+        return {"targets": [], "input_tokens": 1, "output_tokens": 1, "cost_usd": Decimal("0")}
+
+    with (
+        caplog.at_level(logging.INFO, logger="app.workers.refinement_prepare_worker"),
+        patch.object(critique_service, "run_critique", side_effect=_critique_while_the_session_is_deleted),
+    ):
+        assert await process_one_session() is True
+
+    assert [r.levelno for r in caplog.records if r.levelno >= logging.ERROR] == []
+    assert any("deleted during preparation" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_a_failure_after_the_session_was_claimed_again_is_left_to_the_new_claim(
+    db: AsyncSession, user_factory,
+) -> None:
+    user = await user_factory()
+    session_id = await _preparing_session(db, user["id"])
+    later = datetime.now(timezone.utc) + timedelta(minutes=1)
+
+    async def _critique_fails_after_a_new_claim(**_: object) -> dict:
+        async with unit_of_work() as other:
+            await other.execute(
+                update(ResumeRefinementSession)
+                .where(ResumeRefinementSession.id == session_id)
+                .values(preparation_started_at=later),
+            )
+        raise _busy()
+
+    with patch.object(critique_service, "run_critique", side_effect=_critique_fails_after_a_new_claim):
+        assert await process_one_session() is True
+
+    session = await _reload(db, session_id)
+    assert (session.status, session.preparation_started_at) == ("preparing", later)
+    assert (session.preparation_retry_count, session.error_message) == (0, None)

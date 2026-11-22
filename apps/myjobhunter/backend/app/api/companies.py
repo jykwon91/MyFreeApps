@@ -29,7 +29,7 @@ from platform_shared.extraction import ExtractionError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.ai_failure_http import ai_failure_http_exception
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, released_active_user
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -239,20 +239,20 @@ async def get_company_research(
 async def trigger_company_research(
     company_id: uuid.UUID,
     _payload: CompanyResearchRequest = CompanyResearchRequest(),  # noqa: B008
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
+    user: User = Depends(released_active_user),
 ) -> CompanyResearchResponse:
     """Run Tavily + Claude research for a company and return the result.
 
     This is a synchronous call — it may take 10-30 seconds while we fetch
-    search results and synthesise them with Claude. Phase 5 will move this
-    to a background queue.
+    search results and synthesise them with Claude. No database connection
+    is held while it waits.
 
     Rate limited per user (10 / 5 min, 30 / hour); 429 when exceeded. The
     limit is applied after the company and in-flight checks, so a 404 or a
     409 doesn't use up the user's quota.
 
-    Returns 404 if the company does not exist or belongs to another user.
+    Returns 404 if the company does not exist, belongs to another user, or
+    was deleted while its research ran.
     Returns 409 if a run for this company is already in flight.
     Returns 503 if the Tavily API key is not configured.
     Returns 502 if the Anthropic API call fails (our own copy as the detail,
@@ -260,17 +260,21 @@ async def trigger_company_research(
     Returns 200 with the populated research record on success.
     """
     try:
-        company = await company_research_service.claim_run(
-            db, company_id=company_id, user_id=user.id
+        claim = await company_research_service.claim_run(
+            company_id=company_id, user_id=user.id,
         )
-        if company is None:
+        if claim is None:
             raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
-        check_user_rate_limit(
-            user.id, _RESEARCH_LIMITER_PER_5_MIN, _RESEARCH_LIMITER_PER_HOUR,
-        )
-        research = await company_research_service.run_claimed_research(
-            db, company=company, user_id=user.id
-        )
+        try:
+            check_user_rate_limit(
+                user.id, _RESEARCH_LIMITER_PER_5_MIN, _RESEARCH_LIMITER_PER_HOUR,
+            )
+        except HTTPException:
+            await company_research_service.release_run(claim)
+            raise
+        research = await company_research_service.run_claimed_research(claim)
+        if research is None:
+            raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     except HTTPException:
         raise
     except ResearchAlreadyRunningError as exc:

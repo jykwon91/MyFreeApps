@@ -24,6 +24,7 @@ import logging
 import uuid
 from typing import Any
 
+from platform_shared.db.session import release_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile.education import Education
@@ -48,12 +49,17 @@ from app.services.resume_refinement.errors import (
     SourceJobNotReady,
 )
 from app.services.resume_refinement.markdown_renderer import render_resume_to_markdown
+from app.services.resume_refinement.session_claude_window import (
+    lock_if_still_preparing,
+    reload_if_unchanged,
+)
 from app.services.resume_refinement.session_helpers import (
     _generate_next_proposal,
     _load_active,
     _prefetch_all_proposals,
     _with_turns,
 )
+from app.services.resume_refinement.session_position import SessionPosition
 
 logger = logging.getLogger(__name__)
 
@@ -126,15 +132,29 @@ async def prepare_session(
     previous attempt got that far), so a retry after a prefetch-stage
     failure doesn't re-spend the critique call.
 
+    No database connection is held during a Claude call: each result is
+    saved only if the session is still where it was when the call began
+    (see ``session_claude_window``), and the session is unlocked only
+    while this run still holds the preparation claim taken at
+    ``preparation_started_at``. Otherwise the fresh session is returned
+    untouched.
+
     Raises on failure — the worker decides transient (release the claim,
     poll retries) vs permanent (status ``failed`` + error_message).
     """
+    claimed_at = session.preparation_started_at
     if session.improvement_targets is None:
+        position = SessionPosition.of(session)
+        await release_connection(db)
         critique = await critique_service.run_critique(
             resume_markdown=session.current_draft,
             user_id=user_id,
             session_id=session.id,
         )
+        session, unchanged = await reload_if_unchanged(db, session, position)
+        if not unchanged:
+            logger.info("Session %s changed during its critique; not saved", session.id)
+            return session
         session = await session_repo.update_critique(
             db,
             session,
@@ -142,6 +162,7 @@ async def prepare_session(
             tokens_in=critique["input_tokens"],
             tokens_out=critique["output_tokens"],
             cost_usd=critique["cost_usd"],
+            commit=False,
         )
         await turn_repo.append(
             db,
@@ -153,34 +174,45 @@ async def prepare_session(
             draft_after=session.current_draft,
             tokens_in=critique["input_tokens"],
             tokens_out=critique["output_tokens"],
+            commit=False,
         )
+        session = await session_repo.commit_staged(db, session)
 
-    targets = session.improvement_targets or []
-    if not targets:
+    if session.improvement_targets:
+        # Prefetch proposals for ALL critique targets in parallel. The
+        # operator's stated workflow is to browse every suggestion before
+        # acting, so we pay the Claude cost up front to make navigation
+        # instant. Per-target failures are graceful — those targets
+        # generate on first visit.
+        session = await _prefetch_all_proposals(db, session, user_id=user_id)
+
+    session, ours = await lock_if_still_preparing(db, session, claimed_at)
+    if not ours:
+        logger.info("Session %s changed during its preparation; not unlocked", session.id)
+        return session
+    if not session.improvement_targets:
         # Nothing to draft — unlock straight into the "nothing to flag"
         # completion state. Waiting for a "first proposal" here would
         # spin forever (there is no target 0).
         return await session_repo.mark_active(db, session)
 
-    # Prefetch proposals for ALL critique targets in parallel. The
-    # operator's stated workflow is to browse every suggestion before
-    # acting, so we pay the Claude cost up front to make navigation
-    # instant. Per-target failures are graceful — those targets
-    # generate on first visit.
-    session = await _prefetch_all_proposals(db, session, user_id=user_id)
-
-    # Hydrate pending_* from the cache for the starting target. If the
-    # prefetch for target 0 failed, fall back to a synchronous
-    # generation.
+    # Hydrate pending_* from the cache for the starting target, staged
+    # under the lock so it lands in the same commit as the unlock. If the
+    # prefetch for target 0 failed, fall back to a synchronous generation.
     hydrated = await session_repo.hydrate_pending_from_cache(
-        db, session, target_index=session.target_index,
+        db, session, target_index=session.target_index, commit=False,
     )
     if hydrated is not None:
         session = hydrated
     else:
+        await release_connection(db)
         session = await _generate_next_proposal(
             db, session, user_id=user_id, hint=None, use_cache=False,
         )
+        session, ours = await lock_if_still_preparing(db, session, claimed_at)
+        if not ours:
+            logger.info("Session %s changed during its preparation; not unlocked", session.id)
+            return session
 
     # Unlock gate: never flip to active without real content for the
     # current target. GET /sessions/{id} is a pure read (no

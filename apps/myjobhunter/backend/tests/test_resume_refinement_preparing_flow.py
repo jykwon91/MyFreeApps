@@ -34,6 +34,8 @@ from app.services.resume_refinement.errors import (
     SessionNotActive,
 )
 
+from tests.refinement_session_rereads import mock_db, rereads
+
 
 def _fake_session(
     *,
@@ -86,14 +88,6 @@ def _critique(targets: list[dict]) -> dict:
     }
 
 
-def _mock_db() -> MagicMock:
-    db = MagicMock()
-    db.flush = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    return db
-
-
 # ---------------------------------------------------------------------------
 # start_session — fast return, no Claude
 # ---------------------------------------------------------------------------
@@ -103,7 +97,7 @@ def _mock_db() -> MagicMock:
 async def test_start_session_returns_preparing_without_claude() -> None:
     """Session creation must NOT run critique or prefetch — that's the
     entire point of the async flow."""
-    db = _mock_db()
+    db = mock_db()
     job = MagicMock()
     job.status = "complete"
     job.result_parsed_fields = None
@@ -209,6 +203,7 @@ def _prepare_patches(session, *, critique_mock, prefetch_mock, hydrated, generat
         patch.object(
             session_service.session_repo, "mark_active", new=fake_mark_active,
         ),
+        rereads(session),
     )
     return patches, marked_active
 
@@ -216,7 +211,7 @@ def _prepare_patches(session, *, critique_mock, prefetch_mock, hydrated, generat
 @pytest.mark.asyncio
 async def test_prepare_session_happy_path_unlocks() -> None:
     session = _fake_session(targets=None)
-    db = _mock_db()
+    db = mock_db()
     hydrated = _fake_session(
         targets=[_target()], pending_proposal="drafted text",
     )
@@ -229,7 +224,7 @@ async def test_prepare_session_happy_path_unlocks() -> None:
         prefetch_mock=prefetch_mock,
         hydrated=hydrated,
     )
-    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6]:
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
         result = await session_lifecycle_service.prepare_session(
             db=db, session=session, user_id=session.user_id,
         )
@@ -245,7 +240,7 @@ async def test_prepare_session_skips_critique_on_retry() -> None:
     """Retry idempotency: targets already persisted → critique is NOT
     re-spent; preparation resumes from the prefetch."""
     session = _fake_session(targets=[_target()])
-    db = _mock_db()
+    db = mock_db()
     hydrated = _fake_session(
         targets=[_target()], pending_proposal="drafted text",
     )
@@ -258,7 +253,7 @@ async def test_prepare_session_skips_critique_on_retry() -> None:
         prefetch_mock=prefetch_mock,
         hydrated=hydrated,
     )
-    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6]:
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
         await session_lifecycle_service.prepare_session(
             db=db, session=session, user_id=session.user_id,
         )
@@ -272,7 +267,7 @@ async def test_prepare_session_zero_targets_unlocks_immediately() -> None:
     """0 targets → straight to active. Waiting for a 'first proposal'
     would spin forever (there is no target 0)."""
     session = _fake_session(targets=None)
-    db = _mock_db()
+    db = mock_db()
     critique_mock = AsyncMock(return_value=_critique([]))
     prefetch_mock = AsyncMock(side_effect=AssertionError("prefetch must NOT run"))
 
@@ -282,7 +277,7 @@ async def test_prepare_session_zero_targets_unlocks_immediately() -> None:
         prefetch_mock=prefetch_mock,
         hydrated=None,
     )
-    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6]:
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
         result = await session_lifecycle_service.prepare_session(
             db=db, session=session, user_id=session.user_id,
         )
@@ -296,7 +291,7 @@ async def test_prepare_session_gates_unlock_on_first_target_content() -> None:
     """Cache miss + failed generation → PreparationFailed, NOT a silent
     unlock into a permanently-stuck 'working on a suggestion' state."""
     session = _fake_session(targets=[_target()])
-    db = _mock_db()
+    db = mock_db()
     critique_mock = AsyncMock(side_effect=AssertionError("targets already set"))
     prefetch_mock = AsyncMock(return_value=session)
 
@@ -309,7 +304,7 @@ async def test_prepare_session_gates_unlock_on_first_target_content() -> None:
         hydrated=None,
         generated=session,
     )
-    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6]:
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
         with pytest.raises(PreparationFailed):
             await session_lifecycle_service.prepare_session(
                 db=db, session=session, user_id=session.user_id,
@@ -326,7 +321,7 @@ async def test_prepare_session_gates_unlock_on_first_target_content() -> None:
 @pytest.mark.asyncio
 async def test_retry_preparation_requeues_failed_session() -> None:
     session = _fake_session(status="failed")
-    db = _mock_db()
+    db = mock_db()
     reset_calls: list[bool] = []
 
     async def fake_reset(_db, sess):
@@ -358,7 +353,7 @@ async def test_retry_preparation_requeues_failed_session() -> None:
 @pytest.mark.asyncio
 async def test_retry_preparation_rejects_non_failed_session() -> None:
     session = _fake_session(status="active")
-    db = _mock_db()
+    db = mock_db()
 
     with patch.object(
         session_service.session_repo,

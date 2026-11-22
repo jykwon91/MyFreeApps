@@ -175,12 +175,12 @@ def _disable_discovery_scoring_background(monkeypatch: pytest.MonkeyPatch) -> No
 UNIT_OF_WORK_SERVICE_MODULES: tuple[str, ...] = (
     "app.services.application.application_service",
     "app.services.application.application_transition_service",
+    "app.services.company.company_research_service",
     "app.services.company.company_service",
     "app.services.discovery.discovery_fetch_reaper",
     "app.services.discovery.discovery_fetch_service",
     "app.services.discovery.discovery_inbox_service",
     "app.services.discovery.discovery_promote_service",
-    "app.services.discovery.discovery_score_service",
     "app.services.discovery.discovery_source_service",
     "app.services.documents.document_service",
     "app.services.job_analysis.job_analysis_promote_service",

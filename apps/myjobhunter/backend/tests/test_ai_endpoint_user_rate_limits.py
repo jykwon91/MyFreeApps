@@ -108,7 +108,10 @@ ENDPOINTS: list[Endpoint] = [
         paid_call="app.services.company.company_research_service.run_claimed_research",
         paid_error=ValueError("boom"),
         # The company lookup and in-flight claim come first (404 / 409 spend no quota).
-        before_limit=(("app.services.company.company_research_service.claim_run", object()),),
+        before_limit=(
+            ("app.services.company.company_research_service.claim_run", object()),
+            ("app.services.company.company_research_service.release_run", None),
+        ),
     ),
     Endpoint(
         id="resume-upload",

@@ -3,7 +3,7 @@
 After ``discovery_fetch_service.fetch_source`` upserts new rows, this
 loop calls the two-stage prefilter
 (``discovery_prefilter_service.rank_unscored_for_user``) to narrow the
-candidate set, then calls the shared ``job_analysis_service.score()``
+candidate set, then calls the shared ``job_analysis_service.score_discovered_job()``
 against the operator's profile snapshot for each remaining row, and
 persists the score + reasoning back onto the ``discovered_jobs`` row.
 
@@ -85,12 +85,12 @@ import sentry_sdk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.db.session import AsyncSessionLocal, unit_of_work
+from app.db.session import AsyncSessionLocal
 from app.repositories.system import extraction_log_repository
 from app.services.discovery import discovery_prefilter_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
-    score as score_jd,
+    score_discovered_job,
 )
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
 
     # Candidates are read in a short session that closes before the loop, so
     # nothing sits idle in a transaction across Claude calls. Each posting is
-    # then scored and committed in its own unit_of_work.
+    # then scored with no session open and saved in its own short transaction.
     async with AsyncSessionLocal() as db:
         spent_today = await _spent_today(db, user_id)
         if spent_today >= daily_cap:
@@ -175,7 +175,7 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
         )
 
     # Track in-loop spend locally instead of re-querying
-    # extraction_logs each iteration. ``score_jd`` returns the
+    # extraction_logs each iteration. ``score_discovered_job`` returns the
     # JobAnalysis with ``total_cost_usd`` populated; sum into
     # ``spent_today`` so the next-iteration cap check is current
     # without an extra round-trip.
@@ -190,20 +190,17 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             break
 
         try:
-            async with unit_of_work() as score_db:
-                analysis = await score_jd(
-                    score_db,
-                    user_id,
-                    jd_text=job.description or job.title,
-                    source_url=job.source_url,
-                    extracted_hint={
-                        "title": job.title,
-                        "company": job.company_name,
-                        "location": job.location,
-                    },
-                    discovered_job_id=job.id,
-                    discovered_job=job,
-                )
+            analysis = await score_discovered_job(
+                user_id,
+                job.id,
+                jd_text=job.description or job.title,
+                source_url=job.source_url,
+                extracted_hint={
+                    "title": job.title,
+                    "company": job.company_name,
+                    "location": job.location,
+                },
+            )
         except JobAnalysisError as exc:
             _emit_sentry_failure(
                 exc=exc,
@@ -246,9 +243,13 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
 
             continue
 
-        # Successful score — reset the consecutive-failure counter.
+        # Claude answered — reset the consecutive-failure counter.
         consecutive_failures = 0
         last_failure_code = None
+        if analysis is None:
+            # Removed or scored elsewhere while Claude ran; nothing was saved.
+            # Its cost is in extraction_logs, which the next pass's budget reads.
+            continue
         spent_today += float(analysis.total_cost_usd or 0)
         scored += 1
 

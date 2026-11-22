@@ -25,11 +25,12 @@ from app.models.resume_refinement.session import ResumeRefinementSession
 
 
 async def _persist(
-    db: AsyncSession, session: ResumeRefinementSession,
+    db: AsyncSession, session: ResumeRefinementSession, *, commit: bool = True,
 ) -> ResumeRefinementSession:
     await db.flush()
-    await db.commit()
-    await db.refresh(session)
+    if commit:
+        await db.commit()
+        await db.refresh(session)
     return session
 
 
@@ -65,17 +66,19 @@ async def hydrate_pending_from_cache(
     session: ResumeRefinementSession,
     *,
     target_index: int,
+    commit: bool = True,
 ) -> ResumeRefinementSession | None:
     """If a cached proposal exists for ``target_index``, copy it onto
     the pending_* fields and return the refreshed session. Returns
     ``None`` when there's no cache entry — callers should fall through
     to generation. Does not judge validity; the service does that first.
+    ``commit=False`` only stages the write.
     """
     entry = (session.proposal_cache or {}).get(str(target_index))
     if not entry:
         return None
     _load_entry_into_pending(session, entry, target_index=target_index)
-    return await _persist(db, session)
+    return await _persist(db, session, commit=commit)
 
 
 async def apply_cached_proposal(
@@ -110,9 +113,11 @@ async def cache_proposal(
     clarifying_question: str | None,
     guard_flagged: list[str] | None = None,
     flagged_proposal: str | None = None,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Write a generated proposal into ``proposal_cache`` for
     ``target_index`` so future navigations and advances skip the AI call.
+    ``commit=False`` only stages the write.
 
     ``draft_occurrences`` and ``confirmed_facts_count`` are read from the
     session as it is right now. JSONB requires a fresh dict assignment
@@ -134,7 +139,7 @@ async def cache_proposal(
         "confirmed_facts_count": len(session.confirmed_facts or []),
     }
     session.proposal_cache = existing
-    return await _persist(db, session)
+    return await _persist(db, session, commit=commit)
 
 
 async def update_cached_context_marker(
@@ -172,8 +177,5 @@ async def invalidate_cached_proposal(
     if str(target_index) in existing:
         del existing[str(target_index)]
         session.proposal_cache = existing
-        if not commit:
-            await db.flush()
-            return session
-        return await _persist(db, session)
+        return await _persist(db, session, commit=commit)
     return session

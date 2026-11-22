@@ -33,6 +33,8 @@ from app.services.resume_refinement import (
 )
 from app.services.resume_refinement.errors import NoPendingProposal
 
+from tests.refinement_session_rereads import mock_db, rereads
+
 
 def _fake_session(
     *,
@@ -63,6 +65,7 @@ def _fake_session(
     s.total_tokens_out = 0
     s.total_cost_usd = Decimal("0")
     s.turn_count = 0
+    s.preparation_started_at = None
     return s
 
 
@@ -74,14 +77,6 @@ def _target(section: str = "summary") -> dict:
         "severity": "high",
         "notes": None,
     }
-
-
-def _mock_db() -> MagicMock:
-    db = MagicMock()
-    db.flush = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    return db
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +92,7 @@ async def test_clarify_answer_records_confirmed_facts() -> None:
         targets=[_target()],
         pending_guard_flagged=["40%", "Hooli"],
     )
-    db = _mock_db()
+    db = mock_db()
     confirmed: list[list[str]] = []
     generated_after_commits: list[int] = []
 
@@ -144,7 +139,7 @@ async def test_plain_reroll_does_not_confirm_facts() -> None:
         targets=[_target()],
         pending_guard_flagged=["40%"],
     )
-    db = _mock_db()
+    db = mock_db()
     add_mock = AsyncMock(return_value=session)
 
     with (
@@ -170,7 +165,7 @@ async def test_answer_without_guard_flags_does_not_confirm() -> None:
     """A hint on an ordinary (non-guard) clarify or proposal must not
     touch the allowlist — there is nothing to confirm."""
     session = _fake_session(targets=[_target()], pending_guard_flagged=None)
-    db = _mock_db()
+    db = mock_db()
     add_mock = AsyncMock(return_value=session)
 
     with (
@@ -203,7 +198,7 @@ async def test_accept_flagged_applies_held_proposal_and_confirms() -> None:
         pending_guard_flagged=["40%"],
         pending_flagged_proposal="new text with 40% improvement",
     )
-    db = _mock_db()
+    db = mock_db()
     confirmed: list[list[str]] = []
     applied: dict = {}
     turns: list[dict] = []
@@ -263,7 +258,7 @@ async def test_accept_flagged_applies_held_proposal_and_confirms() -> None:
 @pytest.mark.asyncio
 async def test_accept_flagged_without_held_proposal_raises() -> None:
     session = _fake_session(targets=[_target()], pending_flagged_proposal=None)
-    db = _mock_db()
+    db = mock_db()
 
     with (
         patch.object(session_turn_service, "_load_active", new=AsyncMock(return_value=session)),
@@ -297,7 +292,7 @@ def _flagged_rewrite() -> dict:
 @pytest.mark.asyncio
 async def test_generation_persists_guard_state_and_increments_count() -> None:
     session = _fake_session(targets=[_target()], guard_flag_counts={"0": 1})
-    db = _mock_db()
+    db = mock_db()
     pending_updates: list[dict] = []
     increments: list[int] = []
     rewrite_kwargs: list[dict] = []
@@ -313,7 +308,7 @@ async def test_generation_persists_guard_state_and_increments_count() -> None:
         sess.pending_clarifying_question = kwargs.get("clarifying_question")
         return sess
 
-    async def fake_increment(_db, sess, *, target_index):
+    async def fake_increment(_db, sess, *, target_index, **_):
         increments.append(target_index)
         counts = dict(sess.guard_flag_counts)
         counts[str(target_index)] = counts.get(str(target_index), 0) + 1
@@ -324,6 +319,7 @@ async def test_generation_persists_guard_state_and_increments_count() -> None:
         return sess
 
     with (
+        rereads(session),
         patch.object(session_service.rewrite_service, "run_rewrite", new=fake_run_rewrite),
         patch.object(session_service.session_repo, "update_pending_proposal", new=fake_update_pending),
         patch.object(session_service.session_repo, "increment_guard_flag_count", new=fake_increment),

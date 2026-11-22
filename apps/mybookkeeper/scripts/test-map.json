@@ -289,7 +289,8 @@
         "test_dual_write.py",
         "test_document_delete.py",
         "test_document_extraction_deleted_mid_read.py",
-        "test_document_list_page.py"
+        "test_document_list_page.py",
+        "test_document_gmail_download.py"
       ],
       "frontend_tests": [
         "DocumentUploadZone.test.tsx",

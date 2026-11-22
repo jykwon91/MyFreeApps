@@ -40,6 +40,7 @@ from app.db.session import AsyncSessionLocal
 from app.repositories.resume_refinement import session_repo
 from app.services.extraction.ai_failure import user_failure_message
 from app.services.resume_refinement import session_lifecycle_service
+from app.services.resume_refinement.errors import SessionNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ async def process_one_session() -> bool:
             return False
         session_id = claimed.id
         user_id = claimed.user_id
+        claimed_at = claimed.preparation_started_at
 
     logger.info(
         "Preparing refinement session %s for user %s", session_id, user_id,
@@ -77,6 +79,8 @@ async def process_one_session() -> bool:
                 db=db, session=session, user_id=user_id,
             )
         logger.info("Prepared refinement session %s", session_id)
+    except SessionNotFound:
+        logger.info("Refinement session %s was deleted during preparation", session_id)
     except Exception as exc:  # noqa: BLE001 — worker loop must not die
         logger.exception("Failed to prepare refinement session %s", session_id)
         # Stored as our own copy, never the exception's (or provider's) text.
@@ -85,7 +89,13 @@ async def process_one_session() -> bool:
             session = await session_repo.get_by_id_for_user(
                 db, session_id, user_id,
             )
-            if session is not None and session.status == "preparing":
+            # Only while this run still holds the claim: a session that was
+            # claimed again meanwhile belongs to the newer run.
+            if (
+                session is not None
+                and session.status == "preparing"
+                and session.preparation_started_at == claimed_at
+            ):
                 if (
                     is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
                     and session.preparation_retry_count < REFINEMENT_PREP_MAX_RETRIES

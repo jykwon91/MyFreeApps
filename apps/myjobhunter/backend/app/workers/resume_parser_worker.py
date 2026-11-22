@@ -93,6 +93,7 @@ async def process_one() -> bool:
         file_path: str = job.file_path
         content_type: str = job.file_content_type or "application/octet-stream"
         filename: str = job.file_filename or "resume"
+        claimed_at: datetime = job.started_at
 
     logger.info("Processing resume job %s for user %s (%s)", job_id, user_id, filename)
 
@@ -103,14 +104,18 @@ async def process_one() -> bool:
             profile_id=profile_id,
             file_path=file_path,
             content_type=content_type,
+            claimed_at=claimed_at,
         )
-        logger.info("Completed resume job %s", job_id)
     except Exception as exc:
         logger.exception("Failed to process resume job %s", job_id)
         error_msg = _failure_message(exc)
 
         async with AsyncSessionLocal() as db:
-            job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
+            # Only while this worker still holds the claim, as on success:
+            # a job deleted, finished or claimed again meanwhile is left alone.
+            job = await resume_upload_job_repo.get_claimed_for_update(
+                db, job_id, user_id, started_at=claimed_at,
+            )
             if (
                 job is not None
                 and is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
@@ -144,8 +149,14 @@ async def _run_extraction(
     profile_id: uuid.UUID,
     file_path: str,
     content_type: str,
+    claimed_at: datetime,
 ) -> bool:
     """Download → extract text → call Claude → persist rows → mark complete.
+
+    No database session is open until step 5. The job is then re-read,
+    locked, and saved only if it is still ``processing`` under this
+    worker's claim (``claimed_at``), so a job that changed hands or was
+    deleted meanwhile gets no second merge.
 
     Returns True when the merge changed a profile field the discovery
     embedding is built from (work history or skills), so the caller knows
@@ -199,10 +210,14 @@ async def _run_extraction(
 
     # 5. Persist: upsert profile rows + mark complete in one session.
     async with AsyncSessionLocal() as db:
-        # Re-fetch the job for update (the claim session is already closed).
-        job = await resume_upload_job_repo.get_by_id_for_user(db, job_id, user_id)
+        # Re-fetch the job locked (the claim session is already closed).
+        job = await resume_upload_job_repo.get_claimed_for_update(
+            db, job_id, user_id, started_at=claimed_at,
+        )
         if job is None:
-            logger.warning("Job %s disappeared before completion — skipping", job_id)
+            logger.warning(
+                "Job %s was deleted or changed while it was parsed — not saved", job_id,
+            )
             return False
 
         # Merge work_history and education: a re-upload carries rows the

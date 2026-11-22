@@ -17,6 +17,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.jwt_backend import build_jwt_auth_backend
+from platform_shared.auth.released_current_user import released_current_user
 from platform_shared.auth.user_manager import PlatformBaseUserManager
 from platform_shared.services.account_lockout import lock_duration_for
 
@@ -114,3 +115,8 @@ auth_backend = _jwt.auth_backend
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
 current_active_user = fastapi_users.current_user(active=True, verified=True)
+# The signed-in user, with the connection that looked them up handed back
+# before the route runs. For routes that wait on a slow outside call (Claude,
+# Tavily, a job page): their own writes run in short transactions, and the
+# user lookup's transaction would otherwise sit open for the whole wait.
+released_active_user = released_current_user(current_active_user, get_db)
