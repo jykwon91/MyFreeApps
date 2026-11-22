@@ -5,6 +5,7 @@ import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
 import { toneForEventType } from "@myjobhunter/api-client/utils/toneForEventType";
+import { APPLICATION_ARCHIVED_LABEL } from "@myjobhunter/api-client/constants/applicationArchivedLabel";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 
 export function companyName(application: Application): string {
@@ -46,6 +47,7 @@ export function applicationRowLabel(application: Application): string {
     formatRemoteType(application.remote_type),
     appliedText(application),
     statusLabel(application),
+    application.archived ? APPLICATION_ARCHIVED_LABEL : null,
   ]
     .filter((part): part is string => Boolean(part))
     .join(", ");

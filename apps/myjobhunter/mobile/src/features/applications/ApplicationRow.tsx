@@ -1,6 +1,7 @@
+import { APPLICATION_ARCHIVED_LABEL } from "@myjobhunter/api-client/constants/applicationArchivedLabel";
 import { Chip, ClampedText, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { memo } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import type { ApplicationRowProps } from "../../types/ApplicationRowProps";
 import { applicationDetails, applicationRowLabel, companyName, fitText, statusLabel, statusTone } from "./applicationDisplay";
@@ -36,7 +37,12 @@ function ApplicationRow({ application, onPress }: ApplicationRowProps) {
           {details}
         </ClampedText>
       ) : null}
-      {status ? <Chip label={status} tone={statusTone(application)} /> : null}
+      {status || application.archived ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
+          {status ? <Chip label={status} tone={statusTone(application)} /> : null}
+          {application.archived ? <Chip label={APPLICATION_ARCHIVED_LABEL} /> : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 }

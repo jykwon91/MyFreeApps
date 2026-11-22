@@ -8,6 +8,7 @@ import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messag
 import { useApplicationsList } from "@/features/applications/useApplicationsList";
 import { getEventTypeColor } from "@/lib/event-color";
 import { applicationRowLabel } from "@/lib/applicationRowLabel";
+import { APPLICATION_ARCHIVED_LABEL } from "@myjobhunter/api-client/constants/applicationArchivedLabel";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
@@ -44,10 +45,16 @@ const COLUMNS: ColumnDef<Application>[] = [
     sortDescFirst: false,
     cell: ({ row }) => {
       const value = row.original.latest_status;
-      if (value == null) {
-        return <span className="text-sm text-muted-foreground">—</span>;
-      }
-      return <Badge label={formatEventType(value)} color={getEventTypeColor(value)} />;
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          {value == null ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : (
+            <Badge label={formatEventType(value)} color={getEventTypeColor(value)} />
+          )}
+          {row.original.archived ? <Badge label={APPLICATION_ARCHIVED_LABEL} color="gray" /> : null}
+        </span>
+      );
     },
   },
   {
