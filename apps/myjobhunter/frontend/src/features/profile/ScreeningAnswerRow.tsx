@@ -1,4 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
+import RowActions from "@/components/RowActions";
 import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
 import { screeningQuestionLabel } from "@myjobhunter/api-client/utils/screeningQuestionLabel";
 
@@ -17,22 +18,12 @@ export default function ScreeningAnswerRow({ answer, onEdit, onDelete }: Screeni
           {answer.answer ?? <em className="text-muted-foreground">No answer</em>}
         </p>
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="p-2 rounded hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Edit answer"
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={onDelete}
-          className="p-2 rounded hover:bg-destructive/10 text-destructive min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Delete answer"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
+      <RowActions
+        actions={[
+          { key: "edit", label: "Edit answer", icon: Pencil, onClick: onEdit },
+          { key: "delete", label: "Delete answer", icon: Trash2, destructive: true, onClick: onDelete },
+        ]}
+      />
     </div>
   );
 }

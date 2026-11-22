@@ -9,6 +9,7 @@ import { isResumeJobRetrying } from "@myjobhunter/api-client/utils/isResumeJobRe
 import { resumeJobMeta } from "@myjobhunter/api-client/utils/resumeJobMeta";
 import { resumeJobParsedResults } from "@myjobhunter/api-client/utils/resumeJobParsedResults";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
+import RowActions from "@/components/RowActions";
 
 export interface ResumeJobRowProps {
   job: ResumeUploadJob;
@@ -90,15 +91,17 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
           </button>
         ) : null}
 
-        <button
-          onClick={() => onDownload(job.id)}
-          disabled={isDownloading}
-          className="p-2 rounded hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-          aria-label={`Download ${job.file_filename ?? "resume"}`}
-          title="Download"
-        >
-          <Download size={14} />
-        </button>
+        <RowActions
+          actions={[
+            {
+              key: "download",
+              label: `Download ${job.file_filename ?? "resume"}`,
+              icon: Download,
+              disabled: isDownloading,
+              onClick: () => onDownload(job.id),
+            },
+          ]}
+        />
       </div>
 
       {mode.kind === "complete" && expanded ? (
