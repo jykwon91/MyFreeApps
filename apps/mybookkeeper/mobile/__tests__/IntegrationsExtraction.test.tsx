@@ -2,6 +2,7 @@ import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
 import api from "@platform/core/lib/api";
 import { act, screen, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import GmailSyncWatcher from "../src/features/integrations/GmailSyncWatcher";
 import IntegrationsScreen from "../src/features/integrations/IntegrationsScreen";
 import { store } from "../src/lib/store";
 import { aQueueItem, aSyncLog, startIntegrationsServer } from "../test-support/integrationsServer";
@@ -30,10 +31,20 @@ async function refreshScreen() {
   });
 }
 
+// The app-wide watcher does the reloading; it's always mounted beside whatever screen is showing.
+function renderIntegrations() {
+  return renderScreen(
+    <>
+      <GmailSyncWatcher />
+      <IntegrationsScreen />
+    </>,
+  );
+}
+
 describe("when extraction finishes while the screen is open", () => {
   it("reloads the documents it produced", async () => {
     const server = startIntegrationsServer({ logs: [aSyncLog()], queue: [aQueueItem({ status: "extracting" })] });
-    await renderScreen(<IntegrationsScreen />);
+    await renderIntegrations();
     await screen.findByText("1 extracting");
     await act(async () => {
       store.dispatch(documentsApi.endpoints.getDocuments.initiate({ status: "processing" }));
@@ -48,7 +59,7 @@ describe("when extraction finishes while the screen is open", () => {
 
   it("leaves them alone while nothing has finished", async () => {
     const server = startIntegrationsServer({ logs: [aSyncLog()], queue: [aQueueItem({ status: "fetched" })] });
-    await renderScreen(<IntegrationsScreen />);
+    await renderIntegrations();
     await screen.findByText("1 ready to extract");
     await act(async () => {
       store.dispatch(documentsApi.endpoints.getDocuments.initiate({ status: "processing" }));

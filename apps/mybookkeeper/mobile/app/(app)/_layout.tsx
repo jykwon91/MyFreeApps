@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SINGLE_COPY_SCREENS } from "../../src/constants/singleCopyScreens";
 import { useResumeUploads } from "../../src/features/capture/useResumeUploads";
+import GmailSyncWatcher from "../../src/features/integrations/GmailSyncWatcher";
 import PrivacyCover from "../../src/features/shell/PrivacyCover";
 import WorkspaceGate from "../../src/features/workspace/WorkspaceGate";
 import WorkspaceLostToast from "../../src/features/workspace/WorkspaceLostToast";
@@ -20,6 +21,7 @@ export default function AppLayout() {
       <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
         <WorkspaceGate>
           <WorkspaceLostToast />
+          <GmailSyncWatcher />
           <Stack screenOptions={{ ...stackOptions, headerShown: false }}>
             <Stack.Screen name="(tabs)" options={{ title: "Home" }} />
             {SINGLE_COPY_SCREENS.map((name) => (

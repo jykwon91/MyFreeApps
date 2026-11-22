@@ -16,12 +16,13 @@ import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
 import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
 import LegalFooter from "@/app/components/LegalFooter";
 import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
-import { useGmailSyncWatcher } from "@/shared/hooks/useGmailSyncWatcher";
+import { useGmailSyncWatcher } from "@mybookkeeper/api-client/hooks/useGmailSyncWatcher";
 
 export default function Layout() {
   // Keep transaction-derived caches fresh when a background Gmail extraction
-  // finishes while the user is on some other page.
-  useGmailSyncWatcher();
+  // finishes while the user is on some other page. A browser tab keeps a slow
+  // poll going while idle, so a sync started elsewhere is noticed.
+  useGmailSyncWatcher({ skip: false, canPoll: true, pollWhileIdle: true });
 
   // Poll attribution queue count every 2 min to keep the badge fresh.
   const { data: attributionQueueData } = useGetAttributionReviewQueueQuery(

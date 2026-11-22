@@ -16,4 +16,6 @@ export interface FakeIntegrationsServer {
   requests: AxiosRequestConfig[];
   /** Every read of a document list, to see whether finished extraction made it reload. */
   documentReads: number;
+  /** Every read of the email queue, to see how often it's polled. */
+  queueReads: number;
 }
