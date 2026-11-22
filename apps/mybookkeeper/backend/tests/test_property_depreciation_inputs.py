@@ -21,12 +21,13 @@ from app.core.depreciation_input_constants import (
     LAND_VALUE_OVER_PRICE,
     PLACED_IN_SERVICE_IN_FUTURE,
 )
-from app.core.permissions import current_org_member
+from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
 from app.models.properties.property import Property, PropertyType
 from app.models.properties.property_classification import PropertyClassification
+from app.models.requests.property_create import PropertyCreate
 from app.models.requests.property_update import PropertyUpdate
 from app.models.tax.tax_return import TaxReturn
 from app.models.user.user import User
@@ -124,6 +125,53 @@ class TestLandValue:
         assert PropertyUpdate(land_value=Decimal("0")).land_value == Decimal("0")
 
 
+class TestPurchasePriceOnCreate:
+    @pytest.mark.asyncio
+    async def test_create_persists_the_purchase_price(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        ctx = worker_context(organization_id=test_org.id, user_id=test_user.id)
+        with patch("app.services.properties.property_service.unit_of_work", _fake):
+            created = await property_service.create_property(
+                ctx, "Priced", "1 Main St", PropertyClassification.INVESTMENT,
+                PropertyType.LONG_TERM, Decimal("250000.00"),
+            )
+
+        assert created.purchase_price == Decimal("250000.00")
+
+    def test_request_accepts_a_purchase_price(self) -> None:
+        data = PropertyCreate(name="A", address="B", purchase_price=Decimal("250000.00"))
+        assert data.purchase_price == Decimal("250000.00")
+
+    @pytest.mark.parametrize("bad", ["lots", "-1", "-0.01", "10000000000.00", "100.123"])
+    def test_create_refuses_a_bad_purchase_price(self, bad: str) -> None:
+        with pytest.raises(ValidationError):
+            PropertyCreate(name="A", address="B", purchase_price=bad)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("bad", ["lots", "-1", "-0.01", "10000000000.00", "100.123"])
+    def test_update_refuses_a_bad_purchase_price(self, bad: str) -> None:
+        with pytest.raises(ValidationError):
+            PropertyUpdate(purchase_price=bad)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("good", ["0", "250000", "250000.00", "9999999999.99"])
+    def test_both_accept_a_valid_purchase_price(self, good: str) -> None:
+        assert PropertyCreate(name="A", address="B", purchase_price=good).purchase_price == Decimal(good)  # type: ignore[arg-type]
+        assert PropertyUpdate(purchase_price=good).purchase_price == Decimal(good)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("bad", ["lots", "-1", "10000000000.00", "100.123"])
+    def test_update_refuses_a_bad_land_value(self, bad: str) -> None:
+        with pytest.raises(ValidationError):
+            PropertyUpdate(land_value=bad)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("good", ["0", "25000.00", "9999999999.99"])
+    def test_update_accepts_a_valid_land_value(self, good: str) -> None:
+        assert PropertyUpdate(land_value=good).land_value == Decimal(good)  # type: ignore[arg-type]
+
+
 class TestDatePlacedInService:
     def test_refuses_a_future_date(self) -> None:
         future = datetime.date.today() + datetime.timedelta(days=30)
@@ -211,3 +259,30 @@ class TestPatchRoute:
 
         assert response.status_code == 422
         assert response.json()["detail"] == LAND_VALUE_OVER_PRICE
+
+
+class TestPostRoute:
+    @staticmethod
+    def _post(body: dict) -> tuple[int, dict | None]:
+        ctx = RequestContext(organization_id=uuid.uuid4(), user_id=uuid.uuid4(), org_role=OrgRole.OWNER)
+        app.dependency_overrides[require_write_access] = lambda: ctx
+        try:
+            with patch("app.api.properties.property_service.create_property") as create:
+                create.side_effect = ValueError("stop")
+                response = TestClient(app).post("/properties", json=body)
+                sent = create.call_args.args if create.called else None
+        finally:
+            app.dependency_overrides.clear()
+        return response.status_code, sent
+
+    def test_the_price_is_handed_to_the_service(self) -> None:
+        _, sent = self._post({"name": "A", "address": "B", "purchase_price": "250000.00"})
+
+        assert sent is not None
+        assert sent[-1] == Decimal("250000.00")
+
+    def test_a_non_numeric_price_is_refused_with_a_422(self) -> None:
+        status, sent = self._post({"name": "A", "address": "B", "purchase_price": "lots"})
+
+        assert status == 422
+        assert sent is None

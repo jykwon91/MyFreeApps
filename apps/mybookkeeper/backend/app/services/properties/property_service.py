@@ -1,5 +1,6 @@
 import logging
 import uuid
+from decimal import Decimal
 
 from app.core.context import RequestContext
 from app.core.depreciation_input_constants import (
@@ -40,6 +41,7 @@ async def create_property(
     address: str,
     classification: PropertyClassification = PropertyClassification.UNCLASSIFIED,
     type: PropertyType | None = None,
+    purchase_price: Decimal | None = None,
 ) -> Property:
     async with unit_of_work() as db:
         existing = await property_repo.get_by_name(db, ctx.organization_id, name)
@@ -53,6 +55,7 @@ async def create_property(
             address=address,
             classification=classification,
             type=type,
+            purchase_price=purchase_price,
         )
         activity_type, tax_form = CLASSIFICATION_TO_ACTIVITY.get(
             classification.value, ("unclassified", "schedule_e"),

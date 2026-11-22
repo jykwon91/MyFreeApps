@@ -27,6 +27,7 @@ async def create_property(
     try:
         return await property_service.create_property(
             ctx, data.name, data.address, data.classification, data.type,
+            data.purchase_price,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
