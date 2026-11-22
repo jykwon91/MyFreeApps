@@ -40,6 +40,14 @@ class Company(Base):
     external_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     crunchbase_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    # Claim on a research run in flight (Tavily + Claude), so the same company
+    # isn't researched twice at once. Set and cleared in short transactions
+    # (no connection is held during the run); older than
+    # COMPANY_RESEARCH_CLAIM_LEASE it is stale (a crashed run) and can be retaken.
+    research_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

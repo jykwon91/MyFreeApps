@@ -3,13 +3,14 @@ import email as email_lib
 import uuid
 from urllib.parse import quote
 
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.db.session import AsyncSessionLocal
 from app.mappers.document_summary_mapper import to_document_summary
 from app.models.documents.document import Document
+from app.models.integrations.gmail_connection_snapshot import GmailConnectionSnapshot
+from app.models.integrations.integration import Integration
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_list_repo, document_repo, integration_repo
 from app.schemas.documents.document import DocumentRead
@@ -129,41 +130,48 @@ async def get_single_status(ctx: RequestContext, document_id: uuid.UUID) -> dict
 async def get_document_download(
     ctx: RequestContext, document_id: uuid.UUID
 ) -> DownloadResult | None:
-    """Returns DownloadResult or None if not found. Raises ValueError for missing source."""
+    """Returns DownloadResult or None if not found. Raises ValueError for missing source.
+
+    Storage and Gmail are read with the session closed, so no pooled
+    connection waits on them.
+    """
     async with AsyncSessionLocal() as db:
         doc = await document_repo.get_by_id_with_content(db, document_id, ctx.organization_id)
         if not doc:
             return None
+        if doc.file_content and not doc.file_storage_key:
+            media_type = servable_document_mime_type(doc.file_mime_type)
+            return _download_result(doc.file_content, media_type, doc.file_name or "file")
+        gmail = None
         if not doc.file_storage_key:
-            return await _download_from_row_or_email(db, ctx, doc)
-        storage_key, mime_type, file_name = doc.file_storage_key, doc.file_mime_type, doc.file_name
+            if not doc.email_message_id:
+                raise ValueError("No source file available for this document")
+            gmail = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
+            if not gmail:
+                raise ValueError("Gmail integration not connected")
 
-    # Read with the session closed, so no pooled connection waits on storage.
-    file_bytes = await load_stored_file(get_storage(), storage_key)
-    return _download_result(file_bytes, servable_document_mime_type(mime_type), file_name or "file")
+    if gmail is not None:
+        return await _download_from_gmail(doc, gmail)
+    file_bytes = await load_stored_file(get_storage(), doc.file_storage_key)
+    return _download_result(file_bytes, servable_document_mime_type(doc.file_mime_type), doc.file_name or "file")
 
 
-async def _download_from_row_or_email(
-    db: AsyncSession, ctx: RequestContext, doc: Document,
-) -> DownloadResult:
-    """A document kept in its row, or one still in the user's Gmail."""
-    if doc.file_content:
-        media_type = servable_document_mime_type(doc.file_mime_type)
-        return _download_result(doc.file_content, media_type, doc.file_name or "file")
+async def _download_from_gmail(doc: Document, gmail: Integration) -> DownloadResult:
+    """A document still in the user's Gmail.
 
-    if not doc.email_message_id:
-        raise ValueError("No source file available for this document")
-
-    integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
-    if not integration:
-        raise ValueError("Gmail integration not connected")
-
-    service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+    A token Google refreshed during the fetch is saved in a transaction of its
+    own, and only if Gmail wasn't reconnected meanwhile, whether or not the
+    fetch then found the email.
+    """
+    connection = GmailConnectionSnapshot.of(gmail)
+    service, creds = get_gmail_service(gmail.access_token, gmail.refresh_token)
     prior_token = creds.token
-    email_data = await asyncio.to_thread(fetch_email_by_id, service, doc.email_message_id)
+    try:
+        email_data = await asyncio.to_thread(fetch_email_by_id, service, doc.email_message_id)
+    finally:
+        await persist_refreshed_token(connection, creds, prior_token)
     if not email_data:
         raise ValueError("Email no longer available in Gmail")
-    await persist_refreshed_token(integration, creds, prior_token)
 
     attachments = email_data.get("attachments", [])
     if attachments:

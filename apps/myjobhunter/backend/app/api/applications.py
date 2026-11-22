@@ -31,7 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.ai_failure_http import ai_failure_http_exception
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, released_active_user
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -127,7 +127,7 @@ async def get_application(
 @router.post("/applications/parse-jd", response_model=JdParseResponse, status_code=200)
 async def parse_job_description(
     payload: JdParseRequest,
-    user: User = Depends(current_active_user),
+    user: User = Depends(released_active_user),
 ) -> JdParseResponse:
     """Extract structured fields from a pasted job description using Claude.
 
@@ -162,7 +162,7 @@ async def parse_job_description(
 )
 async def extract_from_url_endpoint(
     payload: JdUrlExtractRequest,
-    user: User = Depends(current_active_user),
+    user: User = Depends(released_active_user),
 ) -> JdUrlExtractResponse:
     """Fetch a job-posting URL and extract structured fields from it.
 

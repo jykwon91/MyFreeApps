@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import Depends, Header, HTTPException
 
+from platform_shared.auth.released_current_user import released_current_user
 from platform_shared.core.permissions import (
     make_current_superuser,
     make_decode_token_auth_time,
@@ -13,7 +14,7 @@ from app.core.auth import current_active_user, get_user_manager
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, get_db
-from app.models.organization.organization_member import OrgRole, OrganizationMember
+from app.models.organization.organization_member import OrgRole
 from app.models.user.user import Role, User
 from app.repositories import organization_repo
 from app.repositories.demo import demo_repo
@@ -48,8 +49,15 @@ current_strict_superuser = make_strict_superuser_gate(
 )
 
 
+# The signed-in user, with the request session's connection handed back
+# before the route runs. Org routes read and write through their services' own
+# short transactions, so the user lookup's transaction would otherwise sit open
+# for the whole request, including any wait on storage or an outside API.
+_released_active_user = released_current_user(current_active_user, get_db)
+
+
 async def current_org_member(
-    user: User = Depends(current_active_user),
+    user: User = Depends(_released_active_user),
     x_organization_id: str | None = Header(None),
 ) -> RequestContext:
     """Resolve the active organization for the current request.

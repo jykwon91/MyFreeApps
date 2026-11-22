@@ -6,16 +6,16 @@ Pipeline (one Claude call, two DB reads, one DB write):
    extract via the existing :func:`jd_url_extractor.extract_from_url`.
    If it has ``jd_text``, use that verbatim.
 2. Load the operator's profile snapshot — Profile, Skill rows, top
-   N WorkHistory rows, and Education rows. The snapshot is bounded
-   in size so the prompt stays under Claude's input window even for
-   operators with 20+ skills and 10+ jobs of history.
+   N WorkHistory rows, and Education rows — in a short transaction that
+   closes before Claude is called, so no pooled connection waits on it.
+   The snapshot is bounded so the prompt stays under Claude's input window.
 3. Build the analysis prompt user-content (a JSON-shaped envelope of
    profile + jd_text) and call ``claude_service.call_claude_with_meta``
    so the per-call token / cost meta lands on the JobAnalysis row.
 4. Validate the Claude response: every dimension status must be in
    the dimension's enum, the verdict must be one of the four legal
    values, the dimensions array must contain the five expected keys.
-5. Persist the JobAnalysis row, commit, return.
+5. Persist the JobAnalysis row in a new transaction, commit, return.
 
 Tenant isolation
 ================
@@ -32,9 +32,9 @@ session pattern.
 
 Module layout
 =============
-This module owns: ``analyze``, ``score``, ``get_analysis``,
-``soft_delete_analysis``, and all response-validation / prompt-building
-helpers.
+This module owns: ``analyze``, ``score``, ``score_discovered_job``,
+``get_analysis``, ``soft_delete_analysis`` and the envelope validation.
+Field-level reply normalisation lives in :mod:`analysis_reply_fields`.
 
 Promote logic (creating an Application from a JobAnalysis) lives in the
 sibling :mod:`job_analysis_promote_service`. ``apply_to_application`` is
@@ -54,7 +54,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.loggable_url import loggable_url
 from app.db.session import unit_of_work
-from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.repositories.discovery import discovery_repository
 from app.repositories.job_analysis import job_analysis_repository
@@ -68,13 +67,11 @@ from app.services.extraction.jd_url_extractor import (
     extract_from_url,
 )
 from app.services.extraction.prompts.job_analysis_prompt import JOB_ANALYSIS_PROMPT
-from app.services.job_analysis._job_analysis_utils import (
-    _SALARY_PERIOD_MAP,
-    _VALID_REMOTE_TYPE,
-    _map_salary_period,
-    _safe_float,
-    _safe_remote_type,
-    _str_or_none,
+from app.services.job_analysis._job_analysis_utils import _str_or_none
+from app.services.job_analysis.analysis_reply_fields import (
+    flag_list,
+    validate_dimensions,
+    validate_extracted,
 )
 from app.services.job_analysis.extracted_jd_text import join_extracted_text
 # Profile-snapshot construction lives in a sibling module (no-growth split).
@@ -99,6 +96,7 @@ __all__ = [
     # Core analyze / score surface
     "analyze",
     "score",
+    "score_discovered_job",
     "get_analysis",
     "soft_delete_analysis",
     # Re-exported from promote module for backward compat
@@ -174,34 +172,6 @@ _VERDICTS: frozenset[str] = frozenset(
     ("strong_fit", "worth_considering", "stretch", "mismatch"),
 )
 
-_DIMENSION_KEYS: tuple[str, ...] = (
-    "skill_match",
-    "seniority",
-    "salary",
-    "location_remote",
-    "work_auth",
-)
-
-_DIMENSION_STATUS: dict[str, frozenset[str]] = {
-    "skill_match": frozenset(("strong", "partial", "gap", "unclear")),
-    "seniority": frozenset(("aligned", "below", "above", "unclear")),
-    "salary": frozenset(
-        ("above_target", "in_range", "below_target", "not_disclosed", "no_target"),
-    ),
-    "location_remote": frozenset(
-        ("compatible", "stretch", "incompatible", "unclear"),
-    ),
-    "work_auth": frozenset(("compatible", "blocker", "unclear")),
-}
-
-# Cap red/green flag list lengths server-side too — defensive against
-# prompt-injection that inflates the array beyond what the UI handles.
-_MAX_FLAGS = 5
-
-# Cap rationale length per dimension. The model is asked for 1-2
-# sentences; cap at 600 chars to keep payload size predictable.
-_MAX_RATIONALE_CHARS = 600
-
 
 # ---------------------------------------------------------------------------
 # Public entry points
@@ -270,65 +240,104 @@ async def analyze(
         source_url = None
         resolved_jd_text = jd_text.strip()
 
-    async with unit_of_work() as db:
-        return await score(
-            db,
-            user_id,
-            jd_text=resolved_jd_text,
-            source_url=source_url,
-        )
+    return await score(user_id, jd_text=resolved_jd_text, source_url=source_url)
 
 
 async def score(
-    db: AsyncSession,
     user_id: uuid.UUID,
     *,
     jd_text: str,
     source_url: str | None = None,
     extracted_hint: dict | None = None,
-    discovered_job_id: uuid.UUID | None = None,
-    discovered_job: DiscoveredJob | None = None,
 ) -> JobAnalysis:
-    """Score pre-resolved JD text against ``user_id``'s profile.
+    """Score pre-resolved JD text against ``user_id``'s profile and save the analysis.
 
-    Pure JD-text-in, JobAnalysis-out: no URL fetching, no extra IO. Both
-    :func:`analyze` (paste-URL flow) and the discovery score worker call
-    this function so the scoring rubric, validation, and persistence
-    shape stay consistent across surfaces. The caller's ``unit_of_work`` commits.
+    Pure JD-text-in, JobAnalysis-out: no URL fetching. :func:`analyze` and
+    :func:`score_discovered_job` share :func:`_build_analysis`, so the rubric,
+    validation and persisted shape stay the same across surfaces.
+
+    No database connection is held while Claude runs: the profile is read in
+    a short transaction that closes first, and the row is saved in a new one.
 
     Args:
         jd_text: The full JD text body. Must be non-empty after stripping.
         source_url: Optional canonical URL the JD came from. Used for the
             fingerprint and persisted on the JobAnalysis row.
         extracted_hint: Optional pre-extracted fields the caller already
-            knows (title, company, location, salary, etc.) — Claude's
-            ``extracted`` block is merged with this hint, hint values
-            overriding for the fields it provides. The discovery worker
-            uses this so we don't pay Claude to re-extract structural
-            fields the source API already returned.
-        discovered_job_id: Optional FK back to the discovered_jobs row
-            this scoring run was triggered for. Stored as ``context_id``
-            on the extraction_log entry so per-feature cost rollups can
-            join.
-        discovered_job: Optional ORM row for the same discovered_jobs
-            posting. When provided, ``score``, ``score_reason``, and
-            ``scored_at`` are written to the row within the same
-            transaction that persists the JobAnalysis — collapsing
-            what was previously two separate transactions into one so a
-            crash between them cannot leave ``discovered_job.score`` NULL
-            while the JobAnalysis + cost record already exist.
+            knows (title, company, location...). Hint values override
+            Claude's ``extracted`` block for the fields they provide, so we
+            don't pay Claude to re-extract what the source API returned.
 
     Raises:
         JobAnalysisError: Claude failed, returned malformed JSON, or
             returned an envelope that didn't pass validation.
     """
+    analysis = await _build_analysis(
+        user_id, jd_text=jd_text, source_url=source_url, extracted_hint=extracted_hint,
+    )
+    async with unit_of_work() as db:
+        return await job_analysis_repository.create(db, analysis)
+
+
+async def score_discovered_job(
+    user_id: uuid.UUID,
+    discovered_job_id: uuid.UUID,
+    *,
+    jd_text: str,
+    source_url: str | None,
+    extracted_hint: dict | None,
+) -> JobAnalysis | None:
+    """Score a discovered posting, saving the analysis and the posting's score in one commit.
+
+    The posting is re-read, locked, after Claude answers. ``None`` (nothing
+    saved) when it was removed meanwhile or another pass already scored it, so
+    a posting never gets two analyses. The Claude call itself is logged against
+    ``discovered_job_id`` in ``extraction_logs`` either way.
+
+    Raises:
+        JobAnalysisError: as :func:`score`.
+    """
+    analysis = await _build_analysis(
+        user_id,
+        jd_text=jd_text,
+        source_url=source_url,
+        extracted_hint=extracted_hint,
+        context_id=discovered_job_id,
+    )
+    async with unit_of_work() as db:
+        job = await discovery_repository.get_discovered(
+            db, discovered_job_id, user_id, for_update=True,
+        )
+        if job is None or job.score is not None:
+            logger.info(
+                "Discovered job removed or already scored while Claude ran; not saved: job=%s",
+                discovered_job_id,
+            )
+            return None
+        saved = await job_analysis_repository.create(db, analysis)
+        await discovery_repository.record_score(
+            db, job, score=_verdict_to_score(saved.verdict), score_reason=saved.verdict_summary,
+        )
+        return saved
+
+
+async def _build_analysis(
+    user_id: uuid.UUID,
+    *,
+    jd_text: str,
+    source_url: str | None,
+    extracted_hint: dict | None,
+    context_id: uuid.UUID | None = None,
+) -> JobAnalysis:
+    """Run the Claude analysis and return the (unsaved) row, with no session open during the call."""
     cleaned_jd = jd_text.strip() if jd_text else ""
     if not cleaned_jd:
         raise JobAnalysisError(
             "score() requires non-empty jd_text",
         )
 
-    snapshot = await _load_profile_snapshot(db, user_id)
+    async with unit_of_work() as db:
+        snapshot = await _load_profile_snapshot(db, user_id)
 
     user_content = _build_user_content(snapshot=snapshot, jd_text=cleaned_jd)
     try:
@@ -337,7 +346,7 @@ async def score(
             user_content=user_content,
             context_type="job_analysis",
             user_id=user_id,
-            context_id=discovered_job_id,
+            context_id=context_id,
         )
     except ExtractionError as exc:
         wrapped = JobAnalysisError.from_ai_failure(exc.kind, exc.error_type)
@@ -363,15 +372,11 @@ async def score(
                 merged[key] = value
         validated["extracted"] = merged
 
-    fingerprint = _compute_fingerprint(
-        source_url=source_url, jd_text=cleaned_jd,
-    )
-
-    analysis = JobAnalysis(
+    return JobAnalysis(
         user_id=user_id,
         source_url=source_url,
         jd_text=cleaned_jd,
-        fingerprint=fingerprint,
+        fingerprint=_compute_fingerprint(source_url=source_url, jd_text=cleaned_jd),
         extracted=validated["extracted"],
         verdict=validated["verdict"],
         verdict_summary=validated["verdict_summary"],
@@ -382,21 +387,6 @@ async def score(
         total_tokens_out=meta["output_tokens"],
         total_cost_usd=meta["cost_usd"],
     )
-    analysis = await job_analysis_repository.create(db, analysis)
-
-    # If the caller provided the DiscoveredJob row, mutate it here so the
-    # score pointer and the JobAnalysis row land in a single commit. Without
-    # this, a crash between the two formerly separate commits left
-    # discovered_job.score = NULL while the JobAnalysis + cost record
-    # already existed, causing the next refresh to re-pay for scoring.
-    if discovered_job is not None:
-        await discovery_repository.record_score(
-            db,
-            discovered_job,
-            score=_verdict_to_score(validated["verdict"]),
-            score_reason=validated["verdict_summary"],
-        )
-    return analysis
 
 
 async def get_analysis(
@@ -458,11 +448,11 @@ def _validate_response(raw: Any) -> dict:
     if not verdict_summary:
         raise JobAnalysisError("Claude returned an empty verdict_summary")
 
-    extracted = _validate_extracted(raw.get("extracted"))
-    dimensions = _validate_dimensions(raw.get("dimensions"))
+    extracted = validate_extracted(raw.get("extracted"))
+    dimensions = validate_dimensions(raw.get("dimensions"))
 
-    red_flags = _flag_list(raw.get("red_flags"))
-    green_flags = _flag_list(raw.get("green_flags"))
+    red_flags = flag_list(raw.get("red_flags"))
+    green_flags = flag_list(raw.get("green_flags"))
 
     return {
         "verdict": verdict,
@@ -473,112 +463,6 @@ def _validate_response(raw: Any) -> dict:
         "green_flags": green_flags,
     }
 
-
-def _validate_extracted(raw: Any) -> dict:
-    """Coerce the extracted block to the JobAnalysisExtracted shape."""
-    if not isinstance(raw, dict):
-        return {
-            "title": None,
-            "company": None,
-            "location": None,
-            "remote_type": None,
-            "posted_salary_min": None,
-            "posted_salary_max": None,
-            "posted_salary_currency": None,
-            "posted_salary_period": None,
-            "summary": None,
-        }
-    remote = _str_or_none(raw.get("remote_type"))
-    if remote not in _VALID_REMOTE_TYPE:
-        remote = None
-    period = _str_or_none(raw.get("posted_salary_period"))
-    if period not in _SALARY_PERIOD_MAP:
-        period = None
-    currency = _str_or_none(raw.get("posted_salary_currency"))
-    if currency:
-        currency = currency[:3].upper()
-    return {
-        "title": _str_or_none(raw.get("title")),
-        "company": _str_or_none(raw.get("company")),
-        "location": _str_or_none(raw.get("location")),
-        "remote_type": remote,
-        "posted_salary_min": _safe_float(raw.get("posted_salary_min")),
-        "posted_salary_max": _safe_float(raw.get("posted_salary_max")),
-        "posted_salary_currency": currency,
-        "posted_salary_period": period,
-        "summary": _str_or_none(raw.get("summary")),
-    }
-
-
-def _validate_dimensions(raw: Any) -> list[dict]:
-    """Validate the dimensions array against the fixed key order.
-
-    Builds a key→row map from whatever Claude returned, then emits one
-    row per expected key in the canonical order. Missing keys produce
-    a row with status='unclear' and a generic rationale.
-    """
-    found: dict[str, dict] = {}
-    if isinstance(raw, list):
-        for item in raw:
-            if not isinstance(item, dict):
-                continue
-            key = _str_or_none(item.get("key"))
-            if key in _DIMENSION_STATUS:
-                status_raw = _str_or_none(item.get("status"))
-                rationale = _str_or_none(item.get("rationale")) or ""
-                if rationale and len(rationale) > _MAX_RATIONALE_CHARS:
-                    rationale = rationale[: _MAX_RATIONALE_CHARS - 1] + "…"
-                allowed = _DIMENSION_STATUS[key]
-                if status_raw not in allowed:
-                    status_raw = _fallback_status_for(key)
-                found[key] = {
-                    "key": key,
-                    "status": status_raw,
-                    "rationale": rationale,
-                }
-
-    out: list[dict] = []
-    for key in _DIMENSION_KEYS:
-        row = found.get(key)
-        if row is None:
-            out.append(
-                {
-                    "key": key,
-                    "status": _fallback_status_for(key),
-                    "rationale": (
-                        "Insufficient signal in the JD or profile to assess this dimension."
-                    ),
-                }
-            )
-        else:
-            out.append(row)
-    return out
-
-
-def _fallback_status_for(key: str) -> str:
-    """Return the safest 'no signal' status for a given dimension."""
-    if key == "salary":
-        return "not_disclosed"
-    return "unclear"
-
-
-def _flag_list(raw: Any) -> list[str]:
-    """Coerce a value to a bounded list of short strings."""
-    if not isinstance(raw, list):
-        return []
-    out: list[str] = []
-    for item in raw:
-        if not isinstance(item, str):
-            continue
-        cleaned = item.strip()
-        if not cleaned:
-            continue
-        if len(cleaned) > 200:
-            cleaned = cleaned[:199] + "…"
-        out.append(cleaned)
-        if len(out) >= _MAX_FLAGS:
-            break
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -613,7 +497,3 @@ def _verdict_to_score(verdict: str) -> int:
         "stretch": 40,
         "mismatch": 15,
     }.get(verdict, 50)
-
-
-# _str_or_none, _safe_float, _safe_remote_type, _map_salary_period
-# are imported from _job_analysis_utils at the top of this module.

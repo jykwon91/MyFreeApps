@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import or_, select, text, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.jobs.resume_upload_job import ResumeUploadJob
@@ -66,6 +66,32 @@ async def get_by_id_for_user(
             ResumeUploadJob.id == job_id,
             ResumeUploadJob.user_id == user_id,
         )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_claimed_for_update(
+    db: AsyncSession,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    started_at: datetime,
+) -> ResumeUploadJob | None:
+    """The job, locked until commit, if it is still ``processing`` under the claim made at ``started_at``.
+
+    None when the job is gone, or was finished, failed or re-claimed while
+    the worker waited on Claude.
+    """
+    result = await db.execute(
+        select(ResumeUploadJob)
+        .where(
+            ResumeUploadJob.id == job_id,
+            ResumeUploadJob.user_id == user_id,
+            ResumeUploadJob.status == "processing",
+            ResumeUploadJob.started_at == started_at,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
 

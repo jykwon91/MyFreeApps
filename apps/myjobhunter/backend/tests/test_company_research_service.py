@@ -13,14 +13,12 @@ Tavily and Claude calls are mocked so no real network calls are made.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_research_repository
 from app.services.company import company_research_service
@@ -71,13 +69,13 @@ MOCK_CLAUDE_RESPONSE = {
 
 
 async def _claim_and_run(
-    db: AsyncSession, *, company_id: uuid.UUID, user_id: uuid.UUID,
+    *, company_id: uuid.UUID, user_id: uuid.UUID,
 ) -> CompanyResearch | None:
     """As the route runs it: claim the company's run, then run it (None for a company that isn't the user's)."""
-    company = await company_research_service.claim_run(db, company_id=company_id, user_id=user_id)
-    if company is None:
+    claim = await company_research_service.claim_run(company_id=company_id, user_id=user_id)
+    if claim is None:
         return None
-    return await company_research_service.run_claimed_research(db, company=company, user_id=user_id)
+    return await company_research_service.run_claimed_research(claim)
 
 
 # ---------------------------------------------------------------------------
@@ -115,11 +113,7 @@ class TestCompanyResearchServiceHappyPath:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            research = await _claim_and_run(
-                db,
-                company_id=company_id,
-                user_id=uuid.UUID(user["id"]),
-            )
+            research = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
 
         assert research is not None
         assert research.overall_sentiment == "positive"
@@ -177,12 +171,8 @@ class TestCompanyResearchServiceHappyPath:
                 new=AsyncMock(side_effect=[first_response, second_response]),
             ),
         ):
-            r1 = await _claim_and_run(
-                db, company_id=company_id, user_id=uuid.UUID(user["id"])
-            )
-            r2 = await _claim_and_run(
-                db, company_id=company_id, user_id=uuid.UUID(user["id"])
-            )
+            r1 = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
+            r2 = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
 
         assert r1 is not None
         assert r2 is not None
@@ -213,11 +203,7 @@ class TestCompanyResearchTenantIsolation:
             assert resp.status_code == 201
             company_id = uuid.UUID(resp.json()["id"])
 
-        result = await _claim_and_run(
-            db,
-            company_id=company_id,
-            user_id=uuid.UUID(attacker["id"]),
-        )
+        result = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(attacker["id"]))
 
         assert result is None
 
@@ -230,11 +216,7 @@ class TestCompanyResearchTenantIsolation:
         """Claiming returns None when company_id doesn't exist."""
         user = await user_factory()
 
-        result = await _claim_and_run(
-            db,
-            company_id=uuid.uuid4(),
-            user_id=uuid.UUID(user["id"]),
-        )
+        result = await _claim_and_run(company_id=uuid.uuid4(), user_id=uuid.UUID(user["id"]))
 
         assert result is None
 
@@ -275,11 +257,7 @@ class TestCompanyResearchServiceErrors:
             ),
         ):
             with pytest.raises(ValueError, match="Claude returned invalid JSON"):
-                await _claim_and_run(
-                    db,
-                    company_id=company_id,
-                    user_id=uuid.UUID(user["id"]),
-                )
+                await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
 
 
 # ---------------------------------------------------------------------------
@@ -601,9 +579,7 @@ class TestResearchSourceDedup:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            r1 = await _claim_and_run(
-                db, company_id=company_id, user_id=uuid.UUID(user["id"])
-            )
+            r1 = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
 
         with (
             patch(
@@ -619,9 +595,7 @@ class TestResearchSourceDedup:
                 new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
             ),
         ):
-            r2 = await _claim_and_run(
-                db, company_id=company_id, user_id=uuid.UUID(user["id"])
-            )
+            r2 = await _claim_and_run(company_id=company_id, user_id=uuid.UUID(user["id"]))
 
         assert r1.id == r2.id
         sources = await company_research_repository.list_sources_for_research(
@@ -658,7 +632,6 @@ class TestCompanyResearchPersonalisation:
     ) -> None:
         from app.models.profile.profile import Profile
         from app.models.profile.skill import Skill
-        from datetime import date
 
         user = await user_factory()
         user_id = uuid.UUID(user["id"])
@@ -702,9 +675,7 @@ class TestCompanyResearchPersonalisation:
                 new=AsyncMock(side_effect=_fake_call_claude),
             ),
         ):
-            await _claim_and_run(
-                db, company_id=company_id, user_id=user_id
-            )
+            await _claim_and_run(company_id=company_id, user_id=user_id)
 
         # The user's resume summary + skill should appear in the
         # context Claude sees.
@@ -750,8 +721,6 @@ class TestCompanyResearchPersonalisation:
                 new=AsyncMock(side_effect=_fake_call_claude),
             ),
         ):
-            await _claim_and_run(
-                db, company_id=company_id, user_id=user_id
-            )
+            await _claim_and_run(company_id=company_id, user_id=user_id)
 
         assert "no resume content uploaded" in captured["user_content"]

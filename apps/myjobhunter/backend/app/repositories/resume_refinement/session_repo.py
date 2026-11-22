@@ -154,18 +154,16 @@ async def update_critique(
     tokens_in: int,
     tokens_out: int,
     cost_usd: Decimal,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
-    """Persist the initial critique pass output."""
+    """Persist the initial critique pass output. ``commit=False`` only stages it."""
     session.improvement_targets = improvement_targets
     session.target_index = 0
     session.turn_count += 1
     session.total_tokens_in += tokens_in
     session.total_tokens_out += tokens_out
     session.total_cost_usd = (session.total_cost_usd or Decimal("0")) + cost_usd
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def update_pending_proposal(
@@ -181,13 +179,14 @@ async def update_pending_proposal(
     cost_usd: Decimal,
     guard_flagged: list[str] | None = None,
     flagged_proposal: str | None = None,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
     """Set the pending AI proposal on the session and bump counters.
 
     ``guard_flagged`` / ``flagged_proposal`` carry the hallucination-guard
     state when the proposal was downgraded to a clarify — kept so a
     clarify answer can confirm the phrases and "Use it anyway" can apply
-    the held text.
+    the held text. ``commit=False`` only stages the write.
     """
     session.pending_target_section = target_section
     session.pending_proposal = proposal
@@ -199,10 +198,7 @@ async def update_pending_proposal(
     session.total_tokens_in += tokens_in
     session.total_tokens_out += tokens_out
     session.total_cost_usd = (session.total_cost_usd or Decimal("0")) + cost_usd
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def apply_user_resolution(
@@ -440,16 +436,14 @@ async def increment_guard_flag_count(
     session: ResumeRefinementSession,
     *,
     target_index: int,
+    commit: bool = True,
 ) -> ResumeRefinementSession:
-    """Bump the per-target hallucination-guard flag counter."""
+    """Bump the per-target hallucination-guard flag counter. ``commit=False`` only stages it."""
     counts = dict(session.guard_flag_counts or {})
     key = str(target_index)
     counts[key] = int(counts.get(key, 0)) + 1
     session.guard_flag_counts = counts
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await _write(db, session, commit=commit)
 
 
 async def mark_abandoned(

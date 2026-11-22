@@ -428,6 +428,80 @@ class TestClaudeDegradation:
         assert result.spam_status == "clean"
 
 
+class TestInquiryChangedWhileScored:
+    """The inquiry is committed before the Claude call, so the operator can act
+    on it while it is scored. The result must not undo what they did."""
+
+    @staticmethod
+    async def _submit_while(db: AsyncSession, change, scoring) -> object:
+        async def _score(**_: object):
+            inquiry = (await db.execute(select(Inquiry))).scalar_one()
+            await change(inquiry)
+            await db.commit()
+            return scoring
+
+        with patch.object(inquiry_spam_scorer, "score_inquiry", side_effect=_score):
+            return await public_inquiry_service.submit_public_inquiry(
+                payload=_payload(),
+                client_ip="1.2.3.4",
+                user_agent="Mozilla/5.0",
+                turnstile_passed=True,
+                rate_limited=False,
+            )
+
+    @staticmethod
+    async def _claude_rows(db: AsyncSession) -> list[InquirySpamAssessment]:
+        result = await db.execute(
+            select(InquirySpamAssessment).where(InquirySpamAssessment.assessment_type == "claude_score"),
+        )
+        return list(result.scalars())
+
+    @pytest.mark.asyncio
+    async def test_deleted_inquiry_gets_no_assessment_and_no_notification(
+        self, db: AsyncSession, test_listing: Listing, patch_session,
+    ) -> None:
+        async def _delete(inquiry: Inquiry) -> None:
+            inquiry.deleted_at = _dt.datetime.now(_dt.timezone.utc)
+
+        result = await self._submit_while(db, _delete, _clean_claude_result())
+
+        assert result.outcome == PublicInquiryOutcome.SUCCESS
+        assert result.notify_operator is False
+        assert await self._claude_rows(db) == []
+
+    @pytest.mark.asyncio
+    async def test_operator_triage_is_kept_and_the_score_still_recorded(
+        self, db: AsyncSession, test_listing: Listing, patch_session,
+    ) -> None:
+        async def _mark_spam(inquiry: Inquiry) -> None:
+            inquiry.spam_status = "spam"
+
+        result = await self._submit_while(db, _mark_spam, _clean_claude_result())
+
+        assert result.spam_status == "spam"
+        assert result.notify_operator is False
+        inquiry = (await db.execute(select(Inquiry))).scalar_one()
+        await db.refresh(inquiry)
+        assert inquiry.spam_status == "spam"
+        assert inquiry.spam_score is None
+        assert [row.score for row in await self._claude_rows(db)] == [85.0]
+
+    @pytest.mark.asyncio
+    async def test_operator_triage_is_kept_when_scoring_failed(
+        self, db: AsyncSession, test_listing: Listing, patch_session,
+    ) -> None:
+        async def _clear(inquiry: Inquiry) -> None:
+            inquiry.spam_status = "manually_cleared"
+
+        degraded = ClaudeScoringDegraded(
+            error_type="overloaded_error", status=529, raw_prompt="prompt", raw_response=None,
+        )
+        result = await self._submit_while(db, _clear, degraded)
+
+        assert result.spam_status == "manually_cleared"
+        assert result.notify_operator is False
+
+
 class TestSubmitTiming:
     @pytest.mark.asyncio
     async def test_fast_submit_flagged_but_processed(

@@ -32,6 +32,8 @@ import pytest
 from app.services.resume_refinement import session_service
 from app.services.resume_refinement import session_turn_service
 
+from tests.refinement_session_rereads import mock_db, rereads
+
 
 def _fake_session(
     *,
@@ -49,6 +51,7 @@ def _fake_session(
     s = MagicMock(spec=[])
     s.id = uuid.uuid4()
     s.user_id = uuid.uuid4()
+    s.status = "active"
     s.improvement_targets = targets or []
     s.target_index = target_index
     s.current_draft = "## Resume\n- bullet 1"
@@ -65,6 +68,7 @@ def _fake_session(
     s.total_tokens_out = 0
     s.total_cost_usd = Decimal("0")
     s.turn_count = 0
+    s.preparation_started_at = None
     return s
 
 
@@ -239,7 +243,7 @@ async def test_prefetch_writes_each_target_to_cache() -> None:
     """
     targets = [_target(f"section-{i}") for i in range(3)]
     session = _fake_session(targets=targets)
-    db = MagicMock()
+    db = mock_db()
 
     rewrite_mock = AsyncMock(
         side_effect=[
@@ -253,11 +257,9 @@ async def test_prefetch_writes_each_target_to_cache() -> None:
         cache_calls.append(target_index)
         return sess
 
-    db.flush = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
 
     with (
+        rereads(session),
         patch.object(session_service.rewrite_service, "run_rewrite", new=rewrite_mock),
         patch.object(
             session_service.session_repo,
@@ -289,7 +291,7 @@ async def test_prefetch_one_target_failure_does_not_block_others() -> None:
     """
     targets = [_target(f"section-{i}") for i in range(3)]
     session = _fake_session(targets=targets)
-    db = MagicMock()
+    db = mock_db()
 
     async def flaky_rewrite(*args, **kwargs):
         target = kwargs.get("target", {})
@@ -303,11 +305,9 @@ async def test_prefetch_one_target_failure_does_not_block_others() -> None:
         cache_calls.append(target_index)
         return sess
 
-    db.flush = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
 
     with (
+        rereads(session),
         patch.object(
             session_service.rewrite_service,
             "run_rewrite",
@@ -343,10 +343,7 @@ async def test_prefetch_caps_in_flight_claude_calls() -> None:
     """
     targets = [_target(f"section-{i}") for i in range(10)]
     session = _fake_session(targets=targets)
-    db = MagicMock()
-    db.flush = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
+    db = mock_db()
 
     in_flight = 0
     peak_in_flight = 0
@@ -368,6 +365,7 @@ async def test_prefetch_caps_in_flight_claude_calls() -> None:
         return sess
 
     with (
+        rereads(session),
         patch.object(
             session_service.rewrite_service,
             "run_rewrite",

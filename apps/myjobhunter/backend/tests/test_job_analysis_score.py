@@ -9,8 +9,10 @@ the contract:
 - source_url is optional and persisted on the row
 - extracted_hint merges over Claude's ``extracted`` block (hint wins
   for fields it provides; Claude wins for fields the hint omits)
-- discovered_job_id is passed through to the extraction_log via
-  ``context_id``
+- score_discovered_job logs the Claude call against the posting
+  (``context_id``) and saves the analysis + the posting's score together
+- no database connection is held while Claude runs, and a posting removed
+  or scored by another pass meanwhile gets nothing saved
 
 The existing ``test_job_analysis_service.py`` continues to cover
 ``analyze()`` end-to-end.
@@ -21,14 +23,17 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import engine as app_engine
+from app.db.session import unit_of_work
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
-from app.services.job_analysis import job_analysis_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
     score,
+    score_discovered_job,
 )
 
 
@@ -82,7 +87,6 @@ async def test_score_persists_row_with_jd_text_only(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await score(
-            db,
             user_id,
             jd_text="Senior Backend Engineer at Acme. Python required.",
         )
@@ -103,7 +107,6 @@ async def test_score_persists_source_url_when_provided(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await score(
-            db,
             user_id,
             jd_text="Senior Backend Engineer at Acme.",
             source_url="https://www.linkedin.com/jobs/view/123",
@@ -120,10 +123,10 @@ async def test_score_rejects_empty_jd_text(
     user_id = uuid.UUID(user["id"])
 
     with pytest.raises(JobAnalysisError):
-        await score(db, user_id, jd_text="")
+        await score(user_id, jd_text="")
 
     with pytest.raises(JobAnalysisError):
-        await score(db, user_id, jd_text="   ")
+        await score(user_id, jd_text="   ")
 
 
 @pytest.mark.asyncio
@@ -144,7 +147,6 @@ async def test_score_extracted_hint_overrides_claude_for_provided_fields(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await score(
-            db,
             user_id,
             jd_text="Senior Backend Engineer at Acme. Python required.",
             extracted_hint=hint,
@@ -172,7 +174,6 @@ async def test_score_extracted_hint_with_none_values_does_not_override(
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await score(
-            db,
             user_id,
             jd_text="Senior Backend Engineer at Acme.",
             extracted_hint=hint,
@@ -184,30 +185,89 @@ async def test_score_extracted_hint_with_none_values_does_not_override(
     assert result.extracted["company"] == "Stripe"
 
 
+async def _add_discovered_job(db: AsyncSession, user_id: uuid.UUID, ext_id: str) -> DiscoveredJob:
+    job = DiscoveredJob(
+        user_id=user_id,
+        source="jsearch",
+        source_external_id=ext_id,
+        title="Senior Backend Engineer",
+        company_name="Acme",
+        remote_type="remote",
+    )
+    db.add(job)
+    await db.commit()
+    return job
+
+
+async def _analysis_count(db: AsyncSession, user_id: uuid.UUID) -> int:
+    result = await db.execute(
+        select(func.count()).select_from(JobAnalysis).where(JobAnalysis.user_id == user_id),
+    )
+    return int(result.scalar_one())
+
+
+def _claude_seeing_no_open_connection(checks: list[int]) -> AsyncMock:
+    """A fake Claude that records how many app DB connections are checked out."""
+
+    async def _call(**_: object) -> dict:
+        checks.append(app_engine.pool.checkedout())
+        return _meta()
+
+    return AsyncMock(side_effect=_call)
+
+
 @pytest.mark.asyncio
-async def test_score_passes_discovered_job_id_to_extraction_log(
+async def test_score_holds_no_database_connection_while_claude_runs(
     db: AsyncSession, user_factory,
 ) -> None:
-    """The discovery worker passes discovered_job_id; we forward it to
-    the extraction_log via context_id so per-feature cost rollups can
-    join discovered_jobs ↔ extraction_logs."""
+    """The profile read closes before Claude is called; the save opens after."""
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
-    fake_discovered_id = uuid.uuid4()
+    checks: list[int] = []
+
+    with patch(_FAKE_PATH, new=_claude_seeing_no_open_connection(checks)):
+        result = await score(user_id, jd_text="Senior Backend Engineer at Acme.")
+
+    assert checks == [0]
+    assert await _analysis_count(db, user_id) == 1
+    assert result.verdict == "worth_considering"
+
+
+@pytest.mark.asyncio
+async def test_score_discovered_job_holds_no_database_connection_while_claude_runs(
+    db: AsyncSession, user_factory,
+) -> None:
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    job = await _add_discovered_job(db, user_id, "ext-no-conn")
+    checks: list[int] = []
+
+    with patch(_FAKE_PATH, new=_claude_seeing_no_open_connection(checks)):
+        await score_discovered_job(
+            user_id, job.id, jd_text="Senior Backend Engineer.", source_url=None, extracted_hint=None,
+        )
+
+    assert checks == [0]
+
+
+@pytest.mark.asyncio
+async def test_score_discovered_job_logs_claude_call_against_the_posting(
+    db: AsyncSession, user_factory,
+) -> None:
+    """The posting id is the extraction_log ``context_id``, so per-feature
+    cost rollups can join discovered_jobs and extraction_logs."""
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    job = await _add_discovered_job(db, user_id, "ext-context-id")
 
     mock = AsyncMock(return_value=_meta())
     with patch(_FAKE_PATH, new=mock):
-        await score(
-            db,
-            user_id,
-            jd_text="Senior Backend Engineer at Acme.",
-            discovered_job_id=fake_discovered_id,
+        await score_discovered_job(
+            user_id, job.id, jd_text="Senior Backend Engineer.", source_url=None, extracted_hint=None,
         )
 
-    # Verify context_id was forwarded to claude_service.
     assert mock.await_count == 1
-    kwargs = mock.await_args.kwargs
-    assert kwargs["context_id"] == fake_discovered_id
+    assert mock.await_args.kwargs["context_id"] == job.id
 
 
 @pytest.mark.asyncio
@@ -235,65 +295,96 @@ async def test_analyze_text_path_still_works_after_refactor(
 
 
 @pytest.mark.asyncio
-async def test_score_with_discovered_job_sets_score_fields_atomically(
+async def test_score_discovered_job_saves_analysis_and_score_in_one_commit(
     db: AsyncSession, user_factory,
 ) -> None:
-    """score() with discovered_job= writes score, score_reason, and scored_at
-    on the DiscoveredJob in the same commit as the JobAnalysis row.
-
-    This is the single-commit guarantee: before this refactor the worker
-    committed the JobAnalysis first then wrote discovered_job.score in a
-    separate transaction. A process crash between those two commits would
-    leave discovered_job.score = NULL while the cost record already existed,
-    causing a re-bill on the next refresh cycle.
-    """
+    """The analysis row and the posting's score, score_reason and scored_at
+    commit together, so a crash can't leave a paid-for analysis with the
+    posting still unscored (which would re-bill on the next refresh)."""
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
-
-    job = DiscoveredJob(
-        user_id=user_id,
-        source="jsearch",
-        source_external_id="test-ext-id-score-atomic",
-        title="Senior Backend Engineer",
-        company_name="Acme",
-        remote_type="remote",
-    )
-    db.add(job)
-    await db.flush()
+    job = await _add_discovered_job(db, user_id, "test-ext-id-score-atomic")
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
-        analysis = await score(
-            db,
+        analysis = await score_discovered_job(
             user_id,
+            job.id,
             jd_text="Senior Backend Engineer at Acme. Python required.",
-            discovered_job=job,
+            source_url=None,
+            extracted_hint=None,
         )
 
-    assert isinstance(analysis, JobAnalysis)
-    assert analysis.verdict == "worth_considering"
-
-    # The DiscoveredJob must have all three score fields set in the same commit.
-    assert job.score is not None, "discovered_job.score must be set"
-    assert job.score_reason is not None, "discovered_job.score_reason must be set"
-    assert job.scored_at is not None, "discovered_job.scored_at must be set"
-
+    assert analysis is not None
+    await db.refresh(job)
     # verdict → score mapping: "worth_considering" maps to 70.
     assert job.score == 70
     assert job.score_reason == analysis.verdict_summary
+    assert job.scored_at is not None
+    assert await _analysis_count(db, user_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_score_discovered_job_saves_nothing_when_posting_deleted_meanwhile(
+    db: AsyncSession, user_factory,
+) -> None:
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    job = await _add_discovered_job(db, user_id, "ext-deleted-mid-call")
+
+    async def _claude_while_posting_is_deleted(**_: object) -> dict:
+        async with unit_of_work() as other:
+            await other.execute(delete(DiscoveredJob).where(DiscoveredJob.id == job.id))
+        return _meta()
+
+    with patch(_FAKE_PATH, new=AsyncMock(side_effect=_claude_while_posting_is_deleted)):
+        result = await score_discovered_job(
+            user_id, job.id, jd_text="Senior Backend Engineer.", source_url=None, extracted_hint=None,
+        )
+
+    assert result is None
+    assert await _analysis_count(db, user_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_score_discovered_job_keeps_the_first_score_when_another_pass_finished_first(
+    db: AsyncSession, user_factory,
+) -> None:
+    """Two passes scoring the same posting: the second to finish saves nothing."""
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    job = await _add_discovered_job(db, user_id, "ext-scored-mid-call")
+
+    async def _claude_while_another_pass_scores(**_: object) -> dict:
+        async with unit_of_work() as other:
+            await other.execute(
+                update(DiscoveredJob)
+                .where(DiscoveredJob.id == job.id)
+                .values(score=15, score_reason="first pass", scored_at=func.now()),
+            )
+        return _meta()
+
+    with patch(_FAKE_PATH, new=AsyncMock(side_effect=_claude_while_another_pass_scores)):
+        result = await score_discovered_job(
+            user_id, job.id, jd_text="Senior Backend Engineer.", source_url=None, extracted_hint=None,
+        )
+
+    assert result is None
+    await db.refresh(job)
+    assert (job.score, job.score_reason) == (15, "first pass")
+    assert await _analysis_count(db, user_id) == 0
 
 
 @pytest.mark.asyncio
 async def test_score_without_discovered_job_leaves_no_score_fields(
     db: AsyncSession, user_factory,
 ) -> None:
-    """score() called without discovered_job= (the analyze-from-URL / paste-text
-    flow) must NOT touch any DiscoveredJob row — the parameter is opt-in only."""
+    """score() (the analyze-from-URL / paste-text flow) must NOT touch any
+    DiscoveredJob row — only score_discovered_job writes one."""
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
 
     with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
         result = await score(
-            db,
             user_id,
             jd_text="Senior Backend Engineer at Acme.",
         )

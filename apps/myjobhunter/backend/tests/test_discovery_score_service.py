@@ -15,11 +15,9 @@ All tests use the standard conftest DB fixtures.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.services.discovery import discovery_score_service
@@ -56,7 +54,7 @@ def _restore_real_score_user_inbox(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-_SCORE_JD_PATH = "app.services.discovery.discovery_score_service.score_jd"
+_SCORE_JD_PATH = "app.services.discovery.discovery_score_service.score_discovered_job"
 _SPENT_TODAY_PATH = "app.services.discovery.discovery_score_service._spent_today"
 _SESSION_LOCAL_PATH = "app.services.discovery.discovery_score_service.AsyncSessionLocal"
 # PR 4b: the score loop now reads its candidate list from the prefilter
@@ -201,14 +199,12 @@ class TestHappyPath:
         assert mock_score.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_score_jd_receives_discovered_job_kwarg(self) -> None:
-        """score_jd is called with discovered_job= so both writes land in one commit.
+    async def test_scores_each_posting_by_id(self) -> None:
+        """The loop hands over the posting's id, not the row it read earlier.
 
-        Before this refactor, score_jd committed the JobAnalysis first, then
-        the worker wrote discovered_job.score in a second commit. A crash between
-        those two commits left discovered_job.score = NULL while the cost record
-        already existed, causing a re-bill on the next refresh. The fix passes the
-        ORM row into score_jd so the single internal commit covers both writes.
+        ``score_discovered_job`` re-reads and locks the posting after Claude
+        answers, so a row loaded before the call can't be written back stale.
+        The loop's own read session is closed before any scoring starts.
         """
         user_id = uuid.uuid4()
         job = _make_job(user_id)
@@ -220,22 +216,49 @@ class TestHappyPath:
 
         analysis = _make_analysis(cost=0.005)
 
+        async def _score(*args: object, **kwargs: object) -> object:
+            mock_cm.__aexit__.assert_awaited()
+            return analysis
+
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
             patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
-            patch(_SCORE_JD_PATH, new=AsyncMock(return_value=analysis)) as mock_score,
+            patch(_SCORE_JD_PATH, new=AsyncMock(side_effect=_score)) as mock_score,
         ):
             from app.services.discovery import discovery_score_service
             await discovery_score_service.score_user_inbox(user_id, batch=10)
 
         assert mock_score.call_count == 1
-        call_kwargs = mock_score.call_args.kwargs
-        # The worker must pass the ORM row — not just the ID — so score_jd can
-        # mutate it within the same transaction.
-        assert call_kwargs["discovered_job"] is job
-        # The worker must NOT call db.commit() itself; score_jd owns the boundary.
+        assert mock_score.call_args.args == (user_id, job.id)
         mock_db.commit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_posting_changed_while_scoring_is_skipped_not_failed(self) -> None:
+        """A posting removed or scored elsewhere mid-call (None) isn't a failure.
+
+        It must not count toward the circuit breaker, and the loop goes on.
+        """
+        user_id = uuid.uuid4()
+        jobs = [_make_job(user_id) for _ in range(4)]
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=AsyncMock())
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
+            patch(_SCORE_JD_PATH, new=AsyncMock(return_value=None)) as mock_score,
+            patch("app.services.discovery.discovery_score_service.sentry_sdk") as mock_sentry,
+        ):
+            from app.services.discovery import discovery_score_service
+            await discovery_score_service.score_user_inbox(user_id, batch=10)
+
+        assert mock_score.call_count == 4
+        mock_sentry.capture_message.assert_not_called()
+        mock_sentry.capture_exception.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_budget_stops_loop_mid_batch(self) -> None:

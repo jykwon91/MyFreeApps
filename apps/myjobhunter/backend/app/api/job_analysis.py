@@ -26,7 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.ai_failure_http import ai_failure_http_exception
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, released_active_user
 from app.core.job_failure_messages import JOB_ANALYSIS_FAILED_MESSAGE
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
@@ -61,7 +61,7 @@ _ANALYZE_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
 )
 async def analyze_job(
     payload: JobAnalysisRequest,
-    user: User = Depends(current_active_user),
+    user: User = Depends(released_active_user),
 ) -> JobAnalysisResponse:
     """Run a fit analysis for the caller against the supplied job.
 

@@ -134,6 +134,20 @@ async def create(
     return inquiry
 
 
+async def get_for_spam_triage(db: AsyncSession, inquiry_id: uuid.UUID) -> Inquiry | None:
+    """The live (not soft-deleted) inquiry, locked until commit, for the ingest path's final triage.
+
+    Reloaded past the identity map, so a status the operator set meanwhile is seen.
+    """
+    result = await db.execute(
+        select(Inquiry)
+        .where(Inquiry.id == inquiry_id, Inquiry.deleted_at.is_(None))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def update_spam_triage(
     db: AsyncSession,
     inquiry_id: uuid.UUID,

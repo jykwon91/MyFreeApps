@@ -11,6 +11,7 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
+from platform_shared.db.session import release_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume_refinement.session import ResumeRefinementSession
@@ -21,6 +22,8 @@ from app.services.resume_refinement.errors import (
     SessionNotActive,
     SessionNotFound,
 )
+from app.services.resume_refinement.session_claude_window import reload_if_unchanged
+from app.services.resume_refinement.session_position import SessionPosition
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +208,8 @@ async def _generate_next_proposal(
             )
 
     prior_context = _build_prior_context(prior_turns)
+    position = SessionPosition.of(session)
+    await release_connection(db)
 
     try:
         rewrite = await rewrite_service.run_rewrite(
@@ -231,6 +236,14 @@ async def _generate_next_proposal(
         )
         return session
 
+    session, unchanged = await reload_if_unchanged(db, session, position)
+    if not unchanged:
+        # The user acted while Claude worked: this proposal is for a
+        # position the session has left.
+        return session
+
+    # Every write below is staged under the row lock and committed once,
+    # so no other request can act between them.
     flagged = list(rewrite.get("hallucination_flagged") or [])
     session = await session_repo.update_pending_proposal(
         db,
@@ -244,12 +257,13 @@ async def _generate_next_proposal(
         cost_usd=rewrite["cost_usd"],
         guard_flagged=flagged or None,
         flagged_proposal=rewrite["rewritten_text"] if flagged else None,
+        commit=False,
     )
     if flagged:
         # Loop breaker bookkeeping: from the second flag on the same
         # target, the clarify copy + frontend offer "Use it anyway".
         session = await session_repo.increment_guard_flag_count(
-            db, session, target_index=session.target_index,
+            db, session, target_index=session.target_index, commit=False,
         )
 
     ai_turn = await turn_repo.append(
@@ -263,6 +277,7 @@ async def _generate_next_proposal(
         clarifying_question=session.pending_clarifying_question,
         tokens_in=rewrite["input_tokens"],
         tokens_out=rewrite["output_tokens"],
+        commit=False,
     )
 
     # Cache the proposal so navigating back to this target_index later
@@ -270,7 +285,7 @@ async def _generate_next_proposal(
     # asking us to regenerate. Written after the turn so the marker
     # already counts this proposal's own clarify question — otherwise the
     # entry would look stale the moment the user navigated back to it.
-    return await session_repo.cache_proposal(
+    session = await session_repo.cache_proposal(
         db,
         session,
         target_index=session.target_index,
@@ -282,7 +297,9 @@ async def _generate_next_proposal(
         clarifying_question=session.pending_clarifying_question,
         guard_flagged=session.pending_guard_flagged,
         flagged_proposal=session.pending_flagged_proposal,
+        commit=False,
     )
+    return await session_repo.commit_staged(db, session)
 
 
 async def _serve_cached_proposal(
@@ -354,6 +371,8 @@ async def _prefetch_all_proposals(
     # share the same session framing.
     prior_turns = await turn_repo.list_for_session(db, session.id)
     prior_context = _build_prior_context(prior_turns)
+    position = SessionPosition.of(session)
+    await release_connection(db)
 
     async def _one(target_index: int, target: dict[str, Any]) -> dict[str, Any] | None:
         async with semaphore:
@@ -382,11 +401,12 @@ async def _prefetch_all_proposals(
     results = await asyncio.gather(
         *[_one(i, t) for i, t in enumerate(targets)],
     )
+    session, unchanged = await reload_if_unchanged(db, session, position)
+    if not unchanged:
+        return session
 
-    # Sequential DB writes after parallel Claude calls — JSONB column
-    # mutation is not safe across concurrent transactions on the same
-    # row. Each write is fast (single round-trip) so the sequential
-    # cost is negligible.
+    # Every result is staged on the locked, freshly read row and committed
+    # once, so the cache and counters are never written from a stale copy.
     context_marker = _prior_context_marker(prior_turns)
     for entry in results:
         if entry is None:
@@ -423,8 +443,9 @@ async def _prefetch_all_proposals(
             clarifying_question=rewrite["question"] if is_clarify else None,
             guard_flagged=flagged or None,
             flagged_proposal=rewrite["rewritten_text"] if flagged else None,
+            commit=False,
         )
-    return session
+    return await session_repo.commit_staged(db, session)
 
 
 def _apply_rewrite(
