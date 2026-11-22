@@ -41,7 +41,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any, Awaitable, Callable, Optional, Protocol
+from typing import Any, Awaitable, Callable, Optional, Protocol, cast
 
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
@@ -50,6 +50,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.refuse_as_locked import refuse_as_locked
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.core.strict_superuser_gate import StrictSuperuserGate
 from platform_shared.db.session import release_connection
 from platform_shared.services.auth_event_service import log_auth_event
 from platform_shared.services.guard_outcome import GuardOutcome
@@ -261,7 +262,7 @@ def make_strict_superuser_gate(
     verify_totp_step_up: Callable[[AsyncSession, uuid.UUID, str], Awaitable[bool]],
     decode_token_auth_time: Callable[[Request], Optional[float]],
     max_token_age_seconds: int = 900,
-) -> Callable[..., Awaitable[_StrictSuperuserUser]]:
+) -> StrictSuperuserGate:
     """Build a hardened FastAPI dependency for superuser-only routes.
 
     Three independent gates layered for defense-in-depth:
@@ -307,12 +308,20 @@ def make_strict_superuser_gate(
             (15 minutes). Tokens older than this are rejected with 401.
 
     Returns:
-        An async FastAPI dependency that can be used like:
+        An async FastAPI dependency (always enforcing; it has no bypass) that
+        can be used like:
 
         ```
         @router.delete("/admin/dangerous-action", dependencies=[Depends(strict_superuser)])
         async def dangerous_action(...): ...
         ```
+
+        ``gate.when(predicate, after=current_admin)`` builds a sibling
+        dependency for routes that need step-up only for some requests: it
+        runs ``after`` first (so the caller is authorised before anything is
+        looked up), then ``await predicate(request)``; True enforces the full
+        gate, False admits the caller without step-up. A predicate that
+        raises fails the request.
 
     Defense rationale:
         Superuser endpoints can promote/demote any user, wipe data, and
@@ -323,12 +332,12 @@ def make_strict_superuser_gate(
         every attempt.
     """
 
-    async def _check(
+    async def _enforce(
         request: Request,
-        user: _StrictSuperuserUser = Depends(current_active_user),
-        x_totp_code: Optional[str] = Header(default=None, alias="X-TOTP-Code"),
-        db: AsyncSession = Depends(get_db),
-        user_manager: _GuardedUserManager = Depends(get_user_manager),
+        user: _StrictSuperuserUser,
+        x_totp_code: str | None,
+        db: AsyncSession,
+        user_manager: _GuardedUserManager,
     ) -> _StrictSuperuserUser:
         user_id = user.id
 
@@ -400,4 +409,34 @@ def make_strict_superuser_gate(
         await _record(AuthEventType.SUPERUSER_GATE_PASSED, succeeded=True)
         return user
 
-    return _check
+    async def _check(
+        request: Request,
+        user: _StrictSuperuserUser = Depends(current_active_user),
+        x_totp_code: Optional[str] = Header(default=None, alias="X-TOTP-Code"),
+        db: AsyncSession = Depends(get_db),
+        user_manager: _GuardedUserManager = Depends(get_user_manager),
+    ) -> _StrictSuperuserUser:
+        return await _enforce(request, user, x_totp_code, db, user_manager)
+
+    def _when(
+        predicate: Callable[[Request], Awaitable[bool]],
+        *,
+        after: Callable[..., Any],
+    ) -> Callable[..., Awaitable[_StrictSuperuserUser]]:
+        async def _conditional_check(
+            request: Request,
+            _after: Any = Depends(after),
+            user: _StrictSuperuserUser = Depends(current_active_user),
+            x_totp_code: str | None = Header(default=None, alias="X-TOTP-Code"),
+            db: AsyncSession = Depends(get_db),
+            user_manager: _GuardedUserManager = Depends(get_user_manager),
+        ) -> _StrictSuperuserUser:
+            if not await predicate(request):
+                return user
+            return await _enforce(request, user, x_totp_code, db, user_manager)
+
+        return _conditional_check
+
+    gate = cast(StrictSuperuserGate, _check)
+    gate.when = _when
+    return gate

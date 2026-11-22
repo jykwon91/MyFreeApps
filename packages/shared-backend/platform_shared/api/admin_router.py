@@ -6,9 +6,9 @@ dependency, an instantiated ``AdminUserService``, and a
 Routes:
 
     GET    /admin/users                       — list users
-    PATCH  /admin/users/{id}/role             — change role
-    PATCH  /admin/users/{id}/activate         — set is_active=true
-    PATCH  /admin/users/{id}/deactivate       — set is_active=false
+    PATCH  /admin/users/{id}/role             — change role (strict gate if target is a superuser)
+    PATCH  /admin/users/{id}/activate         — set is_active=true (same)
+    PATCH  /admin/users/{id}/deactivate       — set is_active=false (same)
     PATCH  /admin/users/{id}/superuser        — toggle is_superuser (strict gate)
     GET    /admin/stats/users                 — user count summary
 
@@ -35,8 +35,9 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from platform_shared.core.strict_superuser_gate import StrictSuperuserGate
 from platform_shared.schemas.admin_user import (
     AdminUserRead,
     AdminUserRoleUpdate,
@@ -49,7 +50,7 @@ def build_admin_router(
     *,
     service: AdminUserService,
     current_admin: Callable[..., Any],
-    current_strict_superuser: Callable[..., Any],
+    current_strict_superuser: StrictSuperuserGate,
     response_model: type[Any] = AdminUserRead,
 ) -> APIRouter:
     """Construct the shared admin router.
@@ -60,12 +61,13 @@ def build_admin_router(
         current_admin: The app's FastAPI dependency that yields a User
             after gating on ``Role.ADMIN`` / ``is_superuser``. Each app
             builds its own. Used for read endpoints and routine admin
-            mutations (role / activate / deactivate).
+            mutations (role / activate / deactivate) on non-superusers.
         current_strict_superuser: The app's FastAPI dependency built by
             ``make_strict_superuser_gate`` — yields a User after passing
             the three-gate strict check (is_superuser + recent auth_time +
             X-TOTP-Code header). Used for the highest-risk endpoints
-            (superuser toggle today, more in PR F2). REQUIRED — the
+            (superuser toggle, and role / activate / deactivate when the
+            target is a superuser). REQUIRED — the
             router refuses to flip ``is_superuser`` without it.
         response_model: Optional override for the user response schema.
             Defaults to ``AdminUserRead``. Apps that want to return
@@ -78,6 +80,24 @@ def build_admin_router(
     """
     router = APIRouter(prefix="/admin", tags=["admin"])
 
+    async def _target_is_superuser(request: Request) -> bool:
+        try:
+            user_id = uuid.UUID(str(request.path_params["user_id"]))
+        except ValueError:
+            return False  # the route's own path validation answers 422
+        return await service.is_superuser_target(user_id)
+
+    # Acting on a superuser (deactivate, activate, re-role) needs the same
+    # step-up as the superuser toggle, else a stolen superuser token could lock
+    # out or reinstate other superusers. Anyone else keeps the routine admin
+    # check. ``current_admin`` runs first, so nothing is looked up for a caller
+    # who isn't an admin.
+    superuser_target_gate = [
+        Depends(
+            current_strict_superuser.when(_target_is_superuser, after=current_admin),
+        ),
+    ]
+
     @router.get("/users", response_model=list[response_model])  # type: ignore[valid-type]
     async def list_users(
         limit: int = Query(50, ge=1, le=200),
@@ -88,6 +108,7 @@ def build_admin_router(
 
     @router.patch(
         "/users/{user_id}/role", response_model=response_model,  # type: ignore[valid-type]
+        dependencies=superuser_target_gate,
     )
     async def update_user_role(
         user_id: uuid.UUID,
@@ -105,6 +126,7 @@ def build_admin_router(
 
     @router.patch(
         "/users/{user_id}/activate", response_model=response_model,  # type: ignore[valid-type]
+        dependencies=superuser_target_gate,
     )
     async def activate_user(
         user_id: uuid.UUID,
@@ -121,6 +143,7 @@ def build_admin_router(
 
     @router.patch(
         "/users/{user_id}/deactivate", response_model=response_model,  # type: ignore[valid-type]
+        dependencies=superuser_target_gate,
     )
     async def deactivate_user(
         user_id: uuid.UUID,
