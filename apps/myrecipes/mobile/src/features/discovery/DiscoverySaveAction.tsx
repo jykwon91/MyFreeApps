@@ -9,7 +9,7 @@ import type { RootState } from "../../lib/store";
  * Opens the new-recipe form filled in from this recipe, as the website does, so the user checks it
  * before creating it. Once created, the button opens that recipe instead, so it isn't saved twice.
  */
-export default function DiscoverySaveAction({ resultId, title }: { resultId: string; title: string }) {
+export default function DiscoverySaveAction({ resultId }: { resultId: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const router = useRouter();
   const savedRecipeId = useSelector((state: RootState) => state.discovery.saved[resultId]);
@@ -17,7 +17,7 @@ export default function DiscoverySaveAction({ resultId, title }: { resultId: str
   if (savedRecipeId) {
     return (
       <LoadingButton
-        onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: savedRecipeId, title, from: "discover" } })}
+        onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: savedRecipeId, from: "discover" } })}
         variant="secondary"
       >
         Open saved recipe

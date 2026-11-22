@@ -7,6 +7,7 @@ import { ScrollView, View } from "react-native";
 import { useDispatch } from "react-redux";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { COOK_COPY_MESSAGES } from "../../constants/cook";
+import { useCachedRecipeSummary } from "../../hooks/useCachedRecipeSummary";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
 import { cookHref } from "../../utils/cookHref";
 import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
@@ -23,8 +24,10 @@ export default function RecipeDetailScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
   const dispatch = useDispatch<AppStore["dispatch"]>();
-  // A deep link has only the id; the list passes the rest so the screen opens with them.
-  const params = useLocalSearchParams<{ id: string; title?: string; owner?: string; from?: string }>();
+  // Only the id (and where Back goes) come from the route: a link can say anything, so the text shown
+  // is the server's, or the row from a list the app already loaded.
+  const params = useLocalSearchParams<{ id: string; from?: string }>();
+  const cachedSummary = useCachedRecipeSummary(params.id);
   // Reopening always asks again, so a failure still in the cache can't stand in for the answer.
   const { currentData: recipe, error, isError, refetch } = useGetRecipeQuery(params.id, {
     refetchOnMountOrArgChange: true,
@@ -101,8 +104,8 @@ export default function RecipeDetailScreen() {
           >
             <RecipeTitleBlock
               isLoading={!hasFailed}
-              owner={recipe?.owner_display_name ?? params.owner}
-              title={recipe?.title ?? params.title}
+              owner={(recipe ?? cachedSummary)?.owner_display_name}
+              title={(recipe ?? cachedSummary)?.title}
             />
             {renderBody()}
           </ScrollView>

@@ -1,5 +1,6 @@
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
+import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
@@ -26,8 +27,8 @@ configurePlatform({
 
 export function makeStore() {
   return configureStore({
-    reducer: { [baseApi.reducerPath]: baseApi.reducer, cookSessions, cookTimers, discovery },
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
+    reducer: { [recipesApi.reducerPath]: recipesApi.reducer, cookSessions, cookTimers, discovery },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(recipesApi.middleware),
   });
 }
 

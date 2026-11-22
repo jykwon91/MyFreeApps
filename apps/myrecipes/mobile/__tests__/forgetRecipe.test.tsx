@@ -74,7 +74,7 @@ it("puts a Discover result back to Save once the recipe saved from it is deleted
   store.dispatch(recipeSaved({ resultId: "flan1", recipeId: "r1", generation: 0 }));
   await render(
     <Provider store={store}>
-      <DiscoverySaveAction resultId="flan1" title="Flan" />
+      <DiscoverySaveAction resultId="flan1" />
     </Provider>,
   );
   expect(screen.getByText("Open saved recipe")).toBeTruthy();

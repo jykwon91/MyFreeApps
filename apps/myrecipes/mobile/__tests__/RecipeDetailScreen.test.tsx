@@ -8,6 +8,7 @@ import { AccessibilityInfo, AppState } from "react-native";
 import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
+import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { recipeSaved } from "../src/features/discovery/discoverySlice";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
@@ -90,9 +91,14 @@ let gate: Promise<void> = Promise.resolve();
 let store: ReturnType<typeof makeStore>;
 
 let requestCount = 0;
+let listedTitle = "Tomato soup";
 
 const adapter: AxiosAdapter = async (config) => {
   // The owner's cook log (and its version numbers) are asked for too; this file is about the recipe.
+  if (config.url === "/recipes") {
+    const items = [{ ...SOUP, latest_version: undefined, title: listedTitle }];
+    return { status: 200, data: { items, total: 1, has_more: false, next_cursor: null }, statusText: "", headers: {}, config };
+  }
   if (config.url !== "/recipes/r1") return { status: 200, data: [], statusText: "", headers: {}, config };
   requestCount += 1;
   await gate;
@@ -123,6 +129,13 @@ function reopen() {
   );
 }
 
+// What the app has after the recipes list was open: the row the user taps is in the cache.
+async function loadList() {
+  await act(async () => {
+    await store.dispatch(recipesApi.endpoints.listRecipes.initiate({}));
+  });
+}
+
 function holdResponses(): () => void {
   let open = () => {};
   gate = new Promise((resolve) => {
@@ -144,7 +157,8 @@ beforeEach(() => {
   mockPush.mockClear();
   mockReplace.mockClear();
   mockCanGoBack = true;
-  mockParams = { id: "r1", title: "Tomato soup", owner: "Sam" };
+  mockParams = { id: "r1" };
+  listedTitle = "Tomato soup";
   gate = Promise.resolve();
   requestCount = 0;
   reply = { status: 200, data: SOUP };
@@ -160,9 +174,10 @@ afterEach(async () => {
 });
 
 describe("RecipeDetailScreen", () => {
-  it("opens with what the list passed, then fills in the recipe", async () => {
+  it("opens with the tapped row from the cached list, then fills in the recipe", async () => {
     const open = holdResponses();
     await show();
+    await loadList();
 
     expect(screen.getByRole("header", { name: "Tomato soup" })).toBeTruthy();
     expect(screen.getByText("by Sam")).toBeTruthy();
@@ -199,10 +214,35 @@ describe("RecipeDetailScreen", () => {
     expect(screen.getByText("by Sam")).toBeTruthy();
   });
 
+  it("never shows a title or owner taken from the link, while loading", async () => {
+    mockParams = { id: "r1", title: "Fake title", owner: "Fake owner" };
+    const open = holdResponses();
+    await show();
+
+    expect(screen.queryByText("Fake title")).toBeNull();
+    expect(screen.queryByText("by Fake owner")).toBeNull();
+    expect(screen.getByTestId("recipe-title-skeleton", { includeHiddenElements: true })).toBeTruthy();
+
+    open();
+    expect(await screen.findByRole("header", { name: "Tomato soup" })).toBeTruthy();
+    expect(screen.queryByText("Fake title")).toBeNull();
+  });
+
+  it("shows no text from the link when the load fails", async () => {
+    mockParams = { id: "r1", title: "Fake title", owner: "Fake owner" };
+    reply = { status: 500, data: "boom" };
+    await show();
+
+    expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
+    expect(screen.queryByText("Fake title")).toBeNull();
+    expect(screen.queryByText("by Fake owner")).toBeNull();
+  });
+
   it("prefers the server's title when the recipe was renamed", async () => {
-    mockParams = { id: "r1", title: "Old name" };
+    listedTitle = "Old name";
     reply = { status: 200, data: { ...SOUP, title: "New name" } };
     await show();
+    await loadList();
 
     expect(await screen.findByRole("header", { name: "New name" })).toBeTruthy();
     expect(screen.queryByText("Old name")).toBeNull();
@@ -404,10 +444,11 @@ describe("RecipeDetailScreen", () => {
     const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     reply = "offline";
     await show();
+    await loadList();
 
     expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
     expect(screen.queryByText("Recipe not found")).toBeNull();
-    expect(screen.getByRole("header", { name: "Tomato soup" })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: "Tomato soup" })).toBeTruthy();
     await waitFor(() => expect(announce).toHaveBeenCalledWith("Can't load this recipe"));
 
     const open = holdResponses();

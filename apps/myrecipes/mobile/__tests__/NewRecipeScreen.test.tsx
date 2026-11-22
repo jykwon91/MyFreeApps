@@ -319,7 +319,7 @@ describe("creating", () => {
     await waitFor(() =>
       expect(mockReplace).toHaveBeenCalledWith({
         pathname: "/recipes/[id]",
-        params: { id: "r-new", title: "Tomato soup", owner: "Sam" },
+        params: { id: "r-new" },
       }),
     );
     expect(postedBody()).toEqual({
