@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
+import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
@@ -53,6 +54,8 @@ export interface FakeApplicantServer {
   tenantListFailure: number | null;
   /** What /signed-leases lists, newest first. */
   leases: SignedLeaseSummary[];
+  /** What /signed-leases/:id answers, with each lease's files. */
+  leaseDetails: SignedLeaseDetail[];
 }
 
 export const SAMPLE_PROVIDER = {
@@ -86,7 +89,7 @@ export function formValue(form: unknown, field: string): string | undefined {
 }
 
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
-  const server: FakeApplicantServer = { tenantListFailure: null, leases: [], applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
+  const server: FakeApplicantServer = { tenantListFailure: null, leases: [], leaseDetails: [], applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
   const adapter: AxiosAdapter = (request) => {
     const config = withTransactionListQuery(request);
     const respond = (data: unknown, status = 200) => {
@@ -118,6 +121,8 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
       row?.screening_results.push(result);
       return respond(result, 201);
     }
+    const leaseDetail = server.leaseDetails.find((lease) => config.url === `/signed-leases/${lease.id}`);
+    if (leaseDetail) return respond(leaseDetail);
     if (config.url === "/signed-leases") return respond({ items: server.leases, total: server.leases.length, has_more: false });
     if (config.url === "/transactions") return respond([]);
     if (config.url?.startsWith("/rent-ledger/tenants/")) return respond(aRentLedger());
