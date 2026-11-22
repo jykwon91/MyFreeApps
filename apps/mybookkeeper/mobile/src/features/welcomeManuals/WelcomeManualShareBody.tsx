@@ -73,7 +73,7 @@ export default function WelcomeManualShareBody({ manual, refreshControl }: Welco
         </>
       ) : (
         <View style={{ gap: spacing.sm }}>
-          <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{MESSAGES.off}</Text>
+          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{MESSAGES.off}</Text>
           <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.offBody}</Text>
           {canWrite ? (
             <LoadingButton isLoading={share.isBusy} loadingText={MESSAGES.enabling} onPress={() => void share.enable()}>

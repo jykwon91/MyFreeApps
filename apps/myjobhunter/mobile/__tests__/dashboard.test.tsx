@@ -245,6 +245,14 @@ it("stops trying to scroll to a stage after a few tries", async () => {
   expect(scrollToIndex).toHaveBeenCalledTimes(1 + STAGE_SCROLL_RETRY_LIMIT);
 });
 
+it("lists every stage as a heading, Closed's included, beside its open/close button", async () => {
+  serve({ "POST /auth/mobile/refresh": refreshed, [BOARD]: boardOf(...ITEMS) });
+  await renderApp();
+  await showBoard();
+  expect(screen.getByRole("header", { name: "Closed, 1 application" })).toBeTruthy();
+  expect(closedHeading()).toBeTruthy();
+});
+
 it("folds Closed away, as the website's accordion does, and opens it from its heading", async () => {
   serve({ "POST /auth/mobile/refresh": refreshed, [BOARD]: boardOf(...ITEMS) });
   await renderApp();

@@ -1,6 +1,6 @@
-import { ClampedText, LARGE_TEXT_PREVIEW_LINES, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ClampedText, CollapsibleHeader, LARGE_TEXT_PREVIEW_LINES, useTheme } from "@platform/mobile";
 import { useState, type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export default function CollapsibleSection({
   title,
@@ -18,28 +18,23 @@ export default function CollapsibleSection({
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <Pressable
-        accessibilityLabel={preview && !isOpen ? `${title}, ${preview}` : title}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: isOpen }}
-        onPress={() => {
+      <CollapsibleHeader
+        action={<Text style={{ fontSize: fontSize.sm, color: colors.primary }}>{isOpen ? "Hide" : "Show"}</Text>}
+        actionLabel={preview && !isOpen ? `${title}, ${preview}` : title}
+        below={
+          preview && !isOpen ? (
+            <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+              {preview}
+            </ClampedText>
+          ) : null
+        }
+        isOpen={isOpen}
+        onToggle={() => {
           if (!isOpen) onOpen?.();
           setIsOpen(!isOpen);
         }}
-        style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", gap: spacing.xs }}
-      >
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-            {title}
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.primary }}>{isOpen ? "Hide" : "Show"}</Text>
-        </View>
-        {preview && !isOpen ? (
-          <ClampedText largeTextNumberOfLines={LARGE_TEXT_PREVIEW_LINES} numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-            {preview}
-          </ClampedText>
-        ) : null}
-      </Pressable>
+        title={title}
+      />
       {isOpen ? children : null}
     </View>
   );

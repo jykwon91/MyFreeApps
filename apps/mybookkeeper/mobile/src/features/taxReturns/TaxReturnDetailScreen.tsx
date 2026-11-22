@@ -69,7 +69,7 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} refreshControl={refreshControl} testID="tax-return-detail">
       <View style={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>{taxReturnTitle(current)}</Text>
+        <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>{taxReturnTitle(current)}</Text>
         <Text style={muted}>{`${statusLine} · ${filingStatus}`}</Text>
         <StaleDataBanner isShown={isStale} />
         {current.needs_recompute ? <Banner message={MESSAGES.outOfDateDetail} /> : null}

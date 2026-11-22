@@ -73,7 +73,7 @@ export default function TaxReviewScreen() {
             {review && hasForms ? (
               <>
                 {review.summary ? (
-                  <View accessible style={{ gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.muted }}>
+                  <View style={{ gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.muted }}>
                     <Text accessibilityRole="header" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>
                       {MESSAGES.summaryTitle}
                     </Text>

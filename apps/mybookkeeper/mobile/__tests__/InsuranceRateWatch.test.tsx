@@ -6,6 +6,7 @@ import { fireEvent, screen } from "@testing-library/react-native";
 import RateWatchScreen from "../src/features/insurance/RateWatchScreen";
 import { EMPTY_RATE_WATCH, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
+import { isInsideAccessibleParent } from "../test-support/isInsideAccessibleParent";
 
 jest.mock("expo-router", () => ({ router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() } }));
 
@@ -74,6 +75,14 @@ describe("rate watch", () => {
     expect(screen.getByText("Raising rates")).toBeTruthy();
     expect(screen.getByText(/statewide average/)).toBeTruthy();
     expect(screen.getByText("What to do")).toBeTruthy();
+  });
+
+  it("lists What to do as a heading", async () => {
+    startInsuranceServer({ rateWatch: results() });
+    await renderInsurance(<RateWatchScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Check filings" }));
+    await screen.findByTestId("rate-watch-results");
+    expect(isInsideAccessibleParent(screen.getByRole("header", { name: "What to do" }))).toBe(false);
   });
 
   it("shows a skeleton while the filings are being checked", async () => {

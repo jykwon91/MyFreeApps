@@ -128,6 +128,13 @@ describe("a 1099 in full", () => {
     expect(screen.getByText(MESSAGES.notCompareYet)).toBeTruthy();
   });
 
+  it("lists the file's title as a heading, and still reaches the open and delete buttons", async () => {
+    serve([aSource()]);
+    await showDetail();
+    expect(screen.getByRole("header", { name: /^1099-K Airbnb, Reported/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: MESSAGES.openSourceDocument })).toBeTruthy();
+  });
+
   it("opens the source document", async () => {
     serve([aSource()]);
     await showDetail();

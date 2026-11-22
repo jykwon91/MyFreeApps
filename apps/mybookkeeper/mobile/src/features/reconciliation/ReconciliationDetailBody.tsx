@@ -17,8 +17,8 @@ export default function ReconciliationDetailBody({ source, canWrite }: Reconcili
   const { isDeleting, askToDelete } = useDeleteReconciliationSource(source, () => goBackOr("/reconciliation"));
   return (
     <>
-      <View accessible accessibilityLabel={detailLabel(source)} style={{ gap: spacing.xs }}>
-        <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+      <View accessible accessibilityLabel={detailLabel(source)} accessibilityRole="header" style={{ gap: spacing.xs }}>
+        <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {sourceTitle(source)}
         </Text>
         <Text style={{ fontSize: fontSize.xl, fontWeight: "700", fontVariant: ["tabular-nums"], color: colors.foreground }}>
