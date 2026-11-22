@@ -54,8 +54,14 @@ test("a company whose answer is lost and whose list can't be read says it isn't 
   await addGlobex(page);
 
   // The toast region only: for its first second Radix also keeps a hidden screen-reader copy of the toast text.
+  // The region counts hidden nodes because the dialog stays open over the kept list, and an open modal dialog marks
+  // everything outside it aria-hidden; the toast itself is still on screen (toBeVisible) and still announced.
   await expect(
-    page.getByRole("region", { name: "Notifications" }).getByText(/not sure that saved\. Check your companies before trying again/),
+    page
+      .getByRole("region", { name: "Notifications", includeHidden: true })
+      .getByText(/not sure that saved\. Check your companies before trying again/),
   ).toBeVisible();
   await expect(page.getByText('Company "Globex" added', { exact: true })).toHaveCount(0);
+  // Nothing was confirmed, so the dialog keeps what was typed instead of being swapped out for an error page.
+  await expect(page.getByRole("dialog").getByPlaceholder("e.g. Acme Corp")).toHaveValue("Globex");
 });
