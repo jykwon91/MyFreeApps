@@ -435,6 +435,23 @@ describe("disenchant verdict", () => {
     expect(lines).toContain("collapsed true");
   });
 
+  it("finds Enchanting through the professions API when the client has no skills-window functions", () => {
+    const lines = deTooltip(
+      `sell[${DE_ITEM}] = 20; GetNumSkillLines = nil; GetSkillLineInfo = nil; ` +
+        `GetProfessions = function() return 3, nil end; GetProfessionInfo = function(i) if i == 3 then return "Enchanting", 0, 25, 75, 0, 0, 333 end end; ` +
+        `hover(GameTooltip, ${DE_ITEM})`,
+    );
+    expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
+    expect(lines.join(" ")).not.toContain("need");
+  });
+
+  it("treats a player who knows Disenchant as an enchanter when no API gives the rank", () => {
+    const lines = deTooltip(
+      `sell[${DE_ITEM}] = 20; GetNumSkillLines = nil; GetSkillLineInfo = nil; IsPlayerSpell = function(id) return id == 13262 end; hover(GameTooltip, ${DE_ITEM})`,
+    );
+    expect(lines).toContain(`Disenchant | ~${DE_EV}c`);
+  });
+
   it("shows the AH or vendor verdict and a 'need Enchanting' info line when the player has no Enchanting", () => {
     // enchSkill defaults to nil (no Enchanting).
     const lines = deTooltip(`sell[${DE_ITEM}] = 20; hover(GameTooltip, ${DE_ITEM})`);
