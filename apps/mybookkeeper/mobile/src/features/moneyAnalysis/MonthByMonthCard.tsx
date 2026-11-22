@@ -37,8 +37,8 @@ export default function MonthByMonthCard({ byMonth, byMonthExpense, scope }: Mon
           }))}
           height={HOME_CHART_HEIGHT}
           series={[
-            { label: MESSAGES.revenue, color: colors.positiveText },
-            { label: MESSAGES.expenses, color: colors.destructiveText },
+            { label: MESSAGES.revenue, color: colors.chartPositive },
+            { label: MESSAGES.expenses, color: colors.chartNegative },
           ]}
           testID="analysis-monthly-chart"
         />

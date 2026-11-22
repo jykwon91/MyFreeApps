@@ -31,7 +31,8 @@ type Token = keyof ThemeColors;
 // - surface: a background that text tokens sit on (`muted` is also the pressed-row fill).
 // - fill / label: a solid fill and the one token drawn on it, paired in FILL_LABELS.
 // - outline: borders and dividers, never text.
-const TOKEN_ROLES: Record<Token, "text" | "surface" | "fill" | "label" | "outline"> = {
+// - chart: bar fills for chart series, checked for 3:1 against the surface and against each other.
+const TOKEN_ROLES: Record<Token, "text" | "surface" | "fill" | "label" | "outline" | "chart"> = {
   background: "surface",
   card: "surface",
   muted: "surface",
@@ -42,6 +43,8 @@ const TOKEN_ROLES: Record<Token, "text" | "surface" | "fill" | "label" | "outlin
   secondaryForeground: "text",
   destructiveText: "text",
   positiveText: "text",
+  chartPositive: "chart",
+  chartNegative: "chart",
   primaryForeground: "label",
   destructive: "fill",
   destructiveForeground: "label",
@@ -111,6 +114,15 @@ describe.each(Object.entries({ light: lightColors, dark: darkColors }))(
     it("the selected segment's outline stands out from the muted track it sits on", () => {
       // SegmentedControl: a `card` segment outlined in `inputBorder` on a `muted` track.
       expect(contrastRatio(colors.inputBorder, colors.muted)).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    });
+
+    it.each(["background", "card"] as const)("each chart series is 3:1 against %s", (surface) => {
+      expect(contrastRatio(colors.chartPositive, colors[surface])).toBeGreaterThanOrEqual(AA_NON_TEXT);
+      expect(contrastRatio(colors.chartNegative, colors[surface])).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    });
+
+    it("the money in and money out chart series differ by 3:1 without hue", () => {
+      expect(contrastRatio(colors.chartPositive, colors.chartNegative)).toBeGreaterThanOrEqual(AA_NON_TEXT);
     });
 
     it("the error border stands out from the background", () => {

@@ -98,7 +98,7 @@ export default function GroupedBarChart({ series, groups, height, accessibilityL
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: "row", gap: spacing.lg }}>
         {series.map((item) => (
           <View key={item.label} style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
-            <View style={{ width: CHART_LEGEND_SWATCH, height: CHART_LEGEND_SWATCH, borderRadius: 2, backgroundColor: item.color }} />
+            <View testID={testID && `${testID}-legend-${item.label}`} style={{ width: CHART_LEGEND_SWATCH, height: CHART_LEGEND_SWATCH, borderRadius: 2, backgroundColor: item.color }} />
             <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{item.label}</Text>
           </View>
         ))}

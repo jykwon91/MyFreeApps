@@ -2,6 +2,7 @@ import type { GroupedBarChartGroup } from "./GroupedBarChartGroup";
 import type { GroupedBarChartSeries } from "./GroupedBarChartSeries";
 
 export interface GroupedBarChartProps {
+  /** Colours must differ in luminance (3:1), not just hue; see `GroupedBarChartSeries.color`. */
   series: readonly GroupedBarChartSeries[];
   groups: readonly GroupedBarChartGroup[];
   /** Height of the bars' area, not counting the labels and legend. */

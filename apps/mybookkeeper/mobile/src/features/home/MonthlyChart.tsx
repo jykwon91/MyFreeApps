@@ -30,8 +30,8 @@ export default function MonthlyChart({ byMonth, scope }: { byMonth: readonly Mon
         }))}
         height={HOME_CHART_HEIGHT}
         series={[
-          { label: "Revenue", color: colors.positiveText },
-          { label: "Expenses", color: colors.destructiveText },
+          { label: "Revenue", color: colors.chartPositive },
+          { label: "Expenses", color: colors.chartNegative },
         ]}
         testID="home-monthly-chart"
       />
