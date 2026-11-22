@@ -311,6 +311,12 @@ async def accept_invite(
                 invite.organization_id, user_id,
             )
             raise PermissionError("This invite was sent to a different email address")
+        if not user.is_verified:
+            logger.warning(
+                "ORG_ACTION accept_invite_unverified org=%s user=%s",
+                invite.organization_id, user_id,
+            )
+            raise PermissionError("Verify your email address before accepting this invite")
 
         existing = await organization_repo.get_member(
             db, invite.organization_id, user_id,
