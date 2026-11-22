@@ -246,7 +246,7 @@ describe("adding a mortgage", () => {
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.saveNew }));
     const reason = await screen.findByText("Pick whether the rate is fixed or adjustable.");
     expect(reason).toBeTruthy();
-    expect(screen.getByLabelText(MESSAGES.rateType).props.accessibilityHint).toBe("Pick whether the rate is fixed or adjustable.");
+    expect(screen.getByLabelText(`${MESSAGES.rateType}, required`).props.accessibilityHint).toBe("Pick whether the rate is fixed or adjustable.");
     expect(requests.filter((r) => r.method?.toLowerCase() === "post")).toHaveLength(0);
   });
 

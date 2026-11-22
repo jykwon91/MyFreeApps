@@ -1,5 +1,5 @@
+import { ChoiceGroup } from "@platform/mobile";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import ChoiceGroup from "../src/components/forms/ChoiceGroup";
 import PickerField from "../src/components/forms/PickerField";
 
 jest.mock("@react-native-community/datetimepicker", () => {

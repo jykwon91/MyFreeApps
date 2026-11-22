@@ -8,7 +8,7 @@ import { contactFormErrors } from "@myjobhunter/api-client/utils/contactFormErro
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
 import { hasContactFormErrors } from "@myjobhunter/api-client/utils/hasContactFormErrors";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
-import { FIELD_PRESETS, FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, FIELD_PRESETS, FormField, FormSheet, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
@@ -17,7 +17,6 @@ import { contactFieldMessage } from "../../lib/contactFieldMessage";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
 import { createFailure } from "../../lib/writeFailure";
 import type { ContactSheetProps } from "../../types/ContactSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /**

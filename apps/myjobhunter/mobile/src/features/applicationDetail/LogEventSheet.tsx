@@ -4,14 +4,13 @@ import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/ap
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
-import { FormField, FormSheet, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
 import { LOGGABLE_EVENT_OPTIONS } from "../../constants/eventOptions";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
 import { createFailure } from "../../lib/writeFailure";
 import type { LogEventSheetProps } from "../../types/LogEventSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import DateTimeField from "./DateTimeField";
 import InterviewDetailsFields from "./InterviewDetailsFields";
 import SheetButtons from "../../components/forms/SheetButtons";

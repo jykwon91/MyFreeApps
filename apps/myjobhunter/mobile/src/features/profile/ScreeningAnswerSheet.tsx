@@ -5,14 +5,13 @@ import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { screeningAnswerProblem } from "@myjobhunter/api-client/utils/screeningAnswerProblem";
 import { screeningQuestionLabel } from "@myjobhunter/api-client/utils/screeningQuestionLabel";
 import { unansweredScreeningQuestions } from "@myjobhunter/api-client/utils/unansweredScreeningQuestions";
-import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SCREENING_MESSAGES as MESSAGES } from "../../constants/profileScreening";
 import { createFailure, writeFailure } from "../../lib/writeFailure";
 import type { ScreeningAnswerSheetProps } from "../../types/ScreeningAnswerSheetProps";
-import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /**

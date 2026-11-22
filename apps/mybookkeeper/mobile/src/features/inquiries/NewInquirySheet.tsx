@@ -11,7 +11,7 @@ import {
   inquiryFormToCreateRequest,
   needsExternalInquiryId,
 } from "@mybookkeeper/api-client/utils/inquiryForm";
-import { FIELD_PRESETS, FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { ChoiceGroup, FIELD_PRESETS, FormField, FormSheet, FormSheetCancelButton, LoadingButton, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
@@ -19,7 +19,6 @@ import { dateFromIso } from "../../lib/localDate";
 import type { NewInquirySheetProps } from "../../types/NewInquirySheetProps";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
-import InquiryChoiceGroup from "./InquiryChoiceGroup";
 import { inquiryCreateFailure } from "./inquiryCreateFailure";
 import InquiryListingField from "./InquiryListingField";
 import InquiryReceivedAtField from "./InquiryReceivedAtField";
@@ -65,7 +64,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     <FormSheet failure={failure ?? (hasProblems ? MESSAGES.fixFields : null)} hasUnsavedChanges={isDirty} isBusy={isBusy} isOpen onRequestClose={onClose} title={LABELS.title}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LABELS.intro}</Text>
       <View pointerEvents={isBusy ? "none" : "auto"} style={{ gap: spacing.md }}>
-        <InquiryChoiceGroup<InquirySource> choices={SOURCE_CHOICES} disabled={isBusy} label={LABELS.source} onSelect={(source) => update({ source })} value={values.source} />
+        <ChoiceGroup<InquirySource> disabled={isBusy} label={LABELS.source} onChange={(source) => update({ source })} options={SOURCE_CHOICES} value={values.source} />
         {needsExternalInquiryId(values.source) ? (
           <FormField
             {...fields.field("externalId")}
