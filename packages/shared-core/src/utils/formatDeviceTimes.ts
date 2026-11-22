@@ -1,4 +1,4 @@
-import { formatCount } from "@platform/core/utils/count";
+import { formatCount } from "./count";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;

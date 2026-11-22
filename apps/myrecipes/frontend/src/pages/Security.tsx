@@ -4,6 +4,7 @@ import { AlertBox } from "@platform/ui";
 
 import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
+import SignedInDevices from "@platform/ui/components/auth/SignedInDevices";
 import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
@@ -15,6 +16,7 @@ import DeleteAccountModal from "@/features/security/DeleteAccountModal";
  *  - Intro AlertBox about 2FA (dismissable, persisted in localStorage)
  *  - Display Name setting
  *  - Two-Factor Authentication — TOTP enrollment / disable
+ *  - Devices signed in — phones signed in to the account, each with Sign out
  *  - Data & Privacy — export your data, delete your account
  */
 export default function Security() {
@@ -50,6 +52,10 @@ export default function Security() {
 
       <div className="bg-card border rounded-lg p-6">
         <TwoFactorSetup />
+      </div>
+
+      <div className="bg-card border rounded-lg p-6">
+        <SignedInDevices appName="MyRecipes" />
       </div>
 
       <div className="bg-card border rounded-lg p-6 space-y-6">

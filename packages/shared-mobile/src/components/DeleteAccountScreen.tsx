@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
+import { fetchDevices } from "@platform/core/auth/deviceSessions";
+import { requestDeleteAccount } from "../auth/mobileAuthApi";
 import { useFieldChain } from "../hooks/useFieldChain";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Download, Trash2 } from "lucide-react";
 import { AlertBox, showError, showSuccess } from "@platform/ui";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
+import SignedInDevices from "@platform/ui/components/auth/SignedInDevices";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
 import { useDismissable } from "@/shared/hooks/useDismissable";
@@ -58,6 +59,10 @@ export default function Security() {
 
       <div className="bg-card border rounded-lg p-6">
         <TwoFactorSetup />
+      </div>
+
+      <div className="bg-card border rounded-lg p-6">
+        <SignedInDevices appName="MyBookkeeper" />
       </div>
 
       <div className="bg-card border rounded-lg p-6 space-y-6">

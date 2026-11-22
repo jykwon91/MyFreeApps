@@ -16,7 +16,6 @@ export const SECURITY_MESSAGES = {
   displayNameLoadFailed: "I couldn't load your display name.",
   tryAgain: "Try again",
   loadingDisplayName: "Loading your display name",
-  loadingDevices: "Loading your signed-in devices",
   loadingTwoStep: "Checking two-step verification",
 
   dataHeading: "Data & Privacy",
@@ -29,8 +28,3 @@ export const SECURITY_MESSAGES = {
   deleteBody: "Permanently delete your account and all associated data. This can't be undone.",
   deleteButton: "Delete my account",
 } as const;
-
-/** Signing a device out again after a lost answer is harmless: one that already went answers "already signed out". */
-export function deviceSignOutUnsureMessage(name: string): string {
-  return unsureRepeatableMessage(`${name} was signed out`);
-}

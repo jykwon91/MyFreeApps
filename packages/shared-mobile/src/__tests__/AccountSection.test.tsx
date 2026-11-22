@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { SessionContext } from "../auth/SessionContext";
 import AccountSection from "../components/AccountSection";
-import type { useDevices } from "../hooks/useDevices";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
-import type { SignedInDevice } from "../types/SignedInDevice";
+import type { SignedInDevice } from "@platform/core/types/security/signed-in-device";
+import type { UseDevicesResult } from "@platform/core/types/security/use-devices-result";
 
 const device = (id: string, name: string | null, lastUsed: string): SignedInDevice => ({
   id,
@@ -19,7 +19,7 @@ const THIS_PHONE = device("mine", "My iPhone", "2026-10-02T00:00:00Z");
 const OLDER = device("older", "Old Pixel", "2026-10-03T00:00:00Z");
 const NEWER = device("newer", null, "2026-10-04T00:00:00Z");
 
-function setUp(overrides: Partial<ReturnType<typeof useDevices>> = {}, signOut = jest.fn()) {
+function setUp(overrides: Partial<UseDevicesResult> = {}, signOut = jest.fn()) {
   const devices = {
     devices: [OLDER, NEWER, THIS_PHONE],
     hasError: false,

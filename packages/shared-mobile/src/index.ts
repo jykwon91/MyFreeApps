@@ -94,7 +94,6 @@ export { goBackOr } from "./utils/goBackOr";
 export { filePart } from "./utils/filePart";
 export { reencodePhoto } from "./utils/reencodePhoto";
 export { newDownloadFolder } from "./utils/newDownloadFolder";
-export { useDevices } from "./hooks/useDevices";
 export { useOpenLink } from "./hooks/useOpenLink";
 export { useOpenWebsite } from "./hooks/useOpenWebsite";
 export { useMotion } from "./hooks/useMotion";

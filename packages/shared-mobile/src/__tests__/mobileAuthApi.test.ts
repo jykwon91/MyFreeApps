@@ -2,14 +2,12 @@ import api from "@platform/core/lib/api";
 import { _resetPlatformForTests, configurePlatform } from "@platform/core/platform/configurePlatform";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import {
-  fetchDevices,
   fetchTwoFactorEnabled,
   requestDeleteAccount,
   requestLogin,
   requestLogout,
   requestRefresh,
   resendVerificationEmail,
-  revokeDevice,
 } from "../auth/mobileAuthApi";
 
 const originalAdapter = api.defaults.adapter;
@@ -97,18 +95,6 @@ describe("the rest", () => {
     await expect(requestLogout("r")).resolves.toBe(true);
     api.defaults.adapter = offline;
     await expect(requestLogout("r")).resolves.toBe(false);
-  });
-
-  it("lists devices and signs one out", async () => {
-    api.defaults.adapter = answering(200, [{ id: "1" }]);
-    await expect(fetchDevices()).resolves.toEqual([{ id: "1" }]);
-    const seen: string[] = [];
-    api.defaults.adapter = async (config) => {
-      seen.push(`${config.method} ${config.url}`);
-      return { status: 204, data: null, statusText: "", headers: {}, config };
-    };
-    await revokeDevice("a/b");
-    expect(seen).toEqual(["delete /auth/mobile/sessions/a%2Fb"]);
   });
 });
 

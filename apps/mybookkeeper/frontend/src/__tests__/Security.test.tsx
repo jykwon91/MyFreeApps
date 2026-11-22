@@ -10,6 +10,11 @@ vi.mock("@platform/ui/components/auth/TwoFactorSetup", () => ({
   default: () => <div data-testid="two-factor-setup">TwoFactorSetup</div>,
 }));
 
+// SignedInDevices loads the device list on mount and is tested in @platform/ui.
+vi.mock("@platform/ui/components/auth/SignedInDevices", () => ({
+  default: ({ appName }: { appName: string }) => <div data-testid="signed-in-devices">{appName}</div>,
+}));
+
 // DeleteAccountModal is tested separately — stub it to avoid RTK Query setup.
 vi.mock("@/app/features/security/DeleteAccountModal", () => ({
   default: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
@@ -57,6 +62,12 @@ describe("Security — page structure", () => {
     renderSecurity();
 
     expect(screen.getByTestId("two-factor-setup")).toBeInTheDocument();
+  });
+
+  it("lists the phones signed in to the account", () => {
+    renderSecurity();
+
+    expect(screen.getByTestId("signed-in-devices")).toHaveTextContent("MyBookkeeper");
   });
 
   it("renders the Data & Privacy section heading", () => {
