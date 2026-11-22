@@ -6,8 +6,8 @@ import { useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { DELETE_SECTION_BODY, WELCOME_MANUAL_SECTION_MESSAGES as MESSAGES, deleteSectionTitle, photoCountLabel } from "../../constants/welcomeManualForms";
 import { askOnce } from "../../lib/askOnce";
-import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import type { WelcomeManualView } from "../../types/WelcomeManualView";
+import MarkdownText from "../markdown/MarkdownText";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { roomNameFor } from "./welcomeManualRoomOptions";
 import WelcomeManualNavRow from "./WelcomeManualNavRow";
@@ -39,9 +39,11 @@ export default function WelcomeManualSectionDetailBody({ view, section, onDelete
           {section.title}
         </Text>
         {roomName ? <Chip label={roomName} /> : null}
-        <Text selectable style={{ fontSize: fontSize.md, color: section.body ? colors.foreground : colors.mutedForeground }}>
-          {section.body ? plainFromMarkdown(section.body) : MESSAGES.noText}
-        </Text>
+        {section.body ? (
+          <MarkdownText source={section.body} />
+        ) : (
+          <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.noText}</Text>
+        )}
       </View>
       {failure ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
