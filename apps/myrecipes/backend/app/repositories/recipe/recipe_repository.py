@@ -24,10 +24,14 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({"title", "description", "source"
 
 
 async def list_all_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Recipe]:
-    """Every non-deleted recipe the user owns, oldest first (data export)."""
+    """Every recipe the user owns, soft-deleted ones included, oldest first.
+
+    Data-export only: the export must cover every row still stored about the
+    user, so this deliberately does not filter ``deleted_at``.
+    """
     result = await db.execute(
         select(Recipe)
-        .where(Recipe.user_id == user_id, Recipe.deleted_at.is_(None))
+        .where(Recipe.user_id == user_id)
         .order_by(Recipe.created_at.asc(), Recipe.id.asc())
     )
     return list(result.scalars().all())

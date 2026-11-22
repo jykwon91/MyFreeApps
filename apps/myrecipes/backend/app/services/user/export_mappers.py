@@ -50,9 +50,12 @@ def step_to_export_dict(step: RecipeStep) -> dict[str, Any]:
     return {"id": str(step.id), "position": step.position, "instruction": step.instruction}
 
 
-def cook_log_to_export_dict(cook: CookLog) -> dict[str, Any]:
+def cook_log_to_export_dict(cook: CookLog, recipe: Recipe) -> dict[str, Any]:
+    """A cook log has no soft-delete of its own; it is deleted with its recipe."""
     return {
         "id": str(cook.id),
+        "recipe_id": str(recipe.id),
+        "recipe_deleted_at": _iso(recipe.deleted_at),
         "version_id": str(cook.version_id),
         "cooked_at": _iso(cook.cooked_at),
         "rating": cook.rating,
@@ -105,6 +108,7 @@ def recipes_to_export_list(
             "source": recipe.source,
             "created_at": _iso(recipe.created_at),
             "updated_at": _iso(recipe.updated_at),
+            "deleted_at": _iso(recipe.deleted_at),
             "versions": [
                 version_to_export_dict(
                     v, ingredients_by_version[v.id], steps_by_version[v.id],
@@ -113,4 +117,18 @@ def recipes_to_export_list(
             ],
         }
         for recipe in recipes
+    ]
+
+
+def cook_logs_to_export_list(
+    cook_logs: list[CookLog],
+    recipes: list[Recipe],
+    versions: list[RecipeVersion],
+) -> list[dict[str, Any]]:
+    """Map cook logs, tagging each with the recipe (and its deletion state) it was logged on."""
+    recipe_by_id = {recipe.id: recipe for recipe in recipes}
+    recipe_by_version_id = {v.id: recipe_by_id[v.recipe_id] for v in versions}
+    return [
+        cook_log_to_export_dict(cook, recipe_by_version_id[cook.version_id])
+        for cook in cook_logs
     ]

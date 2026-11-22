@@ -4,7 +4,7 @@ Account deletion needs no service here: every user-owned table references
 ``users.id`` with ``ON DELETE CASCADE``.
 
 build_export: assembles a full per-user data export (profile, recipes with
-all versions/ingredients/steps, and cook logs).
+all versions/ingredients/steps, and cook logs), soft-deleted rows included.
 """
 from datetime import datetime, timezone
 
@@ -21,11 +21,12 @@ from app.services.user import export_mappers
 async def build_export(db: AsyncSession, user) -> dict:
     """Assemble the full data export for ``user``.
 
-    Includes profile metadata, every non-deleted recipe with all of its
-    versions (ingredients, steps, change notes) and the user's cook logs.
-    Soft-deleted recipes (and their versions/cook logs) are omitted, matching
-    MyBookkeeper's export. Never includes hashed_password, TOTP secret, or
-    recovery codes -- the mappers emit whitelisted columns only.
+    Includes profile metadata, every recipe with all of its versions
+    (ingredients, steps, change notes) and the user's cook logs. Soft-deleted
+    recipes are still stored, so they are exported too, marked by their
+    ``deleted_at`` (cook logs carry ``recipe_deleted_at``). Never includes
+    hashed_password, TOTP secret, or recovery codes -- the mappers emit
+    whitelisted columns only.
     """
     recipes = await recipe_repository.list_all_by_user(db, user.id)
     versions = await recipe_version_repository.list_all_by_user(db, user.id)
@@ -38,5 +39,5 @@ async def build_export(db: AsyncSession, user) -> dict:
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "user": export_mappers.user_to_export_dict(user),
         "recipes": export_mappers.recipes_to_export_list(recipes, versions, ingredients, steps),
-        "cook_logs": [export_mappers.cook_log_to_export_dict(c) for c in cook_logs],
+        "cook_logs": export_mappers.cook_logs_to_export_list(cook_logs, recipes, versions),
     }
