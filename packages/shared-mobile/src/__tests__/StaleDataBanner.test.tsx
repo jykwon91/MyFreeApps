@@ -16,13 +16,46 @@ describe("StaleDataBanner", () => {
     expect(announce).toHaveBeenCalledWith(SHOWING_LAST_LOADED_MESSAGE);
   });
 
-  it("as a section's note, is a quiet line that isn't announced", async () => {
-    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
-    announce.mockClear();
-    await render(<StaleDataBanner isShown variant="note" />);
-    expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(announce).not.toHaveBeenCalled();
+  describe("as a section's note", () => {
+    const politeAnnounce = () => jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+
+    it("is a quiet line, not an alert, that is read politely once when it appears", async () => {
+      const announce = politeAnnounce();
+      announce.mockClear();
+      await render(<StaleDataBanner isShown variant="note" />);
+      expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith(SHOWING_LAST_LOADED_MESSAGE, { queue: true });
+    });
+
+    it("isn't read again when the screen re-renders", async () => {
+      const announce = politeAnnounce();
+      announce.mockClear();
+      const screenUnderTest = await render(<StaleDataBanner isShown variant="note" />);
+      await screenUnderTest.rerender(<StaleDataBanner isShown variant="note" />);
+      expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it("is read when it appears after the data was fresh, and again when its wording changes", async () => {
+      const announce = politeAnnounce();
+      announce.mockClear();
+      const screenUnderTest = await render(<StaleDataBanner isShown={false} variant="note" />);
+      expect(announce).not.toHaveBeenCalled();
+      await screenUnderTest.rerender(<StaleDataBanner isShown variant="note" />);
+      await screenUnderTest.rerender(<StaleDataBanner isShown variant="note" message="Couldn't update this." />);
+      expect(announce).toHaveBeenCalledTimes(2);
+      expect(announce).toHaveBeenLastCalledWith("Couldn't update this.", { queue: true });
+    });
+  });
+
+  it("as a banner, is announced exactly once", async () => {
+    const assertive = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    const polite = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    assertive.mockClear();
+    polite.mockClear();
+    await render(<StaleDataBanner isShown />);
+    expect(assertive.mock.calls.length + polite.mock.calls.length).toBe(1);
   });
 
   it("uses an app's own wording when given", async () => {
