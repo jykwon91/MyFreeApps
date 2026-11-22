@@ -1,13 +1,12 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import { Banner, downloadFailureMessage, LoadingButton, Thumbnail, useTheme, useToast } from "@platform/mobile";
-import { useRef, useState } from "react";
+import { Banner, LoadingButton, Thumbnail, useTheme } from "@platform/mobile";
+import { useRef } from "react";
 import { Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
-import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
-import { openAttachmentFile } from "../documents/openDocumentFile";
 import { photoUrl } from "./listingPhotoDisplay";
+import { useSharePhotos } from "./useSharePhotos";
 
 interface ListingPhotoViewerProps {
   photos: readonly ListingPhoto[];
@@ -27,25 +26,13 @@ interface ListingPhotoViewerProps {
 /** One photo, large, with a way to step through the rest and what can be done to it. */
 export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, failure, onIndexChange, onClose, onMove, onRemove, onRetryPhoto }: ListingPhotoViewerProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const asking = useRef(false);
-  const [isSharing, setIsSharing] = useState(false);
+  const { isSharing, share } = useSharePhotos();
   const photo = index === null ? undefined : photos[index];
   if (index === null || !photo) return null;
   const url = photoUrl(photo);
-
-  async function share(current: ListingPhoto, address: string): Promise<void> {
-    setIsSharing(true);
-    try {
-      await openAttachmentFile(address, { id: current.id, filename: current.storage_key, content_type: mimeTypeFor(current.storage_key) });
-    } catch (error) {
-      showToast(downloadFailureMessage(error, MESSAGES.shareFailed), "error");
-    } finally {
-      setIsSharing(false);
-    }
-  }
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} statusBarTranslucent visible>
@@ -73,7 +60,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
           </View>
         </View>
         {url ? (
-          <LoadingButton isLoading={isSharing} onPress={() => void share(photo, url)} variant="secondary">
+          <LoadingButton isLoading={isSharing} onPress={() => void share([photo])} variant="secondary">
             {MESSAGES.shareOne}
           </LoadingButton>
         ) : null}
