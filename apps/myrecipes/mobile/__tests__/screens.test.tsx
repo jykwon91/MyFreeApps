@@ -5,13 +5,21 @@ import { formatCount } from "@platform/core/utils/count";
 import { recipeFacts } from "../src/utils/recipeFacts";
 
 describe("recipeFacts", () => {
-  it("labels what's there and leaves out missing or zero values", () => {
+  it("labels what's there and leaves out missing values", () => {
     expect(recipeFacts({ servings: "4", prep_minutes: 15, cook_minutes: 30 })).toEqual([
       { label: "Servings", value: "4" },
       { label: "Prep", value: "15 min" },
       { label: "Cook", value: "30 min" },
     ]);
-    expect(recipeFacts({ servings: null, prep_minutes: 0, cook_minutes: null })).toEqual([]);
+    expect(recipeFacts({ servings: null, prep_minutes: null, cook_minutes: null })).toEqual([]);
+    expect(recipeFacts({ servings: "", prep_minutes: null, cook_minutes: null })).toEqual([]);
+  });
+
+  it("shows zero minutes, as the website does", () => {
+    expect(recipeFacts({ servings: null, prep_minutes: 0, cook_minutes: 0 })).toEqual([
+      { label: "Prep", value: "0 min" },
+      { label: "Cook", value: "0 min" },
+    ]);
   });
 });
 

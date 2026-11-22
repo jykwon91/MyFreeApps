@@ -175,7 +175,7 @@ describe("RecipeDetailScreen", () => {
     expect(screen.queryByLabelText("Loading recipe")).toBeNull();
     expect(screen.getByLabelText("Servings: 4").props.accessible).toBe(true);
     expect(screen.getByLabelText("Prep: 15 min")).toBeTruthy();
-    expect(screen.queryByLabelText(/^Cook/)).toBeNull();
+    expect(screen.getByLabelText("Cook: 0 min")).toBeTruthy();
   });
 
   it("names Back for where it was opened from: Recipes, or Discover", async () => {
@@ -353,10 +353,15 @@ describe("RecipeDetailScreen", () => {
     expect(await screen.findByText("Version 3 · More salt")).toBeTruthy();
   });
 
-  it("stays quiet about the first version", async () => {
+  it("names the first version and its change note, as the website does", async () => {
+    reply = { status: 200, data: { ...SOUP, latest_version: { ...VERSION, version_number: 1, change_note: "Original" } } };
     await show();
-    await screen.findByText("Source: Grandma");
-    expect(screen.queryByText(/^Version \d/)).toBeNull();
+    expect(await screen.findByText("Version 1 · Original")).toBeTruthy();
+  });
+
+  it("names the first version when it has no change note", async () => {
+    await show();
+    expect(await screen.findByText("Version 1")).toBeTruthy();
   });
 
   it.each([404, 422])("says not found on a %i and offers a way back", async (status) => {

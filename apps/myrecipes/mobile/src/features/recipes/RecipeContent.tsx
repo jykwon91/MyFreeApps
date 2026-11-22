@@ -39,12 +39,10 @@ export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse
           {recipe.version_count >= COMPARE_VERSION_COUNT ? (
             <VersionHistoryButton recipeId={recipe.id} versionCount={recipe.version_count} />
           ) : null}
-          {version.version_number > 1 ? (
-            <Text style={muted}>
-              Version {version.version_number}
-              {version.change_note ? ` · ${version.change_note}` : ""}
-            </Text>
-          ) : null}
+          <Text style={muted}>
+            Version {version.version_number}
+            {version.change_note ? ` · ${version.change_note}` : ""}
+          </Text>
           <RecipeIngredients ingredients={version.ingredients} />
           <RecipeSteps steps={version.steps} />
           {recipe.is_owner ? (
