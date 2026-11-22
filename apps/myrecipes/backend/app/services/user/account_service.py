@@ -1,14 +1,11 @@
 """MyRecipes account-management services.
 
-delete_user_data: wired into the shared account-deletion router. Deletes
-all app-owned data for the user. As domain models are added, populate this
-with the right per-table deletes.
+Account deletion needs no service here: every user-owned table references
+``users.id`` with ``ON DELETE CASCADE``.
 
 build_export: assembles a full per-user data export (profile, recipes with
 all versions/ingredients/steps, and cook logs).
 """
-import logging
-import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,17 +16,6 @@ from app.repositories.recipe import (
     recipe_version_repository,
 )
 from app.services.user import export_mappers
-
-logger = logging.getLogger(__name__)
-
-
-async def delete_user_data(db: AsyncSession, user_id: uuid.UUID) -> None:
-    """Delete all app-owned data for ``user_id``.
-
-    Scaffold stub: no user-scoped domain rows yet. The shared deletion
-    router handles the user row itself via its own cascade logic.
-    """
-    logger.info("delete_user_data called for user_id=%s -- no domain rows to delete", user_id)
 
 
 async def build_export(db: AsyncSession, user) -> dict:
