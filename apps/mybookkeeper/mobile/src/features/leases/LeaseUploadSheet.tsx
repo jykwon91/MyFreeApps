@@ -2,7 +2,7 @@ import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants
 import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import { inferKindsForFiles } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
-import { Banner, confirmDiscard, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, LoadingButton, OptionRow, useTheme, useToast, useMotion } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { addedFile, addedFiles, LEASE_FILE_TYPES, LEASE_MESSAGES, LEASE_PHOTO_NAME, LEASE_UPLOAD_KINDS } from "../../constants/leases";
@@ -22,6 +22,7 @@ interface LeaseUploadSheetProps {
 
 export default function LeaseUploadSheet({ leaseId, initialKind, onClose }: LeaseUploadSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const { showToast } = useToast();
   const [upload] = useUploadSignedLeaseAttachmentMutation();
   const [kind, setKind] = useState(initialKind);
@@ -67,7 +68,7 @@ export default function LeaseUploadSheet({ leaseId, initialKind, onClose }: Leas
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
       <ScrollView
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         keyboardShouldPersistTaps="handled"

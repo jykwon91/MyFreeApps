@@ -1,6 +1,6 @@
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
-import { Banner, FieldError, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FieldError, LoadingButton, useTheme, useMotion } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
@@ -24,6 +24,7 @@ interface SendReceiptFormProps {
 
 export default function SendReceiptForm({ receipt, gmailState, isSending, isPreviewing, failure, onSend, onPreview }: SendReceiptFormProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { isAnimated } = useMotion();
   const [guess] = useState(() => guessedPaymentMethod(receipt));
   const [values, setValues] = useState<ReceiptSendValues>({
     periodStart: receipt.period_start_date,
@@ -38,8 +39,8 @@ export default function SendReceiptForm({ receipt, gmailState, isSending, isPrev
 
   // The buttons sit below the form, so a message at the top would be off screen.
   useEffect(() => {
-    if (failure) scroller.current?.scrollTo({ y: 0 });
-  }, [failure]);
+    if (failure) scroller.current?.scrollTo({ y: 0, animated: isAnimated });
+  }, [failure, isAnimated]);
 
   function update(change: Partial<ReceiptSendValues>): void {
     setValues((current) => ({ ...current, ...change }));

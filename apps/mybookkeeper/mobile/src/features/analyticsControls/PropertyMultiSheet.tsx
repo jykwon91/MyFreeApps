@@ -1,4 +1,4 @@
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useAnnouncement, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useAnnouncement, useTheme, useMotion } from "@platform/mobile";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 
@@ -15,6 +15,7 @@ interface PropertyMultiSheetProps {
 /** Each tap counts straight away, so the choice shows in the numbers behind the sheet. */
 export default function PropertyMultiSheet({ isOpen, properties, selectedIds, onChange, onClose, maxSelected }: PropertyMultiSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const isAtLimit = maxSelected !== undefined && selectedIds.length >= maxSelected;
   const limitNotice = isAtLimit ? MESSAGES.propertyLimit(maxSelected) : undefined;
   // Read when a tap reaches the limit, not each time the sheet is opened at it.
@@ -25,7 +26,7 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

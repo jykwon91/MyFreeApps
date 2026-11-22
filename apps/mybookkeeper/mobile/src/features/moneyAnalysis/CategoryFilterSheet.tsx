@@ -1,7 +1,7 @@
 import { EXPENSE_CATEGORY_LIST, REVENUE_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";
 import type { CategoryPreset } from "@mybookkeeper/api-client/types/analytics/category-preset";
 import { categoriesForPreset, detectCategoryPreset, isCategoryFilterActive, toggleCategory } from "@mybookkeeper/api-client/utils/categoryFilter";
-import { MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
+import { MIN_TOUCH_TARGET, OptionRow, useTheme, useMotion } from "@platform/mobile";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 import { categoryLabel } from "../transactions/transactionDisplay";
@@ -22,12 +22,13 @@ const SECTIONS: readonly { heading: string; categories: readonly string[] }[] = 
 /** Each tap counts straight away. A preset sets the whole list; a row adds or drops one; Only keeps just that one. */
 export default function CategoryFilterSheet({ isOpen, selected, onChange, onClose }: CategoryFilterSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const preset: CategoryPreset = isCategoryFilterActive(selected) ? detectCategoryPreset(selected) : "all";
   const presetIsExact = !isCategoryFilterActive(selected) || detectCategoryPreset(selected) !== "all";
   const sectionTitle = { fontSize: fontSize.sm, fontWeight: "600", color: colors.mutedForeground, paddingHorizontal: spacing.lg, paddingTop: spacing.md } as const;
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

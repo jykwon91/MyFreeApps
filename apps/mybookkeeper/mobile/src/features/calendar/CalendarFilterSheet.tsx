@@ -1,6 +1,6 @@
 import { CALENDAR_FILTER_SOURCES } from "@mybookkeeper/api-client/constants/calendarFilterSources";
 import { getSourceLabel } from "@mybookkeeper/api-client/constants/calendarSources";
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme, useMotion } from "@platform/mobile";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { FILTER_MESSAGES } from "../../constants/calendarFilters";
 import type { CalendarFilters } from "../../types/CalendarFilters";
@@ -17,10 +17,11 @@ interface CalendarFilterSheetProps {
 /** Each tap filters the list straight away, so the host sees what a choice does before closing. */
 export default function CalendarFilterSheet({ isOpen, filters, properties, onChange, onClose }: CalendarFilterSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const sectionTitle = { fontSize: fontSize.sm, fontWeight: "600", color: colors.mutedForeground, paddingHorizontal: spacing.lg, paddingTop: spacing.md } as const;
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

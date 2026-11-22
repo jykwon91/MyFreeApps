@@ -3,7 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { Alert, ScrollView } from "react-native";
+import { AccessibilityInfo, Alert, ScrollView } from "react-native";
 import { Provider } from "react-redux";
 import PromoteScreen from "../src/features/applicants/PromoteScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -194,8 +194,21 @@ describe("PromoteScreen", () => {
     await renderScreen();
     await pressPromote();
     expect(await screen.findByText("I wasn't able to promote that. Want to try again?")).toBeTruthy();
-    expect(scrollTo).toHaveBeenCalledWith({ y: 0 });
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
     scrollTo.mockRestore();
+  });
+
+  it("jumps to the top without animating when Reduce Motion is on", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    startServer("offline");
+    await renderScreen();
+    await pressPromote();
+    expect(await screen.findByText("I wasn't able to promote that. Want to try again?")).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+    expect(scrollTo).not.toHaveBeenCalledWith({ y: 0, animated: true });
+    scrollTo.mockRestore();
+    jest.restoreAllMocks();
   });
 
   it("asks before throwing away what was typed", async () => {

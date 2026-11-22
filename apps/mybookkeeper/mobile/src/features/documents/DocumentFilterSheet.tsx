@@ -5,7 +5,7 @@ import {
 } from "@mybookkeeper/api-client/constants/documentFilterOptions";
 import { DEFAULT_DOCUMENT_VIEW, DOCUMENT_SORT_FIELDS } from "@mybookkeeper/api-client/constants/documentListView";
 import type { DocumentListView } from "@mybookkeeper/api-client/types/document/DocumentListView";
-import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, useTheme, useMotion } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { DOCUMENT_FILTER_SHEET as SHEET } from "../../constants/documentFilters";
@@ -24,11 +24,12 @@ export default function DocumentFilterSheet({
   onClose: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const [draft, setDraft] = useState(view);
   const update = (change: Partial<DocumentListView>) => setDraft((current) => ({ ...current, ...change }));
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

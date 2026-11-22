@@ -4,7 +4,7 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
-import { Banner, CharacterCounter, FieldError, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
+import { Banner, CharacterCounter, FieldError, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme, useMotion } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
@@ -19,6 +19,7 @@ import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
  */
 export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onAdd, onClose }: CompanyPickerSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const { currentData, isFetching, error, refetch } = useListCompaniesQuery();
   const [query, setQuery] = useState(initialQuery);
 
@@ -51,7 +52,7 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }} testID="company-picker">
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

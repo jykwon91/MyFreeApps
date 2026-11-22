@@ -3,7 +3,7 @@ import { useRefinementProposal } from "@myjobhunter/api-client/hooks/useRefineme
 import type { PickedDraftLine } from "@myjobhunter/api-client/types/resume-refinement/picked-draft-line";
 import { SuggestionMode } from "@myjobhunter/api-client/types/resume-refinement/suggestion-mode";
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
-import { type KeyboardAwareScrollRef, SegmentedControl, StaleDataBanner, useToast } from "@platform/mobile";
+import { type KeyboardAwareScrollRef, SegmentedControl, StaleDataBanner, useToast, useMotion } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { RESUME_PANES } from "../../constants/resumePanes";
@@ -25,6 +25,7 @@ import { useShareResumeExport } from "./useShareResumeExport";
  * the conversation; Draft holds the resume, where a tapped line gets a fresh suggestion.
  */
 export default function ResumeSessionView({ session, onStartNew, isStale, renewSession }: ResumeSessionViewProps) {
+  const { isAnimated } = useMotion();
   const { showToast } = useToast();
   const [pane, setPane] = useState<ResumePane>("review");
   const [customFailure, setCustomFailure] = useState<string | null>(null);
@@ -96,7 +97,7 @@ export default function ResumeSessionView({ session, onStartNew, isStale, renewS
           canPick={session.status === "active"}
           highlightText={picker.highlightText}
           isPickDisabled={picker.isPicking}
-          onHighlightLayout={(y) => scroll.current?.scrollTo({ y: Math.max(0, draftTop.current + y - RESUME_HIGHLIGHT_SCROLL_MARGIN), animated: true })}
+          onHighlightLayout={(y) => scroll.current?.scrollTo({ y: Math.max(0, draftTop.current + y - RESUME_HIGHLIGHT_SCROLL_MARGIN), animated: isAnimated })}
           onLayout={(y) => (draftTop.current = y)}
           onPick={pick}
           source={session.current_draft}

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Modal, Text, View } from "react-native";
 import { FORM_SHEET_TEST_ID } from "../constants/formSheet";
+import { useMotion } from "../hooks/useMotion";
 import { useTheme } from "../theme/useTheme";
 import type { FormSheetProps } from "../types/FormSheetProps";
 import type { KeyboardAwareScrollRef } from "../types/KeyboardAwareScrollRef";
@@ -15,12 +16,13 @@ import KeyboardAwareScroll from "./KeyboardAwareScroll";
  */
 export default function FormSheet({ title, isOpen, onRequestClose, hasUnsavedChanges = false, discardCopy, isBusy = false, failure = null, children }: FormSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { isAnimated, sheetAnimation } = useMotion();
   const scroller = useRef<KeyboardAwareScrollRef>(null);
 
   // The buttons sit below the fields, so a message at the top would be off screen.
   useEffect(() => {
-    if (failure) scroller.current?.scrollTo({ y: 0 });
-  }, [failure]);
+    if (failure) scroller.current?.scrollTo({ y: 0, animated: isAnimated });
+  }, [failure, isAnimated]);
 
   function requestClose(): void {
     if (isBusy) return;
@@ -29,7 +31,7 @@ export default function FormSheet({ title, isOpen, onRequestClose, hasUnsavedCha
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={requestClose} presentationStyle="pageSheet" testID={FORM_SHEET_TEST_ID} visible={isOpen}>
+    <Modal animationType={sheetAnimation} onRequestClose={requestClose} presentationStyle="pageSheet" testID={FORM_SHEET_TEST_ID} visible={isOpen}>
       <FormSheetCloseContext.Provider value={{ requestClose, isBusy }}>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           <KeyboardAwareScroll

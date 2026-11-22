@@ -1,7 +1,7 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, confirmDiscard, FieldError, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, FieldError, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast, useMotion } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, View } from "react-native";
 import {
@@ -32,6 +32,7 @@ interface ExtendLeaseSheetProps {
 
 export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, endsOn, onClose }: ExtendLeaseSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation, isAnimated } = useMotion();
   const { showToast } = useToast();
   const [extendLease] = useExtendSignedLeaseMutation();
   const { refetch } = useGetSignedLeaseByIdQuery(leaseId);
@@ -49,8 +50,8 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
 
   // The buttons sit below the calendar and note, so a message at the top would be off screen.
   useEffect(() => {
-    if (failure) scroller.current?.scrollTo({ y: 0 });
-  }, [failure]);
+    if (failure) scroller.current?.scrollTo({ y: 0, animated: isAnimated });
+  }, [failure, isAnimated]);
 
   function close(): void {
     if (isBusy) return;
@@ -125,7 +126,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
 
   const longEnd = formatLongDate(endsOn);
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <KeyboardAwareScroll
           contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}

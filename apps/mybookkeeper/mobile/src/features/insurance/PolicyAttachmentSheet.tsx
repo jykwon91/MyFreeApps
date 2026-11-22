@@ -2,7 +2,7 @@ import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/
 import { useUploadInsurancePolicyAttachmentMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { INSURANCE_ATTACHMENT_KIND_LABELS, INSURANCE_ATTACHMENT_KINDS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
 import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
-import { Banner, confirmDiscard, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, LoadingButton, OptionRow, useTheme, useToast, useMotion } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { DEFAULT_ATTACHMENT_KIND, POLICY_ATTACHMENT_MESSAGES, POLICY_PHOTO_NAME, POLICY_PHOTO_NO_SELECTION_LIMIT, POLICY_READER_MESSAGES, policyPhotoName } from "../../constants/insuranceForm";
@@ -17,6 +17,7 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId: string; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const { showToast } = useToast();
   const [upload] = useUploadInsurancePolicyAttachmentMutation();
   const [kind, setKind] = useState<InsuranceAttachmentKind>(DEFAULT_ATTACHMENT_KIND);
@@ -75,7 +76,7 @@ export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId:
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
+    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
       <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {POLICY_ATTACHMENT_MESSAGES.addFile}
