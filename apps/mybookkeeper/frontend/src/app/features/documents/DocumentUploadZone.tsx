@@ -7,7 +7,8 @@ import { baseApi } from "@/shared/store/baseApi";
 import { EMAIL_DERIVED_TAGS } from "@mybookkeeper/api-client/constants/emailDerivedTags";
 import { DOCUMENT_UPLOAD_ACCEPT } from "@mybookkeeper/api-client/constants/documentUpload";
 import { documentUploadProblem, documentUploadProblemMessage, isSupportedDocumentUpload } from "@mybookkeeper/api-client/utils/documentUploadFile";
-import { uploadOutcome } from "@/shared/utils/upload-outcome";
+import { uploadOutcome } from "@mybookkeeper/api-client/utils/uploadOutcome";
+import { UPLOAD_OUTCOME_MESSAGES } from "@mybookkeeper/api-client/constants/uploadOutcomeMessages";
 import { cn, showError } from "@platform/ui";
 import UploadStatusCard from "./UploadStatusCard";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
@@ -109,15 +110,15 @@ function resolveUploadStatusText(args: UploadStatusTextArgs): string {
         ? `${fileName} — I read ${batchTotal - 1} of ${batchTotal}, but had trouble with 1. Want me to try that one again? It's in the list below.`
         : `${fileName} — I read ${batchTotal - batchFailed} of ${batchTotal}, but had trouble with ${batchFailed}. Want me to try those again? They're in the list below.`;
     case "done-single":
-      return `${fileName} — Got it! Check your Transactions page for the extracted data.`;
+      return `${fileName} — ${UPLOAD_OUTCOME_MESSAGES.done}`;
     case "failed-multi":
       return `${fileName} — I couldn't upload any of these. Please try again.`;
     case "failed-batch":
       return `${fileName} — I had trouble reading all ${batchTotal} of these. Want me to try again? They're in the list below.`;
     case "failed-single":
-      return `${fileName} — I had trouble reading this one. You can have me try again from the list below.`;
+      return `${fileName} — ${UPLOAD_OUTCOME_MESSAGES.failed} You can have me try again from the list below.`;
     case "skipped-single":
-      return `${fileName} — I read it, but there was nothing new to add to your transactions.`;
+      return `${fileName} — ${UPLOAD_OUTCOME_MESSAGES.skipped}`;
   }
 }
 

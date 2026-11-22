@@ -8,7 +8,7 @@ import { AxiosError, type AxiosAdapter, type AxiosProgressEvent } from "axios";
 import { drainUploadQueue } from "../src/features/capture/drainUploadQueue";
 import { addToQueue, clearUploadQueue, pendingUploads } from "../src/features/capture/uploadQueueFiles";
 import { uploadForm } from "../src/features/capture/uploadForm";
-import { uploadSentSettled, uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadSentSettled, uploadsReset, uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -69,7 +69,7 @@ beforeEach(() => {
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
 });
 
 afterEach(() => {
@@ -392,7 +392,7 @@ describe("upload queue", () => {
     expect(waiting()).toEqual([]);
   });
 
-  it("shows each file waiting, then sending with how far it's got, then sent", async () => {
+  it("shows each file waiting, then sending with how far it's got, then being read", async () => {
     const now = jest.spyOn(Date, "now");
     now.mockReturnValueOnce(9).mockReturnValueOnce(10);
     addFile("w1", "lease.docx");
@@ -415,12 +415,12 @@ describe("upload queue", () => {
     ]);
     expect(seen[1][0]).toEqual({ name: "lease.docx", status: "uploading", percent: 40 });
     expect(seen[3]).toEqual([
-      { name: "lease.docx", status: "done", percent: null },
+      { name: "lease.docx", status: "reading", percent: null },
       { name: "bank.csv", status: "uploading", percent: 40 },
     ]);
     expect(rows()).toEqual([
-      { name: "lease.docx", status: "done", percent: null },
-      { name: "bank.csv", status: "done", percent: null },
+      { name: "lease.docx", status: "reading", percent: null },
+      { name: "bank.csv", status: "reading", percent: null },
     ]);
     expect(uploads().phase).toBe("sent");
   });
@@ -438,12 +438,12 @@ describe("upload queue", () => {
     expect(percents).toEqual([null]);
   });
 
-  it("clears the sent files once the message has been up long enough", async () => {
+  it("keeps a sent file listed while it's being read once the message has been up long enough", async () => {
     addFile("w1", "ledger.xlsx");
     serverAnswering();
     await drain();
     store.dispatch(uploadSentSettled());
-    expect(rows()).toEqual([]);
+    expect(rows()).toEqual([{ name: "ledger.xlsx", status: "reading", percent: null }]);
     expect(uploads().phase).toBe("idle");
   });
 
@@ -462,7 +462,7 @@ describe("upload queue", () => {
     await drain();
     expect(rows()).toEqual([{ name: "lease.docx", status: "failed", percent: null }]);
     await drain();
-    expect(rows()).toEqual([{ name: "lease.docx", status: "done", percent: null }]);
+    expect(rows()).toEqual([{ name: "lease.docx", status: "reading", percent: null }]);
   });
 
   it("marks the file being sent as failed when the connection drops", async () => {
@@ -492,6 +492,6 @@ describe("upload queue", () => {
     api.defaults.adapter = adapter;
     await drain();
     await waitFor(() => expect(pendingUploads("w2")).toEqual([]));
-    await waitFor(() => expect(rows()).toEqual([{ name: "mine.csv", status: "done", percent: null }]));
+    await waitFor(() => expect(rows()).toEqual([{ name: "mine.csv", status: "reading", percent: null }]));
   });
 });

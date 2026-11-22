@@ -23,7 +23,7 @@ describe("a zip being read in the upload list", () => {
   it("is kept when sending ends, and when the got-it message settles, so it can still be stopped", () => {
     let state = reducer(withZipBeingRead(), uploadDrainEnded(true));
     state = reducer(reducer(state, uploadPhaseChanged("sent")), uploadSentSettled());
-    expect(state.files).toEqual([{ uri: "q:/receipts.zip", name: "receipts.zip", status: "reading", percent: null, batchId: "batch-1" }]);
+    expect(state.files).toEqual([{ uri: "q:/receipts.zip", name: "receipts.zip", status: "reading", percent: null, batchId: "batch-1", documentId: null, outcome: null }]);
   });
 
   it("is kept when a message is dismissed", () => {

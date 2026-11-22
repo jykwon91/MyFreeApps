@@ -21,6 +21,7 @@ import { pendingUploads, removeFromQueue } from "./uploadQueueFiles";
 import {
   uploadBatchStarted,
   uploadBlocked,
+  uploadDocumentSent,
   uploadDrainEnded,
   uploadFileChanged,
   uploadFileProgressed,
@@ -75,10 +76,10 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
       removeFromQueue(next);
       failedEarlier.delete(next.uri);
       if (switchedAway) return "idle";
-      const batchId = result.data.batch_id;
-      // A zip is read as a batch, which can still be stopped while it's being read.
+      const { batch_id: batchId, document_id: documentId } = result.data;
+      // A zip is read as a batch, which can still be stopped while it's being read. Anything else is one document.
       if (batchId) dispatch(uploadBatchStarted({ uri: next.uri, batchId }));
-      else dispatch(uploadFileChanged({ uri: next.uri, status: "done" }));
+      else dispatch(uploadDocumentSent({ uri: next.uri, documentId }));
       sentAny = true;
       networkFailuresInARow = 0;
       continue;

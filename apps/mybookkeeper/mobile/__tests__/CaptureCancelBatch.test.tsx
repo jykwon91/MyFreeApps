@@ -134,7 +134,7 @@ describe("cancelling a zip being read", () => {
     const server = startServer();
     await sendFile("bank.csv");
     await waitFor(() => expect(server.uploads).toEqual(["bank.csv"]));
-    expect(await screen.findByLabelText("bank.csv, Sent")).toBeTruthy();
+    expect(await screen.findByLabelText("bank.csv, Reading…")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Cancel reading/ })).toBeNull();
   });
 });

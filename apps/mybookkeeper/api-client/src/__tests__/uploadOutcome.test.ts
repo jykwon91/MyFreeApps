@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { uploadOutcome } from "@/shared/utils/upload-outcome";
+import { uploadOutcome } from "../utils/uploadOutcome";
 
 describe("uploadOutcome", () => {
   it.each([
