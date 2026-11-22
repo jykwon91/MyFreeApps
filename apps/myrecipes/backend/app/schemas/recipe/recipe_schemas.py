@@ -6,6 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.core.recipe_content_limits import RECIPE_INGREDIENTS_MAX, RECIPE_STEPS_MAX
+
 from app.schemas.recipe.version_schemas import (
     RECIPE_MINUTES_MAX,
     IngredientInput,
@@ -25,8 +27,8 @@ class RecipeCreateRequest(BaseModel):
     servings: str | None = Field(default=None, max_length=50)
     prep_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
     cook_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
-    ingredients: list[IngredientInput] = Field(min_length=1)
-    steps: list[StepInput] = Field(min_length=1)
+    ingredients: list[IngredientInput] = Field(min_length=1, max_length=RECIPE_INGREDIENTS_MAX)
+    steps: list[StepInput] = Field(min_length=1, max_length=RECIPE_STEPS_MAX)
 
 
 class RecipeUpdateRequest(BaseModel):

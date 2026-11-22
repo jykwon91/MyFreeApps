@@ -5,7 +5,7 @@ import { requestErrorStatus } from "../utils/requestErrorStatus";
 
 describe("photoImportErrorMessage", () => {
   it("tells a photo it can't read from a service that's down, a limit, or a dropped connection", () => {
-    expect(photoImportErrorMessage({ status: 413 })).toBe("That photo is too large (max 15 MB). Try a smaller or compressed version.");
+    expect(photoImportErrorMessage({ status: 413 })).toBe("That photo is too large (max 15 MB and 80 megapixels). Try a smaller or compressed version.");
     expect(photoImportErrorMessage({ status: 415 })).toMatch(/JPG, PNG or WebP/);
     expect(photoImportErrorMessage({ status: 422 })).toMatch(/clearer or better-lit photo/);
     expect(photoImportErrorMessage({ status: 429 })).toMatch(/Give it a few minutes/);

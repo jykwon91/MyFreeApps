@@ -14,12 +14,17 @@ export const CHANGE_NOTE_MAX_LENGTH = 2000;
 // The largest values the columns hold: quantity is Numeric(10, 3), minutes are Integer.
 export const INGREDIENT_QUANTITY_MAX = 9_999_999.999;
 export const RECIPE_MINUTES_MAX = 2_147_483_647;
+// How many ingredients and steps one version may have (app/core/recipe_content_limits.py).
+export const RECIPE_INGREDIENTS_MAX = 200;
+export const RECIPE_STEPS_MAX = 200;
 
 /** Why a recipe form can't be saved yet, worded the same on web and phone. */
 export const RECIPE_FORM_PROBLEMS = {
   titleRequired: "Give your recipe a title.",
   ingredientsRequired: "Add at least one ingredient.",
   stepsRequired: "Add at least one step.",
+  ingredientsTooMany: `A recipe can have up to ${RECIPE_INGREDIENTS_MAX} ingredients. Remove some to save.`,
+  stepsTooMany: `A recipe can have up to ${RECIPE_STEPS_MAX} steps. Remove some to save.`,
   ingredientNameRequired: "Name this ingredient, or remove it.",
   quantityInvalid: (decimalSeparator: DecimalSeparator) => `Enter the amount as a number, like 2 or 0${decimalSeparator}5.`,
   quantityTooLarge: "Enter an amount below 10 million.",

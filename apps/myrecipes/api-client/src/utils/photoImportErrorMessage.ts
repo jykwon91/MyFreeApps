@@ -1,5 +1,5 @@
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
-import { PHOTO_IMPORT_MAX_MEGABYTES } from "../constants/photoImport";
+import { PHOTO_IMPORT_MAX_MEGABYTES, PHOTO_IMPORT_MAX_MEGAPIXELS } from "../constants/photoImport";
 import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { requestErrorStatus } from "./requestErrorStatus";
 
@@ -8,7 +8,7 @@ export function photoImportErrorMessage(error: unknown): string {
   if (isNoResponse(error)) return CONNECTION_MESSAGES.photoImport;
   switch (requestErrorStatus(error)) {
     case 413:
-      return `That photo is too large (max ${PHOTO_IMPORT_MAX_MEGABYTES} MB). Try a smaller or compressed version.`;
+      return `That photo is too large (max ${PHOTO_IMPORT_MAX_MEGABYTES} MB and ${PHOTO_IMPORT_MAX_MEGAPIXELS} megapixels). Try a smaller or compressed version.`;
     case 415:
       return "That file isn't a photo we can read. Use a JPG, PNG or WebP.";
     case 422:

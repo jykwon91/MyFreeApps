@@ -1,12 +1,14 @@
 """The backend refuses what the web and phone forms refuse, with a 422 (never a 500).
 
 A blank title, a tweak without a note, and a recipe or tweak with no
-ingredients or steps are all rejected; an explicit null title on PATCH is too
+ingredients or steps, or more than the per-version cap, are all rejected; an explicit null title on PATCH is too
 (the column is NOT NULL). Whitespace is stripped before it is checked and stored.
 """
 from __future__ import annotations
 
 import pytest
+
+from app.core.recipe_content_limits import RECIPE_INGREDIENTS_MAX, RECIPE_STEPS_MAX
 
 CONTENT = {"ingredients": [{"name": "flour"}], "steps": [{"instruction": "Mix."}]}
 
@@ -17,6 +19,15 @@ def _recipe(**overrides) -> dict:
 
 def _tweak(**overrides) -> dict:
     return {"change_note": "More flour", **CONTENT, **overrides}
+
+
+def _rows(field: str, count: int) -> list[dict]:
+    if field == "ingredients":
+        return [{"name": f"ingredient {i}"} for i in range(count)]
+    return [{"instruction": f"Step {i}."} for i in range(count)]
+
+
+_CAPS = [("ingredients", RECIPE_INGREDIENTS_MAX), ("steps", RECIPE_STEPS_MAX)]
 
 
 class TestCreate:
@@ -44,6 +55,23 @@ class TestCreate:
             blank_step = await authed.post("/recipes", json=_recipe(steps=[{"instruction": " "}]))
         assert blank_name.status_code == 422
         assert blank_step.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("field", "cap"), _CAPS)
+    async def test_more_rows_than_the_cap_is_422(self, user_factory, as_user, field, cap) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/recipes", json=_recipe(**{field: _rows(field, cap + 1)}))
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("field", "cap"), _CAPS)
+    async def test_exactly_the_cap_saves(self, user_factory, as_user, field, cap) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/recipes", json=_recipe(**{field: _rows(field, cap)}))
+        assert resp.status_code == 201, resp.text
+        assert len(resp.json()["latest_version"][field]) == cap
 
     @pytest.mark.asyncio
     async def test_title_is_stored_trimmed(self, user_factory, as_user) -> None:
@@ -112,6 +140,17 @@ class TestTweak:
         async with await as_user(user) as authed:
             rid = (await authed.post("/recipes", json=_recipe())).json()["id"]
             resp = await authed.post(f"/recipes/{rid}/versions", json=_tweak(**{field: []}))
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("field", "cap"), _CAPS)
+    async def test_more_rows_than_the_cap_is_422(self, user_factory, as_user, field, cap) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            rid = (await authed.post("/recipes", json=_recipe())).json()["id"]
+            resp = await authed.post(
+                f"/recipes/{rid}/versions", json=_tweak(**{field: _rows(field, cap + 1)})
+            )
         assert resp.status_code == 422, resp.text
 
     @pytest.mark.asyncio

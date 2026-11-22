@@ -1,7 +1,8 @@
 /**
  * No-backend E2E for /recipes/import: a signed-in user picks a photo, it's read
  * into the editor for review, and creating it lands on the new recipe; a failed
- * read says why (the copy shared with the phone) and goes back to picking.
+ * read says why (the copy shared with the phone) and goes back to picking, and a
+ * draft with more rows than a recipe can have says so instead of posting.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -11,6 +12,7 @@ import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeCreate } from "./fixtures/stubRecipeCreate";
 import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
+import { RECIPE_FORM_PROBLEMS, RECIPE_INGREDIENTS_MAX } from "@myrecipes/api-client/constants/recipeForm";
 
 const CREATED_ID = recipeIdAt(2);
 const DRAFT = {
@@ -31,12 +33,12 @@ const PHOTO = {
 };
 
 /** POST /recipes/extract answers each status in turn; POST /recipes creates from what was posted. */
-async function stubImport(page: Page, extractStatuses: number[]) {
+async function stubImport(page: Page, extractStatuses: number[], draft: typeof DRAFT = DRAFT) {
   const extracts: string[] = [];
   await page.route(new RegExp(`${DEFAULT_API_BASE}/recipes/extract$`), (route) => {
     extracts.push(route.request().headers()["content-type"] ?? "");
     const status = extractStatuses[extracts.length - 1] ?? 200;
-    return route.fulfill(status === 200 ? json(DRAFT) : json({ detail: "no" }, status));
+    return route.fulfill(status === 200 ? json(draft) : json({ detail: "no" }, status));
   });
   const posted = await stubRecipeCreate(page, CREATED_ID);
   return { extracts, posted };
@@ -72,9 +74,15 @@ test("reads a photo into the editor, then creates the recipe from it", async ({ 
 
 test("a failed read says why and goes back to picking a photo", async ({ page }) => {
   await stubSignedInShell(page);
-  const { extracts } = await stubImport(page, [429, 422, 200]);
+  const { extracts } = await stubImport(page, [413, 429, 422, 200]);
 
   await page.goto("/recipes/import");
+  await pickPhoto(page);
+  await page.getByRole("button", { name: "Extract recipe" }).click();
+  await expect(
+    page.getByText("That photo is too large (max 15 MB and 80 megapixels). Try a smaller or compressed version."),
+  ).toBeVisible();
+
   await pickPhoto(page);
   await page.getByRole("button", { name: "Extract recipe" }).click();
   await expect(page.getByText("You've imported a lot of photos recently. Give it a few minutes and try again.")).toBeVisible();
@@ -86,5 +94,26 @@ test("a failed read says why and goes back to picking a photo", async ({ page })
   await pickPhoto(page);
   await page.getByRole("button", { name: "Extract recipe" }).click();
   await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
-  expect(extracts).toHaveLength(3);
+  expect(extracts).toHaveLength(4);
+});
+
+test("a draft with more ingredients than a recipe can have says so and isn't posted", async ({ page }) => {
+  await stubSignedInShell(page);
+  const ingredients = Array.from({ length: RECIPE_INGREDIENTS_MAX + 1 }, (_, i) => ({
+    name: `item ${i}`,
+    quantity: null,
+    unit: null,
+    note: null,
+  }));
+  const { posted } = await stubImport(page, [200], { ...DRAFT, ingredients });
+
+  await page.goto("/recipes/import");
+  await pickPhoto(page);
+  await page.getByRole("button", { name: "Extract recipe" }).click();
+  await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
+
+  await page.getByRole("button", { name: "Create recipe" }).click();
+  await expect(page.getByText(RECIPE_FORM_PROBLEMS.ingredientsTooMany)).toBeVisible();
+  await expect(page).toHaveURL(/\/recipes\/import$/);
+  expect(posted).toEqual([]);
 });

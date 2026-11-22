@@ -4,6 +4,8 @@
  */
 export const PHOTO_IMPORT_MAX_BYTES = 15 * 1024 * 1024;
 export const PHOTO_IMPORT_MAX_MEGABYTES = PHOTO_IMPORT_MAX_BYTES / (1024 * 1024);
+/** The backend also refuses a photo of more pixels than this (`MAX_PHOTO_PIXELS`), however few bytes. */
+export const PHOTO_IMPORT_MAX_MEGAPIXELS = 80;
 export const PHOTO_IMPORT_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /**
