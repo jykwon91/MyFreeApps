@@ -8,6 +8,7 @@ import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
 import { LOOT_ADDON_TALENT_TABS } from "@/games/wow-forever/data/lootAddon/lootAddonTalentTabs";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_LOOT_STUBS } from "@/test/addonLua/wowLootStubs.lua";
+import itemEffects from "@/games/wow-forever/data/lootAddon/itemEffects.json";
 
 const ARMOR = "classID = 4";
 const CHEST = `loc = "INVTYPE_CHEST", ${ARMOR}, subclassID = 4`;
@@ -16,6 +17,8 @@ const strength = (n: number): string => `stats = { ITEM_MOD_STRENGTH_SHORT = ${n
 
 const SHOW_ROLL = 'GroupLootFrame1.rollID = 1; GroupLootFrame1.shown = true; fire("START_LOOT_ROLL", 1); tick()';
 const COLOUR_CODES = /\|c[0-9a-f]{8}|\|r/gi;
+const VERDICT = /^frame: (Upgrade|Downgrade|About the same)/;
+const ESTIMATE = /effect estimated from item level: worth ~(\d+) stat points/;
 
 /** Loads the addon after `setup`, runs `then`, and returns what the roll window and chat showed, colour codes stripped. */
 function run(setup: string, then = SHOW_ROLL): string[] {
@@ -107,7 +110,7 @@ describe("MGA Loot verdicts", () => {
     // Two rings that score the same: one verdict line, the other "About the same" below it.
     const twins = `items[11] = { ${RING}, ${strength(10)} }; items[12] = { ${RING}, ${strength(10)} }; equipped[11] = 11; equipped[12] = 12`;
     expect(run(roll(`${RING}, ${strength(10)}`, twins)).join(" ")).toMatch(/About the same as .*\[Item 11\]\S* \/\/ 0% vs .*\[Item 12\]/);
-    // A ring with nothing it scores gets no second line contradicting "Nothing it scores".
+    // A ring with nothing it scores gets no second line: a % against a zero score means nothing.
     expect(run(roll(`${RING}, stats = {}`, wearing)).join(" ")).not.toContain("your other one");
     // One finger empty: there's no other ring to compare with.
     expect(run(roll(`${RING}, ${strength(15)}`, `items[11] = { ${RING}, ${strength(30)} }; equipped[11] = 11`)).join("\n")).not.toContain("your other one");
@@ -248,21 +251,56 @@ describe("MGA Loot verdicts", () => {
     expect(run(roll(`${CHEST}, ${strength(10)}`, "me.level = 50"))[0]).toContain("leveling estimate");
   });
 
-  it("won't call an upgrade or downgrade when the item has an effect it can't count", () => {
-    const [line] = run(roll(`${CHEST}, ${strength(10)}, lines = { "Use: Restores 500 health." }`, `items[5] = { ${CHEST}, ${strength(20)} }; equipped[5] = 5`));
-    expect(line).toMatch(/^frame: Can't judge: this item has "Use: Restores 500 health\.", which MGA Loot can't count \/\/ stats alone: -50% vs .*\[Item 5\]/);
-    expect(line).not.toContain("Downgrade");
+  it("estimates an effect with no data from the item's level: the stat points it lacks next to items like it", () => {
+    // Item 100 isn't in MGALootEffects, so the estimate is worked out in game from MGALootBudget.
+    const budget = (itemEffects.budget as Record<string, Record<string, Record<string, number>>>).head_chest_legs["3"]["60"];
+    const [line] = run(
+      roll(`${CHEST}, quality = 3, ilvl = 60, ${strength(10)}, lines = { "Use: Restores 500 health." }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`),
+    );
+    expect(line).toMatch(/^frame: Upgrade \+\d+% over .*\[Item 5\]/);
+    expect(line.match(ESTIMATE)?.[1]).toBe(String(budget - 10));
+    // An item already at its level's budget has nothing left for the effect.
+    const [full] = run(
+      roll(`${CHEST}, quality = 3, ilvl = 60, ${strength(budget)}, lines = { "Use: Restores 500 health." }`, `items[5] = { ${CHEST}, ${strength(budget)} }; equipped[5] = 5`),
+    );
+    expect(full).toContain("About the same as");
+    expect(full).toContain("worth ~0 stat points");
   });
 
-  it("won't judge against a worn item with an effect it can't count", () => {
-    const [line] = run(roll(`${CHEST}, ${strength(20)}`, `items[5] = { ${CHEST}, ${strength(10)}, lines = { "Chance on hit: Heals you for 50." } }; equipped[5] = 5`));
-    expect(line).toMatch(/Can't judge: .*\[Item 5\]\S* has "Chance on hit: Heals you for 50\."/);
-    expect(line).not.toContain("Upgrade");
+  it("estimates an effect on your worn item too", () => {
+    const [line] = run(
+      roll(`${CHEST}, quality = 3, ${strength(20)}`, `items[5] = { ${CHEST}, quality = 3, ${strength(10)}, lines = { "Chance on hit: Heals you for 50." } }; equipped[5] = 5`),
+    );
+    // 20 strength beats 10 on stats; the worn item's estimated effect makes it the better one.
+    expect(line).toMatch(/^frame: Downgrade -\d+% vs/);
   });
 
-  it("won't judge an item with a stat it doesn't know", () => {
-    const [line] = run(roll(`${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_MYSTERY_SHORT = 3 }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`));
-    expect(line).toContain("Can't judge: this item has ITEM_MOD_MYSTERY_SHORT");
+  it("counts a stat it has no weight for at your average stat weight", () => {
+    const [line] = run(
+      roll(`${CHEST}, stats = { ITEM_MOD_STRENGTH_SHORT = 10, ITEM_MOD_MYSTERY_SHORT = 3 }`, `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`),
+    );
+    expect(line).toMatch(VERDICT);
+    expect(line).toContain("ITEM_MOD_MYSTERY_SHORT counted at your average stat weight");
+  });
+
+  it("never says Can't judge", () => {
+    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
+    const TRINKET = `loc = "INVTYPE_TRINKET", ${ARMOR}, subclassID = 0`;
+    const odd = 'lines = { "Use: Restores 500 health.", "Chance on hit: Heals you for 50." }';
+    const cases = [
+      roll(`${CHEST}, ${strength(10)}, ${odd}`, `items[5] = { ${CHEST}, ${strength(20)}, ${odd} }; equipped[5] = 5`),
+      roll(`${CHEST}, stats = {}, ${odd}`, `items[5] = { ${CHEST}, stats = {}, ${odd} }; equipped[5] = 5`),
+      roll(`${RING}, ${odd}`, `items[11] = { ${RING}, ${odd} }; items[12] = { ${RING}, ${strength(5)}, ${odd} }; equipped[11] = 11; equipped[12] = 12`),
+      roll(`${TRINKET}, quality = 4, ilvl = 63, ${odd}`, `items[13] = { ${TRINKET}, ${odd} }; equipped[13] = 13`),
+      roll(`${SWORD}, quality = 5, ilvl = 80, ${odd}`, 'me.class = "MAGE"; me.level = 30'),
+      `items[754] = { ${SWORD}, ${strength(10)}, ${odd} }; rolls[1] = 754; talents = { 31, 20, 0 }; items[17780] = { ${SWORD}, ${odd} }; equipped[16] = 17780`,
+      roll(`${CHEST}, stats = { ITEM_MOD_MYSTERY_SHORT = 3, ITEM_MOD_MANA_SHORT = 100 }`, `items[5] = { ${CHEST}, stats = { ITEM_MOD_HEALTH_SHORT = 50 } }; equipped[5] = 5`),
+    ];
+    for (const setup of cases) {
+      const text = run(setup).join("\n");
+      expect(text, setup).not.toMatch(/can't judge|stats alone|nothing it scores/i);
+      expect(text, setup).toMatch(VERDICT);
+    }
   });
 
   it("doesn't count Equip lines that are plain stats as effects", () => {
@@ -308,36 +346,29 @@ describe("MGA Loot verdicts", () => {
     expect(line).not.toContain("Can't judge");
   });
 
-  it("calls a downgrade when only your worn item has the uncounted effect", () => {
+  it("calls a downgrade when only your worn item has the estimated effect and it wins anyway", () => {
     const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
     const [line] = run(
       `items[854] = { ${SWORD} }; rolls[1] = 854; talents = { 31, 20, 0 }; ` +
         `items[754] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; equipped[16] = 754`,
     );
     expect(line).toMatch(/Downgrade -\d+% vs/);
-    expect(line).toContain("which only widens the gap");
-    expect(line).not.toContain("Can't judge");
   });
 
-  it("calls an upgrade when only the new item has the uncounted effect and it already wins on stats", () => {
+  it("values an effect the data can't model at the generator's item-level estimate (Shortsword of Vengeance)", () => {
     const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
-    const [line] = run(
-      `items[754] = { ${SWORD}, ${strength(20)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; rolls[1] = 754; talents = { 31, 20, 0 }; ` +
-        `items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
+    const SMITE = 'lines = { "Chance on hit: Blasts the enemy with Holy Smite." }';
+    const [up] = run(
+      `items[754] = { ${SWORD}, ${strength(20)}, ${SMITE} }; rolls[1] = 754; talents = { 31, 20, 0 }; items[16] = { ${SWORD}, ${strength(10)} }; equipped[16] = 16`,
     );
-    expect(line).toMatch(/Upgrade \+\d+% over/);
-    expect(line).toContain("which only adds to it");
-    expect(line).not.toContain("Can't judge");
-  });
-
-  it("still can't judge when an uncounted effect could flip the verdict (weaker on stats)", () => {
-    const SWORD = `loc = "INVTYPE_WEAPON", classID = 2, subclassID = 7`;
-    const [line] = run(
-      `items[754] = { ${SWORD}, ${strength(10)}, lines = { "Chance on hit: Blasts the enemy with Holy Smite." } }; rolls[1] = 754; talents = { 31, 20, 0 }; ` +
-        `items[16] = { ${SWORD}, ${strength(20)} }; equipped[16] = 16`,
+    expect(up).toMatch(/Upgrade \+\d+% over/);
+    expect(up).toContain("worth ~14 stat points");
+    // 10 strength + 14 points of effect beats a plain 20 strength sword.
+    const [weaker] = run(
+      `items[754] = { ${SWORD}, ${strength(10)}, ${SMITE} }; rolls[1] = 754; talents = { 31, 20, 0 }; items[16] = { ${SWORD}, ${strength(20)} }; equipped[16] = 16`,
     );
-    expect(line).toContain("Can't judge: this item has \"Chance on hit: Blasts the enemy");
-    expect(line).not.toContain("Upgrade");
+    expect(weaker).toMatch(VERDICT);
+    expect(weaker).toContain("worth ~14 stat points");
   });
 
   it("counts Zum'rah's Vexing Cane's summon for a caster, with its summon note", () => {

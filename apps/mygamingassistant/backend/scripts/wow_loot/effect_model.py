@@ -111,6 +111,8 @@ RANGED_WEAPON_BITS = sum(1 << s for s in (2, 3, 16, 18, 19))
 MELEE_WEAPON_BITS = sum(1 << s for s in (0, 1, 4, 5, 6, 7, 8, 10, 13, 15))
 RANGED_ONLY_KEYS = {"hit_pct": "ranged_hit_pct", "crit_pct": "ranged_crit_pct", "haste_pct": "ranged_haste_pct"}
 MAX_DEPTH = 4
+# The item-level estimate for an item with an effect the data can't value (budget.py): its value is stat points.
+BUDGET = "budget"
 NO_RATE = 101  # SpellAuraOptions.ProcChance when a spell sets none.
 # A proc aura whose tooltip says "chance" but whose ProcChance is 100 carries no real chance: the client
 # has 100 on Forever's "Chance on harmful spell cast" auras, whose rate the server keeps. Such a proc counts
