@@ -1,4 +1,5 @@
 export const DUPLICATES_LINK = "/duplicates";
+export const POSSIBLE_DUPLICATE_LABEL = "Possible duplicate";
 export const DUPLICATES_SKELETON_ROWS = ["a", "b", "c", "d"] as const;
 
 /** Wording follows the website's duplicates tab. */

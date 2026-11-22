@@ -10,6 +10,7 @@ import { DUPLICATES_LINK } from "../../constants/duplicates";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { APPROVAL_PROPERTY_MESSAGES } from "../../constants/transactionApproval";
 import { pickerLoadError } from "../../lib/pickerLoadError";
+import { useDuplicateTransactionIds } from "../duplicates/useDuplicateTransactionIds";
 import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -28,6 +29,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
   const { showToast } = useToast();
+  const duplicateIds = useDuplicateTransactionIds();
   const { currentData, error, isFetching, refetch } = useGetTransactionQuery(id);
   const { data: loadedProperties, error: propertiesError, refetch: refetchProperties } = useGetPropertiesQuery();
   const properties = loadedProperties ?? [];
@@ -61,7 +63,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
   }
 
   const name = transactionName(transaction);
-  const isDuplicate = transaction.status === "duplicate";
+  const isDuplicate = duplicateIds.has(transaction.id);
   const reviewable = isReviewable(transaction.status);
   const propertyOptions = selectableProperties(properties, null).map((property) => ({ value: property.id, label: property.name }));
 
@@ -127,12 +129,11 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
             actions={[{ label: "Review duplicates", onPress: () => router.push(DUPLICATES_LINK) }]}
             message="I think this is a duplicate of another transaction. Compare them to merge or keep one."
           />
-        ) : (
-          <TransactionFact
-            label="Status"
-            value={transaction.status === "approved" ? "\u2713 Approved" : statusLabel(transaction.status)}
-          />
-        )}
+        ) : null}
+        <TransactionFact
+          label="Status"
+          value={transaction.status === "approved" ? "\u2713 Approved" : statusLabel(transaction.status)}
+        />
         {reviewable && transaction.review_reason ? <TransactionFact label="Why I flagged this" value={transaction.review_reason} /> : null}
 
         <TransactionFact label="Date" value={spokenDate(transaction.transaction_date)} />
@@ -151,14 +152,14 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
           </LoadingButton>
         ) : null}
 
-        {canWrite && !isDuplicate ? (
+        {canWrite ? (
           <LoadingButton isLoading={isDeleting} loadingText="Deleting…" onPress={confirmDelete} variant="destructive">
             Delete
           </LoadingButton>
         ) : null}
       </ScrollView>
 
-      {canWrite && !isDuplicate ? (
+      {canWrite ? (
         <View
           style={{
             flexDirection: "row",

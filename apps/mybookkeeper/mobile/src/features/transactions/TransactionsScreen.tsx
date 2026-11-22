@@ -1,4 +1,5 @@
 import DuplicatesLink from "../duplicates/DuplicatesLink";
+import { useDuplicateTransactionIds } from "../duplicates/useDuplicateTransactionIds";
 import PagedListFooter from "../shell/PagedListFooter";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
@@ -85,6 +86,7 @@ export default function TransactionsScreen({
   // Loading the next page leaves the rows already shown as they are; any other fetch may change them.
   const isRefetching = isFetching && !isFetchingNextPage;
   const rowsStatus = useMemo(() => ({ isCurrent: !isRefetching, version: rowsVersion }), [isRefetching, rowsVersion]);
+  const duplicateIds = useDuplicateTransactionIds();
   const selection = useTransactionSelection(rows, params, rowsStatus);
   const { cancel: cancelSelection, drop: dropSelected } = selection;
 
@@ -155,6 +157,7 @@ export default function TransactionsScreen({
   const renderTransaction = useCallback<ListRenderItem<Transaction>>(
     ({ item }) => (
       <TransactionRow
+        isPossibleDuplicate={duplicateIds.has(item.id)}
         isSelected={isSelected(item.id)}
         onLongPress={canWrite ? start : undefined}
         onPress={openTransaction}
@@ -162,7 +165,7 @@ export default function TransactionsScreen({
         transaction={item}
       />
     ),
-    [isSelected, canWrite, start, openTransaction, propertyNames],
+    [isSelected, canWrite, start, openTransaction, propertyNames, duplicateIds],
   );
 
   if (isLoading) return <TransactionsSkeleton />;

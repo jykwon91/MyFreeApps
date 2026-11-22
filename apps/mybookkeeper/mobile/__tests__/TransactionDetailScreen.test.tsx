@@ -10,6 +10,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { APPROVAL_PROPERTY_MESSAGES } from "../src/constants/transactionApproval";
+import { aDuplicatePair } from "../test-support/aDuplicatePair";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 import { queriesSettled } from "../test-support/queriesSettled";
 
@@ -245,13 +246,23 @@ describe("TransactionDetailScreen", () => {
     expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
   });
 
-  it("sends duplicates to the duplicates review, with nothing to approve, edit or delete", async () => {
-    startTransactionServer([aTransaction({ status: "duplicate" })]);
-    await renderScreen();
+  it("offers the duplicates review when this transaction is in a suspected pair, keeping its own actions", async () => {
+    const server = startTransactionServer([aTransaction({ id: "a1" })]);
+    server.duplicates = [aDuplicatePair()];
+    await renderScreen("a1");
     expect(await screen.findByText(/duplicate of another transaction/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Review duplicates" }));
     expect(mockPush).toHaveBeenCalledWith("/duplicates");
-    for (const name of ["Approve", "Edit", "Delete"]) expect(screen.queryByRole("button", { name })).toBeNull();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
+  });
+
+  it("shows no duplicates banner when this transaction is in no suspected pair", async () => {
+    const server = startTransactionServer([aTransaction({ id: "t1" })]);
+    server.duplicates = [aDuplicatePair()];
+    await renderScreen("t1");
+    await screen.findByText("Home Depot");
+    await queriesSettled();
+    expect(screen.queryByText(/duplicate of another transaction/)).toBeNull();
   });
 
   it("shows a viewer no changes", async () => {
