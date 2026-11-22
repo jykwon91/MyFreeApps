@@ -325,5 +325,5 @@ async def hard_delete_by_id(
 
 
 async def hard_delete_for_organization(db: AsyncSession, organization_id: uuid.UUID) -> None:
-    """For deleting an account. Everywhere else a lease is soft-deleted."""
+    """For deleting a workspace or an account. Everywhere else a lease is soft-deleted."""
     await db.execute(delete(SignedLease).where(SignedLease.organization_id == organization_id))
