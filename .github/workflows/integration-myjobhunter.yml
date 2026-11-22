@@ -51,6 +51,7 @@ jobs:
           JWT_LIFETIME_SECONDS=1800
           LOG_LEVEL=INFO
           EMAIL_BACKEND=console
+          ENVIRONMENT=test
           MYJOBHUNTER_ENABLE_TEST_HELPERS=1
           # MinIO is part of the shared infra stack on the VPS; in CI we
           # don't run it. The boot guard would otherwise fail with

@@ -254,6 +254,7 @@ check_test_mode_off(
     flag_name="ALLOW_TEST_ADMIN_PROMOTION",
     flag_is_on=settings.allow_test_admin_promotion,
     environment=settings.environment,
+    environment_is_explicit=settings.environment_is_explicit,
 )
 if settings.allow_test_admin_promotion:
     from app.test_helpers.router import router as test_helpers_router

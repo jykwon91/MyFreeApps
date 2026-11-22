@@ -15,6 +15,7 @@ from platform_shared.core.boot_guards import (
     check_transparency_sync_configured,
     check_turnstile_configured,
 )
+from platform_shared.core.settings import BaseAppSettings
 
 
 class TestCheckTurnstileConfigured:
@@ -358,16 +359,47 @@ class TestCheckTransparencySyncConfigured:
             _sync_guard(environment="staging", minio_access_key="")
 
 
+def _required_settings() -> BaseAppSettings:
+    return BaseAppSettings(
+        _env_file=None,
+        database_url="sqlite+aiosqlite:///:memory:",
+        database_url_sync="sqlite:///:memory:",
+        secret_key="x" * 32,
+        encryption_key="y" * 32,
+    )
+
+
 class TestCheckTestModeOff:
     @pytest.mark.parametrize("environment", ["development", "test"])
-    def test_allowed_where_tests_run(self, environment: str) -> None:
-        check_test_mode_off(flag_name="MY_FLAG", flag_is_on=True, environment=environment)
+    def test_allowed_where_tests_run_when_explicit(self, environment: str) -> None:
+        check_test_mode_off(
+            flag_name="MY_FLAG", flag_is_on=True, environment=environment, environment_is_explicit=True,
+        )
 
-    @pytest.mark.parametrize("environment", ["production", "staging"])
-    def test_off_passes_everywhere(self, environment: str) -> None:
-        check_test_mode_off(flag_name="MY_FLAG", flag_is_on=False, environment=environment)
+    @pytest.mark.parametrize("explicit", [True, False])
+    @pytest.mark.parametrize("environment", ["development", "test", "production", "staging"])
+    def test_off_passes_everywhere(self, environment: str, explicit: bool) -> None:
+        check_test_mode_off(
+            flag_name="MY_FLAG", flag_is_on=False, environment=environment, environment_is_explicit=explicit,
+        )
 
     @pytest.mark.parametrize("environment", ["production", "staging"])
     def test_on_outside_development_and_test_raises(self, environment: str) -> None:
         with pytest.raises(ProductionTestModeError, match="MY_FLAG"):
-            check_test_mode_off(flag_name="MY_FLAG", flag_is_on=True, environment=environment)
+            check_test_mode_off(
+                flag_name="MY_FLAG", flag_is_on=True, environment=environment, environment_is_explicit=True,
+            )
+
+    def test_on_with_defaulted_environment_raises(self) -> None:
+        with pytest.raises(ProductionTestModeError, match="explicitly"):
+            check_test_mode_off(
+                flag_name="MY_FLAG", flag_is_on=True, environment="development", environment_is_explicit=False,
+            )
+
+    def test_defaulted_environment_setting_is_not_explicit(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
+        assert _required_settings().environment_is_explicit is False
+
+    def test_environment_from_env_var_is_explicit(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ENVIRONMENT", "test")
+        assert _required_settings().environment_is_explicit is True
