@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
-import { ChefHat, Compass, Settings, Shield } from "lucide-react";
+import { ChefHat, Compass, Heart, Settings, Shield } from "lucide-react";
 import { AppShell, GuestShell, StepUpModal, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
@@ -24,6 +24,7 @@ const ICONS: Record<string, React.ReactNode> = {
   Compass: <Compass className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
+  Heart: <Heart className="w-5 h-5" />,
 };
 
 const LOGO = (

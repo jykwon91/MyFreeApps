@@ -183,3 +183,13 @@ test.describe("delete account", () => {
     });
   });
 });
+
+test("the signed-in nav has Support MyFreeApps and it opens the support page", async ({ page }) => {
+  await stubSignedInShell(page);
+
+  await page.goto("/settings");
+  await page.getByRole("link", { name: "Support MyFreeApps" }).first().click();
+
+  await expect(page).toHaveURL(/\/support-myfreeapps$/);
+  await expect(page.getByRole("heading", { name: "Please support MyFreeApps!" })).toBeVisible();
+});
