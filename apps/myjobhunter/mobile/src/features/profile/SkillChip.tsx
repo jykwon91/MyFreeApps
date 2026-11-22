@@ -1,4 +1,5 @@
 import { useDeleteSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
+import { skillRemoveBody } from "@myjobhunter/api-client/utils/skillRemoveBody";
 import { MIN_TOUCH_TARGET, useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
@@ -12,7 +13,7 @@ export default function SkillChip({ skill }: SkillChipProps) {
   const [deleteSkill] = useDeleteSkillMutation();
   const { isRemoving, confirmRemove } = useConfirmedRemoval(() => deleteSkill(skill.id).unwrap(), {
     ...MESSAGES,
-    removeBody: `${skill.name} — ${MESSAGES.removeBody}`,
+    removeBody: skillRemoveBody(skill.name),
     remove: PROFILE_MESSAGES.remove,
     keep: PROFILE_MESSAGES.keep,
   });

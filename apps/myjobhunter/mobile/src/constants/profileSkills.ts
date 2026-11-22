@@ -1,3 +1,5 @@
+import { SKILL_REMOVE_MESSAGES } from "@myjobhunter/api-client/constants/skillRemoveMessages";
+
 /** Copy for the profile's skills and the add-skill sheet. */
 export const SKILL_MESSAGES = {
   title: "Skills",
@@ -19,8 +21,8 @@ export const SKILL_MESSAGES = {
   created: "Skill added.",
   couldntCreate: "I couldn't add that skill. Want to try again?",
   checkWhere: "your skills",
-  removeTitle: "Remove this skill?",
-  removeBody: "It will be taken off your profile.",
+  removeTitle: SKILL_REMOVE_MESSAGES.title,
+  removeBody: SKILL_REMOVE_MESSAGES.body,
   removed: "Skill removed.",
   couldntRemove: "I couldn't remove that skill. Want to try again?",
 } as const;
