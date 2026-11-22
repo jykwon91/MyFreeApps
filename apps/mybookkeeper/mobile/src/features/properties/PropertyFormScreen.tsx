@@ -54,7 +54,7 @@ export default function PropertyFormScreen({ original }: { original: Property | 
       || rentedSince !== (original.rented_since ?? null)
       || landValue !== (original.land_value ?? "")
       || placedInService !== (original.date_placed_in_service ?? null)
-    : !isBlank(form);
+    : !isBlank(form) || !priceBlank;
   const choice = CLASSIFICATION_CHOICES.find((candidate) => candidate.value === form.classification);
   const locked = isBusy || isLeaving;
   const errorFor = (field: keyof PropertyForm) => (hasTried ? problems[field] : undefined);

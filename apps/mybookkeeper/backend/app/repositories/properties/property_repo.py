@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from collections.abc import Sequence
 
 from sqlalchemy import func, select
@@ -59,6 +60,7 @@ async def create_property(
     address: str,
     classification: PropertyClassification = PropertyClassification.UNCLASSIFIED,
     type: PropertyType | None = None,
+    purchase_price: Decimal | None = None,
 ) -> Property:
     prop = Property(
         organization_id=organization_id,
@@ -67,6 +69,7 @@ async def create_property(
         address=address,
         classification=classification,
         type=type,
+        purchase_price=purchase_price,
     )
     db.add(prop)
     await db.flush()

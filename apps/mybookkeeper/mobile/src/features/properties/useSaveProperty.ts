@@ -35,7 +35,7 @@ export function useSaveProperty(original: Property | null) {
       () =>
         original && changes !== null
           ? updateProperty({ id: original.id, data: { ...changes, ...extra } }).unwrap()
-          : createProperty(toPropertyWrite(trimmedForm(form))).unwrap(),
+          : createProperty(toPropertyWrite(trimmedForm(form), extra.purchase_price ?? null)).unwrap(),
       { staysLocked: true },
     );
     if (result !== "done") return;

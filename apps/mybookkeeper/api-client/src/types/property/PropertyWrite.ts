@@ -7,4 +7,6 @@ export interface PropertyWrite {
   address: string;
   classification: PropertyClassification;
   type?: PropertyType;
+  /** Decimal string such as "250000.00". Optional when adding. */
+  purchase_price?: string;
 }

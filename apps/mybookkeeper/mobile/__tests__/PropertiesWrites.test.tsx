@@ -323,6 +323,28 @@ describe("adding a property", () => {
     expect(writesOf(server, "post")[0].body).not.toHaveProperty("type");
   });
 
+  it("sends a purchase price typed while adding, in the same request", async () => {
+    const server = serverWith([]);
+    await show(<PropertyCreateScreen />);
+    await screen.findByLabelText("Property name, required");
+    await fillIn();
+    await fireEvent.changeText(screen.getByLabelText(FORM.purchasePrice), "$250,000");
+    await fireEvent.press(button(FORM.add));
+    await screen.findByText(FORM.added);
+    expect(writesOf(server, "post")).toHaveLength(1);
+    expect(writesOf(server, "post")[0].body.purchase_price).toBe("250000.00");
+    expect(writesOf(server, "patch")).toEqual([]);
+  });
+
+  it("asks before discarding when only a purchase price was typed", async () => {
+    serverWith([]);
+    await show(<PropertyCreateScreen />);
+    await screen.findByLabelText("Property name, required");
+    expect(mockPreventRemove.active).toBe(false);
+    await fireEvent.changeText(screen.getByLabelText(FORM.purchasePrice), "250000");
+    expect(mockPreventRemove.active).toBe(true);
+  });
+
   it("trims what was typed", async () => {
     const server = serverWith([]);
     await show(<PropertyCreateScreen />);

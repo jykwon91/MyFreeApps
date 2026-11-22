@@ -58,12 +58,14 @@ export function trimmedForm(form: PropertyForm): PropertyForm {
   return { ...form, name: form.name.trim(), street: form.street.trim(), city: form.city.trim(), state: form.state.trim(), zip: form.zip.trim() };
 }
 
-export function toPropertyWrite(form: PropertyForm): PropertyWrite {
+/** `purchasePrice` is the cleaned decimal string, if one was typed. */
+export function toPropertyWrite(form: PropertyForm, purchasePrice: string | null = null): PropertyWrite {
   return {
     name: form.name,
     address: toAddress(form),
     classification: form.classification,
     ...(form.type ? { type: form.type } : {}),
+    ...(purchasePrice ? { purchase_price: purchasePrice } : {}),
   };
 }
 
