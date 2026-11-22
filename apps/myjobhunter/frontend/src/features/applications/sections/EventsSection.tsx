@@ -11,7 +11,10 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import LogEventDialog from "@/features/applications/LogEventDialog";
+import ListLoadError from "@/components/ListLoadError";
 import EventListItem from "./EventListItem";
+import EventsSkeleton from "./EventsSkeleton";
+import { APPLICATION_EVENTS_LOAD_MESSAGES as MESSAGES } from "@myjobhunter/api-client/constants/applicationEventsLoadMessages";
 import { useListApplicationEventsQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
 
@@ -20,8 +23,8 @@ interface EventsSectionProps {
 }
 
 export default function EventsSection({ applicationId }: EventsSectionProps) {
-  const { data: eventsData } = useListApplicationEventsQuery(applicationId);
-  const events = eventsData?.items ?? [];
+  const { currentData, isFetching, isError, refetch } = useListApplicationEventsQuery(applicationId);
+  const events = currentData?.items;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
@@ -37,12 +40,49 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
     setEditingEventId(null);
   }
 
+  function body() {
+    if (!events) {
+      if (isFetching) return <EventsSkeleton />;
+      if (isError) {
+        return <ListLoadError message={MESSAGES.couldntLoad} retryLabel={MESSAGES.tryAgain} onRetry={refetch} />;
+      }
+      return null;
+    }
+    if (events.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
+          {MESSAGES.none}
+        </p>
+      );
+    }
+    return (
+      <ol className="space-y-2">
+        {events.map((event) => (
+          <EventListItem
+            key={event.id}
+            applicationId={applicationId}
+            event={event}
+            isEditing={editingEventId === event.id}
+            onEditClick={handleEditClick}
+            onCancelEdit={handleCancelEdit}
+            onSaved={handleSaved}
+          />
+        ))}
+      </ol>
+    );
+  }
+
   return (
     <section>
       <header className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-medium">
-          Activity{" "}
-          <span className="text-muted-foreground font-normal">({events.length})</span>
+          Activity
+          {events ? (
+            <>
+              {" "}
+              <span className="text-muted-foreground font-normal">({events.length})</span>
+            </>
+          ) : null}
         </h2>
         <button
           type="button"
@@ -53,25 +93,7 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
           Log event
         </button>
       </header>
-      {events.length === 0 ? (
-        <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
-          No events yet.
-        </p>
-      ) : (
-        <ol className="space-y-2">
-          {events.map((event) => (
-            <EventListItem
-              key={event.id}
-              applicationId={applicationId}
-              event={event}
-              isEditing={editingEventId === event.id}
-              onEditClick={handleEditClick}
-              onCancelEdit={handleCancelEdit}
-              onSaved={handleSaved}
-            />
-          ))}
-        </ol>
-      )}
+      {body()}
 
       <LogEventDialog
         applicationId={applicationId}

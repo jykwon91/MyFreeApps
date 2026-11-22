@@ -1,11 +1,10 @@
+import { APPLICATION_EVENTS_LOAD_MESSAGES } from "@myjobhunter/api-client/constants/applicationEventsLoadMessages";
+
 /** Copy for the activity timeline and the log-event and edit-interview sheets. */
 export const APPLICATION_EVENT_MESSAGES = {
   title: "Activity",
   logEvent: "Log event",
-  none: "No events yet.",
-  couldntLoad: "I couldn't load the activity.",
-  tryAgain: "Try again",
-  loading: "Loading the activity",
+  ...APPLICATION_EVENTS_LOAD_MESSAGES,
   via: "via",
   edit: "Edit interview details",
   logTitle: "Log event",
