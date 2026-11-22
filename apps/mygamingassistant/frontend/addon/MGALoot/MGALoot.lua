@@ -13,6 +13,8 @@
 -- Weights and models are PvE ("PvE values" in the tags); an effect worth a lot
 -- more against players (control, immunities, damage shields, armor cuts) says
 -- "(worth more in PvP)". That is a label only: there are no PvP weights.
+-- A change to one class's spells (an entry's `class`) counts only for that
+-- class; anyone else counts it as 0, and it never makes them an estimate.
 --
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
 --   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
@@ -34,6 +36,7 @@ local MAX_LEVEL = 60
 -- Every weight and model is for fighting mobs; PvP is a label, never a number.
 local PVE_TAG = "PvE values"
 local PVP_NOTE = " (worth more in PvP)"
+local OTHER_CLASS_NOTE = " (only for %ss, so it counts 0)"
 -- Closer than this (percent) is "about the same": the weights aren't that exact.
 local SIDEGRADE_PCT = 5
 -- Past this the old item scores next to nothing, so a percentage means little.
@@ -367,7 +370,8 @@ end
 local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
   local entries = MGALootEffects and id and MGALootEffects[id]
   if not entries then return false, 0 end
-  local budget
+  local budget, estimateForMe
+  local myClass = player().classId
   local weaponDps = RANGED_LOC[equipLoc] and w.ranged or w.melee
   local spellDps = (w.stats.spell_damage or 0) * SPELL_DAMAGE_PER_DPS
   local rangedFirst = w.ranged > w.melee
@@ -375,8 +379,12 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
   for _, e in ipairs(entries) do
     local ranged = EFFECT_RANGED[e.stat]
     local note = e.note
-    if e.stat == "budget" then
+    if e.class and e.class ~= myClass then
+      note = note .. OTHER_CLASS_NOTE:format(e.class)
+    elseif e.stat == "budget" then
       budget, note = e.value, nil
+    elseif e.stat == "unresolved" then
+      estimateForMe = true
     elseif e.stat == "dps" then
       add = add + e.value * weaponDps
     elseif e.stat == "spell_dps" then
@@ -397,13 +405,14 @@ local function scoreEffects(id, stats, equipLoc, w, chance, notes, level)
       if rangedFirst then chance[ranged] = math.max(chance[ranged] or 0, e.value) end
     elseif EFFECT_CHANCE[e.stat] then
       chance[e.stat] = math.max(chance[e.stat] or 0, e.value)
-    elseif e.stat ~= "none" and e.stat ~= "unresolved" then
+    elseif e.stat ~= "none" then
       add = add + e.value * (w.stats[e.stat] or 0)
     end
     if note and e.pvp then note = note .. PVP_NOTE end
     if note then table.insert(notes, note) end
   end
-  return true, add, budget
+  -- The estimate pays for the effects the data can't value; only those that count for you.
+  return true, add, estimateForMe and budget or nil
 end
 
 -- Score with these weights. Also returns notes on how it counted creature-type stats, stats it has no

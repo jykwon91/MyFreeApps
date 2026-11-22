@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from scripts.wow_loot.class_spell import ClassSpell
+
 # A non-weapon item's "chance per hit" is counted at one hit (or spell cast, or hit taken) every this many seconds.
 ASSUMED_SECONDS_PER_HIT = 2.5
 # A proc on your spell casts is counted at one cast every this many seconds when its rate is a chance per cast:
@@ -137,14 +139,15 @@ UNWEIGHTED_AURAS: dict[int, str] = {
     77: "an immunity, which has no stat weight",
     84: "regenerates health, which has no stat weight",
     87: "changes the damage you take, which has no stat weight",
-    107: "changes one of your class spells, which has no stat equivalent",
-    108: "changes one of your class spells, which has no stat equivalent",
     117: "resists a kind of crowd control, which has no stat weight",
     232: "shortens crowd control on you, which has no stat weight",
 }
 # Of those, the immunities and crowd-control resists and breaks: worth more against players, who stun, root,
 # fear and slow far more than mobs do.
 PVP_AURAS = frozenset({77, 117, 232})
+# Flat / percent spell modifiers: change the class spells the effect's class mask names (``class_spell.py``).
+CLASS_MOD_AURAS = frozenset({107, 108})
+AURA_ADD_PCT_MODIFIER = 108
 # SpellEffect.Effect values that summon something (creatures, totems, guardians, objects).
 SUMMON_EFFECTS = frozenset({28, 34, 41, 56, 87, 97, 98, 104, 105, 106, 107, 112})
 EFFECT_LEARN_SPELL = 36
@@ -182,6 +185,8 @@ class World:
     mob_dps: tuple[tuple[int, float], ...] = ()
     mob_armor: tuple[tuple[int, float], ...] = ()
     resist_free: frozenset[str] = frozenset()
+    # Every class's family spells, at their top rank by level 60, for item spell modifiers.
+    class_spells: tuple[ClassSpell, ...] = ()
 
     def dps_at(self, band: int) -> tuple[int, float] | None:
         """The band at or below ``band`` with a median, and that median."""
@@ -199,6 +204,8 @@ class EffectRow:
     trigger: int
     target: int
     target2: int = 0
+    # EffectSpellClassMask_0..3: the family spells a spell modifier changes.
+    class_mask: tuple[int, int, int, int] = (0, 0, 0, 0)
 
 
 @dataclass(frozen=True)
@@ -228,6 +235,8 @@ class Spell:
     chance_worded: bool = False
     # The creatures this spell's summon effects summon, as cmangos classic-db knows them.
     creatures: tuple[Creature, ...] = ()
+    # SpellClassOptions.SpellClassSet: the class family a spell modifier belongs to (0 = none).
+    family: int = 0
 
 
 @dataclass(frozen=True)
@@ -261,6 +270,8 @@ class Entry:
     # Worth a lot more against players than the PvE value says: control, immunities and breaks, damage shields
     # and when-hit procs, armor and resistance cuts modelled from mob values. A label only, never a number.
     pvp: bool = False
+    # The class it counts for (a class-spell modifier); "" = everyone.
+    cls: str = ""
 
 
 NONE = "none"
@@ -362,6 +373,18 @@ class Control:
 @dataclass(frozen=True)
 class NoValue:
     name: str
+
+
+@dataclass(frozen=True)
+class ClassMod:
+    """A flat or percent change (``SpellModOp`` ``op``) to the family spells ``mask`` names."""
+
+    name: str
+    pct: bool
+    op: int
+    amount: float
+    family: int
+    mask: tuple[int, int, int, int]
 
 
 @dataclass(frozen=True)

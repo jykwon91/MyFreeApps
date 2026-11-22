@@ -53,9 +53,14 @@ Every conversion turns an effect into a steady per-fight equivalent of a stat th
   ``ranged_`` key, which the addon counts only for weights that value ranged DPS over melee.
 * **No combat value** (water breathing, run / swim / mount speed, stealth, safe fall, illusions...): value 0,
   note "no combat value".
+* **Class-spell changes** (equip auras 107 / 108): valued in ``class_mods.py`` and marked with the class whose
+  spells they change (``Entry.cls``), the only class the addon counts them for. Each modifier effect is valued
+  on its own, so an item with a direct-damage and a periodic-damage change to spells that share a cooldown
+  (the shocks) counts both at that cooldown. A Use or proc that changes class spells is unresolved for its class.
 * **Unresolved:** scripted (dummy) spells, other effects on the enemy, effects on your pet, class-spell
-  modifiers, summoned objects and totems, rage / energy, buffs that last a set number of hits,
-  and anything the data gives no rate, cooldown or duration for. The addon says it can't judge those.
+  changes the data can't value, summoned objects and totems, rage / energy, buffs that last a set number of
+  hits, and anything the data gives no rate, cooldown or duration for. The addon estimates those from item
+  level (``budget``).
 
 A dummy effect that triggers the same spell as a real effect in the same spell (Hand of Justice's tooltip
 copy of its proc) adds nothing and is skipped.
@@ -65,6 +70,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
+from scripts.wow_loot.class_mods import class_mod_entries
+from scripts.wow_loot.class_spell import FAMILY_CLASS
 from scripts.wow_loot.creature_types import band_of
 from scripts.wow_loot.effect_model import (
     ASSUMED_SECONDS_PER_CAST,
@@ -80,6 +87,7 @@ from scripts.wow_loot.effect_model import (
     USE_TRIGGERS,
     ArmorCut,
     Buff,
+    ClassMod,
     Control,
     Damage,
     Entry,
@@ -225,6 +233,11 @@ def _enemy_entry(part: object, uptime: float, when: str, world: World) -> Entry 
     return None
 
 
+def _passing_class_mod(part: ClassMod) -> Entry:
+    """A class-spell change that only lasts a while (a Use or a proc): its class is known, its worth isn't."""
+    return Entry(UNRESOLVED, 0, f"{part.name}: changes class spells only for a while", cls=FAMILY_CLASS.get(part.family, ""))
+
+
 def _proc_entries(
     item: Item, parts: tuple | list, rate: Rate, prefix: str, world: World = World(), cast: bool = False,
 ) -> list[Entry]:
@@ -271,6 +284,8 @@ def _proc_entries(
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries.append(_passing_class_mod(part))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{prefix}: an effect inside a proc the data can't resolve"))
     return entries
@@ -325,6 +340,8 @@ def _use_entries(item: Item, effect: ItemSpell, spell: Spell, parts: list[object
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries.append(_passing_class_mod(part))
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: a use effect the data can't resolve"))
     return entries
@@ -368,6 +385,8 @@ def _equip_entries(item: Item, spell: Spell, parts: list[object], world: World =
             continue
         elif isinstance(part, Unresolved):
             entries.append(Entry(UNRESOLVED, 0, part.reason, part.pvp))
+        elif isinstance(part, ClassMod):
+            entries += class_mod_entries(part, world.class_spells)
         else:
             entries.append(Entry(UNRESOLVED, 0, f"{spell.name}: an equip effect the data can't resolve"))
     return entries

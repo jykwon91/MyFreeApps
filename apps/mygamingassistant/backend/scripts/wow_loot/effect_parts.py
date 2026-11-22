@@ -10,6 +10,7 @@ from scripts.wow_loot.effect_model import (
     AURA_ARMOR,
     AREA_AROUND_CASTER,
     AURA_ABSORB,
+    AURA_ADD_PCT_MODIFIER,
     AURA_ATTACK_POWER,
     AURA_DAMAGE_DONE,
     AURA_DAMAGE_SHIELD,
@@ -27,6 +28,7 @@ from scripts.wow_loot.effect_model import (
     AURA_SPELL_PENETRATION,
     AURA_STAT,
     CASTER_TARGET,
+    CLASS_MOD_AURAS,
     CONTROL_AURAS,
     CREATURE_SUMMON_EFFECTS,
     EFFECT_DUMMY,
@@ -63,6 +65,7 @@ from scripts.wow_loot.effect_model import (
     UNWEIGHTED_AURAS,
     ArmorCut,
     Buff,
+    ClassMod,
     Control,
     Damage,
     EffectRow,
@@ -244,6 +247,8 @@ def _aura_parts(spell: Spell, row: EffectRow, ctx: _Ctx, depth: int, paired_heal
         return [Heal(row.base, absorb=True)]
     if not _beneficial(row):
         return _enemy_parts(spell, row, duration)
+    if aura in CLASS_MOD_AURAS:
+        return [ClassMod(spell.name, aura == AURA_ADD_PCT_MODIFIER, row.misc, row.base, spell.family, row.class_mask)]
     if aura in UNWEIGHTED_AURAS:
         return [Unresolved(f"{spell.name}: {UNWEIGHTED_AURAS[aura]}", pvp=aura in PVP_AURAS)]
     if row.base < 0:

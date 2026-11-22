@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-21",
+    "title": "MGA Loot counts changes to your class spells",
+    "summary": "Items that change one class's spells, like a totem that adds damage to your shocks or a talisman that cuts Kick's cooldown, now count for that class only. Where the game files give the spell's damage, cast time and cooldown, MGA Loot works out what the change adds: \"+10.6 damage on Earth Shock (top rank, every 6s) = +1.8 spell DPS\". Any other class counts it as 0 and the note says who it's for. A change the files can't put a number on, like more crit chance or a longer duration, is estimated from item level, and only for that class.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-21",
     "title": "MGA Loot says its values are for PvE",
     "summary": "MGA Loot's stat weights and effect values are for fighting mobs, and the grey line under each verdict now says so: \"as Arms · PvE values\". Effects worth a lot more against players, like stuns, roots and slows, immunities and crowd-control breaks, damage shields and procs when you're hit, and armor or resistance taken off the target, add \"(worth more in PvP)\" to their note. That's a label only: MGA Loot doesn't have PvP numbers to score them with.",
     "to": "/wow-forever/compare"

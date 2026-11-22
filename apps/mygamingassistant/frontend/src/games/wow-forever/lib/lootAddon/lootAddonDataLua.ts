@@ -116,7 +116,8 @@ function itemEffectsLua(): string[] {
       const list = entries
         .map((e) => {
           const pvp = e.pvp ? ", pvp = true" : "";
-          return `{stat = ${luaString(e.stat)}, value = ${e.value}, note = ${luaString(e.note.replace(ARROW, "="))}${pvp}}`;
+          const forClass = e.class ? `, class = ${luaString(e.class)}` : "";
+          return `{stat = ${luaString(e.stat)}, value = ${e.value}, note = ${luaString(e.note.replace(ARROW, "="))}${pvp}${forClass}}`;
         })
         .join(", ");
       return `  [${id}] = {${list}},`;
