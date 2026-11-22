@@ -45,7 +45,7 @@ beforeEach(() => {
 describe("listDrillDownPages", () => {
   it("pages GET /transactions/page by offset until the server says there's no more, with its total on every page", async () => {
     const store = makeStore();
-    const args = drillDownListParams({ label: "Expenses", type: "expenses", propertyIds: ["p1"], categories: ["utilities"] });
+    const args = drillDownListParams({ type: "expenses", propertyIds: ["p1"], categories: ["utilities"] });
     const initiate = transactionsApi.endpoints.listDrillDownPages.initiate;
 
     await store.dispatch(initiate(args));
