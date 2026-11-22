@@ -443,6 +443,20 @@ class TestCookLogs:
             )
         assert resp.status_code == 422, resp.text
 
+    @pytest.mark.asyncio
+    async def test_list_cooks_with_other_recipes_version_is_404(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            recipe_a = (await authed.post("/recipes", json=_recipe_payload())).json()
+            recipe_b = (await authed.post("/recipes", json=_recipe_payload())).json()
+            version_b = recipe_b["latest_version"]["id"]
+            await authed.post(f"/recipes/{recipe_b['id']}/versions/{version_b}/cooks", json={"rating": 4})
+
+            mismatched = await authed.get(f"/recipes/{recipe_a['id']}/versions/{version_b}/cooks")
+            matching = await authed.get(f"/recipes/{recipe_b['id']}/versions/{version_b}/cooks")
+        assert mismatched.status_code == 404, mismatched.text
+        assert matching.status_code == 200 and len(matching.json()) == 1
+
     @staticmethod
     async def _create_recipe_with_cook(authed) -> tuple[str, str]:
         created = (await authed.post("/recipes", json=_recipe_payload())).json()
