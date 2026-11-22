@@ -6,6 +6,14 @@ from dataclasses import dataclass
 
 # A non-weapon item's "chance per hit" is counted at one hit (or spell cast, or hit taken) every this many seconds.
 ASSUMED_SECONDS_PER_HIT = 2.5
+# A proc on your spell casts is counted at one cast every this many seconds when its rate is a chance per cast:
+# Classic's main nukes take 2.5-3.5s to cast (Frostbolt and talented Shadow Bolt 2.5s, Fireball 3-3.5s), so
+# 2.5s is the quick end of a caster's rotation. A capped proc (Zum'rah's cane: once a minute) doesn't depend on it.
+ASSUMED_SECONDS_PER_CAST = 2.5
+
+# SpellAuraOptions.ProcTypeMask_0 bits: what a proc aura procs on. Dealing a melee or ranged hit, or casting a spell.
+PROC_ON_HIT_BITS = 0x4 | 0x10 | 0x40 | 0x100  # deal melee swing / melee ability / ranged attack / ranged ability
+PROC_ON_CAST_BITS = 0x4000 | 0x10000 | 0x40000  # deal helpful spell / harmful spell / harmful periodic
 
 # ItemEffect.TriggerType
 TRIGGER_ON_USE = 0
@@ -104,6 +112,12 @@ MELEE_WEAPON_BITS = sum(1 << s for s in (0, 1, 4, 5, 6, 7, 8, 10, 13, 15))
 RANGED_ONLY_KEYS = {"hit_pct": "ranged_hit_pct", "crit_pct": "ranged_crit_pct", "haste_pct": "ranged_haste_pct"}
 MAX_DEPTH = 4
 NO_RATE = 101  # SpellAuraOptions.ProcChance when a spell sets none.
+# A proc aura whose tooltip says "chance" but whose ProcChance is 100 carries no real chance: the client
+# has 100 on Forever's "Chance on harmful spell cast" auras, whose rate the server keeps. Such a proc counts
+# only at its internal cooldown, the most it can proc, and only when that cooldown is at least this many
+# hits or casts long (a 100ms cooldown only stops double procs, so it says nothing about the rate).
+FULL_CHANCE = 100
+MIN_CAP_EVENTS = 10
 # A chance-on-hit item spell with neither a PPM nor a ProcChance of 100 or less procs, in the Classic server
 # (cmangos Player::CastItemCombatSpell -> Unit::GetWeaponProcChance), at swing seconds x 1.8 % per main-hand
 # swing: 1.8 / 100 x 60 = 1.08 procs a minute whatever the weapon's speed.
@@ -126,6 +140,45 @@ UNWEIGHTED_AURAS: dict[int, str] = {
 # SpellEffect.Effect values that summon something (creatures, totems, guardians, objects).
 SUMMON_EFFECTS = frozenset({28, 34, 41, 56, 87, 97, 98, 104, 105, 106, 107, 112})
 EFFECT_LEARN_SPELL = 36
+# Summon effects whose misc value is a creature (the rest summon objects or totems): summon, wild, pet, demon.
+CREATURE_SUMMON_EFFECTS = frozenset({28, 41, 56, 97, 112})
+# cmangos CreatureType values that never fight: critter, totem, non-combat pet, gas cloud.
+NON_COMBAT_CREATURE_TYPES = frozenset({8, 11, 12, 13})
+# Auras on the enemy that only control it: charm, confuse, fear, stun, root, silence, snare, pacify, disarm.
+CONTROL_AURAS = frozenset({5, 6, 7, 12, 26, 27, 33, 60, 67})
+# Haste auras: on the enemy with a negative amount they slow its attacks, which is control too.
+HASTE_AURAS = frozenset({192, 319, 342})
+# Effects that only do something outside a fight: quest complete / start, open lock, kill credit, reputation.
+OUT_OF_COMBAT_EFFECTS = frozenset({16, 33, 90, 103, 134, 150})
+
+
+@dataclass(frozen=True)
+class Creature:
+    """A summoned creature: ``dps`` is its melee damage per second from cmangos classic-db, None when
+    the Classic data doesn't have it (a creature WoW Forever added)."""
+
+    id: int
+    name: str
+    dps: float | None
+    fights: bool = True
+
+
+@dataclass(frozen=True)
+class World:
+    """What MGA Loot knows about the mobs you fight, from cmangos classic-db's normal spawned mobs.
+
+    ``mob_dps`` and ``mob_armor``: the median by ten-level band of minimum level (``creature_types.band_of``).
+    ``resist_free``: the spell schools no band's median mob resists at all.
+    """
+
+    mob_dps: tuple[tuple[int, float], ...] = ()
+    mob_armor: tuple[tuple[int, float], ...] = ()
+    resist_free: frozenset[str] = frozenset()
+
+    def dps_at(self, band: int) -> tuple[int, float] | None:
+        """The band at or below ``band`` with a median, and that median."""
+        known = [(b, dps) for b, dps in self.mob_dps if b <= band]
+        return known[-1] if known else None
 
 
 @dataclass(frozen=True)
@@ -159,6 +212,12 @@ class Spell:
     # cmangos classic-db spell_proc_event for this proc aura: only used when the client gives it no rate.
     classic_ppm: float = 0
     classic_chance: float = 0
+    # A proc aura that procs on your spell casts, not your hits (ProcTypeMask).
+    cast_proc: bool = False
+    # The spell's tooltip calls it a chance ("Chance on hit...", "...have a chance to...").
+    chance_worded: bool = False
+    # The creatures this spell's summon effects summon, as cmangos classic-db knows them.
+    creatures: tuple[Creature, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -168,6 +227,8 @@ class Item:
     weapon_speed: float | None = None
     # Weight keys GetItemStats already gives for this item (its ItemSparse stat lines).
     stat_keys: frozenset[str] = frozenset()
+    # The level the item needs (ItemSparse.RequiredLevel): where a summon the Classic data lacks is counted.
+    level: int = 0
 
 
 @dataclass(frozen=True)
@@ -247,6 +308,41 @@ class Proc:
     parts: tuple
     classic_ppm: float = 0
     classic_chance: float = 0
+    cast: bool = False
+    # ProcChance 100 on a proc its tooltip calls a chance: the chance isn't in the data.
+    chance_unknown: bool = False
+
+
+@dataclass(frozen=True)
+class Summon:
+    """A creature summoned for ``duration_ms``, fighting for you."""
+
+    creature: Creature
+    duration_ms: int
+
+
+@dataclass(frozen=True)
+class ArmorCut:
+    """``amount`` armor off the enemy for ``duration_ms``."""
+
+    amount: float
+    duration_ms: int
+
+
+@dataclass(frozen=True)
+class ResistCut:
+    """``amount`` of a magic school's resistance off the enemy."""
+
+    name: str
+    schools: tuple[str, ...]
+    amount: float
+
+
+@dataclass(frozen=True)
+class Control:
+    """An effect that only controls the enemy (stun, root, fear, slow...)."""
+
+    name: str
 
 
 @dataclass(frozen=True)

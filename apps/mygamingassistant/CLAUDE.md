@@ -1966,15 +1966,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   there; armor never compares with a two-hander; "already wear it" only
   blocks Unique items. Since 1.4.0 Use / Chance on hit / Equip effects are scored from
   `MGALootEffects` (Data.lua, from `data/lootAddon/itemEffects.json`, **GENERATED** by
-  `python -m scripts.wow_loot.item_effects [--hotfix-cache PATH]`: client ItemEffect +
+  `python -m scripts.wow_loot.item_effects [--hotfix-cache PATH] [--creature-cache PATH]`: client ItemEffect +
   Spell* tables with hotfixes, cmangos `item_template.spellppmRate` / `spell_proc_event`
-  only when the client gives no proc rate; conversions in `wow_loot/effect_values.py`'s
-  docstring). Each entry is a weight key (`dps` = weapon-DPS weight by slot, `dps_pct` =
-  share of weapon DPS, `ranged_*` = only for ranged-first weights, `none` = no combat
-  value, `unresolved` = the data can't value it) plus a note shown in the tags. An item
-  with data and no `unresolved` entry has its effect lines covered; otherwise they stay
-  "Can't judge". ProcChance 101 means "not set" and is never a number; a missing rate
-  is unresolved, never guessed. Trinkets are scored like rings. Spec at 60 = `/mgaloot spec <id>`
+  only when the client gives no proc rate, cmangos `creature_template` + `creature` for
+  summoned creatures' DPS and the normal mobs you fight (`wow_loot/mobs.py`: medians by
+  ten-level band; a summon Classic lacks is named from the client creature cache and counts
+  at the median mob DPS of the item's level band); conversions in `wow_loot/effect_values.py`'s
+  docstring). Each entry is a weight key (`dps` = weapon-DPS weight by slot, `use_dps` = a
+  Use's damage, max of weapon DPS and spell damage × 3.5, `spell_dps` = damage from procs on
+  your spell casts, spell damage weight × 3.5 so casters' 0 melee weight doesn't zero it,
+  `dps_pct` = share of weapon DPS, `armor_cut` = average armor off the target, turned at run
+  time into a share of weapon DPS by Classic's armor formula against `MGALootMobArmor` at your
+  level, `ranged_*` = only for ranged-first weights, `none` = no combat value (control effects,
+  resistance cuts no median mob resists), `unresolved` = the data can't value it) plus a note
+  shown in the tags. An item with data and no `unresolved` entry has its effect lines covered;
+  otherwise they stay "Can't judge". ProcChance 101 means "not set" and is never a number, and
+  neither is 100 on a proc whose tooltip says "chance" (Forever's "Chance on harmful spell cast"
+  auras): those count only at a long internal cooldown (≥ 10 hits/casts), the most they can
+  proc. A missing rate is unresolved, never guessed. Trinkets are scored like rings. Spec at 60 = `/mgaloot spec <id>`
   (saved in `MGALootSettings`) else the talent tab with the most points.
   `/mgaloot check <link>` judges any item. Since 1.1.0 the same verdict (`judge(link, true)`:
   no bind/level tags, the tooltip has them) is added to every GameTooltip /

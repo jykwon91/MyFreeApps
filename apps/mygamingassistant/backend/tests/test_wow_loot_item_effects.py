@@ -11,6 +11,7 @@ from scripts.wow_loot.effect_model import (
     AURA_ATTACK_POWER,
     AURA_DUMMY,
     AURA_PROC_TRIGGER,
+    AURA_RESISTANCE,
     CASTER_TARGET,
     EFFECT_APPLY_AURA,
     EFFECT_EXTRA_ATTACKS,
@@ -24,11 +25,14 @@ from scripts.wow_loot.effect_model import (
     EffectRow,
     Entry,
     Item,
+    Creature,
     ItemSpell,
     Spell,
+    World,
 )
 from scripts.wow_loot.effect_values import item_entries, proc_rate
 from scripts.wow_loot.item_effects import OUT, classic_item_ppm
+from scripts.wow_loot.mobs import creature_dps, mob_world, normal_mobs, summoned_creature, unique_names
 
 ENEMY = 6
 FIRE = 4
@@ -45,8 +49,21 @@ def _aura(aura: int, base: float, misc: int = 0, trigger: int = 0) -> EffectRow:
     return EffectRow(EFFECT_APPLY_AURA, aura, base, misc, 0, trigger, CASTER_TARGET)
 
 
-def _entries(item: Item, effect: ItemSpell, *spells: Spell) -> list[Entry]:
-    return item_entries(item, [effect], {s.id: s for s in spells})
+def _entries(item: Item, effect: ItemSpell, *spells: Spell, world: World = World()) -> list[Entry]:
+    return item_entries(item, [effect], {s.id: s for s in spells}, world)
+
+
+EFFECT_SUMMON = 28
+AURA_STUN = 12
+WORLD = World(mob_dps=((30, 29.9), (40, 46.1)), mob_armor=((40, 2539.0),), resist_free=frozenset({"Fire", "Shadow"}))
+
+
+def _enemy_aura(aura: int, base: float, misc: int = 0) -> EffectRow:
+    return EffectRow(EFFECT_APPLY_AURA, aura, base, misc, 0, 0, ENEMY)
+
+
+def _summon(creature_id: int) -> EffectRow:
+    return EffectRow(EFFECT_SUMMON, 0, 0, creature_id, 0, 0, CASTER_TARGET)
 
 
 # --- On use ----------------------------------------------------------------------------------
@@ -69,7 +86,7 @@ def test_use_buff_longer_than_its_cooldown_counts_in_full() -> None:
 def test_use_damage_is_amount_over_cooldown() -> None:
     nuke = Spell(11, "Fire Blast", school_mask=FIRE, cooldown_ms=300_000, effects=(_damage(375),))
     [entry] = _entries(ARMOUR, ItemSpell(11, TRIGGER_ON_USE), nuke)
-    assert (entry.stat, entry.value) == ("dps", 1.25)
+    assert (entry.stat, entry.value) == ("use_dps", 1.25)
     assert entry.note == "use: 375 Fire dmg every 5min → +1.2 DPS"
 
 
@@ -160,6 +177,140 @@ def test_classic_rate_for_a_renumbered_proc_spell() -> None:
     assert classic_item_ppm(1728, 1300753, 2, classic) == 0.0
 
 
+# --- Summons --------------------------------------------------------------------------------
+
+
+def test_creature_dps_follows_cmangos_damage_formula() -> None:
+    # Tracking Hound: 66-73 damage, 2.0s swing, 32 attack power, multiplier 1.
+    hound = {
+        "MinMeleeDmg": "66", "MaxMeleeDmg": "73", "MeleeBaseAttackTime": "2000", "MeleeAttackPower": "32",
+        "DamageMultiplier": "1",
+    }
+    assert creature_dps(hound) == pytest.approx((69.5 + 32 / 14 * 2) / 2, abs=0.05)
+
+
+def test_use_summon_is_creature_dps_times_uptime() -> None:
+    hound = Creature(6867, "Tracking Hound", 37.0)
+    spell = Spell(40, "Summon Tracking Hound", duration_ms=180_000, creatures=(hound,), effects=(_summon(6867),))
+    [entry] = _entries(ARMOUR, ItemSpell(40, TRIGGER_ON_USE, cooldown_ms=600_000), spell)
+    assert entry.stat == "use_dps"
+    assert entry.value == pytest.approx(37 * 0.3, abs=1e-3)
+    assert entry.note == "use: summons Tracking Hound (37 DPS) for 3min every 10min → +11.1 DPS"
+
+
+def test_cast_proc_summon_the_classic_data_lacks_counts_at_the_median_mob() -> None:
+    # Zum'rah's Vexing Cane: on a harmful spell cast, 100% capped at once a minute, a Forever-only zombie for 20s.
+    troll = Creature(265223, "Zombie Troll of Zum'rah", None)
+    summon = Spell(41, "Summon Zombie", duration_ms=20_000, creatures=(troll,), effects=(_summon(265223),))
+    aura = Spell(
+        42, "Vexing", proc_chance=100, proc_icd_ms=60_000, cast_proc=True, chance_worded=True,
+        effects=(_aura(AURA_PROC_TRIGGER, 0, trigger=41),),
+    )
+    cane = Item(18082, weapon_speed=3.0, level=42)
+    [entry] = _entries(cane, ItemSpell(42, TRIGGER_ON_EQUIP), aura, summon, world=WORLD)
+    assert entry.stat == "spell_dps"
+    assert entry.value == pytest.approx(46.1 * 20 / 60, abs=1e-3)
+    assert "once every 1min (its cooldown; the chance per cast isn't in the data" in entry.note
+    assert "counts as a normal level 40-49 mob (46.1 DPS, the median)" in entry.note
+
+
+def _fire_proc(spell_id: int, *, icd_ms: int, chance_worded: bool) -> tuple[Spell, Spell]:
+    bolt = Spell(spell_id + 1, "Firebolt", school_mask=FIRE, effects=(_damage(100),))
+    aura = Spell(
+        spell_id, "Firebolt", proc_chance=100, proc_icd_ms=icd_ms, cast_proc=True, chance_worded=chance_worded,
+        effects=(_aura(AURA_PROC_TRIGGER, 0, trigger=spell_id + 1),),
+    )
+    return aura, bolt
+
+
+def test_chance_worded_proc_at_100_has_no_rate_without_a_long_cooldown() -> None:
+    # "Chance on harmful spell cast to blast a target": the client's 100 isn't the chance; a 100ms cooldown says nothing.
+    aura, bolt = _fire_proc(60, icd_ms=100, chance_worded=True)
+    [entry] = _entries(ARMOUR, ItemSpell(60, TRIGGER_ON_EQUIP), aura, bolt)
+    assert entry == Entry(UNRESOLVED, 0, "Firebolt: the data gives no proc rate")
+
+
+def test_proc_at_100_its_tooltip_doesnt_call_a_chance_is_every_cast() -> None:
+    # "Harmful spell casts sear the target": 100% is the rate.
+    aura, bolt = _fire_proc(62, icd_ms=0, chance_worded=False)
+    [entry] = _entries(ARMOUR, ItemSpell(62, TRIGGER_ON_EQUIP), aura, bolt)
+    assert (entry.stat, entry.value) == ("spell_dps", pytest.approx(100 / 2.5, abs=1e-3))
+
+
+def test_cast_proc_chance_counts_casts_not_swings() -> None:
+    rate = proc_rate(WEAPON, 10, 0, 0, cast=True)
+    assert rate is not None
+    assert rate.per_second == pytest.approx(0.10 / 2.5)
+    assert rate.text == "10% per cast, assuming a cast every 2.5s"
+
+
+def test_summon_that_does_not_fight_has_no_combat_value() -> None:
+    critter = Creature(7, "Rabbit", 1.0, fights=False)
+    spell = Spell(43, "Summon Rabbit", duration_ms=60_000, creatures=(critter,), effects=(_summon(7),))
+    [entry] = _entries(ARMOUR, ItemSpell(43, TRIGGER_ON_USE, cooldown_ms=60_000), spell)
+    assert entry.stat == NONE
+
+
+def test_summon_of_a_creature_the_data_lacks_is_unresolved() -> None:
+    spell = Spell(44, "Summon", duration_ms=60_000, effects=(_summon(5),))
+    [entry] = _entries(ARMOUR, ItemSpell(44, TRIGGER_ON_USE, cooldown_ms=60_000), spell)
+    assert entry.stat == UNRESOLVED
+
+
+def test_summoned_creature_by_id_then_by_client_name() -> None:
+    templates = {1: {"Entry": "1", "Name": "Wolf", "CreatureType": "1", "MinMeleeDmg": "10", "MaxMeleeDmg": "10"}}
+    names = unique_names(templates.values())
+    assert summoned_creature(1, templates, names, {}).name == "Wolf"
+    assert summoned_creature(99, templates, names, {99: ("Wolf", 1)}).dps == creature_dps(templates[1])
+    unknown = summoned_creature(98, templates, names, {98: ("Zombie", 6)})
+    assert (unknown.name, unknown.dps, unknown.fights) == ("Zombie", None, True)
+
+
+def _mob(entry: int, level: int, armor: int, **extra: str) -> dict[str, str]:
+    return {
+        "Entry": str(entry), "MinLevel": str(level), "Armor": str(armor), "CreatureType": "7", "Rank": "0",
+        "NpcFlags": "0", "MinMeleeDmg": "10", "MaxMeleeDmg": "10", **extra,
+    }
+
+
+def test_mob_world_takes_medians_of_spawned_normal_mobs_by_band() -> None:
+    templates = {
+        1: _mob(1, 41, 2000), 2: _mob(2, 44, 3000), 3: _mob(3, 45, 2500),
+        4: _mob(4, 45, 9000, Rank="1"),  # elite
+        5: _mob(5, 45, 9000, NpcFlags="2"),  # a quest giver
+        6: _mob(6, 45, 9000),  # never spawned
+        7: _mob(7, 12, 600, ResistanceFire="20"),
+    }
+    world = mob_world(normal_mobs([{"id": str(i)} for i in (1, 2, 3, 4, 5, 7)], templates))
+    assert world.mob_armor == ((10, 600.0), (40, 2500.0))
+    assert "Fire" not in world.resist_free
+    assert "Shadow" in world.resist_free
+
+
+# --- On the enemy ----------------------------------------------------------------------------
+
+
+def test_armor_cut_is_average_armor_off_the_target() -> None:
+    sunder = Spell(50, "Sunder", ppm=1, duration_ms=30_000, effects=(_enemy_aura(AURA_RESISTANCE, -200, misc=1),))
+    [entry] = _entries(WEAPON, ItemSpell(50, TRIGGER_CHANCE_ON_HIT), sunder, world=WORLD)
+    assert entry.stat == "armor_cut"
+    assert entry.value == pytest.approx(200 * 0.5, abs=1e-3)
+    assert entry.note == "proc: -200 armor on the target for 30s at 1 PPM → -100 armor on average"
+
+
+def test_resistance_cut_no_mob_has_is_worth_nothing() -> None:
+    curse = Spell(51, "Curse", ppm=1, duration_ms=10_000, effects=(_enemy_aura(AURA_RESISTANCE, -50, misc=FIRE),))
+    [entry] = _entries(WEAPON, ItemSpell(51, TRIGGER_CHANCE_ON_HIT), curse, world=WORLD)
+    assert entry.stat == NONE
+    assert "normal mobs at every level resist none" in entry.note
+
+
+def test_control_on_the_enemy_has_no_damage_value() -> None:
+    stun = Spell(52, "Hammer", ppm=2, duration_ms=3_000, effects=(_enemy_aura(AURA_STUN, 0),))
+    [entry] = _entries(WEAPON, ItemSpell(52, TRIGGER_CHANCE_ON_HIT), stun)
+    assert entry == Entry(NONE, 0, "Hammer: control effect: no damage or healing value")
+
+
 # --- Equip -----------------------------------------------------------------------------------
 
 
@@ -209,6 +360,19 @@ def test_committed_on_use_trinket() -> None:
     assert _item(21180) == [
         {"stat": "attack_power", "value": 46.667, "note": "use: +280 attack power for 20s every 2min → +46.7 attack power"},
     ]
+
+
+def test_committed_zumrahs_cane_counts_its_summon() -> None:
+    [entry] = _item(18082)
+    assert entry["stat"] == "spell_dps"
+    assert entry["value"] > 0
+    assert "summons Zombie Troll of Zum'rah" in entry["note"]
+
+
+def test_committed_mob_armor_rises_with_level() -> None:
+    armor = [a for _, a in sorted((int(band), a) for band, a in _committed()["mobArmor"].items())]
+    assert len(armor) == 6
+    assert armor == sorted(armor)
 
 
 def test_committed_water_breathing_item() -> None:

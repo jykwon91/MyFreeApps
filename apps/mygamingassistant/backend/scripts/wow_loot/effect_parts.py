@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from scripts.wow_loot.effect_model import (
     ALL_MAGIC,
+    AURA_ARMOR,
     AREA_AROUND_CASTER,
     AURA_ABSORB,
     AURA_ATTACK_POWER,
@@ -26,6 +27,8 @@ from scripts.wow_loot.effect_model import (
     AURA_SPELL_PENETRATION,
     AURA_STAT,
     CASTER_TARGET,
+    CONTROL_AURAS,
+    CREATURE_SUMMON_EFFECTS,
     EFFECT_DUMMY,
     EFFECT_ENERGIZE,
     EFFECT_EXTRA_ATTACKS,
@@ -36,11 +39,14 @@ from scripts.wow_loot.effect_model import (
     EFFECT_SCHOOL_DAMAGE,
     EFFECT_TRIGGER_SPELL,
     ENEMY_TARGETS,
+    FULL_CHANCE,
+    HASTE_AURAS,
     MANA,
     MAX_DEPTH,
     MELEE_WEAPON_BITS,
     NO_VALUE_AURAS,
     NO_VALUE_EFFECTS,
+    OUT_OF_COMBAT_EFFECTS,
     PERIODIC_TRIGGER_AURAS,
     PET_TARGET,
     PHYSICAL,
@@ -54,7 +60,9 @@ from scripts.wow_loot.effect_model import (
     STAT_BY_MISC,
     SUMMON_EFFECTS,
     UNWEIGHTED_AURAS,
+    ArmorCut,
     Buff,
+    Control,
     Damage,
     EffectRow,
     ExtraAttacks,
@@ -63,7 +71,9 @@ from scripts.wow_loot.effect_model import (
     NoValue,
     PerSecond,
     Proc,
+    ResistCut,
     Spell,
+    Summon,
     Unresolved,
 )
 
@@ -182,8 +192,15 @@ def _row_parts(spell: Spell, row: EffectRow, ctx: _Ctx, depth: int, paired_heali
         return [ExtraAttacks(row.base)]
     if row.effect == EFFECT_TRIGGER_SPELL and row.trigger:
         return spell_parts(row.trigger, ctx.book, ctx, depth + 1)
-    if row.effect in NO_VALUE_EFFECTS:
+    if row.effect in NO_VALUE_EFFECTS or row.effect in OUT_OF_COMBAT_EFFECTS:
         return [NoValue(spell.name)]
+    if row.effect in CREATURE_SUMMON_EFFECTS:
+        creature = next((c for c in spell.creatures if c.id == row.misc), None)
+        if creature is None:
+            return [Unresolved(f"{spell.name}: summons creature {row.misc}, which the data doesn't have")]
+        if not creature.fights:
+            return [NoValue(spell.name)]
+        return [Summon(creature, spell.duration_ms)]
     if row.effect in SUMMON_EFFECTS:
         return [Unresolved(f"{spell.name}: summons something, which has no stat equivalent")]
     if row.effect == EFFECT_LEARN_SPELL:
@@ -225,7 +242,7 @@ def _aura_parts(spell: Spell, row: EffectRow, ctx: _Ctx, depth: int, paired_heal
     if aura == AURA_ABSORB and _beneficial(row):
         return [Heal(row.base, absorb=True)]
     if not _beneficial(row):
-        return [Unresolved(f"{spell.name}: works on the enemy, which has no stat equivalent")]
+        return _enemy_parts(spell, row, duration)
     if aura in UNWEIGHTED_AURAS:
         return [Unresolved(f"{spell.name}: {UNWEIGHTED_AURAS[aura]}")]
     if row.base < 0:
@@ -240,8 +257,27 @@ def _aura_parts(spell: Spell, row: EffectRow, ctx: _Ctx, depth: int, paired_heal
     return [Unresolved(f"{spell.name}: a scripted effect the data can't resolve")]
 
 
+def _enemy_parts(spell: Spell, row: EffectRow, duration: int) -> list[object]:
+    """An aura on the enemy: control, an armor or resistance cut, or unresolved."""
+    aura = row.aura
+    if aura in CONTROL_AURAS or (aura in HASTE_AURAS and row.base < 0):
+        return [Control(spell.name)]
+    if aura == AURA_ARMOR and row.base < 0:
+        return [ArmorCut(-row.base, duration)]
+    if aura == AURA_RESISTANCE and row.base < 0:
+        parts: list[object] = [ArmorCut(-row.base, duration)] if row.misc & PHYSICAL else []
+        schools = tuple(SCHOOLS[bit] for bit in sorted(SCHOOLS) if bit != PHYSICAL and row.misc & bit)
+        if schools:
+            parts.append(ResistCut(spell.name, schools, -row.base))
+        return parts
+    return [Unresolved(f"{spell.name}: works on the enemy, which has no stat equivalent")]
+
+
 def _proc(spell: Spell, parts: tuple) -> Proc:
-    return Proc(spell.name, spell.proc_chance, spell.ppm, spell.proc_icd_ms, parts, spell.classic_ppm, spell.classic_chance)
+    return Proc(
+        spell.name, spell.proc_chance, spell.ppm, spell.proc_icd_ms, parts, spell.classic_ppm, spell.classic_chance,
+        cast=spell.cast_proc, chance_unknown=spell.chance_worded and spell.proc_chance == FULL_CHANCE,
+    )
 
 
 def _scaled(part: object, times: int) -> object:
@@ -251,6 +287,6 @@ def _scaled(part: object, times: int) -> object:
         return Heal(part.amount * times, part.absorb)
     if isinstance(part, Mana):
         return Mana(part.amount * times)
-    if isinstance(part, (NoValue, Unresolved)):
+    if isinstance(part, (NoValue, Unresolved, Control)):
         return part
     return Unresolved("a repeating buff the data can't resolve")
