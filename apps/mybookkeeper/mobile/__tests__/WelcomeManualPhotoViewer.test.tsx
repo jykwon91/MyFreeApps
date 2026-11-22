@@ -40,17 +40,29 @@ describe("the photo viewer", () => {
     expect(screen.getByLabelText("Photo 1 of 3, The router")).toBeTruthy();
   });
 
-  it("pages with the next and previous buttons, and only offers what exists", async () => {
+  it("pages with the next and previous buttons", async () => {
     await open(0);
-    expect(screen.queryByRole("button", { name: MESSAGES.previous })).toBeNull();
     await fireEvent.press(button(MESSAGES.next));
     expect(screen.getByText("2 of 3")).toBeTruthy();
     expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith("2 of 3", { queue: true });
     await fireEvent.press(button(MESSAGES.next));
     expect(screen.getByText("3 of 3")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: MESSAGES.next })).toBeNull();
     await fireEvent.press(button(MESSAGES.previous));
     expect(screen.getByText("2 of 3")).toBeTruthy();
+  });
+
+  it("keeps Previous and Next on screen, disabled at the ends, so screen reader focus stays put", async () => {
+    await open(0);
+    expect(button(MESSAGES.previous)).toBeDisabled();
+    expect(button(MESSAGES.previous).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(button(MESSAGES.next)).toBeEnabled();
+    await fireEvent.press(button(MESSAGES.next));
+    await fireEvent.press(button(MESSAGES.next));
+    expect(screen.getByText("3 of 3")).toBeTruthy();
+    expect(button(MESSAGES.next)).toBeDisabled();
+    expect(button(MESSAGES.next).props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(button(MESSAGES.previous));
+    expect(button(MESSAGES.next)).toBeEnabled();
   });
 
   it("follows a swipe", async () => {
