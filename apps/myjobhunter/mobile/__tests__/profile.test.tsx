@@ -1,3 +1,4 @@
+import { REMOTE_PREFERENCE_MESSAGES } from "@myjobhunter/api-client/constants/remotePreferenceMessages";
 import { baseApi } from "@platform/core/store/baseApi";
 import { DISCARD_MESSAGES, FORM_SHEET_TEST_ID, OPTION_SHEET_ROW_HEIGHT, SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
@@ -285,16 +286,16 @@ describe("the remote preference", () => {
     await fireEvent.press(await screen.findByRole("radio", { name: "Remote only" }));
 
     expect(isChecked("Remote only")).toBe(true);
-    expect(screen.getByText(MESSAGES.remoteSaving)).toBeTruthy();
-    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(MESSAGES.remoteSaving, { queue: true });
+    expect(screen.getByText(REMOTE_PREFERENCE_MESSAGES.saving)).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibilityWithOptions).toHaveBeenCalledWith(REMOTE_PREFERENCE_MESSAGES.saving, { queue: true });
     expect(patches(sent)).toEqual([{ remote_preference: "remote_only" }]);
     // While it saves, another tap does nothing.
     await fireEvent.press(screen.getByRole("radio", { name: "On-site" }));
     expect(patches(sent)).toHaveLength(1);
 
     await held.answer();
-    expect(await screen.findByText(MESSAGES.remoteSaved)).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText(MESSAGES.remoteSaving)).toBeNull());
+    expect(await screen.findByText(REMOTE_PREFERENCE_MESSAGES.saved)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(REMOTE_PREFERENCE_MESSAGES.saving)).toBeNull());
     expect(isChecked("Remote only")).toBe(true);
     expect(isChecked("Hybrid")).toBe(false);
     // The refetch the save starts brings back the same choice.
@@ -316,7 +317,7 @@ describe("the remote preference", () => {
     await renderProfile();
     await fireEvent.press(await screen.findByRole("radio", { name: "Remote only" }));
 
-    expect(await screen.findByText(MESSAGES.remoteSaved)).toBeTruthy();
+    expect(await screen.findByText(REMOTE_PREFERENCE_MESSAGES.saved)).toBeTruthy();
     await waitFor(() => expect(sent.filter(({ route }) => route === "GET /profile").length).toBeGreaterThan(1));
     expect(isChecked("Remote only")).toBe(true);
     expect(isChecked("Hybrid")).toBe(false);
@@ -333,7 +334,7 @@ describe("the remote preference", () => {
       fireEvent.press(onsite);
     });
 
-    expect(await screen.findByText(MESSAGES.remoteSaved)).toBeTruthy();
+    expect(await screen.findByText(REMOTE_PREFERENCE_MESSAGES.saved)).toBeTruthy();
     expect(patches(sent)).toEqual([{ remote_preference: "remote_only" }]);
     expect(isChecked("Remote only")).toBe(true);
   });
@@ -351,7 +352,7 @@ describe("the remote preference", () => {
     await renderProfile();
     await fireEvent.press(await screen.findByRole("radio", { name: "On-site" }));
 
-    expect(await screen.findByText(MESSAGES.couldntSaveRemote)).toBeTruthy();
+    expect(await screen.findByText(REMOTE_PREFERENCE_MESSAGES.couldntSave)).toBeTruthy();
     expect(isChecked("Hybrid")).toBe(true);
     expect(isChecked("On-site")).toBe(false);
   });
@@ -362,6 +363,6 @@ describe("the remote preference", () => {
     await fireEvent.press(await screen.findByRole("radio", { name: "On-site" }));
 
     expect(await screen.findByText("I didn't get an answer, so I'm not sure that went through. Trying again is safe.")).toBeTruthy();
-    expect(screen.queryByText(MESSAGES.couldntSaveRemote)).toBeNull();
+    expect(screen.queryByText(REMOTE_PREFERENCE_MESSAGES.couldntSave)).toBeNull();
   });
 });
