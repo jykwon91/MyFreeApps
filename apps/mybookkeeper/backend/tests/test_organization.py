@@ -261,6 +261,20 @@ class TestInvites:
         assert (await db.get(OrganizationInvite, invite.id)).status == "pending"
 
     @pytest.mark.asyncio
+    async def test_unverified_user_with_matching_email_cannot_join(
+        self, db: AsyncSession, owner: User, member_user: User, org_with_owner: Organization
+    ) -> None:
+        invite = await organization_service.create_invite(
+            org_with_owner.id, "member@example.com", "admin", owner.id,
+        )
+        member_user.is_verified = False
+        await db.commit()
+        with pytest.raises(PermissionError, match="Verify your email"):
+            await organization_service.accept_invite(invite.token, member_user.id)
+        assert await organization_repo.get_member(db, org_with_owner.id, member_user.id) is None
+        assert (await db.get(OrganizationInvite, invite.id)).status == "pending"
+
+    @pytest.mark.asyncio
     async def test_accepting_ignores_email_case(
         self, db: AsyncSession, owner: User, member_user: User, org_with_owner: Organization
     ) -> None:
