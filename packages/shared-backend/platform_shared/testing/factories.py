@@ -58,7 +58,6 @@ import uuid
 from collections.abc import AsyncGenerator, Callable
 from typing import TYPE_CHECKING, Any
 
-import pytest
 import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -291,7 +290,7 @@ def make_api_user_factory(
     -------
     A ``pytest_asyncio.fixture(scope="function")`` function.
     """
-    from httpx import ASGITransport, AsyncClient  # noqa: PLC0415
+    from httpx import AsyncClient  # noqa: PLC0415
 
     @pytest_asyncio.fixture(scope="function")
     async def _user_factory(

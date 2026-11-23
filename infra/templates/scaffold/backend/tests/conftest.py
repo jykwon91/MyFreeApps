@@ -11,8 +11,7 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from collections.abc import AsyncGenerator, Callable
-from typing import Any
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio

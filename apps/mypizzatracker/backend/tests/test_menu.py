@@ -167,7 +167,7 @@ async def test_delete_pizza(auth_client: AsyncClient):
     resp = await auth_client.delete(f"/menu/pizzas/{pid}")
     assert resp.status_code == 204
 
-    after = await auth_client.get(f"/menu/pizzas")
+    after = await auth_client.get("/menu/pizzas")
     assert after.json() == []
 
 
