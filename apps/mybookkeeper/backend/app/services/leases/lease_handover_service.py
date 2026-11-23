@@ -14,6 +14,7 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 
+from platform_shared.core.audit_actor import audit_actor
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.datetime_utils import local_date
@@ -44,6 +45,11 @@ async def end_replaced_leases(*, now: _dt.datetime) -> int:
 
     Tenancy-agnostic — runs across every user. A failure on one lease is
     logged and left for the next run; it never stops the rest.
+
+    All hand-overs commit together, as before. Each lease's change is flushed
+    inside ``audit_actor`` for that lease's owner, because the audit listener
+    names the actor at flush time, so one run never credits one user's lease
+    to another.
     """
     ended = 0
     async with unit_of_work() as db:
@@ -55,13 +61,15 @@ async def end_replaced_leases(*, now: _dt.datetime) -> int:
                 zone = await _host_timezone(db, parent=parent, successor=successor)
                 if successor.starts_on is None or successor.starts_on > local_date(now, zone):
                     continue
-                await signed_lease_repo.update_lease(
-                    db,
-                    lease_id=parent.id,
-                    user_id=parent.user_id,
-                    organization_id=parent.organization_id,
-                    fields={"status": "ended", "ended_at": now, "updated_at": now},
-                )
+                # update_lease flushes, so the audit rows are written here.
+                with audit_actor(parent.user_id):
+                    await signed_lease_repo.update_lease(
+                        db,
+                        lease_id=parent.id,
+                        user_id=parent.user_id,
+                        organization_id=parent.organization_id,
+                        fields={"status": "ended", "ended_at": now, "updated_at": now},
+                    )
                 ended += 1
                 logger.info(
                     "Auto-ended lease %s (successor's starts_on reached in %s)",
