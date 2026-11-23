@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
+import { PRACTICE_SECTION_IDS } from "@/constants/practiceLayout";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import type { PracticeScenario } from "@mylanguagetutor/api-client/types/session/practice-scenario";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
@@ -64,5 +66,17 @@ describe("PracticeLoader", () => {
     expect(screen.getByText(CATALOG_COPY.loadFailed)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: CATALOG_COPY.retry }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the practice skeleton's sections, announced as loading, while the scenario loads", () => {
+    scenario = { target: undefined, isError: false, error: undefined, refetch };
+    render(loader());
+
+    const region = screen.getByLabelText(LOADING_COPY.scenarios);
+    expect(region.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByTestId(PRACTICE_SECTION_IDS.header)).toBeTruthy();
+    expect(screen.getByTestId(PRACTICE_SECTION_IDS.transcript)).toBeTruthy();
+    expect(screen.getByTestId(PRACTICE_SECTION_IDS.composer)).toBeTruthy();
+    expect(screen.queryByRole("listitem")).toBeNull();
   });
 });

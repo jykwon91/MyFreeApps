@@ -15,6 +15,14 @@ import TurnErrorAlert from "@/features/session/TurnErrorAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
 import PracticeAnnouncer from "@/features/session/PracticeAnnouncer";
+import {
+  PRACTICE_COMPOSER,
+  PRACTICE_HEADER,
+  PRACTICE_PAGE,
+  PRACTICE_SECTION_IDS,
+  PRACTICE_START_PROMPT,
+  PRACTICE_TRANSCRIPT,
+} from "@/constants/practiceLayout";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
@@ -70,17 +78,17 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
   };
 
   return (
-    <div className="flex min-h-[60vh] flex-col gap-4">
+    <div className={PRACTICE_PAGE}>
       <PracticeAnnouncer message={announcement} />
-      <header className="space-y-2">
+      <header className={PRACTICE_HEADER} data-testid={PRACTICE_SECTION_IDS.header}>
         <h1 className="text-xl font-semibold">{scenario.title}</h1>
         <p className="text-sm text-muted-foreground">{scenario.goal}</p>
         <ScenarioGoals goals={scenario.goals} met={session.scenarioState.goals_met} />
       </header>
 
-      <div className="flex-1">
+      <div className={PRACTICE_TRANSCRIPT} data-testid={PRACTICE_SECTION_IDS.transcript}>
         {session.entries.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
+          <p className={PRACTICE_START_PROMPT}>
             {startConversationPrompt(language.display_name)}
           </p>
         ) : (
@@ -106,7 +114,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
         <TurnErrorAlert failure={session.failure} onRetry={session.retry} onDismiss={session.dismissFailure} />
       )}
 
-      <div className="sticky bottom-0 space-y-3 border-t bg-background py-4">
+      <div className={PRACTICE_COMPOSER} data-testid={PRACTICE_SECTION_IDS.composer}>
         {block && <SessionBlockNotice block={block} />}
         {voice.view === "denied" && <MicDeniedState onTypeInstead={voice.switchToText} />}
         {voice.view === "privacy" && (
