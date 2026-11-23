@@ -28,6 +28,8 @@ test("applications skeleton has the loaded table's columns and row count", async
   await page.goto("/applications");
   const skeleton = page.getByLabel("Loading applications");
   await expect(skeleton).toBeVisible();
+  await expect(skeleton.getByRole("columnheader").first()).toBeVisible();
+  await expect(skeleton.locator("tbody tr").first()).toBeVisible();
   const skeletonHeaders = await headerTexts(skeleton);
   const skeletonRows = await skeleton.locator("tbody tr").count();
 
@@ -35,5 +37,5 @@ test("applications skeleton has the loaded table's columns and row count", async
   await expect(page.getByRole("cell", { name: "Role 0", exact: true })).toBeVisible();
   const table = page.getByRole("table");
   expect(await headerTexts(table)).toEqual(skeletonHeaders);
-  expect(await table.locator("tbody tr").count()).toBe(skeletonRows);
+  await expect(table.locator("tbody tr")).toHaveCount(skeletonRows);
 });

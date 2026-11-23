@@ -36,13 +36,15 @@ test("dashboard skeleton has the loaded board's columns and lanes", async ({ pag
   await page.goto("/dashboard");
   const skeleton = page.getByLabel("Loading dashboard");
   await expect(skeleton).toBeVisible();
+  await expect(skeleton.locator("[data-skeleton-column]").first()).toBeVisible();
+  await expect(skeleton.locator("[data-skeleton-lane]").first()).toBeVisible();
   const skeletonColumns = await skeleton.locator("[data-skeleton-column]").count();
   const skeletonLanes = await skeleton.locator("[data-skeleton-lane]").count();
 
   release();
   await expect(page.getByText("Role 1")).toBeVisible();
-  expect(await page.locator("[data-kanban-column]").count()).toBe(skeletonColumns);
-  expect(await page.getByRole("button", { name: /lane$/i }).count()).toBe(skeletonLanes);
+  await expect(page.locator("[data-kanban-column]")).toHaveCount(skeletonColumns);
+  await expect(page.getByRole("button", { name: /lane$/i })).toHaveCount(skeletonLanes);
   await expect(page.getByText("1 active application")).toBeVisible();
 });
 

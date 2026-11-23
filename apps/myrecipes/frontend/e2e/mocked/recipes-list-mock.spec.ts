@@ -225,8 +225,10 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
     const skeleton = page.getByLabel("Loading recipes");
     await expect(skeleton).toBeVisible();
     const skeletonItems = skeleton.locator("> div");
+    // The container shows before its cards do, so wait for them rather than counting once.
+    await expect(skeletonItems.first()).toBeVisible();
+    await expect.poll(() => skeletonItems.count()).toBeGreaterThan(1);
     skeletonCards = await skeletonItems.count();
-    expect(skeletonCards).toBeGreaterThan(1);
     const skeletonColumns = await skeleton.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
     const skeletonFirst = await skeletonItems.first().boundingBox();
 

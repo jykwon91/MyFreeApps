@@ -203,6 +203,8 @@ test("the Dismissed skeleton has the loaded list's cards, each ending in the sam
   await page.goto("/discover?view=dismissed");
   const skeleton = page.getByTestId("discovered-jobs-skeleton");
   await expect(skeleton).toBeVisible();
+  await expect(skeleton.locator(":scope > *").first()).toBeVisible();
+  await expect(skeleton.getByTestId("skeleton-actions").first()).toBeVisible();
   const skeletonCards = await skeleton.locator(":scope > *").count();
   const skeletonActions = await skeleton.getByTestId("skeleton-actions").evaluateAll((rows) => rows.map((row) => row.children.length));
 
