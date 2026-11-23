@@ -13,6 +13,11 @@ from app.services.transactions.reference_ownership import assert_references_owne
 MAX_CSV_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
+def csv_too_large_message() -> str:
+    """The rejection for a CSV over ``MAX_CSV_SIZE``."""
+    return f"File too large (max {MAX_CSV_SIZE // (1024 * 1024)}MB)"
+
+
 async def import_bank_csv_file(
     ctx: RequestContext,
     content_bytes: bytes,
@@ -32,7 +37,7 @@ async def import_bank_csv_file(
         raise ValueError("File must be a CSV")
 
     if len(content_bytes) > MAX_CSV_SIZE:
-        raise ValueError("File too large (max 5MB)")
+        raise ValueError(csv_too_large_message())
 
     content = content_bytes.decode("utf-8", errors="replace")
     fmt = detect_bank_format(content)

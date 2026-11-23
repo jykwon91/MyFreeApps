@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 
+from app.core.capped_upload_read import read_upload_or_reject
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.schemas.welcome_manuals.welcome_manual_section_image_reorder_request import (
@@ -15,6 +16,7 @@ from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
 from app.schemas.welcome_manuals.welcome_manual_section_image_update_request import (
     WelcomeManualSectionImageUpdateRequest,
 )
+from app.services.storage import image_processor
 from app.services.welcome_manuals import (
     welcome_manual_section_image_service,
     welcome_manual_section_service,
@@ -36,7 +38,9 @@ async def upload_section_images(
 ) -> list[WelcomeManualSectionImageResponse]:
     payloads: list[tuple[bytes, str | None, str | None]] = []
     for f in files:
-        content = await f.read()
+        content = await read_upload_or_reject(
+            f, image_processor.MAX_IMAGE_BYTES, detail=image_processor.image_too_large_reason(),
+        )
         payloads.append((content, f.filename, f.content_type))
     try:
         return await welcome_manual_section_image_service.upload_images(

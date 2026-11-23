@@ -21,6 +21,7 @@ from platform_shared.services.storage.stored_object_cleanup import delete_stored
 from app.core.config import settings as _settings
 from app.core.insurance_enums import INSURANCE_ATTACHMENT_KINDS
 from app.core.storage import get_storage
+from app.core.upload_size_messages import attachment_too_large_message
 from app.db.session import unit_of_work
 from app.repositories.insurance import (
     insurance_policy_attachment_repo,
@@ -382,8 +383,7 @@ async def upload_attachment(
         raise InvalidAttachmentKindError(f"Invalid kind: {kind}")
 
     if len(content) > _settings.max_blackout_attachment_size_bytes:
-        max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
-        raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
+        raise AttachmentTooLargeError(attachment_too_large_message())
 
     try:
         cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)

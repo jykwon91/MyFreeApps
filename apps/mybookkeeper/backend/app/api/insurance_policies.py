@@ -10,6 +10,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 
+from app.core.capped_upload_read import read_attachment_upload, read_document_upload
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import insurance_policy_extract_limiter
@@ -112,7 +113,7 @@ async def extract_policy_from_upload(
     the literal path is not swallowed by the UUID route.
     """
     insurance_policy_extract_limiter.check(f"insurance-policy-extract:{ctx.user_id}")
-    content = await file.read()
+    content = await read_document_upload(file)
     try:
         return await insurance_policy_extraction_service.extract_policy_from_upload(
             ctx=ctx,
@@ -245,7 +246,7 @@ async def upload_attachment(
     file: UploadFile = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> InsurancePolicyAttachmentResponse:
-    content = await file.read()
+    content = await read_attachment_upload(file)
     try:
         return await insurance_policy_service.upload_attachment(
             user_id=ctx.user_id,

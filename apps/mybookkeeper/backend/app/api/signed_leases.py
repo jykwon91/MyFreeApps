@@ -24,6 +24,7 @@ from fastapi import (
 )
 
 from app.api.lease_render_error_mapping import lease_render_errors
+from app.core.capped_upload_read import read_attachment_upload
 from app.core.context import RequestContext
 from app.core.lease_enums import SIGNED_LEASE_STATUSES
 from app.core.permissions import current_org_member, require_write_access
@@ -120,8 +121,9 @@ async def import_lease(
 
     file_tuples: list[tuple[bytes, str]] = []
     for f in files:
-        content = await f.read()
-        file_tuples.append((content, f.filename or ""))
+        filename = f.filename or ""
+        content = await read_attachment_upload(f, subject=f"File '{filename}'")
+        file_tuples.append((content, filename))
 
     try:
         return await signed_lease_service.import_signed_lease(

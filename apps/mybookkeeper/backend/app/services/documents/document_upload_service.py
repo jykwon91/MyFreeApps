@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.storage import get_storage
+from app.core.upload_size_messages import document_too_large_message
 from app.db.session import unit_of_work
 from app.models.documents.document import Document
 from app.repositories import document_repo, usage_log_repo
@@ -127,7 +128,7 @@ async def accept_upload(
         raise ValueError("File is empty")
 
     if len(content) > settings.max_upload_size_bytes:
-        raise ValueError(f"File exceeds {settings.max_upload_size_bytes // (1024 * 1024)}MB limit")
+        raise ValueError(document_too_large_message())
 
     file_type = detect_file_type(filename, content_type)
     if file_type == "unknown":

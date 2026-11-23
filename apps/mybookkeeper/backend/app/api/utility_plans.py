@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
 )
 
+from app.core.capped_upload_read import read_document_upload
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.power_to_choose_constants import DEFAULT_MIN_TERM_MONTHS
@@ -114,7 +115,7 @@ async def extract_plan_from_upload(
     swallowed by the UUID route.
     """
     utility_plan_extract_limiter.check(f"utility-plan-extract:{ctx.user_id}")
-    content = await file.read()
+    content = await read_document_upload(file)
     try:
         return await utility_plan_extraction_service.extract_plan_from_upload(
             ctx=ctx,

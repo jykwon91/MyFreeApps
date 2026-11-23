@@ -14,6 +14,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 
+from app.core.capped_upload_read import read_attachment_upload
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.listings.blackout_response import BlackoutResponse
@@ -65,7 +66,7 @@ async def upload_attachment(
     - JPEG/PNG/WebP images have metadata stripped before storage; one that
       can't be re-encoded is rejected (415), never stored as-is.
     """
-    content = await file.read()
+    content = await read_attachment_upload(file)
     try:
         return await blackout_service.upload_attachment(
             organization_id=ctx.organization_id,

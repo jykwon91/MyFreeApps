@@ -17,6 +17,7 @@ from fastapi import (
     UploadFile,
 )
 
+from app.core.capped_upload_read import read_document_upload
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import mortgage_statement_extract_limiter
@@ -106,7 +107,7 @@ async def extract_mortgage_from_upload(
     invented from the payment printed on it.
     """
     mortgage_statement_extract_limiter.check(f"mortgage-extract:{ctx.user_id}")
-    content = await file.read()
+    content = await read_document_upload(file)
     try:
         return await mortgage_statement_extraction_service.extract_mortgage_from_upload(
             ctx=ctx,

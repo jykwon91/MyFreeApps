@@ -8,6 +8,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
+from app.core.capped_upload_read import read_document_upload
 from app.core.context import RequestContext
 from app.core.document_constants import DOCUMENT_BEING_READ_DETAIL
 from app.core.permissions import current_org_member, require_write_access
@@ -97,7 +98,7 @@ async def upload_document(
     property_id: Optional[uuid.UUID] = None,
     ctx: RequestContext = Depends(require_write_access),
 ) -> AcceptUploadResponse:
-    content = await file.read()
+    content = await read_document_upload(file)
     try:
         result = await document_upload_service.accept_upload(
             ctx, content, file.filename or "", file.content_type or "", property_id,
@@ -171,7 +172,8 @@ async def replace_file(
     file: UploadFile = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> ReplaceFileResponse:
-    content = await file.read()
+    # A too-large replacement has always been a 422 here, unlike upload's 413.
+    content = await read_document_upload(file, status_code=422)
     try:
         await document_service.replace_file(
             ctx, document_id, content, file.filename or "", file.content_type or "",

@@ -15,6 +15,7 @@ from platform_shared.services.storage.object_upload import upload_objects
 
 from app.core.config import settings as _settings
 from app.core.storage import get_storage
+from app.core.upload_size_messages import attachment_too_large_message
 from app.db.session import unit_of_work
 from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
@@ -129,8 +130,7 @@ async def import_signed_lease(
     processed: list[tuple[bytes, str, str]] = []
     for content, filename in files:
         if len(content) > _settings.max_blackout_attachment_size_bytes:
-            max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
-            raise AttachmentTooLargeError(f"File '{filename}' exceeds {max_mb}MB limit")
+            raise AttachmentTooLargeError(attachment_too_large_message(f"File '{filename}'"))
         try:
             cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)
         except UnsupportedAttachmentType as exc:

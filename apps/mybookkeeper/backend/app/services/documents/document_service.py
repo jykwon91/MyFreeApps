@@ -6,6 +6,7 @@ from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.storage import get_storage
+from app.core.upload_size_messages import document_too_large_message
 from app.db.session import unit_of_work
 from app.models.documents.document import Document
 from app.models.responses.document_delete_result import DocumentDeleteResult
@@ -75,7 +76,7 @@ async def replace_file(
     content: bytes, filename: str, content_type: str,
 ) -> None:
     if len(content) > settings.max_upload_size_bytes:
-        raise ValueError(f"File exceeds {settings.max_upload_size_bytes // (1024 * 1024)}MB limit")
+        raise ValueError(document_too_large_message())
 
     file_type = detect_file_type(filename, content_type)
     if file_type == "unknown":

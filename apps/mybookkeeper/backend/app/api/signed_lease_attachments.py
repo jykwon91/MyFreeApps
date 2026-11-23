@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 
 from app.api.lease_render_error_mapping import lease_attachment_lock_errors
+from app.core.capped_upload_read import read_attachment_upload
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.leases.signed_lease_attachment_response import (
@@ -33,7 +34,7 @@ async def upload_attachment(
     file: UploadFile = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseAttachmentResponse:
-    content = await file.read()
+    content = await read_attachment_upload(file)
     try:
         with lease_attachment_lock_errors():
             return await signed_lease_service.upload_attachment(
