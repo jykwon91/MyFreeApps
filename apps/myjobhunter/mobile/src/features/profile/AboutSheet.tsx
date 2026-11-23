@@ -8,6 +8,7 @@ import { SENIORITY_CHOICES } from "../../constants/seniorityChoices";
 import type { AboutSheetProps } from "../../types/AboutSheetProps";
 import SheetButtons from "../../components/forms/SheetButtons";
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
+import { clientRefusalMessage } from "@myjobhunter/api-client/utils/clientRefusalMessage";
 
 /** Edits your level and summary. A failed save shows at the top and keeps what was typed. */
 export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
@@ -26,7 +27,7 @@ export default function AboutSheet({ profile, onClose }: AboutSheetProps) {
       showToast(MESSAGES.aboutSaved);
       onClose();
     } catch (error) {
-      setFailure(repeatableWriteFailure(error, () => MESSAGES.couldntSaveAbout));
+      setFailure(repeatableWriteFailure(error, (refusal) => clientRefusalMessage(refusal, MESSAGES.couldntSaveAbout)));
     }
   }
 

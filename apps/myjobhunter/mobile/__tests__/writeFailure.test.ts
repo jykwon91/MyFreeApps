@@ -17,10 +17,18 @@ describe("writeFailure, for a change or delete", () => {
     expect(writeFailure(error, "failed")).toBe(UNSURE);
   });
 
-  it("says the thing is gone on a 404, and offers a retry on a real refusal", () => {
+  it("says the thing is gone on a 404, and the server's reason on a 4xx refusal, never a 5xx's words", () => {
     expect(writeFailure({ status: 404, data: { detail: "Not Found" } }, "failed")).toBe(APPLICATION_DETAIL_MESSAGES.gone);
-    expect(writeFailure({ status: 422, data: { detail: "nope" } }, "failed")).toBe("failed");
+    expect(writeFailure({ status: 422, data: { detail: "nope" } }, "failed")).toBe("nope");
     expect(writeFailure({ status: 503, data: { detail: "Storage unavailable" } }, "failed")).toBe("failed");
+  });
+
+  it.each([
+    ["no detail", { status: 422, data: {} }],
+    ["a detail that isn't text", { status: 422, data: { detail: [{ msg: "bad" }] } }],
+    ["a page instead of JSON", { status: 400, data: "<html>Bad Request</html>" }],
+  ])("offers the plain retry when a refusal comes with %s", (_, error) => {
+    expect(writeFailure(error, "failed")).toBe("failed");
   });
 
   it("says nothing when signing out called it off", () => {
@@ -55,10 +63,18 @@ describe("createFailure, for an add", () => {
     );
   });
 
-  it("offers a plain retry when the server refused it, which it does before saving", () => {
-    expect(createFailure({ status: 422, data: { detail: "nope" } }, COPY)).toBe(COPY.failed);
-    expect(createFailure({ status: 400, data: { detail: "nope" } }, COPY)).toBe(COPY.failed);
+  it("says the server's reason when it refused the add (never a 5xx's words), which it does before saving", () => {
+    expect(createFailure({ status: 422, data: { detail: "nope" } }, COPY)).toBe("nope");
+    expect(createFailure({ status: 400, data: { detail: "nope" } }, COPY)).toBe("nope");
     expect(createFailure({ status: 503, data: { detail: "Storage unavailable" } }, COPY)).toBe(COPY.failed);
+  });
+
+  it.each([
+    ["no detail", { status: 422, data: {} }],
+    ["a detail that isn't text", { status: 422, data: { detail: [{ msg: "bad" }] } }],
+    ["a page instead of JSON", { status: 400, data: "<html>Bad Request</html>" }],
+  ])("offers the plain retry when a refusal comes with %s", (_, error) => {
+    expect(createFailure(error, COPY)).toBe(COPY.failed);
   });
 
   it("says the parent is gone on a 404 only when given the words for it", () => {
@@ -75,8 +91,9 @@ describe("moveFailure, for moving an application to another stage", () => {
     expect(moveFailure(error)).toBe(APPLICATION_DETAIL_MESSAGES.unsureMoved);
   });
 
-  it("offers a retry when the server refused the move, and says it's gone on a 404", () => {
-    expect(moveFailure({ status: 400, data: { detail: "not allowed" } })).toBe(APPLICATION_DETAIL_MESSAGES.couldntMove);
+  it("says the server's reason when it refused the move, the plain retry without one, and that it's gone on a 404", () => {
+    expect(moveFailure({ status: 400, data: { detail: "not allowed" } })).toBe("not allowed");
+    expect(moveFailure({ status: 400, data: {} })).toBe(APPLICATION_DETAIL_MESSAGES.couldntMove);
     expect(moveFailure({ status: 404, data: { detail: "Not Found" } })).toBe(APPLICATION_DETAIL_MESSAGES.gone);
   });
 });

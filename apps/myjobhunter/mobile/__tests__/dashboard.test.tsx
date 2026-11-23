@@ -457,7 +457,7 @@ it("puts a card back and says so when the server refuses the move", async () => 
   await fireEvent.press(screen.getByRole("button", { name: "Move Staff Engineer, Stripe" }));
   await fireEvent.press(await screen.findByRole("radio", { name: "Interviewing" }));
 
-  expect(await screen.findByText(DETAIL.couldntMove)).toBeTruthy();
+  expect(await screen.findByText("nope")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Applied, 2 applications" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Interviewing, 1 application" })).toBeTruthy();
 });

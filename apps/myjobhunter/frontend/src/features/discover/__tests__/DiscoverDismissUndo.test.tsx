@@ -52,7 +52,7 @@ const POSTING: DiscoveredJob = {
 
 const actions: string[] = [];
 let dismissed = false;
-let failUndo = false;
+let undoFailure: { status: number; data: unknown } | null = null;
 /** Undo finds the posting already brought back (or expired) since: the backend answers 404. */
 let undoGone = false;
 
@@ -64,7 +64,7 @@ function respond(config: InternalAxiosRequestConfig): { status: number; data: un
   }
   const action = config.url?.split("/").pop() ?? "";
   actions.push(action);
-  if (action === "undo-dismiss" && failUndo) return { status: 500, data: { detail: "boom" } };
+  if (action === "undo-dismiss" && undoFailure) return undoFailure;
   if (action === "undo-dismiss" && undoGone) return { status: 404, data: { detail: "Discovery resource not found" } };
   dismissed = action === "dismiss";
   return { status: 204, data: undefined };
@@ -90,7 +90,7 @@ beforeAll(() => {
 beforeEach(() => {
   actions.length = 0;
   dismissed = false;
-  failUndo = false;
+  undoFailure = null;
   undoGone = false;
 });
 
@@ -156,13 +156,16 @@ describe("Undo after dismissing a posting", () => {
     expect(actions).toEqual(["dismiss"]);
   });
 
-  it("says so when Undo fails, and the posting stays dismissed", async () => {
-    failUndo = true;
+  it.each([
+    ["the server's reason when it turned the request down", { status: 422, data: { detail: "Posting can't be restored" } }, "Posting can't be restored"],
+    ["the fixed line, never a server error's words,", { status: 500, data: { detail: "boom" } }, "Couldn't undo dismiss"],
+  ])("says so when Undo fails, with %s, and the posting stays dismissed", async (_label, failure, message) => {
+    undoFailure = failure;
     const store = renderInbox();
     await dismissThePosting();
 
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByText("boom")).toBeInTheDocument();
+    expect(await screen.findByText(message)).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("Dismissed.")).toBeNull());
     expect(actions).toEqual(["dismiss", "undo-dismiss"]);
     expect(screen.queryByText(TITLE)).toBeNull();
