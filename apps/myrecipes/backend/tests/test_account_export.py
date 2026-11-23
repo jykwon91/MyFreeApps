@@ -90,21 +90,55 @@ class TestExportIncludesRecipeData:
         assert "their private note" not in resp.text
 
     @pytest.mark.asyncio
-    async def test_export_omits_soft_deleted_recipes(self, user_factory, as_user) -> None:
+    async def test_export_includes_soft_deleted_rows_marked_with_deleted_at(
+        self, user_factory, as_user,
+    ) -> None:
         user = await user_factory()
         async with await as_user(user) as authed:
             gone = await _create_recipe(authed, title="Deleted One")
+            gone_version_id = gone["latest_version"]["id"]
             await authed.post(
-                f"/recipes/{gone['id']}/versions/{gone['latest_version']['id']}/cooks",
+                f"/recipes/{gone['id']}/versions/{gone_version_id}/cooks",
                 json={"rating": 3, "outcome_notes": "deleted cook"},
             )
-            await _create_recipe(authed, title="Kept One")
+            kept = await _create_recipe(authed, title="Kept One")
+            await authed.post(
+                f"/recipes/{kept['id']}/versions/{kept['latest_version']['id']}/cooks",
+                json={"rating": 5, "outcome_notes": "kept cook"},
+            )
             assert (await authed.delete(f"/recipes/{gone['id']}")).status_code == 204
             resp = await authed.get("/users/me/export")
 
         body = resp.json()
-        assert [r["title"] for r in body["recipes"]] == ["Kept One"]
-        assert body["cook_logs"] == []
+        by_title = {r["title"]: r for r in body["recipes"]}
+        assert set(by_title) == {"Deleted One", "Kept One"}
+        assert by_title["Kept One"]["deleted_at"] is None
+        deleted = by_title["Deleted One"]
+        assert deleted["deleted_at"] is not None
+        assert [v["id"] for v in deleted["versions"]] == [gone_version_id]
+        assert [i["name"] for i in deleted["versions"][0]["ingredients"]] == ["flour", "salt"]
+        cooks = {c["outcome_notes"]: c for c in body["cook_logs"]}
+        assert set(cooks) == {"deleted cook", "kept cook"}
+        assert cooks["deleted cook"]["recipe_id"] == gone["id"]
+        assert cooks["deleted cook"]["recipe_deleted_at"] == deleted["deleted_at"]
+        assert cooks["kept cook"]["recipe_deleted_at"] is None
+
+    @pytest.mark.asyncio
+    async def test_soft_deleted_recipe_stays_hidden_from_normal_endpoints(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            gone = await _create_recipe(authed, title="Deleted One")
+            await _create_recipe(authed, title="Kept One")
+            assert (await authed.delete(f"/recipes/{gone['id']}")).status_code == 204
+            listing = await authed.get("/recipes")
+            detail = await authed.get(f"/recipes/{gone['id']}")
+
+        assert listing.status_code == 200, listing.text
+        assert "Deleted One" not in listing.text
+        assert "Kept One" in listing.text
+        assert detail.status_code == 404
 
     @pytest.mark.asyncio
     async def test_export_never_contains_secrets(self, user_factory, as_user) -> None:

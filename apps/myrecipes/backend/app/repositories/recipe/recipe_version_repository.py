@@ -9,7 +9,6 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.recipe.recipe import Recipe
 from app.models.recipe.recipe_ingredient import RecipeIngredient
 from app.models.recipe.recipe_step import RecipeStep
 from app.models.recipe.recipe_version import RecipeVersion
@@ -166,11 +165,13 @@ async def counts_and_latest_by_recipe(
 
 
 async def list_all_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[RecipeVersion]:
-    """Every version of the user's non-deleted recipes, in timeline order (data export)."""
+    """Every version the user owns, including those of soft-deleted recipes, in timeline order.
+
+    Data-export only: deliberately does not exclude soft-deleted recipes.
+    """
     result = await db.execute(
         select(RecipeVersion)
-        .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
-        .where(RecipeVersion.user_id == user_id, Recipe.deleted_at.is_(None))
+        .where(RecipeVersion.user_id == user_id)
         .order_by(RecipeVersion.recipe_id.asc(), RecipeVersion.version_number.asc())
     )
     return list(result.scalars().all())
