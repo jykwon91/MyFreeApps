@@ -247,9 +247,7 @@ async def test_upload_file_document_oversize_returns_413(user_factory, as_user, 
     """POST /documents/upload with an oversize file returns 413."""
     user = await user_factory()
     # Lower max to 10 bytes so the _PDF_BYTES triggers the limit.
-    monkeypatch.setattr(
-        "app.services.documents.document_service._MAX_UPLOAD_BYTES", 10
-    )
+    monkeypatch.setattr("app.core.config.settings.max_document_upload_bytes", 10)
     fake_storage = _make_fake_storage()
 
     with patch("app.services.documents.document_service.get_storage", return_value=fake_storage):

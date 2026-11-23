@@ -46,9 +46,6 @@ _ALLOWED_MIME_TYPES: frozenset[str] = frozenset({
 # MinIO key prefix for document files.
 _DOCUMENT_KEY_PREFIX = "documents"
 
-# Maximum upload size: 25 MB.
-_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-
 # Presigned URL TTL: 1 hour.
 _PRESIGNED_URL_TTL_SECONDS = 3600
 
@@ -142,7 +139,7 @@ async def create_file_document(
             await _verify_application_ownership(db, user_id, application_id)
 
     sniffed_type = validate_resume(
-        file_bytes, declared_content_type, max_bytes=_MAX_UPLOAD_BYTES,
+        file_bytes, declared_content_type, max_bytes=settings.max_document_upload_bytes,
     )
 
     storage = get_storage()

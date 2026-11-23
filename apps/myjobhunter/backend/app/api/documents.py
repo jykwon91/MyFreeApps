@@ -15,9 +15,12 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_capped
+from platform_shared.core.upload_too_large_error import UploadTooLargeError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.config import settings
 from app.core.document_limits import DOCUMENT_FILENAME_MAX_LEN, DOCUMENT_TITLE_MAX_LEN
 from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE, MAX_DOCUMENT_PAGE_SIZE
 from app.core.storage import StorageNotConfiguredError
@@ -30,7 +33,7 @@ from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
 from app.services.documents import document_service
 from app.services.documents.document_service import ApplicationNotOwnedError
-from app.services.jobs.resume_validator import ResumeRejected
+from app.services.jobs.resume_validator import ResumeRejected, too_large_reason
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -88,7 +91,10 @@ async def upload_document(
             status_code=422,
             detail=f"filename must be at most {DOCUMENT_FILENAME_MAX_LEN} characters",
         )
-    content = await file.read()
+    try:
+        content = await read_upload_capped(file, settings.max_document_upload_bytes)
+    except UploadTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=too_large_reason(exc.max_bytes)) from exc
 
     try:
         return await document_service.create_file_document(

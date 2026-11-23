@@ -21,6 +21,11 @@ ALLOWED_RESUME_MIME_TYPES: frozenset[str] = frozenset({
 ALLOWED_RESUME_TYPES_LABEL = "PDF, DOCX, or plain text"
 
 
+def too_large_reason(max_bytes: int) -> str:
+    """The ``ResumeRejected`` reason for a file over ``max_bytes``."""
+    return f"file exceeds {max_bytes // (1024 * 1024)}MB limit"
+
+
 class ResumeRejected(ValueError):
     """Raised when an uploaded resume fails any validation check.
 
@@ -106,8 +111,7 @@ def validate_resume(
         raise ResumeRejected("empty file")
 
     if len(content) > max_bytes:
-        mb = max_bytes // (1024 * 1024)
-        raise ResumeRejected(f"file exceeds {mb}MB limit")
+        raise ResumeRejected(too_large_reason(max_bytes))
 
     sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in ALLOWED_RESUME_MIME_TYPES:
