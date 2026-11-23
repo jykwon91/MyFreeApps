@@ -64,9 +64,8 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await expect(entries(page)).toHaveCount(ZONE_CHANGES);
   await expect(entries(page).filter({ hasText: "Mount Hyjal" })).toHaveCount(1);
   // The data has a previous build, so "since last build" is a filter, not a note,
-  // and ticking it must leave some zones but not all of them.
+  // and ticking it must leave fewer zones than all of them (none, when this build added no zones).
   expect(CHANGES_PREVIOUS_BUILD).not.toBeNull();
-  expect(ZONES_SINCE_LAST_BUILD).toBeGreaterThan(0);
   expect(ZONES_SINCE_LAST_BUILD).toBeLessThan(ZONE_CHANGES);
   await expect(page.getByTestId("change-since-note")).toHaveCount(0);
   // The box is checked through the URL a beat after the click, so click and then wait for it
@@ -75,6 +74,9 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await sinceLastBuild.click();
   await expect(sinceLastBuild).toBeChecked();
   await expect(page).toHaveURL(/[?&]since=1(&|$)/);
+  if (ZONES_SINCE_LAST_BUILD === 0) {
+    await expect(page.getByText("No changes match these filters.")).toBeVisible();
+  }
   await expect(entries(page)).toHaveCount(ZONES_SINCE_LAST_BUILD);
 });
 

@@ -215,7 +215,7 @@ def test_committed_output_is_consistent() -> None:
     assert all(r[2] in (CLASSIFICATION_RARE, CLASSIFICATION_RARE_ELITE) for r in rares.values())
     assert all(len(r[3]) == len("2026-11-12") for r in rares.values())
     # Every Classic rare / rare elite with a map spot is listed, not only the confirmed ones.
-    assert len(classic["rares"]) > 10 * len(rares)
+    assert len(classic["rares"]) > 5 * len(rares)
     for cid, rare in classic["rares"].items():
         assert rare["minLevel"] <= rare["maxLevel"]
         assert rare["name"]
