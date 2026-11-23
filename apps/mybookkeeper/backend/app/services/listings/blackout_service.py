@@ -26,6 +26,7 @@ from platform_shared.services.storage.stored_object_cleanup import delete_stored
 from app.core.commit_outcome_constants import OUTCOME_CHECK_LOCK_TIMEOUT_MS
 from app.core.config import settings
 from app.core.storage import get_storage
+from app.core.upload_size_messages import attachment_too_large_message
 from app.db.session import unit_of_work
 from app.repositories import lock_timeout_repo
 from app.repositories.listings import (
@@ -140,8 +141,7 @@ async def upload_attachment(
 
     # 2. Size cap
     if len(content) > settings.max_blackout_attachment_size_bytes:
-        max_mb = settings.max_blackout_attachment_size_bytes // (1024 * 1024)
-        raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
+        raise AttachmentTooLargeError(attachment_too_large_message())
 
     # 3-5. Type from the bytes, allowlist, photo metadata strip — fail closed
     try:

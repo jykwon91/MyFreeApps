@@ -73,6 +73,7 @@ __all__ = [
     "TemplateWriteConflictError",
     "check_declared_size",
     "check_file_count",
+    "file_too_large_message",
     "replace_template_files",
     "upload_template",
 ]
@@ -92,13 +93,18 @@ def _size_limit_label() -> str:
     return f"{settings.max_lease_template_file_size_bytes / (1024 * 1024):g}MB"
 
 
+def file_too_large_message(filename: str) -> str:
+    """The rejection for a template file over the size limit."""
+    return f"{filename} exceeds {_size_limit_label()} limit"
+
+
 def check_declared_size(filename: str, size: int | None) -> None:
     """Reject a file whose declared size is over the limit (before reading it).
 
     ``size`` can be missing or wrong, so the bytes are checked again once read.
     """
     if size is not None and size > settings.max_lease_template_file_size_bytes:
-        raise TemplateFileTooLargeError(f"{filename} exceeds {_size_limit_label()} limit")
+        raise TemplateFileTooLargeError(file_too_large_message(filename))
 
 
 async def _validate_bundle(files: list[TemplateUploadFile]) -> list[ValidatedTemplateFile]:

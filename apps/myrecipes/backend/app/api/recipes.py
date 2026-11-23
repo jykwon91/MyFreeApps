@@ -38,9 +38,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
-from platform_shared.core.capped_upload import read_upload_capped
+from platform_shared.core.capped_upload import read_upload_or_reject
 from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
-from platform_shared.core.upload_too_large_error import UploadTooLargeError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, current_user_optional
@@ -225,13 +224,13 @@ async def extract_recipe_photo(
     Status codes: 413 too large (bytes or pixels), 415 unsupported type, 422 unreadable / no
     recipe found, 429 per-IP budget spent, 503 photo import not available.
     """
-    try:
-        content = await read_upload_capped(file, settings.max_photo_upload_bytes)
-    except UploadTooLargeError as exc:
-        limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
-        raise HTTPException(
-            status_code=413, detail=f"Image exceeds the {limit_mb} MB limit."
-        ) from exc
+    limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
+    content = await read_upload_or_reject(
+        file,
+        settings.max_photo_upload_bytes,
+        status_code=413,
+        detail=f"Image exceeds the {limit_mb} MB limit.",
+    )
     if not content:
         raise HTTPException(status_code=422, detail="The uploaded image is empty.")
     if (file.content_type or "") not in photo_extraction_service.SUPPORTED_MEDIA_TYPES:

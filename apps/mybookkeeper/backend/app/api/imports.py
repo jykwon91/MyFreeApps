@@ -3,6 +3,7 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.context import RequestContext
 from app.core.permissions import require_write_access
@@ -19,7 +20,12 @@ async def import_bank_csv(
     property_id: Optional[uuid.UUID] = Query(None),
     ctx: RequestContext = Depends(require_write_access),
 ) -> ImportResult:
-    content_bytes = await file.read()
+    content_bytes = await read_upload_or_reject(
+        file,
+        import_service.MAX_CSV_SIZE,
+        status_code=413,
+        detail=import_service.csv_too_large_message(),
+    )
     try:
         return await import_service.import_bank_csv_file(
             ctx, content_bytes, file.filename or "", property_id,

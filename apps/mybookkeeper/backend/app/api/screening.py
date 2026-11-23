@@ -22,8 +22,8 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.applicants.screening_eligibility_response import (
@@ -37,6 +37,7 @@ from app.schemas.applicants.screening_redirect_response import (
 )
 from app.schemas.applicants.screening_result_response import ScreeningResultResponse
 from app.services import screening as screening_service
+from app.services.screening import report_processor
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +147,8 @@ async def upload_screening_result(
         422 — bad status or missing snippet on adverse outcome
         503 — storage backend unavailable
     """
-    content = await file.read()
-    if len(content) > settings.max_upload_size_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File exceeds {settings.max_upload_size_bytes // (1024 * 1024)}MB limit",
-        )
+    cap, too_large_detail = report_processor.report_upload_limit()
+    content = await read_upload_or_reject(file, cap, status_code=413, detail=too_large_detail)
 
     try:
         return await screening_service.record_result(

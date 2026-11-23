@@ -90,10 +90,11 @@ class Settings(BaseAppSettings):
     totp_issuer: str = "MyJobHunter"
 
     # ------------------------------------------------------------------
-    # Resume upload limits — generous for legitimate PDF/DOCX resumes,
-    # bounded to prevent storage abuse.
+    # Upload limits — generous for legitimate PDF/DOCX resumes and
+    # documents, bounded to prevent storage abuse.
     # ------------------------------------------------------------------
     max_resume_upload_bytes: int = 25 * 1024 * 1024  # 25 MB
+    max_document_upload_bytes: int = 25 * 1024 * 1024  # 25 MB
 
 
 settings = Settings()

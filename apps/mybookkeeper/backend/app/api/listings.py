@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
@@ -33,7 +34,7 @@ from app.services.listings import (
     listing_photo_service,
     listing_service,
 )
-from app.services.storage.image_processor import ImageRejected
+from app.services.storage import image_processor
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
@@ -132,7 +133,12 @@ async def upload_photos(
 ) -> list[ListingPhotoResponse]:
     payloads: list[tuple[bytes, str | None, str | None]] = []
     for f in files:
-        content = await f.read()
+        content = await read_upload_or_reject(
+            f,
+            image_processor.MAX_IMAGE_BYTES,
+            status_code=413,
+            detail=image_processor.image_too_large_reason(),
+        )
         payloads.append((content, f.filename, f.content_type))
     try:
         return await listing_photo_service.upload_photos(
@@ -142,7 +148,7 @@ async def upload_photos(
         raise HTTPException(status_code=404, detail="Listing not found") from exc
     except listing_photo_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except ImageRejected as exc:
+    except image_processor.ImageRejected as exc:
         # 413 (payload too large) for size; 415 for everything else.
         status = 413 if "MB" in exc.reason else 415
         raise HTTPException(status_code=status, detail=exc.reason) from exc

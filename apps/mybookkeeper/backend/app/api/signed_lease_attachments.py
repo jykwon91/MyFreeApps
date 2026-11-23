@@ -4,10 +4,13 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.api.lease_render_error_mapping import lease_attachment_lock_errors
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.upload_size_messages import attachment_too_large_message
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -33,7 +36,12 @@ async def upload_attachment(
     file: UploadFile = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseAttachmentResponse:
-    content = await file.read()
+    content = await read_upload_or_reject(
+        file,
+        settings.max_blackout_attachment_size_bytes,
+        status_code=413,
+        detail=attachment_too_large_message(),
+    )
     try:
         with lease_attachment_lock_errors():
             return await signed_lease_service.upload_attachment(

@@ -22,7 +22,9 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from platform_shared.core.capped_upload import read_upload_or_reject
 
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import lease_placeholder_suggest_limiter
@@ -67,7 +69,17 @@ async def _read_upload_files(files: list[UploadFile]) -> list[TemplateUploadFile
     lease_template_upload_service.check_file_count(len(files))
     for f in files:
         lease_template_upload_service.check_declared_size(f.filename or "", f.size)
-    return [(f.filename or "", await f.read(), f.content_type) for f in files]
+    payload: list[TemplateUploadFile] = []
+    for f in files:
+        filename = f.filename or ""
+        content = await read_upload_or_reject(
+            f,
+            settings.max_lease_template_file_size_bytes,
+            status_code=413,
+            detail=lease_template_upload_service.file_too_large_message(filename),
+        )
+        payload.append((filename, content, f.content_type))
+    return payload
 
 
 @router.post("", response_model=LeaseTemplateResponse, status_code=201)

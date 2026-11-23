@@ -29,6 +29,11 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from app.core.config import settings
+from app.core.upload_size_messages import (
+    document_too_large_message,
+    exceeds_limit_message,
+)
 from app.services.storage.image_processor import (
     ImageRejected,
     ProcessedImage,
@@ -53,7 +58,8 @@ ALLOWED_REPORT_MIME_TYPES: frozenset[str] = frozenset({
 DEFAULT_MAX_REPORT_BYTES: int = 10 * 1024 * 1024
 
 
-def _max_bytes() -> int:
+def max_report_bytes() -> int:
+    """The size cap for a screening report, in bytes."""
     raw = os.environ.get("MAX_SCREENING_REPORT_BYTES", "").strip()
     if not raw:
         return DEFAULT_MAX_REPORT_BYTES
@@ -64,6 +70,24 @@ def _max_bytes() -> int:
             "Invalid MAX_SCREENING_REPORT_BYTES=%r, falling back to default", raw,
         )
         return DEFAULT_MAX_REPORT_BYTES
+
+
+def report_too_large_reason(cap: int) -> str:
+    """The ``ReportRejected`` reason for a report over ``cap`` bytes."""
+    return exceeds_limit_message("file", cap)
+
+
+def report_upload_limit() -> tuple[int, str]:
+    """The bytes a report upload may have, and the 413 detail for one past that.
+
+    The report cap applies, but never above the general upload ceiling
+    (``settings.max_upload_size_bytes``), which the route enforced first before
+    it read uploads in capped chunks. Each limit keeps its own message.
+    """
+    report_cap = max_report_bytes()
+    if report_cap <= settings.max_upload_size_bytes:
+        return report_cap, report_too_large_reason(report_cap)
+    return settings.max_upload_size_bytes, document_too_large_message()
 
 
 class ReportRejected(ValueError):
@@ -235,9 +259,9 @@ def process_report(
     """
     if not content:
         raise ReportRejected("empty file")
-    cap = _max_bytes()
+    cap = max_report_bytes()
     if len(content) > cap:
-        raise ReportRejected(f"file exceeds {cap // (1024 * 1024)}MB limit")
+        raise ReportRejected(report_too_large_reason(cap))
 
     sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in ALLOWED_REPORT_MIME_TYPES:

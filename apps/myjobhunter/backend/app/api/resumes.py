@@ -13,9 +13,11 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.config import settings
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -26,7 +28,7 @@ from app.services.jobs.resume_upload_service import (
     list_recent,
     presigned_download_url,
 )
-from app.services.jobs.resume_validator import ResumeRejected
+from app.services.jobs.resume_validator import ResumeRejected, too_large_reason
 from app.services.profile.profile_service import get_or_create_profile
 
 router = APIRouter()
@@ -52,7 +54,9 @@ async def upload_resume(
     Rate limited per user (10 / 5 min); 429 when exceeded.
     """
     check_user_rate_limit(user.id, _UPLOAD_LIMITER)
-    content = await file.read()
+    content = await read_upload_or_reject(
+        file, settings.max_resume_upload_bytes, status_code=413, detail=too_large_reason(settings.max_resume_upload_bytes),
+    )
     profile = await get_or_create_profile(user.id)
 
     try:

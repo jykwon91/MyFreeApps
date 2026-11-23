@@ -1,6 +1,8 @@
 /**
- * What POST /documents/upload accepts. Mirrors `_ALLOWED_MIME_TYPES` and
- * `_MAX_UPLOAD_BYTES` in apps/myjobhunter/backend/app/services/documents/document_service.py.
+ * What POST /documents/upload accepts. Mirrors `_ALLOWED_MIME_TYPES` in
+ * apps/myjobhunter/backend/app/services/documents/document_service.py and
+ * `settings.max_document_upload_bytes` in apps/myjobhunter/backend/app/core/config.py.
+ * If either changes on the backend, change the copy here with it.
  */
 export const DOCUMENT_UPLOAD_MIME_TYPES: readonly string[] = [
   "application/pdf",

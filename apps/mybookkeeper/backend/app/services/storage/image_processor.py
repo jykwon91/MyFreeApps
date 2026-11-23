@@ -27,6 +27,7 @@ from pillow_heif import register_heif_opener
 from platform_shared.core.image_pixel_limit import ensure_within_pixel_limit
 from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
 
+from app.core.upload_size_messages import exceeds_limit_message
 from app.services.storage.image_color import flatten_alpha, to_srgb
 
 # Pillow has no HEIC decoder of its own; this registers pillow-heif's opener
@@ -73,6 +74,11 @@ _FILE_EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}$")
 # Phones write a second image (depth map, HDR gain map) into many JPEGs, and
 # Pillow opens those as MPO. They are still JPEGs; only the main image is kept.
 _DECODED_FORMAT_ALIASES: dict[str, str] = {"MPO": "JPEG"}
+
+
+def image_too_large_reason() -> str:
+    """The ``ImageRejected`` reason for a file over ``MAX_IMAGE_BYTES``."""
+    return exceeds_limit_message("file", MAX_IMAGE_BYTES)
 
 
 class ImageRejected(ValueError):
@@ -159,7 +165,7 @@ def process_image(content: bytes, declared_content_type: str | None = None) -> P
     if not content:
         raise ImageRejected("empty file")
     if len(content) > MAX_IMAGE_BYTES:
-        raise ImageRejected(f"file exceeds {MAX_IMAGE_BYTES // (1024 * 1024)}MB limit")
+        raise ImageRejected(image_too_large_reason())
 
     sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in ALLOWED_PHOTO_MIME_TYPES:

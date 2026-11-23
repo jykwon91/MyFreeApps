@@ -312,7 +312,8 @@
         "test_document_delete.py",
         "test_document_extraction_deleted_mid_read.py",
         "test_document_list_page.py",
-        "test_document_gmail_download.py"
+        "test_document_gmail_download.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "DocumentUploadZone.test.tsx",
@@ -735,7 +736,8 @@
         "test_blackout_attachment_metadata.py",
         "test_lease_insurance_attachment_metadata.py",
         "test_strip_metadata_phone_photos.py",
-        "test_cross_org_isolation_http_2.py"
+        "test_cross_org_isolation_http_2.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",
@@ -1221,7 +1223,8 @@
         "test_attachment_content.py",
         "test_image_cleaning_off_event_loop.py",
         "test_lease_insurance_attachment_metadata.py",
-        "test_attachment_upload_commit_outcome.py"
+        "test_attachment_upload_commit_outcome.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -1298,7 +1301,8 @@
         "test_pmms_client.py",
         "test_refi_math.py",
         "test_refi_outlook.py",
-        "test_document_draft_reader.py"
+        "test_document_draft_reader.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "Mortgages.test.tsx",
@@ -1425,7 +1429,8 @@
         "test_offer_ranking.py",
         "test_utility_offer_ranking.py",
         "test_time_of_use_offers.py",
-        "test_document_draft_reader.py"
+        "test_document_draft_reader.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
@@ -1529,7 +1534,8 @@
         "test_welcome_manual_section_image_service.py",
         "test_section_image_storage_order.py",
         "test_welcome_manual_row_locks.py",
-        "test_welcome_manual_reorder_access.py"
+        "test_welcome_manual_reorder_access.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "WelcomeManualDetail.test.tsx",
@@ -1644,7 +1650,8 @@
         "backend/app/core/commit_outcome_constants.py",
         "backend/app/core/lease_render_constants.py",
         "backend/app/repositories/lock_timeout_repo.py",
-        "backend/app/api/lease_render_error_mapping.py"
+        "backend/app/api/lease_render_error_mapping.py",
+        "backend/app/api/signed_lease_import_files.py"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -1681,7 +1688,8 @@
         "test_signed_lease_render_error_routes.py",
         "test_attachment_upload_commit_outcome.py",
         "test_logs_carry_no_personal_details.py",
-        "test_lease_email_logs.py"
+        "test_lease_email_logs.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
@@ -1834,7 +1842,8 @@
         "test_screening_result_repo.py",
         "test_input_validation_hardening.py",
         "test_cleanup_seed_routes.py",
-        "test_attachment_upload_commit_outcome.py"
+        "test_attachment_upload_commit_outcome.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "ScreeningSection.test.tsx",
@@ -2228,7 +2237,8 @@
         "test_metered_usage_extraction.py",
         "test_cleanup_seed_routes.py",
         "test_tax_return_staleness.py",
-        "test_reported_amount.py"
+        "test_reported_amount.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -2404,7 +2414,10 @@
         "backend/app/core/storage.py",
         "backend/app/core/tags.py",
         "backend/app/core/tax_form_fields.py",
-        "backend/app/core/vendors.py"
+        "backend/app/core/vendors.py",
+        "backend/app/core/upload_size_messages.py",
+        "backend/tests/upload_cap_case.py",
+        "backend/tests/upload_cap_cases.py"
       ],
       "backend_tests": [
         "test_login_ip_rate_limit.py",
@@ -2413,7 +2426,8 @@
         "test_storage.py",
         "test_stored_file_missing.py",
         "test_sanitize_tags.py",
-        "test_schema_cleanup.py"
+        "test_schema_cleanup.py",
+        "test_upload_read_caps.py"
       ],
       "frontend_tests": [],
       "e2e_specs": []
