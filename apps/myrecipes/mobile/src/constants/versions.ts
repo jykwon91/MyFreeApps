@@ -1,4 +1,4 @@
-import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 import type { ChipTone } from "@platform/mobile";
 import type { DiffEntryPoint } from "../types/DiffEntryPoint";
@@ -11,11 +11,11 @@ export const VERSION_HISTORY_MESSAGES = {
   screenTitle: "Version history",
   open: "Version history",
   openHint: (versions: string) => `Shows all ${versions} and what changed in each.`,
-  loading: "Loading versions",
-  loadFailedHeading: "Can't load versions",
-  loadFailedBody: "Check your connection and try again.",
-  updateFailed: "Couldn't update the versions. Check your connection and try again.",
-  tryAgain: "Try again",
+  loading: VERSION_COPY.listLoading,
+  loadFailedHeading: VERSION_COPY.listLoadFailedHeading,
+  loadFailedBody: VERSION_COPY.listLoadFailedBody,
+  updateFailed: VERSION_COPY.listUpdateFailed,
+  tryAgain: VERSION_COPY.tryAgain,
   notFoundHeading: "Recipe not found",
   notFoundBody: "It may have been deleted, or the link may be wrong.",
   backToRecipes: "Back to recipes",
