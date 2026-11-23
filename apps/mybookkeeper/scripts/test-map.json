@@ -728,6 +728,7 @@
         "test_channel_listing_repo.py",
         "test_channel_listing_routes.py",
         "test_channel_sync_service.py",
+        "test_multi_user_sweeps_audit_actor.py",
         "test_url_redaction.py",
         "test_calendar_route.py",
         "test_ical_serializer.py",
@@ -1127,6 +1128,7 @@
       "backend_tests": [
         "test_rent_reminder_math.py",
         "test_rent_reminder_dispatch.py",
+        "test_multi_user_sweeps_audit_actor.py",
         "test_rent_reminders_api.py",
         "test_rent_reminder_codes_match_api_client.py",
         "test_rent_reminder_request_id.py",
@@ -2531,6 +2533,7 @@
         "test_upload_processor_audit_actor.py",
         "test_self_healing.py",
         "test_lease_auto_end_scheduler.py",
+        "test_multi_user_sweeps_audit_actor.py",
         "test_utility_plan_scheduler.py",
         "test_logs_carry_no_personal_details.py"
       ],

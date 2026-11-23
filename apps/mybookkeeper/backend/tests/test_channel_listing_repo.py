@@ -192,7 +192,9 @@ class TestChannelListingCRUD:
 
         rows = await channel_listing_repo.list_pollable(db)
         assert len(rows) == 1
-        assert rows[0].channel_id == "airbnb"
+        row, owner_id = rows[0]
+        assert row.channel_id == "airbnb"
+        assert owner_id == test_user.id
 
 
 class TestListingBlackoutUpsertAndDelete:

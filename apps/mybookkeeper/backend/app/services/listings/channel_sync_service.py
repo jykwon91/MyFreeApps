@@ -29,6 +29,7 @@ from typing import Literal
 
 import httpx
 
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.core.capped_fetch import fetch_capped
 from platform_shared.core.capped_fetch_error import CappedFetchError
 from platform_shared.core.url_safety import UnsafeURLError
@@ -212,7 +213,8 @@ async def poll_all() -> int:
     """Poll every channel_listing with an inbound iCal URL.
 
     Returns the count of rows polled. Errors on individual rows are
-    logged + recorded on the row but do not stop the loop.
+    logged + recorded on the row but do not stop the loop. Each feed's
+    writes are audited as the listing's owner.
     """
     async with unit_of_work() as db:
         rows = await channel_listing_repo.list_pollable(db)
@@ -224,8 +226,9 @@ async def poll_all() -> int:
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(ICAL_FEED_PHASE_TIMEOUT_SECONDS),
     ) as client:
-        for row in rows:
-            await poll_one(row, client=client)
+        for row, owner_id in rows:
+            with audit_actor(owner_id):
+                await poll_one(row, client=client)
             polled += 1
 
     return polled

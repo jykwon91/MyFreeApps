@@ -32,6 +32,7 @@ import logging
 import uuid
 from decimal import Decimal
 
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.services.email_service import EmailNotConfiguredError, EmailSendError
 from platform_shared.services.phone_number import to_e164
 from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
@@ -333,15 +334,17 @@ async def run_due_reminders(now: _dt.datetime | None = None) -> int:
     """Send every reminder whose moment has come. Returns how many went out.
 
     One bad plan never stops the sweep: each is processed in isolation and
-    any error is logged and skipped.
+    any error is logged and skipped. Each plan's writes are audited as the
+    plan's owner, the person whose account deletion takes the plan with it.
     """
     moment = now or _now()
     async with unit_of_work() as db:
-        plan_ids = [p.id for p in await rent_reminder_plan_repo.list_active(db)]
+        plans = [(p.id, p.user_id) for p in await rent_reminder_plan_repo.list_active(db)]
     sent = 0
-    for plan_id in plan_ids:
+    for plan_id, owner_id in plans:
         try:
-            sent += await _process_plan(plan_id, moment)
+            with audit_actor(owner_id):
+                sent += await _process_plan(plan_id, moment)
         except Exception:  # noqa: BLE001 — isolate plans from each other
             logger.exception("Rent reminder sweep failed for plan %s", plan_id)
     return sent

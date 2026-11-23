@@ -12,6 +12,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.channel_listing import ChannelListing
+from app.models.listings.listing import Listing
 
 
 # PATCH-allowlist. ``ical_export_token`` is server-managed (rotation only via
@@ -125,17 +126,21 @@ async def get_by_org_channel_external_id(
     return result.scalar_one_or_none()
 
 
-async def list_pollable(db: AsyncSession) -> list[ChannelListing]:
-    """Return every channel_listing with a non-NULL ``ical_import_url``.
+async def list_pollable(db: AsyncSession) -> list[tuple[ChannelListing, uuid.UUID]]:
+    """Return ``(channel_listing, listing owner's user id)`` for every
+    channel_listing with a non-NULL ``ical_import_url``.
 
-    Powers the scheduler's iCal poll. No date filtering — every channel
-    that has a feed gets polled on each cycle. Volume is small (one row
-    per (listing, channel) pair the host has set up).
+    Powers the scheduler's iCal poll, which audits each feed's writes as the
+    listing's owner. No date filtering — every channel that has a feed gets
+    polled on each cycle. Volume is small (one row per (listing, channel)
+    pair the host has set up).
     """
     result = await db.execute(
-        select(ChannelListing).where(ChannelListing.ical_import_url.is_not(None)),
+        select(ChannelListing, Listing.user_id)
+        .join(Listing, Listing.id == ChannelListing.listing_id)
+        .where(ChannelListing.ical_import_url.is_not(None)),
     )
-    return list(result.scalars().all())
+    return [(row, owner_id) for row, owner_id in result.all()]
 
 
 async def create(
