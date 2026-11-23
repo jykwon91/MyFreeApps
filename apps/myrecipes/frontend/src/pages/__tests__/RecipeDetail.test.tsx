@@ -108,6 +108,28 @@ beforeEach(() => {
   useLogCookMutation.mockReturnValue([logCook, { isLoading: false }]);
 });
 
+describe("RecipeDetail byline", () => {
+  const recipeOwnedBy = (name: string) => ({
+    data: { id: "r1", title: "Tomato soup", description: null, source: null, is_owner: false, owner_display_name: name, latest_version: VERSIONS[1] },
+    isLoading: false,
+    isError: false,
+  });
+
+  it("says whose recipe it is under the title", () => {
+    answerVersions({ v2: "loaded" });
+    useGetRecipeQuery.mockReturnValue(recipeOwnedBy("Sam"));
+    renderPage();
+    expect(screen.getByText("by Sam")).toBeInTheDocument();
+  });
+
+  it("shows no byline when the owner's name is unknown", () => {
+    answerVersions({ v2: "loaded" });
+    useGetRecipeQuery.mockReturnValue(recipeOwnedBy(""));
+    renderPage();
+    expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
+  });
+});
+
 describe("RecipeDetail version panel", () => {
   it("shows the skeleton, not the previous version, while a picked version loads", async () => {
     answerVersions({ v2: "loaded" });

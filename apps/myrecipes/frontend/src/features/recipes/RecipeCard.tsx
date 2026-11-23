@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { GitBranch } from "lucide-react";
 import { Badge, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
+import { RECIPE_BYLINE } from "@myrecipes/api-client/constants/recipeByline";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { versionBadgeLabel } from "@myrecipes/api-client/utils/versionBadgeLabel";
 
@@ -59,7 +60,7 @@ export default function RecipeCard({ recipe }: Props) {
 
       {recipe.owner_display_name ? (
         <div className="text-xs text-muted-foreground/80">
-          by {recipe.owner_display_name}
+          {RECIPE_BYLINE.byOwner(recipe.owner_display_name)}
         </div>
       ) : null}
     </Link>

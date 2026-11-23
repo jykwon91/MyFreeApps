@@ -17,6 +17,7 @@ import {
   useDeleteRecipeMutation,
 } from "@myrecipes/api-client/store/recipesApi";
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
+import { RECIPE_BYLINE } from "@myrecipes/api-client/constants/recipeByline";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import { deleteFailureOutcome } from "@myrecipes/api-client/utils/deleteFailureOutcome";
@@ -147,6 +148,11 @@ export default function RecipeDetail() {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-semibold">{recipe.title}</h1>
+          {recipe.owner_display_name ? (
+            <p className="text-sm text-muted-foreground">
+              {RECIPE_BYLINE.byOwner(recipe.owner_display_name)}
+            </p>
+          ) : null}
           {recipe.description ? (
             <p className="text-muted-foreground">{recipe.description}</p>
           ) : null}
