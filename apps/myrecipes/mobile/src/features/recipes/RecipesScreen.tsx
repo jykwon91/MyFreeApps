@@ -1,4 +1,4 @@
-import { RECIPES_LIST_ERROR_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { RECIPES_LIST_ERROR_COPY, RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
@@ -107,9 +107,9 @@ export default function RecipesScreen() {
     if (ownerMe) {
       return (
         <EmptyState
-          action={{ label: RECIPES_MESSAGES.showAll, onPress: () => setIsMineOnly(false) }}
-          body={RECIPES_MESSAGES.mineEmptyBody}
-          heading={RECIPES_MESSAGES.mineEmptyHeading}
+          action={{ label: RECIPES_MINE_EMPTY_COPY.actionLabel, onPress: () => setIsMineOnly(false) }}
+          body={RECIPES_MINE_EMPTY_COPY.body}
+          heading={RECIPES_MINE_EMPTY_COPY.heading}
         />
       );
     }

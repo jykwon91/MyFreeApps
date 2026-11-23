@@ -3,9 +3,6 @@ import type { LoadMoreMessages } from "@platform/core/types/paging/load-more-mes
 /** Copy for the phone's recipe list and its cards. */
 export const RECIPES_MESSAGES = {
   myRecipes: "My recipes",
-  mineEmptyHeading: "None of your recipes yet",
-  mineEmptyBody: "Recipes you create will show up here.",
-  showAll: "Show all recipes",
   notCooked: "Not cooked yet",
   lastCooked: (date: string) => `Last cooked ${date}`,
   noRating: "No rating",

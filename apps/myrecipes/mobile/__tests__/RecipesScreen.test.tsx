@@ -7,6 +7,7 @@ import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { AccessibilityInfo, AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
 import { Provider } from "react-redux";
+import { RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { saveCookCopy } from "../src/features/cook/cookCopies";
@@ -293,10 +294,10 @@ describe("RecipesScreen", () => {
     await screen.findByText("Tomato soup");
 
     await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
-    expect(await screen.findByText("None of your recipes yet")).toBeTruthy();
+    expect(await screen.findByText(RECIPES_MINE_EMPTY_COPY.heading)).toBeTruthy();
     expect(screen.queryByText("No recipes yet")).toBeNull();
 
-    await fireEvent.press(screen.getByRole("button", { name: "Show all recipes" }));
+    await fireEvent.press(screen.getByRole("button", { name: RECIPES_MINE_EMPTY_COPY.actionLabel }));
     expect(await screen.findByText("Tomato soup")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
       checked: false,
