@@ -148,7 +148,10 @@ class TestExportIncludesRecipeData:
 
         body = resp.json()
         assert body["recipes"] == [] and body["cook_logs"] == []
-        assert set(body["user"]) == {"id", "email", "display_name", "is_verified", "totp_enabled"}
+        assert set(body["user"]) == {
+            "id", "email", "display_name", "is_active", "is_verified",
+            "is_superuser", "role", "totp_enabled",
+        }
         lowered = resp.text.lower()
         for secret_key in ("hashed_password", "totp_secret", "recovery", "token"):
             assert secret_key not in lowered

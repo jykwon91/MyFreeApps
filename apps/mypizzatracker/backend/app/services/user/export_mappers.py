@@ -28,16 +28,6 @@ def _money(value: Decimal) -> str:
     return str(value)
 
 
-def user_to_export_dict(user: Any) -> dict[str, Any]:
-    return {
-        "id": str(user.id),
-        "email": user.email,
-        "display_name": user.display_name,
-        "is_verified": user.is_verified,
-        "totp_enabled": user.totp_enabled,
-    }
-
-
 def slot_to_export_dict(slot: Slot) -> dict[str, Any]:
     return {
         "id": str(slot.id),

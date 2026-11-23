@@ -18,6 +18,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.user_export import user_to_export_dict
+
 from app.models.tutor.tutor_profile import TutorProfile
 from app.models.tutor.tutor_turn import TutorTurn
 from app.models.user.user import User
@@ -48,13 +50,7 @@ async def build_export(db: AsyncSession, user: User) -> dict[str, Any]:
 
     return {
         "exported_at": datetime.now(timezone.utc).isoformat(),
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "display_name": user.display_name,
-            "is_verified": user.is_verified,
-            "totp_enabled": user.totp_enabled,
-        },
+        "user": user_to_export_dict(user),
         "tutor_profile": _profile_export(profile),
         "tutor_sessions": [
             to_session_detail(session, turns_by_session.get(session.id, [])).model_dump(

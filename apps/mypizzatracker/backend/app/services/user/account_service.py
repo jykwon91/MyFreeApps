@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.user_export import user_to_export_dict
+
+from app.models.user.user import User
 from app.repositories.customer import customer_repo
 from app.repositories.drop import drop_repo
 from app.repositories.expense import expense_repo
@@ -33,7 +36,7 @@ async def delete_user_data(db: AsyncSession, user_id: uuid.UUID) -> None:
     logger.info("delete_user_data called for user_id=%s -- no domain rows to delete", user_id)
 
 
-async def build_export(db: AsyncSession, user) -> dict:
+async def build_export(db: AsyncSession, user: User) -> dict:
     """Assemble the full data export for ``user``.
 
     Includes profile metadata plus every drop (with slots), menu pizza and
@@ -50,7 +53,7 @@ async def build_export(db: AsyncSession, user) -> dict:
 
     return {
         "exported_at": datetime.now(timezone.utc).isoformat(),
-        "user": export_mappers.user_to_export_dict(user),
+        "user": user_to_export_dict(user),
         "drops": [export_mappers.drop_to_export_dict(d) for d in drops],
         "menu": {
             "pizzas": [export_mappers.pizza_type_to_export_dict(p) for p in pizzas],
