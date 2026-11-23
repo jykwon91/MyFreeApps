@@ -61,7 +61,10 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # individuals with insurers), encrypted at rest via EncryptedString.
     "policy_number",
     # Mortgage domain PII — a loan account number identifies a person to a
-    # financial institution, encrypted at rest via EncryptedString.
+    # financial institution, encrypted at rest via EncryptedString. The same
+    # name covers utility_account_link.account_number, a provider account
+    # identifier stored plaintext for equality lookup (PII-adjacent, already in
+    # core/pii.py PII_FIELD_IDS), so its plaintext never lands in audit_logs.
     "account_number",
     # Payment-attribution payer handle (Zelle email/phone, Venmo @user, Cash
     # App $tag) — a payer's contact identifier, stored on transactions and
@@ -78,6 +81,17 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # The audit log must never capture the decrypted PIN (or its ciphertext,
     # which would leak that a share link is enabled).
     "share_pin",
+    # Bearer secrets: whoever holds one gets in without signing in. The guest
+    # share link of a welcome manual, the public iCal feed of a channel
+    # listing, the channel's own secret-bearing feed URL and token MBK imports
+    # from, and an organization invite. Matching is by column name in every
+    # table, so ``token`` would mask any column called that; today only
+    # organization_invites.token has the name.
+    "share_token",
+    "ical_export_token",
+    "ical_import_secret_token",
+    "ical_import_url",
+    "token",
     # Gmail account addresses — the connected account on integrations, and the
     # account a reply/receipt send claim went through. Encrypted at rest.
     "gmail_address",
@@ -92,11 +106,6 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # contact info, so mask them in audit_logs to be safe.
     "client_ip",
     "user_agent",
-    # Utility-account-link account number — a provider account identifier,
-    # stored plaintext on utility_account_link for equality lookup. PII-adjacent
-    # (already in core/pii.py PII_FIELD_IDS for frontend masking); mask it in
-    # audit_logs too so the plaintext never lands there.
-    "account_number",
 })
 
 # MBK skip-tables — high-volume / secret-bearing tables we don't audit.
@@ -124,9 +133,9 @@ AUDIT_CONFIG = AuditConfig(
 
 
 __all__ = [
-    "current_user_id",
     "AUDIT_CONFIG",
     "MBK_SENSITIVE_FIELDS",
-    "MBK_SKIP_TABLES",
     "MBK_SKIP_FIELDS",
+    "MBK_SKIP_TABLES",
+    "current_user_id",
 ]
