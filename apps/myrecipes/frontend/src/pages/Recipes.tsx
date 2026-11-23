@@ -1,13 +1,13 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, LoadMoreFooter, StaleDataBanner, cn, useIsAuthenticated } from "@platform/ui";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import { RECIPES_LIST_ERROR_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
-import { useDebouncedValue } from "@platform/ui";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
+import { useUrlSyncedSearch } from "@/features/recipes/useUrlSyncedSearch";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
 import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 import { RECIPES_LIST_MESSAGES } from "@/constants/recipes-list-messages";
@@ -26,23 +26,22 @@ export default function Recipes() {
   // to it otherwise, so a signed-out visitor gets the public list instead.
   const ownerMe = isAuthenticated && searchParams.get("owner") === "me";
 
-  // Local input keeps typing responsive; the debounced value is what gets
-  // written back to ?q= so each keystroke neither stacks a history entry nor
-  // fires a request.
-  const [input, setInput] = useState(query);
-  const debouncedInput = useDebouncedValue(input.trim(), RECIPE_SEARCH_DEBOUNCE_MS);
-
-  useEffect(() => {
+  function writeQuery(next: string) {
     setSearchParams(
       (prev) => {
-        const next = new URLSearchParams(prev);
-        if (debouncedInput) next.set("q", debouncedInput);
-        else next.delete("q");
-        return next;
+        const params = new URLSearchParams(prev);
+        if (next) params.set("q", next);
+        else params.delete("q");
+        return params;
       },
       { replace: true },
     );
-  }, [debouncedInput, setSearchParams]);
+  }
+
+  // Local input keeps typing responsive; the debounced value is what gets
+  // written back to ?q= so each keystroke neither stacks a history entry nor
+  // fires a request. Back and Forward put the URL's search back in the box.
+  const { input, setInput } = useUrlSyncedSearch(query, writeQuery, RECIPE_SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
     if (isAuthenticated) return;

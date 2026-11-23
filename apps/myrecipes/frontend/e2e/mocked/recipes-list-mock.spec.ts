@@ -66,6 +66,34 @@ test("searching by title asks the server and keeps the search in the URL", async
   await expect(page).not.toHaveURL(/q=/);
 });
 
+test("browser Back and Forward put the earlier search back in the box", async ({ page }) => {
+  await stubSignedInShell(page);
+  const everything: RecipeSummary[] = [TOMATO, PANCAKES, SOMEONE_ELSES];
+  await stubList(page, ({ search }) => ({
+    body: listPageOf(everything.filter((r) => !search || r.title.toLowerCase().includes(search.toLowerCase()))),
+  }));
+  const box = page.getByLabel("Search recipes by title");
+
+  await page.goto("/");
+  await box.fill("tomato");
+  await expect(page).toHaveURL(/[?&]q=tomato$/);
+  await expect(page.getByRole("heading", { name: "Pancakes" })).toHaveCount(0);
+
+  // The sidebar's Recipes link opens the plain list as a new history entry.
+  await page.getByRole("link", { name: "Recipes" }).first().click();
+  await expect(box).toHaveValue("");
+  await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/[?&]q=tomato$/);
+  await expect(box).toHaveValue("tomato");
+  await expect(page.getByRole("heading", { name: "Pancakes" })).toHaveCount(0);
+
+  await page.goForward();
+  await expect(box).toHaveValue("");
+  await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
+});
+
 test("a search that finds nothing says so, and clearing it brings the recipes back", async ({ page }) => {
   await stubSignedInShell(page);
   await stubList(page, ({ search }) => ({ body: listPageOf(search ? [] : [TOMATO]) }));
