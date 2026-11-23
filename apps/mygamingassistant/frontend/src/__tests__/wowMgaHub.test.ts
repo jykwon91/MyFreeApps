@@ -9,6 +9,7 @@ import lootBindings from "../../addon/MGALoot/Bindings.xml?raw";
 import lootHub from "../../addon/MGALoot/MGAHub.lua?raw";
 import pricesBindings from "../../addon/MGAPrices/Bindings.xml?raw";
 import pricesHub from "../../addon/MGAPrices/MGAHub.lua?raw";
+import professionsHub from "../../addon/MGAProfessions/MGAHub.lua?raw";
 import waypointsBindings from "../../addon/MGAWaypoints/Bindings.xml?raw";
 import waypointsHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
@@ -68,6 +69,10 @@ describe("the MGA hub's copies", () => {
   it.each(Object.entries(copies))("%s ships MGAHub.lua and Bindings.xml identical to addon/shared (edit the shared file, then copy it over)", (_addon, [hub, bindings]) => {
     expect(hub).toBe(sharedHub);
     expect(bindings).toBe(sharedBindings);
+  });
+
+  it("MGAProfessions ships MGAHub.lua identical to addon/shared (its Bindings.xml adds a binding, checked in wowProfessionsAddon.test.ts)", () => {
+    expect(professionsHub).toBe(sharedHub);
   });
 });
 

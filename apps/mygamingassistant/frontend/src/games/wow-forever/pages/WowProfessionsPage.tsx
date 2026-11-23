@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import ProfessionGuideView from "@/games/wow-forever/components/professions/ProfessionGuideView";
 import GuideSectionNav from "@/games/wow-forever/components/shared/GuideSectionNav";
+import ProfessionsAddonCard from "@/games/wow-forever/components/professionsAddon/ProfessionsAddonCard";
 import ProfessionPicker from "@/games/wow-forever/components/professions/ProfessionPicker";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
@@ -56,6 +57,7 @@ export default function WowProfessionsPage() {
       </div>
 
       <ProfessionGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} position={player.position} />
+      <ProfessionsAddonCard />
     </div>
   );
 }
