@@ -1,22 +1,21 @@
 import { Pressable, Text, View } from "react-native";
+import FieldLabel from "./FieldLabel";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import { requiredFieldLabel } from "../utils/requiredFieldLabel";
 import type { PickerFieldProps } from "../types/PickerFieldProps";
 
 /** Looks like a FormField but opens a list of choices instead of the keyboard. */
-export default function PickerField({ label, valueLabel, onPress, hint, error, disabled = false }: PickerFieldProps) {
+export default function PickerField({ label, valueLabel, onPress, hint, error, required = false, expanded, disabled = false }: PickerFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text importantForAccessibility="no" accessibilityElementsHidden style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "500" }}>
-        {label}
-      </Text>
+      <FieldLabel label={label} required={required} />
       <Pressable
         accessibilityHint={hint}
-        accessibilityLabel={requiredFieldLabel(`${label}, ${valueLabel}`, false, error)}
+        accessibilityLabel={requiredFieldLabel(`${label}, ${valueLabel}`, required, error)}
         accessibilityRole="button"
-        accessibilityState={{ disabled }}
+        accessibilityState={expanded === undefined ? { disabled } : { disabled, expanded }}
         disabled={disabled}
         onPress={onPress}
         style={({ pressed }) => ({

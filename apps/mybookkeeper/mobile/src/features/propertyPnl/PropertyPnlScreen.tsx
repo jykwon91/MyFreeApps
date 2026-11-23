@@ -1,12 +1,11 @@
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
-import { EmptyState, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, PickerField, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
 import { useToday } from "../../lib/useToday";
 import type { PropertyPnlSelection } from "../../types/PropertyPnlSelection";
-import PickerField from "../transactions/PickerField";
 import PropertyPnlCard from "./PropertyPnlCard";
 import PropertyPnlPeriodSheet from "./PropertyPnlPeriodSheet";
 import PropertyPnlSkeleton from "./PropertyPnlSkeleton";
@@ -46,7 +45,7 @@ export default function PropertyPnlScreen() {
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             <StaleDataBanner isShown={Boolean(error && currentData)} />
-            <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setIsChoosing(true)} value={`${periodName(preset)}, ${dates}`} />
+            <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setIsChoosing(true)} valueLabel={`${periodName(preset)}, ${dates}`} />
             {currentData && properties.length > 0 ? <PropertyPnlTotals dates={dates} totals={currentData} /> : null}
             {currentData && properties.length > 0 ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.approvedOnly}</Text> : null}
           </View>

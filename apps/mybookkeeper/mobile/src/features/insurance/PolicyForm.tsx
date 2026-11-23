@@ -5,7 +5,7 @@ import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/i
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, goBackOr, KeyboardAwareScroll, LoadingButton, PickerField, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
@@ -15,7 +15,6 @@ import { useFormSubmit } from "../shell/useFormSubmit";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
-import PickerField from "../transactions/PickerField";
 import { policyAddFailure, policyEditFailure } from "./policyFailure";
 import PolicyFormFields from "./PolicyFormFields";
 import { policyFormErrors } from "./policyFormErrors";
@@ -81,7 +80,7 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
     <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       {policy ? (
-        <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={policy.property_name ?? ""} />
+        <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} valueLabel={policy.property_name ?? ""} />
       ) : (
         <>
           <DocumentReader

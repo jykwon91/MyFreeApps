@@ -217,10 +217,14 @@ describe("the rent period", () => {
     await showScreen();
 
     expect(screen.queryByTestId("date-picker")).toBeNull();
+    expect(screen.getByRole("button", { name: "From, Jun 1, 2026", expanded: false })).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "From, Jun 1, 2026" }));
     expect(screen.getAllByTestId("date-picker")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "From, Jun 1, 2026", expanded: true })).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "To, Jun 30, 2026" }));
     expect(screen.getAllByTestId("date-picker")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "From, Jun 1, 2026", expanded: false })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "To, Jun 30, 2026", expanded: true })).toBeTruthy();
     const { minimumDate } = screen.getByTestId("date-picker").props as { minimumDate: Date };
     expect(minimumDate).toEqual(new Date(2026, 5, 1));
     await fireEvent.press(screen.getByRole("button", { name: "To, Jun 30, 2026" }));
@@ -235,7 +239,7 @@ describe("the rent period", () => {
     await act(async () => screen.getByTestId("date-picker").props.onChange({ type: "set" }, new Date(2026, 6, 5)));
 
     expect(screen.getByText("Pick an end date on or after Jul 5, 2026.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "To, Jun 30, 2026" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "To, Jun 30, 2026, error: Pick an end date on or after Jul 5, 2026." })).toBeTruthy();
     expect(sendButton().props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(sendButton());
     expect(Alert.alert).not.toHaveBeenCalled();

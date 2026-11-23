@@ -1,11 +1,10 @@
 import { DEFAULT_FILING_STATUS, FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { taxReturnYearChoices } from "@mybookkeeper/api-client/utils/taxReturnYearChoices";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import { TAX_RETURN_CREATE_MESSAGES as MESSAGES } from "../../constants/taxReturnCreate";
 import { useToday } from "../../lib/useToday";
-import PickerField from "../transactions/PickerField";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import { useCreateTaxReturn } from "./useCreateTaxReturn";
 
@@ -31,8 +30,8 @@ export default function TaxReturnCreateScreen() {
     <>
       <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic">
         {failure ? <Banner message={failure} /> : null}
-        <PickerField disabled={locked} hint={MESSAGES.yearHint} label={MESSAGES.year} onPress={() => setSheet("year")} value={String(year)} />
-        <PickerField disabled={locked} hint={MESSAGES.filingStatusHint} label={MESSAGES.filingStatus} onPress={() => setSheet("status")} value={statusLabel} />
+        <PickerField disabled={locked} hint={MESSAGES.yearHint} label={MESSAGES.year} onPress={() => setSheet("year")} valueLabel={String(year)} />
+        <PickerField disabled={locked} hint={MESSAGES.filingStatusHint} label={MESSAGES.filingStatus} onPress={() => setSheet("status")} valueLabel={statusLabel} />
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={MESSAGES.creating} onPress={() => void create({ taxYear: year, filingStatus })}>
           {MESSAGES.create}
         </LoadingButton>

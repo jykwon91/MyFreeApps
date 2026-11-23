@@ -4,7 +4,7 @@ import { TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChang
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { otherTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
-import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -20,7 +20,6 @@ import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig"
 import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import PeriodDateRow from "../shell/PeriodDateRow";
 import { useVendorChoices } from "../vendors/useVendorChoices";
-import PickerField from "./PickerField";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
 import { savedVendorChoices, savedVendorLabel } from "./savedVendor";
 import { choiceLabel, fromChoice } from "./transactionCreateValues";
@@ -186,7 +185,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
           disabled={vendorsLoading}
           label={LABELS.savedVendor}
           onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor)}
-          value={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
+          valueLabel={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
         />
         <FormField
           {...FIELD_PRESETS.decimal}
@@ -197,8 +196,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
           value={values.amount}
         />
         <SegmentedControl accessibilityLabel="Type" onChange={changeType} segments={TRANSACTION_TYPES} value={values.type} />
-        <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.category)} value={categoryLabel(values.category)} />
-        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} value={propertyLabel(values.propertyId, properties)} />
+        <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.category)} valueLabel={categoryLabel(values.category)} />
+        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} valueLabel={propertyLabel(values.propertyId, properties)} />
         <FormField
           {...fields.target("description")}
           label="Description"
@@ -206,11 +205,11 @@ export default function TransactionEditForm({ original }: { original: Transactio
           onChangeText={(description) => update({ description })}
           value={values.description}
         />
-        <PickerField label={LABELS.channel} onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.channel)} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
+        <PickerField label={LABELS.channel} onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.channel)} valueLabel={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
         <PickerField
           label={LABELS.paymentMethod}
           onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.paymentMethod)}
-          value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)}
+          valueLabel={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)}
         />
         <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
 

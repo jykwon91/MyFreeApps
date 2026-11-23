@@ -1,6 +1,6 @@
 import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import type { FormCompleteness } from "@mybookkeeper/api-client/types/tax/FormCompleteness";
-import { Banner, EmptyState, LoadingButton, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, PickerField, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -9,7 +9,6 @@ import { TAX_REVIEW_MESSAGES as MESSAGES } from "../../constants/taxReview";
 import { useToday } from "../../lib/useToday";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { isServerAnswer } from "../../utils/isServerAnswer";
-import PickerField from "../transactions/PickerField";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { taxYears } from "./taxReportDisplay";
 import { reviewCopyNumber, reviewFormOrder } from "./taxReviewDisplay";
@@ -65,7 +64,7 @@ export default function TaxReviewScreen() {
               hint={TAX_REPORT_MESSAGES.yearHint}
               label={TAX_REPORT_MESSAGES.year}
               onPress={() => setIsChoosingYear(true)}
-              value={String(year)}
+              valueLabel={String(year)}
             />
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.note}</Text>
             <StaleDataBanner isShown={Boolean(error && review)} />

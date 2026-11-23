@@ -1,10 +1,9 @@
 import { COMPARE_MODES } from "@mybookkeeper/api-client/constants/analyticsRanges";
-import { OptionSheet, SectionError, useTheme } from "@platform/mobile";
+import { OptionSheet, PickerField, SectionError, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 import type { AnalysisControlsProps } from "../../types/AnalysisControlsProps";
-import PickerField from "../transactions/PickerField";
 import AnalysisPeriodSheet from "./AnalysisPeriodSheet";
 import { selectionDates, selectionName } from "./analysisPeriod";
 import PropertyPickerField from "./PropertyPickerField";
@@ -19,8 +18,8 @@ export default function AnalysisControls({ choices, selection, onSelection, comp
   return (
     <View style={{ gap: spacing.md }}>
       {yearsFailed && onRetryYears ? <SectionError message={MESSAGES.yearsFailed} onRetry={onRetryYears} retryLabel={MESSAGES.retryYears} /> : null}
-      <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setOpenSheet("period")} value={`${selectionName(selection, choices)}, ${selectionDates(selection)}`} />
-      <PickerField disabled={!canCompare} hint={MESSAGES.compareHint} label={MESSAGES.compare} onPress={() => setOpenSheet("compare")} value={canCompare ? compareLabel : MESSAGES.compareNeedsDates} />
+      <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setOpenSheet("period")} valueLabel={`${selectionName(selection, choices)}, ${selectionDates(selection)}`} />
+      <PickerField disabled={!canCompare} hint={MESSAGES.compareHint} label={MESSAGES.compare} onPress={() => setOpenSheet("compare")} valueLabel={canCompare ? compareLabel : MESSAGES.compareNeedsDates} />
       <PropertyPickerField maxSelected={maxProperties} onChange={onPropertyIds} properties={properties} selectedIds={propertyIds} />
       {children}
       {openSheet === "period" ? (

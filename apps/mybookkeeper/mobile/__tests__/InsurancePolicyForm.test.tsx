@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 async function chooseProperty(name = "Oak Street") {
-  await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+  await fireEvent.press(await screen.findByLabelText("Property, Choose a property, required"));
   await fireEvent.press(await screen.findByRole("radio", { name }));
 }
 
@@ -123,7 +123,7 @@ describe("adding a policy", () => {
   it("points at what is missing instead of sending", async () => {
     const server = startInsuranceServer({ policies: [] });
     await renderInsurance(<NewPolicyScreen />);
-    await screen.findByLabelText("Property *, Choose a property");
+    await screen.findByLabelText("Property, Choose a property, required");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
     expect(await screen.findByText("Choose which property this covers.")).toBeTruthy();
     expect(screen.getByText("Give the policy a name.", SHOWN)).toBeTruthy();
@@ -164,14 +164,14 @@ describe("adding a policy", () => {
     expect(await screen.findByText(POLICY_FORM_MESSAGES.propertiesFailed)).toBeTruthy();
     delete server.failures["GET /properties"];
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
-    await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+    await fireEvent.press(await screen.findByLabelText("Property, Choose a property, required"));
     expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
   });
 
   it("offers every property, a retired one too, as the website does", async () => {
     startInsuranceServer({ properties: [aProperty(), aProperty({ id: "old", name: "Old Place", is_active: false })] });
     await renderInsurance(<NewPolicyScreen />);
-    await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+    await fireEvent.press(await screen.findByLabelText("Property, Choose a property, required"));
     await screen.findByRole("radio", { name: "Oak Street" });
     expect(screen.getByRole("radio", { name: "Old Place" })).toBeTruthy();
   });
@@ -179,7 +179,7 @@ describe("adding a policy", () => {
   it("with only retired properties, still lets the host pick one rather than showing the empty state", async () => {
     startInsuranceServer({ properties: [aProperty({ id: "old", name: "Old Place", is_active: false })] });
     await renderInsurance(<NewPolicyScreen />);
-    await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+    await fireEvent.press(await screen.findByLabelText("Property, Choose a property, required"));
     expect(await screen.findByRole("radio", { name: "Old Place" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add a property" })).toBeNull();
   });
@@ -239,7 +239,7 @@ describe("adding a policy", () => {
   it("asks before throwing away what was typed, and lets a clean form go", async () => {
     startInsuranceServer({ policies: [] });
     await renderInsurance(<NewPolicyScreen />);
-    await screen.findByLabelText("Property *, Choose a property");
+    await screen.findByLabelText("Property, Choose a property, required");
     expect(mockPreventRemove.active).toBe(false);
     await fireEvent.changeText(screen.getByLabelText("Policy name, required"), "Half done");
     expect(mockPreventRemove.active).toBe(true);

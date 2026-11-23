@@ -1,10 +1,9 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
+import { LoadingRegion, OptionSheet, PickerField, SectionError, Skeleton } from "@platform/mobile";
 import { useMemo, useState } from "react";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
 import { NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import { pickerLoadError } from "../../lib/pickerLoadError";
-import PickerField from "../transactions/PickerField";
 import { selectableProperties } from "../transactions/transactionEditValues";
 
 interface BankImportPropertyFieldProps {
@@ -35,7 +34,7 @@ export default function BankImportPropertyField({ value, onChange, disabled }: B
         disabled={disabled}
         label={MESSAGES.property}
         onPress={() => setIsPicking(true)}
-        value={properties.find((property) => property.id === value)?.name ?? MESSAGES.noProperty}
+        valueLabel={properties.find((property) => property.id === value)?.name ?? MESSAGES.noProperty}
       />
       <OptionSheet
         isOpen={isPicking}

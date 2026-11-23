@@ -1,11 +1,10 @@
-import { LoadingRegion, OptionSheet, SectionError, Skeleton } from "@platform/mobile";
+import { LoadingRegion, OptionSheet, PickerField, SectionError, Skeleton } from "@platform/mobile";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { useMemo, useState } from "react";
 import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
 import { pickerLoadError } from "../../lib/pickerLoadError";
 import PagedChoicesFooter from "../shell/PagedChoicesFooter";
 import { useListingChoices } from "../listings/useListingChoices";
-import PickerField from "../transactions/PickerField";
 
 interface LeaseListingFieldProps {
   value: string;
@@ -36,11 +35,10 @@ export default function LeaseListingField({ value, onChange, disabled }: LeaseLi
   return (
     <>
       <PickerField
+        disabled={disabled}
         label={MESSAGES.listing}
-        onPress={() => {
-          if (!disabled) setIsPicking(true);
-        }}
-        value={options.find((option) => option.value === value)?.label ?? MESSAGES.listingNone}
+        onPress={() => setIsPicking(true)}
+        valueLabel={options.find((option) => option.value === value)?.label ?? MESSAGES.listingNone}
       />
       <OptionSheet
         footer={<PagedChoicesFooter choices={choices} loadingLabel={PICKER_LOAD_MESSAGES.loadingMoreListings} />}

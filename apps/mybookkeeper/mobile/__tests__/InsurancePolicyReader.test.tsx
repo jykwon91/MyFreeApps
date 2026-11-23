@@ -73,7 +73,7 @@ describe("reading a policy from a document", () => {
     await renderInsurance(<NewPolicyScreen />);
     await pickPolicyFile();
     await screen.findByText(MESSAGES.readDone("policy.pdf"));
-    await fireEvent.press(screen.getByLabelText("Property *, Choose a property"));
+    await fireEvent.press(screen.getByLabelText("Property, Choose a property, required"));
     await fireEvent.press(await screen.findByRole("radio", { name: "Oak Street" }));
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
     await waitFor(() => expect(lastInsuranceWrite(server)?.route).toBe("POST /insurance-policies"));

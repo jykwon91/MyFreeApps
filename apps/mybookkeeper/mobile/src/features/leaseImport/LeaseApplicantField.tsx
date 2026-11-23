@@ -1,4 +1,4 @@
-import { FieldError, LoadingRegion, OptionSheet, SectionError, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingRegion, OptionSheet, PickerField, SectionError, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
@@ -6,7 +6,6 @@ import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { pickerLoadError } from "../../lib/pickerLoadError";
 import { useApplicantChoices } from "../applicants/useApplicantChoices";
 import PagedChoicesFooter from "../shell/PagedChoicesFooter";
-import PickerField from "../transactions/PickerField";
 
 interface LeaseApplicantFieldProps {
   value: string;
@@ -36,12 +35,12 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
   return (
     <>
       <PickerField
+        disabled={disabled}
         error={error}
-        label={`${MESSAGES.tenant} *`}
-        onPress={() => {
-          if (!disabled) setIsPicking(true);
-        }}
-        value={options.find((option) => option.value === value)?.label ?? MESSAGES.tenantNone}
+        label={MESSAGES.tenant}
+        onPress={() => setIsPicking(true)}
+        required
+        valueLabel={options.find((option) => option.value === value)?.label ?? MESSAGES.tenantNone}
       />
       <FieldError message={error} name={MESSAGES.tenant} />
       <OptionSheet

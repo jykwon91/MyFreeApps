@@ -161,7 +161,7 @@ describe("a listing's own screen", () => {
 describe("adding a listing", () => {
   async function fillRequired(): Promise<void> {
     await fireEvent.changeText(await screen.findByLabelText("Title, required"), "  Sunny loft ");
-    await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+    await fireEvent.press(await screen.findByLabelText("Property, Choose a property, required"));
     await fireEvent.press(await screen.findByRole("radio", { name: "Elm House" }));
     await fireEvent.changeText(screen.getByLabelText("Monthly rate (USD), required"), "1500");
   }

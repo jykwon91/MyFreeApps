@@ -1,7 +1,7 @@
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { taxReturnYears } from "@mybookkeeper/api-client/utils/taxReturnYears";
-import { EmptyState, OptionSheet, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, OptionSheet, PickerField, StaleDataBanner, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -11,7 +11,6 @@ import { useToday } from "../../lib/useToday";
 import type { TaxDocumentRow } from "../../types/TaxDocumentRow";
 import type { TaxDocumentSection } from "../../types/TaxDocumentSection";
 import { isServerAnswer } from "../../utils/isServerAnswer";
-import PickerField from "../transactions/PickerField";
 import { useCanWrite } from "../workspace/useCanWrite";
 import TaxDocumentRowView from "./TaxDocumentRowView";
 import TaxDocumentsSkeleton from "./TaxDocumentsSkeleton";
@@ -70,7 +69,7 @@ export default function TaxDocumentsScreen() {
               hint={TAX_REPORT_MESSAGES.yearHint}
               label={TAX_REPORT_MESSAGES.year}
               onPress={() => setIsChoosingYear(true)}
-              value={yearText}
+              valueLabel={yearText}
             />
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.readNote}</Text>
             {checklist.length > 0 ? (

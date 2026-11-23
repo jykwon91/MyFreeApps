@@ -40,7 +40,7 @@ describe("PropertyChoiceField when a refresh fails", () => {
     await showField();
 
     expect(screen.queryByText(MESSAGES.propertiesFailed)).toBeNull();
-    await fireEvent.press(screen.getByLabelText("Property *, Oak Cottage"));
+    await fireEvent.press(screen.getByLabelText("Property, Oak Cottage, required"));
     expect(await screen.findByText("Maple House")).toBeTruthy();
   });
 
@@ -50,5 +50,16 @@ describe("PropertyChoiceField when a refresh fails", () => {
 
     expect(screen.getByText(MESSAGES.propertiesFailed)).toBeTruthy();
     expect(screen.getByText("Try again")).toBeTruthy();
+  });
+});
+
+describe("PropertyChoiceField while the form is busy", () => {
+  it("reads as unavailable and doesn't open the list", async () => {
+    mockQuery({ data: PROPERTIES });
+    await render(<PropertyChoiceField disabled messages={MESSAGES} onChange={jest.fn()} value="p2" />);
+
+    const field = screen.getByRole("button", { name: "Property, Oak Cottage, required", disabled: true });
+    await fireEvent.press(field);
+    expect(screen.queryByText("Maple House")).toBeNull();
   });
 });
