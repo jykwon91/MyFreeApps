@@ -38,6 +38,7 @@ export { isRateLimitedError } from "./utils/isRateLimitedError";
 export { isUnverifiedLoginError } from "./utils/isUnverifiedLoginError";
 export { safeReturnPath } from "./utils/safeReturnPath";
 export { withReturnTo } from "./utils/withReturnTo";
+export { resolveLoginDestination } from "./utils/resolveLoginDestination";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent } from "./types/toast-event";
 export type { ToastVariant } from "./types/toast-variant";

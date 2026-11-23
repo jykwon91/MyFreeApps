@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Lock } from "lucide-react";
 import {
   AuthPageFooter,
@@ -7,15 +7,13 @@ import {
   TwoFactorStep,
   describeAuthError,
   isUnverifiedLoginError,
+  resolveLoginDestination,
   useIsAuthenticated,
+  withReturnTo,
   ResendStatusAlert,
 } from "@platform/ui";
 import type { ResendStatus } from "@platform/ui";
 import { requestVerifyToken, signIn } from "@/lib/auth";
-
-interface LocationState {
-  from?: string;
-}
 
 /**
  * Login page for the multi-user MyRecipes.
@@ -27,6 +25,7 @@ interface LocationState {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isAuthenticated = useIsAuthenticated();
 
   const [email, setEmail] = useState("");
@@ -45,16 +44,14 @@ export default function Login() {
   const handleTurnstileExpire = useCallback(() => {}, []);
   void handleTurnstileExpire;
 
+  const destination = resolveLoginDestination(location.state, searchParams.get("returnTo"), "/");
+
   useEffect(() => {
-    if (isAuthenticated) {
-      const state = location.state as LocationState | null;
-      navigate(state?.from ?? "/", { replace: true });
-    }
-  }, [isAuthenticated, navigate, location.state]);
+    if (isAuthenticated) navigate(destination, { replace: true });
+  }, [isAuthenticated, navigate, destination]);
 
   function navigateAfterLogin(): void {
-    const state = location.state as LocationState | null;
-    navigate(state?.from ?? "/", { replace: true });
+    navigate(destination, { replace: true });
   }
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
@@ -170,7 +167,7 @@ export default function Login() {
 
             <p className="mt-2 text-sm text-center text-muted-foreground">
               Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to={withReturnTo("/register", destination === "/" ? null : destination)} className="text-primary hover:underline">
                 Create account
               </Link>
             </p>

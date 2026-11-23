@@ -7,11 +7,11 @@ import {
   ResendStatusAlert,
   TwoFactorStep,
   isUnverifiedLoginError,
-  safeReturnPath,
+  resolveLoginDestination,
   useIsAuthenticated,
   withReturnTo,
 } from "@platform/ui";
-import type { RequireAuthLocationState, ResendStatus } from "@platform/ui";
+import type { ResendStatus } from "@platform/ui";
 import { requestVerifyToken, signIn } from "@/lib/auth";
 import { LOGIN_TRUST_COPY } from "@/constants/loginCopy";
 
@@ -40,10 +40,7 @@ export default function Login() {
     { email: string; password: string } | null
   >(null);
 
-  const destination =
-    safeReturnPath((location.state as RequireAuthLocationState | null)?.from) ??
-    safeReturnPath(searchParams.get("returnTo")) ??
-    "/";
+  const destination = resolveLoginDestination(location.state, searchParams.get("returnTo"), "/");
   const registerHref = withReturnTo("/register", destination === "/" ? null : destination);
 
   useEffect(() => {

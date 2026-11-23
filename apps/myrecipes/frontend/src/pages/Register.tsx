@@ -5,9 +5,11 @@ import {
   AuthPageFooter,
   describeAuthError,
   LoadingButton,
+  safeReturnPath,
   TurnstileWidget,
   useTurnstileToken,
   useIsAuthenticated,
+  withReturnTo,
 } from "@platform/ui";
 import { register } from "@/lib/auth";
 
@@ -27,7 +29,7 @@ export default function Register() {
   const navigate = useNavigate();
   const isAuthenticated = useIsAuthenticated();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnTo = safeReturnPath(searchParams.get("returnTo"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,9 +46,7 @@ export default function Register() {
     }
   }, [isAuthenticated, navigate]);
 
-  const loginUrl = returnTo
-    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
-    : "/login";
+  const loginUrl = withReturnTo("/login", returnTo);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

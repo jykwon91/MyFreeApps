@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 import { login } from "@/shared/lib/auth";
 import {
@@ -12,7 +12,7 @@ import {
   RATE_LIMIT_COOLDOWN_SECONDS,
   TwoFactorStep,
   useCooldown,
-  safeReturnPath,
+  resolveLoginDestination,
   withReturnTo,
 } from "@platform/ui";
 import type { ResendStatus } from "@platform/ui";
@@ -29,7 +29,8 @@ export default function Login() {
   const uid = useId();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = safeReturnPath(searchParams.get("returnTo"));
+  const location = useLocation();
+  const destination = resolveLoginDestination(location.state, searchParams.get("returnTo"), "/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,7 +62,7 @@ export default function Login() {
         return;
       }
 
-      navigate(returnTo ?? "/");
+      navigate(destination);
     } catch (err) {
       if (isRateLimitedError(err)) {
         setError(RATE_LIMITED_MESSAGE);
@@ -80,7 +81,7 @@ export default function Login() {
     if (!pendingCredentials) return false;
     const result = await login(pendingCredentials.email, pendingCredentials.password, code);
     if (result.detail === "totp_required") return false;
-    navigate(returnTo ?? "/");
+    navigate(destination);
     return true;
   }
 
@@ -96,7 +97,7 @@ export default function Login() {
 
   const isSubmitDisabled = isLoading || cooldownSeconds > 0;
 
-  const registerUrl = withReturnTo("/register", returnTo);
+  const registerUrl = withReturnTo("/register", destination === "/" ? null : destination);
 
   return (
     <div className="min-h-screen flex flex-col bg-muted">
