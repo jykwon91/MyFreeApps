@@ -1,6 +1,6 @@
 import { UNASSIGNED_PROPERTY_ID } from "../constants/unassignedProperty";
 import { amountToCents } from "./amountToCents";
-import type { DrillDownFilter } from "../types/analytics/drill-down-filter";
+import type { DrillDownScope } from "../types/analytics/drill-down-scope";
 import type { TransactionListPage } from "../types/transaction/TransactionListPage";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
 
@@ -11,7 +11,7 @@ import type { TransactionListParams } from "../types/transaction/TransactionList
  * total cover every matching row. The Unassigned bucket has no property by definition, so a property
  * allowlist would always empty it and is left off.
  */
-export function drillDownListParams(filter: DrillDownFilter): TransactionListParams {
+export function drillDownListParams(filter: DrillDownScope): TransactionListParams {
   const isUnassigned = filter.propertyId === UNASSIGNED_PROPERTY_ID;
   return {
     category: filter.category,

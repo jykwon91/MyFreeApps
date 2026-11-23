@@ -8,7 +8,7 @@ function aPage(amountTotal: string): TransactionListPage {
 
 describe("drillDownListParams", () => {
   it("asks for the approved rows in the range and category, with no cap on how many", () => {
-    expect(drillDownListParams({ label: "x", category: "utilities", startDate: "2026-01-01", endDate: "2026-01-31", propertyId: "p1" })).toEqual({
+    expect(drillDownListParams({ category: "utilities", startDate: "2026-01-01", endDate: "2026-01-31", propertyId: "p1" })).toEqual({
       category: "utilities",
       property_id: "p1",
       unassigned: undefined,
@@ -22,18 +22,18 @@ describe("drillDownListParams", () => {
   });
 
   it("asks the server for only the revenue or expense categories", () => {
-    expect(drillDownListParams({ label: "x", type: "revenue" }).summary_kind).toBe("revenue");
-    expect(drillDownListParams({ label: "x", type: "expenses" }).summary_kind).toBe("expenses");
+    expect(drillDownListParams({ type: "revenue" }).summary_kind).toBe("revenue");
+    expect(drillDownListParams({ type: "expenses" }).summary_kind).toBe("expenses");
   });
 
   it("sends the chosen properties and categories to the server, so its count and total cover them", () => {
-    const params = drillDownListParams({ label: "x", type: "expenses", propertyIds: ["p1", "p2"], categories: ["utilities"] });
+    const params = drillDownListParams({ type: "expenses", propertyIds: ["p1", "p2"], categories: ["utilities"] });
     expect(params.property_ids).toEqual(["p1", "p2"]);
     expect(params.categories).toEqual(["utilities"]);
   });
 
   it("asks for rows with no property, not for a property called unassigned, and drops the property allowlist", () => {
-    const params = drillDownListParams({ label: "x", propertyId: "unassigned", propertyIds: ["p2"] });
+    const params = drillDownListParams({ propertyId: "unassigned", propertyIds: ["p2"] });
     expect(params.unassigned).toBe(true);
     expect(params.property_id).toBeUndefined();
     expect(params.property_ids).toBeUndefined();
