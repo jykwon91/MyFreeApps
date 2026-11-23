@@ -10,7 +10,10 @@ Two entry points:
 
 Both share the same singleton Anthropic client, the shared throttle +
 exponential backoff on rate limits (``platform_shared.extraction.create_with_backoff``),
-and extraction_logs recording.
+and extraction_logs recording. Every caller passes a ``ClaudeRetryPolicy``
+(``app.core.claude_retry_constants``): short when a user is waiting on the
+request, long in a background worker. The SDK's own retries are off so they
+don't stack on the backoff's.
 """
 from __future__ import annotations
 
@@ -26,6 +29,8 @@ from anthropic import Timeout
 from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction import create_with_backoff, extraction_error_from_anthropic
 
+from app.core.claude_retry_constants import CLAUDE_SDK_MAX_RETRIES, WORKER_CLAUDE_RETRY
+from app.core.claude_retry_policy import ClaudeRetryPolicy
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.repositories.system import extraction_log_repository
@@ -58,6 +63,7 @@ def _get_client() -> anthropic.AsyncAnthropic:
         _client = anthropic.AsyncAnthropic(
             api_key=settings.anthropic_api_key,
             timeout=Timeout(120.0, connect=30.0),
+            max_retries=CLAUDE_SDK_MAX_RETRIES,
         )
     return _client
 
@@ -68,6 +74,7 @@ async def call_claude(
     user_content: str,
     context_type: str,
     user_id: uuid.UUID,
+    retry_policy: ClaudeRetryPolicy,
     context_id: uuid.UUID | None = None,
 ) -> dict:
     """Call Claude with a system prompt and return the parsed JSON response.
@@ -78,6 +85,8 @@ async def call_claude(
         context_type: Logged to extraction_logs (e.g. "jd_parse",
             "resume_parse").
         user_id: Scopes the extraction_log row.
+        retry_policy: How long a 429 may be retried before it raises —
+            ``REQUEST_PATH_CLAUDE_RETRY`` or ``WORKER_CLAUDE_RETRY``.
         context_id: Polymorphic FK for the extraction_logs row; pass the
             application/job ID when available, else None.
 
@@ -95,6 +104,7 @@ async def call_claude(
         user_content=user_content,
         context_type=context_type,
         user_id=user_id,
+        retry_policy=retry_policy,
         context_id=context_id,
     )
     return result["parsed"]
@@ -106,6 +116,7 @@ async def call_claude_with_meta(
     user_content: str,
     context_type: str,
     user_id: uuid.UUID,
+    retry_policy: ClaudeRetryPolicy,
     context_id: uuid.UUID | None = None,
 ) -> dict:
     """Same as ``call_claude`` but returns parsed + token + cost meta.
@@ -128,6 +139,8 @@ async def call_claude_with_meta(
         try:
             message = await create_with_backoff(
                 _get_client(),
+                max_attempts=retry_policy.max_attempts,
+                max_wait_seconds=retry_policy.max_wait_seconds,
                 model=_MODEL,
                 max_tokens=_MAX_TOKENS,
                 system=[{
@@ -202,6 +215,7 @@ async def extract_resume(
         user_content=f"Resume:\n{text}",
         context_type="resume_parse",
         user_id=user_id,
+        retry_policy=WORKER_CLAUDE_RETRY,
         context_id=job_id,
     )
     return {

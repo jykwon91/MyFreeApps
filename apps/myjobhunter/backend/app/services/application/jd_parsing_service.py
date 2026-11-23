@@ -20,6 +20,7 @@ from typing import Literal
 
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.core.currency_code import normalize_currency_code
 from app.services.extraction import claude_service
 from app.services.extraction.ai_failure import ai_failure_message
@@ -154,6 +155,7 @@ async def parse_jd(
             user_content=jd_text,
             context_type="jd_parse",
             user_id=user_id,
+            retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             context_id=application_id,
         )
     except ExtractionError as exc:

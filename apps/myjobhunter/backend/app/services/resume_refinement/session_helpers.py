@@ -14,6 +14,8 @@ from typing import Any
 from platform_shared.db.session import release_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.claude_retry_constants import WORKER_CLAUDE_RETRY
+from app.core.claude_retry_policy import ClaudeRetryPolicy
 from app.models.resume_refinement.session import ResumeRefinementSession
 from app.repositories.resume_refinement import session_repo, turn_repo
 from app.services.resume_refinement import rewrite_service
@@ -179,6 +181,7 @@ async def _generate_next_proposal(
     user_id: uuid.UUID,
     hint: str | None,
     use_cache: bool,
+    retry_policy: ClaudeRetryPolicy,
 ) -> ResumeRefinementSession:
     """If a target remains, produce a proposal. Otherwise mark complete-ready.
 
@@ -192,6 +195,9 @@ async def _generate_next_proposal(
     a miss or stale entry generates as usual. Pass ``use_cache=False``
     when the caller wants a fresh generation regardless
     (``request_alternative``) or has already ruled the cache out.
+
+    ``retry_policy``: ``REQUEST_PATH_CLAUDE_RETRY`` from a user's turn,
+    ``WORKER_CLAUDE_RETRY`` from session preparation.
     """
     target = _current_target(session)
     if target is None:
@@ -218,6 +224,7 @@ async def _generate_next_proposal(
             hint=hint,
             user_id=user_id,
             session_id=session.id,
+            retry_policy=retry_policy,
             prior_context=prior_context,
             confirmed_facts=list(session.confirmed_facts or []),
             prior_flag_count=int(
@@ -344,7 +351,8 @@ async def _prefetch_all_proposals(
     """Generate proposals for every critique target in parallel and
     populate ``proposal_cache``.
 
-    Called once at session start so the operator's first navigation
+    Called once at session start, from the refinement-prepare worker
+    (``WORKER_CLAUDE_RETRY``), so the operator's first navigation
     forward — and every navigation after — is a cache hit. Per-target
     Claude failures degrade gracefully: those targets are simply left
     out of the cache and will generate on first visit.
@@ -383,6 +391,7 @@ async def _prefetch_all_proposals(
                     hint=None,
                     user_id=user_id,
                     session_id=session.id,
+                    retry_policy=WORKER_CLAUDE_RETRY,
                     prior_context=prior_context,
                     confirmed_facts=confirmed_facts,
                 )

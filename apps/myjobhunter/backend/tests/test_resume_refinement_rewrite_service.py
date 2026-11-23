@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.claude_retry_constants import WORKER_CLAUDE_RETRY
 from app.services.resume_refinement import rewrite_service
 
 
@@ -60,6 +61,7 @@ async def test_proposal_path_returns_rewritten_text():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
     assert result["kind"] == "proposal"
     assert "payment processing" in (result["rewritten_text"] or "")
@@ -84,6 +86,7 @@ async def test_clarify_path_returns_question():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
     assert result["kind"] == "clarify"
     assert "transactions" in (result["question"] or "")
@@ -108,6 +111,7 @@ async def test_hallucination_downgrades_proposal_to_clarify():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
     assert result["kind"] == "clarify"
     assert result["hallucination_flagged"]  # Non-empty list
@@ -136,6 +140,7 @@ async def test_confirmed_facts_suppress_guard_flag():
             hint="yes, 500K is correct",
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             confirmed_facts=["500K"],
         )
     assert result["kind"] == "proposal"
@@ -162,6 +167,7 @@ async def test_repeat_flag_offers_use_it_anyway():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             prior_flag_count=0,
         )
         repeat = await rewrite_service.run_rewrite(
@@ -170,6 +176,7 @@ async def test_repeat_flag_offers_use_it_anyway():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             prior_flag_count=1,
         )
     assert first["kind"] == "clarify"
@@ -192,6 +199,7 @@ async def test_unknown_kind_falls_back_to_clarify():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
     assert result["kind"] == "clarify"
     assert result["question"]
@@ -215,6 +223,7 @@ async def test_hint_passes_through_to_user_content():
             hint="make it more concise",
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
         )
     assert any("more concise" in c for c in captured_user_content)
 
@@ -255,6 +264,7 @@ async def test_prior_context_passes_through_to_user_content():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             prior_context=prior_context,
         )
 
@@ -289,6 +299,7 @@ async def test_empty_prior_context_omits_block():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             prior_context=[],
         )
         await rewrite_service.run_rewrite(
@@ -297,6 +308,7 @@ async def test_empty_prior_context_omits_block():
             hint=None,
             user_id=_FAKE_USER_ID,
             session_id=_FAKE_SESSION_ID,
+            retry_policy=WORKER_CLAUDE_RETRY,
             prior_context=None,
         )
 

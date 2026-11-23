@@ -50,16 +50,17 @@ from typing import Any
 
 from platform_shared.core.loggable_url import loggable_url
 from platform_shared.core.model_output_log import describe_model_output
-from platform_shared.extraction import AnthropicFailureKind, ExtractionError
+from platform_shared.extraction import ExtractionError
 from platform_shared.repositories.soft_delete import soft_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY, WORKER_CLAUDE_RETRY
+from app.core.claude_retry_policy import ClaudeRetryPolicy
 from app.db.session import unit_of_work
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.repositories.discovery import discovery_repository
 from app.repositories.job_analysis import job_analysis_repository
 from app.services.extraction import claude_service
-from app.services.extraction.ai_failure import ai_failure_message
 from app.services.extraction.jd_url_extractor import (
     JDAiExtractionError,
     JDFetchAuthRequiredError,
@@ -75,6 +76,12 @@ from app.services.job_analysis.analysis_reply_fields import (
     validate_extracted,
 )
 from app.services.job_analysis.extracted_jd_text import join_extracted_text
+from app.services.job_analysis.job_analysis_error import JobAnalysisError
+from app.services.job_analysis.job_analysis_fetch_auth_required_error import (
+    JobAnalysisFetchAuthRequiredError,
+)
+from app.services.job_analysis.job_analysis_fetch_timeout_error import JobAnalysisFetchTimeoutError
+from app.services.job_analysis.job_analysis_invalid_url_error import JobAnalysisInvalidUrlError
 # Profile-snapshot construction lives in a sibling module (no-growth split).
 # Aliased to the prior underscore names so the call sites below are unchanged.
 from app.services.job_analysis.profile_snapshot import (
@@ -108,60 +115,6 @@ __all__ = [
     "JobAnalysisFetchTimeoutError",
     "JobAnalysisInvalidUrlError",
 ]
-
-
-# ---------------------------------------------------------------------------
-# Public errors — route handler maps each to a specific HTTP status.
-# ---------------------------------------------------------------------------
-
-
-class JobAnalysisError(RuntimeError):
-    """Generic analysis failure — HTTP 502.
-
-    ``kind`` is the shared Anthropic failure kind when Claude itself failed
-    (``None`` for a reply that failed parsing / validation), so the discovery
-    score loop and the route route on one classification. ``code`` keeps
-    Anthropic's documented ``error.type`` (``rate_limit_error``,
-    ``authentication_error``...) for Sentry tags; ``retryable`` is True when
-    the next scheduled pass can succeed.
-    """
-
-    def __init__(
-        self,
-        message: str,
-        *,
-        code: str | None = None,
-        retryable: bool = True,
-        kind: AnthropicFailureKind | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.retryable = retryable
-        self.kind = kind
-
-    @classmethod
-    def from_ai_failure(
-        cls, kind: AnthropicFailureKind | None, code: str | None = None,
-    ) -> "JobAnalysisError":
-        """A Claude failure, with our own copy as the message (never provider text)."""
-        return cls(
-            ai_failure_message(kind),
-            code=code,
-            retryable=kind is None or kind.is_transient,
-            kind=kind,
-        )
-
-
-class JobAnalysisFetchAuthRequiredError(JobAnalysisError):
-    """Source URL was auth-walled or returned an empty body — HTTP 422."""
-
-
-class JobAnalysisFetchTimeoutError(JobAnalysisError):
-    """Source URL fetch timed out — HTTP 504."""
-
-
-class JobAnalysisInvalidUrlError(JobAnalysisError):
-    """Source URL was malformed — HTTP 400."""
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +205,9 @@ async def score(
 ) -> JobAnalysis:
     """Score pre-resolved JD text against ``user_id``'s profile and save the analysis.
 
+    Runs while a user waits on the request, so a Claude rate limit fails
+    fast (``REQUEST_PATH_CLAUDE_RETRY``) rather than holding the request.
+
     Pure JD-text-in, JobAnalysis-out: no URL fetching. :func:`analyze` and
     :func:`score_discovered_job` share :func:`_build_analysis`, so the rubric,
     validation and persisted shape stay the same across surfaces.
@@ -273,7 +229,11 @@ async def score(
             returned an envelope that didn't pass validation.
     """
     analysis = await _build_analysis(
-        user_id, jd_text=jd_text, source_url=source_url, extracted_hint=extracted_hint,
+        user_id,
+        jd_text=jd_text,
+        source_url=source_url,
+        extracted_hint=extracted_hint,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
     async with unit_of_work() as db:
         return await job_analysis_repository.create(db, analysis)
@@ -302,6 +262,7 @@ async def score_discovered_job(
         jd_text=jd_text,
         source_url=source_url,
         extracted_hint=extracted_hint,
+        retry_policy=WORKER_CLAUDE_RETRY,
         context_id=discovered_job_id,
     )
     async with unit_of_work() as db:
@@ -327,6 +288,7 @@ async def _build_analysis(
     jd_text: str,
     source_url: str | None,
     extracted_hint: dict | None,
+    retry_policy: ClaudeRetryPolicy,
     context_id: uuid.UUID | None = None,
 ) -> JobAnalysis:
     """Run the Claude analysis and return the (unsaved) row, with no session open during the call."""
@@ -346,6 +308,7 @@ async def _build_analysis(
             user_content=user_content,
             context_type="job_analysis",
             user_id=user_id,
+            retry_policy=retry_policy,
             context_id=context_id,
         )
     except ExtractionError as exc:

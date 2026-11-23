@@ -22,6 +22,7 @@ import pytest
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 
 from app.core.ai_failure_messages import AI_BUSY_MESSAGE, AI_UNREADABLE_REPLY_MESSAGE
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.services.application.jd_parsing_service import (
     JdParseError,
     JdParseResult,
@@ -223,6 +224,7 @@ class TestParseJd:
             user_content=SAMPLE_JD,
             context_type="jd_parse",
             user_id=user_id,
+            retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             context_id=None,
         )
         assert result.title == "Senior Backend Engineer"

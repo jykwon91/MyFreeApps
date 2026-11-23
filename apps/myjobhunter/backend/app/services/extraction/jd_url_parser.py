@@ -41,6 +41,7 @@ from bs4 import BeautifulSoup
 from platform_shared.core.loggable_url import loggable_url
 from platform_shared.extraction import ExtractionError
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.services.extraction import claude_service
 from app.services.extraction.ai_failure import ai_failure_message
 from app.services.extraction.jd_ai_extraction_error import JDAiExtractionError
@@ -216,6 +217,7 @@ async def claude_fallback(
             user_content=visible_text,
             context_type="jd_url_parse",
             user_id=user_id,
+            retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             context_id=None,
         )
     except ExtractionError as exc:

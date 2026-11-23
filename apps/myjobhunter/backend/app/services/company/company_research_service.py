@@ -42,6 +42,7 @@ import anyio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.core.company_research_constants import COMPANY_RESEARCH_CLAIM_LEASE
 from app.db.session import unit_of_work
 from app.models.company.company_research import CompanyResearch
@@ -354,6 +355,7 @@ async def _synthesise_and_save(
         context_type="company_research",
         context_id=company_id,
         user_id=user_id,
+        retry_policy=REQUEST_PATH_CLAUDE_RETRY,
     )
 
     # 6. Persist in a new transaction, re-checking the company first: it may

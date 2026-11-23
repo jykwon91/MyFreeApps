@@ -20,6 +20,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.models.resume_refinement.session import ResumeRefinementSession
 from app.repositories.resume_refinement import (
     session_repo,
@@ -436,6 +437,7 @@ class TestAnotherOptionNeverUsesCache:
         with _patch_rewrite(rewrite):
             await session_helpers._generate_next_proposal(
                 db, session, user_id=user_id, hint=None, use_cache=False,
+                retry_policy=REQUEST_PATH_CLAUDE_RETRY,
             )
 
         rewrite.assert_awaited_once()
