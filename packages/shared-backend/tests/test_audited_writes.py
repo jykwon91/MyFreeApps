@@ -12,10 +12,12 @@ import asyncio
 import os
 import uuid
 from collections.abc import AsyncIterator
+from typing import cast
+from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import Integer, String, select, text, update
+from sqlalchemy import Executable, Integer, String, select, text, update
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -145,11 +147,26 @@ async def test_delete_rows_audits_each_deleted_row_as_the_actor(db: AsyncSession
     assert (await db.execute(select(_Job.id))).scalars().all() == [1]
 
 
-async def test_lock_rows_locks_only_the_target_table() -> None:
-    statement = select(_Job).where(_Job.id == 1).with_for_update(of=_Job)
-    compiled = str(statement.compile(dialect=postgresql.dialect()))
+class _StatementRecorder:
+    """Stands in for the session: keeps the statement ``lock_rows`` runs and matches no rows."""
 
-    assert compiled.endswith("FOR UPDATE OF test_audited_write_jobs")
+    def __init__(self) -> None:
+        self.statement: Executable | None = None
+
+    async def execute(self, statement: Executable) -> MagicMock:
+        self.statement = statement
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        return result
+
+
+async def test_lock_rows_locks_only_the_target_table_in_primary_key_order() -> None:
+    recorder = _StatementRecorder()
+    await lock_rows(cast(AsyncSession, recorder), _Job, _Job.id == 1)
+
+    assert recorder.statement is not None
+    compiled = str(recorder.statement.compile(dialect=postgresql.dialect()))
+    assert compiled.endswith("ORDER BY test_audited_write_jobs.id FOR UPDATE OF test_audited_write_jobs")
 
 
 # --------------------------------------------------------------------------

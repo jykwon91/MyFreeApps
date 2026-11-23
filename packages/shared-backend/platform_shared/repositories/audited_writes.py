@@ -30,10 +30,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def lock_rows[ModelT](
     db: AsyncSession, model: type[ModelT], *criteria: ColumnElement[bool],
 ) -> list[ModelT]:
-    """The rows of ``model`` matching ``criteria``, locked for update and freshly read."""
+    """The rows of ``model`` matching ``criteria``, locked for update and freshly read.
+
+    Rows are locked in primary-key order, so two writers locking overlapping rows
+    take the locks in the same order and cannot deadlock each other.
+    """
     result = await db.execute(
         select(model)
         .where(*criteria)
+        .order_by(*inspect(model).primary_key)
         .with_for_update(of=model)
         .execution_options(populate_existing=True),
     )
