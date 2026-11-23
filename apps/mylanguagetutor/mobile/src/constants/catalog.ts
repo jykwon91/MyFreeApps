@@ -2,8 +2,6 @@ import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOption
 
 export const CATALOG_MESSAGES = {
   retryOffer: "Check your connection and try again.",
-  noScenariosHeading: "No scenarios yet",
-  noScenariosBody: "Scenarios for this language will show up here.",
 } as const;
 
 /** As many placeholder cards as the website's skeletons show. */

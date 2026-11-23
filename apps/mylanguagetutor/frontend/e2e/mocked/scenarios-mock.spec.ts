@@ -83,6 +83,16 @@ test("a failed usage load is said quietly, keeps the scenarios, and Try again sh
   await expect(page.getByText("Couldn't check today's practice time.")).toHaveCount(0);
 });
 
+test("a language with no scenarios says so instead of showing an empty list", async ({ page }) => {
+  await signedInTutor(page, { scenarios: [] });
+
+  await page.goto("/scenarios");
+  await expect(page.getByRole("heading", { name: "Practice Spanish" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No scenarios yet" })).toBeVisible();
+  await expect(page.getByText("Scenarios for this language will show up here.")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(0);
+});
+
 for (const failing of [LIST_SCENARIOS, GET_PROFILE]) {
   test(`a failed load (${failing}) says so instead of an empty path, and Try again recovers`, async ({ page }) => {
     const api = await signedInTutor(page, { failWith: [failing] });

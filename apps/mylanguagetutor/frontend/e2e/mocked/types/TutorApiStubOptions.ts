@@ -1,3 +1,4 @@
+import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
@@ -11,6 +12,8 @@ export interface TutorApiStubOptions {
   usage?: UsageToday;
   /** GET /languages; Spanish unless given. */
   languages?: Language[];
+  /** GET /scenarios; the full path unless given. */
+  scenarios?: Scenario[];
   /** How each turn is answered, in order; a turn past the end gets a plain reply. */
   turns?: TurnScript[];
   /** Holds every turn's answer until released, to see the page while it waits. */

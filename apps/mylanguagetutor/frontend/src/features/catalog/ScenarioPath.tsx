@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { StaleDataBanner, cn } from "@platform/ui";
+import { EmptyState, StaleDataBanner, cn } from "@platform/ui";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
@@ -53,11 +53,15 @@ export default function ScenarioPath({ profile }: ScenarioPathProps) {
       </div>
       {block && <SessionBlockNotice block={block} />}
       {isUsageError && <UsageCheckFailedNotice onRetry={() => void refetch()} />}
-      <ul className={SCENARIO_LIST}>
-        {scenarios.map((scenario) => (
-          <ScenarioCard key={scenario.slug} scenario={scenario} />
-        ))}
-      </ul>
+      {scenarios.length === 0 ? (
+        <EmptyState heading={CATALOG_COPY.noScenariosHeading} body={CATALOG_COPY.noScenariosBody} />
+      ) : (
+        <ul className={SCENARIO_LIST}>
+          {scenarios.map((scenario) => (
+            <ScenarioCard key={scenario.slug} scenario={scenario} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

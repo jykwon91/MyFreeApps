@@ -8,6 +8,9 @@ export const CATALOG_COPY = {
   usageUnavailable: "Couldn't check today's practice time.",
   noLanguages: "No languages are available yet.",
   pickScenario: "Pick a scenario. Each one is a short conversation with a few goals to cover.",
+  /** When the language has no scenarios yet: the empty list's heading and what it's waiting for. */
+  noScenariosHeading: "No scenarios yet",
+  noScenariosBody: "Scenarios for this language will show up here.",
   changeLevel: "Change level",
   /** Before the language name, as the scenario list's heading. */
   practicePrefix: "Practice",

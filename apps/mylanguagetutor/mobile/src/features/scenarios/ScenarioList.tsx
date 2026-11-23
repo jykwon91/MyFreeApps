@@ -1,10 +1,11 @@
+import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { EmptyState, ListSeparator, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList } from "react-native";
-import { CATALOG_MESSAGES, SCENARIO_SKELETON_ROWS } from "../../constants/catalog";
+import { SCENARIO_SKELETON_ROWS } from "../../constants/catalog";
 import type { ScenarioListProps } from "../../types/ScenarioListProps";
 import CardListSkeleton from "../catalog/CardListSkeleton";
 import CatalogCard from "../catalog/CatalogCard";
@@ -25,7 +26,7 @@ export default function ScenarioList({ profile }: ScenarioListProps) {
   return (
     <FlatList
       ItemSeparatorComponent={ListSeparator}
-      ListEmptyComponent={<EmptyState body={CATALOG_MESSAGES.noScenariosBody} heading={CATALOG_MESSAGES.noScenariosHeading} />}
+      ListEmptyComponent={<EmptyState body={CATALOG_COPY.noScenariosBody} heading={CATALOG_COPY.noScenariosHeading} />}
       ListHeaderComponent={
         <ScenarioListHeader
           block={block}
