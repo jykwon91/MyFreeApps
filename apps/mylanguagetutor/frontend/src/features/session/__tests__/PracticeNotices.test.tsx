@@ -9,6 +9,7 @@ import { PRACTICE_NOTICE_COPY } from "@mylanguagetutor/api-client/constants/prac
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import PracticeSession from "@/features/session/PracticeSession";
+import { SHOWN } from "@/test/shownText";
 
 vi.mock("@platform/core/store/baseQuery", () => ({
   axiosBaseQuery: async ({ url, method }: { url: string; method: string }) => {
@@ -36,7 +37,6 @@ vi.mock("@platform/core/store/baseQuery", () => ({
 
 const LANGUAGE: Language = { code: "es", display_name: "Spanish", dialect_label: "Latin American", stt_locale: "es-MX", tts_locale: "es-MX" };
 const SCENARIO: Scenario = { slug: "cafe", title: "At the café", goal: "Order a drink", goals: ["Greet", "Order"], order: 4 };
-const SHOWN = { ignore: '[data-testid="practice-announcer"]' };
 
 function wholeTurn(goalsMet: number[]): Response {
   const events = [
@@ -88,9 +88,9 @@ describe("PracticeSession notices", () => {
 
     answer("palabra ".repeat(100));
 
-    expect(await screen.findByText(PRACTICE_NOTICE_COPY.truncated)).toBeInTheDocument();
+    expect(await screen.findByText(PRACTICE_NOTICE_COPY.truncated, SHOWN)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: PRACTICE_COPY.dismiss }));
-    expect(screen.queryByText(PRACTICE_NOTICE_COPY.truncated)).not.toBeInTheDocument();
+    expect(screen.queryByText(PRACTICE_NOTICE_COPY.truncated, SHOWN)).not.toBeInTheDocument();
   });
 
   it("tells the learner the conversation restarted, keeping what they said before", async () => {
@@ -104,7 +104,7 @@ describe("PracticeSession notices", () => {
     answer("un café");
     fireEvent.click(await screen.findByRole("button", { name: PRACTICE_COPY.tryAgain }));
 
-    expect(await screen.findByText(PRACTICE_NOTICE_COPY.restarted)).toBeInTheDocument();
+    expect(await screen.findByText(PRACTICE_NOTICE_COPY.restarted, SHOWN)).toBeInTheDocument();
     expect(screen.getByText("hola")).toBeInTheDocument();
     expect(screen.getByText("un café")).toBeInTheDocument();
   });

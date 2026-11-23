@@ -79,6 +79,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     failure: session.failure,
     recognitionHint: voice.view === "voice" ? recognitionFailureHint(recognition.failure) : null,
     block,
+    notice: session.notice,
     scenarioComplete: showComplete,
   });
 

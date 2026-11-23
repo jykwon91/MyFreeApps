@@ -13,6 +13,7 @@ import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import PracticeSession from "@/features/session/PracticeSession";
+import { SHOWN } from "@/test/shownText";
 
 /** Whether GET /usage/today says the tutor is on: a test flips it to see the screen follow. */
 const server = vi.hoisted(() => ({ tutorAvailable: true }));
@@ -45,7 +46,6 @@ vi.mock("@platform/core/store/baseQuery", () => ({
 
 const LANGUAGE: Language = { code: "es", display_name: "Spanish", dialect_label: "Latin American", stt_locale: "es-MX", tts_locale: "es-MX" };
 /** The screen's own text, not the screen reader's copy of it in the live region. */
-const SHOWN = { ignore: '[data-testid="practice-announcer"], [data-testid="practice-announcer"] *' };
 const SCENARIO: Scenario = { slug: "cafe", title: "At the café", goal: "Order a drink", goals: ["Greet", "Order"], order: 4 };
 
 /** A turn stream that sends the whole reply, then loses the connection before the corrections. */

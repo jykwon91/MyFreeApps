@@ -12,6 +12,7 @@ import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
+import { PRACTICE_NOTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceNoticeCopy";
 
 let recognition: SpeechRecognitionControls;
 let sessionState: Omit<PracticeSessionState, "busy" | "replay">;
@@ -75,6 +76,8 @@ describe("PracticeSession notices are read by the one live region", () => {
       resume: vi.fn(),
       dismissFailure: vi.fn(),
       dismissRetryPrompt: vi.fn(),
+      notice: null,
+      dismissNotice: vi.fn(),
     };
   });
 
@@ -117,6 +120,13 @@ describe("PracticeSession notices are read by the one live region", () => {
     const { container } = renderScreen();
 
     expect(announcerText()).toContain(VOICE_COPY.noSpeech);
+    expect(container.querySelectorAll(LIVE)).toHaveLength(1);
+  });
+  it("holds the shortened-answer notice, and the notice itself is in no live region", () => {
+    sessionState = { ...sessionState, notice: "truncated" };
+    const { container } = renderScreen();
+
+    expect(announcerText()).toContain(PRACTICE_NOTICE_COPY.truncated);
     expect(container.querySelectorAll(LIVE)).toHaveLength(1);
   });
 });
