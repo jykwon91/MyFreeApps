@@ -9,6 +9,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ci-myrecipes.yml'
+      - '!apps/myrecipes/mobile/**'
+      - '!packages/shared-mobile/**'
   push:
     branches: [main]
     paths:

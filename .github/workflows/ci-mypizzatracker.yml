@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ci-mypizzatracker.yml'
+      - '!packages/shared-mobile/**'
   push:
     branches: [main]
     paths:

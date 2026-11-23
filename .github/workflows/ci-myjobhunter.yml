@@ -84,14 +84,25 @@ jobs:
           echo "::group::changed files"
           echo "$FILES"
           echo "::endgroup::"
-          # Mirrors the `paths:` filter still applied to `push` below. Every
-          # failure path above falls back to relevant=true — this gate may only
-          # ever skip work it is certain is unrelated.
-          if echo "$FILES" | grep -qE '^(apps/myjobhunter/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-myjobhunter\.yml$)'; then
+          # Mirrors the `paths:` filter still applied to `push` below, minus the
+          # phone-only files: the mobile app and packages/shared-mobile are built
+          # and tested by ci-mobile-myjobhunter.yml, and no website or backend job
+          # consumes them. Every failure path above falls back to relevant=true —
+          # this gate may only ever skip work it is certain is unrelated.
+          # Here-strings, not pipes: under pipefail an early-exiting `grep -q`
+          # can SIGPIPE its writer and turn a match into a skip. grep exits 1 for
+          # "no match"; anything above 1 is an error and runs everything.
+          NON_PHONE="$(grep -vE '^(apps/myjobhunter/mobile/|packages/shared-mobile/)' <<< "$FILES")" && rc=0 || rc=$?
+          if [ "$rc" -gt 1 ]; then
+            echo "::warning::Could not filter phone-only files; running the full suite."
             echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          grep -qE '^(apps/myjobhunter/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-myjobhunter\.yml$)' <<< "$NON_PHONE" && rc=0 || rc=$?
+          case "$rc" in
+            1) echo "relevant=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "relevant=true" >> "$GITHUB_OUTPUT" ;;
+          esac
 
   backend-deps-resolve:
     needs: changes
