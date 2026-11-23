@@ -1,3 +1,5 @@
+import { RECIPE_LOAD_FAILED_COPY } from "@myrecipes/api-client/constants/recipeLoadFailedCopy";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 import { useDeleteRecipeMutation, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { EmptyState, LoadingButton, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
@@ -50,7 +52,7 @@ export default function RecipeDetailScreen() {
   const isOffline = isLoadFailed && isNoResponse(error);
   const hasSavedCopy = useMemo(() => isOffline && loadCookCopy(params.id) !== null, [isOffline, params.id]);
   const cookSavedCopy = useOpenOnce(() => router.push(cookHref(params.id)));
-  useAnnouncement(isGone ? "Recipe not found" : isLoadFailed ? "Can't load this recipe" : undefined);
+  useAnnouncement(isGone ? RECIPE_NOT_FOUND_COPY.heading : isLoadFailed ? RECIPE_LOAD_FAILED_COPY.heading : undefined);
 
   function leave(): void {
     if (router.canGoBack()) router.back();
@@ -64,8 +66,8 @@ export default function RecipeDetailScreen() {
         <View style={{ gap: spacing.sm }}>
           <EmptyState
             action={{ label: "Try again", onPress: () => refetch() }}
-            body="Check your connection and try again."
-            heading="Can't load this recipe"
+            body={RECIPE_LOAD_FAILED_COPY.body}
+            heading={RECIPE_LOAD_FAILED_COPY.heading}
           />
           {hasSavedCopy ? (
             <LoadingButton onPress={cookSavedCopy} variant="secondary">
@@ -84,8 +86,8 @@ export default function RecipeDetailScreen() {
       {isGone ? (
         <EmptyState
           action={{ label: "Back to recipes", onPress: leave }}
-          body="It may have been deleted, or the link may be wrong."
-          heading="Recipe not found"
+          body={RECIPE_NOT_FOUND_COPY.body}
+          heading={RECIPE_NOT_FOUND_COPY.heading}
         />
       ) : (
         <>

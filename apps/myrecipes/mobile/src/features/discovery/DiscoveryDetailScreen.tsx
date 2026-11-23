@@ -1,4 +1,5 @@
 import { DISCOVERY_READ_STAGES } from "@myrecipes/api-client/constants/discovery";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 import { readDiscoveredRecipe } from "@myrecipes/api-client/store/readDiscoveredRecipe";
 import { Banner, EmptyState, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -62,10 +63,10 @@ export default function DiscoveryDetailScreen() {
             <Banner message={read.message} />
             <LoadingButton onPress={() => void dispatch(readDiscoveredRecipe(candidate))}>Try again</LoadingButton>
             <LoadingButton accessibilityHint="Opens in your browser" onPress={() => openLink(candidate.url)} variant="secondary">
-              View original
+              {DISCOVERY_DETAIL_COPY.viewOriginal}
             </LoadingButton>
             <LoadingButton onPress={backToResults} variant="ghost">
-              Back to results
+              {DISCOVERY_DETAIL_COPY.backToResults}
             </LoadingButton>
           </View>
         ) : (

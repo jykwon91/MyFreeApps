@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 
 interface Props {
   url: string;
@@ -16,7 +17,7 @@ export default function DiscoveryOriginalLink({ url }: Props) {
       rel="noopener noreferrer"
       className="inline-flex min-h-11 items-center gap-1.5 text-sm text-primary underline underline-offset-2"
     >
-      View original
+      {DISCOVERY_DETAIL_COPY.viewOriginal}
       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
     </a>
   );

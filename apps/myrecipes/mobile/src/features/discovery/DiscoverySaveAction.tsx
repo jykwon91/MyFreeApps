@@ -2,7 +2,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
 import { useSelector } from "react-redux";
-import { DISCOVERY_DETAIL_COPY } from "../../constants/discovery";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 import type { RootState } from "../../lib/store";
 
 /**
@@ -27,7 +27,7 @@ export default function DiscoverySaveAction({ resultId }: { resultId: string }) 
   return (
     <View style={{ gap: spacing.xs }}>
       <LoadingButton onPress={() => router.push({ pathname: "/recipes/new", params: { discovery: resultId } })}>
-        Save to my recipes
+        {DISCOVERY_DETAIL_COPY.saveToRecipes}
       </LoadingButton>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{DISCOVERY_DETAIL_COPY.saveHint}</Text>
     </View>

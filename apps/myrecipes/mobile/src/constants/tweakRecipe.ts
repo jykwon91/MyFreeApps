@@ -1,3 +1,5 @@
+import { RECIPE_LOAD_FAILED_COPY } from "@myrecipes/api-client/constants/recipeLoadFailedCopy";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 /**
  * Copy for tweaking a recipe on the phone, as the website's /recipes/:id/tweak words it. What a
  * failed save says, and the problems with what's typed, come from the API client.
@@ -15,11 +17,11 @@ export const TWEAK_RECIPE_MESSAGES = {
   changeNotePlaceholder: "e.g. Cut the sugar by half, added vanilla",
   save: "Save new version",
   saving: "Saving version…",
-  notFoundHeading: "Recipe not found",
+  notFoundHeading: RECIPE_NOT_FOUND_COPY.heading,
   notFoundBody: "This recipe doesn't exist or has no version to tweak.",
   backToRecipes: "Back to recipes",
-  loadFailedHeading: "Can't load this recipe",
-  loadFailedBody: "Check your connection and try again.",
+  loadFailedHeading: RECIPE_LOAD_FAILED_COPY.heading,
+  loadFailedBody: RECIPE_LOAD_FAILED_COPY.body,
   tryAgain: "Try again",
   notOwnerHeading: "You can only tweak your own recipes",
   notOwnerBody:

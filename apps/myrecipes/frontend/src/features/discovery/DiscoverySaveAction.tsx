@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@platform/ui";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 
 interface Props {
   /** The recipe this result was already saved as, if it was. */
@@ -22,5 +23,5 @@ export default function DiscoverySaveAction({ savedRecipeId, onSave }: Props) {
       </Link>
     );
   }
-  return <Button onClick={onSave}>Save to my recipes</Button>;
+  return <Button onClick={onSave}>{DISCOVERY_DETAIL_COPY.saveToRecipes}</Button>;
 }

@@ -1,6 +1,7 @@
 import { ChefHat } from "lucide-react";
 import { EmptyState } from "@platform/ui";
-import { RECIPE_LOAD_FAILED_MESSAGES } from "@/constants/recipe-detail-messages";
+import { RECIPE_LOAD_FAILED_COPY } from "@myrecipes/api-client/constants/recipeLoadFailedCopy";
+import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
 
 interface RecipeLoadFailedProps {
   onRetry: () => void;
@@ -13,9 +14,9 @@ export default function RecipeLoadFailed({ onRetry, isRetrying }: RecipeLoadFail
     <div className="p-4 sm:p-8 space-y-6">
       <EmptyState
         icon={<ChefHat className="w-12 h-12 text-destructive" />}
-        heading={RECIPE_LOAD_FAILED_MESSAGES.heading}
-        body={RECIPE_LOAD_FAILED_MESSAGES.body}
-        action={{ label: RECIPE_LOAD_FAILED_MESSAGES.tryAgain, onClick: onRetry, loading: isRetrying }}
+        heading={RECIPE_LOAD_FAILED_COPY.heading}
+        body={RECIPE_LOAD_FAILED_COPY.body}
+        action={{ label: STALE_DATA_MESSAGES.tryAgain, onClick: onRetry, loading: isRetrying }}
       />
     </div>
   );

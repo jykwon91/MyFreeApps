@@ -16,7 +16,7 @@ import RecipeDetailRoute from "../app/recipes/[id]";
 import NewRecipeRoute from "../app/recipes/new";
 import DiscoveryDetailRoute from "../app/discover/[id]";
 import { API_BASE_URL } from "../src/constants/api";
-import { DISCOVERY_DETAIL_COPY } from "../src/constants/discovery";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 import { DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import { discoveryCleared } from "@myrecipes/api-client/store/discoverySlice";
 import { readDiscoveredRecipe } from "@myrecipes/api-client/store/readDiscoveredRecipe";

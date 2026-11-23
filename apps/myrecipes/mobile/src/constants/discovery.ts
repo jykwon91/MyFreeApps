@@ -32,12 +32,3 @@ export const DISCOVERY_MISSING_RESULT = {
 export const DISCOVERY_MESSAGES = {
   searchFailedElsewhere: "Your Discover search didn't finish. Open Discover to see why.",
 } as const;
-
-export const DISCOVERY_DETAIL_COPY = {
-  noIngredients: "This page didn't list ingredients we could read — open the original to check.",
-  noSteps: "No steps we could read — open the original.",
-  tipsHeading: "Tips from the source",
-  communityHeading: "What cooks report",
-  sourcesHeading: "Read from",
-  saveHint: "You'll check it over before it's added to your recipes.",
-} as const;

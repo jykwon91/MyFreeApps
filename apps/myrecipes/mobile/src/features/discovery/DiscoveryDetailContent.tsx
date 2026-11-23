@@ -1,7 +1,7 @@
 import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
 import { LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { DISCOVERY_DETAIL_COPY } from "../../constants/discovery";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 import { draftRecipeLines } from "../../utils/draftRecipeLines";
 import RecipeFacts from "../recipes/RecipeFacts";
 import RecipeIngredients from "../recipes/RecipeIngredients";
@@ -33,7 +33,7 @@ export default function DiscoveryDetailContent({ detail, resultId }: { detail: D
       <View style={{ gap: spacing.sm }}>
         <DiscoverySaveAction resultId={resultId} />
         <LoadingButton accessibilityHint="Opens in your browser" onPress={() => openLink(detail.url)} variant="ghost">
-          View original
+          {DISCOVERY_DETAIL_COPY.viewOriginal}
         </LoadingButton>
       </View>
       <RecipeFacts version={detail.draft} />

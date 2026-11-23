@@ -138,12 +138,12 @@ describe("Recipes", () => {
     expect(screen.queryByRole("heading", { name: "Recipe 51" })).not.toBeInTheDocument();
     expect(screen.getByText(`Showing ${RECIPES_PAGE_SIZE} of ${TOTAL} recipes`)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await user.click(screen.getByRole("button", { name: "Show more" }));
 
     expect(await screen.findByRole("heading", { name: "Recipe 51" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recipe 60" })).toBeInTheDocument();
     expect(listCalls.map((config) => config.params?.cursor)).toEqual([undefined, cursorAfter(RECIPES_PAGE_SIZE)]);
-    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
   });
 
   it("starts a search from the first page", async () => {
@@ -151,7 +151,7 @@ describe("Recipes", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderRecipes();
     await screen.findByRole("heading", { name: "Recipe 1" });
-    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await user.click(screen.getByRole("button", { name: "Show more" }));
     await screen.findByRole("heading", { name: "Recipe 51" });
     listCalls.length = 0;
 
@@ -165,7 +165,7 @@ describe("Recipes", () => {
     expect(listCalls.map((config) => config.params)).toEqual([
       { search: "soup", owner: undefined, limit: RECIPES_PAGE_SIZE, cursor: undefined },
     ]);
-    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
   });
 
   it("keeps the loaded recipes and offers Try again when the next page fails", async () => {
@@ -174,7 +174,7 @@ describe("Recipes", () => {
     await screen.findByRole("heading", { name: "Recipe 50" });
 
     respond = () => ({ status: 503, data: { detail: "down" } });
-    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await user.click(screen.getByRole("button", { name: "Show more" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load more recipes.");
     expect(screen.getByRole("heading", { name: "Recipe 50" })).toBeInTheDocument();
