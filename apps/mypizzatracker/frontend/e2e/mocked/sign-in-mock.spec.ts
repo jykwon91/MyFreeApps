@@ -22,9 +22,9 @@ async function signedOutOperator(page: Page): Promise<void> {
 }
 
 async function submitLogin(page: Page, password: string): Promise<void> {
-  await page.getByLabel("Email").fill(TEST_USER.email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByLabel("Email", { exact: true }).fill(TEST_USER.email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
 }
 
 test("signing in lands on the home page, with the operator shown in the shell", async ({ page }) => {
@@ -34,7 +34,7 @@ test("signing in lands on the home page, with the operator shown in the shell", 
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Sign In", exact: true })).toBeDisabled();
 
   await submitLogin(page, TEST_PASSWORD);
 
@@ -67,7 +67,7 @@ test("wrong credentials say so, keep the operator on /login and store no token",
 
   await expect(page.getByRole("alert")).toHaveText(BAD_CREDENTIALS_COPY);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Sign In", exact: true })).toBeEnabled();
   expect(sent).toEqual([{ email: TEST_USER.email, password: WRONG_PASSWORD }]);
   expect(await page.evaluate(() => window.localStorage.getItem("token"))).toBeNull();
 });

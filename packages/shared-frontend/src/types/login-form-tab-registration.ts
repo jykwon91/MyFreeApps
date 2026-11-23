@@ -5,6 +5,7 @@ import type { LoginFormMode } from "./login-form-mode";
 export interface LoginFormTabRegistration {
   onRegister: (email: string, password: string) => Promise<void>;
   registerHref?: never;
+  signInOnly?: never;
   defaultTab?: LoginFormMode;
   passwordMinLength?: number;
   /**

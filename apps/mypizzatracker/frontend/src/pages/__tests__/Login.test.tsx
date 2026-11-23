@@ -14,9 +14,10 @@ vi.mock("@platform/ui", async (importOriginal) => {
   return { ...actual, useIsAuthenticated: vi.fn(() => false) };
 });
 
-import { signIn } from "@/lib/auth";
+import { requestVerifyToken, signIn } from "@/lib/auth";
 
 const mockSignIn = vi.mocked(signIn);
+const mockRequestVerifyToken = vi.mocked(requestVerifyToken);
 
 /** axios rejection: body at err.response.data, .message is the status line. */
 function axiosError(status: number, detail: string): Error {
@@ -58,6 +59,28 @@ async function submitCredentials(entry: Entry = {}) {
 
 describe("Login page errors", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("sends the verification email again from the resend offer", async () => {
+    mockSignIn.mockRejectedValueOnce(axiosError(400, "LOGIN_USER_NOT_VERIFIED"));
+    mockRequestVerifyToken.mockResolvedValueOnce(undefined as never);
+    const user = await submitCredentials();
+
+    await user.click(await screen.findByRole("button", { name: /resend verification email/i }));
+
+    expect(mockRequestVerifyToken).toHaveBeenCalledWith("user@example.com");
+  });
+
+  it("links to the forgot-password page", () => {
+    renderLogin();
+
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
+  });
+
+  it("has no Create account link, since the app has no sign-up", () => {
+    renderLogin();
+
+    expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
+  });
 
   it("says the email or password is wrong on LOGIN_BAD_CREDENTIALS", async () => {
     mockSignIn.mockRejectedValueOnce(axiosError(400, "LOGIN_BAD_CREDENTIALS"));

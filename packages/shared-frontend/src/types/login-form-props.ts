@@ -1,4 +1,5 @@
 import type { LoginFormLinkRegistration } from "./login-form-link-registration";
+import type { LoginFormSignInOnlyRegistration } from "./login-form-sign-in-only-registration";
 import type { LoginFormTabRegistration } from "./login-form-tab-registration";
 
 interface LoginFormBaseProps {
@@ -9,5 +10,6 @@ interface LoginFormBaseProps {
   autoFocusEmail?: boolean;
 }
 
-/** Exactly one way to sign up: a Create Account tab (`onRegister`) or a link to the app's page (`registerHref`). */
-export type LoginFormProps = LoginFormBaseProps & (LoginFormTabRegistration | LoginFormLinkRegistration);
+/** Exactly one way to sign up: a Create Account tab (`onRegister`), a link to the app's page (`registerHref`), or none (`signInOnly`). */
+export type LoginFormProps = LoginFormBaseProps &
+  (LoginFormTabRegistration | LoginFormLinkRegistration | LoginFormSignInOnlyRegistration);
