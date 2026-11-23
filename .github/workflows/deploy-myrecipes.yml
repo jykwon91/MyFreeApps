@@ -37,6 +37,9 @@ jobs:
   # than the deploy's actual work). Keeping it one job pays the queue once.
   deploy:
     runs-on: ubuntu-latest
+    # Manual runs deploy only from main: the VPS fetches main, so a commit from
+    # another branch would fail there AFTER its images (and :latest) were pushed.
+    if: github.ref == 'refs/heads/main'
     # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
     # or PR CI run) must never take the slot and cancel a pending real deploy.
     concurrency:

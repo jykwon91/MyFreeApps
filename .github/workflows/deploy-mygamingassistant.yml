@@ -41,10 +41,12 @@ jobs:
   # than the deploy's actual work). Keeping it one job pays the queue once.
   deploy:
     runs-on: ubuntu-latest
-    # Only a CI run for a push to main that SUCCEEDED. A failed or cancelled
-    # run (cancelled = superseded by a newer pending run in the CI
+    # Manual runs deploy only from main: the VPS fetches main, so a commit from
+    # another branch would fail there AFTER its images (and :latest) were pushed.
+    # Auto runs: only a CI run for a push to main that SUCCEEDED. A failed or
+    # cancelled run (cancelled = superseded by a newer pending run in the CI
     # concurrency group) deploys nothing; the newer run deploys when it passes.
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
     # or PR CI run) must never take the slot and cancel a pending real deploy.
     concurrency:

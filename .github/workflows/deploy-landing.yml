@@ -26,8 +26,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only a CI run for a push to main that SUCCEEDED.
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # Only a CI run for a push to main that SUCCEEDED, or a manual run from
+    # main (the VPS fetches main; another branch's commit would fail there).
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
     # or PR CI run) must never take the slot and cancel a pending real deploy.
     concurrency:

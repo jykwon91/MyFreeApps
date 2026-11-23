@@ -1693,8 +1693,11 @@ _AUTO_DEPLOY_APPS = sorted(set(_APPS) - _NO_AUTO_DEPLOY)
 # static landing page. Maps the deploy workflow to the CI workflow it waits on.
 _AUTO_DEPLOYS = {f"deploy-{app}": f"ci-{app}" for app in _AUTO_DEPLOY_APPS} | {"deploy-landing": "ci-landing"}
 _ALL_DEPLOYS = sorted({f"deploy-{app}" for app in _APPS} | {"deploy-landing"})
+# A manual run deploys only from main: the VPS fetches main, so another branch's commit would fail
+# there only AFTER its images (and :latest) were pushed.
+_MANUAL_FROM_MAIN = "github.ref == 'refs/heads/main'"
 _MAIN_CI_PASSED = (
-    "github.event_name == 'workflow_dispatch' || "
+    f"(github.event_name == 'workflow_dispatch' && {_MANUAL_FROM_MAIN}) || "
     "(github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')"
 )
 _CHOSEN = "${{ steps.gate.outputs.sha }}"
@@ -1899,9 +1902,8 @@ class TestDeployRunsOnlyAfterMainCiPasses:
     def test_manual_only_app_has_no_auto_trigger(self, app: str) -> None:
         wf = _workflow(f"deploy-{app}")
         assert set(wf["on"]) == {"workflow_dispatch"}
-        assert "if" not in wf["jobs"]["deploy"]
+        assert wf["jobs"]["deploy"]["if"] == _MANUAL_FROM_MAIN
         assert "actions" not in wf["jobs"]["deploy"]["permissions"]
-
 
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
