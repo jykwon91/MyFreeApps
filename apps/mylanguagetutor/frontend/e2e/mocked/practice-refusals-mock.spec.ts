@@ -6,10 +6,12 @@
  * a session deleted elsewhere, a rejected token, and a turn the server never
  * answers. Transient failures offer
  * Try again, which sends exactly what the learner said; blocks say why and stop
- * further turns (a daily-cap or turn-limit refusal keeps the learner's answer on screen); a
+ * further turns (every refusal that blocks keeps the learner's answer on screen, and a daily-cap or
+ * tutor-unavailable one lets Try again send it once the block lifts); a
  * rejected token signs the learner out.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { createGate } from "@platform/ui/test-support/gate";
 import {
   DAILY_LIMIT_REACHED,
   RATE_LIMIT_GENERIC_DETAIL,
@@ -34,13 +36,14 @@ import {
   TURN_IN_PROGRESS_COPY,
   TUTOR_BUSY_COPY,
   TUTOR_INPUT_REJECTED_COPY,
+  TUTOR_UNAVAILABLE_KEPT_COPY,
 } from "./constants/turnErrorCopy";
 import { GREETINGS } from "./fixtures/catalogFixtures";
 import { sessionIdAt } from "./fixtures/fixtureIds";
 import { goal, openPractice, sendTyped } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { completeTurn, cutAfterCorrections, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
-import { SESSION_FULL, TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
+import { PLENTY_LEFT, SESSION_FULL, TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
 
 test.use({ timezoneId: LEARNER_TIME_ZONE });
 
@@ -219,6 +222,9 @@ for (const [detail, copy] of [
     await sendTyped(page, LEARNER_GREETING);
 
     await expect(page.getByText(copy)).toBeVisible();
+    // The refused answer stays on screen; nothing can send it in this conversation.
+    await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await page.getByRole("link", { name: "Pick a scenario" }).click();
     await expect(page).toHaveURL(/\/scenarios$/);
   });
@@ -261,14 +267,37 @@ test("a tutor switched off is announced on arrival, before the learner answers",
   expect(api.writes).toEqual([]);
 });
 
-test("a 503 tutor_unavailable on a turn blocks the conversation the same way", async ({ page }) => {
-  await signedInTutor(page, { turns: [refusedTurn(503, TUTOR_UNAVAILABLE)] });
+test("a 503 tutor_unavailable on a turn blocks the conversation, keeps the answer, and Try again sends it once the tutor is back", async ({ page }) => {
+  const gate = createGate();
+  const api = await signedInTutor(page, {
+    holdTurns: gate,
+    turns: [refusedTurn(503, TUTOR_UNAVAILABLE), completeTurn({ reply: TUTOR_GREETING })],
+  });
 
-  await openPractice(page, GREETINGS.title);
-  await sendTyped(page, LEARNER_GREETING);
+  try {
+    await openPractice(page, GREETINGS.title);
+    await sendTyped(page, LEARNER_GREETING);
+    // The tutor's shared budget runs out while the turn is on its way: usage says so from then on.
+    api.setUsage(TUTOR_OFF);
+    gate.release();
 
-  await expect(page.getByText(UNAVAILABLE_COPY)).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.getByText(UNAVAILABLE_COPY)).toBeVisible();
+    await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText(TUTOR_UNAVAILABLE_KEPT_COPY);
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+    await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
+
+    api.setUsage(PLENTY_LEFT);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.getByRole("button", { name: "Try again" }).click();
+
+    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByText(UNAVAILABLE_COPY)).toHaveCount(0);
+    await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
+    expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
+  } finally {
+    gate.release();
+  }
 });
 
 for (const [detail, copy] of [

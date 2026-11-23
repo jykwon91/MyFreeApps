@@ -1,7 +1,8 @@
 """GET /usage/today -- the learner's own remaining daily budget.
 
 Only per-user numbers leave the server; the global budget is reduced to a
-boolean ``tutor_available`` (kill switch / no API key), never a number.
+boolean ``tutor_available`` (kill switch / no API key / no room left in it for
+the learner's next turn), never a number.
 ``cap_reached`` is sized for the learner's next turn: in the conversation they
 are in when a session id is given (its history makes turns dearer), else a
 first turn -- the same estimate the turn itself reserves. ``session_limit_reached`` says the
@@ -37,6 +38,6 @@ async def usage_today(
     return UsageTodayResponse(
         remaining_fraction=round(remaining, 3),
         cap_reached=not affordable,
-        tutor_available=quota_service.tutor_enabled(),
+        tutor_available=await quota_service.tutor_can_answer(db, units=units),
         session_limit_reached=session_limit_reached,
     )

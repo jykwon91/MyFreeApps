@@ -12,6 +12,7 @@ export const TURN_ERROR_COPY: Readonly<Record<string, string>> = {
   turn_in_progress: "Your last message is still being answered. Try again in a moment.",
   rate_limited: "That was a lot of messages in a short time. Wait a few seconds and try again.",
   daily_limit_reached: "That answer wasn't sent because today's practice time ran out. It's kept above, so you can send it again once your practice time is back.",
+  tutor_unavailable: "That answer wasn't sent because the tutor is taking a break. It's kept above, so you can send it again once the tutor is back.",
   [NETWORK_ERROR]: "Couldn't reach the tutor. Check your connection and try again.",
   [CONNECTION_LOST]: "The connection dropped before the tutor finished. Try again.",
   [SESSION_CREATE_FAILED]: "Couldn't start the conversation. Try again.",

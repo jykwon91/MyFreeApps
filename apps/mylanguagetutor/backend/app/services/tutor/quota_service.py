@@ -161,6 +161,18 @@ async def can_afford(db: AsyncSession, user_id: uuid.UUID, *, units: int) -> boo
     return used + units <= cap
 
 
+async def tutor_can_answer(db: AsyncSession, *, units: int) -> bool:
+    """Is the tutor on, with room in today's global budget for a ``units`` reservation?
+
+    Read-only pre-check for the UI, like ``can_afford``: a full global budget refuses
+    turns as ``tutor_unavailable`` too, so the UI must hear it the same way.
+    """
+    if not tutor_enabled():
+        return False
+    used = await get_daily_usage(db, bucket=GLOBAL_BUCKET)
+    return used + units <= settings.ltutor_global_daily_units
+
+
 async def _release(db: AsyncSession, reservation: Reservation, units: int) -> None:
     await release_daily_quota(
         db, bucket=user_bucket(reservation.user_id), amount=units, day=reservation.day,
