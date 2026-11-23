@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
 import { Button, extractErrorMessage, showError } from "@platform/ui";
 
+import { ACCOUNT_COPY } from "@myrecipes/api-client/constants/accountCopy";
 import { signOut } from "@/lib/auth";
 import { useDeleteAccountMutation } from "@platform/ui/store/accountApi";
 import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
@@ -78,8 +79,7 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
             </Dialog.Title>
           </div>
           <Dialog.Description className="text-sm text-muted-foreground mb-5">
-            This will immediately and permanently delete your account and all associated data.
-            This cannot be undone.
+            {ACCOUNT_COPY.deleteWarning}
           </Dialog.Description>
 
           <div className="space-y-4">

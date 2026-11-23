@@ -109,7 +109,7 @@ export default function ResetPassword() {
               disabled={isLoading}
             />
             {error ? (
-              <p className="text-destructive text-sm">{error}</p>
+              <p className="text-destructive text-sm" role="alert">{error}</p>
             ) : null}
             <LoadingButton
               type="submit"

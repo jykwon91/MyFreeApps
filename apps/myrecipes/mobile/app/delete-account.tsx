@@ -1,7 +1,7 @@
 import { DeleteAccountScreen, useSession } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
+import { ACCOUNT_COPY } from "@myrecipes/api-client/constants/accountCopy";
 
 export default function DeleteAccountRoute() {
   const { state } = useSession();
@@ -11,5 +11,5 @@ export default function DeleteAccountRoute() {
     if (isSignedOut) router.replace("/");
   }, [isSignedOut]);
 
-  return <DeleteAccountScreen warning={DELETE_ACCOUNT_WARNING} />;
+  return <DeleteAccountScreen warning={ACCOUNT_COPY.deleteWarning} />;
 }

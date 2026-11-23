@@ -131,7 +131,7 @@ export default function ResetPassword() {
             />
             <FieldFeedback {...confirmFeedback} />
           </div>
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm" role="alert">{error}</p> : null}
           <LoadingButton
             type="submit"
             isLoading={isLoading}

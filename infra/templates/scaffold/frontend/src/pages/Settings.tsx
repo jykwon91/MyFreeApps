@@ -30,13 +30,6 @@ export default function Settings() {
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </Link>
       </Card>
-
-      {/* Account section placeholder */}
-      <Card title="Account">
-        <p className="text-sm text-muted-foreground">
-          Add app-specific settings here.
-        </p>
-      </Card>
     </div>
   );
 }
