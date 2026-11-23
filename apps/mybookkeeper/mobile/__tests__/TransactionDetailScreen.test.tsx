@@ -12,6 +12,7 @@ import { store } from "../src/lib/store";
 import { APPROVAL_PROPERTY_MESSAGES } from "../src/constants/transactionApproval";
 import { aDuplicatePair } from "../test-support/aDuplicatePair";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
+import { isInsideAccessibleParent } from "../test-support/isInsideAccessibleParent";
 import { queriesSettled } from "../test-support/queriesSettled";
 
 const mockPush = jest.fn();
@@ -71,6 +72,13 @@ describe("TransactionDetailScreen", () => {
     expect(screen.getByText("The total looks off")).toBeTruthy();
     expect(screen.getByText("Maintenance")).toBeTruthy();
     expect(await screen.findByText("Oak Street")).toBeTruthy();
+  });
+
+  it("lists the transaction as one heading that still speaks its kind and amount", async () => {
+    startTransactionServer([WAITING]);
+    await renderScreen();
+    const heading = await screen.findByRole("header", { name: "Home Depot, Maintenance expense, 84 dollars and 20 cents" });
+    expect(isInsideAccessibleParent(heading)).toBe(false);
   });
 
   it("shows the tax year, saved vendor, channel, payment method, tax treatment and Schedule E line", async () => {

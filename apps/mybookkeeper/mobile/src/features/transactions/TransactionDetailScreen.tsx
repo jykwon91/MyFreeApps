@@ -103,10 +103,11 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
         {waitingCount ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{waitingCount} to review</Text> : null}
         <View
           accessibilityLabel={`${name}, ${spokenKind(transaction)}, ${spokenAmount(transaction)}`}
+          accessibilityRole="header"
           accessible
           style={{ gap: spacing.xs }}
         >
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+          <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {name}
           </Text>
           <Text
