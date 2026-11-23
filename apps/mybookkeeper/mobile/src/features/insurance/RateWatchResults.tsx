@@ -20,8 +20,8 @@ export default function RateWatchResults({ data }: { data: InsuranceMarketWatch 
     <View style={{ gap: spacing.lg }} testID="rate-watch-results">
       {data.feed_unavailable_reason ? <Banner message={data.feed_unavailable_reason} /> : null}
       {verdict ? (
-        <View accessible style={{ gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}>
-          <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{verdict.headline}</Text>
+        <View style={{ gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}>
+          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>{verdict.headline}</Text>
           {verdict.detail ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{verdict.detail}</Text> : null}
         </View>
       ) : null}

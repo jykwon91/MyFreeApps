@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import type { InsuranceMarketWatch } from "@mybookkeeper/api-client/types/insurance/insurance-market-watch";
 import type { InsurancePolicyRateOutlook } from "@mybookkeeper/api-client/types/insurance/insurance-policy-rate-outlook";
 import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
+import { buildRateWatchVerdict } from "@mybookkeeper/api-client/utils/rateWatchVerdict";
 import { fireEvent, screen } from "@testing-library/react-native";
 import RateWatchScreen from "../src/features/insurance/RateWatchScreen";
 import { EMPTY_RATE_WATCH, startInsuranceServer } from "../test-support/insuranceServer";
@@ -83,6 +84,17 @@ describe("rate watch", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Check filings" }));
     await screen.findByTestId("rate-watch-results");
     expect(isInsideAccessibleParent(screen.getByRole("header", { name: "What to do" }))).toBe(false);
+  });
+
+  it("lists the verdict as a heading, with its detail still read after it", async () => {
+    startInsuranceServer({ rateWatch: results() });
+    await renderInsurance(<RateWatchScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Check filings" }));
+    await screen.findByTestId("rate-watch-results");
+    const verdict = buildRateWatchVerdict(results());
+    expect(verdict).not.toBeNull();
+    expect(isInsideAccessibleParent(screen.getByRole("header", { name: verdict?.headline }))).toBe(false);
+    if (verdict?.detail) expect(screen.getByText(verdict.detail)).toBeTruthy();
   });
 
   it("shows a skeleton while the filings are being checked", async () => {
