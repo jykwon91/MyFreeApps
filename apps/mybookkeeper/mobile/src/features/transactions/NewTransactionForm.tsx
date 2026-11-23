@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -14,7 +14,6 @@ import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
 import PeriodDateRow from "../shell/PeriodDateRow";
-import PickerField from "./PickerField";
 import { categoryLabel, propertyLabel } from "./transactionDisplay";
 import { blankCreateValues, choiceLabel, createAmountError, createPayload, fromChoice } from "./transactionCreateValues";
 import { categoryChoices, selectableProperties } from "./transactionEditValues";
@@ -138,10 +137,10 @@ export default function NewTransactionForm() {
           />
           <FormField {...fields.field("vendor")} label="Vendor" onChangeText={(vendor) => update({ vendor })} placeholder="e.g. Home Depot" value={values.vendor} />
           <FormField {...fields.target("description")} label="Description" multiline onChangeText={(description) => update({ description })} placeholder="Optional details" value={values.description} />
-          <PickerField label="Category" onPress={() => setOpenSheet("category")} value={categoryLabel(values.category)} />
-          <PickerField label="Property" onPress={() => setOpenSheet("property")} value={propertyLabel(values.propertyId, properties)} />
-          <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
-          <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
+          <PickerField label="Category" onPress={() => setOpenSheet("category")} valueLabel={categoryLabel(values.category)} />
+          <PickerField label="Property" onPress={() => setOpenSheet("property")} valueLabel={propertyLabel(values.propertyId, properties)} />
+          <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} valueLabel={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
+          <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} valueLabel={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
           <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
         </View>
         <LoadingButton disabled={locked} isLoading={isSaving} loadingText="Adding…" onPress={save}>

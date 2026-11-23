@@ -1,13 +1,14 @@
+import { PickerField } from "@platform/mobile";
 import { fullDateLabel } from "../../lib/localDate";
 import DatePicker from "./DatePicker";
-import PickerField from "../transactions/PickerField";
 
 interface PeriodDateRowProps {
   label: string;
   value: string;
   minimum?: string;
-  /** Read as the hint on the date; show it with a FieldError beside the row. */
+  /** Read in the date's name; show it with a FieldError beside the row. */
   error?: string;
+  /** Whether the calendar is folded open under the date; read as "expanded" or "collapsed". */
   isOpen: boolean;
   onToggle: () => void;
   onChange: (iso: string) => void;
@@ -17,7 +18,7 @@ interface PeriodDateRowProps {
 export default function PeriodDateRow({ label, value, minimum, error, isOpen, onToggle, onChange }: PeriodDateRowProps) {
   return (
     <>
-      <PickerField error={error} label={label} onPress={onToggle} value={fullDateLabel(value)} />
+      <PickerField error={error} expanded={isOpen} label={label} onPress={onToggle} valueLabel={fullDateLabel(value)} />
       {isOpen ? <DatePicker label={label} minimum={minimum} onChange={onChange} value={value} /> : null}
     </>
   );

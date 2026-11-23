@@ -1,11 +1,10 @@
 import type { TaxSummaryResponse } from "@mybookkeeper/api-client/types/summary/TaxSummaryResponse";
 import { TAX_REPORT_VIEWS } from "../../constants/taxReport";
-import { Banner, SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
+import { Banner, PickerField, SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxReportView } from "../../types/TaxReportView";
-import PickerField from "../transactions/PickerField";
 import { spokenSignedMoney } from "../transactions/transactionDisplay";
 import { hasW2Income, taxReportHeadline } from "@mybookkeeper/api-client/utils/taxReportTotals";
 import { hasTaxData, toCents, uncategorizedCents } from "./taxReportDisplay";
@@ -35,7 +34,7 @@ export default function TaxReportHeader({
   const net = toCents(summary?.net_taxable_income ?? 0) / 100;
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
-      <PickerField hint={MESSAGES.yearHint} label={MESSAGES.year} onPress={onChooseYear} value={String(year)} />
+      <PickerField hint={MESSAGES.yearHint} label={MESSAGES.year} onPress={onChooseYear} valueLabel={String(year)} />
       <StaleDataBanner isShown={showLastLoaded} />
       {uncategorized > 0 ? <Banner message={MESSAGES.uncategorized(formatCurrency(uncategorized / 100))} /> : null}
       {summary && hasTaxData(summary) ? (

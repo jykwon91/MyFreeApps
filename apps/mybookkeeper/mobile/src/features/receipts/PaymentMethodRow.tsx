@@ -1,7 +1,6 @@
-import { OptionSheet } from "@platform/mobile";
+import { OptionSheet, PickerField } from "@platform/mobile";
 import { useState } from "react";
 import { PAYMENT_METHOD_OPTIONS, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
-import PickerField from "../transactions/PickerField";
 import { paymentMethodLabel } from "./receiptDisplay";
 
 interface PaymentMethodRowProps {
@@ -16,7 +15,7 @@ export default function PaymentMethodRow({ value, guess, onChange }: PaymentMeth
   const isGuess = guess !== "" && value === guess;
   return (
     <>
-      <PickerField hint={isGuess ? MESSAGES.guessedMethod : undefined} label={MESSAGES.howTheyPaid} onPress={() => setIsPicking(true)} value={paymentMethodLabel(value)} />
+      <PickerField hint={isGuess ? MESSAGES.guessedMethod : undefined} label={MESSAGES.howTheyPaid} onPress={() => setIsPicking(true)} valueLabel={paymentMethodLabel(value)} />
       <OptionSheet
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}

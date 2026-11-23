@@ -3,14 +3,13 @@ import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyF
 import { POLICY_CARRIER_MAX, POLICY_NAME_MAX, POLICY_NOTES_MAX, POLICY_NUMBER_MAX } from "@mybookkeeper/api-client/constants/insurancePolicyFieldLimits";
 import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/constants/insurancePremiumFrequencies";
 import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
-import { Banner, FIELD_PRESETS, FormField, OptionSheet, useFieldChain, useTheme } from "@platform/mobile";
+import { Banner, FIELD_PRESETS, FormField, OptionSheet, PickerField, useFieldChain, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 import { dateFromIso } from "../../lib/localDate";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 import OptionalDateField from "../shell/OptionalDateField";
-import PickerField from "../transactions/PickerField";
 
 const NOT_BILLED = "none";
 
@@ -52,7 +51,7 @@ export default function PolicyFormFields({ values, errors, onChange }: PolicyFor
         </Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{POLICY_FORM_MESSAGES.costBlurb}</Text>
         <FormField {...FIELD_PRESETS.decimal} {...fields.field("premium")} error={errors.premiumDollars} label={POLICY_FORM_MESSAGES.premium} onChangeText={(premiumDollars) => onChange({ premiumDollars })} value={values.premiumDollars} />
-        <PickerField hint={POLICY_FORM_MESSAGES.billedHint} label={POLICY_FORM_MESSAGES.billed} onPress={() => setIsBilledOpen(true)} value={billed} />
+        <PickerField hint={POLICY_FORM_MESSAGES.billedHint} label={POLICY_FORM_MESSAGES.billed} onPress={() => setIsBilledOpen(true)} valueLabel={billed} />
         {errors.premiumFrequency ? <Banner message={errors.premiumFrequency} /> : null}
         <FormField
           {...FIELD_PRESETS.decimal}

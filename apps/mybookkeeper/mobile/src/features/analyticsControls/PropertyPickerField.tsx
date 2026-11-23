@@ -1,6 +1,6 @@
+import { PickerField } from "@platform/mobile";
 import { useState } from "react";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
-import PickerField from "../transactions/PickerField";
 import PropertyMultiSheet from "./PropertyMultiSheet";
 
 interface PropertyPickerFieldProps {
@@ -23,7 +23,7 @@ export default function PropertyPickerField({ properties, selectedIds, onChange,
   if (properties.length < 2) return null;
   return (
     <>
-      <PickerField hint={MESSAGES.propertiesHint} label={MESSAGES.properties} onPress={() => setIsOpen(true)} value={propertiesValue(properties, selectedIds)} />
+      <PickerField hint={MESSAGES.propertiesHint} label={MESSAGES.properties} onPress={() => setIsOpen(true)} valueLabel={propertiesValue(properties, selectedIds)} />
       <PropertyMultiSheet isOpen={isOpen} maxSelected={maxSelected} onChange={onChange} onClose={() => setIsOpen(false)} properties={properties} selectedIds={selectedIds} />
     </>
   );

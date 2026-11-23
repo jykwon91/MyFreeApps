@@ -1,6 +1,6 @@
+import { PickerField } from "@platform/mobile";
 import { useState } from "react";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
-import PickerField from "../transactions/PickerField";
 import { categoriesValue } from "./categoryFilterDisplay";
 import CategoryFilterSheet from "./CategoryFilterSheet";
 
@@ -9,7 +9,7 @@ export default function CategoryPickerField({ selected, onChange }: { selected: 
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <PickerField hint={MESSAGES.categoriesHint} label={MESSAGES.categories} onPress={() => setIsOpen(true)} value={categoriesValue(selected)} />
+      <PickerField hint={MESSAGES.categoriesHint} label={MESSAGES.categories} onPress={() => setIsOpen(true)} valueLabel={categoriesValue(selected)} />
       <CategoryFilterSheet isOpen={isOpen} onChange={onChange} onClose={() => setIsOpen(false)} selected={selected} />
     </>
   );

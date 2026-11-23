@@ -1,8 +1,7 @@
-import { LoadingButton, SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
+import { LoadingButton, PickerField, SegmentedControl, StaleDataBanner, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
-import PickerField from "../transactions/PickerField";
 
 interface ReconciliationHeaderProps {
   year: number;
@@ -37,7 +36,7 @@ export default function ReconciliationHeader({
       <StaleDataBanner isShown={showLastLoaded} />
       {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.infoNote}</Text>
-      <PickerField hint={MESSAGES.taxYearHint} label={MESSAGES.taxYear} onPress={onChooseYear} value={String(year)} />
+      <PickerField hint={MESSAGES.taxYearHint} label={MESSAGES.taxYear} onPress={onChooseYear} valueLabel={String(year)} />
       {totalCount > 0 ? (
         <>
           <SegmentedControl

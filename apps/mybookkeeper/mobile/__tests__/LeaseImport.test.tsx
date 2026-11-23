@@ -172,7 +172,7 @@ describe("importing a signed lease", () => {
     expect(announce.mock.calls.map(([message]) => message)).toEqual([fieldErrorsSummary([MESSAGES.tenant, MESSAGES.files])]);
     expect(assertive).not.toHaveBeenCalled();
     expect(screen.queryAllByRole("alert", SHOWN)).toHaveLength(0);
-    expect(screen.getByRole("button", { name: new RegExp(`^${MESSAGES.tenant}`) }).props.accessibilityHint).toBe(MESSAGES.needTenant);
+    expect(screen.getByRole("button", { name: `${MESSAGES.tenant}, ${MESSAGES.tenantNone}, required, error: ${MESSAGES.needTenant}` })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Choose a file" }).props.accessibilityHint).toBe(MESSAGES.needFiles);
     announce.mockRestore();
     assertive.mockRestore();

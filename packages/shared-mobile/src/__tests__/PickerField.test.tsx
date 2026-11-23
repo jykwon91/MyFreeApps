@@ -4,7 +4,7 @@ import PickerField from "../components/PickerField";
 import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
-async function setup(props: { disabled?: boolean; hint?: string; error?: string } = {}) {
+async function setup(props: { disabled?: boolean; hint?: string; error?: string; required?: boolean; expanded?: boolean } = {}) {
   const onPress = jest.fn();
   await render(<PickerField label="Category" onPress={onPress} valueLabel="Plumber" {...props} />);
   return onPress;
@@ -45,6 +45,51 @@ describe("PickerField", () => {
     const onPress = await setup({ disabled: true });
     fireEvent.press(screen.getByRole("button", { name: "Category, Plumber" }));
     expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it("is announced as unavailable while disabled", async () => {
+    await setup({ disabled: true });
+    expect(screen.getByRole("button", { name: "Category, Plumber", disabled: true })).toBeTruthy();
+  });
+
+  it("is announced as available when not disabled", async () => {
+    await setup();
+    expect(screen.getByRole("button", { name: "Category, Plumber", disabled: false })).toBeTruthy();
+  });
+
+  it("reads 'required' in the name, before the error, without saying 'star'", async () => {
+    await setup({ required: true, error: "Choose a category." });
+    const field = screen.getByRole("button", { name: "Category, Plumber, required, error: Choose a category." });
+    expect(field.props.accessibilityLabel).not.toContain("*");
+  });
+
+  it("draws the required asterisk but hides it from screen readers", async () => {
+    await setup({ required: true });
+    expect(screen.queryByText("*", { exact: false })).toBeNull();
+    expect(screen.getByText("*", { exact: false, includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it("draws no asterisk and says nothing about 'required' when the field is optional", async () => {
+    await setup();
+    expect(screen.queryByText("*", { exact: false, includeHiddenElements: true })).toBeNull();
+    expect(screen.getByRole("button", { name: "Category, Plumber" }).props.accessibilityLabel).not.toMatch(/required/i);
+  });
+
+  it("is announced as expanded while the content it folds open is showing", async () => {
+    await setup({ expanded: true });
+    expect(screen.getByRole("button", { name: "Category, Plumber", expanded: true })).toBeTruthy();
+  });
+
+  it("is announced as collapsed while the content it folds open is hidden", async () => {
+    await setup({ expanded: false });
+    expect(screen.getByRole("button", { name: "Category, Plumber", expanded: false })).toBeTruthy();
+  });
+
+  it("says nothing about expanded or collapsed when it opens a sheet instead", async () => {
+    await setup();
+    expect(screen.getByRole("button", { name: "Category, Plumber" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Category, Plumber", expanded: false })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Category, Plumber", expanded: true })).toBeNull();
   });
 
   it("is big enough to tap", async () => {
