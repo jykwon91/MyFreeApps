@@ -11,11 +11,16 @@ on:
       - '.github/workflows/ci-mylanguagetutor.yml'
       - '!apps/mylanguagetutor/mobile/**'
       - '!packages/shared-mobile/**'
+  # A successful push run is what deploys this app (deploy-mylanguagetutor.yml runs on
+  # workflow_run of this workflow), so mobile-only changes are excluded here:
+  # they cannot change the web bundle or API image. Mobile has its own CI.
   push:
     branches: [main]
     paths:
       - 'apps/mylanguagetutor/**'
+      - '!apps/mylanguagetutor/mobile/**'
       - 'packages/**'
+      - '!packages/shared-mobile/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ci-mylanguagetutor.yml'

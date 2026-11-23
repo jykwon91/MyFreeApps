@@ -3,28 +3,39 @@
 #   python -m platform_shared.infra.render --app {{ app_slug }}
 
 name: Deploy {{ app_display_name }}
+{%- set auto_deploy = automated_deploy | default(true) %}
 
 on:
   # Manual "Run workflow" button — always available so any app can be
-  # deployed on demand, even when push-triggered auto-deploy is off.
+  # deployed on demand, even when auto-deploy is off. Deploys the commit the
+  # run was started on (github.sha) as-is: it is the operator's override, so
+  # it is not retargeted.
   workflow_dispatch:
-  # Push-triggered auto-deploy. Rendered ONLY when `automated_deploy` is
-  # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
-  # existing apps keep auto-deploying. Set `automated_deploy: false` to make
-  # an app manual-dispatch-only (e.g. not yet ready for production).
-{%- if automated_deploy | default(true) %}
-  push:
+  # Auto-deploy. Rendered ONLY when `automated_deploy` is truthy in
+  # apps/<slug>/app.yaml. A missing key defaults to enabled. Set
+  # `automated_deploy: false` to make an app manual-dispatch-only.
+  #
+  # Production deploys only a commit that passed this app's CI ON MAIN. PRs
+  # merge without being rebased on the latest main, so two PRs can each pass
+  # CI alone and break once combined — the main run is the first to test the
+  # combination. Triggering on `push` would ship that combination before its
+  # CI finished.
+  #
+  # The CI workflow's push `paths:` decide which commits get here:
+  # apps/<slug>/** and packages/**, minus the app's mobile/ and
+  # packages/shared-mobile/, so a mobile-only change does not redeploy. The
+  # root package.json + package-lock.json stay in: the web images `npm ci`
+  # from them, so a web dependency fix must deploy. The cost is that a
+  # mobile-only dependency bump, which also edits the root lockfile, redeploys.
+  #
+  # A commit pushed with `[skip ci]` skips CI, so it no longer deploys either.
+  # The next commit that passes CI ships it.
+{%- if auto_deploy %}
+  workflow_run:
+    workflows: ["{{ app_display_name }} CI"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'apps/{{ app_slug }}/**'
-      - '!apps/{{ app_slug }}/mobile/**'
-      - 'packages/**'
-      - '!packages/shared-mobile/**'
 {%- endif %}
-
-concurrency:
-  group: deploy-{{ app_slug }}
-  cancel-in-progress: false
 
 jobs:
   # ONE job: build + push images, then SSH-deploy, on the same runner.
@@ -33,15 +44,82 @@ jobs:
   # than the deploy's actual work). Keeping it one job pays the queue once.
   deploy:
     runs-on: ubuntu-latest
-{%- if registry_images | default(false) %}
+    # Manual runs deploy only from main: the VPS fetches main, so a commit from
+    # another branch would fail there AFTER its images (and :latest) were pushed.
+{%- if auto_deploy %}
+    # Auto runs: only a CI run for a push to main that SUCCEEDED. A failed or
+    # cancelled run (cancelled = superseded by a newer pending run in the CI
+    # concurrency group) deploys nothing; the newer run deploys when it passes.
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+{%- else %}
+    if: github.ref == 'refs/heads/main'
+{%- endif %}
+    # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
+    # or PR CI run) must never take the slot and cancel a pending real deploy.
+    concurrency:
+      group: deploy-{{ app_slug }}
+      cancel-in-progress: false
     permissions:
       contents: read
+{%- if registry_images | default(false) %}
       packages: write
+{%- endif %}
+{%- if auto_deploy %}
+      # `gh run list` in the target step below.
+      actions: read
 {%- endif %}
 
     steps:
+      # Pick the ONE commit this run deploys; every later step uses
+      # steps.gate.outputs.sha. Under workflow_run, github.sha is main's
+      # current head — possibly untested — so start from the commit the CI
+      # run tested, then move to the newest commit that has since passed the
+      # same CI on main and contains it. Re-running an older commit's CI
+      # therefore deploys the newest passed commit instead of rolling
+      # production back past migrations already applied, whatever order the
+      # runs are listed in. Any listing or API failure fails the deploy.
+      - name: Choose the commit to deploy
+        id: gate
+{%- if auto_deploy %}
+        env:
+          GH_TOKEN: ${{ '{{' }} github.token {{ '}}' }}
+          HEAD_SHA: ${{ '{{' }} github.event.workflow_run.head_sha {{ '}}' }}
+{%- endif %}
+        run: |
+          set -euo pipefail
+          TARGET="$GITHUB_SHA"
+{%- if auto_deploy %}
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+            TARGET="$HEAD_SHA"
+            if ! RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci-{{ app_slug }}.yml \
+                --branch main --event push --status success --limit 20 --json headSha --jq '.[].headSha'); then
+              echo "::error::Could not list successful main runs of ci-{{ app_slug }}.yml; not deploying."
+              exit 1
+            fi
+            if [ -z "$RUNS" ]; then
+              echo "::error::No successful main run of ci-{{ app_slug }}.yml found (expected at least $TARGET); not deploying."
+              exit 1
+            fi
+            for SHA in $RUNS; do
+              if ! STATUS=$(gh api "repos/$GITHUB_REPOSITORY/compare/$TARGET...$SHA" --jq .status); then
+                echo "::error::Could not compare $TARGET with $SHA; not deploying."
+                exit 1
+              fi
+              if [ "$STATUS" = "ahead" ]; then
+                TARGET="$SHA"
+              fi
+            done
+            if [ "$TARGET" != "$HEAD_SHA" ]; then
+              echo "::notice::$TARGET passed CI after $HEAD_SHA and contains it; deploying $TARGET."
+            fi
+          fi
+{%- endif %}
+          echo "sha=$TARGET" >> "$GITHUB_OUTPUT"
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
 {%- if registry_images | default(false) %}
 
       # Build images on the GitHub runner (fast, layer-cached via type=gha) and
@@ -68,10 +146,10 @@ jobs:
           file: apps/{{ app_slug }}/docker/backend.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${{ '{{' }} github.sha {{ '}}' }}
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
             ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:latest
           build-args: |
-            GIT_COMMIT=${{ '{{' }} github.sha {{ '}}' }}
+            GIT_COMMIT=${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
           cache-from: type=gha,scope={{ app_slug }}-backend
           cache-to: type=gha,mode=max,scope={{ app_slug }}-backend
 
@@ -82,7 +160,7 @@ jobs:
           file: apps/{{ app_slug }}/docker/caddy.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:${{ '{{' }} github.sha {{ '}}' }}
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
             ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:latest
           # VITE_* values are inlined into the frozen bundle at build time. They
           # now come from GitHub Actions variables (public values — the Turnstile
@@ -100,12 +178,14 @@ jobs:
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
-{%- if registry_images | default(false) %}
         env:
-          # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
-          # exact images the build steps above just pushed; GHCR_* authenticate
-          # the VPS to pull the (private) packages.
-          IMAGE_TAG: ${{ '{{' }} github.sha {{ '}}' }}
+          # Forwarded into the remote script via `envs:` below. DEPLOY_SHA is
+          # the commit the checkout on the box fast-forwards to.
+          DEPLOY_SHA: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
+{%- if registry_images | default(false) %}
+          # IMAGE_TAG pins the exact images the build steps above just pushed;
+          # GHCR_* authenticate the VPS to pull the (private) packages.
+          IMAGE_TAG: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
           GHCR_USER: ${{ '{{' }} github.repository_owner {{ '}}' }}
           GHCR_TOKEN: ${{ '{{' }} secrets.GHCR_PULL_TOKEN {{ '}}' }}
 {%- endif %}
@@ -114,7 +194,9 @@ jobs:
           username: ${{ '{{' }} secrets.SSH_USER {{ '}}' }}
           key: ${{ '{{' }} secrets.SSH_PRIVATE_KEY {{ '}}' }}
 {%- if registry_images | default(false) %}
-          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          envs: DEPLOY_SHA,IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+{%- else %}
+          envs: DEPLOY_SHA
 {%- endif %}
           # Generous: deploys are serialized via the flock below, so a
           # later app can wait through several earlier app deploys before
@@ -124,7 +206,7 @@ jobs:
             set -e
 
             # Serialize deploys across ALL apps on this shared VPS.
-            # Every app's deploy SSHes here and `git pull`s the SAME
+            # Every app's deploy SSHes here and fast-forwards the SAME
             # /srv/myfreeapps checkout; a `packages/**` change fans out
             # to every app's deploy workflow at once. Without this lock
             # they race on the shared git refs — observed failures:
@@ -145,8 +227,13 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Pull latest code ---"
-            git pull --ff-only
+            echo "--- Fast-forward the checkout to the deploy commit ---"
+            # Never `git pull`: main's head may not have passed CI yet. The
+            # compose file and host Caddyfile used below come from this
+            # checkout. A no-op when it is already past DEPLOY_SHA (another
+            # deploy shipped a newer passed commit), so it never moves back.
+            git fetch origin main
+            git merge --ff-only "$DEPLOY_SHA"
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/{{ app_slug }}/.env || {
