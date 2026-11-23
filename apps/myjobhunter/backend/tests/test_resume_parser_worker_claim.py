@@ -18,6 +18,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import func, select, update
 
+from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
+from app.core.resume_parse_constants import RESUME_PARSE_MAX_RETRIES
 from app.db.session import engine as app_engine
 from app.db.session import unit_of_work
 from app.models.jobs.resume_upload_job import ResumeUploadJob
@@ -168,3 +170,49 @@ async def test_a_failure_after_the_job_was_reclaimed_is_left_to_the_new_claim(
 
     job = await _job(job_id)
     assert (job.status, job.error_message, job.retry_count) == ("processing", None, 0)
+
+
+@pytest.mark.asyncio
+async def test_a_job_backing_off_does_not_block_other_jobs(user_factory, as_user) -> None:
+    """A job that keeps failing waits out its backoff while later jobs run."""
+    failing_user, other_user = await user_factory(), await user_factory()
+    storage = _storage()
+    failing_id = await _upload(as_user, failing_user, storage)
+    other_id = await _upload(as_user, other_user, storage)
+
+    async def _claude_busy(*_: object) -> dict:
+        raise ConnectionError("storage unreachable")
+
+    await _parse(storage, _claude_busy)  # oldest job: fails, requeued with a backoff
+    failing = await _job(failing_id)
+    assert (failing.status, failing.retry_count) == ("queued", 1)
+    assert failing.next_retry_at is not None and failing.next_retry_at > datetime.now(timezone.utc)
+
+    async def _claude_ok(*_: object) -> dict:
+        return _CLAUDE_RESPONSE
+
+    await _parse(storage, _claude_ok)  # the backed-off job is skipped; the other one runs
+    assert (await _job(other_id)).status == "complete"
+    assert (await _job(failing_id)).status == "queued"
+
+    with patch("app.workers.resume_parser_worker.get_storage", return_value=storage):
+        assert await process_one() is False  # nothing else is due
+
+
+@pytest.mark.asyncio
+async def test_a_job_that_keeps_failing_ends_failed_with_a_reason(user_factory, as_user) -> None:
+    """Every retry fails: after the retry budget the job is failed, not requeued."""
+    user = await user_factory()
+    storage = _storage()
+    job_id = await _upload(as_user, user, storage)
+
+    async def _claude_busy(*_: object) -> dict:
+        raise ConnectionError("storage unreachable")
+
+    for _attempt in range(RESUME_PARSE_MAX_RETRIES + 1):
+        await _change_job(job_id, next_retry_at=None)
+        await _parse(storage, _claude_busy)
+
+    job = await _job(job_id)
+    assert (job.status, job.retry_count) == ("failed", RESUME_PARSE_MAX_RETRIES)
+    assert job.error_message == RESUME_PARSE_FAILED_MESSAGE
