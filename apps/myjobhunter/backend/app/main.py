@@ -10,6 +10,7 @@ from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
@@ -29,6 +30,7 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.discovery import discovery_embedding_service
 from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
+from app.services.system.admin_user_service_factory import shared_admin_user_service
 
 
 async def _on_startup() -> None:
@@ -179,10 +181,6 @@ app.include_router(discover.router)
 # (list/role/activate/deactivate/superuser/stats-users). MJH has no
 # app-specific admin endpoints today; if any are added later they
 # mount alongside this under the same /admin prefix.
-from platform_shared.api.admin_router import build_admin_router
-from app.services.system.admin_user_service_factory import shared_admin_user_service
-
-
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,

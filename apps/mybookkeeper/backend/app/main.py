@@ -12,6 +12,7 @@ from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
@@ -32,6 +33,7 @@ from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
 from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, exports, frontend_errors, health_dashboard, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, organizations, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
+from app.services.system.admin_service import shared_admin_user_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -209,10 +211,6 @@ app.include_router(audit.router)
 # (list/role/activate/deactivate/superuser/stats-users). Mounted before
 # the MBK-specific admin router so both sets of routes live under
 # /admin without path collisions.
-from platform_shared.api.admin_router import build_admin_router
-from app.services.system.admin_service import shared_admin_user_service
-
-
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,

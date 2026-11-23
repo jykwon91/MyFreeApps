@@ -3,7 +3,6 @@ import { ChefHat, DollarSign, Heart, Home, Pizza, Settings, Shield, Users, Utens
 import { AppShell, RequireAuth, StepUpModal, useIsAuthenticated } from "@platform/ui";
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
-import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import type { CurrentUser } from "@platform/ui";
 
@@ -33,7 +32,6 @@ const ICONS: Record<string, React.ReactNode> = {
 
 export default function RootLayout() {
   const isAuthenticated = useIsAuthenticated();
-  const { isSuperuser: _isSuperuser } = useIsSuperuser();
   const { data: currentUser } = useGetCurrentUserQuery(undefined, {
     skip: !isAuthenticated,
   });

@@ -19,6 +19,7 @@ from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
@@ -51,6 +52,7 @@ from app.services.user.seed_user_service import (
     SeedUserNotConfiguredError,
     seed_operator_user,
 )
+from app.services.system.admin_user_service_factory import shared_admin_user_service
 
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -187,10 +189,6 @@ app.include_router(customers.router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).
-from platform_shared.api.admin_router import build_admin_router
-from app.services.system.admin_user_service_factory import shared_admin_user_service
-
-
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,

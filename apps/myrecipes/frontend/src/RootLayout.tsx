@@ -3,7 +3,6 @@ import { ChefHat, Compass, Heart, Settings, Shield } from "lucide-react";
 import { AppShell, GuestShell, StepUpModal, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
-import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import type { CurrentUser } from "@platform/ui";
 
@@ -55,7 +54,6 @@ const LOGO = (
  */
 export default function RootLayout() {
   const isAuthenticated = useIsAuthenticated();
-  const { isSuperuser: _isSuperuser } = useIsSuperuser();
   const { data: currentUser } = useGetCurrentUserQuery(undefined, {
     skip: !isAuthenticated,
   });
