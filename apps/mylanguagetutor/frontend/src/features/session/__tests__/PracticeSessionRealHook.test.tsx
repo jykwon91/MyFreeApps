@@ -240,7 +240,7 @@ describe("PracticeSession when the server refuses a turn that can't be answered 
     });
 
     fireEvent.click(await screen.findByRole("button", { name: PRACTICE_COPY.tryAgain }));
-    expect(await screen.findByText("¡Hola! Bienvenido.")).toBeInTheDocument();
+    expect(await screen.findByText("¡Hola! Bienvenido.", SHOWN)).toBeInTheDocument();
     expect(screen.queryByText(SESSION_BLOCK_COPY.unavailable)).not.toBeInTheDocument();
     expect(screen.getAllByText("hola")).toHaveLength(1);
     expect(turns).toEqual(["hola", "hola"]);
