@@ -20,6 +20,7 @@ function config(overrides: Partial<VoiceInputConfig> = {}): VoiceInputConfig {
     block: null,
     privacyAcked: true,
     ackPrivacy: vi.fn(),
+    focusTypedAnswer: vi.fn(),
     ...overrides,
   };
 }
@@ -108,5 +109,26 @@ describe("useVoiceInput", () => {
   it("allows replaying while the tutor speaks, since tapping the microphone stops it first", () => {
     const { result } = renderHook(() => useVoiceInput(config({ speaking: true })));
     expect(result.current.canReplay).toBe(true);
+  });
+
+  it("takes up a retry prompt by listening when the learner speaks, stopping the tutor's voice first", () => {
+    const order: string[] = [];
+    const settings = config({
+      stopSpeaking: () => order.push("stop speaking"),
+      recognition: recognition({ start: () => order.push("listen") }),
+    });
+    const { result } = renderHook(() => useVoiceInput(settings));
+    act(() => result.current.tryRetry());
+    expect(order).toEqual(["stop speaking", "listen"]);
+    expect(settings.focusTypedAnswer).not.toHaveBeenCalled();
+  });
+
+  it("takes up a retry prompt in the typed answer when the learner types", () => {
+    const settings = config();
+    const { result } = renderHook(() => useVoiceInput(settings));
+    act(() => result.current.switchToText());
+    act(() => result.current.tryRetry());
+    expect(settings.focusTypedAnswer).toHaveBeenCalledTimes(1);
+    expect(settings.recognition.start).not.toHaveBeenCalled();
   });
 });

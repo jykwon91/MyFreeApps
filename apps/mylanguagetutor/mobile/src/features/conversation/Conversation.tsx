@@ -3,7 +3,6 @@ import { useVoiceInput } from "@mylanguagetutor/api-client/hooks/useVoiceInput";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { latestReply } from "@mylanguagetutor/api-client/utils/latestReply";
 import { phaseAnnouncement } from "@mylanguagetutor/api-client/utils/phaseAnnouncement";
-import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { HeaderKeyboardAvoidingView, PinnedBar, useAnnouncement, useTheme } from "@platform/mobile";
 import { type ComponentRef, useCallback, useRef, useState } from "react";
@@ -53,6 +52,7 @@ export default function Conversation({ language, scenario, level }: Conversation
     streamTurn,
     speak: synthesis.enqueue,
     stopSpeaking: synthesis.cancel,
+    speakAll: synthesis.speakAll,
   });
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
@@ -67,8 +67,9 @@ export default function Conversation({ language, scenario, level }: Conversation
   const recognition = useSpeechInput(language.stt_locale, onDevice, send);
   const privacy = recognizerPrivacy(onDevice);
   const privacyAck = useVoicePrivacy(privacy);
-  const busy = session.requestPhase !== "idle";
+  const busy = session.busy;
   const block = session.block;
+  const focusTypedAnswer = useCallback(() => input.current?.focus(), []);
   const voice = useVoiceInput({
     recognition,
     speaking: synthesis.speaking,
@@ -77,6 +78,7 @@ export default function Conversation({ language, scenario, level }: Conversation
     block,
     privacyAcked: privacyAck.acked === true,
     ackPrivacy: privacyAck.ack,
+    focusTypedAnswer,
   });
   useOnBackground(recognition.abort);
   useOnBackground(session.interrupt);
@@ -91,15 +93,6 @@ export default function Conversation({ language, scenario, level }: Conversation
     onScroll(event);
     onActivity();
   };
-
-  const { mode, startListening } = voice;
-  const tryRetry = useCallback(() => {
-    if (mode === "voice") startListening();
-    else input.current?.focus();
-  }, [mode, startListening]);
-
-  const { speakAll } = synthesis;
-  const replay = useCallback((text: string, slow: boolean) => speakAll(text, replayRate(slow)), [speakAll]);
 
   return (
     <HeaderKeyboardAvoidingView>
@@ -124,9 +117,9 @@ export default function Conversation({ language, scenario, level }: Conversation
             canReplay={voice.canReplay}
             entries={session.entries}
             languageName={language.display_name}
-            onReplay={replay}
+            onReplay={session.replay}
             onSkipRetry={session.dismissRetryPrompt}
-            onTryRetry={tryRetry}
+            onTryRetry={voice.tryRetry}
             waiting={session.requestPhase === "waiting"}
           />
         )}

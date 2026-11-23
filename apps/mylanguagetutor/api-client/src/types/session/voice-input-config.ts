@@ -14,4 +14,6 @@ export interface VoiceInputConfig {
   privacyAcked: boolean;
   /** Keeps that the learner has read it. */
   ackPrivacy: () => void;
+  /** Puts the cursor in the typed answer. */
+  focusTypedAnswer: () => void;
 }

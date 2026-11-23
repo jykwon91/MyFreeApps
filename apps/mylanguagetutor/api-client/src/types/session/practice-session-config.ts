@@ -12,4 +12,6 @@ export interface PracticeSessionConfig {
   speak: (sentence: string) => void;
   /** Stop any speech in progress (a new turn barges in). */
   stopSpeaking: () => void;
+  /** Stop any speech, then read ``text`` from the start at ``rate`` (replaying a reply). */
+  speakAll: (text: string, rate: number) => void;
 }

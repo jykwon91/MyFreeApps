@@ -5,6 +5,7 @@ import { TurnRequestError } from "../errors/TurnRequestError";
 import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "../utils/turnRefusal";
 import { isConnectionLost } from "../utils/isConnectionLost";
 import { nextUtcMidnight } from "../utils/nextUtcMidnight";
+import { replayRate } from "../utils/replayRate";
 import { usageAnsweredSince } from "../utils/usageAnsweredSince";
 import { usageBlock } from "../utils/usageBlock";
 import { MAX_TURN_CHARS } from "../constants/turnLimits";
@@ -62,7 +63,7 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
-  const { languageCode, ttsLocale, scenarioSlug, level, streamTurn, speak, stopSpeaking } = config;
+  const { languageCode, ttsLocale, scenarioSlug, level, streamTurn, speak, stopSpeaking, speakAll } = config;
   const dispatch = useDispatch();
   const [createSession] = useCreateSessionMutation();
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -348,6 +349,8 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     watch(turn);
   }, [watch]);
 
+  const replay = useCallback((text: string, slow: boolean) => speakAll(text, replayRate(slow)), [speakAll]);
+
   const dismissFailure = useCallback(() => setFailure(null), []);
 
   const dismissRetryPrompt = useCallback(
@@ -359,6 +362,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     sessionId,
     entries,
     requestPhase,
+    busy: requestPhase !== "idle",
     failure: shownFailure,
     block,
     scenarioState,
@@ -366,6 +370,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     retry,
     interrupt,
     resume,
+    replay,
     dismissFailure,
     dismissRetryPrompt,
   };
