@@ -14,7 +14,8 @@ on:
       - '.github/workflows/ci-landing.yml'
   # A successful push run is what deploys the landing page (deploy-landing.yml
   # runs on workflow_run of this workflow), so every path that deploy ships is
-  # listed here, including the host Caddyfile sync script.
+  # listed here, including the host Caddyfile sync script and the deploy
+  # workflow itself.
   push:
     branches: [main]
     paths:
@@ -22,6 +23,7 @@ on:
       - 'infra/Caddyfile'
       - 'infra/sync-host-caddyfile.sh'
       - '.github/workflows/ci-landing.yml'
+      - '.github/workflows/deploy-landing.yml'
 
 permissions:
   contents: read

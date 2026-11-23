@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -1689,19 +1692,97 @@ _AUTO_DEPLOY_APPS = sorted(set(_APPS) - _NO_AUTO_DEPLOY)
 # Every production deploy that runs on its own: each auto-deploy app plus the
 # static landing page. Maps the deploy workflow to the CI workflow it waits on.
 _AUTO_DEPLOYS = {f"deploy-{app}": f"ci-{app}" for app in _AUTO_DEPLOY_APPS} | {"deploy-landing": "ci-landing"}
+_ALL_DEPLOYS = sorted({f"deploy-{app}" for app in _APPS} | {"deploy-landing"})
 _MAIN_CI_PASSED = (
     "github.event_name == 'workflow_dispatch' || "
     "(github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')"
 )
-_DEPLOY_SHA = "${{ github.event.workflow_run.head_sha || github.sha }}"
-_GATED = "steps.gate.outputs.deploy == 'true'"
+_CHOSEN = "${{ steps.gate.outputs.sha }}"
+
+# Stand-ins for the GitHub CLI and git, so the deploy's commit-choosing script
+# runs for real. `gh run list` prints $STUB_RUNS (one SHA per line, in the order
+# the API would list them). `gh api .../compare/BASE...HEAD` answers from
+# $STUB_ORDER, main's history oldest first: "ahead" when HEAD is newer.
+# Every call is logged to $STUB_LOG. git must not be needed at all.
+_STUB_GH = r"""#!/usr/bin/env bash
+echo "$*" >> "$STUB_LOG"
+[ -n "${STUB_LIST_FAIL:-}" ] && [ "$1" = run ] && { echo "HTTP 502" >&2; exit 1; }
+[ -n "${STUB_COMPARE_FAIL:-}" ] && [ "$1" = api ] && { echo "HTTP 404: Not Found" >&2; exit 1; }
+position() { n=0; for c in $STUB_ORDER; do [ "$c" = "$1" ] && { echo "$n"; return; }; n=$((n+1)); done; echo -1; }
+case "$1 $2" in
+  "run list") [ -n "$STUB_RUNS" ] && printf '%s\n' "$STUB_RUNS"; exit 0 ;;
+  "api repos/"*)
+    pair="${2##*/compare/}"; base=$(position "${pair%%...*}"); head=$(position "${pair##*...}")
+    if [ "$head" -gt "$base" ]; then echo ahead; elif [ "$head" -eq "$base" ]; then echo identical; else echo behind; fi ;;
+  *) echo "unexpected gh call: $*" >&2; exit 2 ;;
+esac
+"""
+_STUB_GIT = '#!/usr/bin/env bash\necho "git must not be called: $*" >&2\nexit 3\n'
+
+
+def _deploy_job(deploy: str) -> dict:
+    return _workflow(deploy)["jobs"]["deploy"]
+
+
+def _gate_step(deploy: str) -> dict:
+    return next(step for step in _deploy_job(deploy)["steps"] if step.get("id") == "gate")
+
+
+def _ssh_step(deploy: str) -> dict:
+    return next(step for step in _deploy_job(deploy)["steps"] if step.get("uses", "").startswith("appleboy/ssh-action@"))
+
+
+def _code_lines(text: str) -> list[str]:
+    return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+
+
+def _run_gate(
+    deploy: str,
+    tmp_path: Path,
+    *,
+    event: str = "workflow_run",
+    head: str = "",
+    runs: list[str] | None = None,
+    order: str = "",
+    **flags: str,
+) -> tuple[subprocess.CompletedProcess[str], str, str]:
+    """Run the deploy's "Choose the commit to deploy" script under bash -e with
+    the stubs on PATH. Returns the process, the chosen sha and the gh call log."""
+    gate = _gate_step(deploy)
+    assert "${{" not in gate["run"], "The gate script must read its inputs from env, not expressions."
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    for name, body in (("gh", _STUB_GH), ("git", _STUB_GIT)):
+        (stubs / name).write_text(body, encoding="utf-8")
+        (stubs / name).chmod(0o755)
+    script = tmp_path / "gate.sh"
+    script.write_text(gate["run"], encoding="utf-8")
+    output, log = tmp_path / "output", tmp_path / "log"
+    output.touch()
+    log.touch()
+    env = {
+        "PATH": f"{stubs}{os.pathsep}/usr/bin{os.pathsep}/bin",
+        "GITHUB_EVENT_NAME": event,
+        "GITHUB_SHA": "mainhead",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "GITHUB_OUTPUT": str(output),
+        "GH_TOKEN": "token",
+        "HEAD_SHA": head,
+        "STUB_RUNS": "\n".join(runs or []),
+        "STUB_ORDER": order,
+        "STUB_LOG": str(log),
+        **flags,
+    }
+    proc = subprocess.run([shutil.which("bash") or "bash", "-e", str(script)], env=env, capture_output=True, text=True, check=False)
+    chosen = dict(line.split("=", 1) for line in output.read_text().splitlines()).get("sha", "")
+    return proc, chosen, log.read_text()
 
 
 class TestDeployRunsOnlyAfterMainCiPasses:
     """PRs merge without being rebased on the latest main, so two PRs can each
     pass CI alone and break once combined. The CI run on main is the first to
     test the combination, so production may deploy a commit only after that
-    run passed, and must deploy exactly the commit it tested."""
+    run passed, and must deploy exactly a commit that passed it."""
 
     @pytest.mark.parametrize(("deploy", "ci"), sorted(_AUTO_DEPLOYS.items()))
     def test_deploy_waits_for_the_apps_ci_on_main(self, deploy: str, ci: str) -> None:
@@ -1718,54 +1799,108 @@ class TestDeployRunsOnlyAfterMainCiPasses:
 
     @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
     def test_deploy_job_needs_a_successful_push_run(self, deploy: str) -> None:
-        assert _workflow(deploy)["jobs"]["deploy"].get("if") == _MAIN_CI_PASSED, (
+        assert _deploy_job(deploy).get("if") == _MAIN_CI_PASSED, (
             f"{deploy}.yml's deploy job must run only for the manual button or a successful CI "
             f"run for a push to main — workflow_run also fires on failed runs and on PR runs."
         )
 
+    @pytest.mark.parametrize("deploy", _ALL_DEPLOYS)
+    def test_concurrency_is_on_the_job(self, deploy: str) -> None:
+        """Workflow-level concurrency is taken before the job's `if:` runs, so a run
+        from a failed CI run would cancel a pending real deploy and then skip itself."""
+        assert "concurrency" not in _workflow(deploy), f"{deploy}.yml must not set workflow-level concurrency."
+        assert _deploy_job(deploy).get("concurrency") == {
+            "group": deploy,
+            "cancel-in-progress": False,
+        }, f"{deploy}.yml's deploy job must hold the `{deploy}` concurrency group without cancelling."
+
     @pytest.mark.parametrize("app", _APPS)
-    def test_deploy_builds_and_ships_the_tested_commit(self, app: str) -> None:
+    def test_everything_builds_and_ships_the_chosen_commit(self, app: str) -> None:
         """Under workflow_run, github.sha is main's current head, which may be newer
-        and untested. Everything must use the commit the CI run tested."""
-        wf = _workflow(f"deploy-{app}")
-        assert wf["env"]["DEPLOY_SHA"] == _DEPLOY_SHA, (
-            f"deploy-{app}.yml must define DEPLOY_SHA once as {_DEPLOY_SHA}. Re-render from deploy.yml.j2."
-        )
-        steps = wf["jobs"]["deploy"]["steps"]
+        and untested. Every step must use the one commit the gate chose."""
+        deploy = f"deploy-{app}"
+        wf = _workflow(deploy)
+        assert "env" not in wf, f"{deploy}.yml: the gate step's output is the only definition of the commit."
+        steps = _deploy_job(deploy)["steps"]
+        assert steps[0].get("id") == "gate", f"{deploy}.yml must choose the commit before anything else."
         checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
-        assert checkout.get("with", {}).get("ref") == "${{ env.DEPLOY_SHA }}", (
-            f"deploy-{app}.yml must check out DEPLOY_SHA, not main's head."
-        )
-        lines = _read(".github", "workflows", f"deploy-{app}.yml").replace(_DEPLOY_SHA, "").splitlines()
-        source = "\n".join(line for line in lines if not line.lstrip().startswith("#"))
-        assert "github.sha" not in source, (
-            f"deploy-{app}.yml uses github.sha outside DEPLOY_SHA; use ${{{{ env.DEPLOY_SHA }}}}."
-        )
+        assert checkout.get("with", {}).get("ref") == _CHOSEN, f"{deploy}.yml must check out the chosen commit."
+        code = "\n".join(_code_lines(_read(".github", "workflows", f"{deploy}.yml")))
+        assert "github.sha" not in code, f"{deploy}.yml uses github.sha; use {_CHOSEN}."
         if _uses_registry_images(app):
             for image in ("backend", "caddy"):
-                assert f"myfreeapps-{app}-{image}:${{{{ env.DEPLOY_SHA }}}}" in source
-            assert "IMAGE_TAG: ${{ env.DEPLOY_SHA }}" in source
+                assert f"myfreeapps-{app}-{image}:{_CHOSEN}" in code
+            assert f"GIT_COMMIT={_CHOSEN}" in code
+            assert _ssh_step(deploy)["env"]["IMAGE_TAG"] == _CHOSEN
 
-    @pytest.mark.parametrize("app", _AUTO_DEPLOY_APPS)
-    def test_older_commit_never_ships_over_a_newer_one(self, app: str) -> None:
-        """Re-running an older commit's CI fires the deploy again. If a newer commit
-        has already passed, shipping the older one would roll production back."""
-        job = _workflow(f"deploy-{app}")["jobs"]["deploy"]
-        gate, *rest = job["steps"]
-        assert gate.get("id") == "gate", f"deploy-{app}.yml must start with the newer-commit check."
-        assert f"--workflow ci-{app}.yml" in gate["run"]
-        assert "--branch main --event push --status success" in gate["run"]
-        assert '[ "$STATUS" = "ahead" ]' in gate["run"]
-        assert job["permissions"].get("actions") == "read", "`gh run list` needs actions: read."
-        ungated = [step["name"] for step in rest if step.get("if") != _GATED]
-        assert not ungated, f"deploy-{app}.yml steps {ungated} must be skipped when the check says not to deploy."
+    @pytest.mark.parametrize("deploy", _ALL_DEPLOYS)
+    def test_vps_fast_forwards_to_the_chosen_commit(self, deploy: str) -> None:
+        """The box's checkout supplies the compose file and host Caddyfile. Pulling
+        would move it to main's head, which may not have passed CI."""
+        ssh = _ssh_step(deploy)
+        assert ssh["env"]["DEPLOY_SHA"] == _CHOSEN, f"{deploy}.yml must pass the chosen commit to the box."
+        assert "DEPLOY_SHA" in ssh["with"]["envs"].split(","), f"{deploy}.yml must forward DEPLOY_SHA via envs."
+        script = [line.strip() for line in _code_lines(ssh["with"]["script"])]
+        assert not any("git pull" in line for line in script), f"{deploy}.yml must never `git pull` on the box."
+        fetch, merge = "git fetch origin main", 'git merge --ff-only "$DEPLOY_SHA"'
+        assert fetch in script and merge in script and script.index(fetch) < script.index(merge), (
+            f"{deploy}.yml must `{fetch}` then `{merge}` on the box."
+        )
+
+    def test_landing_chooses_its_commit_like_the_apps(self) -> None:
+        app = _AUTO_DEPLOY_APPS[0]
+        app_gate, landing_gate = _gate_step(f"deploy-{app}"), _gate_step("deploy-landing")
+        assert landing_gate["run"] == app_gate["run"].replace(f"ci-{app}.yml", "ci-landing.yml")
+        assert landing_gate["env"] == app_gate["env"]
+        assert _deploy_job("deploy-landing")["permissions"] == {"contents": "read", "actions": "read"}
+
+    @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
+    def test_gate_moves_to_a_newer_passed_commit(self, deploy: str, tmp_path: Path) -> None:
+        proc, chosen, log = _run_gate(deploy, tmp_path, head="a", runs=["c", "b", "a"], order="a b c")
+        assert proc.returncode == 0, proc.stderr
+        assert chosen == "c", "A newer commit that passed the same CI must be deployed instead."
+        ci = _AUTO_DEPLOYS[deploy]
+        assert f"run list --repo owner/repo --workflow {ci}.yml --branch main --event push --status success" in log
+
+    @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
+    def test_gate_deploys_the_tested_commit_when_it_is_newest(self, deploy: str, tmp_path: Path) -> None:
+        proc, chosen, _ = _run_gate(deploy, tmp_path, head="c", runs=["c", "b", "a"], order="a b c")
+        assert proc.returncode == 0, proc.stderr
+        assert chosen == "c"
+
+    @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
+    def test_gate_ignores_list_order_on_a_rerun(self, deploy: str, tmp_path: Path) -> None:
+        """A re-run of an old commit's CI can be listed first. The gate must still
+        land on the newest commit, never the re-run one."""
+        proc, chosen, _ = _run_gate(deploy, tmp_path, head="b", runs=["b", "a", "d", "c"], order="a b c d")
+        assert proc.returncode == 0, proc.stderr
+        assert chosen == "d"
+
+    @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
+    @pytest.mark.parametrize(
+        ("flags", "runs"),
+        [({}, []), ({"STUB_LIST_FAIL": "1"}, ["a"]), ({"STUB_COMPARE_FAIL": "1"}, ["a"])],
+        ids=["no-runs", "list-fails", "compare-fails"],
+    )
+    def test_gate_fails_closed(self, deploy: str, flags: dict[str, str], runs: list[str], tmp_path: Path) -> None:
+        proc, chosen, _ = _run_gate(deploy, tmp_path, head="a", runs=runs, order="a", **flags)
+        assert proc.returncode != 0, "The deploy must fail, not guess, when the runs can't be read."
+        assert "::error::" in proc.stdout
+        assert chosen == ""
+
+    @pytest.mark.parametrize("deploy", _ALL_DEPLOYS)
+    def test_manual_dispatch_deploys_the_commit_it_was_started_on(self, deploy: str, tmp_path: Path) -> None:
+        proc, chosen, log = _run_gate(deploy, tmp_path, event="workflow_dispatch", STUB_LIST_FAIL="1")
+        assert proc.returncode == 0, proc.stderr
+        assert chosen == "mainhead"
+        assert log == "", "A manual deploy is not retargeted, so it must not query runs."
 
     @pytest.mark.parametrize("app", sorted(_NO_AUTO_DEPLOY))
-    def test_manual_only_app_has_no_auto_trigger_or_gate(self, app: str) -> None:
+    def test_manual_only_app_has_no_auto_trigger(self, app: str) -> None:
         wf = _workflow(f"deploy-{app}")
         assert set(wf["on"]) == {"workflow_dispatch"}
         assert "if" not in wf["jobs"]["deploy"]
-        assert all(step.get("id") != "gate" for step in wf["jobs"]["deploy"]["steps"])
+        assert "actions" not in wf["jobs"]["deploy"]["permissions"]
 
 
 class TestMobileOnlyChangesDontDeployWeb:
@@ -1784,7 +1919,13 @@ class TestMobileOnlyChangesDontDeployWeb:
 
     def test_landing_ci_covers_everything_its_deploy_ships(self) -> None:
         paths = _workflow("ci-landing")["on"]["push"]["paths"]
-        for shipped in ("sites/landing/**", "infra/Caddyfile", "infra/sync-host-caddyfile.sh"):
+        shipped_paths = (
+            "sites/landing/**",
+            "infra/Caddyfile",
+            "infra/sync-host-caddyfile.sh",
+            ".github/workflows/deploy-landing.yml",
+        )
+        for shipped in shipped_paths:
             assert shipped in paths, f"ci-landing.yml push paths must include {shipped}, or a change to it never deploys."
 
 

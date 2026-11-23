@@ -7,7 +7,8 @@ name: Deploy MyLanguageTutor
 on:
   # Manual "Run workflow" button — always available so any app can be
   # deployed on demand, even when auto-deploy is off. Deploys the commit the
-  # run was started on.
+  # run was started on (github.sha) as-is: it is the operator's override, so
+  # it is not retargeted.
   workflow_dispatch:
   # Auto-deploy. Rendered ONLY when `automated_deploy` is truthy in
   # apps/<slug>/app.yaml. A missing key defaults to enabled. Set
@@ -19,23 +20,19 @@ on:
   # combination. Triggering on `push` would ship that combination before its
   # CI finished.
   #
-  # The CI workflow's push `paths:` (apps/<slug>/** and packages/**, minus
-  # mobile, plus the root npm manifest + lockfile) decide which commits get
-  # here; mobile-only changes do not run it, so they do not redeploy.
+  # The CI workflow's push `paths:` decide which commits get here:
+  # apps/<slug>/** and packages/**, minus the app's mobile/ and
+  # packages/shared-mobile/, so a mobile-only change does not redeploy. The
+  # root package.json + package-lock.json stay in: the web images `npm ci`
+  # from them, so a web dependency fix must deploy. The cost is that a
+  # mobile-only dependency bump, which also edits the root lockfile, redeploys.
+  #
+  # A commit pushed with `[skip ci]` skips CI, so it no longer deploys either.
+  # The next commit that passes CI ships it.
   workflow_run:
     workflows: ["MyLanguageTutor CI"]
     types: [completed]
     branches: [main]
-
-env:
-  # The commit to build and ship. Under workflow_run, github.sha is main's
-  # CURRENT head — possibly a newer, untested commit — so use the commit the
-  # CI run actually tested. Manual dispatch has no CI run: use github.sha.
-  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-concurrency:
-  group: deploy-mylanguagetutor
-  cancel-in-progress: false
 
 jobs:
   # ONE job: build + push images, then SSH-deploy, on the same runner.
@@ -48,43 +45,64 @@ jobs:
     # run (cancelled = superseded by a newer pending run in the CI
     # concurrency group) deploys nothing; the newer run deploys when it passes.
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
+    # or PR CI run) must never take the slot and cancel a pending real deploy.
+    concurrency:
+      group: deploy-mylanguagetutor
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
-      # `gh run list` in the newer-commit check below.
+      # `gh run list` in the target step below.
       actions: read
 
     steps:
-      # Never ship an older commit over a newer one. Re-running an older
-      # commit's CI (e.g. retrying a flaky run) fires this workflow again. If
-      # a newer commit has since passed CI, it has been or will be deployed and
-      # already contains this one; deploying this one would roll production
-      # back to code older than the schema it has migrated to.
-      - name: Skip if a newer commit has passed CI
+      # Pick the ONE commit this run deploys; every later step uses
+      # steps.gate.outputs.sha. Under workflow_run, github.sha is main's
+      # current head — possibly untested — so start from the commit the CI
+      # run tested, then move to the newest commit that has since passed the
+      # same CI on main and contains it. Re-running an older commit's CI
+      # therefore deploys the newest passed commit instead of rolling
+      # production back past migrations already applied, whatever order the
+      # runs are listed in. Any listing or API failure fails the deploy.
+      - name: Choose the commit to deploy
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" != "workflow_run" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          TARGET="$GITHUB_SHA"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+            TARGET="$HEAD_SHA"
+            if ! RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci-mylanguagetutor.yml \
+                --branch main --event push --status success --limit 20 --json headSha --jq '.[].headSha'); then
+              echo "::error::Could not list successful main runs of ci-mylanguagetutor.yml; not deploying."
+              exit 1
+            fi
+            if [ -z "$RUNS" ]; then
+              echo "::error::No successful main run of ci-mylanguagetutor.yml found (expected at least $TARGET); not deploying."
+              exit 1
+            fi
+            for SHA in $RUNS; do
+              if ! STATUS=$(gh api "repos/$GITHUB_REPOSITORY/compare/$TARGET...$SHA" --jq .status); then
+                echo "::error::Could not compare $TARGET with $SHA; not deploying."
+                exit 1
+              fi
+              if [ "$STATUS" = "ahead" ]; then
+                TARGET="$SHA"
+              fi
+            done
+            if [ "$TARGET" != "$HEAD_SHA" ]; then
+              echo "::notice::$TARGET passed CI after $HEAD_SHA and contains it; deploying $TARGET."
+            fi
           fi
-          LATEST=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci-mylanguagetutor.yml \
-            --branch main --event push --status success --limit 1 --json headSha --jq '.[0].headSha')
-          STATUS=$(gh api "repos/$GITHUB_REPOSITORY/compare/$DEPLOY_SHA...$LATEST" --jq .status)
-          if [ "$STATUS" = "ahead" ]; then
-            echo "::notice::$LATEST passed CI after $DEPLOY_SHA and contains it, so this older commit is not deployed."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          fi
+          echo "sha=$TARGET" >> "$GITHUB_OUTPUT"
 
       - name: Checkout code
-        if: steps.gate.outputs.deploy == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.DEPLOY_SHA }}
+          ref: ${{ steps.gate.outputs.sha }}
 
       # Build images on the GitHub runner (fast, layer-cached via type=gha) and
       # push to GHCR. The VPS step below PULLS these prebuilt images instead of
@@ -94,11 +112,9 @@ jobs:
       # `IMAGE_TAG=<old-sha> docker compose up -d`) plus :latest. GHCR
       # namespace = the repo owner (jykwon91).
       - name: Set up Docker Buildx
-        if: steps.gate.outputs.deploy == 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GHCR
-        if: steps.gate.outputs.deploy == 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
@@ -106,29 +122,27 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
-        if: steps.gate.outputs.deploy == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/mylanguagetutor/docker/backend.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:${{ env.DEPLOY_SHA }}
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:${{ steps.gate.outputs.sha }}
             ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:latest
           build-args: |
-            GIT_COMMIT=${{ env.DEPLOY_SHA }}
+            GIT_COMMIT=${{ steps.gate.outputs.sha }}
           cache-from: type=gha,scope=mylanguagetutor-backend
           cache-to: type=gha,mode=max,scope=mylanguagetutor-backend
 
       - name: Build and push caddy image
-        if: steps.gate.outputs.deploy == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/mylanguagetutor/docker/caddy.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:${{ env.DEPLOY_SHA }}
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:${{ steps.gate.outputs.sha }}
             ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:latest
           # VITE_* values are inlined into the frozen bundle at build time. They
           # now come from GitHub Actions variables (public values — the Turnstile
@@ -141,20 +155,21 @@ jobs:
           cache-to: type=gha,mode=max,scope=mylanguagetutor-caddy
 
       - name: Deploy to VPS
-        if: steps.gate.outputs.deploy == 'true'
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
-          # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
-          # exact images the build steps above just pushed; GHCR_* authenticate
-          # the VPS to pull the (private) packages.
-          IMAGE_TAG: ${{ env.DEPLOY_SHA }}
+          # Forwarded into the remote script via `envs:` below. DEPLOY_SHA is
+          # the commit the checkout on the box fast-forwards to.
+          DEPLOY_SHA: ${{ steps.gate.outputs.sha }}
+          # IMAGE_TAG pins the exact images the build steps above just pushed;
+          # GHCR_* authenticate the VPS to pull the (private) packages.
+          IMAGE_TAG: ${{ steps.gate.outputs.sha }}
           GHCR_USER: ${{ github.repository_owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          envs: DEPLOY_SHA,IMAGE_TAG,GHCR_USER,GHCR_TOKEN
           # Generous: deploys are serialized via the flock below, so a
           # later app can wait through several earlier app deploys before
           # its own runs. 10m was too tight once deploys serialize.
@@ -163,7 +178,7 @@ jobs:
             set -e
 
             # Serialize deploys across ALL apps on this shared VPS.
-            # Every app's deploy SSHes here and `git pull`s the SAME
+            # Every app's deploy SSHes here and fast-forwards the SAME
             # /srv/myfreeapps checkout; a `packages/**` change fans out
             # to every app's deploy workflow at once. Without this lock
             # they race on the shared git refs — observed failures:
@@ -184,8 +199,13 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Pull latest code ---"
-            git pull --ff-only
+            echo "--- Fast-forward the checkout to the deploy commit ---"
+            # Never `git pull`: main's head may not have passed CI yet. The
+            # compose file and host Caddyfile used below come from this
+            # checkout. A no-op when it is already past DEPLOY_SHA (another
+            # deploy shipped a newer passed commit), so it never moves back.
+            git fetch origin main
+            git merge --ff-only "$DEPLOY_SHA"
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/mylanguagetutor/.env || {

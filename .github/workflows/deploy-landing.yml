@@ -2,8 +2,9 @@ name: Deploy landing page
 
 # Deploys the static myfreeapps.org landing page (sites/landing/public/) and
 # the shared host Caddyfile. Host Caddy serves the page directly from the
-# /srv/myfreeapps checkout, so a deploy is just: pull, sync + reload host
-# Caddy if infra/Caddyfile changed, then verify the page serves over TLS.
+# /srv/myfreeapps checkout, so a deploy is just: fast-forward that checkout to
+# the commit Landing CI tested, sync + reload host Caddy if infra/Caddyfile
+# changed, then verify the page serves over TLS.
 # No images, no containers.
 #
 # Also the path by which an infra/Caddyfile-only change reaches the VPS —
@@ -14,28 +15,75 @@ on:
   # Auto-deploy only after Landing CI passes on main, never straight off a
   # push: PRs merge without being rebased on the latest main, so the main run
   # is the first to test the combination. Landing CI's push `paths:` decide
-  # which commits get here.
+  # which commits get here. A commit pushed with `[skip ci]` skips CI, so it no
+  # longer deploys either; the next commit that passes CI ships it. The manual
+  # button deploys the commit it was started on, not retargeted.
   workflow_run:
     workflows: ["Landing CI"]
     types: [completed]
     branches: [main]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: deploy-landing
-  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     # Only a CI run for a push to main that SUCCEEDED.
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # Job-level, NOT workflow-level: a run whose `if:` skips the job (a failed
+    # or PR CI run) must never take the slot and cancel a pending real deploy.
+    concurrency:
+      group: deploy-landing
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      # `gh run list` in the target step below.
+      actions: read
     steps:
+      # Pick the ONE commit this run deploys: the commit Landing CI tested,
+      # moved to the newest commit that has since passed Landing CI on main
+      # and contains it, so re-running an older run never ships older files.
+      # Same logic as the app deploys (infra/templates/.github/workflows/
+      # deploy.yml.j2). Any listing or API failure fails the deploy.
+      - name: Choose the commit to deploy
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          TARGET="$GITHUB_SHA"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+            TARGET="$HEAD_SHA"
+            if ! RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci-landing.yml \
+                --branch main --event push --status success --limit 20 --json headSha --jq '.[].headSha'); then
+              echo "::error::Could not list successful main runs of ci-landing.yml; not deploying."
+              exit 1
+            fi
+            if [ -z "$RUNS" ]; then
+              echo "::error::No successful main run of ci-landing.yml found (expected at least $TARGET); not deploying."
+              exit 1
+            fi
+            for SHA in $RUNS; do
+              if ! STATUS=$(gh api "repos/$GITHUB_REPOSITORY/compare/$TARGET...$SHA" --jq .status); then
+                echo "::error::Could not compare $TARGET with $SHA; not deploying."
+                exit 1
+              fi
+              if [ "$STATUS" = "ahead" ]; then
+                TARGET="$SHA"
+              fi
+            done
+            if [ "$TARGET" != "$HEAD_SHA" ]; then
+              echo "::notice::$TARGET passed CI after $HEAD_SHA and contains it; deploying $TARGET."
+            fi
+          fi
+          echo "sha=$TARGET" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          # Forwarded into the remote script via `envs:` below.
+          DEPLOY_SHA: ${{ steps.gate.outputs.sha }}
         with:
+          envs: DEPLOY_SHA
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -44,7 +92,7 @@ jobs:
           script: |
             set -e
 
-            # Same lock as every deploy-<app>.yml — they all `git pull` the one
+            # Same lock as every deploy-<app>.yml — they all fast-forward the one
             # shared /srv/myfreeapps checkout and would race on its refs.
             exec 9>/tmp/myfreeapps-deploy.lock
             if ! flock -w 1500 9; then
@@ -54,8 +102,11 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Pull latest code ---"
-            git pull --ff-only
+            echo "--- Fast-forward the checkout to the deploy commit ---"
+            # Never `git pull`: main's head may not have passed CI yet. A no-op
+            # when the checkout is already past DEPLOY_SHA, so it never moves back.
+            git fetch origin main
+            git merge --ff-only "$DEPLOY_SHA"
 
             echo "--- Update host Caddyfile ---"
             sudo bash infra/sync-host-caddyfile.sh
