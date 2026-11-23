@@ -129,7 +129,9 @@ async def generate_advice(
     message = await tax_advisor_claude.ask_tax_advisor(
         model=MODEL_VERSION, tax_data_json=json.dumps(tax_data, cls=_DecimalEncoder, indent=2),
     )
-    first_block = message.content[0]
+    # An empty reply (a refusal can end with no blocks) reads like one with no
+    # text: indexing it would raise an IndexError the route echoes as a 404.
+    first_block = message.content[0] if message.content else None
     raw_text = first_block.text.strip() if isinstance(first_block, anthropic.types.TextBlock) else ""
     input_tokens: int | None = message.usage.input_tokens if message.usage else None
     output_tokens: int | None = message.usage.output_tokens if message.usage else None

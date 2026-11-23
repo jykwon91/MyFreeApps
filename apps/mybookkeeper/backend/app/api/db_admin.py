@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 
 from app.core.config import settings
+from app.core.db_admin_query_error import DbAdminQueryError
 from app.core.rate_limit import admin_db_key_failure_limiter
 from app.core.request_utils import get_client_ip
 from app.core.security import admin_api_key_matches
@@ -77,8 +78,8 @@ async def run_query(
     """Execute a read-only SQL query. SELECT only, max 200 rows."""
     try:
         return await db_admin_service.run_readonly_query(body.sql)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except DbAdminQueryError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/reassign-property", response_model=BulkUpdateResponse)

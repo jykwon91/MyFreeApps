@@ -19,6 +19,7 @@ import datetime as _dt
 import uuid
 
 import pytest
+from platform_shared.core.encrypted_column_decrypt_error import EncryptedColumnDecryptError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -152,12 +153,12 @@ class TestEncryptedStringErrorPaths:
         et = EncryptedString(255)
         assert et.process_result_value(None, dialect=None) is None  # type: ignore[arg-type]
 
-    def test_tampered_ciphertext_raises_value_error(self) -> None:
+    def test_tampered_ciphertext_raises_decrypt_error(self) -> None:
         et = EncryptedString(255)
         # Encrypt a known plaintext, then tamper with the trailing char.
         good = encrypt_pii("hello")
         bad = good[:-2] + ("A" if good[-2] != "A" else "B") + good[-1]
-        with pytest.raises(ValueError, match="Failed to decrypt EncryptedString"):
+        with pytest.raises(EncryptedColumnDecryptError, match="Failed to decrypt EncryptedString"):
             et.process_result_value(bad, dialect=None)  # type: ignore[arg-type]
 
     def test_round_trip_via_module_helpers(self) -> None:

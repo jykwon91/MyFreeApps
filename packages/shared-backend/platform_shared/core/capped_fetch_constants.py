@@ -27,3 +27,7 @@ ACCEPT_ENCODING: Final = "gzip, deflate"
 
 # The logger httpx writes its per-request ``HTTP Request: ...`` line to.
 HTTPX_LOGGER_NAME: Final = "httpx"
+
+# Decodes a body whose response named no charset, or one Python can't use to
+# turn bytes into text with replacement (``idna``, ``rot13``, ``base64``...).
+FALLBACK_TEXT_ENCODING: Final = "utf-8"

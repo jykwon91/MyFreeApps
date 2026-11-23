@@ -86,7 +86,10 @@ def _office_zip_type(content: bytes) -> str | None:
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
             names = set(archive.namelist())
-    except zipfile.BadZipFile:
+    # A damaged archive raises more than BadZipFile: a name flagged UTF-8 that
+    # isn't raises UnicodeDecodeError, a cut-off header EOFError. Upload routes
+    # map ValueError to a reply, so the codec's text would be what users see.
+    except (zipfile.BadZipFile, ValueError, EOFError):
         return None
     if _DOCX_MAIN_PART in names:
         return DOCX_MIME

@@ -98,7 +98,12 @@ def validate_url(url: str) -> Any:
     """
     if not isinstance(url, str) or not url.strip():
         raise ValueError("url must be a non-empty string")
-    parsed = urlparse(url.strip())
+    try:
+        parsed = urlparse(url.strip())
+    except ValueError as exc:
+        # urllib's own text for a malformed bracketed host
+        # (``http://[zz]/``) quotes the input; this is what the caller sees.
+        raise ValueError("url is not well formed") from exc
     if parsed.scheme not in ("http", "https"):
         raise ValueError(f"url scheme must be http or https, got {parsed.scheme!r}")
     if not parsed.netloc:

@@ -9,6 +9,8 @@ those are payee names and file names, and log lines reach Sentry.
 """
 import logging
 
+from app.core.db_admin_query_error import DbAdminQueryError
+from app.core.db_admin_query_messages import UNREADABLE_RESULT_MESSAGE
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import db_admin_repo
 from app.schemas.system.db_admin import (
@@ -24,9 +26,17 @@ logger = logging.getLogger(__name__)
 
 
 async def run_readonly_query(sql: str) -> DbQueryResponse:
-    """Execute a read-only SQL query. Raises ValueError for rejected SQL."""
+    """Execute a read-only SQL query.
+
+    Raises ``DbAdminQueryError`` for rejected SQL and for a result row holding
+    a value the driver can't turn into Python (its ValueError quotes the value).
+    """
     async with AsyncSessionLocal() as db:
-        columns, rows = await db_admin_repo.execute_readonly_query(db, sql)
+        try:
+            columns, rows = await db_admin_repo.execute_readonly_query(db, sql)
+        except ValueError as exc:
+            logger.warning("ADMIN_DB query result could not be read: %s", exc)
+            raise DbAdminQueryError(UNREADABLE_RESULT_MESSAGE) from exc
     return DbQueryResponse(columns=columns, rows=rows, row_count=len(rows))
 
 

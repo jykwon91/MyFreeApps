@@ -29,6 +29,12 @@ def _zip(member: str) -> bytes:
     return buf.getvalue()
 
 
+def _zip_with_bad_utf8_name() -> bytes:
+    """A zip whose member name is flagged UTF-8 but isn't: ``namelist`` raises UnicodeDecodeError."""
+    good = _zip("word/caf\u00e9.xml")
+    return good.replace("caf\u00e9".encode(), b"caf\xff\xfe")
+
+
 def _gif() -> bytes:
     buf = io.BytesIO()
     Image.new("RGB", (8, 8)).save(buf, format="GIF")
@@ -60,6 +66,9 @@ class TestSniffContentType:
 
     def test_a_truncated_zip(self) -> None:
         assert sniff_content_type(b"PK\x03\x04garbage") is None
+
+    def test_a_zip_with_a_name_that_isnt_utf8(self) -> None:
+        assert sniff_content_type(_zip_with_bad_utf8_name()) is None
 
     def test_plain_text(self) -> None:
         assert sniff_content_type(b"Hello world\nplain text here") == "text/plain"
@@ -128,3 +137,9 @@ class TestCleanAttachment:
         with pytest.raises(UnsupportedAttachmentType) as exc:
             clean_attachment(b"MZ\x90\x00\x03\x00\x00\x00", _ALL)
         assert exc.value.sniffed is None
+
+    def test_a_zip_with_a_name_that_isnt_utf8_is_rejected_without_codec_text(self) -> None:
+        with pytest.raises(UnsupportedAttachmentType) as exc:
+            clean_attachment(_zip_with_bad_utf8_name(), _ALL)
+        assert exc.value.sniffed is None
+        assert "codec" not in str(exc.value)

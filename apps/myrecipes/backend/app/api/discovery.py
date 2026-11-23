@@ -25,6 +25,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
+from platform_shared.api.unsafe_url_http import unsafe_url_http_exception
 from platform_shared.core.url_safety import UnsafeURLError
 
 from app.core.auth import current_active_user
@@ -79,7 +80,7 @@ async def read_recipe(
     try:
         return await discovery_service.read_recipe(payload.url, payload.title)
     except UnsafeURLError as exc:
-        raise HTTPException(status_code=400, detail="That URL can't be opened.") from exc
+        raise unsafe_url_http_exception(exc) from exc
     except discovery_service.DiscoveryUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except discovery_service.DiscoveryFailedError as exc:

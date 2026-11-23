@@ -51,6 +51,8 @@ from typing import Any
 from platform_shared.core.loggable_url import loggable_url
 from platform_shared.core.model_output_log import describe_model_output
 from platform_shared.extraction import ExtractionError
+from platform_shared.core.url_safety import UnsafeURLError
+from platform_shared.core.url_safety_messages import UNSAFE_URL_DETAIL
 from platform_shared.repositories.soft_delete import soft_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -185,6 +187,14 @@ async def analyze(
                 user_id, loggable_url(source_url), exc,
             )
             raise JobAnalysisError(str(exc)) from exc
+        except UnsafeURLError as exc:
+            # The guard's reason names the host and the address it resolved
+            # to, which maps the server's network: logged, not sent.
+            logger.warning(
+                "Job posting URL refused: user_id=%s url=%s err=%s",
+                user_id, loggable_url(source_url), exc,
+            )
+            raise JobAnalysisInvalidUrlError(UNSAFE_URL_DETAIL) from exc
         except ValueError as exc:
             raise JobAnalysisInvalidUrlError(str(exc)) from exc
         resolved_jd_text = join_extracted_text(extracted)

@@ -24,7 +24,7 @@ Why this lives here rather than on each model:
       will migrate v1 → v2 once a second key family is introduced.
 
 Tampered ciphertext raises ``cryptography.fernet.InvalidToken`` from the
-underlying Fernet library — surfaced as a clear ``ValueError`` by the shared
+underlying Fernet library — surfaced as ``EncryptedColumnDecryptError`` by the shared
 TypeDecorator so callers don't have to import ``cryptography`` to catch it.
 """
 from __future__ import annotations

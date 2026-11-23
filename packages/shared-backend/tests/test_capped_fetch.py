@@ -78,6 +78,21 @@ class TestSuccess:
         assert result.truncated is False
         assert result.url == _URL
 
+    @pytest.mark.parametrize("charset", ["idna", "rot13", "base64", "undefined"])
+    async def test_charset_that_cannot_decode_text_falls_back_to_utf8(
+        self, charset: str,
+    ) -> None:
+        handler = _Recorder(
+            lambda r: streamed_response(
+                200,
+                content="café".encode("utf-8"),
+                headers={"content-type": f"text/html; charset={charset}"},
+            )
+        )
+        async with _client(handler) as client:
+            result = await fetch_capped(client, _URL, max_bytes=100, total_timeout_seconds=2.0)
+        assert result.text == "café"
+
     async def test_body_exactly_at_cap_is_accepted(self) -> None:
         handler = _Recorder(lambda r: streamed_response(200, content=b"x" * 10))
         async with _client(handler) as client:
@@ -374,6 +389,15 @@ class TestSSRF:
         )
         with pytest.raises(UnsafeURLError):
             await _fetch(handler)
+        assert handler.urls == [_URL]
+
+    async def test_malformed_redirect_target_is_refused_without_urllib_text(self) -> None:
+        # httpx accepts this Location (it escapes the bracket); urljoin raises
+        # "Invalid IPv6 URL" on it.
+        handler = _Recorder(lambda r: httpx.Response(302, headers={"location": "http://a]b/"}))
+        with pytest.raises(UnsafeURLError) as exc_info:
+            await _fetch(handler)
+        assert str(exc_info.value) == "url is not well formed"
         assert handler.urls == [_URL]
 
 

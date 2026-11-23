@@ -102,9 +102,11 @@ def find_jobposting_schema(soup: BeautifulSoup) -> dict | None:
             continue
         try:
             data = json.loads(raw)
-        except json.JSONDecodeError:
-            # Some sites have multiple concatenated JSON blocks. Skip the
-            # block silently — Tier 2 (Claude) will catch the content.
+        except ValueError:
+            # Some sites have multiple concatenated JSON blocks, and an
+            # integer past Python's digit limit raises a plain ValueError
+            # rather than JSONDecodeError. Skip the block silently — Tier 2
+            # (Claude) will catch the content.
             continue
 
         candidates = _flatten_ld_candidates(data)

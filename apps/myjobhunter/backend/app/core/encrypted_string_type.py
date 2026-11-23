@@ -19,7 +19,7 @@ Why this lives here rather than on each model:
       happens to match.
 
 Tampered ciphertext raises ``cryptography.fernet.InvalidToken`` from the
-underlying Fernet library — surfaced as a clear ``ValueError`` by the shared
+underlying Fernet library — surfaced as ``EncryptedColumnDecryptError`` by the shared
 TypeDecorator so callers don't have to import ``cryptography`` to catch it.
 """
 from __future__ import annotations

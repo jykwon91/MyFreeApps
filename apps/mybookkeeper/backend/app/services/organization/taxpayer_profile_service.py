@@ -3,6 +3,8 @@ import logging
 import uuid
 
 from app.core.security import decrypt_pii, encrypt_pii
+from app.core.taxpayer_profile_constants import UNENCODABLE_FIELD_MESSAGE_TEMPLATE
+from app.core.text_encoding_utils import is_utf8_encodable
 from app.db.session import unit_of_work
 from app.models.organization.taxpayer_profile import TaxpayerProfile
 from app.repositories.organization import taxpayer_profile_repo
@@ -95,6 +97,10 @@ async def upsert_profile(
     unknown = set(data.keys()) - _PLAINTEXT_FIELDS
     if unknown:
         raise ValueError(f"Unknown fields: {unknown}")
+    # Checked before encrypting: the encoder's own error would be the reply.
+    for field, value in data.items():
+        if isinstance(value, str) and not is_utf8_encodable(value):
+            raise ValueError(UNENCODABLE_FIELD_MESSAGE_TEMPLATE.format(field=field))
 
     def _e(val: str | None) -> str | None:
         return encrypt_pii(val) if val is not None else None
