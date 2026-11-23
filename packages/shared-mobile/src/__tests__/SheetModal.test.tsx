@@ -136,18 +136,40 @@ describe("sheetEscapeProblems", () => {
     expect(sheetEscapeProblems(join(__dirname, "..", ".."), ["src"])).toEqual([]);
   });
 
-  it("catches a hand-rolled page sheet and a full-screen Modal with no escape", () => {
+  it("catches each react-native Modal that ignores the escape gesture, one Modal at a time", () => {
     const root = mkdtempSync(join(tmpdir(), "sheet-escape-check-"));
     const write = (name: string, code: string) => writeFileSync(join(root, "src", name), code);
+    const RN = 'import { Modal, View } from "react-native";\n';
     try {
       mkdirSync(join(root, "src"), { recursive: true });
-      write("HandRolled.tsx", 'export default () => <Modal presentationStyle="pageSheet" visible><View onAccessibilityEscape={close} /></Modal>;');
-      write("Viewer.tsx", 'export default () => <Modal animationType="fade" visible><View /></Modal>;');
-      write("EscapingViewer.tsx", 'export default () => <Modal animationType="fade" visible><View onAccessibilityEscape={close} /></Modal>;');
+      write("HandRolled.tsx", `${RN}export default () => <Modal presentationStyle="pageSheet" visible><View onAccessibilityEscape={close} /></Modal>;`);
+      write("FormSheetStyle.tsx", `${RN}export default () => <Modal presentationStyle={"formSheet"} visible><View onAccessibilityEscape={close} /></Modal>;`);
+      write("FullScreenStyle.tsx", `${RN}export default () => <Modal presentationStyle="fullScreen" visible><View /></Modal>;`);
+      write("FullScreenEscaping.tsx", `${RN}export default () => <Modal presentationStyle="overFullScreen" visible><View onAccessibilityEscape={close} /></Modal>;`);
+      write("Viewer.tsx", `${RN}export default () => <Modal animationType="fade" visible><View /></Modal>;`);
+      write("SelfClosing.tsx", `${RN}export default () => <Modal visible />;`);
+      write("EscapingViewer.tsx", `${RN}export default () => <Modal animationType="fade" visible><View><View onAccessibilityEscape={close} /></View></Modal>;`);
+      // One Modal's handler doesn't close another, and neither does one outside the Modal.
+      write("TwoModals.tsx", `${RN}export default () => <View><Modal visible><View onAccessibilityEscape={close} /></Modal>\n<Modal visible><View /></Modal></View>;`);
+      write("HandlerOutside.tsx", `${RN}export default () => <View onAccessibilityEscape={close}>\n<Modal visible><View /></Modal></View>;`);
+      // react-native's Modal under another name.
+      write("Aliased.tsx", 'import { Modal as RNModal, View } from "react-native";\nexport default () => <RNModal visible><View /></RNModal>;');
+      write("Namespace.tsx", 'import * as RN from "react-native";\nexport default () => <RN.Modal visible><RN.View /></RN.Modal>;');
+      // Somebody else's Modal isn't react-native's.
+      write("ThirdParty.tsx", 'import Modal from "react-native-modal";\nimport { View } from "react-native";\nexport default () => <Modal isVisible><View /></Modal>;');
       write("Sheet.tsx", "export default () => <SheetModal isOpen onRequestClose={close}><View /></SheetModal>;");
-      expect(sheetEscapeProblems(root, ["src"])).toEqual([
-        "src/HandRolled.tsx:1: a page sheet must be a SheetModal, which closes on the screen reader's escape gesture",
-        "src/Viewer.tsx:1: a full-screen Modal must close on the screen reader's escape gesture: set onAccessibilityEscape on its root view",
+      const escape = "a full-screen Modal must close on the screen reader's escape gesture: set onAccessibilityEscape on its root view";
+      const pageSheet = "a page sheet must be a SheetModal, which closes on the screen reader's escape gesture";
+      expect(sheetEscapeProblems(root, ["src"]).sort()).toEqual([
+        `src/Aliased.tsx:2: ${escape}`,
+        `src/FormSheetStyle.tsx:2: ${pageSheet}`,
+        `src/FullScreenStyle.tsx:2: ${escape}`,
+        `src/HandRolled.tsx:2: ${pageSheet}`,
+        `src/HandlerOutside.tsx:3: ${escape}`,
+        `src/Namespace.tsx:2: ${escape}`,
+        `src/SelfClosing.tsx:2: ${escape}`,
+        `src/TwoModals.tsx:3: ${escape}`,
+        `src/Viewer.tsx:2: ${escape}`,
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

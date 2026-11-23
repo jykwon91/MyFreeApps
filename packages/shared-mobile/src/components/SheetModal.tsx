@@ -6,8 +6,8 @@ import { useTheme } from "../theme/useTheme";
 import type { SheetModalProps } from "../types/SheetModalProps";
 
 /**
- * The page sheet every sheet slides up in, still with Reduce Motion on. Back, the system's dismiss and the screen
- * reader's escape gesture all close it the one way, through onRequestClose.
+ * The page sheet every sheet opens in: it slides up, or appears at once when Reduce Motion is on. Back, the system's
+ * dismiss and the screen reader's escape gesture all close it the one way, through onRequestClose.
  */
 export default function SheetModal({ isOpen, onRequestClose, onClosed, testID, children }: SheetModalProps) {
   const { colors } = useTheme();
