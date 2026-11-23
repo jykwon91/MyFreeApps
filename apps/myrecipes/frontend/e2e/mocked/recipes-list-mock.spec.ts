@@ -12,6 +12,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
@@ -177,6 +178,22 @@ test("an empty library offers New recipe, which opens the editor", async ({ page
   const emptyState = page.getByRole("heading", { name: "No recipes yet" }).locator("xpath=..");
   await emptyState.getByRole("button", { name: "New recipe" }).click();
   await expect(page).toHaveURL(/\/recipes\/new$/);
+});
+
+test("My recipes with nothing in it says so and Show all recipes brings the list back", async ({ page }) => {
+  await stubSignedInShell(page);
+  const calls = await stubList(page, ({ owner }) => ({ body: listPageOf(owner === "me" ? [] : [TOMATO, SOMEONE_ELSES]) }));
+
+  await page.goto("/?owner=me");
+  await expect(page.getByRole("heading", { name: RECIPES_MINE_EMPTY_COPY.heading })).toBeVisible();
+  await expect(page.getByText(RECIPES_MINE_EMPTY_COPY.body)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No recipes yet" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: RECIPES_MINE_EMPTY_COPY.actionLabel }).click();
+  await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
+  await expect(page).not.toHaveURL(/owner=/);
+  await expect(page.getByRole("button", { name: "My recipes" })).toHaveAttribute("aria-pressed", "false");
+  expect(calls[calls.length - 1]).toEqual({ search: null, owner: null, cursor: null });
 });
 
 test("a failed load says so instead of showing an empty library, and Try again recovers", async ({ page }) => {

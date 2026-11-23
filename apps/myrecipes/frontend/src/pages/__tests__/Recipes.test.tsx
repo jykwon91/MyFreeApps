@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/ui";
 import api from "@/lib/api";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
+import { RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeListPage } from "@myrecipes/api-client/types/recipe/recipe-list-page";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
@@ -274,5 +275,24 @@ describe("Recipes", () => {
 
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/?q=soup"));
     expect(box).toHaveValue("soup ");
+  });
+
+  it("says so when My recipes is empty and Show all recipes clears the filter", async () => {
+    const user = userEvent.setup();
+    respond = (config) =>
+      config.params?.owner === "me"
+        ? { status: 200, data: pageAfter(undefined, 0) }
+        : { status: 200, data: pageAfter(undefined, 2) };
+    renderRecipes("/?owner=me");
+
+    expect(await screen.findByRole("heading", { name: RECIPES_MINE_EMPTY_COPY.heading })).toBeInTheDocument();
+    expect(screen.getByText(RECIPES_MINE_EMPTY_COPY.body)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "No recipes yet" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: RECIPES_MINE_EMPTY_COPY.actionLabel }));
+
+    expect(await screen.findByRole("heading", { name: "Recipe 1" })).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
+    expect(screen.getByRole("button", { name: "My recipes" })).toHaveAttribute("aria-pressed", "false");
   });
 });

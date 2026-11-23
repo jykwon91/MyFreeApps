@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, LoadMoreFooter, StaleDataBanner, cn, useIsAuthenticated } from "@platform/ui";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
-import { RECIPES_LIST_ERROR_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { RECIPES_LIST_ERROR_COPY, RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
 import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
@@ -73,6 +73,17 @@ export default function Recipes() {
     navigate("/discover");
   }
 
+  function showAllRecipes() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("owner");
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   function toggleOwnerMe() {
     setSearchParams(
       (prev) => {
@@ -106,6 +117,15 @@ export default function Recipes() {
         icon={<Search className="w-12 h-12" />}
         heading={RECIPES_SEARCH_EMPTY.heading}
         body={RECIPES_SEARCH_EMPTY.body}
+      />
+    );
+  } else if (recipes.length === 0 && ownerMe) {
+    content = (
+      <EmptyState
+        icon={<ChefHat className="w-12 h-12" />}
+        heading={RECIPES_MINE_EMPTY_COPY.heading}
+        body={RECIPES_MINE_EMPTY_COPY.body}
+        action={{ label: RECIPES_MINE_EMPTY_COPY.actionLabel, onClick: showAllRecipes }}
       />
     );
   } else if (recipes.length === 0) {
