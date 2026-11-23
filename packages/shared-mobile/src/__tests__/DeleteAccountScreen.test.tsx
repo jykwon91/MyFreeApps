@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { fetchDevices, fetchTwoFactorEnabled, requestDeleteAccount } from "../auth/mobileAuthApi";
+import { fetchDevices } from "@platform/core/auth/deviceSessions";
+import { fetchTwoFactorEnabled, requestDeleteAccount } from "../auth/mobileAuthApi";
 import { SessionContext } from "../auth/SessionContext";
 import DeleteAccountScreen from "../components/DeleteAccountScreen";
 import type { MobileSession } from "../types/MobileSession";
@@ -8,6 +9,7 @@ import { lastFocusedField } from "../../test-support/focusedField";
 import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi");
+jest.mock("@platform/core/auth/deviceSessions");
 
 const SIGNED_IN: SessionState = { status: "signedIn", email: "me@example.com", sessionId: "mine" };
 const twoFactorEnabled = jest.mocked(fetchTwoFactorEnabled);

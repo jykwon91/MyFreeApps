@@ -1,6 +1,6 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
-import { useDevices } from "../hooks/useDevices";
+import { useDevices } from "@platform/core/hooks/useDevices";
 import { useToast } from "../hooks/useToast";
 import type { AccountSettingsProps } from "../types/AccountSettingsProps";
 import AccountSection from "./AccountSection";

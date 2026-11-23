@@ -7,7 +7,6 @@ import type { DeleteAccountDetails } from "../types/DeleteAccountDetails";
 import type { DeleteAccountResult } from "../types/DeleteAccountResult";
 import type { MobileTokens } from "../types/MobileTokens";
 import type { ResendVerificationOutcome } from "../types/ResendVerificationOutcome";
-import type { SignedInDevice } from "../types/SignedInDevice";
 import type { SignInCredentials } from "../types/SignInCredentials";
 import type { SignInFailure } from "../types/SignInFailure";
 
@@ -82,15 +81,6 @@ export async function requestLogout(refreshToken: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export async function fetchDevices(): Promise<SignedInDevice[]> {
-  const { data } = await api.get<SignedInDevice[]>("/auth/mobile/sessions");
-  return data;
-}
-
-export async function revokeDevice(id: string): Promise<void> {
-  await api.delete(`/auth/mobile/sessions/${encodeURIComponent(id)}`);
 }
 
 export async function fetchTwoFactorEnabled(): Promise<boolean> {

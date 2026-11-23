@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
 import { isAxiosError } from "axios";
-import { fetchDevices, revokeDevice } from "../auth/mobileAuthApi";
-import type { DeviceSignOutOutcome } from "../types/DeviceSignOutOutcome";
-import type { SignedInDevice } from "../types/SignedInDevice";
+import { fetchDevices, revokeDevice } from "../auth/deviceSessions";
+import type { DeviceSignOutOutcome } from "../types/security/device-sign-out-outcome";
+import type { SignedInDevice } from "../types/security/signed-in-device";
+import type { UseDevicesResult } from "../types/security/use-devices-result";
 import { axiosWriteOutcome } from "../utils/axiosWriteOutcome";
 
-export function useDevices() {
+/** The account's signed-in phones and tablets. Loads nothing until `reload` is called. */
+export function useDevices(): UseDevicesResult {
   const [devices, setDevices] = useState<SignedInDevice[] | null>(null);
   const [hasError, setHasError] = useState(false);
 

@@ -3,13 +3,14 @@ import { AxiosError, AxiosHeaders } from "axios";
 import { Alert } from "react-native";
 import { alertButton } from "../../test-support/alertButton";
 import { SessionContext } from "../auth/SessionContext";
-import { fetchDevices, revokeDevice } from "../auth/mobileAuthApi";
+import { fetchDevices, revokeDevice } from "@platform/core/auth/deviceSessions";
 import AccountSettings from "../components/AccountSettings";
 import ToastProvider from "../components/ToastProvider";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 
 jest.mock("../auth/mobileAuthApi");
+jest.mock("@platform/core/auth/deviceSessions");
 jest.mock("expo-router", () => {
   const { useEffect } = jest.requireActual<typeof import("react")>("react");
   return { useFocusEffect: (effect: () => void) => useEffect(effect, [effect]) };
