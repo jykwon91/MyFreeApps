@@ -19,7 +19,10 @@ export interface IngredientChange {
   after: IngredientSnapshot | null;
 }
 
-/** One step-level difference, matched by 1-based position. */
+/**
+ * One step-level difference. Steps are aligned by their text, so an inserted step is one "added" entry.
+ * `position` is the step's 1-based place in the new version, or in the old version for a removed step.
+ */
 export interface StepChange {
   position: number;
   change: DiffChangeKind;

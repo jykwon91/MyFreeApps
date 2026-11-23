@@ -4,15 +4,16 @@ No DB access: it takes already-loaded version/ingredient/step rows. Per-version
 fields (servings, prep/cook minutes) are compared one by one; ingredients are
 matched by ``lineage_key`` (stable across versions, so a quantity edit reads
 as a *change* not remove+add; a key that repeats on a side, as versions saved
-before keys were checked may, is matched occurrence by occurrence, in order);
-steps are matched by ``position``. A version
-that only reorders ingredients or steps has no changes, so ``order_changed``
-says so separately rather than the diff reading as identical.
+before keys were checked may, is matched occurrence by occurrence, in order).
+Steps have no such key, so they are aligned by their text (``step_alignment``):
+an inserted or removed step reads as just that, not as a change to every step
+after it. A version that only reorders ingredients has no changes, so
+``order_changed`` says so separately rather than the diff reading as identical.
 """
 from __future__ import annotations
 
 import uuid
-from collections import Counter, defaultdict, deque
+from collections import defaultdict, deque
 
 from app.core.version_diff_fields import VERSION_DIFF_FIELDS
 from app.models.recipe.recipe_ingredient import RecipeIngredient
@@ -23,6 +24,11 @@ from app.schemas.recipe.diff_schemas import (
     IngredientChange,
     IngredientSnapshot,
     StepChange,
+)
+from app.services.recipe.step_alignment import (
+    StepPair,
+    align_steps,
+    normalize_step_text,
 )
 
 
@@ -111,53 +117,67 @@ def diff_ingredients(
     return changes
 
 
+def _align(before: list[RecipeStep], after: list[RecipeStep]) -> list[StepPair]:
+    return align_steps(
+        [step.instruction for step in before], [step.instruction for step in after],
+    )
+
+
 def order_changed(
     before_ingredients: list[RecipeIngredient],
     after_ingredients: list[RecipeIngredient],
     before_steps: list[RecipeStep],
     after_steps: list[RecipeStep],
 ) -> bool:
-    """Whether the new version lists the same ingredients, or the same steps, in another order.
+    """Whether the new version lists the same ingredients, or some of the same steps, in another order.
 
     Ingredients: the ones both versions share (by lineage_key) come in a different order.
-    Steps are matched by position, so a reorder already shows as step changes; this also
-    reports it when the two versions have the same instructions in a different order.
+    Steps: a step moved, so the alignment has the same wording (ignoring case and spacing)
+    removed in one place and added in another; it then also shows as those two step changes.
     All lists must be in position order.
     """
     matches, _ = _match_ingredients(before_ingredients, after_ingredients)
     old_indexes = [index for index in matches if index is not None]
     if old_indexes != sorted(old_indexes):
         return True
-    before_text = [step.instruction for step in before_steps]
-    after_text = [step.instruction for step in after_steps]
-    return before_text != after_text and Counter(before_text) == Counter(after_text)
+    pairs = _align(before_steps, after_steps)
+    removed = {
+        normalize_step_text(before_steps[old].instruction)
+        for old, new in pairs if new is None and old is not None
+    }
+    return any(
+        normalize_step_text(after_steps[new].instruction) in removed
+        for old, new in pairs if old is None and new is not None
+    )
 
 
 def diff_steps(
     before: list[RecipeStep], after: list[RecipeStep],
 ) -> list[StepChange]:
-    before_by_pos = {s.position: s for s in before}
-    after_by_pos = {s.position: s for s in after}
-
+    """Added, removed and changed steps in reading order, from aligning the two versions'
+    steps by text. ``position`` is the step's place in the new version, or in the old one
+    for a removed step. Both lists must be in position order."""
     changes: list[StepChange] = []
-    for pos in sorted(set(before_by_pos) | set(after_by_pos)):
-        old_step = before_by_pos.get(pos)
-        new_step = after_by_pos.get(pos)
-        if old_step is None and new_step is not None:
-            changes.append(StepChange(position=pos, change="added", after=new_step.instruction))
-        elif new_step is None and old_step is not None:
-            changes.append(StepChange(position=pos, change="removed", before=old_step.instruction))
-        elif (
-            old_step is not None
-            and new_step is not None
-            and old_step.instruction != new_step.instruction
-        ):
+    for old_index, new_index in _align(before, after):
+        if old_index is None and new_index is not None:
+            new_step = after[new_index]
             changes.append(
-                StepChange(
-                    position=pos,
-                    change="changed",
-                    before=old_step.instruction,
-                    after=new_step.instruction,
-                )
+                StepChange(position=new_step.position, change="added", after=new_step.instruction)
             )
+        elif new_index is None and old_index is not None:
+            old_step = before[old_index]
+            changes.append(
+                StepChange(position=old_step.position, change="removed", before=old_step.instruction)
+            )
+        elif old_index is not None and new_index is not None:
+            old_step, new_step = before[old_index], after[new_index]
+            if old_step.instruction != new_step.instruction:
+                changes.append(
+                    StepChange(
+                        position=new_step.position,
+                        change="changed",
+                        before=old_step.instruction,
+                        after=new_step.instruction,
+                    )
+                )
     return changes

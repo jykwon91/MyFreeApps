@@ -1,4 +1,4 @@
-"""Lineage keys sent by the client, and the diff's reorder flag, through the API.
+"""Lineage keys sent by the client, the diff's reorder flag and its step alignment, through the API.
 
 A tweak's ingredients carry ``lineage_key`` from the version it starts from (or null for a new
 ingredient), exactly as the web and phone build it (``buildVersionCreateRequest`` in
@@ -256,4 +256,21 @@ class TestReorderIsNotIdentical:
         assert diff["field_changes"] == []
         assert diff["ingredient_changes"] == []
         assert diff["step_changes"] == []
+        assert diff["order_changed"] is False
+
+
+class TestStepDiffThroughTheApi:
+    @pytest.mark.asyncio
+    async def test_inserting_a_step_reports_only_that_step(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            recipe_id, v1 = await _create(authed)
+            steps = [{"instruction": "Rest the batter."}, *({"instruction": s["instruction"]} for s in v1["steps"])]
+            same = list(map(_carried, v1["ingredients"]))
+            v2 = (await authed.post(f"/recipes/{recipe_id}/versions", json=_tweak(v1, same, steps))).json()
+            diff = (await authed.get(f"/recipes/{recipe_id}/versions/{v2['id']}/diff")).json()
+
+        assert diff["step_changes"] == [
+            {"position": 1, "change": "added", "before": None, "after": "Rest the batter."},
+        ]
         assert diff["order_changed"] is False
