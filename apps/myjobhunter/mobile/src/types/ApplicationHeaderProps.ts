@@ -6,4 +6,7 @@ export interface ApplicationHeaderProps {
   column: KanbanColumn;
   /** Null while the company loads. */
   companyName: string | null;
+  /** The company couldn't be loaded, so there is no name to show. */
+  companyFailed: boolean;
+  onRetryCompany: () => Promise<unknown>;
 }

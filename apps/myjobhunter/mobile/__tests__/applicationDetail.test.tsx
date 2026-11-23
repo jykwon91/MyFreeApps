@@ -1,3 +1,4 @@
+import { APPLICATION_COMPANY_MESSAGES as COMPANY } from "@myjobhunter/api-client/constants/applicationCompanyMessages";
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
@@ -10,6 +11,7 @@ import { store } from "../src/lib/store";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { applicationDetailRecord } from "../test-support/applicationDetailRecord";
 import { applicationDetailRoutes } from "../test-support/applicationDetailRoutes";
+import { companyRecord } from "../test-support/companyRecord";
 import { eventRecord } from "../test-support/eventRecord";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
@@ -121,6 +123,25 @@ it("offers to try again when the application won't load, and shows it once it do
   await fireEvent.press(screen.getByRole("button", { name: MESSAGES.tryAgain }));
 
   expect(await screen.findByRole("header", { name: "Staff Engineer" })).toBeTruthy();
+});
+
+it("says the company couldn't load, not that it's unknown, and shows it once Try again works", async () => {
+  let fails = true;
+  serve({
+    ...applicationDetailRoutes(STRIPE),
+    [`GET /companies/${STRIPE.company_id}`]: () => (fails ? { status: 500 } : { status: 200, data: companyRecord({ id: STRIPE.company_id, name: "Stripe" }) }),
+  });
+  await renderApplicationDetail(ID);
+
+  expect(await screen.findByText(COMPANY.couldntLoad)).toBeTruthy();
+  expect(screen.queryByText("Unknown company")).toBeNull();
+  // The rest of the screen stays usable.
+  expect(screen.getByRole("header", { name: "Staff Engineer" })).toBeTruthy();
+  fails = false;
+  await fireEvent.press(screen.getByRole("button", { name: COMPANY.tryAgain }));
+
+  expect(await screen.findByText("Stripe")).toBeTruthy();
+  expect(screen.queryByText(COMPANY.couldntLoad)).toBeNull();
 });
 
 it("says when the application is gone, with a way back to the list", async () => {

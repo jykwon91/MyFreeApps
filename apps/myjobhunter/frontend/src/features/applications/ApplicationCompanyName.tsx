@@ -1,6 +1,6 @@
 import { LoadingRegion, Skeleton } from "@platform/ui";
 import ListLoadError from "@/components/ListLoadError";
-import { APPLICATION_COMPANY_MESSAGES as MESSAGES } from "@/constants/application-company-messages";
+import { APPLICATION_COMPANY_MESSAGES as MESSAGES } from "@myjobhunter/api-client/constants/applicationCompanyMessages";
 
 export interface ApplicationCompanyNameProps {
   name: string | undefined;
