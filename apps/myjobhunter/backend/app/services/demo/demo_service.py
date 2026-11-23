@@ -57,6 +57,7 @@ from app.services.demo.demo_constants import (
     make_resume_object_key,
     make_resume_parsed_fields,
 )
+from app.services.demo.demo_email_taken_error import DemoEmailTakenError
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ async def create_demo_user(
             uses ``DEMO_DEFAULT_DISPLAY_NAME``.
 
     Raises:
-        ValueError: When ``email`` is supplied and already exists in
+        DemoEmailTakenError: When ``email`` is supplied and already exists in
             ``users``. The route layer maps this to HTTP 409.
     """
     final_email = (email or make_demo_email()).strip().lower()
@@ -98,7 +99,7 @@ async def create_demo_user(
     async with unit_of_work() as db:
         existing = await demo_repo.get_user_by_email(db, final_email)
         if existing is not None:
-            raise ValueError(
+            raise DemoEmailTakenError(
                 f"A user with email '{final_email}' already exists. "
                 "Pick a different email or delete the existing account first."
             )

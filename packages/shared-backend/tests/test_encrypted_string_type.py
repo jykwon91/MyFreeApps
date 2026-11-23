@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 
+from platform_shared.core.encrypted_column_decrypt_error import EncryptedColumnDecryptError
 from platform_shared.core.encrypted_string_type import (
     EncryptedString,
     PIICodec,
@@ -140,18 +141,26 @@ class TestProcessResultValue:
         with pytest.raises(TypeError, match="EncryptedString expected stored str"):
             et.process_result_value(12345, dialect=None)
 
-    def test_tampered_ciphertext_raises_value_error(self) -> None:
+    def test_tampered_ciphertext_raises_decrypt_error(self) -> None:
         et = EncryptedString(255, codec=_make_codec())
         good = et.process_bind_param("hello", dialect=None)
         assert good is not None
         bad = good[:-2] + ("A" if good[-2] != "A" else "B") + good[-1]
-        with pytest.raises(ValueError, match="Failed to decrypt EncryptedString"):
+        with pytest.raises(EncryptedColumnDecryptError, match="Failed to decrypt EncryptedString"):
             et.process_result_value(bad, dialect=None)
 
-    def test_decrypt_with_wrong_codec_raises_value_error(self) -> None:
+    def test_decrypt_error_is_not_a_client_error_type(self) -> None:
+        """Routes echo ``ValueError`` / ``LookupError`` text in 4xx replies.
+
+        A row is often loaded inside such a handler's ``try``, so a key
+        mismatch must not be one of them, or it reads as the client's fault.
+        """
+        assert not issubclass(EncryptedColumnDecryptError, (ValueError, LookupError))
+
+    def test_decrypt_with_wrong_codec_raises_decrypt_error(self) -> None:
         """A ciphertext encrypted under codec A cannot be decrypted by
         codec B (different key/salt/info). The TypeDecorator surfaces this
-        as ``ValueError`` (not bare ``InvalidToken``)."""
+        as ``EncryptedColumnDecryptError`` (not bare ``InvalidToken``)."""
         codec_a = _make_codec()
         # codec_b uses a different info string — same shape, different key family.
         def _enc_b(v: str | None) -> str | None:
@@ -167,7 +176,7 @@ class TestProcessResultValue:
 
         ct = et_a.process_bind_param("isolated", dialect=None)
         assert ct is not None
-        with pytest.raises(ValueError, match="Failed to decrypt EncryptedString"):
+        with pytest.raises(EncryptedColumnDecryptError, match="Failed to decrypt EncryptedString"):
             et_b.process_result_value(ct, dialect=None)
 
 

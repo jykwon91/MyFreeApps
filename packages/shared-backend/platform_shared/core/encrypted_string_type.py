@@ -21,8 +21,8 @@ Why a codec instead of importing ``encrypt_pii`` directly:
     a single :class:`PIICodec` value captures the trio.
 
 Tampered ciphertext raises ``cryptography.fernet.InvalidToken`` from the
-underlying Fernet library — surfaced as a clear ``ValueError`` here so callers
-don't have to import ``cryptography`` to catch it.
+underlying Fernet library — surfaced as :class:`EncryptedColumnDecryptError`
+here so callers don't have to import ``cryptography`` to catch it.
 """
 from __future__ import annotations
 
@@ -32,6 +32,8 @@ from typing import Callable
 from cryptography.fernet import InvalidToken
 from sqlalchemy import String
 from sqlalchemy.types import TypeDecorator
+
+from platform_shared.core.encrypted_column_decrypt_error import EncryptedColumnDecryptError
 
 
 @dataclass(frozen=True)
@@ -117,7 +119,7 @@ class EncryptedString(TypeDecorator):
         try:
             return self._codec.decrypt(value)
         except InvalidToken as exc:
-            raise ValueError(
+            raise EncryptedColumnDecryptError(
                 "Failed to decrypt EncryptedString column — ciphertext is "
                 "corrupted, was encrypted with a different key, or was tampered with.",
             ) from exc

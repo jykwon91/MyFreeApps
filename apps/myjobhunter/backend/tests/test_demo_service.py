@@ -26,6 +26,7 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 from app.main import app
 from app.services.demo import demo_service
+from app.services.demo.demo_email_taken_error import DemoEmailTakenError
 
 
 pytestmark = pytest.mark.asyncio
@@ -152,11 +153,11 @@ async def test_create_demo_user_returns_credentials_and_seeds_data() -> None:
 
 
 async def test_create_demo_user_rejects_duplicate_email() -> None:
-    """Passing the same email twice raises ValueError (409)."""
+    """Passing the same email twice raises DemoEmailTakenError (409)."""
     first = await demo_service.create_demo_user(email="demo+dupe@myjobhunter-demo.example.com")
     assert first.credentials.email == "demo+dupe@myjobhunter-demo.example.com"
 
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.raises(DemoEmailTakenError, match="already exists"):
         await demo_service.create_demo_user(email="demo+dupe@myjobhunter-demo.example.com")
 
 

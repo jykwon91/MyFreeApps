@@ -5,14 +5,19 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import taxpayer_profiles as taxpayer_profiles_api
+from app.core.context import RequestContext
 from app.core.security import decrypt_pii, encrypt_pii
+from app.core.taxpayer_profile_constants import UNENCODABLE_FIELD_MESSAGE_TEMPLATE
 from app.models.organization.organization import Organization
-from app.models.organization.organization_member import OrganizationMember
+from app.models.organization.organization_member import OrganizationMember, OrgRole
 from app.models.organization.taxpayer_profile import TaxpayerProfile
 from app.models.user.user import User
 from app.repositories.organization import taxpayer_profile_repo
+from app.schemas.organization.taxpayer_profile import TaxpayerProfileWrite
 from app.services.organization import taxpayer_profile_service
 
 
@@ -273,3 +278,27 @@ class TestTaxpayerProfileService:
         # The raw DB value must never be the plaintext
         assert row.encrypted_first_name != "Secret"
         assert decrypt_pii(row.encrypted_first_name) == "Secret"
+
+
+# ---------------------------------------------------------------------------
+# Route replies carry our wording, never the encoder's
+# ---------------------------------------------------------------------------
+
+
+class TestUpsertRouteErrorText:
+    @pytest.mark.asyncio
+    async def test_unencodable_text_is_a_400_in_our_words(
+        self, org: Organization, owner: User
+    ) -> None:
+        # JSON allows "\ud800"; UTF-8 can't encode it, so encrypting it fails
+        # with "'utf-8' codec can't encode character ... surrogates not allowed".
+        body = TaxpayerProfileWrite(first_name="a\ud800")
+        ctx = RequestContext(organization_id=org.id, user_id=owner.id, org_role=OrgRole.OWNER)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await taxpayer_profiles_api.upsert_taxpayer_profile("primary", body, ctx)
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == UNENCODABLE_FIELD_MESSAGE_TEMPLATE.format(field="first_name")
+        assert "codec" not in exc_info.value.detail
+        assert "surrogate" not in exc_info.value.detail

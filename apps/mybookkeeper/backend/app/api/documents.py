@@ -44,6 +44,7 @@ from app.services.documents import (
     document_upload_service,
 )
 from app.services.documents.document_errors import DocumentBeingReadError
+from app.services.documents.document_source_unavailable_error import DocumentSourceUnavailableError
 from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -200,8 +201,8 @@ async def download_document(
         result = await document_query_service.get_document_download(ctx, document_id)
     except StoredFileMissingError as exc:
         raise HTTPException(status_code=404, detail=MISSING_DOCUMENT_FILE_DETAIL) from exc
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except DocumentSourceUnavailableError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
     if not result:
         raise HTTPException(status_code=404, detail="Document not found")
     return Response(

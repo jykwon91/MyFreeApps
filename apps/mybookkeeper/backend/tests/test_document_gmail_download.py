@@ -23,6 +23,7 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import User
 from app.services.documents import document_query_service
+from app.services.documents.document_source_unavailable_error import DocumentSourceUnavailableError
 from app.services.email import gmail_credentials
 
 pytestmark = pytest.mark.asyncio
@@ -108,7 +109,7 @@ class _FetchFailed(Exception):
 
 @pytest.mark.parametrize(
     ("fetched", "raises"),
-    [(_EMAIL, None), (None, ValueError), (_FetchFailed(), _FetchFailed)],
+    [(_EMAIL, None), (None, DocumentSourceUnavailableError), (_FetchFailed(), _FetchFailed)],
     ids=["email-found", "email-gone", "fetch-error"],
 )
 async def test_a_token_refreshed_during_the_fetch_is_saved(

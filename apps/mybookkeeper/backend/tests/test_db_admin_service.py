@@ -2,7 +2,7 @@
 
 The service owns the session (plain session for read-only queries,
 ``unit_of_work`` for bulk writes) and the ``ADMIN_DB`` audit log lines; the
-routes keep the API-key gate and map ValueError to 400. The repo's raw SQL is
+routes keep the API-key gate and map ``DbAdminQueryError`` to 400. The repo's raw SQL is
 Postgres-specific, so these tests stub the repository functions.
 """
 from __future__ import annotations
@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.db_admin_query_error import DbAdminQueryError
+from app.core.db_admin_query_messages import SELECT_ONLY_MESSAGE, UNREADABLE_RESULT_MESSAGE
 from app.core.security import admin_api_key_matches
 from app.main import app
 from app.schemas.system.db_admin import (
@@ -25,6 +27,7 @@ from app.schemas.system.db_admin import (
     DbQueryResponse,
     ReExtractDocumentsRequest,
 )
+from app.repositories import db_admin_repo
 from app.services.system import db_admin_service
 
 _API_KEY = "test-admin-key"
@@ -62,13 +65,35 @@ class TestDbAdminService:
         assert result == DbQueryResponse(columns=["id"], rows=[[1], [2]], row_count=2)
 
     @pytest.mark.asyncio
-    async def test_readonly_query_propagates_value_error(self, sessions) -> None:
+    async def test_non_select_is_refused_in_our_words(self) -> None:
+        db = MagicMock(name="db")
+        db.execute = AsyncMock()
+        with pytest.raises(DbAdminQueryError) as exc_info:
+            await db_admin_repo.execute_readonly_query(db, "DROP TABLE t")
+        assert str(exc_info.value) == SELECT_ONLY_MESSAGE
+        db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_readonly_query_propagates_rejection(self, sessions) -> None:
         with patch.object(
             db_admin_service.db_admin_repo, "execute_readonly_query",
-            new=AsyncMock(side_effect=ValueError("Only SELECT queries are allowed")),
+            new=AsyncMock(side_effect=DbAdminQueryError(SELECT_ONLY_MESSAGE)),
         ):
-            with pytest.raises(ValueError):
+            with pytest.raises(DbAdminQueryError, match=SELECT_ONLY_MESSAGE):
                 await db_admin_service.run_readonly_query("DROP TABLE t")
+
+    @pytest.mark.asyncio
+    async def test_unreadable_result_value_gets_our_wording(self, sessions, caplog) -> None:
+        # e.g. ``SELECT '10000-01-01'::date``: the driver's ValueError quotes the value.
+        with patch.object(
+            db_admin_service.db_admin_repo, "execute_readonly_query",
+            new=AsyncMock(side_effect=ValueError("year 10000 is out of range")),
+        ):
+            with caplog.at_level(logging.WARNING, logger=db_admin_service.__name__):
+                with pytest.raises(DbAdminQueryError) as exc_info:
+                    await db_admin_service.run_readonly_query("SELECT '10000-01-01'::date")
+        assert str(exc_info.value) == UNREADABLE_RESULT_MESSAGE
+        assert "year 10000" in caplog.text
 
     @pytest.mark.asyncio
     async def test_reassign_property_writes_in_unit_of_work_and_logs(
@@ -158,10 +183,10 @@ class TestDbAdminRoutes:
     def _api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("app.api.db_admin.settings.admin_api_key", _API_KEY)
 
-    def test_query_maps_value_error_to_400(self) -> None:
+    def test_query_maps_rejection_to_400(self) -> None:
         with patch(
             "app.api.db_admin.db_admin_service.run_readonly_query",
-            new=AsyncMock(side_effect=ValueError("Only SELECT queries are allowed")),
+            new=AsyncMock(side_effect=DbAdminQueryError(SELECT_ONLY_MESSAGE)),
         ):
             response = TestClient(app).post(
                 "/admin/db/query", json={"sql": "DROP TABLE t"},
@@ -169,6 +194,18 @@ class TestDbAdminRoutes:
             )
         assert response.status_code == 400
         assert response.json() == {"detail": "Only SELECT queries are allowed"}
+
+    def test_query_never_echoes_a_library_value_error(self) -> None:
+        with patch(
+            "app.api.db_admin.db_admin_service.run_readonly_query",
+            new=AsyncMock(side_effect=ValueError("year 10000 is out of range")),
+        ):
+            response = TestClient(app, raise_server_exceptions=False).post(
+                "/admin/db/query", json={"sql": "SELECT 1"},
+                headers={"X-Admin-Api-Key": _API_KEY},
+            )
+        assert response.status_code == 500
+        assert "year 10000" not in response.text
 
     def test_query_returns_service_result(self) -> None:
         with patch(

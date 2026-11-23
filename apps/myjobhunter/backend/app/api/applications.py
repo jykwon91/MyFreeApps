@@ -28,6 +28,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from platform_shared.api.unsafe_url_http import unsafe_url_http_exception
+from platform_shared.core.url_safety import UnsafeURLError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.ai_failure_http import ai_failure_http_exception
@@ -203,17 +205,13 @@ async def extract_from_url_endpoint(
         # message.
         raise HTTPException(status_code=422, detail="auth_required") from exc
     except JDFetchTimeoutError as exc:
-        raise HTTPException(
-            status_code=504,
-            detail=f"Timed out fetching URL: {exc}",
-        ) from exc
+        raise HTTPException(status_code=504, detail=f"Timed out fetching URL: {exc}") from exc
     except JDAiExtractionError as exc:
         raise ai_failure_http_exception(exc.kind) from exc
     except JDFetchError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Couldn't extract JD from URL: {exc}",
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"Couldn't extract JD from URL: {exc}") from exc
+    except UnsafeURLError as exc:
+        raise unsafe_url_http_exception(exc) from exc
     except ValueError as exc:
         # Defensive — Pydantic AnyHttpUrl should reject malformed URLs at
         # the schema layer, but service-level _validate_url adds a second

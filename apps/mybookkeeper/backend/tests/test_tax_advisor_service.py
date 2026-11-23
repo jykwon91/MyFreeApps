@@ -19,6 +19,7 @@ from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.schemas.tax.tax_advisor import TaxAdvisorCachedResponse, TaxAdvisorResponse
 from app.core.tax_advisor_disclaimer import HARDCODED_DISCLAIMER
+from app.services.tax import tax_advisor_claude, tax_advisor_service
 from app.services.tax.tax_advisor_response_parser import parse_advisor_response
 from app.services.tax.tax_advisor_service import _assemble_tax_data
 
@@ -396,3 +397,36 @@ class TestGenerateAdviceIntegration:
         assert result.suggestions[0].category == "data_quality"
         assert result.model_version == "claude-sonnet-4-6"
         assert result.generated_at is not None
+
+    @pytest.mark.asyncio
+    async def test_empty_reply_reads_as_unreadable_not_index_error(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        # Indexing an empty content list raised "list index out of range",
+        # which the generate route's LookupError handler sent back as a 404.
+        tax_return = _make_tax_return(test_org)
+        db.add(tax_return)
+        await db.commit()
+
+        mock_response = MagicMock()
+        mock_response.content = []
+        mock_response.usage = None
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with (
+            patch("app.services.tax.tax_advisor_service.unit_of_work", _fake),
+            patch("app.services.tax.tax_advisor_service.AsyncSessionLocal", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
+            patch.object(
+                tax_advisor_claude, "_create_with_backoff",
+                new_callable=AsyncMock, return_value=mock_response,
+            ),
+        ):
+            result = await tax_advisor_service.generate_advice(
+                test_org.id, tax_return.id, test_user.id,
+            )
+
+        assert [s.title for s in result.suggestions] == ["Unable to analyze tax data"]

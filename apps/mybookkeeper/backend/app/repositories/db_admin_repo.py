@@ -5,6 +5,8 @@ import uuid
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db_admin_query_error import DbAdminQueryError
+from app.core.db_admin_query_messages import SELECT_ONLY_MESSAGE
 from app.repositories.tax import tax_return_repo
 
 
@@ -21,10 +23,10 @@ async def execute_readonly_query(
     stripped = sql.strip().rstrip(";")
 
     if _FORBIDDEN_KEYWORDS.search(stripped):
-        raise ValueError("Only SELECT queries are allowed")
+        raise DbAdminQueryError(SELECT_ONLY_MESSAGE)
 
     if not stripped.upper().startswith("SELECT"):
-        raise ValueError("Only SELECT queries are allowed")
+        raise DbAdminQueryError(SELECT_ONLY_MESSAGE)
 
     limited = f"{stripped} LIMIT {row_limit}"
     await db.execute(text("SET TRANSACTION READ ONLY"))

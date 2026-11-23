@@ -45,3 +45,8 @@ DOCUMENT_BEING_READ_DETAIL = "This document is still being read. Try again once 
 # Statuses the Home summary reports as still being read, and as needing a look.
 DOCUMENT_IN_PROGRESS_STATUSES = ("processing", "extracting")
 DOCUMENT_NEEDS_REVIEW_STATUSES = ("failed", "duplicate")
+
+# Why a document can't be downloaded. Shown as the 404 detail.
+NO_DOCUMENT_SOURCE_DETAIL = "No source file available for this document"
+GMAIL_NOT_CONNECTED_DETAIL = "Gmail integration not connected"
+EMAIL_GONE_FROM_GMAIL_DETAIL = "Email no longer available in Gmail"

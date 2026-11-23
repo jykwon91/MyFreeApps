@@ -42,6 +42,7 @@ from app.schemas.demo.demo import (
     DemoUserListResponse,
 )
 from app.services.demo import demo_service
+from app.services.demo.demo_email_taken_error import DemoEmailTakenError
 
 
 router = APIRouter(prefix="/admin/demo", tags=["admin", "demo"])
@@ -62,7 +63,7 @@ async def create_demo_user(
         return await demo_service.create_demo_user(
             email=body.email, display_name=body.display_name,
         )
-    except ValueError as exc:
+    except DemoEmailTakenError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
 
 

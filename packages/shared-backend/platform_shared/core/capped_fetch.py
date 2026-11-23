@@ -40,6 +40,7 @@ from platform_shared.core.capped_body_decoder import CappedBodyDecoder
 from platform_shared.core.capped_fetch_constants import (
     ACCEPT_ENCODING,
     DEFAULT_MAX_REDIRECTS,
+    FALLBACK_TEXT_ENCODING,
     REDIRECT_STATUSES,
 )
 from platform_shared.core.capped_fetch_error import CappedFetchError
@@ -48,7 +49,7 @@ from platform_shared.core.capped_response import CappedResponse
 from platform_shared.core.content_coding import single_content_coding
 from platform_shared.core.host_only_request_log_filter import hide_request_urls
 from platform_shared.core.url_host import url_host
-from platform_shared.core.url_safety import assert_url_safe
+from platform_shared.core.url_safety import UnsafeURLError, assert_url_safe
 
 __all__ = ["fetch_capped"]
 
@@ -105,6 +106,21 @@ async def _read_capped(
     return bytes(body), False
 
 
+def _redirect_target(current_url: str, location: str) -> str:
+    """The absolute URL a ``Location`` header points at.
+
+    A malformed target that httpx lets through (``http://a]b/``) makes
+    ``urljoin`` raise a ``ValueError`` with urllib's text. It is refused like
+    any other unsafe hop, so callers that map ``UnsafeURLError`` to a reply
+    never send that text.
+    """
+    try:
+        return urljoin(current_url, location)
+    except ValueError as exc:
+        logger.warning("Capped fetch refused a malformed redirect from host=%s", url_host(current_url))
+        raise UnsafeURLError("url is not well formed") from exc
+
+
 async def _walk(
     client: httpx.AsyncClient,
     url: str,
@@ -125,7 +141,7 @@ async def _walk(
             if response.status_code in REDIRECT_STATUSES:
                 location = response.headers.get("location")
                 if location:
-                    current_url = urljoin(current_url, location)
+                    current_url = _redirect_target(current_url, location)
                     continue
                 # A redirect status with no target is the final response.
             if not response.is_success:
@@ -145,7 +161,7 @@ async def _walk(
                 status_code=response.status_code,
                 headers=response.headers,
                 content=content,
-                encoding=response.encoding or "utf-8",
+                encoding=response.encoding or FALLBACK_TEXT_ENCODING,
                 truncated=truncated,
             )
     raise _fail("too_many_redirects", current_url)

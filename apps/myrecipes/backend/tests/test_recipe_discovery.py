@@ -19,6 +19,7 @@ import pytest
 from httpx import AsyncClient
 
 from platform_shared.core.signed_url import sign_payload
+from platform_shared.core.url_safety_messages import UNSAFE_URL_DETAIL
 from platform_shared.extraction import (
     AnthropicFailureKind,
     ExtractionError,
@@ -496,10 +497,9 @@ class TestDetail:
 
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post(
-                "/discovery/detail", json={"url": "http://169.254.169.254/latest/meta-data/"}
-            )
+            resp = await authed.post("/discovery/detail", json={"url": "http://169.254.169.254/latest/meta-data/"})
         assert resp.status_code == 400
+        assert resp.json()["detail"] == UNSAFE_URL_DETAIL
         assert fake.calls == []  # never reached the model
 
 

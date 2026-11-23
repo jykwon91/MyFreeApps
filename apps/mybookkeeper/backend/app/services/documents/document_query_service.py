@@ -5,6 +5,11 @@ from urllib.parse import quote
 
 
 from app.core.context import RequestContext
+from app.core.document_constants import (
+    EMAIL_GONE_FROM_GMAIL_DETAIL,
+    GMAIL_NOT_CONNECTED_DETAIL,
+    NO_DOCUMENT_SOURCE_DETAIL,
+)
 from app.core.storage import get_storage
 from app.db.session import AsyncSessionLocal
 from app.mappers.document_summary_mapper import to_document_summary
@@ -24,6 +29,7 @@ from app.services.documents.document_mime_type import (
     servable_document_mime_type,
     stored_document_mime_type,
 )
+from app.services.documents.document_source_unavailable_error import DocumentSourceUnavailableError
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import fetch_email_by_id, get_gmail_service
 from app.services.storage.stored_file import load_stored_file
@@ -130,7 +136,7 @@ async def get_single_status(ctx: RequestContext, document_id: uuid.UUID) -> dict
 async def get_document_download(
     ctx: RequestContext, document_id: uuid.UUID
 ) -> DownloadResult | None:
-    """Returns DownloadResult or None if not found. Raises ValueError for missing source.
+    """Returns DownloadResult or None if not found. Raises DocumentSourceUnavailableError for missing source.
 
     Storage and Gmail are read with the session closed, so no pooled
     connection waits on them.
@@ -145,10 +151,10 @@ async def get_document_download(
         gmail = None
         if not doc.file_storage_key:
             if not doc.email_message_id:
-                raise ValueError("No source file available for this document")
+                raise DocumentSourceUnavailableError(NO_DOCUMENT_SOURCE_DETAIL)
             gmail = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
             if not gmail:
-                raise ValueError("Gmail integration not connected")
+                raise DocumentSourceUnavailableError(GMAIL_NOT_CONNECTED_DETAIL)
 
     if gmail is not None:
         return await _download_from_gmail(doc, gmail)
@@ -171,7 +177,7 @@ async def _download_from_gmail(doc: Document, gmail: Integration) -> DownloadRes
     finally:
         await persist_refreshed_token(connection, creds, prior_token)
     if not email_data:
-        raise ValueError("Email no longer available in Gmail")
+        raise DocumentSourceUnavailableError(EMAIL_GONE_FROM_GMAIL_DETAIL)
 
     attachments = email_data.get("attachments", [])
     if attachments:
