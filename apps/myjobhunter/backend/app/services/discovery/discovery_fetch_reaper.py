@@ -25,6 +25,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
+from platform_shared.core.audit_actor import audit_actor
+
 from app.db.session import unit_of_work
 from app.repositories.discovery import discovery_repository
 
@@ -40,4 +42,9 @@ async def reap_stale_running_fetches() -> int:
     """
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=REAP_AFTER_MINUTES)
     async with unit_of_work() as db:
-        return await discovery_repository.reap_stale_fetches(db, cutoff=cutoff)
+        stale = await discovery_repository.lock_stale_fetches(db, cutoff=cutoff)
+        for fetch in stale:
+            # Startup runs with no signed-in user; each row is audited as its owner.
+            with audit_actor(fetch.user_id):
+                await discovery_repository.mark_reaped(db, fetch)
+    return len(stale)

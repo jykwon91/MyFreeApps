@@ -57,8 +57,9 @@ class ResumeRefinementSession(Base):
     # frontend's "Try again" card. Cleared on retry / unlock.
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Worker claim marker for the ``preparing`` state: set atomically by
-    # ``claim_next_preparing`` so concurrent worker replicas never
+    # Worker claim marker for the ``preparing`` state: set under a
+    # SKIP LOCKED row lock (``session_repo.lock_next_due_preparation`` then
+    # ``mark_preparation_started``) so concurrent worker replicas never
     # prepare the same session twice. Cleared on transient failure so
     # a later poll retries.
     preparation_started_at: Mapped[datetime | None] = mapped_column(

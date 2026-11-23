@@ -16,7 +16,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import desc, nulls_last, outerjoin, select, update
+from platform_shared.repositories.audited_writes import lock_rows, update_rows
+from sqlalchemy import desc, nulls_last, outerjoin, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,30 +84,27 @@ async def complete_fetch(
     await db.flush()
 
 
-async def reap_stale_fetches(
+async def lock_stale_fetches(
     db: AsyncSession,
     *,
     cutoff: datetime,
-) -> int:
-    """Bulk-update discovery_fetches stuck in 'running' before ``cutoff`` to 'error'.
+) -> list[DiscoveryFetch]:
+    """discovery_fetches stuck in 'running' since before ``cutoff``, locked for update.
 
-    Called at startup to clean up zombie rows left by a crashed backend.
-    Returns the number of rows updated so the caller can log it.
+    Every user's rows: the startup reaper marks each one as its owner.
     """
-    stmt = (
-        update(DiscoveryFetch)
-        .where(
-            DiscoveryFetch.status == "running",
-            DiscoveryFetch.started_at < cutoff,
-        )
-        .values(
-            status="error",
-            error_message="reaped: server restart or stuck >30min",
-        )
+    return await lock_rows(
+        db, DiscoveryFetch,
+        DiscoveryFetch.status == "running",
+        DiscoveryFetch.started_at < cutoff,
     )
-    result = await db.execute(stmt)
+
+
+async def mark_reaped(db: AsyncSession, fetch: DiscoveryFetch) -> None:
+    """Mark a zombie ``running`` fetch (a crashed backend left it) as 'error'."""
+    fetch.status = "error"
+    fetch.error_message = "reaped: server restart or stuck >30min"
     await db.flush()
-    return result.rowcount or 0
 
 
 # ===========================================================================
@@ -210,20 +208,16 @@ async def mark_missing_as_expired(
         # a no-op is the only safe behavior if it slips through.
         return 0
 
-    now = datetime.now(timezone.utc)
-    stmt = (
-        update(DiscoveredJob)
-        .where(
-            DiscoveredJob.user_id == user_id,
-            DiscoveredJob.fetch_id.in_(select(DiscoveryFetch.id).where(
-                DiscoveryFetch.discovery_source_id == discovery_source_id)),
-            DiscoveredJob.expired_at.is_(None),
-            DiscoveredJob.source_external_id.notin_(seen_external_ids),
-        )
-        .values(expired_at=now)
+    expired = await update_rows(
+        db, DiscoveredJob,
+        DiscoveredJob.user_id == user_id,
+        DiscoveredJob.fetch_id.in_(select(DiscoveryFetch.id).where(
+            DiscoveryFetch.discovery_source_id == discovery_source_id)),
+        DiscoveredJob.expired_at.is_(None),
+        DiscoveredJob.source_external_id.notin_(seen_external_ids),
+        values={"expired_at": datetime.now(timezone.utc)},
     )
-    result = await db.execute(stmt)
-    return result.rowcount or 0
+    return len(expired)
 
 
 async def list_discovered(

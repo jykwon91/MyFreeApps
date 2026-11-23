@@ -11,6 +11,7 @@ import uuid
 from decimal import Decimal
 
 import pytest
+from platform_shared.testing.audited_write_case import AuditedWriteCase, run_audited_write_case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_enums import APPLICANT_STAGES, REFERENCE_RELATIONSHIPS, SCREENING_PROVIDERS
@@ -59,7 +60,7 @@ from app.repositories.transactions import (
     transaction_reconciliation_repo,
 )
 from app.repositories.vendors import vendor_repo
-from tests.audited_row_factory import AuditedWriteCase, make_row, run_audited_write_case
+from tests.audited_row_factory import make_row
 
 ORG = uuid.uuid4()
 USER = uuid.uuid4()
