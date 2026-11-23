@@ -1,4 +1,9 @@
-import { PHOTO_IMPORT_LONGEST_SIDE, PHOTO_IMPORT_JPEG_QUALITY } from "@myrecipes/api-client/constants/photoImport";
+import {
+  PHOTO_IMPORT_COPY,
+  PHOTO_IMPORT_JPEG_QUALITY,
+  PHOTO_IMPORT_LONGEST_SIDE,
+  PHOTO_IMPORT_STOP_COPY,
+} from "@myrecipes/api-client/constants/photoImport";
 import type { PhotoEncoding } from "@platform/mobile";
 
 export const IMPORT_RECIPE_ROUTE = "/recipes/import";
@@ -21,14 +26,14 @@ export const IMPORT_RECIPE_MESSAGES = {
   extract: "Extract recipe",
   chooseDifferent: "Choose a different photo",
   typeItIn: "Prefer to type it in? Enter it yourself",
-  leavingCancels: "Leaving will cancel the import.",
+  leavingCancels: PHOTO_IMPORT_COPY.leavingCancels,
   cameraDenied: "I need camera access to take a photo. You can turn it on in Settings.",
   openSettings: "Open Settings",
   photoUnreadable: "Couldn't open that photo. Try another one.",
   signInHeading: "Sign in to import a recipe",
   signInBody: "Recipes are saved to your MyRecipes account, so you can open them on the website too.",
-  stopTitle: "Stop reading this photo?",
-  stopBody: "Leaving now cancels the import.",
-  keepWaiting: "Keep waiting",
-  leave: "Leave",
+  stopTitle: PHOTO_IMPORT_STOP_COPY.discardTitle,
+  stopBody: PHOTO_IMPORT_STOP_COPY.discardBody,
+  keepWaiting: PHOTO_IMPORT_STOP_COPY.keepEditing,
+  leave: PHOTO_IMPORT_STOP_COPY.discard,
 } as const;

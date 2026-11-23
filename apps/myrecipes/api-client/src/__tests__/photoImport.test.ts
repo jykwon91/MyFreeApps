@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { photoImportErrorMessage } from "../utils/photoImportErrorMessage";
+import { photoImportProblemIsThePhoto } from "../utils/photoImportProblemIsThePhoto";
 import { requestErrorStatus } from "../utils/requestErrorStatus";
 
 describe("photoImportErrorMessage", () => {
@@ -26,5 +27,17 @@ describe("requestErrorStatus", () => {
     expect(requestErrorStatus({ status: "FETCH_ERROR" })).toBeUndefined();
     expect(requestErrorStatus(null)).toBeUndefined();
     expect(requestErrorStatus("boom")).toBeUndefined();
+  });
+});
+
+describe("photoImportProblemIsThePhoto", () => {
+  it("blames the photo for a size limit, a wrong type, or no recipe in it", () => {
+    for (const status of [413, 415, 422]) expect(photoImportProblemIsThePhoto({ status })).toBe(true);
+  });
+
+  it("keeps the photo when the service is busy, down, failing or unreachable", () => {
+    for (const status of [429, 500, 503]) expect(photoImportProblemIsThePhoto({ status })).toBe(false);
+    expect(photoImportProblemIsThePhoto({ status: "FETCH_ERROR" })).toBe(false);
+    expect(photoImportProblemIsThePhoto(new Error("boom"))).toBe(false);
   });
 });

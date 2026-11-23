@@ -1,3 +1,5 @@
+import type { DiscardCopy } from "@platform/core/types/discard/discard-copy";
+
 /**
  * Photo import (POST /recipes/extract), shared by the website and the phone. The limits mirror
  * the backend: `settings.max_photo_upload_bytes` and `photo_extraction_service.SUPPORTED_MEDIA_TYPES`.
@@ -23,4 +25,16 @@ export const PHOTO_IMPORT_COPY = {
   title: "Import from photo",
   reading: "Reading your recipe photo...",
   timeHint: "This usually takes up to 30 seconds.",
+  leavingCancels: "Leaving will cancel the import.",
 } as const;
+
+/** What's asked before leaving while the photo is being read: leaving stops the request. */
+export const PHOTO_IMPORT_STOP_COPY: DiscardCopy = {
+  discardTitle: "Stop reading this photo?",
+  discardBody: "Leaving now cancels the import.",
+  keepEditing: "Keep waiting",
+  discard: "Leave",
+};
+
+/** Statuses that say the photo itself can't be read, so trying the same one again can't work. */
+export const PHOTO_IMPORT_PHOTO_PROBLEM_STATUSES: readonly number[] = [413, 415, 422];
