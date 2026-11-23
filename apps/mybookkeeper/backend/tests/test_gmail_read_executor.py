@@ -8,6 +8,7 @@ from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
 from app.services.email import gmail_read_executor
+from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR, GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR
 from app.services.email.exceptions import GmailReauthRequiredError
 
 
@@ -46,14 +47,23 @@ async def test_success_returns_the_response_and_saves_a_refreshed_token(gmail) -
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure", [RefreshError("invalid_grant"), _http_error(401)])
-async def test_refused_token_marks_reauth_and_names_the_purpose(gmail, failure) -> None:
+@pytest.mark.parametrize(
+    ("failure", "reason"),
+    [
+        (RefreshError("invalid_grant: Token has been expired or revoked."), GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR),
+        (_http_error(401), GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR),
+        (_http_error(403), GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR),
+    ],
+)
+async def test_refused_token_marks_reauth_and_names_the_purpose(gmail, failure, reason) -> None:
     gmail["request"].execute.side_effect = failure
 
     with pytest.raises(GmailReauthRequiredError, match="send receipts"):
         await _read(gmail)
 
     gmail["mark"].assert_awaited_once()
+    # Fixed copy, not Google's text: the integration API returns this reason.
+    assert gmail["mark"].await_args.args[1] == reason
     gmail["persist"].assert_not_awaited()
 
 

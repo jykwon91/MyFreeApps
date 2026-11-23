@@ -43,6 +43,7 @@ from platform_shared.schemas.admin_user import (
     AdminUserRoleUpdate,
     UserStats,
 )
+from platform_shared.services.admin_target_user_not_found_error import AdminTargetUserNotFoundError
 from platform_shared.services.admin_user_service import AdminUserService
 
 
@@ -121,7 +122,7 @@ def build_admin_router(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except LookupError as exc:
+        except AdminTargetUserNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @router.patch(
@@ -138,7 +139,7 @@ def build_admin_router(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except LookupError as exc:
+        except AdminTargetUserNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @router.patch(
@@ -155,7 +156,7 @@ def build_admin_router(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except LookupError as exc:
+        except AdminTargetUserNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @router.patch(
@@ -171,7 +172,7 @@ def build_admin_router(
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except LookupError as exc:
+        except AdminTargetUserNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @router.get("/stats/users", response_model=UserStats)

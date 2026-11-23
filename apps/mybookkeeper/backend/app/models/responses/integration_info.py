@@ -9,7 +9,7 @@ class IntegrationInfo(TypedDict):
     # Gmail-specific fields. Present when ``provider == 'gmail'``; absent for others.
     # has_send_scope: pre-PR-2.3 integrations lack gmail.send — host must reconnect.
     # needs_reauth: refresh token was rejected by Google — all Gmail calls will fail.
-    # last_reauth_error: short repr of the RefreshError for diagnostics.
+    # last_reauth_error: why Gmail must be reconnected, as fixed copy (Google's text is logged).
     has_send_scope: NotRequired[bool]
     needs_reauth: NotRequired[bool]
     last_reauth_error: NotRequired[str | None]

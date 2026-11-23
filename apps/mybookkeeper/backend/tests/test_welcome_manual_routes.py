@@ -23,10 +23,12 @@ from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_summary import WelcomeManualSummary
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 from app.services.welcome_manuals import (
     welcome_manual_section_service,
     welcome_manual_service,
 )
+from app.services.welcome_manuals.welcome_manual_scope import ManualNotFoundError
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -149,7 +151,7 @@ class TestCreate:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         _override_auth(org_id, user_id)
         try:
-            with patch_service("create_manual", side_effect=LookupError("Property not found")):
+            with patch_service("create_manual", side_effect=PropertyNotFoundError("Property not found")):
                 client = TestClient(app)
                 response = client.post(
                     "/welcome-manuals",
@@ -158,6 +160,7 @@ class TestCreate:
         finally:
             app.dependency_overrides.clear()
         assert response.status_code == 404
+        assert response.json()["detail"] == "Property not found"
 
 
 class TestGetUpdateDelete:
@@ -179,7 +182,7 @@ class TestGetUpdateDelete:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         _override_auth(org_id, user_id)
         try:
-            with patch_service("get_manual", side_effect=LookupError("nope")):
+            with patch_service("get_manual", side_effect=ManualNotFoundError("nope")):
                 client = TestClient(app)
                 response = client.get(f"/welcome-manuals/{uuid.uuid4()}")
         finally:
@@ -208,7 +211,7 @@ class TestGetUpdateDelete:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         _override_auth(org_id, user_id)
         try:
-            with patch_service("update_manual", side_effect=LookupError("nope")):
+            with patch_service("update_manual", side_effect=ManualNotFoundError("nope")):
                 client = TestClient(app)
                 response = client.put(f"/welcome-manuals/{uuid.uuid4()}", json={"title": "x"})
         finally:
@@ -232,7 +235,7 @@ class TestGetUpdateDelete:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         _override_auth(org_id, user_id)
         try:
-            with patch_service("soft_delete_manual", side_effect=LookupError("nope")):
+            with patch_service("soft_delete_manual", side_effect=ManualNotFoundError("nope")):
                 client = TestClient(app)
                 response = client.delete(f"/welcome-manuals/{uuid.uuid4()}")
         finally:

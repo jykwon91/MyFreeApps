@@ -20,6 +20,7 @@ from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
 from app.services.listings import listing_service
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 
 _LOGGER = "app.services.listings.listing_service"
 
@@ -88,7 +89,7 @@ class TestGetPublicListing:
         )
 
         with _patch_session(db), caplog.at_level(logging.WARNING, logger=_LOGGER):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.get_public_listing("archived-pub002")
 
         assert any(
@@ -103,7 +104,7 @@ class TestGetPublicListing:
         self, db: AsyncSession, caplog,
     ) -> None:
         with _patch_session(db), caplog.at_level(logging.WARNING, logger=_LOGGER):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.get_public_listing("never-existed-pub003")
 
         assert any(

@@ -19,7 +19,9 @@ from app.schemas.listings.listing_list_response import ListingListResponse
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
-from app.services.listings.listing_photo_service import ListingNotFoundError, StalePhotoOrderError
+from app.services.listings.listing_not_found_error import ListingNotFoundError
+from app.services.listings.listing_photo_service import StalePhotoOrderError
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 
 
 class TestListingsListEndpoint:
@@ -145,14 +147,14 @@ class TestListingDetailEndpoint:
         app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_returns_404_when_service_raises_lookup_error(self) -> None:
+    async def test_returns_404_when_service_raises_listing_not_found(self) -> None:
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
         app.dependency_overrides[current_org_member] = lambda: self._ctx(org_id, user_id)
 
         with patch(
             "app.api.listings.listing_service.get_listing",
-            side_effect=LookupError("Listing not found"),
+            side_effect=ListingNotFoundError("Listing not found"),
         ):
             client = TestClient(app)
             response = client.get(f"/listings/{uuid.uuid4()}")
@@ -356,7 +358,7 @@ class TestListingCreateEndpoint:
         try:
             with patch(
                 "app.api.listings.listing_service.create_listing",
-                side_effect=LookupError("Property not found"),
+                side_effect=PropertyNotFoundError("Property not found"),
             ):
                 client = TestClient(app)
                 response = client.post(
@@ -410,7 +412,7 @@ class TestListingUpdateEndpoint:
         try:
             with patch(
                 "app.api.listings.listing_service.update_listing",
-                side_effect=LookupError("Listing not found"),
+                side_effect=ListingNotFoundError("Listing not found"),
             ):
                 client = TestClient(app)
                 response = client.put(
@@ -451,7 +453,7 @@ class TestListingDeleteEndpoint:
         try:
             with patch(
                 "app.api.listings.listing_service.soft_delete_listing",
-                side_effect=LookupError("Listing not found"),
+                side_effect=ListingNotFoundError("Listing not found"),
             ):
                 client = TestClient(app)
                 response = client.delete(f"/listings/{listing_id}")

@@ -24,7 +24,12 @@ from app.services.email import (
     gmail_request_executor,
     gmail_service,
 )
-from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS, GMAIL_SEND_CLAIM_STALE_AFTER, GMAIL_SEND_URL
+from app.services.email.constants import (
+    GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
+    GMAIL_HTTP_TIMEOUT_SECONDS,
+    GMAIL_SEND_CLAIM_STALE_AFTER,
+    GMAIL_SEND_URL,
+)
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
     GmailSendError,
@@ -126,17 +131,20 @@ class TestDefiniteRefusals:
             with pytest.raises(GmailReauthRequiredError):
                 await _send()
         mark.assert_awaited_once()
+        assert mark.await_args.args[1] == GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
 
     @pytest.mark.asyncio
     async def test_refresh_error_marks_needs_reauth(self) -> None:
         mark = AsyncMock()
         with (
             patch.object(gmail_request_executor, "mark_integration_needs_reauth", mark),
-            fake_gmail_post(RefreshError("invalid_grant")),
+            fake_gmail_post(RefreshError("invalid_grant: Token has been expired or revoked.")),
         ):
             with pytest.raises(GmailReauthRequiredError):
                 await _send()
         mark.assert_awaited_once()
+        # Fixed copy, not Google's text: the integration API returns this reason.
+        assert mark.await_args.args[1] == GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
 
 
 class TestOutcomeUnknown:

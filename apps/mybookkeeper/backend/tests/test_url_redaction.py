@@ -6,6 +6,13 @@ import logging
 import httpx
 import pytest
 
+from app.core.channel_import_messages import (
+    CHANNEL_IMPORT_ACCESS_DENIED_MESSAGE,
+    CHANNEL_IMPORT_LINK_REJECTED_MESSAGE,
+    CHANNEL_IMPORT_NETWORK_MESSAGE,
+    CHANNEL_IMPORT_SERVER_ERROR_MESSAGE,
+    CHANNEL_IMPORT_UNREADABLE_MESSAGE,
+)
 from app.core.url_redaction import redact_url, redact_urls_in_text
 from app.repositories import channel_listing_repo
 from app.services.listings import channel_sync_service
@@ -60,17 +67,25 @@ class TestRedactUrlsInText:
 
 
 FAILURES = [
-    pytest.param(lambda: _mock_client_status(404), "config", id="http-4xx"),
-    pytest.param(lambda: _mock_client_status(401), "auth", id="http-auth"),
-    pytest.param(lambda: _mock_client_status(503), "transient", id="http-5xx"),
+    pytest.param(
+        lambda: _mock_client_status(404), "config", CHANNEL_IMPORT_LINK_REJECTED_MESSAGE, id="http-4xx",
+    ),
+    pytest.param(
+        lambda: _mock_client_status(401), "auth", CHANNEL_IMPORT_ACCESS_DENIED_MESSAGE, id="http-auth",
+    ),
+    pytest.param(
+        lambda: _mock_client_status(503), "transient", CHANNEL_IMPORT_SERVER_ERROR_MESSAGE, id="http-5xx",
+    ),
     pytest.param(
         lambda: _mock_client_raising(httpx.ConnectError(f"cannot connect to {FEED_URL}")),
         "transient",
+        CHANNEL_IMPORT_NETWORK_MESSAGE,
         id="transport",
     ),
     pytest.param(
         lambda: _mock_client_raising(RuntimeError(f"parser blew up on {FEED_URL}")),
         "unknown",
+        CHANNEL_IMPORT_UNREADABLE_MESSAGE,
         id="unknown",
     ),
 ]
@@ -78,9 +93,9 @@ FAILURES = [
 
 class TestPollOneNeverLogsFeedSecret:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize(("make_client", "category"), FAILURES)
+    @pytest.mark.parametrize(("make_client", "category", "message"), FAILURES)
     async def test_failed_fetch_leaks_nothing(
-        self, db, seeded_channel_listing, caplog, make_client, category,
+        self, db, seeded_channel_listing, caplog, make_client, category, message,
     ) -> None:
         cl = seeded_channel_listing
         await channel_listing_repo.update(db, cl.id, cl.listing_id, {"ical_import_url": FEED_URL})
@@ -103,8 +118,8 @@ class TestPollOneNeverLogsFeedSecret:
         assert after is not None
         assert after.last_import_error_category == category
         assert after.last_import_error is not None
-        assert SECRET not in after.last_import_error
-        assert "www.airbnb.com#" in after.last_import_error
+        assert after.last_import_error == message
+        assert "www.airbnb.com" not in after.last_import_error
 
     @pytest.mark.asyncio
     async def test_unsafe_url_error_does_not_leak(

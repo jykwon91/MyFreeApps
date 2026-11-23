@@ -31,6 +31,7 @@ from app.db.session import unit_of_work
 from app.models.integrations.gmail_connection import GmailConnection
 from app.repositories import integration_repo
 from app.services.email.constants import (
+    GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
     GMAIL_HTTP_TIMEOUT_SECONDS,
     GMAIL_RATE_LIMIT_REASONS,
     GMAIL_SEND_URL,
@@ -59,9 +60,10 @@ async def mark_integration_needs_reauth(
     connection: GmailConnection,
     reason: str,
 ) -> None:
+    """Flag the connection; ``reason`` is fixed copy the API shows, never Google's text."""
     async with unit_of_work() as db:
         marked = await integration_repo.mark_needs_reauth_if_unchanged(
-            db, connection, reason[:200], datetime.now(timezone.utc)
+            db, connection, reason, datetime.now(timezone.utc)
         )
     if not marked:
         logger.info("Gmail was reconnected during this call; leaving the new connection's reauth state alone")
@@ -115,7 +117,7 @@ async def send_raw_gmail_message(
         code = refresh_error_code(exc)
         if kind is GmailFailureKind.REAUTH:
             logger.warning("Gmail send rejected — refresh token revoked: oauth_error=%s", code)
-            await mark_integration_needs_reauth(integration, repr(exc))
+            await mark_integration_needs_reauth(integration, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
             raise GmailReauthRequiredError(
                 f"Gmail token expired. Reconnect Gmail to {purpose}."
             ) from exc
@@ -133,7 +135,7 @@ async def send_raw_gmail_message(
     status = response.status_code
     if status == 401:
         logger.warning("Gmail send rejected with 401 — token rejected by Google")
-        await mark_integration_needs_reauth(integration, "Gmail send returned 401")
+        await mark_integration_needs_reauth(integration, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
         raise GmailReauthRequiredError(
             f"Gmail token rejected (401). Reconnect Gmail to {purpose}."
         )

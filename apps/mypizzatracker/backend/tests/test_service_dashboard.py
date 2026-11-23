@@ -359,7 +359,7 @@ async def test_advance_to_ready_text_sent_sets_timestamp(
 
 @pytest.mark.asyncio
 async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
-    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch, caplog,
 ):
     """When Twilio rejects the send, the order transition still commits
     but the response surfaces sms_dispatched=False + sms_error so the
@@ -374,7 +374,7 @@ async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
     )
 
     def _raise(*args, **kwargs):
-        raise SmsSendError("Twilio rejected (code=21610): recipient opted out")
+        raise SmsSendError("Twilio rejected (code=21610): recipient opted out", code=21610, status=400)
 
     monkeypatch.setattr(sms_sender, "send_sms_or_raise", _raise)
 
@@ -389,7 +389,7 @@ async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
     assert body["order"]["ready_text_sent_at"] is not None
     # SMS failure surfaced to operator
     assert body["sms_dispatched"] is False
-    assert "21610" in body["sms_error"]
+    assert body["sms_error"] == "the customer has opted out of texts" and "code=21610" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -435,7 +435,7 @@ async def test_ready_text_twilio_never_confirmed_is_flagged_outcome_unknown(
 
 @pytest.mark.asyncio
 async def test_ready_text_rejection_never_shows_the_customer_number(
-    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch, caplog,
 ):
     """Twilio's rejection text can quote the To number; the operator's
     sms_error carries the reason without it."""
@@ -454,8 +454,8 @@ async def test_ready_text_rejection_never_shows_the_customer_number(
     body = r.json()
     assert body["sms_dispatched"] is False
     assert body["sms_outcome_unknown"] is False
-    assert "21211" in body["sms_error"]
-    assert "5550199" not in body["sms_error"]
+    assert body["sms_error"] == "the phone number isn't valid"
+    assert "code=21211" in caplog.text and "5550199" not in body["sms_error"]
 
 
 def _use_real_twilio_sender(monkeypatch) -> None:

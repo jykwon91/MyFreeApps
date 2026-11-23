@@ -42,12 +42,14 @@ from app.schemas.welcome_manuals.welcome_manual_share_response import (
 from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 from app.services.welcome_manuals import (
     welcome_manual_email_service,
     welcome_manual_section_service,
     welcome_manual_service,
     welcome_manual_share_service,
 )
+from app.services.welcome_manuals.welcome_manual_scope import ManualNotFoundError
 
 router = APIRouter(prefix="/welcome-manuals", tags=["welcome-manuals"])
 
@@ -77,7 +79,7 @@ async def create_welcome_manual(
         return await welcome_manual_service.create_manual(
             ctx.organization_id, ctx.user_id, payload,
         )
-    except LookupError as exc:
+    except PropertyNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
@@ -90,7 +92,7 @@ async def get_welcome_manual(
         return await welcome_manual_service.get_manual(
             ctx.organization_id, ctx.user_id, manual_id,
         )
-    except LookupError as exc:
+    except ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
 
 
@@ -104,7 +106,7 @@ async def update_welcome_manual(
         return await welcome_manual_service.update_manual(
             ctx.organization_id, ctx.user_id, manual_id, payload,
         )
-    except LookupError as exc:
+    except (ManualNotFoundError, PropertyNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
@@ -117,7 +119,7 @@ async def delete_welcome_manual(
         await welcome_manual_service.soft_delete_manual(
             ctx.organization_id, ctx.user_id, manual_id,
         )
-    except LookupError as exc:
+    except ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
     return Response(status_code=204)
 

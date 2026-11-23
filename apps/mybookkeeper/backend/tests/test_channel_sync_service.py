@@ -33,8 +33,10 @@ import pytest
 from platform_shared.core.capped_fetch_error import CappedFetchError
 from platform_shared.core import url_safety
 from platform_shared.core.url_safety import UnsafeURLError
+from platform_shared.core.url_safety_messages import UNSAFE_URL_DETAIL
 from platform_shared.testing.streamed_response import streamed_response
 
+from app.core.channel_import_messages import CHANNEL_IMPORT_TIMEOUT_MESSAGE, CHANNEL_IMPORT_UNREADABLE_MESSAGE
 from app.core.ical_feed_constants import ICAL_FEED_MAX_BYTES, ICAL_FEED_MAX_REDIRECTS
 
 from app.models.listings.channel import Channel
@@ -282,8 +284,7 @@ class TestPollOne:
         assert len(rows) == 1
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
-        assert refreshed.last_import_error is not None
-        assert "timeout" in refreshed.last_import_error.lower()
+        assert refreshed.last_import_error == CHANNEL_IMPORT_TIMEOUT_MESSAGE
         assert refreshed.last_import_error_category == "transient"
 
     @pytest.mark.asyncio
@@ -351,7 +352,7 @@ class TestPollOne:
 
     @pytest.mark.asyncio
     async def test_unexpected_exception_recorded_as_unknown(
-        self, db, seeded_channel_listing,
+        self, db, seeded_channel_listing, caplog: pytest.LogCaptureFixture,
     ) -> None:
         cl = seeded_channel_listing
         with _patched_uow(db):
@@ -362,7 +363,8 @@ class TestPollOne:
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
         assert refreshed.last_import_error_category == "unknown"
-        assert refreshed.last_import_error is not None
+        assert refreshed.last_import_error == CHANNEL_IMPORT_UNREADABLE_MESSAGE
+        assert "unexpected parse failure" in caplog.text
 
     @pytest.mark.asyncio
     async def test_skip_when_url_is_none(
@@ -494,16 +496,14 @@ class TestFetchLimits:
         refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert refreshed is not None
         assert refreshed.last_import_error_category == "transient"
-        assert refreshed.last_import_error is not None
-        assert "airbnb.com" in refreshed.last_import_error
-        assert "cal.ics" not in refreshed.last_import_error
+        assert refreshed.last_import_error == CHANNEL_IMPORT_TIMEOUT_MESSAGE
         assert "cal.ics" not in caplog.text
 
 
 class TestPollOneBlocksSSRF:
     @pytest.mark.asyncio
     async def test_blocked_url_recorded_as_config(
-        self, db, seeded_channel_listing,
+        self, db, seeded_channel_listing, caplog: pytest.LogCaptureFixture,
     ) -> None:
         cl = seeded_channel_listing
         await channel_listing_repo.update(
@@ -522,8 +522,8 @@ class TestPollOneBlocksSSRF:
         after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
         assert after is not None
         assert after.last_import_error_category == "config"
-        assert after.last_import_error is not None
-        assert "UnsafeURLError" in after.last_import_error
+        assert after.last_import_error == UNSAFE_URL_DETAIL  # the guard's reason, naming the IP, is logged
+        assert "UnsafeURLError" in caplog.text and "169.254.169.254" in caplog.text
 
 
 class TestPollOneLogsRedactedFeed:

@@ -3,7 +3,7 @@
 Patches `AsyncSessionLocal` to point at the in-memory SQLite session — same
 pattern used in test_property_duplicate.py. Verifies that:
 - get_listing returns the full response with photos + external_ids loaded
-- get_listing on a cross-org listing raises LookupError (mapped to 404 by API)
+- get_listing on a cross-org listing raises ListingNotFoundError (mapped to 404 by API)
 - list_listings paginates correctly
 """
 from __future__ import annotations
@@ -24,6 +24,8 @@ from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
 from app.services.listings import listing_service
+from app.services.listings.listing_not_found_error import ListingNotFoundError
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 
 
 def _make_listing(
@@ -110,7 +112,7 @@ class TestGetListing:
 
         other_org_id = uuid.uuid4()
         with _patch_session(db):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.get_listing(other_org_id, test_user.id, listing.id)
 
     @pytest.mark.asyncio
@@ -126,7 +128,7 @@ class TestGetListing:
         await db.commit()
 
         with _patch_session(db):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.get_listing(test_org.id, test_user.id, listing.id)
 
 
@@ -263,7 +265,7 @@ class TestCreateListing:
         with _patch_session(db), patch(
             "app.services.listings.listing_service.unit_of_work", _fake_uow,
         ):
-            with pytest.raises(LookupError):
+            with pytest.raises(PropertyNotFoundError):
                 await listing_service.create_listing(test_org.id, test_user.id, payload)
 
 
@@ -310,7 +312,7 @@ class TestUpdateListing:
         with _patch_session(db), patch(
             "app.services.listings.listing_service.unit_of_work", _fake_uow,
         ):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.update_listing(
                     test_org.id, test_user.id, uuid.uuid4(),
                     ListingUpdateRequest(title="x"),
@@ -355,7 +357,7 @@ class TestSoftDeleteListing:
         with patch(
             "app.services.listings.listing_service.unit_of_work", _fake_uow,
         ):
-            with pytest.raises(LookupError):
+            with pytest.raises(ListingNotFoundError):
                 await listing_service.soft_delete_listing(
                     test_org.id, test_user.id, uuid.uuid4(),
                 )

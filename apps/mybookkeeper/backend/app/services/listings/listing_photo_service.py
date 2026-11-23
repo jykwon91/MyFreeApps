@@ -25,16 +25,12 @@ from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories import listing_photo_repo, listing_repo, lock_timeout_repo
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 from app.services.listings.photo_response_builder import attach_presigned_urls
 from app.services.storage.image_processor import (
-    ImageRejected,
     filename_for_content_type,
     process_image,
 )
-
-
-class ListingNotFoundError(LookupError):
-    """Raised when the listing the caller scoped against does not exist."""
 
 
 class StalePhotoOrderError(ValueError):
