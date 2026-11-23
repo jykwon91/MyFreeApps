@@ -41,6 +41,11 @@ describe("documentUploadFailure", () => {
     );
   });
 
+  it("says the server's reason when it turned the upload down for another reason, but keeps its own words for a file it can't take", () => {
+    expect(documentUploadFailure(null, { status: 409, data: { detail: "Too many documents" } })).toBe("Too many documents");
+    expect(documentUploadFailure(null, { status: 415, data: { detail: "Unsupported media type" } })).toBe(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type);
+  });
+
   it("keeps its other wording", () => {
     expect(documentUploadFailure(null, { status: 500, data: { detail: "Storage unavailable" } })).toBe(DOCUMENT_MESSAGES.couldntUpload);
     expect(documentUploadFailure(null, { status: 415 })).toBe(DOCUMENT_UPLOAD_PROBLEM_MESSAGES.type);

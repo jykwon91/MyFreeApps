@@ -1,4 +1,5 @@
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
+import { clientRefusalMessage } from "@myjobhunter/api-client/utils/clientRefusalMessage";
 import { unsureSavedMessage } from "@myjobhunter/api-client/utils/unsureSavedMessage";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
@@ -8,9 +9,9 @@ import { APPLICATION_DETAIL_MESSAGES } from "../constants/applicationDetail";
 import { WRITE_FAILURE_MESSAGES } from "../constants/writeFailure";
 import type { CreateFailureCopy } from "../types/CreateFailureCopy";
 
-/** repeatableWriteFailure for a change or delete: that the thing is gone (a 404), or else `failed`. */
+/** repeatableWriteFailure for a change or delete: that the thing is gone (a 404), or else the server's reason for a 4xx when it gave one, or `failed`. */
 export function writeFailure(error: unknown, failed: string, gone: string = APPLICATION_DETAIL_MESSAGES.gone): string | null {
-  return repeatableWriteFailure(error, (refusal) => (isNotFound(refusal) ? gone : failed));
+  return repeatableWriteFailure(error, (refusal) => (isNotFound(refusal) ? gone : clientRefusalMessage(refusal, failed)));
 }
 
 /**
@@ -37,10 +38,11 @@ export function moveFailure(error: unknown): string | null {
 /**
  * What to say when an add fails. Unlike a change, an add isn't safe to send twice: after a lost answer or a server failure
  * with no reason it may already be saved, so this says to check first rather than offering a plain retry. Null when a cache
- * reset called it off.
+ * reset called it off. A 4xx refusal says the server's reason when it gave one, else `failed`; a 404's own text is a generic "not found", so it says `gone` or `failed`.
  */
 export function createFailure(error: unknown, { failed, checkWhere, gone }: CreateFailureCopy): string | null {
   if (isCancelledRequest(error)) return null;
   if (writeOutcome(error) === "unknown") return unsureSavedMessage(checkWhere, isNoResponse(error));
-  return gone && isNotFound(error) ? gone : failed;
+  if (isNotFound(error)) return gone ?? failed;
+  return clientRefusalMessage(error, failed);
 }

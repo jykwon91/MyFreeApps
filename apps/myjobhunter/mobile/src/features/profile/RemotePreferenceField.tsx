@@ -9,6 +9,7 @@ import { PROFILE_MESSAGES as MESSAGES } from "../../constants/profile";
 import { REMOTE_CHOICES } from "../../constants/remoteChoices";
 import type { RemotePreferenceFieldProps } from "../../types/RemotePreferenceFieldProps";
 import { repeatableWriteFailure } from "@myjobhunter/api-client/utils/repeatableWriteFailure";
+import { clientRefusalMessage } from "@myjobhunter/api-client/utils/clientRefusalMessage";
 
 /**
  * Saves as soon as a choice is tapped. The tapped choice shows at once and stays until the saved
@@ -38,7 +39,7 @@ export default function RemotePreferenceField({ preference }: RemotePreferenceFi
       if (updated.remote_preference !== next) setPending(null);
     } catch (error) {
       setPending(null);
-      const message = repeatableWriteFailure(error, () => REMOTE_PREFERENCE_MESSAGES.couldntSave);
+      const message = repeatableWriteFailure(error, (refusal) => clientRefusalMessage(refusal, REMOTE_PREFERENCE_MESSAGES.couldntSave));
       if (message) showToast(message, "error");
     } finally {
       isSaving.current = false;

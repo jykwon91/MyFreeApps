@@ -227,9 +227,20 @@ describe("adding a contact", () => {
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "Sam");
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
 
-    expect(await screen.findByText(CONTACTS.couldntCreate)).toBeTruthy();
+    expect(await screen.findByText("nope")).toBeTruthy();
+    expect(screen.queryByText(CONTACTS.couldntCreate)).toBeNull();
     expect(screen.getByLabelText(CONTACTS.nameLabel).props.value).toBe("Sam");
     expect(screen.queryByText(CONTACTS.created)).toBeNull();
+  });
+
+  it("says it couldn't add the contact, in the app's own words, when the server refuses without a reason", async () => {
+    serveContacts([], { [`POST /applications/${ID}/contacts`]: () => ({ status: 400, data: {} }) });
+    await renderApplicationDetail(ID);
+    await openSheet();
+    await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "Sam");
+    await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
+
+    expect(await screen.findByText(CONTACTS.couldntCreate)).toBeTruthy();
   });
 
   it("says to check the contacts before trying again when the server breaks without a reason, since it may have saved", async () => {

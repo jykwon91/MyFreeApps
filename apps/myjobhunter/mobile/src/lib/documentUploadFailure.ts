@@ -12,5 +12,6 @@ import { createFailure } from "./writeFailure";
 export function documentUploadFailure(problem: DocumentUploadProblem | null, error?: unknown): string | null {
   if (problem) return DOCUMENT_UPLOAD_PROBLEM_MESSAGES[problem];
   const reason = uploadRejection(error);
-  return createFailure(error, { failed: reason ? DOCUMENT_UPLOAD_PROBLEM_MESSAGES[reason] : MESSAGES.couldntUpload, checkWhere: MESSAGES.checkWhere });
+  if (reason) return DOCUMENT_UPLOAD_PROBLEM_MESSAGES[reason];
+  return createFailure(error, { failed: MESSAGES.couldntUpload, checkWhere: MESSAGES.checkWhere });
 }
