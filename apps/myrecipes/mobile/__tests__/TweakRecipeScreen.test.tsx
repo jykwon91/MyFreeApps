@@ -338,7 +338,7 @@ describe("checking before it saves", () => {
     assertive.mockRestore();
   });
 
-  it("checks the version's content as the new-recipe form does, before the note", async () => {
+  it("shows the content's problems on their fields too, and names the note first because it sits first on the form", async () => {
     await showForm();
     await type("Ingredient 1 amount", "1/2");
     await type("Cook (min)", "soon");
@@ -346,9 +346,9 @@ describe("checking before it saves", () => {
     await press(MESSAGES.save);
 
     expect(screen.getByText(PROBLEMS.quantityInvalid("."), SHOWN)).toBeTruthy();
-    // On the field, and toasted as the first problem down the form.
-    expect(screen.getAllByText(PROBLEMS.minutesInvalid, SHOWN)).toHaveLength(2);
-    expect(screen.getAllByText(PROBLEMS.changeNoteRequired, SHOWN)).toHaveLength(1);
+    expect(screen.getAllByText(PROBLEMS.minutesInvalid, SHOWN)).toHaveLength(1);
+    // The note is the top field: on the field, and toasted as the first problem down the form.
+    expect(screen.getAllByText(PROBLEMS.changeNoteRequired, SHOWN)).toHaveLength(2);
     expect(posts()).toHaveLength(0);
   });
 
