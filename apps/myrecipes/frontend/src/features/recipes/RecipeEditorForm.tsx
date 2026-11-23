@@ -15,6 +15,7 @@ import type { DiscardCopy } from "@platform/core/types/discard/discard-copy";
 import IngredientRows from "@/features/recipes/IngredientRows";
 import StepRows from "@/features/recipes/StepRows";
 import { useRecipeEditorForm } from "@/features/recipes/useRecipeEditorForm";
+import { useSubmitOnce } from "@myrecipes/api-client/hooks/useSubmitOnce";
 import {
   useCreateRecipeMutation,
   useCreateVersionMutation,
@@ -108,6 +109,7 @@ export default function RecipeEditorForm(props: Props) {
   const [createRecipe, { isLoading: isCreating }] = useCreateRecipeMutation();
   const [createVersion, { isLoading: isTweaking }] = useCreateVersionMutation();
   const isSubmitting = isCreating || isTweaking;
+  const submitOnce = useSubmitOnce();
 
   const values: RecipeFormValues = {
     title,
@@ -158,23 +160,25 @@ export default function RecipeEditorForm(props: Props) {
       return;
     }
 
-    try {
-      if (props.mode === "create") {
-        const created = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
-        showSuccess("Recipe created.");
-        guard.leaveWithoutAsking(() => navigate(`/recipes/${created.id}`, { replace: true }));
-      } else {
-        await createVersion({
-          recipeId: props.recipeId,
-          body: buildVersionCreateRequest(values, changeNote, props.baseVersion.id, decimalSeparator),
-        }).unwrap();
-        showSuccess(TWEAK_MESSAGES.saved);
-        guard.leaveWithoutAsking(() => navigate(`/recipes/${props.recipeId}`, { replace: true }));
+    await submitOnce(async () => {
+      try {
+        if (props.mode === "create") {
+          const created = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
+          showSuccess("Recipe created.");
+          guard.leaveWithoutAsking(() => navigate(`/recipes/${created.id}`, { replace: true }));
+        } else {
+          await createVersion({
+            recipeId: props.recipeId,
+            body: buildVersionCreateRequest(values, changeNote, props.baseVersion.id, decimalSeparator),
+          }).unwrap();
+          showSuccess(TWEAK_MESSAGES.saved);
+          guard.leaveWithoutAsking(() => navigate(`/recipes/${props.recipeId}`, { replace: true }));
+        }
+      } catch (error) {
+        const message = recipeWriteErrorMessage(error, isTweak ? "tweak" : "create");
+        if (message) showError(message);
       }
-    } catch (error) {
-      const message = recipeWriteErrorMessage(error, isTweak ? "tweak" : "create");
-      if (message) showError(message);
-    }
+    });
   }
 
   return (

@@ -1,4 +1,5 @@
 import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
+import { useSubmitOnce } from "@myrecipes/api-client/hooks/useSubmitOnce";
 import { recipesApi, useCreateVersionMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { buildVersionCreateRequest } from "@myrecipes/api-client/utils/buildVersionCreateRequest";
@@ -25,7 +26,7 @@ import { useRecipeRows } from "../recipeForm/useRecipeRows";
  * recipe already shows the new version, and Back returns to it.
  *
  * The screen is keyed by account, so another account signing in unmounts this, and a save that
- * answers after that is dropped. A ref, not state, says a save is under way, so two taps before a
+ * answers after that is dropped. `submitOnce` says a save is under way, so two taps before a
  * re-render can't both send one.
  */
 export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
@@ -41,7 +42,7 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
   const [hasTried, setHasTried] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const rows = useRecipeRows(setValues);
-  const isSending = useRef(false);
+  const submitOnce = useSubmitOnce();
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -67,34 +68,33 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
 
   async function save(): Promise<void> {
     setHasTried(true);
-    if (isSending.current || isSaved) return;
+    if (isSaved) return;
     const problem = tweakFormProblem(values, changeNote, decimalSeparator);
     if (problem) {
       // The field errors say it to a screen reader, as one summary; this is for sighted users who can't see the first.
       showVisualToast(problem, "error");
       return;
     }
-    isSending.current = true;
-    try {
-      const body = buildVersionCreateRequest(values, changeNote, version.id, decimalSeparator);
-      const created = await createVersion({ recipeId, body }).unwrap();
-      if (!isMounted.current) return;
-      // The recipe shows the new version straight away, while it's asked for again.
-      dispatch(
-        recipesApi.util.updateQueryData("getRecipe", recipeId, (recipe) => {
-          recipe.latest_version = created;
-          recipe.latest_version_number = created.version_number;
-          recipe.version_count = created.version_number;
-        }),
-      );
-      showToast(TWEAK_MESSAGES.saved);
-      setIsSaved(true);
-    } catch (error) {
-      // Only a failure can be tried again; a saved tweak is on its way out.
-      isSending.current = false;
-      const message = recipeWriteErrorMessage(error, "tweak");
-      if (message && isMounted.current) showToast(message, "error");
-    }
+    await submitOnce(async () => {
+      try {
+        const body = buildVersionCreateRequest(values, changeNote, version.id, decimalSeparator);
+        const created = await createVersion({ recipeId, body }).unwrap();
+        if (!isMounted.current) return;
+        // The recipe shows the new version straight away, while it's asked for again.
+        dispatch(
+          recipesApi.util.updateQueryData("getRecipe", recipeId, (recipe) => {
+            recipe.latest_version = created;
+            recipe.latest_version_number = created.version_number;
+            recipe.version_count = created.version_number;
+          }),
+        );
+        showToast(TWEAK_MESSAGES.saved);
+        setIsSaved(true);
+      } catch (error) {
+        const message = recipeWriteErrorMessage(error, "tweak");
+        if (message && isMounted.current) showToast(message, "error");
+      }
+    });
   }
 
   return {

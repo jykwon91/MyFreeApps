@@ -1,3 +1,4 @@
+import { useSubmitOnce } from "@myrecipes/api-client/hooks/useSubmitOnce";
 import { recipesApi, useCreateRecipeMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe-form-values";
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
@@ -56,6 +57,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
   const rows = useRecipeRows(setValues);
   // Where to go once it's saved; the detail screen already has the recipe from the cache.
   const [created, setCreated] = useState<{ id: string } | null>(null);
+  const submitOnce = useSubmitOnce();
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -80,24 +82,26 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
 
   async function save(): Promise<void> {
     setHasTried(true);
-    if (isSaving || created) return;
+    if (created) return;
     const problem = firstRecipeFormProblem(recipeFormProblems(values, decimalSeparator));
     if (problem) {
       // The field errors say it to a screen reader, as one summary; this is for sighted users who can't see the first.
       showVisualToast(problem, "error");
       return;
     }
-    try {
-      const recipe = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
-      // The recipe opens straight away, with no skeleton while it's asked for again.
-      dispatch(recipesApi.util.upsertQueryData("getRecipe", recipe.id, recipe));
-      seed?.onCreated?.(recipe.id);
-      showToast(MESSAGES.created);
-      if (isMounted.current) setCreated({ id: recipe.id });
-    } catch (error) {
-      const message = recipeWriteErrorMessage(error, "create");
-      if (message && isMounted.current) showToast(message, "error");
-    }
+    await submitOnce(async () => {
+      try {
+        const recipe = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
+        // The recipe opens straight away, with no skeleton while it's asked for again.
+        dispatch(recipesApi.util.upsertQueryData("getRecipe", recipe.id, recipe));
+        seed?.onCreated?.(recipe.id);
+        showToast(MESSAGES.created);
+        if (isMounted.current) setCreated({ id: recipe.id });
+      } catch (error) {
+        const message = recipeWriteErrorMessage(error, "create");
+        if (message && isMounted.current) showToast(message, "error");
+      }
+    });
   }
 
   return {

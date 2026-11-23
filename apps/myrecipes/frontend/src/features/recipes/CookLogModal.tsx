@@ -2,6 +2,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { LoadingButton, Button, showError, showSuccess } from "@platform/ui";
 import StarRatingInput from "@/features/recipes/StarRatingInput";
+import { useSubmitOnce } from "@myrecipes/api-client/hooks/useSubmitOnce";
 import { useLogCookMutation } from "@myrecipes/api-client/store/recipesApi";
 import { COOK_LOG_MESSAGES as MESSAGES, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
 import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
@@ -31,6 +32,7 @@ export default function CookLogModal({
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [logCook, { isLoading }] = useLogCookMutation();
+  const submitOnce = useSubmitOnce();
 
   function reset() {
     setRating(null);
@@ -46,19 +48,21 @@ export default function CookLogModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    try {
-      await logCook({
-        recipeId,
-        versionId,
-        body: buildCookLogCreateRequest({ rating, notes }),
-      }).unwrap();
-      showSuccess(MESSAGES.logged);
-      reset();
-      onClose();
-    } catch (error) {
-      const message = recipeWriteErrorMessage(error, "logCook");
-      if (message) showError(message);
-    }
+    await submitOnce(async () => {
+      try {
+        await logCook({
+          recipeId,
+          versionId,
+          body: buildCookLogCreateRequest({ rating, notes }),
+        }).unwrap();
+        showSuccess(MESSAGES.logged);
+        reset();
+        onClose();
+      } catch (error) {
+        const message = recipeWriteErrorMessage(error, "logCook");
+        if (message) showError(message);
+      }
+    });
   }
 
   return (
