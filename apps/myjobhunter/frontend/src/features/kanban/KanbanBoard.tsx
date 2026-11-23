@@ -25,7 +25,7 @@ import {
   useSensors,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useMediaQuery } from "@platform/ui";
+import { StaleDataBanner, useMediaQuery } from "@platform/ui";
 import KanbanColumn from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
 import ClosedColumnAccordion from "./ClosedColumnAccordion";
@@ -33,7 +33,7 @@ import KanbanMobileList from "./KanbanMobileList";
 import KanbanEmptyState from "./KanbanEmptyState";
 import { useKanbanDragHandler } from "./use-kanban-drag-handler";
 import { useBoardMoveFeedback } from "./use-board-move-feedback";
-import DashboardStaleBanner from "@/features/dashboard/DashboardStaleBanner";
+import { DASHBOARD_MESSAGES } from "@/constants/dashboard-messages";
 import { useBoardMove } from "@myjobhunter/api-client/hooks/useBoardMove";
 import { newIdempotencyKey } from "@/lib/newIdempotencyKey";
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
@@ -85,7 +85,7 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
   if (isMobile) {
     return (
       <div className="p-4 space-y-6">
-        {isStale ? <DashboardStaleBanner /> : null}
+        {isStale ? <StaleDataBanner message={DASHBOARD_MESSAGES.staleBoard} className="mb-4" /> : null}
         <KanbanMobileList
           itemsByColumn={itemsByColumn}
           onSelectCard={onSelectCard}
@@ -103,7 +103,7 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
 
   return (
     <div className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0">
-      {isStale ? <DashboardStaleBanner /> : null}
+      {isStale ? <StaleDataBanner message={DASHBOARD_MESSAGES.staleBoard} className="mb-4" /> : null}
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Pipeline</h1>
         <p className="text-sm text-muted-foreground">

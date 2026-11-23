@@ -112,4 +112,28 @@ describe("ScenarioPath", () => {
     expect(refetchScenarios).toHaveBeenCalledTimes(1);
     expect(refetchUsage).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps the scenarios under a stale notice when a refresh fails, and Try again reloads", () => {
+    scenarios = { data: SCENARIOS, isError: true };
+    renderPath();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CATALOG_COPY.showingLastLoaded);
+    expect(screen.queryByText(CATALOG_COPY.loadFailed)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /At the cafe/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: CATALOG_COPY.retry }));
+    expect(refetchScenarios).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the scenarios when only the language refresh fails", () => {
+    languages = { data: [SPANISH], isError: true };
+    renderPath();
+
+    expect(screen.getByRole("status")).toHaveTextContent(CATALOG_COPY.showingLastLoaded);
+    expect(screen.getByRole("link", { name: /Greetings/ })).toBeInTheDocument();
+  });
+
+  it("shows no stale notice when nothing failed", () => {
+    renderPath();
+    expect(screen.queryByText(CATALOG_COPY.showingLastLoaded)).not.toBeInTheDocument();
+  });
 });
