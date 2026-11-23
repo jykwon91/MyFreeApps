@@ -223,3 +223,16 @@ test("Enter on a kind and a zone shows every match on the map", async ({ page })
   await expect(page.getByRole("region", { name: /“flight master mount hyjal” on the map/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "Mount Hyjal map" })).toBeVisible();
 });
+
+test("search finds a creature that is no service NPC, by name, part of it or a typo, and pins her", async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("lady prestor");
+  await page.getByRole("option", { name: /Lady Katrana Prestor/ }).click();
+
+  const card = page.getByRole("article", { name: "Lady Katrana Prestor" });
+  await expect(card).toContainText("80.1, 38.2");
+  await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
+
+  await search.fill("lady prestr");
+  await expect(page.getByRole("option", { name: /Lady Katrana Prestor/ })).toBeVisible();
+});
