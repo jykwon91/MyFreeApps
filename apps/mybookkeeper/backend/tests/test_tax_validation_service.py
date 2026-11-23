@@ -86,7 +86,7 @@ class TestW2WagesValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         wage_errors = [r for r in results if r.form_name == "1040" and r.field_id == "line_1a" and r.severity == "error"]
@@ -118,7 +118,7 @@ class TestW2WagesValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         wage_results = [r for r in results if r.form_name == "1040" and r.field_id == "line_1a"]
@@ -149,7 +149,7 @@ class TestScheduleEMathValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         math_errors = [r for r in results if r.field_id == "line_21" and r.severity == "error"]
@@ -178,7 +178,7 @@ class TestScheduleEMathValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         math_errors = [r for r in results if r.field_id == "line_21" and r.severity == "error"]
@@ -210,7 +210,7 @@ class TestMissingDepreciation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         depr_warnings = [r for r in results if r.form_name == "form_4562" and r.severity == "warning"]
@@ -238,7 +238,7 @@ class TestMissingDepreciation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         assert not [r for r in results if r.form_name == "form_4562"]
@@ -282,7 +282,7 @@ class TestMortgagePrincipalWarning:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         principal_warnings = [
@@ -319,7 +319,7 @@ class TestDuplicateDocuments:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         dup_warnings = [r for r in results if "duplicate" in r.message.lower()]
@@ -346,7 +346,7 @@ class TestSALTCap:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         salt_errors = [r for r in results if r.form_name == "schedule_a" and r.severity == "error"]
@@ -380,7 +380,7 @@ class TestPersonalUseDaysValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         personal_use_warnings = [
@@ -415,7 +415,7 @@ class TestPersonalUseDaysValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         personal_use_warnings = [r for r in results if "§280A" in r.message]
@@ -451,7 +451,7 @@ class TestPersonalUseDaysValidation:
             return {prop.id: 200}
 
         with (
-            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake),
             patch("app.services.tax.tax_validation.rental_rules.booking_statement_repo.total_nights_by_property", _mock_nights),
         ):
             results = await tax_validation_service.validate(test_org.id, tr.id)
@@ -483,7 +483,7 @@ class TestPersonalUseDaysValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         personal_use_warnings = [r for r in results if "§280A" in r.message]
@@ -528,7 +528,7 @@ class TestSecurityDepositValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         deposit_info = [
@@ -551,7 +551,7 @@ class TestSecurityDepositValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         deposit_info = [r for r in results if "security deposit" in r.message.lower()]
@@ -583,7 +583,7 @@ class TestPassiveActivityLossValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         pal_warnings = [
@@ -620,7 +620,7 @@ class TestPassiveActivityLossValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         pal_warnings = [r for r in results if "passive activity" in r.message.lower()]
@@ -647,7 +647,7 @@ class TestSEWageBaseValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         wage_warnings = [
@@ -669,7 +669,7 @@ class TestSEWageBaseValidation:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         wage_warnings = [r for r in results if "wage base" in r.message.lower()]
@@ -698,7 +698,7 @@ class TestSSOvercapping:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         ss_warnings = [r for r in results if "social security" in r.message.lower() and r.severity == "warning"]
@@ -724,7 +724,7 @@ class TestSSOvercapping:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         ss_warnings = [r for r in results if "social security" in r.message.lower() and "overpaid" in r.message.lower()]
@@ -750,7 +750,7 @@ class TestNECWithoutScheduleC:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         nec_warnings = [r for r in results if "1099-nec" in r.message.lower() and r.severity == "warning"]
@@ -777,7 +777,7 @@ class TestSEDeductionMissing:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         se_warnings = [r for r in results if "se tax deduction" in r.message.lower() and r.severity == "warning"]
@@ -807,7 +807,7 @@ class TestRentalIncomeWithoutExpenses:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         expense_warnings = [r for r in results if "rental income" in r.message.lower() and "expenses" in r.message.lower()]
@@ -853,7 +853,7 @@ class TestUncategorizedTransactions:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         uncat = [r for r in results if "uncategorized" in r.message.lower() and r.severity == "warning"]
@@ -881,7 +881,7 @@ class TestStandardVsItemized:
         async def _fake():
             yield db
 
-        with patch("app.services.tax.tax_validation.unit_of_work", _fake):
+        with patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
         std_warnings = [r for r in results if "standard deduction" in r.message.lower() and r.severity == "warning"]

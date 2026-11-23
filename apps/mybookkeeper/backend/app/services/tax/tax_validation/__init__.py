@@ -1,5 +1,9 @@
 """Tax validation package — runs cross-document validation rules after recompute.
 
+`validate` only reads. The write paths that change a return's figures (recompute,
+a field override, deleting a form) store each field's status via
+`validate_and_store` or `store_field_statuses`.
+
 Splits rules by IRS form/topic for maintainability. Each module exports a
 `run_rules(db, tax_return, form_fields, all_instances)` function.
 """
@@ -8,8 +12,9 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import unit_of_work
+from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.tax.tax_form_instance import TaxFormInstance
+from app.models.tax.tax_return import TaxReturn
 from app.repositories import tax_return_repo
 
 from ._types import FormFieldIndex, ValidationResult, index_fields
@@ -29,27 +34,56 @@ logger = logging.getLogger(__name__)
 async def validate(
     organization_id: uuid.UUID, tax_return_id: uuid.UUID,
 ) -> list[ValidationResult]:
-    """Run all validation rules and update field statuses. Returns results."""
+    """Run all validation rules and return the results. Writes nothing."""
+    async with AsyncSessionLocal() as db:
+        tax_return = await _get_return(db, organization_id, tax_return_id)
+        all_instances = list(await tax_return_repo.get_all_form_instances(db, tax_return.id))
+        return await _run_rules(db, tax_return, all_instances)
+
+
+async def validate_and_store(
+    organization_id: uuid.UUID, tax_return_id: uuid.UUID,
+) -> list[ValidationResult]:
+    """Run all validation rules in a transaction of its own and store each field's status."""
     async with unit_of_work() as db:
-        tax_return = await tax_return_repo.get_by_id(db, tax_return_id, organization_id)
-        if not tax_return:
-            raise LookupError("Tax return not found")
+        tax_return = await _get_return(db, organization_id, tax_return_id)
+        return await store_field_statuses(db, tax_return)
 
-        all_instances = await tax_return_repo.get_all_form_instances(db, tax_return.id)
-        form_fields = index_fields(all_instances)
 
-        results: list[ValidationResult] = []
-        results.extend(await income_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await rental_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await depreciation_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await se_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await deduction_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await investment_rules.run_rules(db, tax_return, form_fields, all_instances))
-        results.extend(await general_rules.run_rules(db, tax_return, form_fields, all_instances))
+async def store_field_statuses(
+    db: AsyncSession, tax_return: TaxReturn,
+) -> list[ValidationResult]:
+    """Run all validation rules and store each field's status in the caller's transaction."""
+    all_instances = list(await tax_return_repo.get_all_form_instances(db, tax_return.id))
+    results = await _run_rules(db, tax_return, all_instances)
+    await _update_field_statuses(db, all_instances, results)
+    return results
 
-        await _update_field_statuses(db, all_instances, results)
 
-        return results
+async def _get_return(
+    db: AsyncSession, organization_id: uuid.UUID, tax_return_id: uuid.UUID,
+) -> TaxReturn:
+    tax_return = await tax_return_repo.get_by_id(db, tax_return_id, organization_id)
+    if not tax_return:
+        raise LookupError("Tax return not found")
+    return tax_return
+
+
+async def _run_rules(
+    db: AsyncSession,
+    tax_return: TaxReturn,
+    all_instances: list[TaxFormInstance],
+) -> list[ValidationResult]:
+    form_fields = index_fields(all_instances)
+    results: list[ValidationResult] = []
+    results.extend(await income_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await rental_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await depreciation_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await se_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await deduction_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await investment_rules.run_rules(db, tax_return, form_fields, all_instances))
+    results.extend(await general_rules.run_rules(db, tax_return, form_fields, all_instances))
+    return results
 
 
 async def _update_field_statuses(

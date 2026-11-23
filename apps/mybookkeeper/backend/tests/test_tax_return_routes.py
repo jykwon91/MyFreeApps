@@ -17,6 +17,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.main import app
 from app.models.organization.organization import Organization
+from app.models.organization.organization_member import OrgRole
 from app.models.properties.property import Property, PropertyType
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
@@ -56,21 +57,28 @@ def _patch_sessions(db: AsyncSession):
     async def _fake_session():
         yield db
 
+    @asynccontextmanager
+    async def _fake_unit_of_work():
+        """Commits on a clean exit like the real one, so a test sees only what a write stored."""
+        yield db
+        await db.commit()
+
     with (
         patch("app.services.tax.tax_return_service.AsyncSessionLocal", _fake_session),
-        patch("app.services.tax.tax_return_service.unit_of_work", _fake_session),
-        patch("app.services.tax.tax_recompute_service.unit_of_work", _fake_session),
-        patch("app.services.tax.tax_validation.unit_of_work", _fake_session),
+        patch("app.services.tax.tax_return_service.unit_of_work", _fake_unit_of_work),
+        patch("app.services.tax.tax_recompute_service.unit_of_work", _fake_unit_of_work),
+        patch("app.services.tax.tax_validation.unit_of_work", _fake_unit_of_work),
+        patch("app.services.tax.tax_validation.AsyncSessionLocal", _fake_session),
     ):
         yield
 
 
-def _override_org_member(user: User, org: Organization):
+def _override_org_member(user: User, org: Organization, role: OrgRole = OrgRole.OWNER):
     async def _dep():
         return RequestContext(
             organization_id=org.id,
             user_id=user.id,
-            org_role="owner",
+            org_role=role,
         )
     return _dep
 
@@ -562,3 +570,121 @@ class TestValidation:
         resp = await client.get(f"/tax-returns/{tr.id}/validation")
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
+
+    @pytest.mark.asyncio
+    async def test_get_reports_problems_without_storing_field_statuses(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, w2_wages, line_1a = await _make_wage_mismatch(db, org)
+
+        resp = await client.get(f"/tax-returns/{tr.id}/validation")
+
+        assert resp.status_code == 200
+        errors = [
+            r for r in resp.json()
+            if r["form_name"] == "1040" and r["field_id"] == "line_1a" and r["severity"] == "error"
+        ]
+        assert len(errors) == 1
+        await db.refresh(w2_wages)
+        await db.refresh(line_1a)
+        assert w2_wages.validation_status == "unvalidated"
+        assert line_1a.validation_status == "unvalidated"
+        assert line_1a.validation_message is None
+
+    @pytest.mark.asyncio
+    async def test_viewer_can_see_validation_results(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        tr, _, line_1a = await _make_wage_mismatch(db, org)
+        app.dependency_overrides[current_org_member] = _override_org_member(owner, org, OrgRole.VIEWER)
+
+        resp = await client.get(f"/tax-returns/{tr.id}/validation")
+
+        assert resp.status_code == 200
+        assert any(r["severity"] == "error" for r in resp.json())
+        await db.refresh(line_1a)
+        assert line_1a.validation_status == "unvalidated"
+
+    @pytest.mark.asyncio
+    async def test_viewer_cannot_run_the_writes_that_store_statuses(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        tr, w2_wages, line_1a = await _make_wage_mismatch(db, org)
+        app.dependency_overrides[current_org_member] = _override_org_member(owner, org, OrgRole.VIEWER)
+
+        override = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{line_1a.id}",
+            json={"value_numeric": 50000, "override_reason": "Match the W-2"},
+        )
+        recompute = await client.post(f"/tax-returns/{tr.id}/recompute")
+        delete = await client.delete(f"/tax-returns/{tr.id}/instances/{w2_wages.form_instance_id}")
+
+        assert override.status_code == 403
+        assert recompute.status_code == 403
+        assert delete.status_code == 403
+        await db.refresh(line_1a)
+        assert line_1a.validation_status == "unvalidated"
+
+    @pytest.mark.asyncio
+    async def test_override_stores_the_new_field_statuses(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, w2_wages, line_1a = await _make_wage_mismatch(db, org)
+
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{w2_wages.id}",
+            json={"value_numeric": 44000, "override_reason": "Corrected W-2"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["validation_status"] == "valid"
+        await db.refresh(line_1a)
+        assert line_1a.validation_status == "error"
+        assert "does not match" in line_1a.validation_message
+
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{line_1a.id}",
+            json={"value_numeric": 44000, "override_reason": "Match the W-2"},
+        )
+
+        assert resp.status_code == 200
+        await db.refresh(line_1a)
+        assert line_1a.validation_status == "valid"
+        assert line_1a.validation_message is None
+
+    @pytest.mark.asyncio
+    async def test_deleting_a_form_stores_the_new_field_statuses(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, w2_wages, line_1a = await _make_wage_mismatch(db, org)
+
+        resp = await client.delete(f"/tax-returns/{tr.id}/instances/{w2_wages.form_instance_id}")
+
+        assert resp.status_code == 204
+        await db.refresh(line_1a)
+        assert line_1a.validation_status == "error"
+        assert "W-2 wages total (0) does not match" in line_1a.validation_message
+
+
+async def _make_wage_mismatch(
+    db: AsyncSession, org: Organization,
+) -> tuple[TaxReturn, TaxFormField, TaxFormField]:
+    """A return whose W-2 wages (50,000) don't match 1040 line 1a (45,000)."""
+    tr = TaxReturn(id=uuid.uuid4(), organization_id=org.id, tax_year=2025, filing_status="single")
+    db.add(tr)
+    await db.flush()
+    w2 = TaxFormInstance(id=uuid.uuid4(), tax_return_id=tr.id, form_name="w2", source_type="extracted")
+    form_1040 = TaxFormInstance(id=uuid.uuid4(), tax_return_id=tr.id, form_name="1040", source_type="computed")
+    db.add_all([w2, form_1040])
+    await db.flush()
+    w2_wages = TaxFormField(
+        id=uuid.uuid4(), form_instance_id=w2.id, field_id="box_1",
+        field_label="Wages", value_numeric=Decimal("50000.00"),
+    )
+    line_1a = TaxFormField(
+        id=uuid.uuid4(), form_instance_id=form_1040.id, field_id="line_1a",
+        field_label="Wages", value_numeric=Decimal("45000.00"),
+    )
+    db.add_all([w2_wages, line_1a])
+    await db.commit()
+    return tr, w2_wages, line_1a

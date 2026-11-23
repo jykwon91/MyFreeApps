@@ -900,3 +900,30 @@ class TestDemoPdfGenerators:
                   "property_name": "Test", "sub_category": sub_cat}],
             )
             assert pdf[:5] == b"%PDF-", f"Failed for vendor: {vendor}"
+
+
+class TestDemoTaxFormStatuses:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reset", [False, True])
+    async def test_seeded_tax_fields_have_a_stored_status(self, db: AsyncSession, reset: bool) -> None:
+        """Seeding saves each field's validation status itself; recompute is mocked out here."""
+        await demo_service.create_demo_user("status-test")
+        user = await demo_repo.get_user_by_email(db, "demo+status-test@mybookkeeper.com")
+        user_id = user.id
+        if reset:
+            await demo_service.reset_demo_user(user_id)
+        await db.commit()
+        db.expire_all()
+
+        org = await demo_repo.get_org_by_user(db, user_id)
+        org_id = org.id
+        result = await db.execute(
+            select(TaxFormField.validation_status)
+            .join(TaxFormInstance, TaxFormField.form_instance_id == TaxFormInstance.id)
+            .join(TaxReturn, TaxFormInstance.tax_return_id == TaxReturn.id)
+            .where(TaxReturn.organization_id == org_id)
+        )
+        statuses = result.scalars().all()
+
+        assert statuses
+        assert "unvalidated" not in statuses

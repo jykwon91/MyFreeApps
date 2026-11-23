@@ -33,7 +33,7 @@ from app.services.demo.demo_constants import (
 from app.services.demo.demo_email_service import send_demo_invite
 from app.services.demo.demo_people_constants import DEMO_INQUIRIES
 from app.services.demo.demo_pdf_generator import DemoDocumentPdfGenerator, DemoTaxPdfGenerator
-from app.services.tax import tax_recompute_service
+from app.services.tax import tax_recompute_service, tax_validation_service
 from app.services.user.account_deletion_service import remove_stored_files
 
 logger = logging.getLogger(__name__)
@@ -83,6 +83,7 @@ async def create_demo_user(
         await demo_repo.create_tax_form_instances(
             db, tax_return.id, tax_docs, DEMO_TAX_DOCUMENTS,
         )
+        await tax_validation_service.store_field_statuses(db, tax_return)
         org_id = org.id
         tax_return_id = tax_return.id
 
@@ -187,6 +188,7 @@ async def reset_demo_user(user_id: uuid.UUID) -> DemoResetResponse:
         await demo_repo.create_tax_form_instances(
             db, tax_return.id, tax_docs, DEMO_TAX_DOCUMENTS,
         )
+        await tax_validation_service.store_field_statuses(db, tax_return)
         tax_return_id = tax_return.id
 
     await tax_recompute_service.recompute(org_id, tax_return_id)
