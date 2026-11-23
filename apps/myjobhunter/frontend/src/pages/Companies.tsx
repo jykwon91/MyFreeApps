@@ -6,6 +6,8 @@ import { optionalCompanyTextColumn } from "@/features/companies/optionalCompanyT
 import { companyTextSortFn } from "@/features/companies/companyTextSortFn";
 import AddCompanyDialog from "@/features/companies/AddCompanyDialog";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
+import ListLoadError from "@/components/ListLoadError";
+import { COMPANIES_LIST_MESSAGES as MESSAGES } from "@/constants/companies-list-messages";
 import { EMPTY_STATES } from "@/constants/empty-states";
 import type { Company } from "@myjobhunter/api-client/types/company";
 
@@ -23,7 +25,7 @@ const COLUMNS: ColumnDef<Company>[] = [
 ];
 
 export default function Companies() {
-  const { data, isLoading, isError, error } = useListCompaniesQuery();
+  const { data, isLoading, isError, refetch } = useListCompaniesQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const copy = EMPTY_STATES.companies;
 
@@ -39,21 +41,18 @@ export default function Companies() {
     );
   }
 
-  if (isError) {
+  if (isError && !data) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
-        <EmptyState
-          icon={<Building2 className="w-12 h-12 text-destructive" />}
-          heading="Couldn't load companies"
-          body={
-            error && typeof error === "object" && "status" in error
-              ? `The server returned ${(error as { status: number }).status}. Try refreshing.`
-              : "Try refreshing the page."
-          }
-        />
+        <ListLoadError message={MESSAGES.couldntLoad} retryLabel={MESSAGES.retry} onRetry={refetch} />
       </div>
     );
   }
+
+  // Once anything has loaded, a failed refresh keeps it on screen (even an empty list) under a notice.
+  const staleNotice = isError ? (
+    <ListLoadError message={MESSAGES.staleList} retryLabel={MESSAGES.retry} onRetry={refetch} />
+  ) : null;
 
   const items = data?.items ?? [];
 
@@ -61,6 +60,7 @@ export default function Companies() {
     return (
       <>
         <div className="p-4 sm:p-8 space-y-6">
+          {staleNotice}
           <EmptyState
             icon={<Building2 className="w-12 h-12" />}
             heading={copy.heading}
@@ -85,6 +85,8 @@ export default function Companies() {
           Add company
         </button>
       </header>
+
+      {staleNotice}
 
       <AddCompanyDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
