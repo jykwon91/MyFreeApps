@@ -42,9 +42,9 @@ export default function DiscoveryCard({ recipe, onOpen }: Props) {
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight line-clamp-2 group-hover:text-primary">
+          <h2 className="font-semibold leading-tight line-clamp-2 group-hover:text-primary">
             {recipe.title}
-          </h3>
+          </h2>
           <Badge
             label={DISCOVERY_SOURCE_LABELS[recipe.source_type]}
             color={SOURCE_COLORS[recipe.source_type]}

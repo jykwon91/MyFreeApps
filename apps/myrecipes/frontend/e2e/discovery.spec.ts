@@ -135,7 +135,7 @@ async function stubDiscovery(page: Page) {
 
 /** The result cards — buttons rather than links, since opening one costs a call. */
 function resultCards(page: Page) {
-  return page.getByRole("button").filter({ has: page.locator("h3") });
+  return page.getByRole("button").filter({ has: page.locator("h2") });
 }
 
 test.describe("Discovery — gating", () => {

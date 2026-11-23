@@ -44,6 +44,11 @@ describe("DiscoveryCard", () => {
     expect(screen.getByText(/water-baths at 325F/i)).toBeInTheDocument();
   });
 
+  it("titles the card with a level-2 heading, the level after the page's h1", () => {
+    renderCard(makeResult());
+    expect(screen.getByRole("heading", { level: 2, name: "Flan Napolitano" })).toBeInTheDocument();
+  });
+
   it("labels the source type so the mix of sources is visible at a glance", () => {
     renderCard(makeResult({ source_type: "reddit", site_name: "r/Cooking" }));
     expect(screen.getByText("Reddit")).toBeInTheDocument();
