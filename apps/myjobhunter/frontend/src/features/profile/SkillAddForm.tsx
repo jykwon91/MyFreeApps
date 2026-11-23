@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import { useCreateSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
 import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { skillCreateRequest } from "@myjobhunter/api-client/utils/skillCreateRequest";
@@ -8,7 +8,7 @@ import { skillNameProblem } from "@myjobhunter/api-client/utils/skillNameProblem
 import { SKILL_YEAR_CHOICES } from "@/constants/skill-year-choices";
 import type { SkillAddFormProps } from "@/types/profile/skill-add-form-props";
 
-const PROBLEM_ID = "skill-add-problem";
+const NAME_FIELD_ID = "skill-add-name";
 
 /**
  * Adds a skill inline. A blank, repeated or too-long name is caught, with the phone's wording, before
@@ -23,6 +23,7 @@ export default function SkillAddForm({ existingNames }: SkillAddFormProps) {
   const [createSkill, { isLoading }] = useCreateSkillMutation();
   const knownNames = [...existingNames, ...takenNames];
   const problem = hasTried ? skillNameProblem(name, knownNames) : undefined;
+  const feedback = { id: NAME_FIELD_ID, error: problem };
 
   async function handleAdd() {
     setHasTried(true);
@@ -44,6 +45,7 @@ export default function SkillAddForm({ existingNames }: SkillAddFormProps) {
     <div className="mt-3 space-y-1">
       <div className="flex items-center gap-2">
         <input
+          id={NAME_FIELD_ID}
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -56,8 +58,7 @@ export default function SkillAddForm({ existingNames }: SkillAddFormProps) {
           className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="Add a skill..."
           aria-label="Skill name"
-          aria-invalid={problem !== undefined}
-          aria-describedby={problem ? PROBLEM_ID : undefined}
+          {...fieldFeedbackAria(feedback)}
         />
         <select
           value={years}
@@ -82,11 +83,7 @@ export default function SkillAddForm({ existingNames }: SkillAddFormProps) {
           <Plus size={16} />
         </LoadingButton>
       </div>
-      {problem ? (
-        <p id={PROBLEM_ID} role="alert" className="text-xs text-destructive">
-          {problem}
-        </p>
-      ) : null}
+      <FieldFeedback {...feedback} />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   useGetDiscrepanciesQuery,
 } from "@mybookkeeper/api-client/store/reconciliationApi";
 import Select from "@/shared/components/ui/Select";
-import { LoadingButton } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 import {
   RECONCILIATION_DEFAULT_SOURCE_TYPE,
@@ -16,11 +16,10 @@ import {
 import { reconciliationDiscrepanciesMode, reconciliationSourcesMode } from "@mybookkeeper/api-client/utils/reconciliationModes";
 import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { useCompareWithRecords } from "./useCompareWithRecords";
-import FieldProblem from "@/shared/components/FieldProblem";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
-import { fieldProblemId, problemAria } from "@/shared/utils/field-problem-aria";
+import { fieldProblemFeedback } from "@/shared/utils/field-problem-feedback";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
 
@@ -166,10 +165,10 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
                         setAmountProblem(undefined);
                       }}
                       placeholder="0.00"
-                      {...problemAria(amountProblem, fieldProblemId(fieldId, "amount"))}
+                      {...fieldFeedbackAria(fieldProblemFeedback(fieldId, "amount", amountProblem))}
                       className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
-                    <FieldProblem id={fieldProblemId(fieldId, "amount")} message={amountProblem} />
+                    <FieldFeedback {...fieldProblemFeedback(fieldId, "amount", amountProblem)} />
                   </div>
                 </div>
                 <LoadingButton type="submit" size="sm" isLoading={isUploading} loadingText="Adding...">

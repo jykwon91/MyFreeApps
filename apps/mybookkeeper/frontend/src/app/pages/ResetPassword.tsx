@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { describeAuthError, LoadingButton, useUrlToken } from "@platform/ui";
+import { describeAuthError, FieldFeedback, fieldFeedbackAria, LoadingButton, useUrlToken } from "@platform/ui";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -13,6 +13,8 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [passwordProblem, setPasswordProblem] = useState<string | undefined>(undefined);
+  const [confirmProblem, setConfirmProblem] = useState<string | undefined>(undefined);
   const [success, setSuccess] = useState(false);
 
   if (!token) {
@@ -38,14 +40,16 @@ export default function ResetPassword() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setPasswordProblem(undefined);
+    setConfirmProblem(undefined);
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      setPasswordProblem(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setConfirmProblem("Passwords do not match");
       return;
     }
 
@@ -60,6 +64,9 @@ export default function ResetPassword() {
 
     setIsLoading(false);
   }
+
+  const passwordFeedback = { id: "new-password", error: passwordProblem };
+  const confirmFeedback = { id: "confirm-password", error: confirmProblem };
 
   if (success) {
     return (
@@ -102,7 +109,9 @@ export default function ResetPassword() {
               required
               disabled={isLoading}
               minLength={MIN_PASSWORD_LENGTH}
+              {...fieldFeedbackAria(passwordFeedback)}
             />
+            <FieldFeedback {...passwordFeedback} />
             <p className="text-xs text-muted-foreground mt-1">At least {MIN_PASSWORD_LENGTH} characters</p>
           </div>
           <div>
@@ -118,7 +127,9 @@ export default function ResetPassword() {
               required
               disabled={isLoading}
               minLength={MIN_PASSWORD_LENGTH}
+              {...fieldFeedbackAria(confirmFeedback)}
             />
+            <FieldFeedback {...confirmFeedback} />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
           <LoadingButton

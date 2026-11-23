@@ -121,6 +121,8 @@ describe("ResetPassword \u2014 validation", () => {
     await user.type(confirmPasswordInput(container), "short");
     await user.click(screen.getByRole("button", { name: "Reset password" }));
     await screen.findByText("Password must be at least 12 characters");
+    expect(newPasswordInput(container)).toHaveAttribute("aria-invalid", "true");
+    expect(newPasswordInput(container)).toHaveAccessibleDescription("Password must be at least 12 characters");
   });
 
   it("shows error when passwords do not match", async () => {
@@ -130,6 +132,9 @@ describe("ResetPassword \u2014 validation", () => {
     await user.type(confirmPasswordInput(container), "longpassword2");
     await user.click(screen.getByRole("button", { name: "Reset password" }));
     await screen.findByText("Passwords do not match");
+    expect(confirmPasswordInput(container)).toHaveAttribute("aria-invalid", "true");
+    expect(confirmPasswordInput(container)).toHaveAccessibleDescription("Passwords do not match");
+    expect(newPasswordInput(container)).not.toHaveAttribute("aria-invalid");
   });
 
   it("does not call the API when the password is too short", async () => {

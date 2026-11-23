@@ -186,6 +186,20 @@ describe("InviteAccept", () => {
     expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
   });
 
+  it("says a too-short password under the password field and ties it to the field", async () => {
+    mockInviteQuery({ data: makeInviteInfo({ user_exists: false }) });
+    mockCurrentUser(null);
+    renderWithToken("good-token");
+
+    const password = screen.getByLabelText("Password");
+    fireEvent.change(password, { target: { value: "short" } });
+    fireEvent.submit(password.closest("form")!);
+
+    expect(await screen.findByText("Password must be at least 12 characters")).toBeInTheDocument();
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAccessibleDescription("Password must be at least 12 characters");
+  });
+
   it("shows the registration form when the invitee is new", () => {
     mockInviteQuery({ data: makeInviteInfo({ user_exists: false }) });
     mockCurrentUser(null);

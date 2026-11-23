@@ -383,6 +383,10 @@ describe("LeaseAddTemplateModal", () => {
     // flag it on its own field and NOT call the mutation.
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
     expect(await screen.findByTestId("addendum-error-NEW LEASE END DATE")).toHaveTextContent("required");
+    expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toHaveAccessibleDescription(
+      screen.getByTestId("addendum-error-NEW LEASE END DATE").textContent ?? "",
+    );
     expect(addTemplatesMock).not.toHaveBeenCalled();
   });
 

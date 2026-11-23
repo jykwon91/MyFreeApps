@@ -1,4 +1,4 @@
-import { FormField } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField } from "@platform/ui";
 import { UTILITY_PLAN_RATE_TYPES, UTILITY_PLAN_RATE_TYPE_HINTS, UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanRateTypes";
 import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityPlanRateType } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
@@ -6,8 +6,7 @@ import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
 import UtilityPlanInternetFields from "./UtilityPlanInternetFields";
 import type { UtilityPlanFormProblems } from "@mybookkeeper/api-client/types/utility/utility-plan-form-problems";
-import { fieldProblemAria } from "@/shared/utils/field-problem-aria";
-import UtilityPlanFieldProblem from "./UtilityPlanFieldProblem";
+import { utilityPlanFieldFeedback } from "./utility-plan-field-feedback";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 
 /**
@@ -90,9 +89,9 @@ export default function UtilityPlanFormFields({
               required
               data-testid="utility-plan-provider-input"
               {...field}
-              {...fieldProblemAria(problems, "providerName", "utility-plan")}
+              {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "providerName"))}
             />
-            <UtilityPlanFieldProblem problems={problems} field="providerName" />
+            <FieldFeedback {...utilityPlanFieldFeedback(problems, "providerName")} />
           </>
         )}
       </FormField>
@@ -110,9 +109,9 @@ export default function UtilityPlanFormFields({
                 maxLength={255}
                 data-testid="utility-plan-name-input"
                 {...field}
-                {...fieldProblemAria(problems, "planName", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "planName"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="planName" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "planName")} />
             </>
           )}
         </FormField>
@@ -129,9 +128,9 @@ export default function UtilityPlanFormFields({
                 maxLength={100}
                 data-testid="utility-plan-account-input"
                 {...field}
-                {...fieldProblemAria(problems, "accountNumber", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "accountNumber"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="accountNumber" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "accountNumber")} />
             </>
           )}
         </FormField>
@@ -151,9 +150,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-energy-input"
                 {...field}
-                {...fieldProblemAria(problems, "energyCharge", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "energyCharge"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="energyCharge" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "energyCharge")} />
             </>
           )}
         </FormField>
@@ -171,9 +170,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-tdu-input"
                 {...field}
-                {...fieldProblemAria(problems, "tduCharge", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "tduCharge"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="tduCharge" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "tduCharge")} />
             </>
           )}
         </FormField>
@@ -193,9 +192,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-avg-price-input"
                 {...field}
-                {...fieldProblemAria(problems, "avgPrice", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "avgPrice"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="avgPrice" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "avgPrice")} />
             </>
           )}
         </FormField>
@@ -213,9 +212,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-base-charge-input"
                 {...field}
-                {...fieldProblemAria(problems, "monthlyBase", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "monthlyBase"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="monthlyBase" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "monthlyBase")} />
             </>
           )}
         </FormField>
@@ -236,9 +235,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-term-months-input"
                 {...field}
-                {...fieldProblemAria(problems, "termMonths", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "termMonths"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="termMonths" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "termMonths")} />
             </>
           )}
         </FormField>
@@ -253,9 +252,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-start-date-input"
                 {...field}
-                {...fieldProblemAria(problems, "serviceStartDate", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "serviceStartDate"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="serviceStartDate" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "serviceStartDate")} />
             </>
           )}
         </FormField>
@@ -270,9 +269,9 @@ export default function UtilityPlanFormFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-end-date-input"
                 {...field}
-                {...fieldProblemAria(problems, "termEndDate", "utility-plan")}
+                {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "termEndDate"))}
               />
-              <UtilityPlanFieldProblem problems={problems} field="termEndDate" />
+              <FieldFeedback {...utilityPlanFieldFeedback(problems, "termEndDate")} />
             </>
           )}
         </FormField>
@@ -291,9 +290,9 @@ export default function UtilityPlanFormFields({
               className={UTILITY_PLAN_INPUT_CLASS}
               data-testid="utility-plan-etf-input"
               {...field}
-              {...fieldProblemAria(problems, "etf", "utility-plan")}
+              {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "etf"))}
             />
-            <UtilityPlanFieldProblem problems={problems} field="etf" />
+            <FieldFeedback {...utilityPlanFieldFeedback(problems, "etf")} />
           </>
         )}
       </FormField>
@@ -324,9 +323,9 @@ export default function UtilityPlanFormFields({
                   className={UTILITY_PLAN_INPUT_CLASS}
                   data-testid="utility-plan-credit-amount-input"
                   {...field}
-                  {...fieldProblemAria(problems, "billCreditAmount", "utility-plan")}
+                  {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "billCreditAmount"))}
                 />
-                <UtilityPlanFieldProblem problems={problems} field="billCreditAmount" />
+                <FieldFeedback {...utilityPlanFieldFeedback(problems, "billCreditAmount")} />
               </>
             )}
           </FormField>
@@ -344,9 +343,9 @@ export default function UtilityPlanFormFields({
                   className={UTILITY_PLAN_INPUT_CLASS}
                   data-testid="utility-plan-credit-threshold-input"
                   {...field}
-                  {...fieldProblemAria(problems, "billCreditThreshold", "utility-plan")}
+                  {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "billCreditThreshold"))}
                 />
-                <UtilityPlanFieldProblem problems={problems} field="billCreditThreshold" />
+                <FieldFeedback {...utilityPlanFieldFeedback(problems, "billCreditThreshold")} />
               </>
             )}
           </FormField>
@@ -373,9 +372,9 @@ export default function UtilityPlanFormFields({
                   className={UTILITY_PLAN_INPUT_CLASS}
                   data-testid="utility-plan-min-usage-fee-input"
                   {...field}
-                  {...fieldProblemAria(problems, "minUsageFee", "utility-plan")}
+                  {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "minUsageFee"))}
                 />
-                <UtilityPlanFieldProblem problems={problems} field="minUsageFee" />
+                <FieldFeedback {...utilityPlanFieldFeedback(problems, "minUsageFee")} />
               </>
             )}
           </FormField>
@@ -393,9 +392,9 @@ export default function UtilityPlanFormFields({
                   className={UTILITY_PLAN_INPUT_CLASS}
                   data-testid="utility-plan-min-usage-threshold-input"
                   {...field}
-                  {...fieldProblemAria(problems, "minUsageThreshold", "utility-plan")}
+                  {...fieldFeedbackAria(utilityPlanFieldFeedback(problems, "minUsageThreshold"))}
                 />
-                <UtilityPlanFieldProblem problems={problems} field="minUsageThreshold" />
+                <FieldFeedback {...utilityPlanFieldFeedback(problems, "minUsageThreshold")} />
               </>
             )}
           </FormField>

@@ -4,6 +4,8 @@ import api from "@/shared/lib/api";
 import {
   AuthPageFooter,
   describeAuthError,
+  FieldFeedback,
+  fieldFeedbackAria,
   LoadingButton,
   safeReturnPath,
   TurnstileWidget,
@@ -22,6 +24,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [passwordProblem, setPasswordProblem] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const turnstile = useTurnstileToken();
@@ -30,9 +33,10 @@ export default function Register() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setPasswordProblem(undefined);
 
     if (password.length < 12) {
-      setError("Password must be at least 12 characters");
+      setPasswordProblem("Password must be at least 12 characters");
       return;
     }
 
@@ -56,6 +60,7 @@ export default function Register() {
   }
 
   const loginUrl = withReturnTo("/login", returnTo);
+  const passwordFeedback = { id: `${uid}-password`, error: passwordProblem };
 
   if (registered) {
     return (
@@ -117,7 +122,9 @@ export default function Register() {
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 required
                 minLength={12}
+                {...fieldFeedbackAria(passwordFeedback)}
               />
+              <FieldFeedback {...passwordFeedback} />
             </div>
             <TurnstileWidget {...turnstile.widgetProps} />
             <label className="flex items-start gap-2 cursor-pointer">

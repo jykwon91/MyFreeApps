@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, signOut } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import { extractErrorMessage, Skeleton } from "@platform/ui";
+import { extractErrorMessage, FieldFeedback, fieldFeedbackAria, Skeleton } from "@platform/ui";
 import { LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
 import InviteAcceptStatus from "@/shared/components/invite/InviteAcceptStatus";
 import { useAcceptInvite } from "@/shared/hooks/useAcceptInvite";
@@ -34,12 +34,14 @@ export default function InviteAccept() {
   const [name, setName] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regError, setRegError] = useState("");
+  const [regPasswordProblem, setRegPasswordProblem] = useState<string | undefined>(undefined);
   const turnstile = useTurnstileToken();
 
   const { user } = useCurrentUser();
   const authedEmail = user?.email ?? null;
   const isCorrectUser = authedEmail != null && inviteInfo != null && authedEmail.toLowerCase() === inviteInfo.email.toLowerCase();
   const isWrongUser = authedEmail != null && inviteInfo != null && authedEmail.toLowerCase() !== inviteInfo.email.toLowerCase();
+  const regPasswordFeedback = { id: `${uid}-password`, error: regPasswordProblem };
 
   // Auto-accept once when already authenticated as the correct user (a failure is shown, and retried by hand).
   useEffect(() => {
@@ -70,9 +72,10 @@ export default function InviteAccept() {
     e.preventDefault();
     if (!inviteInfo || !token) return;
     setRegError("");
+    setRegPasswordProblem(undefined);
 
     if (regPassword.length < 12) {
-      setRegError("Password must be at least 12 characters");
+      setRegPasswordProblem("Password must be at least 12 characters");
       return;
     }
 
@@ -265,7 +268,9 @@ export default function InviteAccept() {
               required
               minLength={12}
               disabled={isSubmitting}
+              {...fieldFeedbackAria(regPasswordFeedback)}
             />
+            <FieldFeedback {...regPasswordFeedback} />
           </div>
           <TurnstileWidget {...turnstile.widgetProps} />
           {regError ? <p className="text-destructive text-sm">{regError}</p> : null}

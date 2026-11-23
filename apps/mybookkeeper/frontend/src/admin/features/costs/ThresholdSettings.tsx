@@ -3,11 +3,10 @@ import { useGetCostThresholdsQuery, useUpdateCostThresholdsMutation } from "@/sh
 import type { CostThresholds } from "@/shared/types/admin/cost";
 import { useToast } from "@/shared/hooks/useToast";
 import Card from "@/shared/components/ui/Card";
-import FieldProblem from "@/shared/components/FieldProblem";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
-import { fieldProblemAria, fieldProblemId } from "@/shared/utils/field-problem-aria";
+import { fieldProblemFeedback } from "@/shared/utils/field-problem-feedback";
 import { thresholdFieldError } from "@/admin/lib/threshold-field-error";
-import { LoadingButton } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 
 type ThresholdKey = keyof CostThresholds;
 
@@ -95,11 +94,11 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
                 value={getValue(field.key)}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 className="w-24 border rounded-md px-2 py-1.5 text-sm bg-background"
-                {...fieldProblemAria(problems, field.key, "threshold")}
+                {...fieldFeedbackAria(fieldProblemFeedback("threshold", field.key, problems[field.key]))}
               />
               {field.suffix && <span className="text-xs text-muted-foreground whitespace-nowrap">{field.suffix}</span>}
             </div>
-            <FieldProblem id={fieldProblemId("threshold", field.key)} message={problems[field.key]} />
+            <FieldFeedback {...fieldProblemFeedback("threshold", field.key, problems[field.key])} />
             <input
               type="range"
               min="0"

@@ -15,7 +15,9 @@ vi.mock("@myjobhunter/api-client/store/screeningAnswersApi", () => ({
 }));
 
 // Mock @platform/ui completely — avoids importing React 19 code into a React 18 test environment.
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  FieldFeedback: (await importOriginal<typeof import("@platform/ui")>()).FieldFeedback,
+  fieldFeedbackAria: (await importOriginal<typeof import("@platform/ui")>()).fieldFeedbackAria,
   showSuccess: vi.fn(),
   showError: vi.fn(),
   extractErrorMessage: (err: unknown) => String(err),
@@ -73,6 +75,7 @@ describe("ScreeningAnswerDialog — shared validation and 409", () => {
     expect(TOO_LONG).toBeDefined();
     expect(await screen.findByText(TOO_LONG ?? "")).toBeInTheDocument();
     expect(screen.getByLabelText("Your answer")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Your answer")).toHaveAccessibleDescription(TOO_LONG ?? "");
     expect(createTrigger).not.toHaveBeenCalled();
   });
 
@@ -89,6 +92,8 @@ describe("ScreeningAnswerDialog — shared validation and 409", () => {
     await submit("", "Yes");
 
     expect(await screen.findByText(PROFILE_FORM_PROBLEMS.questionRequired)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Question/)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/Question/)).toHaveAccessibleDescription(PROFILE_FORM_PROBLEMS.questionRequired);
     expect(createTrigger).not.toHaveBeenCalled();
   });
 

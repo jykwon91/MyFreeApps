@@ -75,7 +75,7 @@ describe("add policy checks", () => {
     expect(await screen.findByTestId("insurance-premiumDollars-problem")).toHaveTextContent("above 0");
     const input = screen.getByTestId("insurance-premium-input");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAttribute("aria-describedby", "insurance-premiumDollars-problem");
+    expect(input).toHaveAccessibleDescription(screen.getByTestId("insurance-premiumDollars-problem").textContent ?? "");
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

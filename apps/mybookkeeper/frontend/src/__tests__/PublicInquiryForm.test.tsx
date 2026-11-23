@@ -140,6 +140,10 @@ describe("PublicInquiryForm — validation UX", () => {
     expect(screen.getByTestId("public-inquiry-why-error")).toHaveTextContent(
       /Please tell us why you're interested/,
     );
+    for (const radio of [screen.getByTestId("public-inquiry-pets-no"), screen.getByTestId("public-inquiry-pets-yes")]) {
+      expect(radio).toHaveAttribute("aria-invalid", "true");
+      expect(radio).toHaveAccessibleDescription("Please tell us if you have pets.");
+    }
     expect(api.post).not.toHaveBeenCalled();
   });
 

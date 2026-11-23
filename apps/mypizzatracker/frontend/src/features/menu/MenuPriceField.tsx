@@ -1,7 +1,8 @@
-import { FormField } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField } from "@platform/ui";
 import type { MenuPriceFieldProps } from "@/types/menu/MenuPriceFieldProps";
 
 export default function MenuPriceField({ label, value, onChange, error, required }: MenuPriceFieldProps) {
+  const message = error ?? undefined;
   return (
     <FormField label={label} required={required}>
       {(field) => (
@@ -12,15 +13,11 @@ export default function MenuPriceField({ label, value, onChange, error, required
             min="0"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            aria-invalid={error ? true : undefined}
+            {...fieldFeedbackAria({ id: field.id, error: message })}
             className="w-full px-3 py-2 rounded border bg-background"
             {...field}
           />
-          {error && (
-            <p role="alert" className="mt-1 text-xs text-destructive">
-              {error}
-            </p>
-          )}
+          <FieldFeedback id={field.id} error={message} />
         </>
       )}
     </FormField>

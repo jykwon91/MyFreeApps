@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import CopyField from "@/shared/components/ui/CopyField";
 import {
   useCreateListingChannelMutation,
@@ -13,6 +13,7 @@ import {
 } from "@mybookkeeper/api-client/constants/channelListingForm";
 import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
+import type { ChannelListingFormProblems } from "@mybookkeeper/api-client/types/listing/channel-listing-form-problems";
 import {
   channelListingFormProblems,
   channelListingToCreateRequest,
@@ -65,7 +66,7 @@ export default function ChannelListingFormModal({
   const [icalImportUrl, setIcalImportUrl] = useState<string>(
     existing?.ical_import_url ?? "",
   );
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [problems, setProblems] = useState<ChannelListingFormProblems>({});
 
   const selectedChannel = isEdit
     ? existing?.channel
@@ -82,17 +83,21 @@ export default function ChannelListingFormModal({
   // immediately. We disable the submit button and show a message.
   const noChannelsAvailable = !isEdit && availableChannels.length === 0;
 
+  // One problem at a time, the listing URL's first.
+  const urlFeedback = { id: "channel-listing-external-url", error: problems.external_url, testId: "channel-listing-form-validation-error" };
+  const icalFeedback = {
+    id: "channel-listing-ical-import-url",
+    error: problems.external_url ? undefined : problems.ical_import_url,
+    testId: "channel-listing-form-validation-error",
+  };
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     const values = { channel_id: channelId, external_url: externalUrl, external_id: externalId, ical_import_url: icalImportUrl };
-    const problems = channelListingFormProblems(values);
-    const problem = problems.external_url ?? problems.ical_import_url;
-    if (problem) {
-      setValidationError(problem);
-      return;
-    }
-    setValidationError(null);
+    const found = channelListingFormProblems(values);
+    setProblems(found);
+    if (found.external_url || found.ical_import_url) return;
 
     try {
       if (isEdit && existing) {
@@ -171,16 +176,20 @@ export default function ChannelListingFormModal({
 
             <FormField label="Listing URL on the channel" required>
               {(field) => (
-                <input
-                  type="url"
-                  value={externalUrl}
-                  onChange={(e) => setExternalUrl(e.target.value)}
-                  placeholder="https://..."
-                  maxLength={CHANNEL_EXTERNAL_URL_MAX_LENGTH}
-                  data-testid="channel-listing-form-external-url"
-                  className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-                  {...field}
-                />
+                <>
+                  <input
+                    type="url"
+                    value={externalUrl}
+                    onChange={(e) => setExternalUrl(e.target.value)}
+                    placeholder="https://..."
+                    maxLength={CHANNEL_EXTERNAL_URL_MAX_LENGTH}
+                    data-testid="channel-listing-form-external-url"
+                    className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                    {...fieldFeedbackAria(urlFeedback)}
+                    {...field}
+                  />
+                  <FieldFeedback {...urlFeedback} />
+                </>
               )}
             </FormField>
 
@@ -211,8 +220,10 @@ export default function ChannelListingFormModal({
                       maxLength={CHANNEL_ICAL_URL_MAX_LENGTH}
                       data-testid="channel-listing-form-ical-import-url"
                       className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                      {...fieldFeedbackAria(icalFeedback)}
                       {...field}
                     />
+                    <FieldFeedback {...icalFeedback} />
                     <p className="text-xs text-muted-foreground mt-1">
                       Paste the channel's iCal export URL here so bookings on that
                       channel come back into MBK every 15 minutes.
@@ -221,11 +232,14 @@ export default function ChannelListingFormModal({
                 )}
               </FormField>
             ) : (
-              <p className="text-xs text-muted-foreground italic">
-                {selectedChannel?.name ?? "This channel"} doesn't expose a
-                calendar feed, so MBK can only store the listing link —
-                bookings won't sync automatically.
-              </p>
+              <>
+                <p className="text-xs text-muted-foreground italic">
+                  {selectedChannel?.name ?? "This channel"} doesn't expose a
+                  calendar feed, so MBK can only store the listing link —
+                  bookings won't sync automatically.
+                </p>
+                <FieldFeedback {...icalFeedback} />
+              </>
             )}
 
             {isEdit && existing && channelSupportsExport ? (
@@ -235,16 +249,6 @@ export default function ChannelListingFormModal({
                 </p>
                 <CopyField label="Outbound iCal URL" value={existing.ical_export_url} />
               </div>
-            ) : null}
-
-            {validationError ? (
-              <p
-                role="alert"
-                data-testid="channel-listing-form-validation-error"
-                className="text-xs text-red-600"
-              >
-                {validationError}
-              </p>
             ) : null}
 
             <div className="flex items-center justify-end gap-2 pt-2">
