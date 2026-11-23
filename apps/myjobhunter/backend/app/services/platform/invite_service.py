@@ -253,12 +253,14 @@ async def create_and_send_invite(
 
     Raises:
         InviteRecipientUnavailableError: see ``create_invite``.
-        InviteEmailSendFailedError: the email was not sent (SMTP refused it, or
-            email is not configured). The row is deleted so the admin can retry
-            the same address straight away.
-        InviteEmailUnconfirmedError: SMTP timed out or dropped, so the email may
-            have arrived. The row is kept (deleting it would leave a working
-            link with no invite behind it); the admin can cancel and resend.
+        InviteEmailSendFailedError: the email was not sent (SMTP refused it,
+            the server couldn't be reached or logged in to, or email is not
+            configured). The row is deleted so the admin can retry the same
+            address straight away.
+        InviteEmailUnconfirmedError: SMTP timed out or dropped while the email
+            was being handed over, so it may have arrived. The row is kept
+            (deleting it would leave a working link with no invite behind it);
+            the admin can cancel and resend.
     """
     result = await create_invite(email=email, admin_id=admin_id)
     invite = result.invite

@@ -8,6 +8,7 @@ import logging
 import pickle
 import smtplib
 import socket
+import ssl
 import threading
 import time
 import traceback
@@ -121,6 +122,61 @@ class TestClassification:
         with patch("smtplib.SMTP", return_value=server), pytest.raises(TypeError):
             _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
         server.close.assert_called_once()
+
+
+class TestDeliveryUnconfirmed:
+    """Only a timeout or dropped connection while the message is being handed
+    over can leave the recipient holding it: before that, the server never had it."""
+
+    @pytest.mark.parametrize("exc", [ConnectionRefusedError("refused"), TimeoutError("timed out")])
+    def test_a_failed_connect_is_a_definite_failure(self, exc: Exception) -> None:
+        with patch("smtplib.SMTP", side_effect=exc), pytest.raises(EmailSendError) as raised:
+            _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert raised.value.kind == "transient"
+        assert raised.value.failed_before_handover
+        assert not raised.value.delivery_unconfirmed
+
+    @pytest.mark.parametrize("step", ["starttls", "login"])
+    @pytest.mark.parametrize(
+        "exc",
+        [TimeoutError("timed out"), smtplib.SMTPServerDisconnected("closed"), ssl.SSLError("handshake failed")],
+    )
+    def test_a_failure_setting_up_the_session_is_a_definite_failure(self, step: str, exc: Exception) -> None:
+        server = _server()
+        getattr(server, step).side_effect = exc
+        error = _send_failure(server)
+        assert error.kind == "transient"
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
+        server.sendmail.assert_not_called()
+        server.close.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "exc",
+        [TimeoutError("timed out"), smtplib.SMTPServerDisconnected("closed"), ConnectionResetError("reset")],
+    )
+    def test_a_timeout_or_drop_while_handing_over_leaves_delivery_unconfirmed(
+        self, exc: Exception, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        server = _server()
+        server.sendmail.side_effect = exc
+        with caplog.at_level(logging.WARNING):
+            error = _send_failure(server)
+        assert error.kind == "transient"
+        assert not error.failed_before_handover
+        assert error.delivery_unconfirmed
+        server.close.assert_called_once()
+        record = next(r for r in caplog.records if "SMTP send failed" in r.getMessage())
+        assert "unconfirmed=True" in record.getMessage()
+
+    def test_a_reply_while_handing_over_is_a_definite_failure(self) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPDataError(421, b"try again later")
+        assert not _send_failure(server).delivery_unconfirmed
+
+    def test_an_error_that_does_not_say_where_it_failed_counts_as_unconfirmed(self) -> None:
+        # Telling a caller that a timeout definitely failed would invite a duplicate email.
+        assert EmailSendError("timed out", kind="transient").delivery_unconfirmed
 
 
 class TestRecipientsAreNotLogged:
@@ -427,4 +483,26 @@ class TestPickling:
         assert (copy.kind, copy.smtp_code, copy.refused_recipients) == (
             "recipient_rejected", 550, {"x@example.com": 550},
         )
+
+    def test_round_trips_where_it_failed(self) -> None:
+        original = EmailSendError("refused", kind="transient", failed_before_handover=True)
+        copy = pickle.loads(pickle.dumps(original))
+        assert copy.failed_before_handover
+        assert not copy.delivery_unconfirmed
+
+    def test_an_error_pickled_before_the_field_existed_still_loads(self) -> None:
+        copy = pickle.loads(_PICKLED_BEFORE_HANDOVER_FIELD)
+        assert isinstance(copy, EmailSendError)
+        assert (str(copy), copy.kind, copy.smtp_code, copy.refused_recipients) == (
+            "timed out", "transient", None, {},
+        )
+        assert copy.delivery_unconfirmed
+
+
+# ``pickle.dumps(EmailSendError("timed out", kind="transient"), protocol=4)`` as
+# written before ``failed_before_handover`` existed, when ``_rebuild`` took four values.
+_PICKLED_BEFORE_HANDOVER_FIELD = (
+    b"\x80\x04\x95Z\x00\x00\x00\x00\x00\x00\x00\x8c)platform_shared.services.email_send_error"
+    b"\x94\x8c\x08_rebuild\x94\x93\x94(\x8c\ttimed out\x94\x8c\ttransient\x94N}\x94t\x94R\x94."
+)
 

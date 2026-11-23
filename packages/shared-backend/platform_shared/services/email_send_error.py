@@ -14,6 +14,9 @@ class EmailSendError(RuntimeError):
     ``None`` for timeouts and dropped connections. ``refused_recipients`` maps
     each address the server refused to its reply code; when it is non-empty but
     shorter than the recipient list, the other recipients DID get the email.
+    ``failed_before_handover`` is True when the send failed before the message
+    was handed to the server (connecting, starting TLS, logging in), so nobody
+    can have received it.
 
     The message never carries an email address: SMTP replies often quote the
     refused address, and the message is logged and sent to Sentry, so every
@@ -28,31 +31,40 @@ class EmailSendError(RuntimeError):
         kind: EmailFailureKind,
         smtp_code: int | None = None,
         refused_recipients: Mapping[str, int] | None = None,
+        failed_before_handover: bool = False,
     ) -> None:
         super().__init__(mask_email_addresses(message))
         self.kind: EmailFailureKind = kind
         self.smtp_code = smtp_code
         self.refused_recipients: dict[str, int] = dict(refused_recipients or {})
+        self.failed_before_handover = failed_before_handover
 
     @property
     def delivery_unconfirmed(self) -> bool:
         """True when the email may have been delivered anyway.
 
         A timeout or dropped connection (``transient`` with no SMTP reply code)
-        can strike after the server accepted the message, so the recipient may
-        have it. A reply code means the server answered, so the failure is definite.
+        while the message was being handed over can strike after the server
+        accepted it, so the recipient may have it. A reply code means the
+        server answered, and a failure before the hand-over means the server
+        never had the message, so either failure is definite. An error that
+        doesn't say where it failed counts as unconfirmed: telling a caller it
+        definitely failed would invite a resend and a duplicate email.
         """
-        return self.kind == "transient" and self.smtp_code is None
+        return self.kind == "transient" and self.smtp_code is None and not self.failed_before_handover
 
     def __reduce__(
         self,
     ) -> tuple[
-        Callable[[str, EmailFailureKind, int | None, Mapping[str, int]], "EmailSendError"],
-        tuple[str, EmailFailureKind, int | None, dict[str, int]],
+        Callable[[str, EmailFailureKind, int | None, Mapping[str, int], bool], "EmailSendError"],
+        tuple[str, EmailFailureKind, int | None, dict[str, int], bool],
     ]:
         # The keyword-only fields aren't in ``args``, so the default pickling
         # (``cls(*args)``) would fail; rebuild through a positional factory.
-        return (_rebuild, (str(self), self.kind, self.smtp_code, self.refused_recipients))
+        return (
+            _rebuild,
+            (str(self), self.kind, self.smtp_code, self.refused_recipients, self.failed_before_handover),
+        )
 
 
 def _rebuild(
@@ -60,7 +72,13 @@ def _rebuild(
     kind: EmailFailureKind,
     smtp_code: int | None,
     refused_recipients: Mapping[str, int],
+    # Defaulted so an error pickled before this field existed still loads.
+    failed_before_handover: bool = False,
 ) -> EmailSendError:
     return EmailSendError(
-        message, kind=kind, smtp_code=smtp_code, refused_recipients=refused_recipients,
+        message,
+        kind=kind,
+        smtp_code=smtp_code,
+        refused_recipients=refused_recipients,
+        failed_before_handover=failed_before_handover,
     )

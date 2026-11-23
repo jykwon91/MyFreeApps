@@ -32,7 +32,9 @@ operation is capped by ``SMTP_TIMEOUT_SECONDS``.
 
 A failed send raises ``EmailSendError`` carrying ``kind`` (misconfigured /
 recipient_rejected / message_rejected / transient), the server's
-``smtp_code`` and any ``refused_recipients``, and is logged with them.
+``smtp_code`` and any ``refused_recipients``, and is logged with them. Its
+``delivery_unconfirmed`` is True only when a timeout or dropped connection
+struck while the message was being handed over, so it may have arrived anyway.
 Log lines name recipients by count and domain only and never carry the
 subject, which often names a tenant or applicant.
 
@@ -164,7 +166,8 @@ class EmailService:
             EmailNotConfiguredError: If SMTP creds are missing.
             EmailSendError: If SMTP send fails for any other reason
                 (network, timeout, auth, recipient rejected). Its ``kind``,
-                ``smtp_code`` and ``refused_recipients`` say which.
+                ``smtp_code`` and ``refused_recipients`` say which, and
+                ``delivery_unconfirmed`` whether it may have arrived anyway.
         """
         if not to:
             raise ValueError("Recipients list cannot be empty")
@@ -206,10 +209,16 @@ class EmailService:
         if reply_to:
             msg["Reply-To"] = strip_line_breaks(reply_to)
 
+        handing_over = False
         try:
-            refused = self._deliver(sender, to, msg.as_string())
+            payload = msg.as_string()
+            server = self._open_session()
+            handing_over = True
+            refused = _hand_over(server, sender, to, payload)
         except (smtplib.SMTPException, OSError, email.errors.MessageError, UnicodeError) as e:
-            error = error_from_smtp_exception(e, recipient_count=len(to))
+            error = error_from_smtp_exception(
+                e, recipient_count=len(to), failed_before_handover=not handing_over,
+            )
             _log_send_failure(error, to)
             # Not chained: the smtplib exception's text quotes the recipient, and
             # a cause is printed in full in the ERROR traceback Sentry receives.
@@ -221,32 +230,17 @@ class EmailService:
 
         logger.info("Email sent via SMTP to %s", describe_recipients(to))
 
-    def _deliver(self, sender: str, to: list[str], payload: str) -> dict[str, tuple[int, bytes]]:
-        """Run one SMTP conversation; return the recipients the server refused.
-
-        Raises ``smtplib.SMTPException`` / ``OSError`` / ``UnicodeError`` (a
-        non-ASCII address, which smtplib encodes as ASCII) only for failures
-        before the server accepted the message. Once ``sendmail`` returns the email is
-        out, so a failing QUIT afterwards is logged, not raised: reporting it
-        as a failed send would invite a resend and a duplicate email.
-        """
+    def _open_session(self) -> smtplib.SMTP:
+        """Connect, start TLS and log in. A failure here comes before the
+        message has left us, so nobody can have received it."""
         server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
         try:
             server.starttls(context=ssl.create_default_context())
             server.login(self.smtp_user, self.smtp_password)
-            refused = server.sendmail(sender, to, payload)
         except BaseException:
             server.close()
             raise
-        try:
-            server.quit()
-        except (smtplib.SMTPException, OSError) as e:
-            logger.warning(
-                "SMTP server accepted the email but closing the session failed; "
-                "treating the send as delivered: %r", e,
-            )
-            server.close()
-        return refused
+        return server
 
     async def send_or_raise_async(
         self,
@@ -316,12 +310,44 @@ class EmailService:
         )
 
 
+def _hand_over(
+    server: smtplib.SMTP, sender: str, to: list[str], payload: str,
+) -> dict[str, tuple[int, bytes]]:
+    """Send the message on an open session; return the recipients the server refused.
+
+    Raises ``smtplib.SMTPException`` / ``OSError`` / ``UnicodeError`` (a
+    non-ASCII address, which smtplib encodes as ASCII) when ``sendmail`` fails.
+    A timeout or dropped connection then can come after the server took the
+    message, so the caller can't tell whether it was delivered. The whole call
+    counts, MAIL FROM and RCPT TO included: smtplib doesn't say which command
+    failed, and calling it unconfirmed can't cause a duplicate. Once
+    ``sendmail`` returns the email is out, so a failing QUIT afterwards is
+    logged, not raised: reporting it as a failed send would invite a resend
+    and a duplicate email.
+    """
+    try:
+        refused = server.sendmail(sender, to, payload)
+    except BaseException:
+        server.close()
+        raise
+    try:
+        server.quit()
+    except (smtplib.SMTPException, OSError) as e:
+        logger.warning(
+            "SMTP server accepted the email but closing the session failed; "
+            "treating the send as delivered: %r", e,
+        )
+        server.close()
+    return refused
+
+
 def _log_send_failure(error: EmailSendError, to: list[str]) -> None:
     """Log a failed send with its SMTP code. Config faults log at ERROR: an
     operator has to act, and every later send will fail the same way."""
     level = logging.ERROR if error.kind == "misconfigured" else logging.WARNING
     logger.log(
         level,
-        "SMTP send failed: kind=%s smtp_code=%s refused=%d to=%s: %s",
-        error.kind, error.smtp_code, len(error.refused_recipients), describe_recipients(to), error,
+        "SMTP send failed: kind=%s smtp_code=%s refused=%d unconfirmed=%s to=%s: %s",
+        error.kind, error.smtp_code, len(error.refused_recipients), error.delivery_unconfirmed,
+        describe_recipients(to), error,
     )
