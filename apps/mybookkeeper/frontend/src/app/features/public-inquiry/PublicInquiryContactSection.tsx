@@ -1,3 +1,4 @@
+import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import {
   MAX_FREE_TEXT_CHARS,
@@ -48,8 +49,7 @@ export default function PublicInquiryContactSection({
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
           onBlur={() => markTouched("name")}
-          aria-invalid={!!visibleErrors.name}
-          aria-describedby={visibleErrors.name ? "name-error" : undefined}
+          {...fieldFeedbackAria({ id: "name", error: visibleErrors.name })}
           className={inputClasses(!!visibleErrors.name)}
           data-testid="public-inquiry-name"
         />
@@ -63,8 +63,7 @@ export default function PublicInquiryContactSection({
           value={form.email}
           onChange={(e) => update("email", e.target.value)}
           onBlur={() => markTouched("email")}
-          aria-invalid={!!visibleErrors.email}
-          aria-describedby={visibleErrors.email ? "email-error" : undefined}
+          {...fieldFeedbackAria({ id: "email", error: visibleErrors.email })}
           className={inputClasses(!!visibleErrors.email)}
           data-testid="public-inquiry-email"
         />
@@ -78,8 +77,7 @@ export default function PublicInquiryContactSection({
           value={form.phone}
           onChange={(e) => update("phone", e.target.value)}
           onBlur={() => markTouched("phone")}
-          aria-invalid={!!visibleErrors.phone}
-          aria-describedby={visibleErrors.phone ? "phone-error" : undefined}
+          {...fieldFeedbackAria({ id: "phone", error: visibleErrors.phone })}
           className={inputClasses(!!visibleErrors.phone)}
           data-testid="public-inquiry-phone"
         />
@@ -100,10 +98,7 @@ export default function PublicInquiryContactSection({
             value={form.moveInDate}
             onChange={(e) => update("moveInDate", e.target.value)}
             onBlur={() => markTouched("moveInDate")}
-            aria-invalid={!!visibleErrors.moveInDate}
-            aria-describedby={
-              visibleErrors.moveInDate ? "move-in-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "move-in", error: visibleErrors.moveInDate })}
             className={inputClasses(!!visibleErrors.moveInDate)}
             data-testid="public-inquiry-move-in"
           />
@@ -121,10 +116,7 @@ export default function PublicInquiryContactSection({
             value={form.moveOutDate}
             onChange={(e) => update("moveOutDate", e.target.value)}
             onBlur={() => markTouched("moveOutDate")}
-            aria-invalid={!!visibleErrors.moveOutDate}
-            aria-describedby={
-              visibleErrors.moveOutDate ? "move-out-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "move-out", error: visibleErrors.moveOutDate })}
             className={inputClasses(!!visibleErrors.moveOutDate)}
             data-testid="public-inquiry-move-out-date"
           />
@@ -156,10 +148,7 @@ export default function PublicInquiryContactSection({
             value={form.occupantCount}
             onChange={(e) => update("occupantCount", e.target.value)}
             onBlur={() => markTouched("occupantCount")}
-            aria-invalid={!!visibleErrors.occupantCount}
-            aria-describedby={
-              visibleErrors.occupantCount ? "occupants-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "occupants", error: visibleErrors.occupantCount })}
             className={inputClasses(!!visibleErrors.occupantCount)}
             data-testid="public-inquiry-occupants"
           />
@@ -179,10 +168,7 @@ export default function PublicInquiryContactSection({
             value={form.vehicleCount}
             onChange={(e) => update("vehicleCount", e.target.value)}
             onBlur={() => markTouched("vehicleCount")}
-            aria-invalid={!!visibleErrors.vehicleCount}
-            aria-describedby={
-              visibleErrors.vehicleCount ? "vehicles-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "vehicles", error: visibleErrors.vehicleCount })}
             className={inputClasses(!!visibleErrors.vehicleCount)}
             data-testid="public-inquiry-vehicles"
           />
@@ -203,8 +189,7 @@ export default function PublicInquiryContactSection({
                 update("hasPets", "no");
                 markTouched("hasPets");
               }}
-              aria-invalid={!!visibleErrors.hasPets}
-              aria-describedby={visibleErrors.hasPets ? "has-pets-error" : undefined}
+              {...fieldFeedbackAria({ id: "has-pets", error: visibleErrors.hasPets })}
               data-testid="public-inquiry-pets-no"
             />
             No
@@ -220,23 +205,13 @@ export default function PublicInquiryContactSection({
                 update("hasPets", "yes");
                 markTouched("hasPets");
               }}
-              aria-invalid={!!visibleErrors.hasPets}
-              aria-describedby={visibleErrors.hasPets ? "has-pets-error" : undefined}
+              {...fieldFeedbackAria({ id: "has-pets", error: visibleErrors.hasPets })}
               data-testid="public-inquiry-pets-yes"
             />
             Yes
           </label>
         </div>
-        {visibleErrors.hasPets ? (
-          <p
-            id="has-pets-error"
-            className="mt-1 text-xs text-red-600"
-            role="alert"
-            data-testid="public-inquiry-has-pets-error"
-          >
-            {visibleErrors.hasPets}
-          </p>
-        ) : null}
+        <FieldFeedback id="has-pets" error={visibleErrors.hasPets} testId="public-inquiry-has-pets-error" />
       </fieldset>
 
       {form.hasPets === "yes" ? (

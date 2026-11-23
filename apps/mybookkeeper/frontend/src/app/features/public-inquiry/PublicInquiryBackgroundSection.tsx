@@ -8,6 +8,7 @@ import {
   MIN_WHY_THIS_ROOM_CHARS,
   inputClasses,
 } from "./public-inquiry-helpers";
+import { fieldFeedbackAria } from "@platform/ui";
 import PublicInquiryField from "./PublicInquiryField";
 
 interface PublicInquiryBackgroundSectionProps {
@@ -38,10 +39,7 @@ export default function PublicInquiryBackgroundSection({
           value={form.currentCity}
           onChange={(e) => update("currentCity", e.target.value)}
           onBlur={() => markTouched("currentCity")}
-          aria-invalid={!!visibleErrors.currentCity}
-          aria-describedby={
-            visibleErrors.currentCity ? "city-error" : undefined
-          }
+          {...fieldFeedbackAria({ id: "city", error: visibleErrors.currentCity })}
           className={inputClasses(!!visibleErrors.currentCity)}
           data-testid="public-inquiry-city"
         />
@@ -64,10 +62,7 @@ export default function PublicInquiryBackgroundSection({
             update("currentRegion", "");
           }}
           onBlur={() => markTouched("currentCountry")}
-          aria-invalid={!!visibleErrors.currentCountry}
-          aria-describedby={
-            visibleErrors.currentCountry ? "country-error" : undefined
-          }
+          {...fieldFeedbackAria({ id: "country", error: visibleErrors.currentCountry })}
           className={inputClasses(!!visibleErrors.currentCountry)}
           data-testid="public-inquiry-country"
         >
@@ -91,10 +86,7 @@ export default function PublicInquiryBackgroundSection({
             value={form.currentRegion}
             onChange={(e) => update("currentRegion", e.target.value)}
             onBlur={() => markTouched("currentRegion")}
-            aria-invalid={!!visibleErrors.currentRegion}
-            aria-describedby={
-              visibleErrors.currentRegion ? "region-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "region", error: visibleErrors.currentRegion })}
             className={inputClasses(!!visibleErrors.currentRegion)}
             data-testid="public-inquiry-region"
           >
@@ -122,10 +114,7 @@ export default function PublicInquiryBackgroundSection({
             value={form.currentRegion}
             onChange={(e) => update("currentRegion", e.target.value)}
             onBlur={() => markTouched("currentRegion")}
-            aria-invalid={!!visibleErrors.currentRegion}
-            aria-describedby={
-              visibleErrors.currentRegion ? "region-error" : undefined
-            }
+            {...fieldFeedbackAria({ id: "region", error: visibleErrors.currentRegion })}
             className={inputClasses(!!visibleErrors.currentRegion)}
             data-testid="public-inquiry-region"
           />
@@ -148,10 +137,7 @@ export default function PublicInquiryBackgroundSection({
             )
           }
           onBlur={() => markTouched("employmentStatus")}
-          aria-invalid={!!visibleErrors.employmentStatus}
-          aria-describedby={
-            visibleErrors.employmentStatus ? "employment-error" : undefined
-          }
+          {...fieldFeedbackAria({ id: "employment", error: visibleErrors.employmentStatus })}
           className={inputClasses(!!visibleErrors.employmentStatus)}
           data-testid="public-inquiry-employment"
         >
@@ -180,10 +166,7 @@ export default function PublicInquiryBackgroundSection({
           value={form.whyThisRoom}
           onChange={(e) => update("whyThisRoom", e.target.value)}
           onBlur={() => markTouched("whyThisRoom")}
-          aria-invalid={!!visibleErrors.whyThisRoom}
-          aria-describedby={
-            visibleErrors.whyThisRoom ? "why-error" : undefined
-          }
+          {...fieldFeedbackAria({ id: "why", error: visibleErrors.whyThisRoom })}
           className={inputClasses(!!visibleErrors.whyThisRoom)}
           data-testid="public-inquiry-why"
         />

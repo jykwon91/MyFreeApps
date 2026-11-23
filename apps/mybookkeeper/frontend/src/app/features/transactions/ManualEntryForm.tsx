@@ -6,14 +6,13 @@ import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } f
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
-import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
-import TransactionFieldError from "@/app/features/transactions/TransactionFieldError";
 
 export interface ManualEntryFormProps {
   properties: readonly Property[];
@@ -141,12 +140,11 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
                   step="0.01"
                   min="0.01"
                   required
-                  aria-invalid={errors.amount ? true : undefined}
-                  aria-describedby={errors.amount ? `${field.id}-error` : undefined}
+                  {...fieldFeedbackAria({ id: field.id, error: errors.amount?.message })}
                   {...field}
                 />
               </div>
-              <TransactionFieldError id={`${field.id}-error`} message={errors.amount?.message} />
+              <FieldFeedback id={field.id} error={errors.amount?.message} />
             </>
           )}
         </FormField>
