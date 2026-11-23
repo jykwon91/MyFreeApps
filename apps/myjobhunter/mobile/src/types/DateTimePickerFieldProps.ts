@@ -1,4 +1,4 @@
-export interface PickerFieldProps {
+export interface DateTimePickerFieldProps {
   label: string;
   /** The chosen value as people read it, or null when nothing is chosen. */
   valueText: string | null;
@@ -17,7 +17,7 @@ export interface PickerFieldProps {
   /** A required field can't be cleared. */
   required?: boolean;
   error?: string;
-  /** Quiet help under the field, replaced by the error when there is one. */
+  /** Quiet help under the field and the button's spoken hint; the error replaces the visible text. */
   hint?: string;
   /** Locks the buttons and closes the picker, for while the form is saving. */
   disabled?: boolean;

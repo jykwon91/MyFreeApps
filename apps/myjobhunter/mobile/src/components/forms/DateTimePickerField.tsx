@@ -3,13 +3,13 @@ import { FieldError, FieldLabel, LoadingButton, requiredFieldLabel, useTheme } f
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import { DATE_TIME_FIELD_MESSAGES as MESSAGES } from "../../constants/dateTimeField";
-import type { PickerFieldProps } from "../../types/PickerFieldProps";
+import type { DateTimePickerFieldProps } from "../../types/DateTimePickerFieldProps";
 
 /**
  * A date or date-and-time field. iOS spins it in place under a Done button; Android opens its own
  * dialog. The label and value show above Choose (or Change) and, when it isn't required, Clear.
  */
-export default function PickerField({
+export default function DateTimePickerField({
   label,
   valueText,
   pickerDate,
@@ -23,7 +23,7 @@ export default function PickerField({
   error,
   hint,
   disabled = false,
-}: PickerFieldProps) {
+}: DateTimePickerFieldProps) {
   const { colors, spacing, fontSize } = useTheme();
   const [isPicking, setIsPicking] = useState(false);
   const hasValue = valueText !== null;
@@ -49,8 +49,9 @@ export default function PickerField({
       <Text style={{ fontSize: fontSize.md, color: hasValue ? colors.foreground : colors.mutedForeground }}>{valueText ?? MESSAGES.notSet}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton
-          accessibilityHint={error ?? hint}
-          accessibilityLabel={requiredFieldLabel(`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`, required)}
+          accessibilityHint={hint}
+          accessibilityLabel={requiredFieldLabel(`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`, required, error)}
+          accessibilityState={Platform.OS === "ios" ? { expanded: isPicking } : undefined}
           disabled={disabled}
           onPress={press}
           style={{ flex: 1 }}
