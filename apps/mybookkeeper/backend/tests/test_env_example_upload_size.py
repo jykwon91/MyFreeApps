@@ -10,7 +10,7 @@ KEY = "MAX_UPLOAD_SIZE_BYTES"
 
 
 def _example_value() -> int:
-    for line in ENV_EXAMPLE.read_text().splitlines():
+    for line in ENV_EXAMPLE.read_text(encoding="utf-8").splitlines():
         if line.startswith(f"{KEY}="):
             return int(line.split("=", 1)[1])
     raise AssertionError(f"{KEY} missing from .env.example")

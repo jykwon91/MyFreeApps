@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parents[2]
-TEST_MAP = json.loads((APP_DIR / "scripts" / "test-map.json").read_text())
+TEST_MAP = json.loads((APP_DIR / "scripts" / "test-map.json").read_text(encoding="utf-8"))
 
 # vitest is given bare file names and filters on them, so a name just has to
 # exist somewhere under the frontend's sources.

@@ -21,7 +21,7 @@ def test_no_module_defines_its_own_copy() -> None:
         f"{path.relative_to(_APP)}:{node.lineno}"
         for path in _APP.rglob("*.py")
         if path.name != "sql_in_list.py"
-        for node in ast.walk(ast.parse(path.read_text()))
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
         if isinstance(node, ast.FunctionDef) and node.name.lstrip("_") == "sql_in_list"
     ]
     assert copies == []

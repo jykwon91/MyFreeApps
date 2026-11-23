@@ -7,8 +7,8 @@ SERVICE = Path(__file__).parents[1] / "app" / "services" / "transactions" / "att
 
 
 def test_the_server_still_says_what_the_phone_listens_for() -> None:
-    block = PHONE_CONSTANTS.read_text().split("PAYMENT_REVIEW_SERVER_DETAILS = {")[1].split("}")[0]
+    block = PHONE_CONSTANTS.read_text(encoding="utf-8").split("PAYMENT_REVIEW_SERVER_DETAILS = {")[1].split("}")[0]
     details = re.findall(r': "([^"]+)"', block)
     assert len(details) == 4
-    service = SERVICE.read_text()
+    service = SERVICE.read_text(encoding="utf-8")
     assert [detail for detail in details if f'"{detail}"' not in service] == []

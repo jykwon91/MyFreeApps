@@ -105,7 +105,7 @@ _WEB_CONFIG = (
 
 
 def test_web_pii_fields_match_backend() -> None:
-    source = _WEB_CONFIG.read_text()
+    source = _WEB_CONFIG.read_text(encoding="utf-8")
     block = re.search(r"PII_FIELDS[^=]*=\s*new Set\(\[(.*?)\]\)", source, re.S)
     assert block is not None
     assert set(re.findall(r'"([a-z_]+)"', block.group(1))) == set(PII_FIELD_IDS)

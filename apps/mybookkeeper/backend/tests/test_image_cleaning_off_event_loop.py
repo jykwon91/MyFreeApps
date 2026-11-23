@@ -32,7 +32,7 @@ def _called_name(call: ast.Call) -> str | None:
 
 def _direct_blocking_calls(path: Path) -> list[str]:
     found: list[str] = []
-    for fn in ast.walk(ast.parse(path.read_text())):
+    for fn in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if not isinstance(fn, ast.AsyncFunctionDef):
             continue
         for node in ast.walk(fn):
@@ -52,11 +52,11 @@ def test_no_async_service_calls_image_cleaning_directly() -> None:
 ])
 def test_the_check_catches_a_direct_call(tmp_path: Path, source: str) -> None:
     path = tmp_path / "probe.py"
-    path.write_text(source)
+    path.write_text(source, encoding="utf-8")
     assert _direct_blocking_calls(path)
 
 
 def test_the_check_allows_to_thread(tmp_path: Path) -> None:
     path = tmp_path / "probe.py"
-    path.write_text("async def f(c):\n    return await asyncio.to_thread(clean_attachment, c, ALLOWED)\n")
+    path.write_text("async def f(c):\n    return await asyncio.to_thread(clean_attachment, c, ALLOWED)\n", encoding="utf-8")
     assert _direct_blocking_calls(path) == []

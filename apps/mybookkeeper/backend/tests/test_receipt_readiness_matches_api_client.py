@@ -11,11 +11,11 @@ from app.schemas.leases.receipt_gmail_state import ReceiptGmailState
 from app.schemas.leases.receipt_send_blocker import ReceiptSendBlocker
 
 API_CLIENT = Path(__file__).parents[2] / "api-client" / "src"
-MESSAGES = (API_CLIENT / "constants" / "receiptReadinessMessages.ts").read_text()
+MESSAGES = (API_CLIENT / "constants" / "receiptReadinessMessages.ts").read_text(encoding="utf-8")
 
 
 def _union(type_file: str) -> set[str]:
-    return set(re.findall(r'"(\w+)"', (API_CLIENT / "types" / "lease" / type_file).read_text()))
+    return set(re.findall(r'"(\w+)"', (API_CLIENT / "types" / "lease" / type_file).read_text(encoding="utf-8")))
 
 
 def _message_keys(constant: str) -> set[str]:

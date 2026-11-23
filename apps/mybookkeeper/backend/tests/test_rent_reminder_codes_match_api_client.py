@@ -28,13 +28,13 @@ def _between(source: str, start: str, end: str, *, file: str) -> str:
 
 
 def _labelled_codes() -> set[str]:
-    source = (API_CLIENT / "utils" / "rentReminderError.ts").read_text()
+    source = (API_CLIENT / "utils" / "rentReminderError.ts").read_text(encoding="utf-8")
     labels = _between(source, "Object.entries({", "}));", file="rentReminderError.ts")
     return set(re.findall(r"^\s{2}(\w+):", labels, flags=re.MULTILINE))
 
 
 def _codes_file() -> str:
-    return (API_CLIENT / "constants" / "rentReminderErrorCodes.ts").read_text()
+    return (API_CLIENT / "constants" / "rentReminderErrorCodes.ts").read_text(encoding="utf-8")
 
 
 def test_every_reminder_error_code_has_words() -> None:
