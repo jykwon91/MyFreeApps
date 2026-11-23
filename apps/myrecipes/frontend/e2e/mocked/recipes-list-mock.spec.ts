@@ -114,7 +114,7 @@ test("a signed-out visitor opening /?owner=me sees the public list and the filte
   await page.goto("/?owner=me");
 
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Couldn't load recipes" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Can't load recipes" })).toHaveCount(0);
   await expect(page).not.toHaveURL(/owner=/);
   await expect(page.getByRole("button", { name: "My recipes" })).toHaveCount(0);
   expect(calls.every((c) => c.owner === null)).toBe(true);
@@ -151,18 +151,18 @@ test("an empty library offers New recipe, which opens the editor", async ({ page
   await expect(page).toHaveURL(/\/recipes\/new$/);
 });
 
-test("a failed load says so instead of showing an empty library, and a refresh recovers", async ({ page }) => {
+test("a failed load says so instead of showing an empty library, and Try again recovers", async ({ page }) => {
   await stubSignedInShell(page);
   let failing = true;
   await stubList(page, () => (failing ? { body: { detail: "boom" }, status: 500 } : { body: listPageOf([TOMATO]) }));
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Couldn't load recipes" })).toBeVisible();
-  await expect(page.getByText("The server returned 500. Try refreshing.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Can't load recipes" })).toBeVisible();
+  await expect(page.getByText("Something went wrong loading your recipes. Try again in a moment.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "No recipes yet" })).toHaveCount(0);
 
   failing = false;
-  await page.reload();
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("heading", { name: "Tomato soup" })).toBeVisible();
 });
 
