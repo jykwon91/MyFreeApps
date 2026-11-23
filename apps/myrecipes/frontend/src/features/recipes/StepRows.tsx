@@ -4,7 +4,7 @@ import { STEP_INSTRUCTION_MAX_LENGTH } from "@myrecipes/api-client/constants/rec
 import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
 import { TOUCH_TARGET } from "@/constants/touchTarget";
 import { stepControlId } from "@/features/recipes/rowControlIds";
-import { useFocusAddedRow } from "@/features/recipes/useFocusAddedRow";
+import { useRowListFocus } from "@/features/recipes/useRowListFocus";
 
 interface Props {
   rows: EditableStepRow[];
@@ -34,10 +34,20 @@ export default function StepRows({
   onRemove,
   onMove,
 }: Props) {
-  const { containerRef, add } = useFocusAddedRow(rows.length, onAdd);
   const addId = "add-step";
+  const { containerRef, announcement, add, remove, move } = useRowListFocus({
+    noun: "step",
+    rowCount: rows.length,
+    addButtonId: addId,
+    onAdd,
+    onRemove,
+    onMove,
+  });
   return (
     <div ref={containerRef} className="space-y-2">
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       {rows.map((row, idx) => (
         <div key={row.key}>
           <div className="flex items-start gap-2">
@@ -62,7 +72,7 @@ export default function StepRows({
                 type="button"
                 aria-label="Move step up"
                 disabled={disabled || idx === 0}
-                onClick={() => onMove(row.key, -1)}
+                onClick={() => move(row.key, idx, -1)}
                 className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
               >
                 <ChevronUp className="w-4 h-4" />
@@ -71,7 +81,7 @@ export default function StepRows({
                 type="button"
                 aria-label="Move step down"
                 disabled={disabled || idx === rows.length - 1}
-                onClick={() => onMove(row.key, 1)}
+                onClick={() => move(row.key, idx, 1)}
                 className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
               >
                 <ChevronDown className="w-4 h-4" />
@@ -80,7 +90,7 @@ export default function StepRows({
                 type="button"
                 aria-label="Remove step"
                 disabled={disabled}
-                onClick={() => onRemove(row.key)}
+                onClick={() => remove(row.key, idx)}
                 className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30`}
               >
                 <X className="w-4 h-4" />

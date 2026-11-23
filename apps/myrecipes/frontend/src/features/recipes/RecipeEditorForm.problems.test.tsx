@@ -124,3 +124,48 @@ describe("RecipeEditorForm added rows", () => {
     expect(screen.getByLabelText("Step 2")).toHaveFocus();
   });
 });
+
+describe("RecipeEditorForm row moves and removals", () => {
+  async function addSteps(count: number) {
+    for (let i = 0; i < count; i += 1) await userEvent.click(screen.getByRole("button", { name: "Add step" }));
+  }
+
+  it("announces a move for screen readers", async () => {
+    renderCreate();
+    await addSteps(2);
+    await userEvent.click(screen.getAllByRole("button", { name: "Move step up" })[2]);
+    const message = screen.getByText("Moved step 3 up to 2");
+    expect(message).toHaveAttribute("role", "status");
+    expect(message).toHaveClass("sr-only");
+    await userEvent.click(screen.getAllByRole("button", { name: "Move step down" })[0]);
+    expect(screen.getByText("Moved step 1 down to 2")).toBeInTheDocument();
+  });
+
+  it("announces an ingredient move", async () => {
+    renderCreate();
+    await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Move ingredient up" })[1]);
+    expect(screen.getByText("Moved ingredient 2 up to 1")).toBeInTheDocument();
+  });
+
+  it("moves focus to the next row after a removal", async () => {
+    renderCreate();
+    await addSteps(2);
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove step" })[1]);
+    expect(screen.getAllByLabelText(/^Step \d/)).toHaveLength(2);
+    expect(screen.getByLabelText("Step 2")).toHaveFocus();
+  });
+
+  it("moves focus to the previous row after removing the last", async () => {
+    renderCreate();
+    await addSteps(1);
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove step" })[1]);
+    expect(screen.getByLabelText("Step 1")).toHaveFocus();
+  });
+
+  it("moves focus to the Add button when the list empties", async () => {
+    renderCreate();
+    await userEvent.click(screen.getByRole("button", { name: "Remove ingredient" }));
+    expect(screen.getByRole("button", { name: "Add ingredient" })).toHaveFocus();
+  });
+});
