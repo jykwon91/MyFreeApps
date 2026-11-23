@@ -90,6 +90,14 @@ MAY_STILL_ARRIVE_ERRORS: frozenset[str] = frozenset({
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_OUTCOME_UNKNOWN,
 })
+# Twilio refused the text because the tenant had replied STOP (error 21610).
+ERROR_SMS_OPTED_OUT = "sms_21610"
+# Failed texts a tenant's reply can still be matched to: ones that may have
+# arrived, and ones Twilio blocked after a STOP. A blocked text never reached
+# the tenant, so it only decides whose reply it is when no other text does and
+# every blocked one is from the same account: then that tenant's START (the
+# reply that matters most) still reaches their landlord.
+REPLY_MATCH_FAILED_ERRORS: frozenset[str] = MAY_STILL_ARRIVE_ERRORS | {ERROR_SMS_OPTED_OUT}
 # Send now's 409 when the last attempt may have gone out and the operator
 # didn't confirm sending again. It covers texts and emails, so it doesn't say
 # where to check: the card's warning does, for each channel.
@@ -101,6 +109,8 @@ REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE = (
 MAX_ERROR_CODE_LENGTH = 120
 # Room for a Twilio Message SID (34 characters today).
 MAX_PROVIDER_MESSAGE_ID_LENGTH = 64
+# A phone-number lookup code: SHA-256 as hex.
+PHONE_LOOKUP_HASH_LENGTH = 64
 
 # Prefix of the code for a text Twilio reported it couldn't deliver, followed
 # by Twilio's ``ErrorCode`` (``sms_failed: 30007``), or ``unknown`` without one.
@@ -119,3 +129,34 @@ SMS_WEBHOOK_PUBLIC_PATH = "/api/rent-reminders/sms/webhook"
 # The query parameter on each text's status-callback URL naming the send row
 # and try (``<send id>:<attempt>``, ``rent_reminder_request_id``).
 SMS_WEBHOOK_REQUEST_ID_PARAM = "request_id"
+
+# Where Twilio posts the texts tenants send to the reminder number (the number's
+# "A message comes in" webhook), rebuilt the same way for its signature. Twilio
+# only retries this when it can't connect at all, so a reply is never emailed
+# twice; adding Twilio's ``#rp=`` retry options to the URL would need a record
+# of handled MessageSids first.
+SMS_INBOUND_PUBLIC_PATH = "/api/rent-reminders/sms/inbound"
+
+# Requests per client IP for each Twilio webhook. Twilio posts from a shared
+# pool of addresses, so each route has its own bucket: a burst of status
+# callbacks after the evening run must not turn a tenant's reply away.
+SMS_WEBHOOK_RATE_LIMIT = 120
+SMS_WEBHOOK_RATE_WINDOW_SECONDS = 60
+# Manual "send now" requests per signed-in user.
+SEND_NOW_RATE_LIMIT = 20
+SEND_NOW_RATE_WINDOW_SECONDS = 3600
+
+# A reply is only matched to reminder texts sent within this many days: enough
+# for monthly reminders and some slack, short enough that a phone number given
+# up and passed to someone new soon stops reaching the old landlord.
+REPLY_MATCH_WINDOW_DAYS = 120
+# Two different landlords texted the number within this many hours of each
+# other: the reply could be for either, so neither is sent it.
+REPLY_AMBIGUITY_HOURS = 24
+# Most replies from one phone number emailed on per hour. Each one is an email
+# from the shared mail account, so a number texting in a loop must not use up
+# what sign-up and password-reset emails need. Counted in each API worker
+# process, like every ``RateLimiter``, so the real ceiling is this times the
+# worker count (``--workers`` in docker/backend.Dockerfile; two today).
+REPLY_FORWARD_LIMIT = 20
+REPLY_FORWARD_WINDOW_SECONDS = 3600

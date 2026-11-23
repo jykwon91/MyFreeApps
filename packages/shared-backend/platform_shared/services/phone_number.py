@@ -13,6 +13,21 @@ _NON_DIGITS = re.compile(r"\D+")
 _NANP_LENGTH = 10
 _E164_MIN_DIGITS = 8
 _E164_MAX_DIGITS = 15
+# "+", then 8 to 15 digits not starting with 0. ASCII digits only: ``\d`` would
+# also accept fullwidth and Arabic-Indic digits.
+_E164 = re.compile(r"\+[1-9][0-9]{7,14}")
+
+
+def parse_e164(value: str | None) -> str | None:
+    """Return ``value`` if it already is exactly an E.164 number, else ``None``.
+
+    For numbers a provider reports, such as Twilio's ``From``, which are E.164
+    for a text. Unlike :func:`to_e164` nothing is stripped first, so another
+    channel's address (``whatsapp:+17135550100``) is not read as a phone number.
+    """
+    if value is not None and _E164.fullmatch(value):
+        return value
+    return None
 
 
 def to_e164(raw: str | None) -> str | None:

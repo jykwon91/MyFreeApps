@@ -17,7 +17,9 @@ behind on its own, and "send now" sends every enabled channel at once.
 operator. SMS goes out from the operator's Twilio number; the row sits at
 ``sent_to_provider`` until Twilio confirms through its signed status callback
 (``rent_reminder_webhook_service``), or the watchdog
-(``rent_reminder_watchdog_service``) fails it.
+(``rent_reminder_watchdog_service``) fails it. A text's row keeps the lookup
+code of the number it went to, so the tenant's reply can be emailed to the
+operator (``rent_reminder_reply_service``).
 
 **Failures** of any kind mark the row ``failed`` with a short code
 (``rent_reminder_failure_code``) and email the operator once
@@ -34,7 +36,6 @@ import uuid
 from decimal import Decimal
 
 from platform_shared.core.audit_actor import audit_actor
-from platform_shared.services.phone_number import to_e164
 
 from app.core.datetime_utils import as_utc
 from app.core.rent_reminder_channel import RentReminderChannel
@@ -63,6 +64,7 @@ from app.services.rent import rent_reminder_send_state as send_state
 from app.services.rent import rent_reminder_watchdog_service as watchdog
 from app.services.rent.rent_reminder_failure_code import ReminderUndeliverable, failure_code
 from app.services.rent.rent_reminder_outbound import ReminderOutbound
+from app.services.rent.rent_reminder_recipients import ReminderRecipients
 from app.services.rent.rent_reminder_sms_permission import may_send_texts
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
@@ -116,8 +118,9 @@ def _now() -> _dt.datetime:
 
 async def _send(outbound: ReminderOutbound) -> str | None:
     """Push one reminder out. Returns the Twilio Message SID for SMS, else ``None``."""
+    recipients = outbound.recipients
     if outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
-        recipient = (outbound.tenant_email or "").strip()
+        recipient = (recipients.email or "").strip()
         if not recipient:
             raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
         await email_service.send_email_or_raise(
@@ -131,14 +134,13 @@ async def _send(outbound: ReminderOutbound) -> str | None:
         raise ReminderUndeliverable(ERROR_SMS_NOT_CONFIGURED)
     if not outbound.owner_may_text:
         raise ReminderUndeliverable(ERROR_SMS_NOT_ALLOWED)
-    if not (outbound.tenant_phone or "").strip():
+    if not (recipients.phone or "").strip():
         raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
-    phone = to_e164(outbound.tenant_phone)
-    if phone is None:
+    if recipients.sms_to is None:
         raise ReminderUndeliverable(ERROR_INVALID_PHONE)
     return await asyncio.to_thread(
         sms_service.send_or_raise,
-        phone,
+        recipients.sms_to,
         outbound.body + SMS_OPT_OUT_SUFFIX,
         request_id=format_reminder_request_id(outbound.send_id, outbound.attempt),
     )
@@ -274,8 +276,6 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
             "applicant_id": plan.applicant_id,
             "organization_id": plan.organization_id,
             "user_id": plan.user_id,
-            "tenant_email": applicant.contact_email,
-            "tenant_phone": applicant.contact_phone,
             "operator_email": await alerts.operator_email(db, plan.user_id),
             "owner_may_text": may_send_texts(plan.user_id),
         }
@@ -285,6 +285,9 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
                 "Rent reminder text held back: the owner may not send texts: plan_id=%s owner_id=%s",
                 plan.id, plan.user_id,
             )
+        recipients = ReminderRecipients.for_tenant(
+            email=applicant.contact_email, phone=applicant.contact_phone,
+        )
 
     sent = 0
     for channel in pending:
@@ -302,6 +305,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
                         seen_error_code=seen_error_code,
                         amount=due.amount,
                         message_body=rendered.body,
+                        recipient_phone_hash=recipients.phone_hash_for(channel),
                     )
                 else:
                     row = await rent_reminder_send_repo.claim(
@@ -314,6 +318,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
                         channel=channel,
                         amount=due.amount,
                         message_body=rendered.body,
+                        recipient_phone_hash=recipients.phone_hash_for(channel),
                     )
                 send_id, attempt = row.id, row.attempt
         except ReminderAlreadyClaimedError:
@@ -325,8 +330,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
                 channel=channel,
                 subject=rendered.subject,
                 body=rendered.body,
-                tenant_email=snapshot["tenant_email"],
-                tenant_phone=snapshot["tenant_phone"],
+                recipients=recipients,
                 operator_email=snapshot["operator_email"],
                 owner_may_text=snapshot["owner_may_text"],
             ),
@@ -451,6 +455,9 @@ async def send_now(
         ):
             raise ReminderChangedError(_CHANGED_MESSAGE)
         operator_email = await alerts.operator_email(db, user_id)
+        recipients = ReminderRecipients.for_tenant(
+            email=applicant.contact_email, phone=applicant.contact_phone,
+        )
         outbounds: list[ReminderOutbound] = []
         for channel in channels:
             if channel in existing:
@@ -462,6 +469,7 @@ async def send_now(
                         seen_error_code=existing[channel].error_code,
                         amount=due.amount,
                         message_body=rendered.body,
+                        recipient_phone_hash=recipients.phone_hash_for(channel),
                     )
                 except ReminderAlreadyClaimedError as exc:
                     raise ReminderAlreadySentError(_ALREADY_SENT_MESSAGE) from exc
@@ -477,6 +485,7 @@ async def send_now(
                         channel=channel,
                         amount=due.amount,
                         message_body=rendered.body,
+                        recipient_phone_hash=recipients.phone_hash_for(channel),
                     )
                 except ReminderAlreadyClaimedError as exc:
                     raise ReminderAlreadySentError(_ALREADY_SENT_MESSAGE) from exc
@@ -487,8 +496,7 @@ async def send_now(
                     channel=channel,
                     subject=rendered.subject,
                     body=rendered.body,
-                    tenant_email=applicant.contact_email,
-                    tenant_phone=applicant.contact_phone,
+                    recipients=recipients,
                     operator_email=operator_email,
                     owner_may_text=owner_may_text,
                 ),

@@ -20,14 +20,23 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 
 
-def _derive_fernet(encryption_key: str, salt: bytes | None, info: bytes) -> Fernet:
+def derive_key(secret: str, *, salt: bytes | None, info: bytes) -> bytes:
+    """Derive a 32-byte sub-key from ``secret`` with HKDF-SHA256.
+
+    Each ``info`` string gives an independent key, so one secret can back
+    several key families (tokens, PII, lookup codes) without one leaking another.
+    """
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
         info=info,
     )
-    key = hkdf.derive(encryption_key.encode())
+    return hkdf.derive(secret.encode())
+
+
+def _derive_fernet(encryption_key: str, salt: bytes | None, info: bytes) -> Fernet:
+    key = derive_key(encryption_key, salt=salt, info=info)
     return Fernet(base64.urlsafe_b64encode(key))
 
 

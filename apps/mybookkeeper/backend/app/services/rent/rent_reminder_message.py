@@ -41,7 +41,8 @@ def format_amount(amount: Decimal) -> str:
     return f"${amount:,.2f}"
 
 
-def _short_date(day: _dt.date) -> str:
+def short_date(day: _dt.date) -> str:
+    """``Nov 1``: the month's short name and the day, no leading zero."""
     # ``%-d`` is glibc-only and raises on Windows, so strip the zero by hand.
     return f"{day.strftime('%b')} {day.day}"
 
@@ -53,7 +54,7 @@ def due_phrase(due_date: _dt.date, sent_on: _dt.date) -> str:
         return f"today ({weekday})"
     if days_out == 1:
         return f"tomorrow ({weekday})"
-    return f"on {weekday}, {_short_date(due_date)}"
+    return f"on {weekday}, {short_date(due_date)}"
 
 
 def render_reminder(
@@ -78,5 +79,5 @@ def render_reminder(
 def reminder_subject(amount: Decimal, due_date: _dt.date) -> str:
     return (
         f"Rent reminder: {format_amount(amount)} due "
-        f"{due_date.strftime('%A')}, {_short_date(due_date)}"
+        f"{due_date.strftime('%A')}, {short_date(due_date)}"
     )

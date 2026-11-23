@@ -11,7 +11,9 @@ Per RENTALS_PLAN.md §5.3, §8.1-8.7:
   while the applicant is still active in the screening / approval pipeline).
 - ``sensitive_purged_at`` is set by the future retention worker (§6.6) when
   PII is NULL'd 1 year after a declined applicant — the row itself is kept
-  for funnel analytics, only the PII is purged.
+  for funnel analytics, only the PII is purged. That purge must also NULL
+  ``rent_reminder_sends.recipient_phone_hash`` for the applicant: anyone
+  holding ``ENCRYPTION_KEY`` can turn the code back into the phone number.
 """
 from __future__ import annotations
 

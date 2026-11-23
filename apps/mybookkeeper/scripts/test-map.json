@@ -1135,6 +1135,12 @@
         "backend/app/workers/scheduler_worker.py",
         "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",
         "backend/alembic/versions/rentremattempt261121_add_rent_reminder_send_attempt.py",
+        "backend/alembic/versions/rentremtwilio261123_rename_rent_reminder_phone_states.py",
+        "backend/alembic/versions/rentremphonehash261123_add_rent_reminder_recipient_phone_hash.py",
+        "backend/app/repositories/rent/rent_reminder_reply_candidate.py",
+        "backend/app/core/html_text.py",
+        "backend/app/core/wording_utils.py",
+        "backend/app/core/twilio_request_verifier.py",
         "frontend/src/app/features/rent/",
         "api-client/src/types/rent/",
         "api-client/src/store/rentRemindersApi.ts",
@@ -1167,7 +1173,17 @@
         "test_rent_reminder_channels.py",
         "test_rent_reminder_sms_permission.py",
         "test_sms_sender_boot_guard.py",
-        "test_sms_sender_boot_wiring.py"
+        "test_sms_sender_boot_wiring.py",
+        "test_rent_reminder_twilio_webhook.py",
+        "test_rent_reminder_failure_code.py",
+        "test_rent_reminder_inbound_webhook.py",
+        "test_rent_reminder_reply_service.py",
+        "test_rent_reminder_reply_routing.py",
+        "test_rent_reminder_reply_email_builder.py",
+        "test_rent_reminder_phone_hash_schema.py",
+        "test_html_text.py",
+        "test_wording_utils.py",
+        "test_security_key_families.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx",
@@ -2697,7 +2713,8 @@
         "Register.test.tsx"
       ],
       "e2e_specs": [
-        "legal-pages.spec.ts"
+        "legal-pages.spec.ts",
+        "mocked/privacy-policy-text-replies-mock.spec.ts"
       ]
     },
     "client_dates": {

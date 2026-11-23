@@ -9,6 +9,12 @@ reminder the operator hears about, rather than a silent duplicate.
 
 Rows are never deleted. ``message_body`` names the tenant, so it is encrypted
 at rest like the applicant's own ``legal_name``.
+
+``recipient_phone_hash`` is the keyed lookup code (``app.core.security.
+phone_lookup_hash``) of the number a text was sent to, so a tenant's reply can
+be matched to the account that texted it without decrypting any phone number.
+Codes older than ``REPLY_MATCH_WINDOW_DAYS`` are kept but never matched. A
+retention job that purges a tenant's details must null their codes too.
 """
 from __future__ import annotations
 
@@ -37,6 +43,7 @@ from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_constants import (
     MAX_ERROR_CODE_LENGTH,
     MAX_PROVIDER_MESSAGE_ID_LENGTH,
+    PHONE_LOOKUP_HASH_LENGTH,
 )
 from app.core.rent_reminder_enums import (
     RENT_REMINDER_CHANNEL_SMS,
@@ -96,6 +103,12 @@ class RentReminderSend(Base):
         String(MAX_PROVIDER_MESSAGE_ID_LENGTH), nullable=True,
     )
     error_code: Mapped[str | None] = mapped_column(String(MAX_ERROR_CODE_LENGTH), nullable=True)
+    # Lookup code of the number the current try texts (lowercase hex
+    # HMAC-SHA256 of its E.164 form). Texts only; NULL for email, for a number
+    # that can't be texted, and for texts from before replies were forwarded.
+    recipient_phone_hash: Mapped[str | None] = mapped_column(
+        String(PHONE_LOOKUP_HASH_LENGTH), nullable=True,
+    )
 
     created_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -143,6 +156,14 @@ class RentReminderSend(Base):
         ),
         CheckConstraint("amount >= 0", name="chk_rent_reminder_send_amount_non_negative"),
         CheckConstraint("attempt >= 1", name="chk_rent_reminder_send_attempt_positive"),
+        CheckConstraint(
+            "channel = 'sms' OR recipient_phone_hash IS NULL",
+            name="chk_rent_reminder_send_phone_hash_sms_only",
+        ),
+        CheckConstraint(
+            f"recipient_phone_hash IS NULL OR length(recipient_phone_hash) = {PHONE_LOOKUP_HASH_LENGTH}",
+            name="chk_rent_reminder_send_phone_hash_length",
+        ),
         # History for one tenant, newest first.
         Index("ix_rent_reminder_sends_applicant_created", "applicant_id", "created_at"),
         Index("ix_rent_reminder_sends_org", "organization_id"),
@@ -152,5 +173,12 @@ class RentReminderSend(Base):
             "ix_rent_reminder_sends_pending",
             "created_at",
             postgresql_where=text(f"status IN {RENT_REMINDER_PENDING_STATUSES_SQL}"),
+        ),
+        # Matching a tenant's reply: the recent texts to one number.
+        Index(
+            "ix_rent_reminder_sends_recipient_phone_hash",
+            "recipient_phone_hash",
+            "created_at",
+            postgresql_where=text("recipient_phone_hash IS NOT NULL"),
         ),
     )

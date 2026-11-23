@@ -13,10 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_constants import (
+    ERROR_SMS_OPTED_OUT,
     MAX_ERROR_CODE_LENGTH,
     MAX_PROVIDER_MESSAGE_ID_LENGTH,
+    REPLY_MATCH_FAILED_ERRORS,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_REPLYABLE_STATUSES
 from app.models.rent.rent_reminder_send import RentReminderSend
+from app.repositories.rent.rent_reminder_reply_candidate import ReplyCandidate
 
 
 class ReminderAlreadyClaimedError(LookupError):
@@ -51,6 +55,7 @@ async def claim(
     channel: RentReminderChannel,
     amount: Decimal,
     message_body: str,
+    recipient_phone_hash: str | None = None,
 ) -> RentReminderSend:
     """Insert a ``queued`` row for this reminder, or raise if one exists.
 
@@ -59,6 +64,9 @@ async def claim(
     gets ``ReminderAlreadyClaimedError`` and must not send. The caller runs the
     claim in its own transaction, so a constraint violation only rolls back the
     claim itself.
+
+    ``recipient_phone_hash`` is the lookup code of the number a text goes to.
+    Without one, replies to the text are never matched to it.
     """
     if await get_by_key(db, plan_id=plan_id, due_date=due_date, channel=channel):
         raise ReminderAlreadyClaimedError(f"{plan_id}/{due_date}/{channel}")
@@ -72,6 +80,7 @@ async def claim(
         status="queued",
         amount=amount,
         message_body=message_body,
+        recipient_phone_hash=recipient_phone_hash,
     )
     db.add(row)
     try:
@@ -90,6 +99,7 @@ async def requeue(
     seen_error_code: str | None,
     amount: Decimal,
     message_body: str,
+    recipient_phone_hash: str | None = None,
 ) -> RentReminderSend:
     """Reset a failed row for a retry (the unique key forbids a new row).
 
@@ -98,6 +108,10 @@ async def requeue(
     it as failed, and one of them may have sent it again and ended unsure
     since, so only a row nobody has touched may be sent. The try number goes
     up, so webhooks about the earlier try no longer match the row.
+
+    ``recipient_phone_hash`` is always overwritten: the tenant's number may
+    have changed since the last try, and replies must match the number this
+    try texts.
     """
     changed = await update_rows(
         db,
@@ -111,6 +125,7 @@ async def requeue(
             "attempt": seen_attempt + 1,
             "amount": amount,
             "message_body": message_body,
+            "recipient_phone_hash": recipient_phone_hash,
             "error_code": None,
             "provider_message_id": None,
             "sent_at": None,
@@ -159,6 +174,56 @@ async def list_for_applicant(
         .limit(limit),
     )
     return result.scalars().all()
+
+
+async def list_reply_candidates(
+    db: AsyncSession, *, recipient_phone_hash: str, since: _dt.datetime,
+) -> list[ReplyCandidate]:
+    """Texts to one number since ``since`` that a reply from it may answer, newest first.
+
+    Across every account, on purpose: deciding whose reply it is needs to see
+    every landlord who texted the number. A text counts once it reached Twilio,
+    when it failed in a way that doesn't rule out that it arrived, or when
+    Twilio blocked it after a STOP (``REPLY_MATCH_FAILED_ERRORS``). Blocked
+    ones are marked, since they never reached the tenant. Only routing columns
+    are read; nothing is decrypted.
+    """
+    result = await db.execute(
+        select(
+            RentReminderSend.id,
+            RentReminderSend.applicant_id,
+            RentReminderSend.organization_id,
+            RentReminderSend.user_id,
+            RentReminderSend.due_date,
+            RentReminderSend.created_at,
+            RentReminderSend.status,
+            RentReminderSend.error_code,
+        )
+        .where(
+            RentReminderSend.recipient_phone_hash == recipient_phone_hash,
+            RentReminderSend.created_at >= since,
+            or_(
+                RentReminderSend.status.in_(RENT_REMINDER_REPLYABLE_STATUSES),
+                and_(
+                    RentReminderSend.status == "failed",
+                    RentReminderSend.error_code.in_(sorted(REPLY_MATCH_FAILED_ERRORS)),
+                ),
+            ),
+        )
+        .order_by(RentReminderSend.created_at.desc(), RentReminderSend.id.desc()),
+    )
+    return [
+        ReplyCandidate(
+            send_id=row.id,
+            applicant_id=row.applicant_id,
+            organization_id=row.organization_id,
+            user_id=row.user_id,
+            due_date=row.due_date,
+            created_at=row.created_at,
+            blocked_by_stop=row.status == "failed" and row.error_code == ERROR_SMS_OPTED_OUT,
+        )
+        for row in result.all()
+    ]
 
 
 async def list_unconfirmed(
