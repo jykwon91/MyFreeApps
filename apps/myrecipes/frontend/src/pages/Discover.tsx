@@ -225,7 +225,7 @@ export default function Discover() {
               key={suggestion}
               type="button"
               onClick={() => void runSearch(suggestion)}
-              className="min-h-[36px] rounded-full border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              className="min-h-11 rounded-full border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
             >
               {suggestion}
             </button>

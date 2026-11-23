@@ -7,6 +7,7 @@ import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-lo
 import { COOK_LOG_MESSAGES as MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { deleteFailureOutcome } from "@myrecipes/api-client/utils/deleteFailureOutcome";
 import { cooksNewestFirst } from "@myrecipes/api-client/utils/cooksNewestFirst";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   recipeId: string;
@@ -83,7 +84,7 @@ export default function CookLogHistory({
                 type="button"
                 onClick={() => setPendingDelete(cook.id)}
                 aria-label={MESSAGES.deleteLabel}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
+                className={`flex ${TOUCH_TARGET} shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive`}
               >
                 <Trash2 className="w-4 h-4" />
               </button>

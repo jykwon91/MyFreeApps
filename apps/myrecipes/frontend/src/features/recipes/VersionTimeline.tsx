@@ -5,6 +5,7 @@ import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/const
 import type { VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 import { newestFirst } from "@myrecipes/api-client/utils/newestFirst";
 import { versionNote } from "@myrecipes/api-client/utils/versionNote";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   versions: VersionSummary[];
@@ -80,14 +81,20 @@ export default function VersionTimeline({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={checkboxDisabled}
-                    onChange={() => onToggleCompare(version.id)}
-                    aria-label={`Select v${version.version_number} to compare`}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border accent-primary cursor-pointer disabled:opacity-40"
-                  />
+                  <label
+                    className={`flex ${TOUCH_TARGET} shrink-0 items-center justify-center ${
+                      checkboxDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={checkboxDisabled}
+                      onChange={() => onToggleCompare(version.id)}
+                      aria-label={`Select v${version.version_number} to compare`}
+                      className="h-4 w-4 rounded border accent-primary disabled:opacity-40"
+                    />
+                  </label>
                   <button
                     type="button"
                     onClick={() => onSelect(version.id)}

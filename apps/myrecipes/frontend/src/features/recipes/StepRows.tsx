@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { Button } from "@platform/ui";
 import { STEP_INSTRUCTION_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
 import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   rows: EditableStepRow[];
@@ -48,7 +49,7 @@ export default function StepRows({
               aria-label="Move step up"
               disabled={disabled || idx === 0}
               onClick={() => onMove(row.key, -1)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
             >
               <ChevronUp className="w-4 h-4" />
             </button>
@@ -57,7 +58,7 @@ export default function StepRows({
               aria-label="Move step down"
               disabled={disabled || idx === rows.length - 1}
               onClick={() => onMove(row.key, 1)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
             >
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -66,7 +67,7 @@ export default function StepRows({
               aria-label="Remove step"
               disabled={disabled}
               onClick={() => onRemove(row.key)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30`}
             >
               <X className="w-4 h-4" />
             </button>

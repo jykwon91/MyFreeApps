@@ -32,6 +32,7 @@ import SectionLoadFailed from "@/features/recipes/SectionLoadFailed";
 import VersionTimelineSkeleton from "@/features/recipes/VersionTimelineSkeleton";
 import CookLogModal from "@/features/recipes/CookLogModal";
 import EditRecipeMetaModal from "@/features/recipes/EditRecipeMetaModal";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -137,7 +138,7 @@ export default function RecipeDetail() {
       <div>
         <Link
           to="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className={`inline-flex ${TOUCH_TARGET} items-center gap-1 text-sm text-muted-foreground hover:text-foreground`}
         >
           <ArrowLeft className="w-4 h-4" />
           Recipes
