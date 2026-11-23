@@ -246,6 +246,18 @@ describe("Register \u2014 submit success", () => {
     const link = screen.getByRole("link", { name: /sign in/i });
     expect(link.getAttribute("href")).toContain("returnTo=");
   });
+
+  it("drops a returnTo that leaves the site from the sign in link", async () => {
+    vi.mocked(api.post).mockResolvedValue({});
+    const user = userEvent.setup();
+    const { container } = renderRegister("?returnTo=%2F%2Fevil.example");
+    await user.type(emailInput(container), "jane@example.com");
+    await user.type(passwordInput(container), "mypassword1234");
+    await user.click(termsCheckbox());
+    await user.click(screen.getByRole("button", { name: "Sign up" }));
+    await screen.findByText(/check your inbox/i);
+    expect(screen.getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
+  });
 });
 
 // ---------------------------------------------------------------------------

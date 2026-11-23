@@ -1,14 +1,22 @@
 import { useId, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { AuthPageFooter, describeAuthError, LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
+import {
+  AuthPageFooter,
+  describeAuthError,
+  LoadingButton,
+  safeReturnPath,
+  TurnstileWidget,
+  useTurnstileToken,
+  withReturnTo,
+} from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
 export default function Register() {
   const uid = useId();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnTo = safeReturnPath(searchParams.get("returnTo"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,9 +55,7 @@ export default function Register() {
     }
   }
 
-  const loginUrl = returnTo
-    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
-    : "/login";
+  const loginUrl = withReturnTo("/login", returnTo);
 
   if (registered) {
     return (
