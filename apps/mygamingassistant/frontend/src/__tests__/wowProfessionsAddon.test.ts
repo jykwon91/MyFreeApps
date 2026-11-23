@@ -83,6 +83,17 @@ describe("MGA Professions route from your skill", () => {
     expect(out.some((l) => l.includes("skill 1 (from the game)"))).toBe(true);
   });
 
+  it("falls back to the old skills list, by name, only when GetProfessions is missing", () => {
+    const old =
+      'GetProfessions = nil; GetProfessionInfo = nil; GetNumSkillLines = function() return 2 end; ' +
+      'GetSkillLineInfo = function(i) if i == 1 then return "Professions", 1, 1, 0 end return "Alchemy", nil, nil, 100, 0, 0, 150 end; ';
+    const out = run(`${old} lines("alchemy", "route")`);
+    expect(out.some((l) => l.includes("skill 100 (from the game)"))).toBe(true);
+    // Neither API: nothing read, nothing thrown.
+    const none = run(`GetProfessions = nil; GetProfessionInfo = nil; lines("alchemy", "route")`);
+    expect(none.some((l) => l.includes("type your skill below"))).toBe(true);
+  });
+
   it("starts at the row your skill is in", () => {
     const out = run(`known = { { line = 171, skill = 100, max = 150 } }; lines("alchemy", "route")`);
     expect(out.some((l) => l.startsWith("Craft") && l.includes("Elixir of Wisdom (skill 100-140)"))).toBe(true);

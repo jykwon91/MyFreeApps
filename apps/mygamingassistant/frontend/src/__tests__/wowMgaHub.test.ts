@@ -92,7 +92,7 @@ describe("loading the hub from several addons", () => {
   });
 
   it("hands what an older copy registered to a newer one, which then makes the only button", () => {
-    const older = sharedHub.replace("local VERSION = 1", "local VERSION = 0");
+    const older = sharedHub.replace(/local VERSION = \d+/, "local VERSION = 0");
     expect(older).not.toBe(sharedHub);
     const lines = run(
       `MGAHub.Register({ name = "Loot", order = 20, menu = { { text = "Upgrades in your bags", func = function() end } } })
@@ -100,12 +100,36 @@ describe("loading the hub from several addons", () => {
       [older, sharedHub],
     );
     // The older copy loaded first and registered nothing before the newer one replaced it: the scenario registers on the newer.
-    expect(lines.slice(-1)[0]).toBe("chat: 1 1 [Loot] | Upgrades in your bags | - | Settings");
+    expect(lines.slice(-1)[0]).toBe("chat: 1 2 [Loot] | Upgrades in your bags | - | Settings");
     const carried = run(
       `fire("PLAYER_LOGIN"); MGAHub.OpenMenu(); ${say("buttons() .. ' ' .. table.concat(menuLines(), ' | ')")}`,
       [`${older}\nMGAHub.Register({ name = "Loot", menu = { { text = "Upgrades in your bags", func = function() end } } })`, sharedHub],
     );
     expect(carried.slice(-1)[0]).toBe("chat: 1 [Loot] | Upgrades in your bags | - | Settings");
+  });
+});
+
+describe("MGAHub.GetProfessionSkills", () => {
+  const skills = `local s = MGAHub.GetProfessionSkills(); ${say("s and #s .. ' ' .. (s[1] and (s[1].name .. '=' .. s[1].skill .. '/' .. tostring(s[1].line)) or '-') or 'nil'")}`;
+  const last = (setup: string): string => run(`${setup}; ${skills}`).slice(-1)[0];
+
+  it("reads GetProfessions/GetProfessionInfo on a client without GetSkillLineInfo", () => {
+    const forever =
+      'GetProfessions = function() return 4, nil, 2 end; ' +
+      'GetProfessionInfo = function(i) return "P" .. i, 0, i * 10, 300, 0, 0, 100 + i end';
+    expect(last(forever)).toBe("chat: 2 P4=40/104");
+  });
+
+  it("falls back to the old skills list, and gives up on a collapsed header", () => {
+    const lines = (expanded: string) =>
+      "GetNumSkillLines = function() return 2 end; " +
+      `GetSkillLineInfo = function(i) if i == 1 then return "Professions", 1, ${expanded}, 0 end return "Mining", nil, nil, 77 end`;
+    expect(last(lines("1"))).toBe("chat: 1 Mining=77/nil");
+    expect(last(lines("nil"))).toBe("chat: nil");
+  });
+
+  it("is nil, not an error, with neither API", () => {
+    expect(last("")).toBe("chat: nil");
   });
 });
 

@@ -112,6 +112,6 @@ test("the Item compare page downloads the MGA Loot addon with its weights inside
   expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Bindings.xml", "MGALoot/Data.lua", "MGALoot/MGAHub.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
   expect(strFromU8(files["MGALoot/Data.lua"])).toContain('{id = "arms", name = "Arms", tab = 1, weights = {');
   expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## SavedVariables: MGAHubSettings, MGALootSettings");
-  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## Version: 1.10.0");
+  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## Version: 1.10.1");
   await expect(page.getByText("MGA Loot is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });

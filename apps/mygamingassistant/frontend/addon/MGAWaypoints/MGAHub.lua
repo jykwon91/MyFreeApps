@@ -26,7 +26,7 @@
 -- Written for the WoW Forever client (Classic Era interface 16001). The key bindings
 -- (Bindings.xml, in every addon folder) call MGAHub.OpenMenu and MGAHub.OpenSettings.
 
-local VERSION = 1
+local VERSION = 2
 
 local previous = _G.MGAHub
 if previous and previous.version >= VERSION then return end
@@ -417,6 +417,39 @@ local function buildButton()
   end)
   button:SetScript("OnLeave", function() GameTooltip:Hide() end)
   Hub.PlaceButton()
+end
+
+-- Your professions ----------------------------------------------------------------------------
+
+-- Your skills as { {name, line, skill, max} } (line = the skill line id, nil from the old skills
+-- list), or nil when they can't be read in full. Forever has no GetSkillLineInfo, so this asks
+-- GetProfessions/GetProfessionInfo first; the old Skills tab is only a guarded fallback, and gives
+-- up on a collapsed header (its rows aren't listed). Nothing here errors on a client missing either.
+function Hub.GetProfessionSkills()
+  local out = {}
+  if GetProfessions and GetProfessionInfo then
+    pcall(function()
+      local indexes = { GetProfessions() }
+      for i = 1, 6 do
+        local index = indexes[i]
+        if index then
+          local name, _, skill, max, _, _, line = GetProfessionInfo(index)
+          if name or line then table.insert(out, { name = name, line = line, skill = skill, max = max }) end
+        end
+      end
+    end)
+    if #out > 0 then return out end
+  end
+  if not (GetNumSkillLines and GetSkillLineInfo) then return nil end
+  local readable = pcall(function()
+    for i = 1, GetNumSkillLines() do
+      local name, header, expanded, rank, _, _, max = GetSkillLineInfo(i)
+      if header and not expanded then error("collapsed") end
+      if name and not header then table.insert(out, { name = name, skill = rank or 0, max = max }) end
+    end
+  end)
+  if readable and #out > 0 then return out end
+  return nil
 end
 
 -- Events and the one slash command ------------------------------------------------------------

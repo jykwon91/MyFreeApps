@@ -78,32 +78,19 @@ end
 
 -- Your skills ---------------------------------------------------------------------------------
 
--- { [skillLine] = { skill, max } } from the game. Tries the modern list first, then the old skills list by name.
+-- { [skillLine] = { skill, max } } from the game, read by the hub (the modern list, then the old
+-- skills list by name).
 function M.GameSkills()
   local found = {}
-  if GetProfessions and GetProfessionInfo then
-    pcall(function()
-      local count = select("#", GetProfessions())
-      for i = 1, count do
-        local index = select(i, GetProfessions())
-        if index then
-          local _, _, skill, max, _, _, line = GetProfessionInfo(index)
-          if line then found[line] = { skill = skill, max = max } end
-        end
+  local list = MGAHub and MGAHub.GetProfessionSkills and MGAHub.GetProfessionSkills() or {}
+  for _, s in ipairs(list) do
+    local line = s.line
+    if not line then
+      for _, p in pairs(Data.professions) do
+        if p.label == s.name then line = p.skillLine end
       end
-    end)
-  end
-  if next(found) == nil and GetNumSkillLines and GetSkillLineInfo then
-    pcall(function()
-      for i = 1, GetNumSkillLines() do
-        local name, header, _, rank, _, _, maxRank = GetSkillLineInfo(i)
-        if not header then
-          for _, p in pairs(Data.professions) do
-            if p.label == name then found[p.skillLine] = { skill = rank, max = maxRank } end
-          end
-        end
-      end
-    end)
+    end
+    if line then found[line] = { skill = s.skill, max = s.max } end
   end
   return found
 end

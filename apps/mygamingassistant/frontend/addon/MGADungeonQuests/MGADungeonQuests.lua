@@ -94,19 +94,20 @@ local function forYourClass(line, class)
   return false
 end
 
--- Your skill in each profession you have, by its enUS name (the Skills tab), or nil when that can't
--- be read in full -- no GetSkillLineInfo, a non-English client, a collapsed header (its rows aren't
--- listed) or a list not filled in yet -- which then hides no profession quest.
+-- Your skill in each profession you have, by its enUS name, or nil when that can't be read in full
+-- -- no skill API, a non-English client (the quest data names professions in English), or nothing
+-- listed yet -- which then hides no profession quest. The hub reads them (Forever has no
+-- GetSkillLineInfo).
 local function playerSkills()
-  if not GetNumSkillLines or not GetSkillLineInfo then return nil end
+  if not (MGAHub and MGAHub.GetProfessionSkills) then return nil end
   local locale = GetLocale and GetLocale() or "enUS"
   if locale ~= "enUS" and locale ~= "enGB" then return nil end
+  local list = MGAHub.GetProfessionSkills()
+  if not list then return nil end
   local out, rows = {}, 0
-  for i = 1, GetNumSkillLines() do
-    local name, isHeader, isExpanded, rank = GetSkillLineInfo(i)
-    if isHeader and not isExpanded then return nil end
-    if name and not isHeader then
-      out[name] = rank or 0
+  for _, s in ipairs(list) do
+    if s.name then
+      out[s.name] = s.skill or 0
       rows = rows + 1
     end
   end
