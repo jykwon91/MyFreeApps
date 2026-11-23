@@ -11,12 +11,18 @@ class EmailSendError(RuntimeError):
 
     ``kind`` says what went wrong (see ``EmailFailureKind``). ``smtp_code`` is
     the server's reply code (e.g. 535, 550, 421) when the server sent one,
-    ``None`` for timeouts and dropped connections. ``refused_recipients`` maps
-    each address the server refused to its reply code; when it is non-empty but
-    shorter than the recipient list, the other recipients DID get the email.
-    ``failed_before_handover`` is True when the send failed before the message
-    was handed to the server (connecting, starting TLS, logging in), so nobody
-    can have received it.
+    ``None`` for timeouts, dropped connections and reply lines too long for
+    smtplib to read. ``failed_before_handover`` is True when the send failed
+    before the message was handed to the server (connecting, starting TLS,
+    logging in, or the server turning the recipients away), so nobody can have
+    received it.
+
+    ``refused_recipients`` maps each address the server refused to its reply
+    code, and is empty when it refused none. When it is non-empty and
+    ``failed_before_handover`` is False, the server took the email for every
+    other recipient. When it is non-empty and ``failed_before_handover`` is
+    True, nobody got it: the server refused every recipient, or answered 421
+    partway through them, so some may not be listed.
 
     The message never carries an email address: SMTP replies often quote the
     refused address, and the message is logged and sent to Sentry, so every
@@ -43,13 +49,14 @@ class EmailSendError(RuntimeError):
     def delivery_unconfirmed(self) -> bool:
         """True when the email may have been delivered anyway.
 
-        A timeout or dropped connection (``transient`` with no SMTP reply code)
-        while the message was being handed over can strike after the server
-        accepted it, so the recipient may have it. A reply code means the
-        server answered, and a failure before the hand-over means the server
-        never had the message, so either failure is definite. An error that
-        doesn't say where it failed counts as unconfirmed: telling a caller it
-        definitely failed would invite a resend and a duplicate email.
+        A timeout, a dropped connection or a reply smtplib couldn't read
+        (``transient`` with no SMTP reply code) while the message was being
+        handed over can strike after the server accepted it, so the recipient
+        may have it. A reply code means the server answered, and a failure
+        before the hand-over means the server never had the message, so either
+        failure is definite. An error that doesn't say where it failed counts as
+        unconfirmed: telling a caller it definitely failed would invite a resend
+        and a duplicate email.
         """
         return self.kind == "transient" and self.smtp_code is None and not self.failed_before_handover
 

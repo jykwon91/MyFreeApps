@@ -33,8 +33,9 @@ operation is capped by ``SMTP_TIMEOUT_SECONDS``.
 A failed send raises ``EmailSendError`` carrying ``kind`` (misconfigured /
 recipient_rejected / message_rejected / transient), the server's
 ``smtp_code`` and any ``refused_recipients``, and is logged with them. Its
-``delivery_unconfirmed`` is True only when a timeout or dropped connection
-struck while the message was being handed over, so it may have arrived anyway.
+``delivery_unconfirmed`` is True only when a timeout, a dropped connection or
+a reply smtplib couldn't read struck while the message was being handed over,
+so it may have arrived anyway.
 Log lines name recipients by count and domain only and never carry the
 subject, which often names a tenant or applicant.
 
@@ -224,7 +225,7 @@ class EmailService:
             # a cause is printed in full in the ERROR traceback Sentry receives.
             raise error from None
         if refused:
-            error = error_from_refused_recipients(refused, recipient_count=len(to))
+            error = error_from_refused_recipients(refused, recipient_count=len(to), sent_to_the_rest=True)
             _log_send_failure(error, to)
             raise error
 
