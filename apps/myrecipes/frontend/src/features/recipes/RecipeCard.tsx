@@ -1,7 +1,9 @@
+import { formatCount } from "@platform/core/utils/count";
 import { Link } from "react-router-dom";
 import { GitBranch } from "lucide-react";
 import { Badge, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
+import { RECIPE_CARD_COPY } from "@myrecipes/api-client/constants/recipeCardCopy";
 import { RECIPE_BYLINE } from "@myrecipes/api-client/constants/recipeByline";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { versionBadgeLabel } from "@myrecipes/api-client/utils/versionBadgeLabel";
@@ -45,7 +47,7 @@ export default function RecipeCard({ recipe }: Props) {
       <div className="mt-auto flex items-center justify-between pt-2 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <GitBranch className="w-4 h-4" aria-hidden />
-          {recipe.version_count} version{recipe.version_count === 1 ? "" : "s"}
+          {formatCount(recipe.version_count, "version")}
         </span>
         {recipe.is_owner && <StarRating value={recipe.best_rating} showEmptyDash />}
       </div>
@@ -53,8 +55,8 @@ export default function RecipeCard({ recipe }: Props) {
       {recipe.is_owner && (
         <div className="text-xs text-muted-foreground">
           {recipe.last_cooked_at
-            ? `Last cooked ${formatDate(recipe.last_cooked_at)}`
-            : "Not cooked yet"}
+            ? RECIPE_CARD_COPY.lastCooked(formatDate(recipe.last_cooked_at))
+            : RECIPE_CARD_COPY.notCooked}
         </div>
       )}
 

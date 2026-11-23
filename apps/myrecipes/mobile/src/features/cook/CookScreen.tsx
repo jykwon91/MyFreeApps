@@ -1,3 +1,5 @@
+import { RECIPE_LOAD_FAILED_COPY } from "@myrecipes/api-client/constants/recipeLoadFailedCopy";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { Banner, EmptyState, LoadingRegion, Skeleton, useAnnouncement, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -50,7 +52,7 @@ export default function CookScreen() {
     if (isGone) dispatch(forgetRecipe(id));
   }, [dispatch, id, isGone]);
 
-  useAnnouncement(isGone ? "Recipe not found" : isLoadFailed ? "Can't load this recipe" : undefined);
+  useAnnouncement(isGone ? RECIPE_NOT_FOUND_COPY.heading : isLoadFailed ? RECIPE_LOAD_FAILED_COPY.heading : undefined);
 
   function exit(): void {
     if (router.canGoBack()) router.back();
@@ -59,14 +61,14 @@ export default function CookScreen() {
 
   function renderUnavailable() {
     if (isGone) {
-      return <EmptyState body="It may have been deleted, or the link may be wrong." heading="Recipe not found" />;
+      return <EmptyState body={RECIPE_NOT_FOUND_COPY.body} heading={RECIPE_NOT_FOUND_COPY.heading} />;
     }
     if (isLoadFailed) {
       return (
         <EmptyState
           action={{ label: "Try again", onPress: () => refetch() }}
-          body="Check your connection and try again."
-          heading="Can't load this recipe"
+          body={RECIPE_LOAD_FAILED_COPY.body}
+          heading={RECIPE_LOAD_FAILED_COPY.heading}
         />
       );
     }

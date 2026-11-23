@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 
 /**
  * E2E coverage for the public-read / auth-write conversion.
@@ -86,7 +87,7 @@ test.describe("Public browsing — guest layout & gating", () => {
   test("missing recipe shows the public 404 copy", async ({ page }) => {
     await page.goto(`/recipes/${MISSING_ID}`);
     await expect(
-      page.getByText("This recipe doesn't exist. It may have been deleted.")
+      page.getByText(RECIPE_NOT_FOUND_COPY.body)
     ).toBeVisible();
   });
 });

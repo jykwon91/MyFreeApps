@@ -1,21 +1,7 @@
-import type { LoadMoreMessages } from "@platform/core/types/paging/load-more-messages";
-
 /** Copy for the phone's recipe list and its cards. */
 export const RECIPES_MESSAGES = {
-  myRecipes: "My recipes",
-  notCooked: "Not cooked yet",
-  lastCooked: (date: string) => `Last cooked ${date}`,
   noRating: "No rating",
 } as const;
-
-/** Under the recipe list while more recipes are left to load. */
-export const RECIPES_LOAD_MORE_MESSAGES: LoadMoreMessages = {
-  showingCount: (shown, total) => `Showing ${shown} of ${total} recipes`,
-  loadMore: "Show more",
-  loadingMore: "Loading more…",
-  couldntLoadMore: "Couldn't load more recipes.",
-  tryAgain: "Try again",
-};
 
 /** How many stars a rating is out of. */
 export const MAX_STARS = 5;

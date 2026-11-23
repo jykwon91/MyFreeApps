@@ -5,6 +5,7 @@ import {
   DISCOVERY_QUERY_PLACEHOLDER,
   DISCOVERY_SEARCH_STAGES,
 } from "@myrecipes/api-client/constants/discovery";
+import { DISCOVERY_RESULTS_SUMMARY } from "@myrecipes/api-client/constants/discoveryResultsSummary";
 import { searchDiscoveredRecipes } from "@myrecipes/api-client/store/searchDiscoveredRecipes";
 import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 import { Banner, EmptyState, ListSeparator, LoadingButton, SearchField, useScreenFocused, useTheme, useToast } from "@platform/mobile";
@@ -94,8 +95,9 @@ export default function DiscoverSearch() {
         ListHeaderComponent={
           results.recipes.length > 0 ? (
             <Text style={{ marginBottom: spacing.md, color: colors.mutedForeground, fontSize: fontSize.sm }}>
-              {formatCount(results.recipes.length, "version")} of{" "}
-              <Text style={{ color: colors.foreground }}>{results.query}</Text>, best first.
+              {DISCOVERY_RESULTS_SUMMARY.lead(results.recipes.length)}{" "}
+              <Text style={{ color: colors.foreground }}>{results.query}</Text>
+              {DISCOVERY_RESULTS_SUMMARY.tail}
             </Text>
           ) : undefined
         }

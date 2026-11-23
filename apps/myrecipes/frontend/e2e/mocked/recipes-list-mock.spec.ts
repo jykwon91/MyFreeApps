@@ -4,7 +4,7 @@
  * keeps it in the URL), a signed-out visitor on /?owner=me gets the public list
  * with the filter dropped, an empty library and an empty search each say so, a
  * failed load says so instead of showing an empty library, the loading
- * skeleton has the same grid as the loaded list, and Load more brings in the
+ * skeleton has the same grid as the loaded list, and Show more brings in the
  * page after the first page's cursor (recipe 51 on) until every recipe is showing.
  */
 import type { Page } from "@playwright/test";
@@ -12,7 +12,9 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { RECIPES_LOAD_MORE_MESSAGES } from "@myrecipes/api-client/constants/recipesLoadMoreCopy";
 import { RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { RECIPES_SEARCH_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesSearchEmptyCopy";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
@@ -104,7 +106,7 @@ test("a search that finds nothing says so, and clearing it brings the recipes ba
 
   await page.getByLabel("Search recipes by title").fill("zzz");
   await expect(page.getByRole("heading", { name: "No matches" })).toBeVisible();
-  await expect(page.getByText("No recipes match your search. Try a different title.")).toBeVisible();
+  await expect(page.getByText(RECIPES_SEARCH_EMPTY_COPY.body("zzz"))).toBeVisible();
 
   await page.getByLabel("Search recipes by title").fill("");
   await expect(page.getByRole("heading", { name: "Tomato soup" })).toBeVisible();
@@ -247,7 +249,7 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
   }
 });
 
-test("Load more asks for the page after the last recipe shown, so a recipe deleted meanwhile skips none", async ({ page }) => {
+test("Show more asks for the page after the last recipe shown, so a recipe deleted meanwhile skips none", async ({ page }) => {
   await stubSignedInShell(page);
   const total = RECIPES_PAGE_SIZE + 5;
   let library = Array.from({ length: total }, (_, i) => summaryOf(recipeIdAt(100 + i), `Library recipe ${i + 1}`));
@@ -267,10 +269,10 @@ test("Load more asks for the page after the last recipe shown, so a recipe delet
 
   // Deleted on another device after the first page loaded: an offset of 50 would now skip recipe 51.
   library = library.slice(1);
-  await page.getByRole("button", { name: "Load more" }).click();
+  await page.getByRole("button", { name: RECIPES_LOAD_MORE_MESSAGES.loadMore }).click();
   await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: `Library recipe ${total}`, exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: RECIPES_LOAD_MORE_MESSAGES.loadMore })).toHaveCount(0);
   expect(calls.map((c) => c.cursor)).toEqual([null, recipeIdAt(100 + RECIPES_PAGE_SIZE - 1)]);
 
   await page.getByLabel("Search recipes by title").fill(`recipe ${total}`);

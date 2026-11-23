@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 import { ChefHat } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
 import { useTweakBase } from "@myrecipes/api-client/hooks/useTweakBase";
@@ -50,7 +51,7 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
       <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<ChefHat className="w-12 h-12 text-destructive" />}
-          heading="Recipe not found"
+          heading={RECIPE_NOT_FOUND_COPY.heading}
           body="This recipe doesn't exist or has no version to tweak."
           action={{ label: "Back to recipes", onClick: onMissing }}
         />

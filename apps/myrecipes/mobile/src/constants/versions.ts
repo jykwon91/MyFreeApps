@@ -1,4 +1,5 @@
 import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 import type { ChipTone } from "@platform/mobile";
 import type { DiffEntryPoint } from "../types/DiffEntryPoint";
@@ -16,8 +17,8 @@ export const VERSION_HISTORY_MESSAGES = {
   loadFailedBody: VERSION_COPY.listLoadFailedBody,
   updateFailed: VERSION_COPY.listUpdateFailed,
   tryAgain: VERSION_COPY.tryAgain,
-  notFoundHeading: "Recipe not found",
-  notFoundBody: "It may have been deleted, or the link may be wrong.",
+  notFoundHeading: RECIPE_NOT_FOUND_COPY.heading,
+  notFoundBody: RECIPE_NOT_FOUND_COPY.body,
   backToRecipes: "Back to recipes",
   startCompare: "Compare versions",
   cancelCompare: "Cancel",

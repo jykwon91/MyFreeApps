@@ -1,4 +1,8 @@
+import { RECIPES_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesEmptyCopy";
 import { RECIPES_LIST_ERROR_COPY, RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { RECIPES_LOAD_MORE_MESSAGES } from "@myrecipes/api-client/constants/recipesLoadMoreCopy";
+import { RECIPES_MINE_FILTER_LABEL } from "@myrecipes/api-client/constants/recipesMineFilterCopy";
+import { RECIPES_SEARCH_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesSearchEmptyCopy";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
@@ -20,7 +24,6 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
-import { RECIPES_LOAD_MORE_MESSAGES, RECIPES_MESSAGES } from "../../constants/recipes";
 import { cookHref } from "../../utils/cookHref";
 import { formatCount } from "@platform/core/utils/count";
 import { listCookCopies } from "../cook/cookCopies";
@@ -99,8 +102,8 @@ export default function RecipesScreen() {
       return (
         <EmptyState
           action={{ label: "Clear search", onPress: clearSearch }}
-          body={`Nothing matches "${term}". Check the spelling or try a shorter word.`}
-          heading="No matches"
+          body={RECIPES_SEARCH_EMPTY_COPY.body(term)}
+          heading={RECIPES_SEARCH_EMPTY_COPY.heading}
         />
       );
     }
@@ -116,8 +119,8 @@ export default function RecipesScreen() {
     return (
       <EmptyState
         action={{ label: NEW_RECIPE_MESSAGES.newRecipe, onPress: () => router.push("/recipes/new") }}
-        body="Recipes shared on MyRecipes will show up here."
-        heading="No recipes yet"
+        body={RECIPES_EMPTY_COPY.body}
+        heading={RECIPES_EMPTY_COPY.heading}
       />
     );
   }
@@ -140,7 +143,7 @@ export default function RecipesScreen() {
           <View style={{ flexDirection: "row" }}>
             <ChipButton
               isChecked={isMineOnly}
-              label={RECIPES_MESSAGES.myRecipes}
+              label={RECIPES_MINE_FILTER_LABEL}
               onPress={() => setIsMineOnly((on) => !on)}
             />
           </View>

@@ -1,7 +1,7 @@
 import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import { ClampedText, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { DISCOVERY_DETAIL_COPY } from "../../constants/discovery";
+import { DISCOVERY_DETAIL_COPY } from "@myrecipes/api-client/constants/discoveryDetailCopy";
 
 /** Every page the read drew on, so the reader can go to the original. */
 export default function DiscoverySources({ sources }: { sources: string[] }) {

@@ -1,4 +1,5 @@
 import { DISCOVERY_NO_RESULTS_COPY } from "@myrecipes/api-client/constants/discovery";
+import { DISCOVERY_RESULTS_SUMMARY } from "@myrecipes/api-client/constants/discoveryResultsSummary";
 import type { DiscoveryResults } from "@myrecipes/api-client/types/recipe/discovery";
 
 interface Props {
@@ -16,7 +17,8 @@ export default function DiscoveryResultCount({ results }: Props) {
   }
   return (
     <p className="text-sm text-muted-foreground">
-      {count} version{count === 1 ? "" : "s"} of <span className="text-foreground">{results.query}</span>, best first.
+      {DISCOVERY_RESULTS_SUMMARY.lead(count)} <span className="text-foreground">{results.query}</span>
+      {DISCOVERY_RESULTS_SUMMARY.tail}
     </p>
   );
 }

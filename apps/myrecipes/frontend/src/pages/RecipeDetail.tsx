@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { RECIPE_NOT_FOUND_COPY } from "@myrecipes/api-client/constants/recipeNotFoundCopy";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, ChefHat, GitBranch, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
@@ -130,8 +131,8 @@ export default function RecipeDetail() {
       <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<ChefHat className="w-12 h-12 text-destructive" />}
-          heading="Recipe not found"
-          body="This recipe doesn't exist. It may have been deleted."
+          heading={RECIPE_NOT_FOUND_COPY.heading}
+          body={RECIPE_NOT_FOUND_COPY.body}
           action={{ label: "Back to recipes", onClick: () => navigate("/") }}
         />
       </div>

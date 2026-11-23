@@ -3,14 +3,17 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, LoadMoreFooter, StaleDataBanner, cn, useIsAuthenticated } from "@platform/ui";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
+import { RECIPES_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesEmptyCopy";
 import { RECIPES_LIST_ERROR_COPY, RECIPES_MINE_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesListCopy";
+import { RECIPES_LOAD_MORE_MESSAGES } from "@myrecipes/api-client/constants/recipesLoadMoreCopy";
+import { RECIPES_MINE_FILTER_LABEL } from "@myrecipes/api-client/constants/recipesMineFilterCopy";
+import { RECIPES_SEARCH_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesSearchEmptyCopy";
 import { recipesListErrorMessage } from "@myrecipes/api-client/utils/recipesListErrorMessage";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { useUrlSyncedSearch } from "@/features/recipes/useUrlSyncedSearch";
-import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
+import { RECIPES_NEW_ACTION_LABEL } from "@/constants/empty-states";
 import { STALE_DATA_MESSAGES } from "@/constants/stale-data-messages";
-import { RECIPES_LIST_MESSAGES } from "@/constants/recipes-list-messages";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
@@ -115,8 +118,8 @@ export default function Recipes() {
     content = (
       <EmptyState
         icon={<Search className="w-12 h-12" />}
-        heading={RECIPES_SEARCH_EMPTY.heading}
-        body={RECIPES_SEARCH_EMPTY.body}
+        heading={RECIPES_SEARCH_EMPTY_COPY.heading}
+        body={RECIPES_SEARCH_EMPTY_COPY.body(query)}
       />
     );
   } else if (recipes.length === 0 && ownerMe) {
@@ -132,9 +135,9 @@ export default function Recipes() {
     content = (
       <EmptyState
         icon={<ChefHat className="w-12 h-12" />}
-        heading={RECIPES_EMPTY_STATE.heading}
-        body={RECIPES_EMPTY_STATE.body}
-        action={{ label: RECIPES_EMPTY_STATE.actionLabel, onClick: goToNew }}
+        heading={RECIPES_EMPTY_COPY.heading}
+        body={RECIPES_EMPTY_COPY.body}
+        action={{ label: RECIPES_NEW_ACTION_LABEL, onClick: goToNew }}
       />
     );
   } else {
@@ -165,7 +168,7 @@ export default function Recipes() {
             isLoading={list.isFetchingNextPage}
             isError={list.isLoadMoreError}
             onLoadMore={list.loadMore}
-            messages={RECIPES_LIST_MESSAGES}
+            messages={RECIPES_LOAD_MORE_MESSAGES}
           />
         )}
       </div>
@@ -196,7 +199,7 @@ export default function Recipes() {
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
-            New recipe
+            {RECIPES_NEW_ACTION_LABEL}
           </button>
         </div>
       </header>
@@ -226,7 +229,7 @@ export default function Recipes() {
             )}
           >
             <ChefHat className="w-4 h-4" />
-            My recipes
+            {RECIPES_MINE_FILTER_LABEL}
           </button>
         ) : null}
       </div>
