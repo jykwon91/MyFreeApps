@@ -25,6 +25,7 @@ import type { DateRange } from "@/shared/types/dashboard/date-range";
 import type { MergedRow } from "@/shared/types/dashboard/merged-row";
 import type { PropertyMonthlySummary } from "@mybookkeeper/api-client/types/summary/PropertyMonthlySummary";
 import { mergeData, buildFilter } from "@/shared/utils/chart-utils";
+import { useChartColors } from "@/shared/hooks/useChartColors";
 import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 export default function MonthlyOverviewChart({
@@ -42,6 +43,7 @@ export default function MonthlyOverviewChart({
   onRangeSelect: (range: DateRange) => void;
   selectedCategories?: Set<string>;
 }) {
+  const colors = useChartColors();
   const { chartData, propertyKeys } = mergeData(byMonth, byMonthExpense, byPropertyMonth);
   const hasPropertyBreakdown = propertyKeys.length > 0;
   const showPropertyExpenses = hasPropertyBreakdown && !selectedCategories;
@@ -173,7 +175,7 @@ export default function MonthlyOverviewChart({
               <Bar
                 dataKey="revenue"
                 name="Revenue"
-                fill="#22c55e"
+                fill={colors.positive}
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
                 onClick={(data, _index, e) => {

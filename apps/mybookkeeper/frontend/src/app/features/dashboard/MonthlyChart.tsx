@@ -2,6 +2,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveCont
 import { parse, format, startOfMonth, endOfMonth } from "date-fns";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import { useChartColors } from "@/shared/hooks/useChartColors";
 import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 interface ChartRow extends MonthSummary {
@@ -19,6 +20,7 @@ export interface MonthlyChartProps {
 }
 
 export default function MonthlyChart({ data, height = 260, onBarClick }: MonthlyChartProps) {
+  const colors = useChartColors();
   const chartData: ChartRow[] = data.map((row) => ({
     ...row,
     displayMonth: formatMonth(row.month),
@@ -47,7 +49,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
         <Bar
           dataKey="revenue"
           name="Revenue"
-          fill="#22c55e"
+          fill={colors.positive}
           radius={[2, 2, 0, 0]}
           cursor={onBarClick ? "pointer" : undefined}
           onClick={(_d, i, e) => handleClick("revenue", i, e)}
@@ -55,7 +57,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
         <Bar
           dataKey="expenses"
           name="Expenses"
-          fill="#ef4444"
+          fill={colors.negative}
           radius={[2, 2, 0, 0]}
           cursor={onBarClick ? "pointer" : undefined}
           onClick={(_d, i, e) => handleClick("expenses", i, e)}

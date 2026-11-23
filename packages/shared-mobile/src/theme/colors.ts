@@ -1,3 +1,4 @@
+import { CHART_COLORS } from "@platform/core/constants/chartColors";
 import type { ThemeColors } from "../types/ThemeColors";
 
 // Same values as the `:root` and `.dark` variables in apps/*/frontend/src/index.css,
@@ -21,8 +22,8 @@ export const lightColors: ThemeColors = {
   destructiveForeground: "hsl(222.2, 84%, 4.9%)",
   destructiveText: "#b91c1c",
   positiveText: "#166534",
-  chartPositive: "#16a34a",
-  chartNegative: "#7f1d1d",
+  chartPositive: CHART_COLORS.light.positive,
+  chartNegative: CHART_COLORS.light.negative,
   toastSuccessBackground: "#f0fdf4",
   toastSuccessBorder: "#bbf7d0",
   toastSuccessForeground: "#166534",
@@ -51,8 +52,8 @@ export const darkColors: ThemeColors = {
   destructiveForeground: "hsl(210, 40%, 98%)",
   destructiveText: "#f87171",
   positiveText: "#86efac",
-  chartPositive: "#86efac",
-  chartNegative: "#b91c1c",
+  chartPositive: CHART_COLORS.dark.positive,
+  chartNegative: CHART_COLORS.dark.negative,
   toastSuccessBackground: "#052e16",
   toastSuccessBorder: "#166534",
   toastSuccessForeground: "#bbf7d0",
