@@ -7,11 +7,12 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import Select, or_, select, func, update as sa_update
+from sqlalchemy import Select, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
 from platform_shared.repositories import soft_delete as _soft_delete
+from platform_shared.repositories.audited_writes import update_rows
 
 from app.core.document_list_constants import DOCUMENT_NOT_IN_LIBRARY_STATUSES
 from app.models.documents.document import Document
@@ -204,10 +205,12 @@ async def soft_delete_by_user(
     """Soft-delete documents a user removed, dropping any file bytes held in the database."""
     if not document_ids:
         return
-    await db.execute(
-        sa_update(Document)
-        .where(Document.organization_id == organization_id, Document.id.in_(document_ids))
-        .values(status="deleted", deleted_at=datetime.now(timezone.utc), file_content=None)
+    await update_rows(
+        db,
+        Document,
+        Document.organization_id == organization_id,
+        Document.id.in_(document_ids),
+        values={"status": "deleted", "deleted_at": datetime.now(timezone.utc), "file_content": None},
     )
 
 
@@ -221,17 +224,15 @@ async def soft_delete_still_failed(
     """
     if not document_ids:
         return []
-    result = await db.execute(
-        sa_update(Document)
-        .where(
-            Document.organization_id == organization_id,
-            Document.id.in_(document_ids),
-            Document.status == "failed",
-        )
-        .values(status="deleted", deleted_at=datetime.now(timezone.utc), file_content=None)
-        .returning(Document.file_storage_key)
+    deleted = await update_rows(
+        db,
+        Document,
+        Document.organization_id == organization_id,
+        Document.id.in_(document_ids),
+        Document.status == "failed",
+        values={"status": "deleted", "deleted_at": datetime.now(timezone.utc), "file_content": None},
     )
-    return [key for key in result.scalars() if key]
+    return [doc.file_storage_key for doc in deleted if doc.file_storage_key]
 
 
 async def soft_delete_duplicate(db: AsyncSession, document: Document) -> None:
@@ -413,20 +414,13 @@ async def reset_to_processing(
     """Reset documents to processing for re-extraction. Returns count updated."""
     if not document_ids:
         return 0
-    result = await db.execute(
-        sa_update(Document)
-        .where(
-            Document.id.in_(document_ids),
-            Document.organization_id == organization_id,
-        )
-        .values(
-            status="processing",
-            error_message=None,
-            retry_count=0,
-            next_retry_at=None,
-        )
-    )
-    return result.rowcount  # type: ignore[return-value]
+    return len(await update_rows(
+        db,
+        Document,
+        Document.id.in_(document_ids),
+        Document.organization_id == organization_id,
+        values={"status": "processing", "error_message": None, "retry_count": 0, "next_retry_at": None},
+    ))
 
 
 async def count_by_status(
@@ -474,14 +468,12 @@ async def reset_failed_retryable(
 
     Returns count of documents reset.
     """
-    result = await db.execute(
-        sa_update(Document)
-        .where(
-            Document.organization_id == organization_id,
-            Document.status == "failed",
-            Document.retry_count < max_retries,
-            Document.deleted_at.is_(None),
-        )
-        .values(status="processing", next_retry_at=None, error_message=None)
-    )
-    return result.rowcount  # type: ignore[return-value]
+    return len(await update_rows(
+        db,
+        Document,
+        Document.organization_id == organization_id,
+        Document.status == "failed",
+        Document.retry_count < max_retries,
+        Document.deleted_at.is_(None),
+        values={"status": "processing", "next_retry_at": None, "error_message": None},
+    ))

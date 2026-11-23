@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.welcome_manuals.welcome_manual_section import WelcomeManualSection
@@ -203,10 +203,6 @@ async def delete_by_id(
     section = await get_by_id(db, section_id, manual_id)
     if section is None:
         return None
-    await db.execute(
-        delete(WelcomeManualSection).where(
-            WelcomeManualSection.id == section_id,
-            WelcomeManualSection.manual_id == manual_id,
-        )
-    )
+    await db.delete(section)
+    await db.flush()
     return section

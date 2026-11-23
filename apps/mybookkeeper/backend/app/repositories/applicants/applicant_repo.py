@@ -15,7 +15,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import and_, delete, desc, func, or_, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -298,17 +299,15 @@ async def soft_delete(
     user_id: uuid.UUID,
 ) -> bool:
     """Soft-delete an applicant. Returns True iff a row was updated."""
-    result = await db.execute(
-        update(Applicant)
-        .where(
-            Applicant.id == applicant_id,
-            Applicant.organization_id == organization_id,
-            Applicant.user_id == user_id,
-            Applicant.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        Applicant,
+        Applicant.id == applicant_id,
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+        Applicant.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))
 
 
 async def update_stage(

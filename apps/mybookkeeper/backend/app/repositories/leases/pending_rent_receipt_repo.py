@@ -9,7 +9,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, and_, exists, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import ColumnElement, Select, and_, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -234,28 +235,25 @@ async def claim_for_send(
 ) -> PendingRentReceipt | None:
     """Move a ``pending`` row to ``sending``; return it, or None if not pending.
 
-    One conditional UPDATE, so of two concurrent claims exactly one matches.
+    The row is claimed under its row lock, so of two concurrent claims exactly one matches.
     """
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(
-            PendingRentReceipt.transaction_id == transaction_id,
-            PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.status == "pending",
-            PendingRentReceipt.deleted_at.is_(None),
-        )
-        .values(
-            status="sending",
-            send_message_id=send_message_id,
-            send_claimed_at=claimed_at,
-            sender_gmail_address=sender_gmail_address,
-            sent_via_attachment_id=None,
-            updated_at=claimed_at,
-        )
-        .returning(PendingRentReceipt)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        PendingRentReceipt.transaction_id == transaction_id,
+        PendingRentReceipt.organization_id == organization_id,
+        PendingRentReceipt.status == "pending",
+        PendingRentReceipt.deleted_at.is_(None),
+        values={
+            "status": "sending",
+            "send_message_id": send_message_id,
+            "send_claimed_at": claimed_at,
+            "sender_gmail_address": sender_gmail_address,
+            "sent_via_attachment_id": None,
+            "updated_at": claimed_at,
+        },
     )
-    return result.scalar_one_or_none()
+    return changed[0] if changed else None
 
 
 def _held_by(
@@ -277,13 +275,13 @@ async def set_attempt_attachment(
     send_message_id: str,
     attachment_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(*_held_by(receipt_id, organization_id, send_message_id))
-        .values(sent_via_attachment_id=attachment_id)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        *_held_by(receipt_id, organization_id, send_message_id),
+        values={"sent_via_attachment_id": attachment_id},
     )
-    return result.rowcount == 1
+    return len(changed) == 1
 
 
 async def mark_sent_if_claimed(
@@ -295,13 +293,13 @@ async def mark_sent_if_claimed(
     sent_at: _dt.datetime,
 ) -> bool:
     """``sending`` → ``sent``, only while this attempt still holds the claim."""
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(*_held_by(receipt_id, organization_id, send_message_id))
-        .values(status="sent", sent_at=sent_at, updated_at=sent_at)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        *_held_by(receipt_id, organization_id, send_message_id),
+        values={"status": "sent", "sent_at": sent_at, "updated_at": sent_at},
     )
-    return result.rowcount == 1
+    return len(changed) == 1
 
 
 async def release_claim(
@@ -317,20 +315,20 @@ async def release_claim(
     Keyed on the attempt's Message-ID so a late release can never undo a
     newer attempt.
     """
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(*_held_by(receipt_id, organization_id, send_message_id))
-        .values(
-            status="pending",
-            send_message_id=None,
-            send_claimed_at=None,
-            sender_gmail_address=None,
-            sent_via_attachment_id=None,
-            updated_at=released_at,
-        )
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        *_held_by(receipt_id, organization_id, send_message_id),
+        values={
+            "status": "pending",
+            "send_message_id": None,
+            "send_claimed_at": None,
+            "sender_gmail_address": None,
+            "sent_via_attachment_id": None,
+            "updated_at": released_at,
+        },
     )
-    return result.rowcount == 1
+    return len(changed) == 1
 
 
 async def mark_dismissed_if_pending(
@@ -341,18 +339,16 @@ async def mark_dismissed_if_pending(
     dismissed_at: _dt.datetime,
 ) -> bool:
     """``pending`` → ``dismissed``; False if the row isn't pending (e.g. mid-send)."""
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(
-            PendingRentReceipt.transaction_id == transaction_id,
-            PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.status == "pending",
-            PendingRentReceipt.deleted_at.is_(None),
-        )
-        .values(status="dismissed", updated_at=dismissed_at)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        PendingRentReceipt.transaction_id == transaction_id,
+        PendingRentReceipt.organization_id == organization_id,
+        PendingRentReceipt.status == "pending",
+        PendingRentReceipt.deleted_at.is_(None),
+        values={"status": "dismissed", "updated_at": dismissed_at},
     )
-    return result.rowcount == 1
+    return len(changed) == 1
 
 
 async def dismiss_pending_for_transactions(
@@ -369,18 +365,16 @@ async def dismiss_pending_for_transactions(
     """
     if not transaction_ids:
         return 0
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(
-            PendingRentReceipt.transaction_id.in_(transaction_ids),
-            PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.status == "pending",
-            PendingRentReceipt.deleted_at.is_(None),
-        )
-        .values(status="dismissed", updated_at=dismissed_at)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        PendingRentReceipt.transaction_id.in_(transaction_ids),
+        PendingRentReceipt.organization_id == organization_id,
+        PendingRentReceipt.status == "pending",
+        PendingRentReceipt.deleted_at.is_(None),
+        values={"status": "dismissed", "updated_at": dismissed_at},
     )
-    return result.rowcount
+    return len(changed)
 
 
 async def mark_dismissed_if_claimed(
@@ -396,13 +390,13 @@ async def mark_dismissed_if_claimed(
     For a claim that can't be settled because Gmail now holds another account.
     The claim's Message-ID, address and PDF stay as the record of the attempt.
     """
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(*_held_by(receipt_id, organization_id, send_message_id))
-        .values(status="dismissed", updated_at=dismissed_at)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        *_held_by(receipt_id, organization_id, send_message_id),
+        values={"status": "dismissed", "updated_at": dismissed_at},
     )
-    return result.rowcount == 1
+    return len(changed) == 1
 
 
 async def move_to_transaction(
@@ -420,15 +414,13 @@ async def move_to_transaction(
     receipt is then dismissed with it.
     """
     target = aliased(PendingRentReceipt)
-    result = await db.execute(
-        update(PendingRentReceipt)
-        .where(
-            PendingRentReceipt.transaction_id == from_transaction_id,
-            PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.deleted_at.is_(None),
-            ~exists().where(target.transaction_id == to_transaction_id),
-        )
-        .values(transaction_id=to_transaction_id)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        PendingRentReceipt,
+        PendingRentReceipt.transaction_id == from_transaction_id,
+        PendingRentReceipt.organization_id == organization_id,
+        PendingRentReceipt.deleted_at.is_(None),
+        ~exists().where(target.transaction_id == to_transaction_id),
+        values={"transaction_id": to_transaction_id},
     )
-    return result.rowcount == 1
+    return len(changed) == 1

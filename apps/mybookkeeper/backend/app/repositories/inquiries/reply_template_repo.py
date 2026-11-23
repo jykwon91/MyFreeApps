@@ -10,7 +10,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import asc, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import asc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inquiries.reply_template import ReplyTemplate
@@ -141,17 +142,12 @@ async def archive(
     user_id: uuid.UUID,
 ) -> bool:
     """Soft-delete: set is_archived=true. Returns True iff a row was updated."""
-    result = await db.execute(
-        update(ReplyTemplate)
-        .where(
-            ReplyTemplate.id == template_id,
-            ReplyTemplate.organization_id == organization_id,
-            ReplyTemplate.user_id == user_id,
-            ReplyTemplate.is_archived.is_(False),
-        )
-        .values(
-            is_archived=True,
-            updated_at=_dt.datetime.now(_dt.timezone.utc),
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        ReplyTemplate,
+        ReplyTemplate.id == template_id,
+        ReplyTemplate.organization_id == organization_id,
+        ReplyTemplate.user_id == user_id,
+        ReplyTemplate.is_archived.is_(False),
+        values={"is_archived": True, "updated_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))

@@ -2,7 +2,8 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import Integer, Row, func, or_, select, update as sa_update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import Integer, Row, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased, selectinload
@@ -273,16 +274,14 @@ async def mark_duplicate_reviewed(
     organization_id: uuid.UUID,
 ) -> int:
     """Mark transactions as reviewed (not duplicates). Returns count updated."""
-    result = await db.execute(
-        sa_update(Transaction)
-        .where(
-            Transaction.id.in_(transaction_ids),
-            Transaction.organization_id == organization_id,
-            Transaction.deleted_at.is_(None),
-        )
-        .values(duplicate_reviewed_at=datetime.now(timezone.utc))
-    )
-    return result.rowcount  # type: ignore[return-value]
+    return len(await update_rows(
+        db,
+        Transaction,
+        Transaction.id.in_(transaction_ids),
+        Transaction.organization_id == organization_id,
+        Transaction.deleted_at.is_(None),
+        values={"duplicate_reviewed_at": datetime.now(timezone.utc)},
+    ))
 
 
 async def summary_by_property(

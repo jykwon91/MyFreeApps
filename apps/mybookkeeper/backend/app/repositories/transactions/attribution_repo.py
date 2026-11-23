@@ -6,13 +6,12 @@ import uuid
 from datetime import datetime, timezone
 from collections.abc import Sequence
 
-from sqlalchemy import delete, exists, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
-from app.models.applicants.applicant import Applicant
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue
-from app.models.transactions.transaction import Transaction
 
 
 async def create(
@@ -161,16 +160,14 @@ async def move_pending_review(
     Nothing moves when the target already has a review row (one per transaction).
     """
     target = aliased(RentAttributionReviewQueue)
-    result = await db.execute(
-        update(RentAttributionReviewQueue)
-        .where(
-            RentAttributionReviewQueue.transaction_id == from_transaction_id,
-            RentAttributionReviewQueue.organization_id == organization_id,
-            RentAttributionReviewQueue.status == "pending",
-            RentAttributionReviewQueue.deleted_at.is_(None),
-            ~exists().where(target.transaction_id == to_transaction_id),
-        )
-        .values(transaction_id=to_transaction_id)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        RentAttributionReviewQueue,
+        RentAttributionReviewQueue.transaction_id == from_transaction_id,
+        RentAttributionReviewQueue.organization_id == organization_id,
+        RentAttributionReviewQueue.status == "pending",
+        RentAttributionReviewQueue.deleted_at.is_(None),
+        ~exists().where(target.transaction_id == to_transaction_id),
+        values={"transaction_id": to_transaction_id},
     )
-    return result.rowcount == 1
+    return len(changed) == 1

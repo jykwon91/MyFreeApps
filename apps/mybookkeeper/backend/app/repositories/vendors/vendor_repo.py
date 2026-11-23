@@ -12,9 +12,8 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete as _sa_delete
+from platform_shared.repositories.audited_writes import delete_rows, update_rows
 from sqlalchemy import desc, func, select
-from sqlalchemy import update as _sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transactions.transaction import Transaction
@@ -231,15 +230,13 @@ async def null_vendor_on_transactions(
 
     Returns the number of transactions affected.
     """
-    result = await db.execute(
-        _sa_update(Transaction)
-        .where(
-            Transaction.vendor_id == vendor_id,
-            Transaction.organization_id == organization_id,
-        )
-        .values(vendor_id=None)
-    )
-    return int(result.rowcount or 0)
+    return len(await update_rows(
+        db,
+        Transaction,
+        Transaction.vendor_id == vendor_id,
+        Transaction.organization_id == organization_id,
+        values={"vendor_id": None},
+    ))
 
 
 async def soft_delete(
@@ -250,17 +247,15 @@ async def soft_delete(
     user_id: uuid.UUID,
 ) -> bool:
     """Soft-delete a vendor. Returns True iff a row was updated."""
-    result = await db.execute(
-        _sa_update(Vendor)
-        .where(
-            Vendor.id == vendor_id,
-            Vendor.organization_id == organization_id,
-            Vendor.user_id == user_id,
-            Vendor.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        Vendor,
+        Vendor.id == vendor_id,
+        Vendor.organization_id == organization_id,
+        Vendor.user_id == user_id,
+        Vendor.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(
@@ -276,11 +271,10 @@ async def hard_delete_by_id(
     inline so cross-tenant cleanup attempts no-op instead of removing data
     the caller does not own.
     """
-    result = await db.execute(
-        _sa_delete(Vendor).where(
-            Vendor.id == vendor_id,
-            Vendor.organization_id == organization_id,
-            Vendor.user_id == user_id,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db,
+        Vendor,
+        Vendor.id == vendor_id,
+        Vendor.organization_id == organization_id,
+        Vendor.user_id == user_id,
+    ))

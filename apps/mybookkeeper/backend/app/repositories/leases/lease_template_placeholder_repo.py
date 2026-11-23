@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete as _sa_delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholder
@@ -115,10 +116,8 @@ async def delete_all_for_template(
     *,
     template_id: uuid.UUID,
 ) -> None:
-    await db.execute(
-        _sa_delete(LeaseTemplatePlaceholder).where(
-            LeaseTemplatePlaceholder.template_id == template_id,
-        )
+    await delete_rows(
+        db, LeaseTemplatePlaceholder, LeaseTemplatePlaceholder.template_id == template_id,
     )
 
 

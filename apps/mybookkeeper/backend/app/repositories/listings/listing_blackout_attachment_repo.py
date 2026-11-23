@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing_blackout_attachment import ListingBlackoutAttachment
@@ -89,12 +89,8 @@ async def delete_by_id_scoped_to_blackout(
     row = result.scalar_one_or_none()
     if row is None:
         return None
-    await db.execute(
-        delete(ListingBlackoutAttachment).where(
-            ListingBlackoutAttachment.id == attachment_id,
-            ListingBlackoutAttachment.listing_blackout_id == blackout_id,
-        )
-    )
+    await db.delete(row)
+    await db.flush()
     return row
 
 

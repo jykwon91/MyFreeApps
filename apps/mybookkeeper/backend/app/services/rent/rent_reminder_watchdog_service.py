@@ -8,6 +8,8 @@ import datetime as _dt
 import logging
 import uuid
 
+from platform_shared.core.audit_actor import audit_actor
+
 from app.core.rent_reminder_constants import (
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
@@ -30,13 +32,16 @@ async def run_watchdog(now: _dt.datetime | None = None) -> int:
     ``sent_to_phone`` with no phone confirmation in time means the phone is
     off, offline, or asleep (``no_phone_confirmation``); a ``queued`` row that
     old means the worker died mid-send (``send_interrupted``).
+
+    The sweep runs for no signed-in user, so each row's writes are audited as
+    the row's owner.
     """
     moment = now or _now()
     cutoff = moment - _dt.timedelta(minutes=SMS_CONFIRMATION_TIMEOUT_MINUTES)
-    failed: list[tuple[uuid.UUID, int]] = []
+    failed: list[tuple[uuid.UUID, int, uuid.UUID]] = []
     async with unit_of_work() as db:
         for row in await rent_reminder_send_repo.list_unconfirmed(db, older_than=cutoff):
-            send_id, attempt, status = row.id, row.attempt, row.status
+            send_id, attempt, status, owner_id = row.id, row.attempt, row.status, row.user_id
             code = (
                 ERROR_NO_PHONE_CONFIRMATION
                 if status == "sent_to_phone"
@@ -44,18 +49,21 @@ async def run_watchdog(now: _dt.datetime | None = None) -> int:
             )
             # The phone may confirm between the read and this write; then the
             # confirmation stands and nobody is alerted.
-            if not await rent_reminder_send_repo.mark_failed(
-                db, row=row, error_code=code, seen_status=status, seen_attempt=attempt,
-            ):
+            with audit_actor(owner_id):
+                recorded = await rent_reminder_send_repo.mark_failed(
+                    db, row=row, error_code=code, seen_status=status, seen_attempt=attempt,
+                )
+            if not recorded:
                 continue
             logger.warning(
                 "Rent reminder unconfirmed: send_id=%s channel=%s status=%s code=%s",
                 send_id, row.channel, status, code,
             )
-            failed.append((send_id, attempt))
-    for send_id, attempt in failed:
+            failed.append((send_id, attempt, owner_id))
+    for send_id, attempt, owner_id in failed:
         try:
-            await alerts.alert_operator(send_id, attempt)
+            with audit_actor(owner_id):
+                await alerts.alert_operator(send_id, attempt)
         except Exception:  # one alert failing must not stop the rest
             logger.exception("Could not alert the operator about reminder %s", send_id)
     return len(failed)

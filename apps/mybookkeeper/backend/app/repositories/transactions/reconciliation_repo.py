@@ -2,7 +2,8 @@ import uuid
 from collections.abc import Sequence
 from decimal import Decimal
 
-from sqlalchemy import delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -76,13 +77,12 @@ async def delete_source(
 
     Its matches go with it through the foreign key's ON DELETE CASCADE.
     """
-    result = await db.execute(
-        delete(ReconciliationSource).where(
-            ReconciliationSource.id == source_id,
-            ReconciliationSource.organization_id == organization_id,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db,
+        ReconciliationSource,
+        ReconciliationSource.id == source_id,
+        ReconciliationSource.organization_id == organization_id,
+    ))
 
 
 async def get_discrepancies(

@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing import Listing
@@ -230,16 +231,14 @@ async def soft_delete_by_id(
     already soft-deleted). Returns False otherwise so the route layer can
     respond with 404 without an extra round trip.
     """
-    result = await db.execute(
-        update(Listing)
-        .where(
-            Listing.id == listing_id,
-            Listing.organization_id == organization_id,
-            Listing.deleted_at.is_(None),
-        )
-        .values(deleted_at=datetime.now(timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        Listing,
+        Listing.id == listing_id,
+        Listing.organization_id == organization_id,
+        Listing.deleted_at.is_(None),
+        values={"deleted_at": datetime.now(timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(

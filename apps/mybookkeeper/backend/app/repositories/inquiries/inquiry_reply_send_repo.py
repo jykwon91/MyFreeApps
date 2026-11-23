@@ -9,7 +9,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import delete, select, update
+from platform_shared.repositories.audited_writes import delete_rows, update_rows
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,16 +74,13 @@ async def claim(
 
 async def release(db: AsyncSession, *, claim_id: uuid.UUID, send_message_id: str) -> bool:
     """Delete a claim whose reply definitely did not go out. False if it was no longer held."""
-    result = await db.execute(
-        delete(InquiryReplySend)
-        .where(
-            InquiryReplySend.id == claim_id,
-            InquiryReplySend.status == "sending",
-            InquiryReplySend.send_message_id == send_message_id,
-        )
-        .execution_options(synchronize_session=False),
-    )
-    return result.rowcount == 1
+    return len(await delete_rows(
+        db,
+        InquiryReplySend,
+        InquiryReplySend.id == claim_id,
+        InquiryReplySend.status == "sending",
+        InquiryReplySend.send_message_id == send_message_id,
+    )) == 1
 
 
 async def mark_sent(
@@ -93,21 +91,18 @@ async def mark_sent(
     inquiry_message_id: uuid.UUID,
 ) -> bool:
     """Point the claim at the message it recorded. False if it was no longer held."""
-    result = await db.execute(
-        update(InquiryReplySend)
-        .where(
-            InquiryReplySend.id == claim_id,
-            InquiryReplySend.status == "sending",
-            InquiryReplySend.send_message_id == send_message_id,
-        )
-        .values(
-            status="sent",
-            inquiry_message_id=inquiry_message_id,
-            updated_at=_dt.datetime.now(_dt.timezone.utc),
-        )
-        .execution_options(synchronize_session=False),
-    )
-    return result.rowcount == 1
+    return len(await update_rows(
+        db,
+        InquiryReplySend,
+        InquiryReplySend.id == claim_id,
+        InquiryReplySend.status == "sending",
+        InquiryReplySend.send_message_id == send_message_id,
+        values={
+            "status": "sent",
+            "inquiry_message_id": inquiry_message_id,
+            "updated_at": _dt.datetime.now(_dt.timezone.utc),
+        },
+    )) == 1
 
 
 async def backdate_open_claims(db: AsyncSession, *, inquiry_id: uuid.UUID, claimed_at: _dt.datetime) -> None:

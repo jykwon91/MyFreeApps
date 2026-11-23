@@ -5,7 +5,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, desc, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -271,15 +272,14 @@ async def restore_last_emailed_if_unchanged(
     restore_to: _dt.datetime | None,
 ) -> None:
     """Put ``last_emailed_to_tenant_at`` back only if no later email has stamped it since."""
-    await db.execute(
-        update(SignedLease)
-        .where(
-            SignedLease.id == lease_id,
-            SignedLease.user_id == user_id,
-            SignedLease.organization_id == organization_id,
-            SignedLease.last_emailed_to_tenant_at == expected,
-        )
-        .values(last_emailed_to_tenant_at=restore_to)
+    await update_rows(
+        db,
+        SignedLease,
+        SignedLease.id == lease_id,
+        SignedLease.user_id == user_id,
+        SignedLease.organization_id == organization_id,
+        SignedLease.last_emailed_to_tenant_at == expected,
+        values={"last_emailed_to_tenant_at": restore_to},
     )
 
 
@@ -290,17 +290,15 @@ async def soft_delete(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        update(SignedLease)
-        .where(
-            SignedLease.id == lease_id,
-            SignedLease.user_id == user_id,
-            SignedLease.organization_id == organization_id,
-            SignedLease.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        SignedLease,
+        SignedLease.id == lease_id,
+        SignedLease.user_id == user_id,
+        SignedLease.organization_id == organization_id,
+        SignedLease.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(
