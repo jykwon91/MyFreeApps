@@ -1,5 +1,5 @@
 import { type RouteObject } from "react-router-dom";
-import { StandaloneLayout, Support } from "@platform/ui";
+import { SettingsPage, StandaloneLayout, Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import Drops from "@/pages/Drops";
 import Menu from "@/pages/Menu";
@@ -7,7 +7,6 @@ import Service from "@/pages/Service";
 import Financials from "@/pages/Financials";
 import Customers from "@/pages/Customers";
 import Security from "@/pages/Security";
-import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -32,7 +31,7 @@ export const routes: RouteObject[] = [
       { path: "/service", element: <Service /> },
       { path: "/financials", element: <Financials /> },
       { path: "/customers", element: <Customers /> },
-      { path: "/settings", element: <Settings /> },
+      { path: "/settings", element: <SettingsPage /> },
       { path: "/security", element: <Security /> },
     ],
   },

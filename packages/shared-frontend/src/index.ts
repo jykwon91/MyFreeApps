@@ -186,6 +186,10 @@ export type { PaginationProps } from "./components/data/Pagination";
 export { default as FileUploadDropzone } from "./components/upload/FileUploadDropzone";
 export type { FileUploadDropzoneProps } from "./components/upload/FileUploadDropzone";
 
+// Settings page for apps with no app-specific settings (shared)
+export { default as SettingsPage } from "./pages/SettingsPage";
+export type { SettingsPageProps } from "./types/settings-page-props";
+
 // Support / donation page (shared across all apps)
 export { default as Support } from "./pages/Support";
 export { default as TransparencyWidget } from "./components/widgets/TransparencyWidget";

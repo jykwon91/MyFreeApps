@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
 import { Shield, ChevronRight } from "lucide-react";
-import { Card } from "@platform/ui";
+import Card from "../components/ui/Card";
+import type { SettingsPageProps } from "../types/settings-page-props";
 
-export default function Settings() {
+/**
+ * Settings page shared across every app that has no app-specific settings:
+ * a single row that links out to the dedicated Security page.
+ */
+export default function SettingsPage({ securityPath = "/security" }: SettingsPageProps) {
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <div>
@@ -12,10 +17,9 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Security -- link out to dedicated page */}
       <Card title="Security">
         <Link
-          to="/security"
+          to={securityPath}
           className="flex items-center justify-between gap-4 -m-2 p-2 rounded hover:bg-muted/40 transition-colors min-h-[44px]"
         >
           <div className="flex items-center gap-3">
@@ -29,13 +33,6 @@ export default function Settings() {
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </Link>
-      </Card>
-
-      {/* Account section placeholder */}
-      <Card title="Account">
-        <p className="text-sm text-muted-foreground">
-          Add app-specific settings here.
-        </p>
       </Card>
     </div>
   );

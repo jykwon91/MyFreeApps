@@ -5,6 +5,7 @@ import { AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import SignedInDevices from "@platform/ui/components/auth/SignedInDevices";
 import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
+import { ACCOUNT_COPY } from "@myrecipes/api-client/constants/accountCopy";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 
@@ -30,10 +31,7 @@ export default function Security() {
 
       {!infoDismissed && (
         <AlertBox variant="info" className="flex items-center justify-between gap-3">
-          <span>
-            Two-factor authentication adds an extra layer of security to your account. We
-            recommend enabling it to protect your account access.
-          </span>
+          <span>{ACCOUNT_COPY.twoFactorIntro}</span>
           <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
@@ -57,7 +55,7 @@ export default function Security() {
           <div>
             <p className="text-sm font-medium">Export your data</p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Download a JSON copy of your profile and saved data.
+              {ACCOUNT_COPY.exportDescription}
             </p>
           </div>
           <div className="shrink-0">
@@ -73,8 +71,7 @@ export default function Security() {
               Delete account
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Permanently delete your account and all associated data. This
-              cannot be undone.
+              {ACCOUNT_COPY.deleteWarning}
             </p>
           </div>
           <button

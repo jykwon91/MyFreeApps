@@ -11,7 +11,7 @@ import { File } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import { API_BASE_URL } from "../src/constants/api";
-import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
+import { ACCOUNT_COPY } from "@myrecipes/api-client/constants/accountCopy";
 import { SECURITY_CONTENT, SECURITY_INTRO_DISMISSED_KEY } from "../src/constants/security";
 import { store } from "../src/lib/store";
 import { renderApp } from "../test-support/renderApp";
@@ -251,7 +251,7 @@ describe("data & privacy", () => {
     await openSecurity();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.deleteButton }));
 
-    expect(await screen.findByText(DELETE_ACCOUNT_WARNING)).toBeTruthy();
+    expect(await screen.findByText(ACCOUNT_COPY.deleteWarning)).toBeTruthy();
     expect(screen).toHavePathname("/delete-account");
   });
 });

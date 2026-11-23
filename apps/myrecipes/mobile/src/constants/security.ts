@@ -1,4 +1,5 @@
 import type { MoreMenuItem, SecurityScreenContent } from "@platform/mobile";
+import { ACCOUNT_COPY } from "@myrecipes/api-client/constants/accountCopy";
 
 export const SECURITY_ROUTE = "/security";
 export const SECURITY_TURN_ON_ROUTE = "/security/turn-on";
@@ -13,9 +14,8 @@ export const SECURITY_MENU_ITEM: MoreMenuItem = { label: "Security", webPath: SE
 export const SECURITY_INTRO_DISMISSED_KEY = "myrecipes_security_info_dismissed";
 
 export const SECURITY_CONTENT: SecurityScreenContent = {
-  intro:
-    "Two-step sign-in adds an extra layer of security to your account. I recommend turning it on to protect your account access.",
+  intro: ACCOUNT_COPY.twoFactorIntro,
   whatTwoStepProtects: "your recipes and cook logs",
   displayNameDescription: "Shown in your profile and on exported data.",
-  exportDescription: "A JSON copy of your profile and saved data.",
+  exportDescription: ACCOUNT_COPY.exportDescription,
 };
