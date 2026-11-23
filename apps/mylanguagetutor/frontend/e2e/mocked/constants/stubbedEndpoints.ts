@@ -7,3 +7,4 @@ export const LIST_SCENARIOS = "GET /scenarios";
 export const GET_PROFILE = "GET /profile";
 export const SAVE_PROFILE = "PUT /profile";
 export const CREATE_SESSION = "POST /sessions";
+export const GET_USAGE_TODAY = "GET /usage/today";

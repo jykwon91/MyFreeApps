@@ -1,14 +1,14 @@
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
-import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
 import { Banner, MIN_TOUCH_TARGET, StaleDataBanner, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
+import SessionBlockNotice from "../conversation/SessionBlockNotice";
 import type { ScenarioListHeaderProps } from "../../types/ScenarioListHeaderProps";
 
 /** The language and level above the scenarios, with Change level and today's limit, as on the website. */
-export default function ScenarioListHeader({ profile, languageName, isCapReached, isStale }: ScenarioListHeaderProps) {
+export default function ScenarioListHeader({ profile, languageName, block, isUsageError, isStale, onRetryUsage }: ScenarioListHeaderProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.xs, paddingBottom: spacing.md }}>
@@ -29,8 +29,20 @@ export default function ScenarioListHeader({ profile, languageName, isCapReached
         </Pressable>
       </View>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{CATALOG_COPY.pickScenario}</Text>
-      {/* Information, not an error to retry, as on the website. */}
-      {isCapReached ? <Banner message={sessionBlockMessage("daily_limit")} style={{ marginTop: spacing.sm }} tone="info" /> : null}
+      {/* Information, not an error, as on the website. */}
+      {block ? (
+        <View style={{ marginTop: spacing.sm }}>
+          <SessionBlockNotice block={block} />
+        </View>
+      ) : null}
+      {isUsageError ? (
+        <Banner
+          actions={[{ label: CATALOG_COPY.retry, onPress: onRetryUsage }]}
+          message={CATALOG_COPY.usageUnavailable}
+          style={{ marginTop: spacing.sm }}
+          tone="info"
+        />
+      ) : null}
     </View>
   );
 }

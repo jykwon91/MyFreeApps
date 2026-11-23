@@ -13,7 +13,7 @@ import ScenarioListHeader from "./ScenarioListHeader";
 /** The scenario learning path for the learner's language. A scenario opens its conversation. */
 export default function ScenarioList({ profile }: ScenarioListProps) {
   const { colors, spacing } = useTheme();
-  const { languageName, scenarios, isError, error, isCapReached, refetch } = useScenarioPath(profile);
+  const { languageName, scenarios, isError, error, block, isUsageError, refetch } = useScenarioPath(profile);
   const { refresh, isRefreshing, refreshControl } = useRefresh(refetch, error);
 
   if (!scenarios) {
@@ -26,7 +26,14 @@ export default function ScenarioList({ profile }: ScenarioListProps) {
       ItemSeparatorComponent={ListSeparator}
       ListEmptyComponent={<EmptyState body={CATALOG_MESSAGES.noScenariosBody} heading={CATALOG_MESSAGES.noScenariosHeading} />}
       ListHeaderComponent={
-        <ScenarioListHeader isCapReached={isCapReached} isStale={isError} languageName={languageName} profile={profile} />
+        <ScenarioListHeader
+          block={block}
+          isStale={isError}
+          isUsageError={isUsageError}
+          languageName={languageName}
+          onRetryUsage={refresh}
+          profile={profile}
+        />
       }
       contentContainerStyle={{ flexGrow: 1, padding: spacing.lg }}
       data={scenarios}

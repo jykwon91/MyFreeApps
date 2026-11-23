@@ -15,6 +15,7 @@ import {
 import CatalogSkeleton from "@/features/catalog/CatalogSkeleton";
 import CatalogError from "@/features/catalog/CatalogError";
 import ScenarioCard from "@/features/catalog/ScenarioCard";
+import UsageCheckFailedNotice from "@/features/catalog/UsageCheckFailedNotice";
 import SessionBlockNotice from "@/features/session/SessionBlockNotice";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 
@@ -24,7 +25,7 @@ interface ScenarioPathProps {
 
 /** The scenario learning path for the learner's language, with their level. */
 export default function ScenarioPath({ profile }: ScenarioPathProps) {
-  const { languageName, scenarios, isError, isCapReached, refetch } = useScenarioPath(profile);
+  const { languageName, scenarios, isError, block, isUsageError, refetch } = useScenarioPath(profile);
 
   if (!scenarios) return isError ? <CatalogError onRetry={() => void refetch()} /> : <CatalogSkeleton />;
 
@@ -50,7 +51,8 @@ export default function ScenarioPath({ profile }: ScenarioPathProps) {
         </p>
         <p className={cn(CATALOG_HEADER_LINE, "text-muted-foreground", TWO_TEXT_LINES)}>{CATALOG_COPY.pickScenario}</p>
       </div>
-      {isCapReached && <SessionBlockNotice block="daily_limit" />}
+      {block && <SessionBlockNotice block={block} />}
+      {isUsageError && <UsageCheckFailedNotice onRetry={() => void refetch()} />}
       <ul className={SCENARIO_LIST}>
         {scenarios.map((scenario) => (
           <ScenarioCard key={scenario.slug} scenario={scenario} />
