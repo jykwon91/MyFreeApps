@@ -22,7 +22,7 @@ const READ_FAILED = "We couldn't read a recipe off that page. Open the original 
 const CHEESE_LINE = "4 oz cream cheese (softened)";
 
 /** The result cards: buttons rather than links, since opening one costs a call. */
-const resultCards = (page: Page) => page.getByRole("button").filter({ has: page.locator("h3") });
+const resultCards = (page: Page) => page.getByRole("button").filter({ has: page.locator("h2") });
 
 async function search(page: Page, query: string) {
   await page.getByLabel("Dish to search the web for").fill(query);
