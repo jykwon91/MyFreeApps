@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CenteredCard,
   LoadingButton,
   PasswordPair,
   describeAuthError,
+  useUrlToken,
 } from "@platform/ui";
 import { Briefcase } from "lucide-react";
 import { resetPassword } from "@/lib/auth";
@@ -24,15 +25,8 @@ import { resetPassword } from "@/lib/auth";
  * Register page's UX.
  */
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [token] = useState(() => searchParams.get("token"));
-
-  useEffect(() => {
-    if (token) {
-      window.history.replaceState(null, "", "/reset-password");
-    }
-  }, [token]);
+  const token = useUrlToken("/reset-password");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

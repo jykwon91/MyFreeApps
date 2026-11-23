@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import { AlertBox } from "@platform/ui";
 
+import { ACCOUNT_COPY } from "@mylanguagetutor/api-client/constants/accountCopy";
 import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
@@ -29,10 +30,7 @@ export default function Security() {
 
       {!infoDismissed && (
         <AlertBox variant="info" className="flex items-center justify-between gap-3">
-          <span>
-            Two-factor authentication adds an extra layer of security to your account. We
-            recommend enabling it to protect your account access.
-          </span>
+          <span>{ACCOUNT_COPY.twoFactorIntro}</span>
           <button
             type="button"
             onClick={dismissInfo}
@@ -59,7 +57,7 @@ export default function Security() {
           <div>
             <p className="text-sm font-medium">Export your data</p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Download a JSON copy of your profile and saved data.
+              {ACCOUNT_COPY.exportDescription}
             </p>
           </div>
           <div className="shrink-0">
@@ -75,8 +73,7 @@ export default function Security() {
               Delete account
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Permanently delete your account and all associated data. This
-              cannot be undone.
+              {ACCOUNT_COPY.deleteWarning}
             </p>
           </div>
           <button

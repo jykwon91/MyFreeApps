@@ -193,6 +193,7 @@ export { useDebouncedValue } from "./hooks/useDebouncedValue";
 export { useForgetMutationArgs } from "./hooks/useForgetMutationArgs";
 export { useMediaQuery } from "./hooks/useMediaQuery";
 export { useLiveSearchParams } from "./hooks/useLiveSearchParams";
+export { useUrlToken } from "./hooks/useUrlToken";
 export { useScrollTopOnNavigate } from "./hooks/useScrollTopOnNavigate";
 export type { ScrollTopOnNavigateOptions } from "./types/scroll-top-on-navigate-options";
 export { useTheme } from "./hooks/useTheme";

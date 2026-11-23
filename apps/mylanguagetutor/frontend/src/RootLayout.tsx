@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
-import { MessageCircle, Settings, Shield } from "lucide-react";
+import { Heart, MessageCircle, Settings, Shield } from "lucide-react";
 import { AppShell, RequireAuth, StepUpModal, ThemeToggle, useIsAuthenticated } from "@platform/ui";
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
@@ -22,6 +22,7 @@ const ICONS: Record<string, React.ReactNode> = {
   MessageCircle: <MessageCircle className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
+  Heart: <Heart className="w-5 h-5" />,
 };
 
 export default function RootLayout() {

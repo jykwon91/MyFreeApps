@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ChefHat } from "lucide-react";
-import { describeAuthError, isAlreadyVerifiedError } from "@platform/ui";
+import { describeAuthError, isAlreadyVerifiedError, useUrlToken } from "@platform/ui";
 import { VerifyState } from "@/constants/verifyState";
 import api from "@/lib/api";
 
@@ -9,8 +9,7 @@ const NO_TOKEN_MESSAGE =
   "No verification token found in the link. Please check your email and try again.";
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = useUrlToken("/verify-email");
 
   const [state, setState] = useState<VerifyState>(
     token ? VerifyState.VERIFYING : VerifyState.ERROR,

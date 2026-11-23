@@ -50,4 +50,14 @@ describe("VerifyEmail page", () => {
       await screen.findByText("This verification link is invalid or has expired."),
     ).toBeInTheDocument();
   });
+
+  it("removes the token from the address bar once it has been read", async () => {
+    mockApiPost.mockResolvedValueOnce({ data: {} });
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    renderVerify("/verify-email?token=abc123");
+    expect(await screen.findByText(/your email has been verified/i)).toBeInTheDocument();
+    expect(replaceState).toHaveBeenCalledWith(null, "", "/verify-email");
+    expect(mockApiPost).toHaveBeenCalledWith("/auth/verify", { token: "abc123" });
+    replaceState.mockRestore();
+  });
 });
