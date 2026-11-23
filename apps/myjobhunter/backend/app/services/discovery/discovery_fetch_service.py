@@ -29,39 +29,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import unit_of_work
-from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository, discovery_source_repository
-from app.schemas.discovery.greenhouse_source_config import (
-    GreenhouseSourceConfig,
-    GreenhouseFetchConfig,
-)
+from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
+from app.services.discovery.discovery_fetch_errors import (
+    DiscoverySourceInactiveError,
+    DiscoverySourceMissingQueryError,
+    DiscoverySourceNotFoundError,
+    DiscoveryUnsupportedSourceError,
+)
+from app.services.discovery.discovery_fetch_failure_message import stored_failure_message
 from app.services.discovery.industry_denylists import expand_excluded_keywords
 from app.services.discovery.sources import greenhouse, jsearch, lever
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Public errors
-# ---------------------------------------------------------------------------
-
-
-class DiscoveryFetchError(RuntimeError):
-    """Generic fetch failure — HTTP 502."""
-
-
-class DiscoverySourceNotFoundError(DiscoveryFetchError):
-    """Source ID doesn't exist or doesn't belong to caller — HTTP 404."""
-
-
-class DiscoverySourceInactiveError(DiscoveryFetchError):
-    """Source is deactivated — HTTP 409."""
-
-
-class DiscoveryUnsupportedSourceError(DiscoveryFetchError):
-    """No adapter registered for this source kind — HTTP 501."""
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +64,7 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
 
     base_query = _build_jsearch_query(typed)
     if not base_query:
-        raise DiscoveryFetchError(
+        raise DiscoverySourceMissingQueryError(
             "JSearch source missing required config.query (or config.roles)",
         )
 
@@ -376,15 +358,18 @@ async def _fetch_in_transaction(
         # branch — operators got "JSearch upstream is unavailable"
         # when the real issue was a missing API key (which deserves
         # 503 + a key-config message).
+        # The adapter's text (URLs, provider bodies) goes to the log only;
+        # the saved search and the audit row store fixed copy.
         logger.warning(
-            "discovery fetch failed: source=%s id=%s error=%s",
-            source.source, source.id, exc,
+            "discovery fetch failed: source=%s id=%s error_type=%s",
+            source.source, source.id, type(exc).__name__, exc_info=True,
         )
+        error_message = stored_failure_message(exc)
         await discovery_repository.complete_fetch(
-            db, fetch, status="error", error_message=str(exc),
+            db, fetch, status="error", error_message=error_message,
         )
         await discovery_source_repository.mark_source_fetched(
-            db, source, success=False, error_message=str(exc),
+            db, source, success=False, error_message=error_message,
         )
         return None, exc
 

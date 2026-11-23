@@ -38,6 +38,10 @@ from tenacity import (
 )
 
 from app.core.config import settings
+from app.core.discovery_source_failure_messages import (
+    JSEARCH_MONTHLY_QUOTA_MESSAGE,
+    JSEARCH_THROTTLED_MESSAGE_TEMPLATE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -280,11 +284,7 @@ async def search(
         # actionable error the fetch service persists as the source's
         # failure reason.
         if retry_after is None:
-            raise JSearchQuotaError(
-                "JSearch monthly quota reached — the RapidAPI plan is "
-                "exhausted until it resets. Upgrade the plan tier or wait "
-                "for the next billing cycle.",
-            )
+            raise JSearchQuotaError(JSEARCH_MONTHLY_QUOTA_MESSAGE)
 
         # Short-window throttle with an actionable Retry-After: honor it
         # by sleeping the advised interval (bounded), then raise a
@@ -295,10 +295,7 @@ async def search(
             # quota exhaustion with the advised wait so the reason is
             # actionable.
             raise JSearchQuotaError(
-                "JSearch rate limit reached — the RapidAPI plan is "
-                f"throttled for ~{int(retry_after)}s, beyond what a "
-                "single fetch will wait. Upgrade the plan tier or retry "
-                "later.",
+                JSEARCH_THROTTLED_MESSAGE_TEMPLATE.format(seconds=int(retry_after)),
             )
         await asyncio.sleep(retry_after)
         raise JSearchTransientError(
