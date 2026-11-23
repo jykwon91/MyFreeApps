@@ -14,8 +14,10 @@ import { LAYOUT_SHIFT_TOLERANCE_PX } from "./constants/layoutShiftTolerance";
 import type { BoxSide } from "./types/BoxSide";
 import type { LayoutBox } from "./types/LayoutBox";
 
-/** Every element `items` matches, measured now; each must be rendered. */
+/** Every element `items` matches, measured once the first one is on screen; each must be rendered. */
 export async function measureBoxes(items: Locator): Promise<LayoutBox[]> {
+  // A container can show before its children render; count only after one has, or the count reads 0.
+  await expect(items.first(), "something to measure").toBeVisible();
   const count = await items.count();
   expect(count, "something to measure").toBeGreaterThan(0);
   const boxes: LayoutBox[] = [];

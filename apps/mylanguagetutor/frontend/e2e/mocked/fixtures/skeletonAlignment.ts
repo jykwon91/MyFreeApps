@@ -20,9 +20,10 @@ export async function expectSkeletonRowsLineUp(page: Page): Promise<void> {
     await expect(skeleton).toBeVisible();
     const skeletonRows = skeleton.getByRole("listitem");
     // A fixed few placeholder rows stand in for the path, which is longer.
-    const placeholders = await skeletonRows.count();
-    expect(placeholders).toBeGreaterThan(1);
-    expect(placeholders).toBeLessThanOrEqual(SCENARIOS.length);
+    // The container shows before its rows do, so wait for them rather than counting once.
+    await expect(skeletonRows.first()).toBeVisible();
+    await expect.poll(() => skeletonRows.count()).toBeGreaterThan(1);
+    await expect.poll(() => skeletonRows.count()).toBeLessThanOrEqual(SCENARIOS.length);
     const skeletonBoxes = await measureBoxes(skeletonRows);
 
     gate.release();
