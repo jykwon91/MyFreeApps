@@ -184,6 +184,7 @@
 "18373":{"instance":{"mobs":[["Prince Tortheldrin",60,61,20.0,429,"boss"]],"more":0}},
 "18437":{"vendors":[[12799,"Sergeant Ba'sha","Accessories Quartermaster",1454,"",41.5,68.6,"H",0,0]]},
 "18693":{"instance":{"mobs":[["Ras Frostwhisper",62,62,16.7,289,""]],"more":0}},
+"18757":{"instance":{"mobs":[["Lord Hel'nurath",62,62,25.0,429,"boss"]],"more":0}},
 "18821":{"instance":{"mobs":[["Garr",63,63,5.5,409,"boss"],["Magmadar",63,63,5.5,409,"boss"],["Golemagg the Incinerator",63,63,2.3,409,"boss"],["Baron Geddon",63,63,0.9,409,"boss"]],"more":0}},
 "19397":{"instance":{"mobs":[["Ebonroc",63,63,14.0,469,"boss"],["Firemaw",63,63,14.0,469,"boss"],["Flamegor",63,63,14.0,469,"boss"]],"more":0}},
 "19525":{"vendors":[[14753,"Illiyana Moonblaze","Silverwing Supply Officer",1440,"Fallen Sky Lake",61.5,83.9,"A",0,0]]},

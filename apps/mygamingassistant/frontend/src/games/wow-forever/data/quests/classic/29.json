@@ -43,7 +43,7 @@
 "5021":[5021,"Better Late Than Never",52,50,"N","",null,[["npc",10778,"Janice Felstone",1422,"Felstone Field",38.4,54.1,null]],[],[],[],[],["object:175894"],true,[]],
 "5085":[5085,"Mystery Goo",56,52,"N","",null,[["object",176091,"Deadwood Cauldron",1448,"Felpaw Village",60.2,5.8,null]],[5083,5084],[["item",12813,1]],[],[],["npc:9298"],false,[5086,5087,5121]],
 "5149":[5149,"Pamela's Doll",55,50,"N","",null,[["npc",10926,"Pamela Redpath",1423,"Darrowshire",31.2,78.0,null]],[5142],[["item",12885,1]],[],[],["npc:10926"],true,[5152,5153,5154,5210,5181,5206,5941,5721,5942]],
-"5213":[5213,"The Active Agent",60,55,"N","",null,[["npc",11035,"Betina Bigglezink",1423,"Light's Hope Chapel",71.7,49.9,null]],[5212],[["item",13176,1]],[],[[13209,1],[19812,1]],["npc:11035"],true,[]],
+"5213":[5213,"The Active Agent",60,55,"N","",null,[["npc",11035,"Betina Bigglezink",1423,"Light's Hope Chapel",71.7,49.9,null]],[5212],[["item",13176,1]],[],[],["npc:11035"],true,[]],
 "5341":[5341,"Barov Family Fortune",60,52,"H","",null,[["npc",11022,"Alexi Barov",1422,"The Bulwark",26.4,58.8,null]],[],[["item",13471,1],["item",13448,1],["item",13450,1],["item",13451,1]],[],[],["npc:11022"],true,[5342]],
 "5405":[5405,"Argent Dawn Commission",55,50,"N","",null,[["npc",10839,"Argent Officer Garush",1422,"The Bulwark",26.6,55.5,null]],[],[],[],[],["npc:10839"],true,[]],
 "5533":[5533,"Scholomance",55,55,"A","",null,[["npc",10838,"Commander Ashlam Valorfist",1416,"Strahnbrad",78.7,29.1,null]],[5066,5092,5097],[],[],[],["npc:11056"],true,[5537,5538,5801,5803,5505]],

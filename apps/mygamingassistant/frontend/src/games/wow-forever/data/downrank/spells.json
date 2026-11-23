@@ -1,5 +1,5 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 5,609 records)",
-"clientBuild":"1.60.1.70888",
+{"source":"wago.tools DB2 wowf 1.60.1.71037 with hotfixes, plus the Forever client hotfix cache (build 71037, 6,288 records)",
+"clientBuild":"1.60.1.71037",
 "families":[
 {"id":"druid-healing-touch","classId":"druid","name":"Healing Touch","kind":"heal","targets":"single","icon":136041,"changedInForever":true,"ranks":[
 {"spell":5185,"rank":1,"level":1,"maxLevel":5,"maxLevelFrom":"client","fullBonusUntil":10,"lowLevelFactor":0.2875,"mana":25,"castMs":1500,"direct":{"base":44,"perLevel":0.8,"variance":0.3182,"coefficient":0.429},"periodic":null,"from":"client","coefficientFrom":"client"},

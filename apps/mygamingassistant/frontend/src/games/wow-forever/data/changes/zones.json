@@ -1,4 +1,4 @@
-{"category":"zones","build":"1.60.1.70888","entries":[
+{"category":"zones","build":"1.60.1.71037","entries":[
 {"key":"zone:2482","kind":"new","name":"Mount Hyjal","summary":"New zone.","link":["map",2482],"since":null},
 {"key":"zone:2521","kind":"new","name":"Zephras Isle","summary":"New zone.","link":["map",2521],"since":null},
 {"key":"zone:2524","kind":"new","name":"Darkspear Islands","summary":"New area.","since":null},

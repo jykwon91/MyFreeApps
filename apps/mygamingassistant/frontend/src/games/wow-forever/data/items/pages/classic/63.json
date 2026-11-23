@@ -193,5 +193,6 @@
 "22015":{"quests":[8931,8938]},
 "22079":{"quests":[8909,8916]},
 "22207":{"instance":{"mobs":[["Emperor Dagran Thaurissan",59,59,20.0,230,"boss"]],"more":0}},
+"22335":{"instance":{"mobs":[["Lord Valthalak",63,63,34.7,229,"boss"]],"more":0}},
 "22655":{"quests":[9238]}
 }}
