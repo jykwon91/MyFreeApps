@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
 
 from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
@@ -48,7 +49,8 @@ logger = logging.getLogger(__name__)
 async def process_one_session() -> bool:
     """Claim and prepare one ``preparing`` session.
 
-    Returns True if a session was found, False if nothing is waiting.
+    Returns True if a session was found, False if nothing is waiting. Once
+    claimed, every audited write is recorded as made by the session's user.
     """
     async with AsyncSessionLocal() as db:
         claimed = await session_repo.claim_next_preparing(db)
@@ -58,60 +60,61 @@ async def process_one_session() -> bool:
         user_id = claimed.user_id
         claimed_at = claimed.preparation_started_at
 
-    logger.info(
-        "Preparing refinement session %s for user %s", session_id, user_id,
-    )
+    with audit_actor(user_id):
+        logger.info(
+            "Preparing refinement session %s for user %s", session_id, user_id,
+        )
 
-    try:
-        async with AsyncSessionLocal() as db:
-            # Re-fetch in a fresh session (the claim session is closed).
-            session = await session_repo.get_by_id_for_user(
-                db, session_id, user_id,
-            )
-            if session is None or session.status != "preparing":
-                logger.warning(
-                    "Session %s vanished or changed status before "
-                    "preparation — skipping",
-                    session_id,
+        try:
+            async with AsyncSessionLocal() as db:
+                # Re-fetch in a fresh session (the claim session is closed).
+                session = await session_repo.get_by_id_for_user(
+                    db, session_id, user_id,
                 )
-                return True
-            await session_lifecycle_service.prepare_session(
-                db=db, session=session, user_id=user_id,
-            )
-        logger.info("Prepared refinement session %s", session_id)
-    except SessionNotFound:
-        logger.info("Refinement session %s was deleted during preparation", session_id)
-    except Exception as exc:  # noqa: BLE001 — worker loop must not die
-        logger.exception("Failed to prepare refinement session %s", session_id)
-        # Stored as our own copy, never the exception's (or provider's) text.
-        error_msg = user_failure_message(exc, fallback=REFINEMENT_PREP_FAILED_MESSAGE)
-        async with AsyncSessionLocal() as db:
-            session = await session_repo.get_by_id_for_user(
-                db, session_id, user_id,
-            )
-            # Only while this run still holds the claim: a session that was
-            # claimed again meanwhile belongs to the newer run.
-            if (
-                session is not None
-                and session.status == "preparing"
-                and session.preparation_started_at == claimed_at
-            ):
+                if session is None or session.status != "preparing":
+                    logger.warning(
+                        "Session %s vanished or changed status before "
+                        "preparation — skipping",
+                        session_id,
+                    )
+                    return True
+                await session_lifecycle_service.prepare_session(
+                    db=db, session=session, user_id=user_id,
+                )
+            logger.info("Prepared refinement session %s", session_id)
+        except SessionNotFound:
+            logger.info("Refinement session %s was deleted during preparation", session_id)
+        except Exception as exc:  # noqa: BLE001 — worker loop must not die
+            logger.exception("Failed to prepare refinement session %s", session_id)
+            # Stored as our own copy, never the exception's (or provider's) text.
+            error_msg = user_failure_message(exc, fallback=REFINEMENT_PREP_FAILED_MESSAGE)
+            async with AsyncSessionLocal() as db:
+                session = await session_repo.get_by_id_for_user(
+                    db, session_id, user_id,
+                )
+                # Only while this run still holds the claim: a session that was
+                # claimed again meanwhile belongs to the newer run.
                 if (
-                    is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
-                    and session.preparation_retry_count < REFINEMENT_PREP_MAX_RETRIES
+                    session is not None
+                    and session.status == "preparing"
+                    and session.preparation_started_at == claimed_at
                 ):
-                    await session_repo.release_preparation_claim(
-                        db,
-                        session,
-                        AI_RETRY_SCHEDULED_MESSAGE,
-                        next_retry_at=next_retry_at(
-                            session.preparation_retry_count,
-                            REFINEMENT_PREP_RETRY_BASE_SECONDS,
-                        ),
-                    )
-                else:
-                    await session_repo.mark_preparation_failed(
-                        db, session, error_msg,
-                    )
+                    if (
+                        is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
+                        and session.preparation_retry_count < REFINEMENT_PREP_MAX_RETRIES
+                    ):
+                        await session_repo.release_preparation_claim(
+                            db,
+                            session,
+                            AI_RETRY_SCHEDULED_MESSAGE,
+                            next_retry_at=next_retry_at(
+                                session.preparation_retry_count,
+                                REFINEMENT_PREP_RETRY_BASE_SECONDS,
+                            ),
+                        )
+                    else:
+                        await session_repo.mark_preparation_failed(
+                            db, session, error_msg,
+                        )
 
     return True

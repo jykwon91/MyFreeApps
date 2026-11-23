@@ -60,8 +60,9 @@ class AuditConfigurationError(RuntimeError):
     """
 
 
-# Per-request actor identifier for the ``changed_by`` column. Apps' middleware
-# is responsible for setting + resetting this on each request.
+# Actor identifier for the ``changed_by`` column. The shared request middleware
+# sets it per request; a background job sets it with ``audit_actor`` (in
+# ``platform_shared.core.audit_actor``) for the user it acts for.
 current_user_id: ContextVar[str | None] = ContextVar("current_user_id", default=None)
 
 # Legacy registry, populated at import time by MGA's app/core/audit.py.

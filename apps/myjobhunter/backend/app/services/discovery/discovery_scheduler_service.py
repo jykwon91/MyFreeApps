@@ -59,6 +59,7 @@ from apscheduler.job import Job
 from apscheduler.jobstores.base import BaseJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from platform_shared.core.audit_actor import audit_actor
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
@@ -280,6 +281,9 @@ async def _run_scheduled_fetch(source_id: uuid.UUID, user_id: uuid.UUID) -> None
     they surface in logs + Sentry. The fetch service already increments
     ``consecutive_failures`` on the source row and logs structured
     error context (per ``rules/check-third-party-error-codes.md``).
+
+    The fetch, embed and score run for the source's owner, so every audited
+    write is recorded as theirs.
     """
     async with AsyncSessionLocal() as db:
         src = await discovery_schedule_repository.get_source_for_scheduler(
@@ -322,44 +326,45 @@ async def _run_scheduled_fetch(source_id: uuid.UUID, user_id: uuid.UUID) -> None
                 pass
             return
 
-    # The fetch runs in its own unit_of_work; this read session is closed
-    # first so it doesn't sit idle in a transaction while the adapter calls out.
-    logger.info(
-        "discovery_scheduler_service: running scheduled fetch source=%s user=%s",
-        source_id, user_id,
-    )
-    try:
-        result = await discovery_fetch_service.fetch_source(user_id, source_id)
-    except (
-        DiscoverySourceNotFoundError,
-        DiscoverySourceInactiveError,
-        DiscoveryUnsupportedSourceError,
-        DiscoveryFetchError,
-    ):
-        # These are surfaced + structured-logged by fetch_source;
-        # re-raise so APScheduler counts the job as failed and
-        # Sentry captures the traceback.
-        raise
+    with audit_actor(user_id):
+        # The fetch runs in its own unit_of_work; this read session is closed
+        # first so it doesn't sit idle in a transaction while the adapter calls out.
+        logger.info(
+            "discovery_scheduler_service: running scheduled fetch source=%s user=%s",
+            source_id, user_id,
+        )
+        try:
+            result = await discovery_fetch_service.fetch_source(user_id, source_id)
+        except (
+            DiscoverySourceNotFoundError,
+            DiscoverySourceInactiveError,
+            DiscoveryUnsupportedSourceError,
+            DiscoveryFetchError,
+        ):
+            # These are surfaced + structured-logged by fetch_source;
+            # re-raise so APScheduler counts the job as failed and
+            # Sentry captures the traceback.
+            raise
 
-    # Embedding + scoring run in their own sessions (each opens its own
-    # AsyncSessionLocal context). Mirror the route layer's chain.
-    if result.get("new_count", 0) > 0:
-        try:
-            await discovery_embedding_service.embed_pending_for_user_background(
-                user_id,
-            )
-        except Exception:
-            # The fetch itself succeeded. Log + continue to scoring so a
-            # transient embed failure doesn't block the scoring pass.
-            # Exception propagates to Sentry via APScheduler's logger.
-            logger.exception(
-                "discovery_scheduler_service: embed failed user=%s source=%s",
-                user_id, source_id,
-            )
-        try:
-            await discovery_score_service.score_user_inbox(user_id)
-        except Exception:
-            logger.exception(
-                "discovery_scheduler_service: score failed user=%s source=%s",
-                user_id, source_id,
-            )
+        # Embedding + scoring run in their own sessions (each opens its own
+        # AsyncSessionLocal context). Mirror the route layer's chain.
+        if result.get("new_count", 0) > 0:
+            try:
+                await discovery_embedding_service.embed_pending_for_user_background(
+                    user_id,
+                )
+            except Exception:
+                # The fetch itself succeeded. Log + continue to scoring so a
+                # transient embed failure doesn't block the scoring pass.
+                # Exception propagates to Sentry via APScheduler's logger.
+                logger.exception(
+                    "discovery_scheduler_service: embed failed user=%s source=%s",
+                    user_id, source_id,
+                )
+            try:
+                await discovery_score_service.score_user_inbox(user_id)
+            except Exception:
+                logger.exception(
+                    "discovery_scheduler_service: score failed user=%s source=%s",
+                    user_id, source_id,
+                )

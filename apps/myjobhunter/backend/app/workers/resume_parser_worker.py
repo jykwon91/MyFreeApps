@@ -33,6 +33,7 @@ import uuid
 from datetime import datetime, timezone
 
 from platform_shared.core import async_storage
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,7 +81,8 @@ def _failure_message(exc: Exception) -> str:
 async def process_one() -> bool:
     """Claim and process one queued job.
 
-    Returns True if a job was found, False if the queue is empty.
+    Returns True if a job was found, False if the queue is empty. Once
+    claimed, every audited write is recorded as made by the job's user.
     """
     async with AsyncSessionLocal() as db:
         job = await resume_upload_job_repo.claim_next_queued(db)
@@ -94,50 +96,51 @@ async def process_one() -> bool:
         content_type: str = job.file_content_type or "application/octet-stream"
         claimed_at: datetime = job.started_at
 
-    logger.info("Processing resume job %s for user %s", job_id, user_id)
+    with audit_actor(user_id):
+        logger.info("Processing resume job %s for user %s", job_id, user_id)
 
-    try:
-        embedding_inputs_changed = await _run_extraction(
-            job_id=job_id,
-            user_id=user_id,
-            profile_id=profile_id,
-            file_path=file_path,
-            content_type=content_type,
-            claimed_at=claimed_at,
-        )
-    except Exception as exc:
-        logger.exception("Failed to process resume job %s", job_id)
-        error_msg = _failure_message(exc)
-
-        async with AsyncSessionLocal() as db:
-            # Only while this worker still holds the claim, as on success:
-            # a job deleted, finished or claimed again meanwhile is left alone.
-            job = await resume_upload_job_repo.get_claimed_for_update(
-                db, job_id, user_id, started_at=claimed_at,
+        try:
+            embedding_inputs_changed = await _run_extraction(
+                job_id=job_id,
+                user_id=user_id,
+                profile_id=profile_id,
+                file_path=file_path,
+                content_type=content_type,
+                claimed_at=claimed_at,
             )
-            if (
-                job is not None
-                and is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
-                and job.retry_count < RESUME_PARSE_MAX_RETRIES
-            ):
-                await resume_upload_job_repo.schedule_retry(
-                    db,
-                    job,
-                    next_retry_at=next_retry_at(job.retry_count, RESUME_PARSE_RETRY_BASE_SECONDS),
-                    error_message=AI_RETRY_SCHEDULED_MESSAGE,
-                )
-                logger.info(
-                    "Resume job %s: transient failure, retry %d at %s",
-                    job_id, job.retry_count, job.next_retry_at,
-                )
-            elif job is not None:
-                await resume_upload_job_repo.mark_failed(db, job, error_msg)
-    else:
-        # Outside the try: the job is already committed as complete, so an
-        # embedding error must not requeue it or mark it failed.
-        if embedding_inputs_changed:
+        except Exception as exc:
+            logger.exception("Failed to process resume job %s", job_id)
+            error_msg = _failure_message(exc)
+
             async with AsyncSessionLocal() as db:
-                await profile_service.refresh_profile_embedding_best_effort(db, user_id)
+                # Only while this worker still holds the claim, as on success:
+                # a job deleted, finished or claimed again meanwhile is left alone.
+                job = await resume_upload_job_repo.get_claimed_for_update(
+                    db, job_id, user_id, started_at=claimed_at,
+                )
+                if (
+                    job is not None
+                    and is_transient_failure(exc, extra_transient=TRANSIENT_WORKER_ERRORS)
+                    and job.retry_count < RESUME_PARSE_MAX_RETRIES
+                ):
+                    await resume_upload_job_repo.schedule_retry(
+                        db,
+                        job,
+                        next_retry_at=next_retry_at(job.retry_count, RESUME_PARSE_RETRY_BASE_SECONDS),
+                        error_message=AI_RETRY_SCHEDULED_MESSAGE,
+                    )
+                    logger.info(
+                        "Resume job %s: transient failure, retry %d at %s",
+                        job_id, job.retry_count, job.next_retry_at,
+                    )
+                elif job is not None:
+                    await resume_upload_job_repo.mark_failed(db, job, error_msg)
+        else:
+            # Outside the try: the job is already committed as complete, so an
+            # embedding error must not requeue it or mark it failed.
+            if embedding_inputs_changed:
+                async with AsyncSessionLocal() as db:
+                    await profile_service.refresh_profile_embedding_best_effort(db, user_id)
 
     return True
 

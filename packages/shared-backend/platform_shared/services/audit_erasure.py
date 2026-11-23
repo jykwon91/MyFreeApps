@@ -31,9 +31,11 @@ rows about deleted records of a shared workspace, which are that workspace's
 history. MBK only lets a user delete their account once nothing of theirs is
 left in a workspace that survives.
 
-Known limit: an audit row with no actor (written by a background worker) about
-a record that was deleted before the account deletion is found by neither rule,
-so it keeps its values.
+Known limit: an audit row with no actor about a record that was deleted before
+the account deletion is found by neither rule, so it keeps its values. Jobs
+that act for one user record that user as the actor
+(:func:`~platform_shared.core.audit_actor.audit_actor`), so this is left to
+system-wide jobs and to rows written before those jobs did.
 """
 from __future__ import annotations
 
