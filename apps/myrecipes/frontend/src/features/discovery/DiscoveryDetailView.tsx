@@ -7,6 +7,7 @@ import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   detail: DiscoveredDetail;
@@ -39,7 +40,7 @@ export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className={`inline-flex ${TOUCH_TARGET} items-center gap-1 text-sm text-muted-foreground hover:text-foreground`}
       >
         <ArrowLeft className="h-4 w-4" />
         Back to results

@@ -6,6 +6,7 @@ import {
   INGREDIENT_UNIT_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
 import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
+import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   rows: EditableIngredientRow[];
@@ -78,7 +79,7 @@ export default function IngredientRows({
               aria-label="Move ingredient up"
               disabled={disabled || idx === 0}
               onClick={() => onMove(row.key, -1)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
             >
               <ChevronUp className="w-4 h-4" />
             </button>
@@ -87,7 +88,7 @@ export default function IngredientRows({
               aria-label="Move ingredient down"
               disabled={disabled || idx === rows.length - 1}
               onClick={() => onMove(row.key, 1)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
             >
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -96,7 +97,7 @@ export default function IngredientRows({
               aria-label="Remove ingredient"
               disabled={disabled}
               onClick={() => onRemove(row.key)}
-              className="flex h-11 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30"
+              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30`}
             >
               <X className="w-4 h-4" />
             </button>
