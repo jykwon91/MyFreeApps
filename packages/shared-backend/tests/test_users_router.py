@@ -12,21 +12,27 @@ from __future__ import annotations
 import contextlib
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi_users import FastAPIUsers, exceptions, schemas
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport
 from httpx import ASGITransport, AsyncClient
 
 from platform_shared.api.users_router import build_users_router
+from platform_shared.core.account_deleted_by import AccountDeletedBy
+from platform_shared.services.account_already_deleted_error import (
+    AccountAlreadyDeletedError,
+)
 from platform_shared.services.account_deletion import AccountDeletionBlockedError
 from platform_shared.services.prepare_deletion import PrepareDeletion
 
 _PLAIN_SUPERUSER_HEADERS = {"Authorization": "Bearer stolen-admin-token"}
 _GATE_PASS_HEADERS = {**_PLAIN_SUPERUSER_HEADERS, "X-Test-Gate": "pass"}
+_ADMIN = SimpleNamespace(id=uuid.uuid4())
 
 
 class _Read(schemas.BaseUser[uuid.UUID]):
@@ -49,9 +55,10 @@ def _build(manager: MagicMock, prepare_deletion: PrepareDeletion | None = None) 
         get_strategy=lambda: strategy,
     )
 
-    async def strict_gate(x_test_gate: str | None = Header(default=None)) -> None:
+    async def strict_gate(x_test_gate: str | None = Header(default=None)) -> SimpleNamespace:
         if x_test_gate != "pass":
             raise HTTPException(status_code=401, headers={"X-Require-Step-Up": "totp"})
+        return _ADMIN
 
     app = FastAPI()
     app.include_router(
@@ -117,6 +124,21 @@ async def test_passing_the_gate_runs_the_shared_deletion_with_the_apps_hook(dele
     _txn_db, user, hook = deletion.await_args.args
     assert user is manager.get.return_value
     assert hook is prepare_deletion
+
+
+@pytest.mark.asyncio
+async def test_the_deletion_event_records_an_admin_delete_and_who_did_it(deletion: AsyncMock) -> None:
+    assert await _delete(_build(_manager()), str(uuid.uuid4()), _GATE_PASS_HEADERS) == 204
+    kwargs = deletion.await_args.kwargs
+    assert kwargs["deleted_by"] == AccountDeletedBy.ADMIN
+    assert kwargs["actor_id"] == _ADMIN.id
+    assert isinstance(kwargs["request"], Request)
+
+
+@pytest.mark.asyncio
+async def test_a_user_deleted_by_a_concurrent_request_is_not_found(deletion: AsyncMock) -> None:
+    deletion.side_effect = AccountAlreadyDeletedError
+    assert await _delete(_build(_manager()), str(uuid.uuid4()), _GATE_PASS_HEADERS) == 404
 
 
 @pytest.mark.asyncio

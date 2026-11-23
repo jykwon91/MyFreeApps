@@ -8,11 +8,12 @@ rows and the rows about them are erased, everyone else's are kept.
 import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 import pytest_asyncio
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi_users import FastAPIUsers, schemas
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
@@ -28,6 +29,7 @@ from sqlalchemy.pool import StaticPool
 
 from platform_shared.api.users_router import build_users_router
 from platform_shared.auth.user_manager import PlatformBaseUserManager
+from platform_shared.core.account_deleted_by import AccountDeletedBy
 from platform_shared.core.audit import (
     current_user_id,
     register_audit_listeners,
@@ -37,7 +39,10 @@ from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.db.base import Base
 from platform_shared.db.models.auth_event import AuthEvent
-from platform_shared.services.account_deletion import AccountDeletionBlockedError
+from platform_shared.services.account_deletion import (
+    AccountDeletionBlockedError,
+    delete_account_and_erase_history,
+)
 from platform_shared.services.prepare_deletion import AfterCommit
 from platform_shared.testing.audit_erasure import (
     assert_audit_erased,
@@ -47,7 +52,10 @@ from platform_shared.testing.audit_erasure import (
 from platform_shared.testing.factories import _FastPasswordHelper
 
 _SECRET = "test-secret-key-that-is-long-enough-to-sign-with"
-_GATE_PASS_HEADERS = {"Authorization": "Bearer admin-token", "X-Test-Gate": "pass"}
+_GATE_PASS_HEADERS = {
+    "Authorization": "Bearer admin-token", "X-Test-Gate": "pass",
+    "X-Forwarded-For": "203.0.113.7", "User-Agent": "admin-console",
+}
 
 
 class _AppBase(DeclarativeBase):
@@ -137,11 +145,12 @@ def _app(engine: AsyncEngine, caller: _User, prepare: _Prepare) -> FastAPI:
     superuser = fastapi_users.current_user(active=True, superuser=True)
 
     async def strict_gate(
-        _user: Annotated[_User, Depends(superuser)], x_test_gate: Annotated[str | None, Header()] = None,
-    ) -> None:
+        user: Annotated[_User, Depends(superuser)], x_test_gate: Annotated[str | None, Header()] = None,
+    ) -> _User:
         """Stands in for ``make_strict_superuser_gate``: a superuser, then a fresh step-up."""
         if x_test_gate != "pass":
             raise HTTPException(status_code=401)
+        return user
 
     app = FastAPI()
     app.include_router(
@@ -178,6 +187,14 @@ async def _seed(db: AsyncSession) -> tuple[_User, _User, _User]:
     return admin, alice, bob
 
 
+async def _deletion_event(db: AsyncSession, user_id: uuid.UUID) -> AuthEvent:
+    return (await db.execute(
+        select(AuthEvent).where(
+            AuthEvent.user_id == user_id, AuthEvent.event_type == AuthEventType.ACCOUNT_DELETED,
+        ),
+    )).scalar_one()
+
+
 async def _delete_as(app: FastAPI, caller: _User, user_id: uuid.UUID, headers: dict[str, str]) -> int:
     token = current_user_id.set(str(caller.id))
     try:
@@ -204,10 +221,9 @@ async def test_an_admin_delete_erases_the_users_audit_content_only(engine: Async
             kept=["admin@example.com", "Admin Person", "bob@example.com", "Bob Person", "bob own note",
                   "alice note on bob account"],
         )
-        event_types = (await db.execute(
-            select(AuthEvent.event_type).where(AuthEvent.user_id == alice.id),
-        )).scalars().all()
-        assert AuthEventType.ACCOUNT_DELETED in event_types
+        deleted = await _deletion_event(db, alice.id)
+        assert deleted.event_metadata == {"by": AccountDeletedBy.ADMIN, "actor_id": str(admin.id)}
+        assert (deleted.ip_address, deleted.user_agent) == ("203.0.113.7", "admin-console")
     assert prepare.prepared == [alice.id]
     assert prepare.committed == [alice.id]
 
@@ -237,3 +253,40 @@ async def test_a_non_superuser_cannot_delete_or_erase_anyone(engine: AsyncEngine
         assert await db.get(_User, alice.id) is not None
         assert_audit_erased(await audit_values(db), erased=[], kept=["alice@example.com", "alice private note"])
     assert prepare.prepared == []
+
+
+@pytest.mark.asyncio
+async def test_a_user_deleted_while_waiting_for_the_lock_is_not_found_and_nothing_runs(engine: AsyncEngine) -> None:
+    prepare = _Prepare()
+    async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+        admin, alice, _bob = await _seed(db)
+
+        with patch("platform_shared.services.account_deletion.user_repo.lock_by_id", AsyncMock(return_value=None)):
+            status = await _delete_as(_app(engine, admin, prepare), admin, alice.id, _GATE_PASS_HEADERS)
+
+        assert status == 404
+        db.expunge_all()
+        assert await db.get(_User, alice.id) is not None
+        assert_audit_erased(await audit_values(db), erased=[], kept=["alice@example.com", "alice private note"])
+    assert prepare.prepared == []
+
+
+@pytest.mark.parametrize("deleted_by", [AccountDeletedBy.SELF, AccountDeletedBy.ADMIN])
+@pytest.mark.asyncio
+async def test_the_deletion_event_records_who_deleted_and_from_where(engine: AsyncEngine, deleted_by: str) -> None:
+    request = Request({
+        "type": "http", "client": ("198.51.100.4", 4000),
+        "headers": [(b"user-agent", b"deleting-browser")],
+    })
+    async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+        admin, alice, _bob = await _seed(db)
+        actor = alice if deleted_by == AccountDeletedBy.SELF else admin
+
+        await delete_account_and_erase_history(
+            db, alice, None, request=request, deleted_by=deleted_by, actor_id=actor.id,
+        )
+        await db.commit()
+
+        deleted = await _deletion_event(db, alice.id)
+        assert deleted.event_metadata == {"by": deleted_by, "actor_id": str(actor.id)}
+        assert (deleted.ip_address, deleted.user_agent) == ("198.51.100.4", "deleting-browser")

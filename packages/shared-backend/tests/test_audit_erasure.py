@@ -16,6 +16,7 @@ from sqlalchemy import ForeignKey, String, delete, event, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from platform_shared.core.account_deleted_by import AccountDeletedBy
 from platform_shared.core.audit import register_audit_listeners
 from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.audit_erasure_constants import (
@@ -158,7 +159,7 @@ async def test_deleting_an_account_erases_its_audit_content_only(db: AsyncSessio
     scope = await capture_deletion_scope(db, alice)
     # An app's prepare_deletion removing the workspace the user created, as MBK's does.
     await db.execute(delete(_Organization).where(_Organization.id == alices_org.id))
-    await delete_account(db, alice)
+    await delete_account(db, alice, request=None, metadata={"by": AccountDeletedBy.SELF, "actor_id": str(alice.id)})
     await erase_audit_history(db, alice, scope)
     await db.commit()
 

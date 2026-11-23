@@ -22,9 +22,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.refuse_as_locked import refuse_as_locked
-from platform_shared.auth.require_current_password import require_current_password
 from platform_shared.auth.released_current_user import released_current_user
+from platform_shared.auth.require_current_password import require_current_password
+from platform_shared.core.account_deleted_by import AccountDeletedBy
 from platform_shared.schemas.account import DeleteAccountRequest
+from platform_shared.services.account_already_deleted_error import (
+    AccountAlreadyDeletedError,
+)
 from platform_shared.services.account_deletion import (
     AccountDeletionBlockedError,
     delete_account_and_erase_history,
@@ -126,7 +130,17 @@ def build_account_deletion_router(
 
         try:
             async with unit_of_work_factory() as txn_db:
-                after_commit = await delete_account_and_erase_history(txn_db, current_user, prepare_deletion)
+                after_commit = await delete_account_and_erase_history(
+                    txn_db,
+                    current_user,
+                    prepare_deletion,
+                    request=request,
+                    deleted_by=AccountDeletedBy.SELF,
+                    actor_id=current_user.id,
+                )
+        except AccountAlreadyDeletedError as exc:
+            # What the auth dependency answers for a token whose account is gone.
+            raise HTTPException(status_code=401, detail="Unauthorized") from exc
         except AccountDeletionBlockedError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         if after_commit is not None:
