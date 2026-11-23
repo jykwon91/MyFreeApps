@@ -7,7 +7,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/ui";
 import api from "@/lib/api";
@@ -82,13 +82,27 @@ function LocationProbe() {
   return <output data-testid="location">{location.pathname + location.search}</output>;
 }
 
-function renderRecipes(initialEntry = "/") {
+function HistoryProbe() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <button onClick={() => navigate(-1)}>history back</button>
+      <button onClick={() => navigate(1)}>history forward</button>
+    </>
+  );
+}
+
+function renderRecipes(initialEntry: string | string[] = "/") {
   store = makeStore();
   render(
     <Provider store={store}>
-      <MemoryRouter initialEntries={[initialEntry]}>
+      <MemoryRouter
+        initialEntries={Array.isArray(initialEntry) ? initialEntry : [initialEntry]}
+        initialIndex={Array.isArray(initialEntry) ? initialEntry.length - 1 : 0}
+      >
         <Recipes />
         <LocationProbe />
+        <HistoryProbe />
       </MemoryRouter>
     </Provider>,
   );
@@ -218,5 +232,47 @@ describe("Recipes", () => {
     expect(await screen.findByRole("heading", { name: "Recipe 1" })).toBeInTheDocument();
     expect(listCalls[0]?.params?.owner).toBe("me");
     expect(screen.getByTestId("location")).toHaveTextContent("/?owner=me");
+  });
+
+  it("puts the URL's search back in the box on browser Back and Forward", async () => {
+    const user = userEvent.setup();
+    renderRecipes(["/?q=soup", "/?q=pasta"]);
+    const box = screen.getByLabelText("Search recipes by title");
+    expect(box).toHaveValue("pasta");
+
+    await user.click(screen.getByRole("button", { name: "history back" }));
+    await waitFor(() => expect(box).toHaveValue("soup"));
+    expect(await screen.findByRole("heading", { name: "Soup 1" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "history forward" }));
+    await waitFor(() => expect(box).toHaveValue("pasta"));
+  });
+
+  it("clears the box when Back lands on a URL with no search", async () => {
+    const user = userEvent.setup();
+    renderRecipes(["/", "/?q=soup"]);
+    const box = screen.getByLabelText("Search recipes by title");
+    expect(box).toHaveValue("soup");
+
+    await user.click(screen.getByRole("button", { name: "history back" }));
+
+    await waitFor(() => expect(box).toHaveValue(""));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/));
+  });
+
+  it("leaves the box alone while the user types, even after the search reaches the URL", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderRecipes();
+    await screen.findByRole("heading", { name: "Recipe 1" });
+    const box = screen.getByLabelText("Search recipes by title");
+
+    await user.type(box, "soup ");
+    await act(async () => {
+      vi.advanceTimersByTime(RECIPE_SEARCH_DEBOUNCE_MS);
+    });
+
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/?q=soup"));
+    expect(box).toHaveValue("soup ");
   });
 });
