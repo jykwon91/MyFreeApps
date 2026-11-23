@@ -2,7 +2,7 @@
 ## Title: MGA Professions
 ## Notes: The site's profession guides in game: your leveling route from your current skill, the mats you have and need, trainers for your next rank and where to gather.
 ## Author: MyGamingAssistant
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: MGAHubSettings, MGAProfessionsSettings
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 

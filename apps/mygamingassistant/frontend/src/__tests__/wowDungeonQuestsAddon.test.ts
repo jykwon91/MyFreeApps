@@ -217,6 +217,20 @@ describe("MGA Dungeon Quests checklist", () => {
     expect(window(run('slash("deadmines")', 'player.locale = "deDE"'))).toContain("3. Wild Leather Armor  0 of 1 done");
   });
 
+  it("reads your professions through GetProfessions on a client without GetSkillLineInfo (Forever)", () => {
+    const forever = (rank: number) =>
+      "GetNumSkillLines = nil; GetSkillLineInfo = nil; " +
+      "GetProfessions = function() return 1, nil end; " +
+      `GetProfessionInfo = function(i) if i == 1 then return "Leatherworking", 0, ${rank}, 300, 0, 0, 165 end end`;
+    const shown = (rank: number) => window(run('slash("deadmines")', forever(rank)));
+    expect(shown(200)).toContain("3. Wild Leather Armor  0 of 1 done");
+    expect(shown(200)).toContain("Needs Leatherworking 225 (you have 200)");
+    expect(shown(230).join(" ")).not.toMatch(/Needs Leatherworking/);
+    // A profession you don't have still hides its line.
+    const none = window(run('slash("deadmines")', forever(200).replace('"Leatherworking"', '"Mining"')));
+    expect(none.join(" ")).not.toMatch(/Wild Leather/);
+  });
+
   it("says when a quest needs a higher level, and names an item that starts one", () => {
     const shown = window(run('slash("wailing")'));
     expect(shown).toContain("[todo] Deep Quest (27)  (done in the dungeon)  needs level 25");
