@@ -7,8 +7,10 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.documents.document import Document
 from app.models.organization.organization import Organization
 from app.models.organization.organization_invite import OrganizationInvite
 from app.models.organization.organization_member import OrganizationMember
@@ -385,3 +387,52 @@ class TestInvites:
     ) -> None:
         with pytest.raises(LookupError, match="not found"):
             await organization_service.accept_invite("bogus_token", member_user.id)
+
+
+class TestDeleteOrganizationStoredFiles:
+    @staticmethod
+    async def _org_with_file(db: AsyncSession, owner: User, name: str, key: str) -> Organization:
+        org = await organization_repo.create(db, name, owner.id)
+        db.add(Document(organization_id=org.id, user_id=owner.id, file_storage_key=key))
+        await db.commit()
+        return org
+
+    @pytest.mark.asyncio
+    async def test_removes_the_orgs_files_and_no_one_elses(self, db: AsyncSession, owner: User) -> None:
+        doomed = await self._org_with_file(db, owner, "Doomed", "doomed.pdf")
+        kept = await self._org_with_file(db, owner, "Kept", "kept.pdf")
+
+        with patch("app.services.user.account_deletion_service.get_storage") as get_storage:
+            await organization_service.delete_organization(doomed.id, owner.id)
+
+        get_storage.return_value.delete_file.assert_called_once_with("doomed.pdf")
+        assert await organization_repo.get_by_id(db, doomed.id) is None
+        assert await organization_repo.get_by_id(db, kept.id) is not None
+        remaining = (await db.scalars(select(Document.file_storage_key))).all()
+        assert "kept.pdf" in remaining
+
+    @pytest.mark.asyncio
+    async def test_a_storage_failure_does_not_undo_the_delete(
+        self, db: AsyncSession, owner: User, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        org = await self._org_with_file(db, owner, "Doomed", "doomed.pdf")
+
+        with (
+            patch("app.services.user.account_deletion_service.get_storage") as get_storage,
+            caplog.at_level(logging.ERROR),
+        ):
+            get_storage.return_value.delete_file.side_effect = ConnectionError("down")
+            await organization_service.delete_organization(org.id, owner.id)
+
+        assert await organization_repo.get_by_id(db, org.id) is None
+        assert "doomed.pdf" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_a_missing_org_removes_no_files(self, owner: User) -> None:
+        with (
+            patch("app.services.user.account_deletion_service.get_storage") as get_storage,
+            pytest.raises(LookupError),
+        ):
+            await organization_service.delete_organization(uuid.uuid4(), owner.id)
+
+        get_storage.return_value.delete_file.assert_not_called()

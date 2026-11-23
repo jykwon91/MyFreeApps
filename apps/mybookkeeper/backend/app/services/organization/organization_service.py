@@ -14,7 +14,10 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_invite import OrganizationInvite
 from app.models.organization.organization_member import OrgRole, OrganizationMember
 from app.repositories import integration_repo, organization_repo, user_repo
+from app.repositories.leases import signed_lease_repo
+from app.repositories.user import account_files_repo
 from app.services.organization.invite_email import send_invite_email
+from app.services.user.account_deletion_service import remove_stored_files
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +69,11 @@ async def delete_organization(org_id: uuid.UUID, user_id: uuid.UUID) -> None:
         org = await organization_repo.get_by_id(db, org_id)
         if not org:
             raise LookupError("Organization not found")
+        storage_keys = await account_files_repo.list_storage_keys(db, [org_id])
+        await signed_lease_repo.hard_delete_for_organization(db, org_id)
         await organization_repo.delete(db, org)
         logger.info("ORG_ACTION delete org=%s user=%s", org_id, user_id)
+    remove_stored_files(storage_keys)
 
 
 async def list_members(
