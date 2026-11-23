@@ -36,7 +36,7 @@
     # 30 MB clears the largest legitimate upload (a 25 MB resume); apps still
     # enforce their own tighter per-route limits below this ceiling.
     request_body {
-        max_size 30MB
+        max_size {{ request_body_max_size }}
     }
     # Compress text responses (JSON, HTML, JS, CSS) with zstd or gzip. Caddy
     # skips already-encoded responses and responses smaller than its minimum

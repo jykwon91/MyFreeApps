@@ -63,6 +63,12 @@ Permissions-Policy (optional):
                            ``{{ permissions_policy }}`` and used in both branches of
                            ``infra/templates/Caddyfile.docker.j2``.
 
+Request body cap (optional):
+  request_body_max_size  str   Caddy ``request_body max_size`` for the app's edge, in
+                               Caddy's decimal units (``16MB``). Default ``30MB``. Set it
+                               to the app's largest legitimate body plus multipart overhead
+                               when that is well under the default.
+
 Other keys:
   workers               list   Worker definitions, each with ``name`` and ``command``,
                                and optionally ``healthcheck`` (mapping: ``test`` list +
@@ -100,6 +106,8 @@ from platform_shared.core.tracked_task_constants import API_STOP_GRACE_PERIOD_SE
 from platform_shared.infra.worker_healthcheck import normalize_worker_healthcheck
 from platform_shared.infra.worker_stop_grace_period import validate_worker_stop_grace_period
 
+
+DEFAULT_REQUEST_BODY_MAX_SIZE = "30MB"
 
 # Canonical feature order for the Permissions-Policy header.  This list is the
 # single source of truth — the order matches what was previously hardcoded in
@@ -285,6 +293,7 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     # inject it so templates can reference {{ permissions_policy }} directly.
     permissions_policy_self: list[str] = ctx.get("permissions_policy_self") or []
     ctx["permissions_policy"] = _build_permissions_policy(permissions_policy_self)
+    ctx.setdefault("request_body_max_size", DEFAULT_REQUEST_BODY_MAX_SIZE)
     _apply_discord_activity(ctx)
     for worker in ctx.get("workers") or []:
         if "healthcheck" in worker:
