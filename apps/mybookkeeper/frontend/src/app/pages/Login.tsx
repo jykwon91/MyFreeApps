@@ -9,6 +9,8 @@ import {
   isUnverifiedLoginError,
   LoadingButton,
   ResendStatusAlert,
+  safeReturnPath,
+  withReturnTo,
 } from "@platform/ui";
 import type { ResendStatus } from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
@@ -19,7 +21,7 @@ export default function Login() {
   const uid = useId();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnTo = safeReturnPath(searchParams.get("returnTo"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,9 +106,7 @@ export default function Login() {
 
   const isSubmitDisabled = isLoading || cooldownSeconds > 0;
 
-  const registerUrl = returnTo
-    ? `/register?returnTo=${encodeURIComponent(returnTo)}`
-    : "/register";
+  const registerUrl = withReturnTo("/register", returnTo);
 
   return (
     <div className="min-h-screen flex flex-col bg-muted">

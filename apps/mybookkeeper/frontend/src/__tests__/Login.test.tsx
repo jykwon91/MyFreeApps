@@ -119,6 +119,26 @@ describe("Login — normal login", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
     });
   });
+
+  it.each([
+    ["another site", "https%3A%2F%2Fevil.example"],
+    ["a protocol-relative URL", "%2F%2Fevil.example"],
+    ["a backslash path", "%2F%5Cevil.example"],
+    ["a path with a tab", "%2F%09%2Fevil.example"],
+  ])("goes home instead of to %s after signing in", async (_label, encoded) => {
+    vi.mocked(login).mockResolvedValue({ access_token: "tok123" });
+    const user = userEvent.setup();
+    const { container } = renderLogin(`?returnTo=${encoded}`);
+
+    await user.type(emailInput(container), "user@example.com");
+    await user.type(passwordInput(container), "secret123");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/");
+    });
+    expect(screen.getByText("Sign up").closest("a")).toHaveAttribute("href", "/register");
+  });
 });
 
 // ---------------------------------------------------------------------------
