@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-23",
+    "title": "New MGA Professions addon: the profession guides in your game",
+    "summary": "Open Professions from the MGA minimap menu, the key binding, or the MGA guide button on a profession window. It starts from your own professions and skill and lists the next rows of the route with the mats you carry against what each needs, where to learn each recipe, the trainers for your next rank, and the best gathering zones. Click a trainer to point the MGA Waypoints arrow at them; with MGA Prices installed it adds what the mats cost. Download it from the Professions page.",
+    "to": "/wow-forever/professions"
+  },
+  {
     "date": "2026-11-22",
     "title": "New MGA Waypoints addon: pick a place, follow the arrow",
     "summary": "Click the MGA minimap button, choose Go to..., and pick your class trainer, the nearest flight master, a repair vendor, a profession trainer, a dungeon door or any named place. An arrow on your screen points the way with the yards left, and pins appear on your minimap and World Map. It clears itself when you arrive. On another continent it points you at the boat or zeppelin. Download it from the World Map page.",
