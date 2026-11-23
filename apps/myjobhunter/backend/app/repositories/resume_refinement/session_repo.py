@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -326,22 +326,17 @@ async def bump_turn_count(
     return await _write(db, session, commit=commit)
 
 
-async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | None:
-    """Atomically claim one unclaimed ``preparing`` session and return it.
+async def lock_next_due_preparation(db: AsyncSession) -> ResumeRefinementSession | None:
+    """The oldest unclaimed ``preparing`` session that is due, locked; ``None`` when nothing is.
 
-    Mirrors ``resume_upload_job_repo.claim_next_queued``: an
-    ``UPDATE ... WHERE id = (subquery) RETURNING`` with
-    ``FOR UPDATE SKIP LOCKED`` so only one worker replica can claim a
-    given session. The claim marker is ``preparation_started_at``
-    (status stays ``preparing`` — the frontend keeps showing the
-    progress card either way). A session waiting out a retry backoff
-    (``preparation_next_retry_at`` in the future) is not claimable yet.
-
-    Returns ``None`` when nothing is due.
+    Read ``FOR UPDATE SKIP LOCKED``, so a session another worker replica is
+    claiming is passed over rather than claimed twice. A session waiting out a
+    retry backoff (``preparation_next_retry_at`` in the future) is not due yet.
+    ``mark_preparation_started`` then claims it in the same transaction.
     """
     now = datetime.now(timezone.utc)
-    subq = (
-        select(ResumeRefinementSession.id)
+    result = await db.execute(
+        select(ResumeRefinementSession)
         .where(
             ResumeRefinementSession.status == "preparing",
             ResumeRefinementSession.preparation_started_at.is_(None),
@@ -353,19 +348,22 @@ async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | No
         .order_by(ResumeRefinementSession.created_at.asc())
         .limit(1)
         .with_for_update(skip_locked=True)
-        .scalar_subquery()
     )
-    stmt = (
-        update(ResumeRefinementSession)
-        .where(ResumeRefinementSession.id == subq)
-        .values(preparation_started_at=now, updated_at=now)
-        .returning(ResumeRefinementSession)
-    )
-    result = await db.execute(stmt)
-    row = result.scalar_one_or_none()
-    if row is not None:
-        await db.commit()
-    return row
+    return result.scalar_one_or_none()
+
+
+async def mark_preparation_started(
+    db: AsyncSession, session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Claim a session locked by ``lock_next_due_preparation`` and commit.
+
+    The claim marker is ``preparation_started_at``; status stays ``preparing``
+    (the frontend keeps showing the progress card either way).
+    """
+    now = datetime.now(timezone.utc)
+    session.preparation_started_at = now
+    session.updated_at = now
+    return await _write(db, session, commit=True)
 
 
 async def mark_active(

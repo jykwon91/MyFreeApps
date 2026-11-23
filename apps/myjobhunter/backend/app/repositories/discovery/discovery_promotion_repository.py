@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import update
+from platform_shared.repositories.audited_writes import update_rows
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
@@ -21,14 +21,11 @@ async def clear_promotion_links(
 ) -> None:
     """Unlink the caller's postings from ``application_id`` (more than one when
     Promote went to a twin). Clears ``promoted_at`` too, per chk_discovered_promoted."""
-    await db.execute(
-        update(DiscoveredJob)
-        .where(
-            DiscoveredJob.user_id == user_id,
-            DiscoveredJob.promoted_application_id == application_id,
-        )
-        .values(promoted_application_id=None, promoted_at=None)
-        .execution_options(synchronize_session="fetch"),
+    await update_rows(
+        db, DiscoveredJob,
+        DiscoveredJob.user_id == user_id,
+        DiscoveredJob.promoted_application_id == application_id,
+        values={"promoted_application_id": None, "promoted_at": None},
     )
 
 

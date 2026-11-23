@@ -14,8 +14,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from platform_shared.repositories.audited_writes import lock_rows
 from sqlalchemy import func, or_, select
-from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company import Company
@@ -163,25 +163,20 @@ async def try_claim_research(
 ) -> bool:
     """Mark the company's research run as started, unless a live claim exists.
 
-    One conditional UPDATE: a concurrent claim waits on the row lock and then
-    finds the fresh timestamp, so only one wins. A claim older than
-    ``stale_before`` (its run died) is taken over. ``updated_at`` is kept: a
-    claim isn't an edit to the company.
+    The company is read ``FOR UPDATE``: a concurrent claim waits on the row
+    lock and then finds the fresh timestamp, so only one wins. A claim older
+    than ``stale_before`` (its run died) is taken over.
     """
-    result = await db.execute(
-        sa_update(Company)
-        .where(
-            Company.id == company_id,
-            Company.user_id == user_id,
-            or_(
-                Company.research_started_at.is_(None),
-                Company.research_started_at < stale_before,
-            ),
-        )
-        .values(research_started_at=claimed_at, updated_at=Company.updated_at)
-        .execution_options(synchronize_session=False)
+    companies = await lock_rows(
+        db, Company,
+        Company.id == company_id,
+        Company.user_id == user_id,
+        or_(
+            Company.research_started_at.is_(None),
+            Company.research_started_at < stale_before,
+        ),
     )
-    return (result.rowcount or 0) > 0
+    return await _set_research_claim(db, companies, claimed_at)
 
 
 async def renew_research_claim(
@@ -197,30 +192,37 @@ async def renew_research_claim(
     False when the claim is no longer this run's: it was taken over (or the
     company deleted) meanwhile.
     """
-    result = await db.execute(
-        sa_update(Company)
-        .where(
-            Company.id == company_id,
-            Company.user_id == user_id,
-            Company.research_started_at == claimed_at,
-        )
-        .values(research_started_at=renewed_at, updated_at=Company.updated_at)
-        .execution_options(synchronize_session=False)
+    companies = await lock_rows(
+        db, Company,
+        Company.id == company_id,
+        Company.user_id == user_id,
+        Company.research_started_at == claimed_at,
     )
-    return (result.rowcount or 0) > 0
+    return await _set_research_claim(db, companies, renewed_at)
 
 
 async def release_research_claim(
     db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID, *, claimed_at: datetime,
 ) -> None:
     """Clear the claim taken at ``claimed_at``; a newer claim (a later run) is left alone."""
-    await db.execute(
-        sa_update(Company)
-        .where(
-            Company.id == company_id,
-            Company.user_id == user_id,
-            Company.research_started_at == claimed_at,
-        )
-        .values(research_started_at=None, updated_at=Company.updated_at)
-        .execution_options(synchronize_session=False)
+    companies = await lock_rows(
+        db, Company,
+        Company.id == company_id,
+        Company.user_id == user_id,
+        Company.research_started_at == claimed_at,
     )
+    await _set_research_claim(db, companies, None)
+
+
+async def _set_research_claim(
+    db: AsyncSession, companies: list[Company], research_started_at: datetime | None,
+) -> bool:
+    """Set the research claim on the locked ``companies``; True if there was one.
+
+    ``updated_at`` is kept: a claim isn't an edit to the company (see
+    ``Company._stamp_updated_at``).
+    """
+    for company in companies:
+        company.research_started_at = research_started_at
+    await db.flush()
+    return bool(companies)

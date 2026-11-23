@@ -4,9 +4,9 @@ Runs inside the SAME worker process as the resume parser (see
 ``resume_parser_worker.main``), so no new container or compose change
 is needed. Each poll:
 
-1. Atomically claim one ``preparing`` session whose
-   ``preparation_started_at`` is NULL (UPDATE ... RETURNING with
-   FOR UPDATE SKIP LOCKED — safe across worker replicas).
+1. Claim one ``preparing`` session whose ``preparation_started_at`` is
+   NULL (read FOR UPDATE SKIP LOCKED, then stamped in the same
+   transaction — safe across worker replicas).
 2. Run ``session_lifecycle_service.prepare_session``: critique →
    prefetch every target proposal → hydrate the first target →
    unlock (status ``active``).
@@ -49,13 +49,16 @@ logger = logging.getLogger(__name__)
 async def process_one_session() -> bool:
     """Claim and prepare one ``preparing`` session.
 
-    Returns True if a session was found, False if nothing is waiting. Once
-    claimed, every audited write is recorded as made by the session's user.
+    Returns True if a session was found, False if nothing is waiting. The
+    claim and every audited write after it are recorded as made by the
+    session's user.
     """
     async with AsyncSessionLocal() as db:
-        claimed = await session_repo.claim_next_preparing(db)
-        if claimed is None:
+        due = await session_repo.lock_next_due_preparation(db)
+        if due is None:
             return False
+        with audit_actor(due.user_id):
+            claimed = await session_repo.mark_preparation_started(db, due)
         session_id = claimed.id
         user_id = claimed.user_id
         claimed_at = claimed.preparation_started_at

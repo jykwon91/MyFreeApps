@@ -8,7 +8,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from platform_shared.repositories.audited_writes import lock_rows
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.session_status import SessionStatus
@@ -42,12 +43,13 @@ async def get_by_id_for_update(
 async def increment_turn_count(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID,
 ) -> None:
-    """Atomic ``turn_count = turn_count + 1`` (no read-modify-write)."""
-    await db.execute(
-        update(TutorSession)
-        .where(TutorSession.id == session_id, TutorSession.user_id == user_id)
-        .values(turn_count=TutorSession.turn_count + 1)
-    )
+    """``turn_count + 1`` on the session read ``FOR UPDATE``, so concurrent
+    turns each count: the second waits for the first's commit and reads its count."""
+    for session in await lock_rows(
+        db, TutorSession, TutorSession.id == session_id, TutorSession.user_id == user_id,
+    ):
+        session.turn_count += 1
+    await db.flush()
 
 
 async def list_by_user(

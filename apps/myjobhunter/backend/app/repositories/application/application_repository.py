@@ -33,6 +33,7 @@ from sqlalchemy import delete, func, literal_column, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
+from platform_shared.repositories.audited_writes import delete_rows
 
 from app.core.application_list_constants import DEFAULT_PAGE_SIZE, DEFAULT_SORT_FIELD, DEFAULT_SORT_ORDER
 from app.core.enums import EventType
@@ -140,13 +141,11 @@ async def delete_by_ids(
 ) -> None:
     """Hard-delete the given applications.
 
-    Events, contacts and documents go with them through their
-    ``ON DELETE CASCADE`` keys.
+    Events, contacts and documents go with them through their ORM cascade
+    (each one audited), backed by their ``ON DELETE CASCADE`` keys.
     """
-    await db.execute(
-        delete(Application).where(
-            Application.id.in_(application_ids), Application.user_id == user_id,
-        )
+    await delete_rows(
+        db, Application, Application.id.in_(application_ids), Application.user_id == user_id,
     )
 
 

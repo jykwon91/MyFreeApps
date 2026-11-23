@@ -13,7 +13,9 @@ Modules
   checks and the one-call assertions that keep account deletion from leaving
   user data behind. Works on code metadata or a reflected migrated database.
 - ``sqlite_metadata``: makes PostgreSQL-only column types work in SQLite tests.
-- ``streamed_response``: an ``httpx.Response`` with an unread body, for
+- ``audited_write_case``: runs a repository write on a seeded row and checks
+  the ``audit_logs`` rows it left (table, record id, operation, fields, actor).
+- ``streamed_response``:an ``httpx.Response`` with an unread body, for
   ``MockTransport`` tests of code that streams the raw body.
 
 See each module's docstring for full usage examples.
