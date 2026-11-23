@@ -6,7 +6,8 @@ import uuid
 from decimal import Decimal
 from typing import Sequence
 
-from sqlalchemy import and_, or_, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,34 +95,31 @@ async def requeue(
     since, so only a row nobody has touched may be sent. The try number goes
     up, so webhooks about the earlier try no longer match the row.
     """
-    result = await db.execute(
-        update(RentReminderSend)
-        .where(
-            RentReminderSend.id == row.id,
-            RentReminderSend.status == "failed",
-            RentReminderSend.attempt == seen_attempt,
-            RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
-        )
-        .values(
-            status="queued",
-            attempt=RentReminderSend.attempt + 1,
-            amount=amount,
-            message_body=message_body,
-            error_code=None,
-            provider_message_id=None,
-            sent_at=None,
-            confirmed_at=None,
-            operator_alerted_at=None,
+    changed = await update_rows(
+        db,
+        RentReminderSend,
+        RentReminderSend.id == row.id,
+        RentReminderSend.status == "failed",
+        RentReminderSend.attempt == seen_attempt,
+        RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
+        values={
+            "status": "queued",
+            "attempt": seen_attempt + 1,
+            "amount": amount,
+            "message_body": message_body,
+            "error_code": None,
+            "provider_message_id": None,
+            "sent_at": None,
+            "confirmed_at": None,
+            "operator_alerted_at": None,
             # The watchdog ages queued rows from here. A retry of an old row
             # must not look stuck while it is still sending.
-            created_at=_dt.datetime.now(_dt.timezone.utc),
-        )
-        .execution_options(synchronize_session=False)
+            "created_at": _now(),
+        },
     )
-    if result.rowcount != 1:
+    if not changed:
         raise ReminderAlreadyClaimedError(str(row.id))
-    await db.refresh(row)
-    return row
+    return changed[0]
 
 
 async def get(db: AsyncSession, *, send_id: uuid.UUID) -> RentReminderSend | None:
@@ -203,19 +201,18 @@ async def _update_if_unchanged(
     between. The write is skipped (``False``) rather than overwriting that,
     and ``row`` is refreshed either way so the caller sees what is stored.
     """
-    result = await db.execute(
-        update(RentReminderSend)
-        .where(
-            RentReminderSend.id == row.id,
-            RentReminderSend.status == seen_status,
-            RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
-            RentReminderSend.attempt == seen_attempt,
-        )
-        .values(**values)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        RentReminderSend,
+        RentReminderSend.id == row.id,
+        RentReminderSend.status == seen_status,
+        RentReminderSend.error_code.is_not_distinct_from(seen_error_code),
+        RentReminderSend.attempt == seen_attempt,
+        values=values,
     )
-    await db.refresh(row)
-    return result.rowcount == 1
+    if not changed:
+        await db.refresh(row)
+    return bool(changed)
 
 
 async def confirm_if_unchanged(
@@ -339,19 +336,19 @@ async def claim_operator_alert(
     alerts racing for the same try can't both win the update.
     """
     claimed_at = _now()
-    result = await db.execute(
-        update(RentReminderSend)
-        .where(
-            RentReminderSend.id == row.id,
-            RentReminderSend.status == "failed",
-            RentReminderSend.attempt == attempt,
-            RentReminderSend.operator_alerted_at.is_(None),
-        )
-        .values(operator_alerted_at=claimed_at)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        RentReminderSend,
+        RentReminderSend.id == row.id,
+        RentReminderSend.status == "failed",
+        RentReminderSend.attempt == attempt,
+        RentReminderSend.operator_alerted_at.is_(None),
+        values={"operator_alerted_at": claimed_at},
     )
-    await db.refresh(row)
-    return claimed_at if result.rowcount == 1 else None
+    if not changed:
+        await db.refresh(row)
+        return None
+    return claimed_at
 
 
 async def release_operator_alert(
@@ -361,14 +358,13 @@ async def release_operator_alert(
 
     Only our own claim on that same try is cleared, never a newer one.
     """
-    await db.execute(
-        update(RentReminderSend)
-        .where(
-            RentReminderSend.id == row.id,
-            RentReminderSend.attempt == attempt,
-            RentReminderSend.operator_alerted_at == claimed_at,
-        )
-        .values(operator_alerted_at=None)
-        .execution_options(synchronize_session=False)
+    changed = await update_rows(
+        db,
+        RentReminderSend,
+        RentReminderSend.id == row.id,
+        RentReminderSend.attempt == attempt,
+        RentReminderSend.operator_alerted_at == claimed_at,
+        values={"operator_alerted_at": None},
     )
-    await db.refresh(row)
+    if not changed:
+        await db.refresh(row)

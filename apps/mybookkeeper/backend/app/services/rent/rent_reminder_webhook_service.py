@@ -36,6 +36,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal
 
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.core.mask_phone_numbers import mask_phone_numbers
 from platform_shared.services.httpsms_service import (
     HTTPSMS_EVENT_PHONE_DELIVERED,
@@ -198,7 +199,8 @@ async def handle_event(payload: dict[str, Any], *, event_type_header: str | None
     """Apply one verified webhook. Returns True if a row changed.
 
     Call ``verify`` first. Unknown events and unknown messages are logged and
-    acknowledged, so httpSMS does not retry them forever.
+    acknowledged, so httpSMS does not retry them forever. httpSMS is not a
+    signed-in user, so the writes are audited as the reminder's owner.
     """
     event = parse_httpsms_event(payload, event_type_header=event_type_header)
     if event.event_type not in _HANDLED_EVENTS:
@@ -213,11 +215,13 @@ async def handle_event(payload: dict[str, Any], *, event_type_header: str | None
                 event.event_type, event.message_id, event.request_id,
             )
             return False
-        for _ in range(_MAX_DECISIONS):
-            outcome, settled_unsure = await _apply(db, row, event, attempt)
-            if outcome != "raced":
-                break
-        else:
+        owner_id = row.user_id
+        with audit_actor(owner_id):
+            for _ in range(_MAX_DECISIONS):
+                outcome, settled_unsure = await _apply(db, row, event, attempt)
+                if outcome != "raced":
+                    break
+        if outcome == "raced":
             logger.warning(
                 "Gave up on httpSMS %s: the row kept changing: send_id=%s attempt=%s",
                 event.event_type, row.id, row.attempt,
@@ -226,5 +230,6 @@ async def handle_event(payload: dict[str, Any], *, event_type_header: str | None
         alert_id, alert_attempt = row.id, row.attempt
 
     if outcome == "failed":
-        await alerts.alert_operator(alert_id, alert_attempt, settled_unsure=settled_unsure)
+        with audit_actor(owner_id):
+            await alerts.alert_operator(alert_id, alert_attempt, settled_unsure=settled_unsure)
     return outcome in ("confirmed", "failed")

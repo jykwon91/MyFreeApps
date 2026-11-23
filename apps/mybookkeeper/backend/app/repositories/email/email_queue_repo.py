@@ -2,7 +2,8 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func, or_, update
+from platform_shared.repositories.audited_writes import lock_rows, update_rows
+from sqlalchemy import select, func, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
@@ -128,13 +129,12 @@ async def reset_stuck(
     *,
     error: str | None = None,
 ) -> None:
-    await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.organization_id == organization_id,
-            EmailQueue.status.in_(from_statuses),
-        )
-        .values(status=to_status, error=error)
+    await update_rows(
+        db,
+        EmailQueue,
+        EmailQueue.organization_id == organization_id,
+        EmailQueue.status.in_(from_statuses),
+        values={"status": to_status, "error": error},
     )
 
 
@@ -244,20 +244,18 @@ async def record_failed_attempt(
     and is claimed again once that time passes; without it the row is
     ``failed`` until the user retries it.
     """
-    result = await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.id == item_id,
-            EmailQueue.status == "extracting",
-            EmailQueue.claimed_at == claimed_at,
-        )
-        .values(
-            status="fetched" if retry_at is not None else "failed",
-            error=error[:1000],
-            next_attempt_at=retry_at,
-        )
-    )
-    return result.rowcount > 0
+    return bool(await update_rows(
+        db,
+        EmailQueue,
+        EmailQueue.id == item_id,
+        EmailQueue.status == "extracting",
+        EmailQueue.claimed_at == claimed_at,
+        values={
+            "status": "fetched" if retry_at is not None else "failed",
+            "error": error[:1000],
+            "next_attempt_at": retry_at,
+        },
+    ))
 
 
 async def release_claim(
@@ -268,20 +266,19 @@ async def release_claim(
     The row goes back to ``fetched``, due at ``retry_at``, with the claim's
     attempt taken off again. False if the claim no longer holds.
     """
-    result = await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.id == item_id,
-            EmailQueue.status == "extracting",
-            EmailQueue.claimed_at == claimed_at,
-        )
-        .values(
-            status="fetched",
-            attempts=EmailQueue.attempts - 1,
-            next_attempt_at=retry_at,
-        )
+    rows = await lock_rows(
+        db,
+        EmailQueue,
+        EmailQueue.id == item_id,
+        EmailQueue.status == "extracting",
+        EmailQueue.claimed_at == claimed_at,
     )
-    return result.rowcount > 0
+    for row in rows:
+        row.status = "fetched"
+        row.attempts -= 1
+        row.next_attempt_at = retry_at
+    await db.flush()
+    return bool(rows)
 
 
 async def dismiss_if_extracting(db: AsyncSession, item_id: uuid.UUID) -> bool:
@@ -290,12 +287,13 @@ async def dismiss_if_extracting(db: AsyncSession, item_id: uuid.UUID) -> bool:
     The drain then drops whatever it read (it writes only while its claim
     holds), and the email is not fetched again.
     """
-    result = await db.execute(
-        update(EmailQueue)
-        .where(EmailQueue.id == item_id, EmailQueue.status == "extracting")
-        .values(status="dismissed", error=None)
-    )
-    return result.rowcount > 0
+    return bool(await update_rows(
+        db,
+        EmailQueue,
+        EmailQueue.id == item_id,
+        EmailQueue.status == "extracting",
+        values={"status": "dismissed", "error": None},
+    ))
 
 
 async def delete_item(db: AsyncSession, item: EmailQueue) -> None:
@@ -404,24 +402,22 @@ async def retry_item(db: AsyncSession, item: EmailQueue) -> str:
 
 async def retry_all_failed(db: AsyncSession, organization_id: uuid.UUID) -> None:
     # Items with raw_content -> fetched
-    await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.organization_id == organization_id,
-            EmailQueue.status == "failed",
-            EmailQueue.raw_content.isnot(None),
-        )
-        .values(status="fetched", error=None, attempts=0, next_attempt_at=None)
+    await update_rows(
+        db,
+        EmailQueue,
+        EmailQueue.organization_id == organization_id,
+        EmailQueue.status == "failed",
+        EmailQueue.raw_content.isnot(None),
+        values={"status": "fetched", "error": None, "attempts": 0, "next_attempt_at": None},
     )
     # Items without raw_content -> pending
-    await db.execute(
-        update(EmailQueue)
-        .where(
-            EmailQueue.organization_id == organization_id,
-            EmailQueue.status == "failed",
-            EmailQueue.raw_content.is_(None),
-        )
-        .values(status="pending", error=None, attempts=0, next_attempt_at=None)
+    await update_rows(
+        db,
+        EmailQueue,
+        EmailQueue.organization_id == organization_id,
+        EmailQueue.status == "failed",
+        EmailQueue.raw_content.is_(None),
+        values={"status": "pending", "error": None, "attempts": 0, "next_attempt_at": None},
     )
 
 

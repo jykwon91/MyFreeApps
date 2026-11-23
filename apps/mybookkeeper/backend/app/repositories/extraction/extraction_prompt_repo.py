@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.extraction.extraction_prompt import ExtractionPrompt
@@ -44,8 +45,13 @@ async def set_active(db: AsyncSession, prompt_id: uuid.UUID) -> ExtractionPrompt
 
     # Deactivate others in the same scope
     scope_filter = ExtractionPrompt.user_id == prompt.user_id if prompt.user_id else ExtractionPrompt.user_id.is_(None)
-    await db.execute(
-        update(ExtractionPrompt).where(scope_filter).values(is_active=False)
+    await update_rows(
+        db,
+        ExtractionPrompt,
+        scope_filter,
+        ExtractionPrompt.id != prompt.id,
+        ExtractionPrompt.is_active.is_(True),
+        values={"is_active": False},
     )
     prompt.is_active = True
     return prompt

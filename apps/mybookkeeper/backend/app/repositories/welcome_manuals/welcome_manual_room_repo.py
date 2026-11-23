@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.welcome_manuals.welcome_manual_room import WelcomeManualRoom
@@ -145,10 +145,6 @@ async def delete_by_id(
     room = await get_by_id(db, room_id, manual_id)
     if room is None:
         return None
-    await db.execute(
-        delete(WelcomeManualRoom).where(
-            WelcomeManualRoom.id == room_id,
-            WelcomeManualRoom.manual_id == manual_id,
-        )
-    )
+    await db.delete(room)
+    await db.flush()
     return room

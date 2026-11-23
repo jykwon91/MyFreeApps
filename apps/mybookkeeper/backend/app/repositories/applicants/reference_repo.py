@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import asc, select, update
+from sqlalchemy import asc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -89,16 +89,9 @@ async def mark_contacted(
     if ref is None:
         return None
 
-    when = contacted_at if contacted_at is not None else _dt.datetime.now(_dt.timezone.utc)
-    values: dict[str, object] = {"contacted_at": when}
+    ref.contacted_at = contacted_at if contacted_at is not None else _dt.datetime.now(_dt.timezone.utc)
     if notes is not None:
-        values["notes"] = notes
-
-    await db.execute(
-        update(Reference)
-        .where(Reference.id == reference_id)
-        .values(**values)
-    )
+        ref.notes = notes
     await db.flush()
     await db.refresh(ref)
     return ref

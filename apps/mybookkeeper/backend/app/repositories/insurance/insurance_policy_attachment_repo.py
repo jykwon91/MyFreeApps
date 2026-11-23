@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
@@ -86,10 +86,6 @@ async def delete_by_id_scoped_to_policy(
     row = result.scalar_one_or_none()
     if row is None:
         return None
-    await db.execute(
-        delete(InsurancePolicyAttachment).where(
-            InsurancePolicyAttachment.id == attachment_id,
-            InsurancePolicyAttachment.policy_id == policy_id,
-        )
-    )
+    await db.delete(row)
+    await db.flush()
     return row

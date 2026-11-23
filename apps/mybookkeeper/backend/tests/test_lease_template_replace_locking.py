@@ -1,4 +1,4 @@
-"""The replace path locks the template row and bumps its version in SQL.
+"""The replace path locks the template row and bumps its version under that lock.
 
 SQLite cannot exercise row locks or concurrent writers, so these assert on the
 statements compiled for PostgreSQL, which is what runs in production.
@@ -21,6 +21,7 @@ def _compiled(statement: object) -> str:
 async def _executed_statement(call) -> object:
     db = MagicMock()
     db.execute = AsyncMock(return_value=MagicMock(rowcount=1))
+    db.flush = AsyncMock()
     await call(db)
     return db.execute.call_args.args[0]
 
@@ -44,8 +45,10 @@ async def test_get_does_not_lock_by_default() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bump_version_increments_in_sql() -> None:
+async def test_bump_version_reads_the_row_for_update() -> None:
+    """The version is read and written back through the ORM (so the change is
+    audited) while the row is locked, so two concurrent bumps can't both read
+    the same version."""
     stmt = await _executed_statement(lambda db: lease_template_repo.bump_version(db, **_ids()))
 
-    sql = _compiled(stmt)
-    assert "UPDATE lease_templates SET version=(lease_templates.version + %(version_1)s)" in sql
+    assert "FOR UPDATE OF lease_templates" in _compiled(stmt)

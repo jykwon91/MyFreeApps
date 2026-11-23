@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete as _sa_delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template_file import LeaseTemplateFile
@@ -71,15 +72,5 @@ async def delete_all_for_template(
     template_id: uuid.UUID,
 ) -> list[str]:
     """Delete all files for a template, returning the storage keys to clean up."""
-    result = await db.execute(
-        select(LeaseTemplateFile.storage_key).where(
-            LeaseTemplateFile.template_id == template_id,
-        )
-    )
-    keys = [row[0] for row in result.all()]
-    await db.execute(
-        _sa_delete(LeaseTemplateFile).where(
-            LeaseTemplateFile.template_id == template_id,
-        )
-    )
-    return keys
+    deleted = await delete_rows(db, LeaseTemplateFile, LeaseTemplateFile.template_id == template_id)
+    return [row.storage_key for row in deleted]

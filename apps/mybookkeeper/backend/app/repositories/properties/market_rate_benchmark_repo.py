@@ -15,7 +15,8 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Select, delete, inspect, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import Select, inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -156,10 +157,9 @@ async def delete_by_service_type(
     organization_id: uuid.UUID,
     service_type: str,
 ) -> bool:
-    result = await db.execute(
-        delete(MarketRateBenchmark).where(
-            MarketRateBenchmark.organization_id == organization_id,
-            MarketRateBenchmark.service_type == service_type,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db,
+        MarketRateBenchmark,
+        MarketRateBenchmark.organization_id == organization_id,
+        MarketRateBenchmark.service_type == service_type,
+    ))

@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing_photo import ListingPhoto
@@ -116,12 +116,8 @@ async def delete_by_id(
     photo = await get_by_id(db, photo_id, listing_id)
     if photo is None:
         return None
-    await db.execute(
-        delete(ListingPhoto).where(
-            ListingPhoto.id == photo_id,
-            ListingPhoto.listing_id == listing_id,
-        )
-    )
+    await db.delete(photo)
+    await db.flush()
     return photo
 
 

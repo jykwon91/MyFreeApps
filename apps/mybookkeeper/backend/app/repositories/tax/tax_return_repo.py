@@ -2,7 +2,8 @@ import uuid
 from collections.abc import Iterable, Sequence
 from decimal import Decimal
 
-from sqlalchemy import select, update as sa_update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -81,10 +82,13 @@ async def set_needs_recompute(
 async def flag_unfiled_for_recompute(
     db: AsyncSession, organization_id: uuid.UUID,
 ) -> None:
-    await db.execute(
-        sa_update(TaxReturn)
-        .where(TaxReturn.organization_id == organization_id, TaxReturn.status != TAX_RETURN_STATUS_FILED)
-        .values(needs_recompute=True)
+    await update_rows(
+        db,
+        TaxReturn,
+        TaxReturn.organization_id == organization_id,
+        TaxReturn.status != TAX_RETURN_STATUS_FILED,
+        TaxReturn.needs_recompute.is_(False),
+        values={"needs_recompute": True},
     )
 
 

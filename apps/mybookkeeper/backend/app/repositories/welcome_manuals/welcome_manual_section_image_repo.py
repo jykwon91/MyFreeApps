@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.welcome_manuals.welcome_manual_section_image import (
@@ -133,10 +133,6 @@ async def delete_by_id(
     image = await get_by_id(db, image_id, section_id)
     if image is None:
         return None
-    await db.execute(
-        delete(WelcomeManualSectionImage).where(
-            WelcomeManualSectionImage.id == image_id,
-            WelcomeManualSectionImage.section_id == section_id,
-        )
-    )
+    await db.delete(image)
+    await db.flush()
     return image

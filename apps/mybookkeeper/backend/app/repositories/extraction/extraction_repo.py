@@ -1,7 +1,8 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import delete as sa_delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.extraction.extraction import Extraction
@@ -74,9 +75,5 @@ async def delete_by_document_ids(
     """Delete all extractions for given document IDs. Returns (deleted extraction IDs, count)."""
     if not document_ids:
         return [], 0
-    stmt = select(Extraction.id).where(Extraction.document_id.in_(document_ids))
-    extraction_ids = [row[0] for row in (await db.execute(stmt)).all()]
-    if not extraction_ids:
-        return [], 0
-    await db.execute(sa_delete(Extraction).where(Extraction.id.in_(extraction_ids)))
-    return extraction_ids, len(extraction_ids)
+    deleted = await delete_rows(db, Extraction, Extraction.document_id.in_(document_ids))
+    return [extraction.id for extraction in deleted], len(deleted)

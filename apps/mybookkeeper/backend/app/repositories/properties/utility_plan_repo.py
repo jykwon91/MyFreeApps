@@ -12,7 +12,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, case, desc, func, or_, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import ColumnElement, Select, case, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utility_plan_constants import (
@@ -372,14 +373,12 @@ async def soft_delete(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        update(UtilityPlan)
-        .where(
-            UtilityPlan.id == plan_id,
-            UtilityPlan.user_id == user_id,
-            UtilityPlan.organization_id == organization_id,
-            UtilityPlan.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        UtilityPlan,
+        UtilityPlan.id == plan_id,
+        UtilityPlan.user_id == user_id,
+        UtilityPlan.organization_id == organization_id,
+        UtilityPlan.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))

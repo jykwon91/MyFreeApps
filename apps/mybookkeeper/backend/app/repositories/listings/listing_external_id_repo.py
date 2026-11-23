@@ -1,7 +1,8 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing import Listing
@@ -175,10 +176,9 @@ async def delete_by_id(
     business value in retaining a removed link), so soft-delete is not
     used here.
     """
-    result = await db.execute(
-        delete(ListingExternalId).where(
-            ListingExternalId.id == ext_pk,
-            ListingExternalId.listing_id == listing_id,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db,
+        ListingExternalId,
+        ListingExternalId.id == ext_pk,
+        ListingExternalId.listing_id == listing_id,
+    ))

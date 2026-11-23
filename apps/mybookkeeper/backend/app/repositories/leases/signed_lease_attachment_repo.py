@@ -11,7 +11,8 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, select, update
+from platform_shared.repositories.audited_writes import lock_rows, update_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
@@ -99,14 +100,8 @@ async def update_kind_scoped_to_lease(
     row = result.scalar_one_or_none()
     if row is None:
         return None
-    await db.execute(
-        update(SignedLeaseAttachment)
-        .where(
-            SignedLeaseAttachment.id == attachment_id,
-            SignedLeaseAttachment.lease_id == lease_id,
-        )
-        .values(kind=kind)
-    )
+    row.kind = kind
+    await db.flush()
     await db.refresh(row)
     return row
 
@@ -137,13 +132,12 @@ async def update_signing_state_scoped_to_lease(
     if row is None:
         return None
     if fields:
-        await db.execute(
-            update(SignedLeaseAttachment)
-            .where(
-                SignedLeaseAttachment.id == attachment_id,
-                SignedLeaseAttachment.lease_id == lease_id,
-            )
-            .values(**fields)
+        await update_rows(
+            db,
+            SignedLeaseAttachment,
+            SignedLeaseAttachment.id == attachment_id,
+            SignedLeaseAttachment.lease_id == lease_id,
+            values=fields,
         )
         await db.refresh(row)
     return row
@@ -169,12 +163,8 @@ async def delete_by_id_scoped_to_lease(
     row = result.scalar_one_or_none()
     if row is None:
         return None
-    await db.execute(
-        delete(SignedLeaseAttachment).where(
-            SignedLeaseAttachment.id == attachment_id,
-            SignedLeaseAttachment.lease_id == lease_id,
-        )
-    )
+    await db.delete(row)
+    await db.flush()
     return row
 
 
@@ -185,12 +175,15 @@ async def set_emailed_to_tenant_at(
     stamps: Mapping[uuid.UUID, datetime | None],
 ) -> None:
     """Set ``emailed_to_tenant_at`` per attachment, scoped to its lease (same IDOR guard)."""
-    for stamp, ids in _ids_by_stamp(stamps).items():
-        await db.execute(
-            update(SignedLeaseAttachment)
-            .where(SignedLeaseAttachment.lease_id == lease_id, SignedLeaseAttachment.id.in_(ids))
-            .values(emailed_to_tenant_at=stamp)
-        )
+    rows = await lock_rows(
+        db,
+        SignedLeaseAttachment,
+        SignedLeaseAttachment.lease_id == lease_id,
+        SignedLeaseAttachment.id.in_(list(stamps)),
+    )
+    for row in rows:
+        row.emailed_to_tenant_at = stamps[row.id]
+    await db.flush()
 
 
 async def restore_emailed_to_tenant_at_if_unchanged(
@@ -201,20 +194,13 @@ async def restore_emailed_to_tenant_at_if_unchanged(
     stamps: Mapping[uuid.UUID, datetime | None],
 ) -> None:
     """Put each file's stamp back, skipping any a later email has stamped since."""
-    for stamp, ids in _ids_by_stamp(stamps).items():
-        await db.execute(
-            update(SignedLeaseAttachment)
-            .where(
-                SignedLeaseAttachment.lease_id == lease_id,
-                SignedLeaseAttachment.id.in_(ids),
-                SignedLeaseAttachment.emailed_to_tenant_at == expected,
-            )
-            .values(emailed_to_tenant_at=stamp)
-        )
-
-
-def _ids_by_stamp(stamps: Mapping[uuid.UUID, datetime | None]) -> dict[datetime | None, list[uuid.UUID]]:
-    by_value: dict[datetime | None, list[uuid.UUID]] = {}
-    for attachment_id, stamp in stamps.items():
-        by_value.setdefault(stamp, []).append(attachment_id)
-    return by_value
+    rows = await lock_rows(
+        db,
+        SignedLeaseAttachment,
+        SignedLeaseAttachment.lease_id == lease_id,
+        SignedLeaseAttachment.id.in_(list(stamps)),
+        SignedLeaseAttachment.emailed_to_tenant_at == expected,
+    )
+    for row in rows:
+        row.emailed_to_tenant_at = stamps[row.id]
+    await db.flush()

@@ -8,7 +8,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.channel_listing import ChannelListing
@@ -209,13 +210,12 @@ async def delete_by_id(
     by FK — that's the service's responsibility (channel_listing.delete
     must clean up blackouts attributed to that channel for this listing).
     """
-    result = await db.execute(
-        delete(ChannelListing).where(
-            ChannelListing.id == channel_listing_id,
-            ChannelListing.listing_id == listing_id,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db,
+        ChannelListing,
+        ChannelListing.id == channel_listing_id,
+        ChannelListing.listing_id == listing_id,
+    ))
 
 
 async def mark_imported(

@@ -11,7 +11,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import Row, and_, delete, desc, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import Row, and_, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.inquiry_enums import INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX
@@ -198,16 +199,14 @@ async def soft_delete_by_id(
     organization_id: uuid.UUID,
 ) -> bool:
     """Soft-delete an inquiry. Returns True iff a row was updated."""
-    result = await db.execute(
-        update(Inquiry)
-        .where(
-            Inquiry.id == inquiry_id,
-            Inquiry.organization_id == organization_id,
-            Inquiry.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        Inquiry,
+        Inquiry.id == inquiry_id,
+        Inquiry.organization_id == organization_id,
+        Inquiry.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(

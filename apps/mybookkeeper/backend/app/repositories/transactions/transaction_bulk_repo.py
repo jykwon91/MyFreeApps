@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import ColumnElement, Select, delete as sa_delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import ColumnElement, Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.transaction_statuses import COUNTED_STATUS, REVIEWABLE_STATUSES
@@ -143,13 +144,13 @@ async def delete_by_extraction_ids(
     """
     if not extraction_ids:
         return 0
-    stmt = sa_delete(Transaction).where(
+    criteria = [
         Transaction.extraction_id.in_(extraction_ids),
         Transaction.organization_id == organization_id,
-    )
+    ]
     if tax_year is not None:
-        stmt = stmt.where(Transaction.tax_year == tax_year)
-    deleted = list((await db.execute(stmt.returning(Transaction))).scalars().all())
+        criteria.append(Transaction.tax_year == tax_year)
+    deleted = await delete_rows(db, Transaction, *criteria)
     await tax_return_repo.flag_unfiled_where_counted(db, deleted)
     return len(deleted)
 

@@ -10,7 +10,8 @@ Used by:
 import uuid
 from datetime import date
 
-from sqlalchemy import and_, delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing import Listing
@@ -108,30 +109,16 @@ async def delete_missing_uids(
     A UID disappearing from the feed is taken as a cancellation. Returns
     the number of rows deleted.
     """
-    if not keep_uids:
-        # Nothing to keep — delete everything for this (listing, source)
-        # that has a UID. (Manual rows have source != channel slug and are
-        # never affected.)
-        result = await db.execute(
-            delete(ListingBlackout).where(
-                ListingBlackout.listing_id == listing_id,
-                ListingBlackout.source == source,
-                ListingBlackout.source_event_id.is_not(None),
-            )
-        )
-        return result.rowcount or 0
-
-    result = await db.execute(
-        delete(ListingBlackout).where(
-            and_(
-                ListingBlackout.listing_id == listing_id,
-                ListingBlackout.source == source,
-                ListingBlackout.source_event_id.is_not(None),
-                ListingBlackout.source_event_id.notin_(keep_uids),
-            )
-        )
-    )
-    return result.rowcount or 0
+    # Only rows with a UID are feed rows. (Manual rows have source != channel
+    # slug and are never affected.) With nothing to keep, every feed row goes.
+    criteria = [
+        ListingBlackout.listing_id == listing_id,
+        ListingBlackout.source == source,
+        ListingBlackout.source_event_id.is_not(None),
+    ]
+    if keep_uids:
+        criteria.append(ListingBlackout.source_event_id.notin_(keep_uids))
+    return len(await delete_rows(db, ListingBlackout, *criteria))
 
 
 async def create(
@@ -186,9 +173,8 @@ async def delete_by_id_scoped_to_organization(
     row = result.scalar_one_or_none()
     if row is None:
         return False
-    await db.execute(
-        delete(ListingBlackout).where(ListingBlackout.id == blackout_id),
-    )
+    await db.delete(row)
+    await db.flush()
     return True
 
 
@@ -262,13 +248,12 @@ async def delete_by_listing_and_source(
     are preserved by definition since they wouldn't share a source slug
     with any channel.
     """
-    result = await db.execute(
-        delete(ListingBlackout).where(
-            ListingBlackout.listing_id == listing_id,
-            ListingBlackout.source == source,
-        )
-    )
-    return result.rowcount or 0
+    return len(await delete_rows(
+        db,
+        ListingBlackout,
+        ListingBlackout.listing_id == listing_id,
+        ListingBlackout.source == source,
+    ))
 
 
 async def set_host_notes(db: AsyncSession, blackout: ListingBlackout, host_notes: str) -> None:

@@ -2,7 +2,8 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration
@@ -78,12 +79,12 @@ async def delete_active_for_return(
     tax_return_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> None:
-    await db.execute(
-        delete(TaxAdvisorSuggestion).where(
-            TaxAdvisorSuggestion.tax_return_id == tax_return_id,
-            TaxAdvisorSuggestion.organization_id == organization_id,
-            TaxAdvisorSuggestion.status == "active",
-        )
+    await delete_rows(
+        db,
+        TaxAdvisorSuggestion,
+        TaxAdvisorSuggestion.tax_return_id == tax_return_id,
+        TaxAdvisorSuggestion.organization_id == organization_id,
+        TaxAdvisorSuggestion.status == "active",
     )
 
 

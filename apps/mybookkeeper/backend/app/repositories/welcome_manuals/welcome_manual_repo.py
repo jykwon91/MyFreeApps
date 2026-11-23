@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.welcome_manuals.welcome_manual import WelcomeManual
@@ -137,16 +138,14 @@ async def soft_delete_by_id(
     Returns True if a row was updated (manual existed and was not already
     soft-deleted), False otherwise so the route can 404 without a round trip.
     """
-    result = await db.execute(
-        update(WelcomeManual)
-        .where(
-            WelcomeManual.id == manual_id,
-            WelcomeManual.organization_id == organization_id,
-            WelcomeManual.deleted_at.is_(None),
-        )
-        .values(deleted_at=datetime.now(timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        WelcomeManual,
+        WelcomeManual.id == manual_id,
+        WelcomeManual.organization_id == organization_id,
+        WelcomeManual.deleted_at.is_(None),
+        values={"deleted_at": datetime.now(timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(
@@ -215,16 +214,14 @@ async def clear_share(
     Returns True if a row was updated (manual existed, was not soft-deleted,
     and belonged to the org), False otherwise.
     """
-    result = await db.execute(
-        update(WelcomeManual)
-        .where(
-            WelcomeManual.id == manual_id,
-            WelcomeManual.organization_id == organization_id,
-            WelcomeManual.deleted_at.is_(None),
-        )
-        .values(share_token=None, share_pin=None)
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        WelcomeManual,
+        WelcomeManual.id == manual_id,
+        WelcomeManual.organization_id == organization_id,
+        WelcomeManual.deleted_at.is_(None),
+        values={"share_token": None, "share_pin": None},
+    ))
 
 
 async def record_failed_unlock(

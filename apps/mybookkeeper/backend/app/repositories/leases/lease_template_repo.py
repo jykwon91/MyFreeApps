@@ -9,7 +9,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import delete, desc, func, select, update
+from platform_shared.repositories.audited_writes import lock_rows, update_rows
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template import LeaseTemplate
@@ -129,19 +130,19 @@ async def bump_version(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> bool:
-    """Increment the version in SQL so concurrent bumps cannot lose one."""
-    result = await db.execute(
-        update(LeaseTemplate)
-        .where(
-            LeaseTemplate.id == template_id,
-            LeaseTemplate.user_id == user_id,
-            LeaseTemplate.organization_id == organization_id,
-            LeaseTemplate.deleted_at.is_(None),
-        )
-        .values(version=LeaseTemplate.version + 1)
-        .execution_options(synchronize_session=False)
+    """Increment the version under the row lock so concurrent bumps cannot lose one."""
+    rows = await lock_rows(
+        db,
+        LeaseTemplate,
+        LeaseTemplate.id == template_id,
+        LeaseTemplate.user_id == user_id,
+        LeaseTemplate.organization_id == organization_id,
+        LeaseTemplate.deleted_at.is_(None),
     )
-    return (result.rowcount or 0) > 0
+    for row in rows:
+        row.version += 1
+    await db.flush()
+    return bool(rows)
 
 
 async def list_by_ids(
@@ -171,17 +172,15 @@ async def soft_delete(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        update(LeaseTemplate)
-        .where(
-            LeaseTemplate.id == template_id,
-            LeaseTemplate.user_id == user_id,
-            LeaseTemplate.organization_id == organization_id,
-            LeaseTemplate.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        LeaseTemplate,
+        LeaseTemplate.id == template_id,
+        LeaseTemplate.user_id == user_id,
+        LeaseTemplate.organization_id == organization_id,
+        LeaseTemplate.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))
 
 
 async def hard_delete_by_id(

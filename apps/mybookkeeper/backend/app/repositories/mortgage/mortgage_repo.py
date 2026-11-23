@@ -6,7 +6,8 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import desc, func, or_, select, update
+from platform_shared.repositories.audited_writes import update_rows
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mortgage.mortgage import Mortgage
@@ -211,14 +212,12 @@ async def soft_delete(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        update(Mortgage)
-        .where(
-            Mortgage.id == mortgage_id,
-            Mortgage.user_id == user_id,
-            Mortgage.organization_id == organization_id,
-            Mortgage.deleted_at.is_(None),
-        )
-        .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await update_rows(
+        db,
+        Mortgage,
+        Mortgage.id == mortgage_id,
+        Mortgage.user_id == user_id,
+        Mortgage.organization_id == organization_id,
+        Mortgage.deleted_at.is_(None),
+        values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
+    ))

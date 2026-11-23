@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import delete, desc, select, update
+from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -117,17 +117,11 @@ async def update_status(
     if sr is None:
         return None
 
-    values: dict[str, object] = {"status": status}
+    sr.status = status
     if completed_at is not None:
-        values["completed_at"] = completed_at
+        sr.completed_at = completed_at
     if adverse_action_snippet is not None:
-        values["adverse_action_snippet"] = adverse_action_snippet
-
-    await db.execute(
-        update(ScreeningResult)
-        .where(ScreeningResult.id == screening_result_id)
-        .values(**values)
-    )
+        sr.adverse_action_snippet = adverse_action_snippet
     await db.flush()
     await db.refresh(sr)
     return sr

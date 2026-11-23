@@ -313,7 +313,8 @@
         "test_document_extraction_deleted_mid_read.py",
         "test_document_list_page.py",
         "test_document_gmail_download.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "DocumentUploadZone.test.tsx",
@@ -365,7 +366,8 @@
         "test_email_extraction_retry.py",
         "test_email_queue_retry_migration.py",
         "test_scheduler_worker_gmail_task.py",
-        "test_email_sync_interrupted.py"
+        "test_email_sync_interrupted.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "EmailQueueSection.test.tsx"
@@ -408,7 +410,8 @@
         "test_claude_service_legacy_mapping.py",
         "test_document_draft_reader.py",
         "test_upload_processor_retries.py",
-        "test_upload_processor_audit_actor.py"
+        "test_upload_processor_audit_actor.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [
@@ -628,7 +631,8 @@
         "test_utility_account_service.py",
         "test_property_matcher_account_link.py",
         "test_property_depreciation_inputs.py",
-        "test_depreciation_schedule_e.py"
+        "test_depreciation_schedule_e.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "Properties.test.tsx",
@@ -739,7 +743,8 @@
         "test_lease_insurance_attachment_metadata.py",
         "test_strip_metadata_phone_photos.py",
         "test_cross_org_isolation_http_2.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_leases_listings.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",
@@ -926,7 +931,8 @@
         "test_reply_template_variables_match_phone.py",
         "test_gmail_service_send.py",
         "test_test_utils_routes.py",
-        "test_inquiry_seed_routes.py"
+        "test_inquiry_seed_routes.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "Inquiries.test.tsx",
@@ -1005,7 +1011,8 @@
         "test_applicant_indexes.py",
         "test_applicant_contract_dates_api.py",
         "test_applicant_contract_service.py",
-        "test_applicant_contact_email.py"
+        "test_applicant_contact_email.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "ApplicantStageBadge.test.tsx",
@@ -1132,7 +1139,8 @@
         "test_rent_reminders_api.py",
         "test_rent_reminder_codes_match_api_client.py",
         "test_rent_reminder_request_id.py",
-        "test_cross_org_isolation_http_2.py"
+        "test_cross_org_isolation_http_2.py",
+        "test_rent_reminder_send_audit.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx"
@@ -1227,7 +1235,8 @@
         "test_image_cleaning_off_event_loop.py",
         "test_lease_insurance_attachment_metadata.py",
         "test_attachment_upload_commit_outcome.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -1305,7 +1314,8 @@
         "test_refi_math.py",
         "test_refi_outlook.py",
         "test_document_draft_reader.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "Mortgages.test.tsx",
@@ -1433,7 +1443,8 @@
         "test_utility_offer_ranking.py",
         "test_time_of_use_offers.py",
         "test_document_draft_reader.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
@@ -1538,7 +1549,8 @@
         "test_section_image_storage_order.py",
         "test_welcome_manual_row_locks.py",
         "test_welcome_manual_reorder_access.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_leases_listings.py"
       ],
       "frontend_tests": [
         "WelcomeManualDetail.test.tsx",
@@ -1654,7 +1666,8 @@
         "backend/app/core/lease_render_constants.py",
         "backend/app/repositories/lock_timeout_repo.py",
         "backend/app/api/lease_render_error_mapping.py",
-        "backend/app/api/signed_lease_import_files.py"
+        "backend/app/api/signed_lease_import_files.py",
+        "backend/tests/audited_row_factory.py"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -1692,7 +1705,8 @@
         "test_attachment_upload_commit_outcome.py",
         "test_logs_carry_no_personal_details.py",
         "test_lease_email_logs.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_leases_listings.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
@@ -1800,7 +1814,8 @@
         "test_receipt_readiness_matches_api_client.py",
         "test_receipt_send_service.py",
         "test_send_claim_staleness.py",
-        "test_receipt_period_resolver.py"
+        "test_receipt_period_resolver.py",
+        "test_audited_writes_leases_listings.py"
       ],
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",
@@ -1846,7 +1861,8 @@
         "test_input_validation_hardening.py",
         "test_cleanup_seed_routes.py",
         "test_attachment_upload_commit_outcome.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "ScreeningSection.test.tsx",
@@ -1899,7 +1915,8 @@
         "test_vendor_seed_routes.py",
         "test_vendor_service.py",
         "test_vendor_routes.py",
-        "test_vendor_writes.py"
+        "test_vendor_writes.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "Vendors.test.tsx",
@@ -2036,7 +2053,8 @@
         "test_capital_improvements_not_deducted.py",
         "test_tax_summary_by_tax_year.py",
         "test_depreciation_schedule_e.py",
-        "test_logs_carry_no_personal_details.py"
+        "test_logs_carry_no_personal_details.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
@@ -2205,7 +2223,8 @@
         "backend/app/core/transaction_statuses.py",
         "frontend/src/test/transactions-page-harness.tsx",
         "frontend/src/shared/types/select-all-control.ts",
-        "api-client/src/types/selection/"
+        "api-client/src/types/selection/",
+        "backend/tests/audited_row_factory.py"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -2241,7 +2260,8 @@
         "test_cleanup_seed_routes.py",
         "test_tax_return_staleness.py",
         "test_reported_amount.py",
-        "test_upload_read_caps.py"
+        "test_upload_read_caps.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -2344,7 +2364,8 @@
         "test_attribution_service_payer_alias.py",
         "test_attribution_service_auto_verifies.py",
         "test_attribution_service_income_guard.py",
-        "test_cleanup_seed_routes.py"
+        "test_cleanup_seed_routes.py",
+        "test_audited_writes_records.py"
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",

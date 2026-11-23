@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -100,11 +100,8 @@ async def update_note(
     if not safe:
         return note
 
-    await db.execute(
-        update(VideoCallNote)
-        .where(VideoCallNote.id == video_call_note_id)
-        .values(**safe)
-    )
+    for name, value in safe.items():
+        setattr(note, name, value)
     await db.flush()
     await db.refresh(note)
     return note

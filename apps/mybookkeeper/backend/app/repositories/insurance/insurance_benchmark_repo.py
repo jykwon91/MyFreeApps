@@ -14,7 +14,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import delete, inspect, select
+from platform_shared.repositories.audited_writes import delete_rows
+from sqlalchemy import inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -119,9 +120,6 @@ async def upsert(
 async def delete_for_org(
     db: AsyncSession, *, organization_id: uuid.UUID,
 ) -> bool:
-    result = await db.execute(
-        delete(InsuranceBenchmark).where(
-            InsuranceBenchmark.organization_id == organization_id,
-        )
-    )
-    return (result.rowcount or 0) > 0
+    return bool(await delete_rows(
+        db, InsuranceBenchmark, InsuranceBenchmark.organization_id == organization_id,
+    ))
