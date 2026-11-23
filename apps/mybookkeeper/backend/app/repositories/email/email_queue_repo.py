@@ -2,9 +2,8 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from platform_shared.repositories.audited_writes import lock_rows, update_rows
+from platform_shared.repositories.audited_writes import insert_if_absent, lock_rows, update_rows
 from sqlalchemy import select, func, or_
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
@@ -80,17 +79,26 @@ async def insert_ignore_conflict(
     attachment_content_type: str | None,
     email_subject: str | None,
 ) -> None:
-    stmt = pg_insert(EmailQueue).values(
-        organization_id=organization_id,
-        user_id=user_id,
-        message_id=message_id,
-        sync_log_id=sync_log_id,
-        attachment_id=attachment_id,
-        attachment_filename=attachment_filename,
-        attachment_content_type=attachment_content_type,
-        email_subject=email_subject,
-    ).on_conflict_do_nothing()
-    await db.execute(stmt)
+    """Queue one attachment of a message, unless it's already queued.
+
+    Idempotent on the unique key ``(user_id, message_id, attachment_id)``.
+    """
+    await insert_if_absent(
+        db, EmailQueue,
+        EmailQueue.user_id == user_id,
+        EmailQueue.message_id == message_id,
+        EmailQueue.attachment_id == attachment_id,
+        create={
+            "organization_id": organization_id,
+            "user_id": user_id,
+            "message_id": message_id,
+            "sync_log_id": sync_log_id,
+            "attachment_id": attachment_id,
+            "attachment_filename": attachment_filename,
+            "attachment_content_type": attachment_content_type,
+            "email_subject": email_subject,
+        },
+    )
 
 
 async def create_item(

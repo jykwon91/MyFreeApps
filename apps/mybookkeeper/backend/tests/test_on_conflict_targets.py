@@ -71,33 +71,41 @@ def _string_list(node: ast.expr) -> frozenset[str] | None:
     return None
 
 
-def _upserts() -> list[_Upsert]:
+def _upserts_in(source: str, where: str) -> list[_Upsert]:
     found: list[_Upsert] = []
-    for path in sorted(_APP_DIR.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for node in ast.walk(tree):
-            if not (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr in _UPSERT_METHODS
-            ):
-                continue
-            keywords = {k.arg: k.value for k in node.keywords if k.arg}
-            constraint = keywords.get("constraint")
-            elements = keywords.get("index_elements")
-            found.append(
-                _Upsert(
-                    where=f"{path.relative_to(_BACKEND_DIR)}:{node.lineno}",
-                    model=_insert_model(node.func.value),
-                    constraint=(
-                        str(constraint.value)
-                        if isinstance(constraint, ast.Constant)
-                        else None
-                    ),
-                    index_elements=_string_list(elements) if elements is not None else None,
-                )
+    for node in ast.walk(ast.parse(source, filename=where)):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _UPSERT_METHODS
+        ):
+            continue
+        keywords = {k.arg: k.value for k in node.keywords if k.arg}
+        constraint = keywords.get("constraint")
+        elements = keywords.get("index_elements")
+        found.append(
+            _Upsert(
+                where=f"{where}:{node.lineno}",
+                model=_insert_model(node.func.value),
+                constraint=(
+                    str(constraint.value)
+                    if isinstance(constraint, ast.Constant)
+                    else None
+                ),
+                index_elements=_string_list(elements) if elements is not None else None,
             )
+        )
     return found
+
+
+def _upserts() -> list[_Upsert]:
+    return [
+        upsert
+        for path in sorted(_APP_DIR.rglob("*.py"))
+        for upsert in _upserts_in(
+            path.read_text(encoding="utf-8"), str(path.relative_to(_BACKEND_DIR)),
+        )
+    ]
 
 
 def _table_for(model: str | None) -> Table | None:
@@ -156,15 +164,27 @@ def _migration_names() -> tuple[set[str], set[str]]:
     return constraints, unique_indexes
 
 
+_SAMPLE_UPSERTS = """
+pg_insert(CalendarListingBlocklist).values(x=1).on_conflict_do_nothing(
+    constraint="uq_blocklist_user_channel_listing",
+)
+pg_insert(CalendarEmailReviewQueue).values(x=1).on_conflict_do_nothing(
+    index_elements=["user_id", "email_message_id"],
+)
+"""
+
+
 class TestOnConflictTargets:
     def test_scan_finds_both_kinds_of_target(self) -> None:
         # Guards the scan itself: if it stops matching, the checks below
-        # would pass vacuously.
-        upserts = _upserts()
-        assert any(u.constraint == "uq_blocklist_user_channel_listing" for u in upserts)
-        assert any(
-            u.index_elements == {"user_id", "email_message_id"} for u in upserts
-        )
+        # would pass vacuously. The app's targeted upserts all moved to
+        # audited ORM writes, so the targets are checked on a sample.
+        sample = _upserts_in(_SAMPLE_UPSERTS, "sample")
+        assert [(u.model, u.constraint, u.index_elements) for u in sample] == [
+            ("CalendarListingBlocklist", "uq_blocklist_user_channel_listing", None),
+            ("CalendarEmailReviewQueue", None, {"user_id", "email_message_id"}),
+        ]
+        assert {u.model for u in _upserts()} >= {"EmailFilterLog", "ProcessedEmail"}
 
     def test_every_target_resolves_to_a_model(self) -> None:
         unresolved = [

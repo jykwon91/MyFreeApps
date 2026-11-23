@@ -1,6 +1,6 @@
 """Customer repository.
 
-Thin ORM layer: lookup-by-phone + atomic upsert. Phone normalization is the service's
+Thin ORM layer: lookup-by-phone + race-safe upsert. Phone normalization is the service's
 responsibility -- the repo just takes the already-normalized value.
 """
 from __future__ import annotations
@@ -9,8 +9,8 @@ import re
 import uuid
 from typing import Optional
 
+from platform_shared.repositories.audited_writes import upsert_row
 from sqlalchemy import func, or_, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -45,27 +45,20 @@ async def list_customers_by_ids(
 async def upsert_customer_by_phone(
     db: AsyncSession, *, name: str, phone: str,
 ) -> Customer:
-    """Create the customer for ``phone`` or update its name, in one atomic statement.
+    """Create the customer for ``phone`` or update its name.
 
-    ``INSERT ... ON CONFLICT (phone)`` closes the lookup-then-insert race: two
+    Through the ORM (``upsert_row``), so the audit log records the change. Two
     first orders from the same new phone both succeed and share one customer
     row instead of the second hitting the unique constraint. The name is only
     rewritten (and ``updated_at`` bumped) when it actually changed.
     """
-    stmt = pg_insert(Customer).values(name=name, phone=phone)
-    stmt = stmt.on_conflict_do_update(
-        constraint="uq_customer_phone",
-        set_={"name": stmt.excluded.name, "updated_at": func.now()},
-        where=Customer.name.is_distinct_from(stmt.excluded.name),
+    customer, _ = await upsert_row(
+        db, Customer,
+        Customer.phone == phone,
+        create={"name": name, "phone": phone},
+        update={"name": name},
     )
-    await db.execute(stmt)
-    # populate_existing so a customer already in the session shows the new name.
-    result = await db.execute(
-        select(Customer)
-        .where(Customer.phone == phone)
-        .execution_options(populate_existing=True),
-    )
-    return result.scalar_one()
+    return customer
 
 
 async def update_customer(

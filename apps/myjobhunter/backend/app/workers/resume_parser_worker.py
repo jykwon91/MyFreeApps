@@ -11,8 +11,8 @@ For each queued job:
   4. Call Claude with the resume extraction prompt.
   5. Map the JSON response to WorkHistory / Education / Skill rows.
   6. Merge the profile rows: work history / education matched against the
-     user's existing rows (no duplicates on re-upload), skills via
-     ON CONFLICT DO NOTHING.
+     user's existing rows (no duplicates on re-upload), skills inserted
+     unless the user already has one of that name.
   7. Mark the job ``complete`` with the raw Claude response + parser version.
   8. When the merge changed what the profile embedding is built from (work
      history rows added or filled, skills added), refresh the embedding so
@@ -30,13 +30,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from platform_shared.core import async_storage
 from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
 from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
@@ -50,7 +48,7 @@ from app.core.transient_errors import TRANSIENT_WORKER_ERRORS
 from app.db.session import AsyncSessionLocal
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
-from app.models.profile.skill import Skill
+from app.repositories.profile import skill_repository
 from app.services.extraction.ai_failure import user_failure_message
 from app.services.extraction.claude_service import MAX_TEXT_CHARS, extract_resume
 from app.services.jobs.parse_provenance import build_parse_provenance
@@ -228,10 +226,10 @@ async def _run_extraction(
             db, user_id, work_entries, edu_entries,
         )
 
-        # Skills use ON CONFLICT DO NOTHING for UNIQUE(user_id, lower(name)).
+        # Skills the user already has (UNIQUE(user_id, lower(name))) are skipped.
         skills_added = 0
         for skill in skill_entries:
-            if await _upsert_skill_ignore_conflict(db, skill):
+            if await skill_repository.add_if_absent(db, skill):
                 skills_added += 1
 
         await db.flush()
@@ -256,26 +254,6 @@ async def _run_extraction(
         len(skill_entries),
     )
     return merge_result.work_history_changed or skills_added > 0
-
-
-async def _upsert_skill_ignore_conflict(db: AsyncSession, skill: Skill) -> bool:
-    """Add a skill row; silently ignore UNIQUE(user_id, lower(name)) violations.
-
-    Returns True when a row was inserted, False when the skill already existed.
-    """
-    now = datetime.now(timezone.utc)
-    stmt = pg_insert(Skill).values(
-        id=uuid.uuid4(),  # Generate a fresh UUID — ORM default doesn't fire on pg_insert
-        user_id=skill.user_id,
-        profile_id=skill.profile_id,
-        name=skill.name,
-        category=skill.category,
-        years_experience=skill.years_experience,
-        created_at=now,
-        updated_at=now,
-    ).on_conflict_do_nothing()
-    result = await db.execute(stmt)
-    return result.rowcount == 1
 
 
 def _build_parsed_fields(claude_response: dict, *, provenance: dict | None = None) -> dict:

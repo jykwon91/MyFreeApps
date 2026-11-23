@@ -11,6 +11,7 @@ import datetime as _dt
 import uuid
 
 import pytest
+from platform_shared.repositories import audited_writes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,33 +77,30 @@ class TestUpsert:
         assert rows[0].annual_premium_cents == 150_000
 
     async def test_a_racing_insert_converges_on_an_update(
-        self, db: AsyncSession,
+        self, db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Simulates the loser of a concurrent write: the row appears between
         the read and the insert. The SAVEPOINT catches the unique violation and
         the caller ends up updating the winner instead of seeing a 500."""
         org_id = uuid.uuid4()
-        real_get = insurance_benchmark_repo.get_for_org
+        real_lock = audited_writes.lock_rows
         calls = {"n": 0}
 
-        async def _get_missing_first(db_arg, *, organization_id):
-            # First read reports "absent" even though the row is about to exist;
-            # later reads (including the post-IntegrityError re-read) tell the
-            # truth.
+        async def _lock_missing_first(db_arg, model, *criteria):
+            # The first read reports "absent" even though the row exists; later
+            # reads (including the post-IntegrityError re-read) tell the truth.
             calls["n"] += 1
             if calls["n"] == 1:
-                return None
-            return await real_get(db_arg, organization_id=organization_id)
+                return []
+            return await real_lock(db_arg, model, *criteria)
 
         # The winner's row, already committed by the other writer.
         await _upsert(db, org_id, source="Winner")
 
-        insurance_benchmark_repo.get_for_org = _get_missing_first  # type: ignore[assignment]
-        try:
-            result = await _upsert(db, org_id, source="Loser", annual_premium_cents=99_000)
-        finally:
-            insurance_benchmark_repo.get_for_org = real_get  # type: ignore[assignment]
+        monkeypatch.setattr(audited_writes, "lock_rows", _lock_missing_first)
+        result = await _upsert(db, org_id, source="Loser", annual_premium_cents=99_000)
 
+        assert calls["n"] == 2  # the insert did collide and re-read the winner
         assert result.source == "Loser"
         assert result.annual_premium_cents == 99_000
         rows = (

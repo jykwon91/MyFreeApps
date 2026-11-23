@@ -14,9 +14,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from platform_shared.repositories.audited_writes import delete_rows
-from sqlalchemy import inspect, select
-from sqlalchemy.exc import IntegrityError
+from platform_shared.repositories.audited_writes import delete_rows, upsert_row
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.insurance.insurance_benchmark import InsuranceBenchmark
@@ -33,26 +32,6 @@ async def get_for_org(
     return result.scalar_one_or_none()
 
 
-def _apply_values(
-    benchmark: InsuranceBenchmark,
-    *,
-    recorded_by_user_id: uuid.UUID | None,
-    annual_premium_cents: int,
-    coverage_amount_cents: int,
-    region_label: str | None,
-    source: str | None,
-    observed_on: _dt.date,
-    notes: str | None,
-) -> None:
-    benchmark.recorded_by_user_id = recorded_by_user_id
-    benchmark.annual_premium_cents = annual_premium_cents
-    benchmark.coverage_amount_cents = coverage_amount_cents
-    benchmark.region_label = region_label
-    benchmark.source = source
-    benchmark.observed_on = observed_on
-    benchmark.notes = notes
-
-
 async def upsert(
     db: AsyncSession,
     *,
@@ -67,12 +46,11 @@ async def upsert(
 ) -> InsuranceBenchmark:
     """Create the org's benchmark, or replace its values.
 
-    Read-then-write rather than a dialect-specific ``ON CONFLICT``, so the query
-    stays portable to SQLite in tests like the rest of this package. The insert
-    is wrapped in a SAVEPOINT and the unique-index violation is caught: two
-    writers that both miss on the read converge on an update instead of the
-    loser surfacing as a 500. That makes the endpoint genuinely idempotent
-    rather than idempotent-if-unraced.
+    Through the ORM (``upsert_row``) rather than a dialect-specific
+    ``ON CONFLICT``, so the query stays portable to SQLite in tests and the
+    audit log records the write. Two writers that both find no row converge on
+    an update instead of the loser surfacing as a 500, so the endpoint is
+    genuinely idempotent rather than idempotent-if-unraced.
     """
     values = {
         "recorded_by_user_id": recorded_by_user_id,
@@ -84,36 +62,12 @@ async def upsert(
         "notes": notes,
     }
 
-    existing = await get_for_org(db, organization_id=organization_id)
-    if existing is not None:
-        _apply_values(existing, **values)
-        await db.flush()
-        return existing
-
-    benchmark = InsuranceBenchmark(organization_id=organization_id, **values)
-    try:
-        async with db.begin_nested():
-            db.add(benchmark)
-            await db.flush()
-    except IntegrityError:
-        # Another writer inserted this org's row between our read and our
-        # write. The SAVEPOINT rolled back, so the session is usable: re-read
-        # the winner and apply our values on top.
-        #
-        # The rollback usually evicts the pending instance itself, in which
-        # case expunging again raises InvalidRequestError — and that exception
-        # would replace the IntegrityError we are handling, turning a recovered
-        # race into a 500. Only expunge if it is still attached.
-        if inspect(benchmark).session_id is not None:
-            db.expunge(benchmark)
-        winner = await get_for_org(db, organization_id=organization_id)
-        if winner is None:
-            # The violation was not the unique index — surface it rather than
-            # swallowing a genuine constraint failure as a silent no-op.
-            raise
-        _apply_values(winner, **values)
-        await db.flush()
-        return winner
+    benchmark, _created = await upsert_row(
+        db, InsuranceBenchmark,
+        InsuranceBenchmark.organization_id == organization_id,
+        create={"organization_id": organization_id, **values},
+        update=values,
+    )
     return benchmark
 
 

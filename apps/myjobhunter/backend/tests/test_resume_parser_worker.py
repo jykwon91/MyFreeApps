@@ -737,17 +737,17 @@ async def test_embedding_model_failure_keeps_job_complete(
 
 
 # ---------------------------------------------------------------------------
-# _upsert_skill_ignore_conflict — typed parameter regression guard
+# skill_repository.add_if_absent — typed parameter regression guard
 # ---------------------------------------------------------------------------
 
 
-def test_upsert_skill_ignore_conflict_accepts_skill_orm_type():
-    """_upsert_skill_ignore_conflict signature must use typed annotations, not Any."""
+def test_add_skill_if_absent_accepts_skill_orm_type():
+    """skill_repository.add_if_absent signature must use typed annotations, not Any."""
     import inspect
     import typing
-    from app.workers.resume_parser_worker import _upsert_skill_ignore_conflict
+    from app.repositories.profile.skill_repository import add_if_absent
 
-    sig = inspect.signature(_upsert_skill_ignore_conflict)
+    sig = inspect.signature(add_if_absent)
     db_annotation = sig.parameters["db"].annotation
     skill_annotation = sig.parameters["skill"].annotation
 

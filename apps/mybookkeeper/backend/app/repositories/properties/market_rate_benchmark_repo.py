@@ -15,9 +15,8 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from platform_shared.repositories.audited_writes import delete_rows
-from sqlalchemy import Select, inspect, select
-from sqlalchemy.exc import IntegrityError
+from platform_shared.repositories.audited_writes import delete_rows, upsert_row
+from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.properties.market_rate_benchmark import MarketRateBenchmark
@@ -59,27 +58,6 @@ async def list_for_org(
     return list(result.scalars().all())
 
 
-def _apply_values(
-    benchmark: MarketRateBenchmark,
-    *,
-    recorded_by_user_id: uuid.UUID | None,
-    rate_cents_per_kwh: Decimal | None,
-    monthly_cents: int | None,
-    source: str | None,
-    observed_on: _dt.date,
-    notes: str | None,
-) -> None:
-    # Both shapes are assigned, not just the populated one: switching a service
-    # from a metered rate to a flat monthly must clear the figure that no longer
-    # applies, or the CHECK would reject the write.
-    benchmark.recorded_by_user_id = recorded_by_user_id
-    benchmark.rate_cents_per_kwh = rate_cents_per_kwh
-    benchmark.monthly_cents = monthly_cents
-    benchmark.source = source
-    benchmark.observed_on = observed_on
-    benchmark.notes = notes
-
-
 async def upsert(
     db: AsyncSession,
     *,
@@ -94,12 +72,15 @@ async def upsert(
 ) -> MarketRateBenchmark:
     """Create the org's benchmark for ``service_type``, or replace its values.
 
-    Read-then-write rather than a dialect-specific ``ON CONFLICT``, so the query
-    stays portable to SQLite in tests like the rest of this package. The insert
-    is wrapped in a SAVEPOINT and the unique-index violation is caught: two
-    writers that both miss on the read converge on an update instead of the
-    loser surfacing as a 500. Portable to both dialects, and it makes the
-    endpoint genuinely idempotent rather than idempotent-if-unraced.
+    Through the ORM (``upsert_row``) rather than a dialect-specific
+    ``ON CONFLICT``, so the query stays portable to SQLite in tests and the
+    audit log records the write. Two writers that both find no row converge on
+    an update instead of the loser surfacing as a 500, so the endpoint is
+    genuinely idempotent rather than idempotent-if-unraced.
+
+    Both rate shapes are written, not just the populated one: switching a
+    service from a metered rate to a flat monthly must clear the figure that no
+    longer applies, or the CHECK would reject the write.
     """
     values = {
         "recorded_by_user_id": recorded_by_user_id,
@@ -110,44 +91,13 @@ async def upsert(
         "notes": notes,
     }
 
-    existing = await get_by_service_type(
-        db, organization_id=organization_id, service_type=service_type,
+    benchmark, _created = await upsert_row(
+        db, MarketRateBenchmark,
+        MarketRateBenchmark.organization_id == organization_id,
+        MarketRateBenchmark.service_type == service_type,
+        create={"organization_id": organization_id, "service_type": service_type, **values},
+        update=values,
     )
-    if existing is not None:
-        _apply_values(existing, **values)
-        await db.flush()
-        return existing
-
-    benchmark = MarketRateBenchmark(
-        organization_id=organization_id,
-        service_type=service_type,
-        **values,
-    )
-    try:
-        async with db.begin_nested():
-            db.add(benchmark)
-            await db.flush()
-    except IntegrityError:
-        # Another writer inserted this org's row between our read and our
-        # write. The SAVEPOINT rolled back, so the session is usable: re-read
-        # the winner and apply our values on top.
-        #
-        # The rollback usually evicts the pending instance itself, in which
-        # case expunging again raises InvalidRequestError — and that exception
-        # would replace the IntegrityError we are handling, turning a recovered
-        # race into a 500. Only expunge if it is still attached.
-        if inspect(benchmark).session_id is not None:
-            db.expunge(benchmark)
-        winner = await get_by_service_type(
-            db, organization_id=organization_id, service_type=service_type,
-        )
-        if winner is None:
-            # The violation was not the unique index — surface it rather than
-            # swallowing a genuine constraint failure as a silent no-op.
-            raise
-        _apply_values(winner, **values)
-        await db.flush()
-        return winner
     return benchmark
 
 
