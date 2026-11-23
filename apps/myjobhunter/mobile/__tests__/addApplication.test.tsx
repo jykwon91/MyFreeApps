@@ -370,7 +370,7 @@ describe("from a link", () => {
     let failAdd = true;
     const sent = serveAdd({
       "POST /applications/extract-from-url": ok(extracted({ company: "Linear" })),
-      "POST /companies": () => (failAdd ? fail(500)() : ok(companyRecord({ id: "co-linear", name: "Linear" }))()),
+      "POST /companies": () => (failAdd ? fail(500, null)() : ok(companyRecord({ id: "co-linear", name: "Linear" }))()),
       "POST /companies/co-linear/research": ok({}),
     });
     await openAddScreen();
@@ -387,6 +387,20 @@ describe("from a link", () => {
     expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([{ name: "Linear" }, { name: "Linear" }]);
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-linear" });
     await waitFor(() => expect(requestsTo(sent, "POST /companies/co-linear/research")).toHaveLength(1));
+  });
+
+  it("says the server's reason when it refuses the company on Save", async () => {
+    serveAdd({
+      "POST /applications/extract-from-url": ok(extracted({ company: "Linear" })),
+      "POST /companies": fail(422, "Company name is not allowed."),
+    });
+    await openAddScreen();
+    await readLink();
+
+    expect(await screen.findByText(MESSAGES.companyNew)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+    expect(await screen.findByText("Company name is not allowed.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntAddCompany)).toBeNull();
   });
 
   it("says the companies didn't load, not that adding one failed, when GET /companies fails during the read", async () => {

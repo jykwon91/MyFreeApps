@@ -356,8 +356,8 @@ describe("adding a company", () => {
     expect(posts(sent)).toHaveLength(1);
   });
 
-  it("keeps the sheet and what was typed, with the reason at the top, when the add fails", async () => {
-    let reply: FakeReply = { status: 500, data: { detail: "boom" } };
+  it("keeps the sheet and what was typed, with the server's reason at the top, when the add is refused", async () => {
+    let reply: FakeReply = { status: 422, data: { detail: "Company name is not allowed." } };
     const sent = serveCompanies([ACME], { "POST /companies": () => reply });
     await showScreen();
     await openAddSheet();
@@ -365,7 +365,8 @@ describe("adding a company", () => {
     await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
+    expect(await screen.findByText("Company name is not allowed.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
     expect(screen.getByRole("header", { name: MESSAGES.addTitle })).toBeTruthy();
     expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.value).toBe("Hooli");
     expect(screen.queryByText(MESSAGES.added("Hooli"))).toBeNull();
@@ -374,6 +375,20 @@ describe("adding a company", () => {
     await fireEvent.press(saveButton());
     expect(await screen.findByText(MESSAGES.added("Hooli"))).toBeTruthy();
     expect(posts(sent)).toHaveLength(2);
+  });
+
+  it.each([
+    ["no detail", { status: 500, data: {} }],
+    ["a detail that isn't text", { status: 422, data: { detail: [{ msg: "bad" }] } }],
+  ])("says it couldn't add, in the app's own words, when the server refuses with %s", async (_label, reply: FakeReply) => {
+    serveCompanies([ACME], { "POST /companies": () => reply });
+    await showScreen();
+    await openAddSheet();
+
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
   });
 
   it.each([
