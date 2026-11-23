@@ -209,6 +209,25 @@ describe("LoginForm", () => {
     });
   });
 
+  describe("with signInOnly", () => {
+    it("shows the sign-in form with no tabs and no sign-up link", () => {
+      render(<LoginForm onSignIn={noop} signInOnly />);
+      expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).toBeNull();
+      expect(screen.queryByRole("link", { name: "Create account" })).toBeNull();
+    });
+
+    it("signs in from the form", async () => {
+      const onSignIn = vi.fn().mockResolvedValue(undefined);
+      render(<LoginForm onSignIn={onSignIn} signInOnly />);
+      await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
+      await userEvent.type(screen.getByLabelText("Password"), "secret123");
+      await userEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+      await waitFor(() => expect(onSignIn).toHaveBeenCalledWith("user@example.com", "secret123"));
+    });
+  });
+
   it("leaves focus alone by default", () => {
     render(<LoginForm onSignIn={noop} onRegister={noop} />);
     expect(screen.getByLabelText("Email")).not.toHaveFocus();
@@ -227,6 +246,8 @@ describe("LoginForm", () => {
     void (<LoginForm onSignIn={noop} />);
     // @ts-expect-error -- both onRegister and registerHref
     void (<LoginForm onSignIn={noop} onRegister={noop} registerHref="/register" />);
+    // @ts-expect-error -- signInOnly and a sign-up link together
+    void (<LoginForm onSignIn={noop} signInOnly registerHref="/register" />);
     // @ts-expect-error -- the tab's captcha means nothing without the tab
     void (<LoginForm onSignIn={noop} registerHref="/register" registerCaptchaReady />);
   });

@@ -166,8 +166,8 @@ test.describe("Seeded recipe — guest vs owner", () => {
   }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(OWNER_EMAIL);
-    await page.getByLabel("Password").fill(OWNER_PASSWORD);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByLabel("Password", { exact: true }).fill(OWNER_PASSWORD);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
     await expect(page).toHaveURL(/^(?!.*\/login).*$/, { timeout: 10_000 });
 
     await page.goto("/");

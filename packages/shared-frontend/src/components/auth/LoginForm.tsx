@@ -1,4 +1,5 @@
 import LoginFormRegisterLink from "./LoginFormRegisterLink";
+import LoginFormSignInOnly from "./LoginFormSignInOnly";
 import LoginFormTabs from "./LoginFormTabs";
 import {
   LOGIN_FORM_COPY,
@@ -8,6 +9,34 @@ import type { LoginFormProps } from "../../types/login-form-props";
 
 export default function LoginForm(props: LoginFormProps) {
   const { onSignIn, onGoogleSignIn, trustCopy = LOGIN_FORM_COPY.defaultTrust, autoFocusEmail = false } = props;
+
+  function renderCredentials() {
+    if (props.signInOnly) {
+      return <LoginFormSignInOnly onSignIn={onSignIn} trustCopy={trustCopy} autoFocusEmail={autoFocusEmail} />;
+    }
+    if (props.registerHref !== undefined) {
+      return (
+        <LoginFormRegisterLink
+          onSignIn={onSignIn}
+          registerHref={props.registerHref}
+          trustCopy={trustCopy}
+          autoFocusEmail={autoFocusEmail}
+        />
+      );
+    }
+    return (
+      <LoginFormTabs
+        onSignIn={onSignIn}
+        onRegister={props.onRegister}
+        defaultTab={props.defaultTab ?? "signin"}
+        trustCopy={trustCopy}
+        autoFocusEmail={autoFocusEmail}
+        passwordMinLength={props.passwordMinLength ?? LOGIN_FORM_DEFAULT_PASSWORD_MIN_LENGTH}
+        registerCaptchaSlot={props.registerCaptchaSlot}
+        registerCaptchaReady={props.registerCaptchaReady ?? true}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-sm mx-auto">
@@ -52,25 +81,7 @@ export default function LoginForm(props: LoginFormProps) {
         </>
       )}
 
-      {props.registerHref !== undefined ? (
-        <LoginFormRegisterLink
-          onSignIn={onSignIn}
-          registerHref={props.registerHref}
-          trustCopy={trustCopy}
-          autoFocusEmail={autoFocusEmail}
-        />
-      ) : (
-        <LoginFormTabs
-          onSignIn={onSignIn}
-          onRegister={props.onRegister}
-          defaultTab={props.defaultTab ?? "signin"}
-          trustCopy={trustCopy}
-          autoFocusEmail={autoFocusEmail}
-          passwordMinLength={props.passwordMinLength ?? LOGIN_FORM_DEFAULT_PASSWORD_MIN_LENGTH}
-          registerCaptchaSlot={props.registerCaptchaSlot}
-          registerCaptchaReady={props.registerCaptchaReady ?? true}
-        />
-      )}
+      {renderCredentials()}
     </div>
   );
 }

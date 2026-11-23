@@ -3,6 +3,7 @@ export interface LoginFormLinkRegistration {
   /** The app's register page, with any `returnTo` already on it (see withReturnTo). */
   registerHref: string;
   onRegister?: never;
+  signInOnly?: never;
   defaultTab?: never;
   passwordMinLength?: never;
   registerCaptchaSlot?: never;

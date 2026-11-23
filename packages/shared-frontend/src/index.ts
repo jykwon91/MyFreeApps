@@ -137,6 +137,7 @@ export { default as LoginForm } from "./components/auth/LoginForm";
 export type { LoginFormProps } from "./types/login-form-props";
 export type { LoginFormTabRegistration } from "./types/login-form-tab-registration";
 export type { LoginFormLinkRegistration } from "./types/login-form-link-registration";
+export type { LoginFormSignInOnlyRegistration } from "./types/login-form-sign-in-only-registration";
 export { default as TwoFactorStep } from "./components/auth/TwoFactorStep";
 export type { TwoFactorStepProps } from "./types/two-factor-step-props";
 export { default as PasswordPair } from "./components/auth/PasswordPair";
