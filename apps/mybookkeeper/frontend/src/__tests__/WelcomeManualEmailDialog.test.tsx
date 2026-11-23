@@ -160,6 +160,19 @@ describe("WelcomeManualEmailDialog", () => {
     });
   });
 
+  it("tells the host they've hit the send limit when the server answers 429", async () => {
+    emailMutationMock.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 429, data: { detail: "Too many attempts" } }),
+    });
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
+    await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
+    await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
+
+    await waitFor(() => {
+      expect(showErrorMock).toHaveBeenCalledWith("You've emailed a lot of guides in a short time. Try again in a while.");
+    });
+  });
+
   describe("room picker", () => {
     it("is absent for a whole-place manual", () => {
       render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);

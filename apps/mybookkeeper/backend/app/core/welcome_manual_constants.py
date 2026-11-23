@@ -97,3 +97,12 @@ SHARE_TOKEN_BYTES = 24
 SHARE_PIN_LENGTH = 4
 SHARE_UNLOCK_MAX_ATTEMPTS = 5
 SHARE_UNLOCK_LOCKOUT_WINDOW_SECONDS = 900
+
+# Emailing a manual sends mail from the platform's own sending domain, with a PDF
+# attached, to any address the caller types. Two limits bound that: a short
+# per-user allowance, and a per-organization daily cap so several accounts
+# in one workspace cannot add up to a relay.
+WELCOME_MANUAL_EMAIL_USER_MAX_PER_HOUR = 20
+WELCOME_MANUAL_EMAIL_USER_WINDOW_SECONDS = 3600
+WELCOME_MANUAL_EMAIL_ORG_MAX_PER_DAY = 100
+WELCOME_MANUAL_EMAIL_ORG_WINDOW_SECONDS = 86400

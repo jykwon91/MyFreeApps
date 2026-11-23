@@ -1,3 +1,4 @@
+import { WELCOME_MANUAL_EMAIL_TOO_MANY } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Alert, Share } from "react-native";
@@ -329,6 +330,16 @@ describe("emailing the guide", () => {
     await fireEvent.press(button(EMAIL.send));
     await screen.findByText(EMAIL.failedHeading);
     await fireEvent.press(button(EMAIL.tryAgain));
+    expect(screen.getByDisplayValue("guest@example.com")).toBeTruthy();
+  });
+
+  it("says so when too many guides have been emailed, and keeps what was typed", async () => {
+    const server = startWelcomeManualsServer({ manuals: [aManual({ sections: [aSection()] })] });
+    server.failWhen = (_method, url) => (url.endsWith("/email") ? { status: 429, detail: "Too many attempts" } : null);
+    await open();
+    await fill("guest@example.com");
+    await fireEvent.press(button(EMAIL.send));
+    await screen.findByText(WELCOME_MANUAL_EMAIL_TOO_MANY);
     expect(screen.getByDisplayValue("guest@example.com")).toBeTruthy();
   });
 
