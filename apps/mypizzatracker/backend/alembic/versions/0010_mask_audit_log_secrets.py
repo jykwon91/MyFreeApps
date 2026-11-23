@@ -31,6 +31,8 @@ depends_on: Union[str, Sequence[str], None] = None
 # and skip tables. A skip field or skip table should have no audit rows at all;
 # its values are masked rather than its rows deleted.
 _MASK = "***"
+# Account erasure already replaced these values; keep its marker so the erasure stays recorded.
+_ERASED = "[erased]"
 _FIELDS = (
     "hashed_password",
     "totp_recovery_codes",
@@ -44,19 +46,19 @@ _TABLES = (
 _MASK_VALUES = sa.text(
     """
     UPDATE audit_logs
-    SET old_value = CASE WHEN old_value IS NULL THEN NULL ELSE :mask END,
-        new_value = CASE WHEN new_value IS NULL THEN NULL ELSE :mask END
+    SET old_value = CASE WHEN old_value IS NULL OR old_value IN (:mask, :erased) THEN old_value ELSE :mask END,
+        new_value = CASE WHEN new_value IS NULL OR new_value IN (:mask, :erased) THEN new_value ELSE :mask END
     WHERE (field_name IN :fields OR table_name IN :tables)
       AND (
-        (old_value IS NOT NULL AND old_value <> :mask)
-        OR (new_value IS NOT NULL AND new_value <> :mask)
+        (old_value IS NOT NULL AND old_value NOT IN (:mask, :erased))
+        OR (new_value IS NOT NULL AND new_value NOT IN (:mask, :erased))
       )
     """
 ).bindparams(sa.bindparam("fields", expanding=True), sa.bindparam("tables", expanding=True))
 
 
 def mask_audit_log_secrets(connection: Connection) -> None:
-    connection.execute(_MASK_VALUES, {"mask": _MASK, "fields": list(_FIELDS), "tables": list(_TABLES)})
+    connection.execute(_MASK_VALUES, {"mask": _MASK, "erased": _ERASED, "fields": list(_FIELDS), "tables": list(_TABLES)})
 
 
 def upgrade() -> None:

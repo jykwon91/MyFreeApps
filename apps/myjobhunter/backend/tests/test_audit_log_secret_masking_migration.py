@@ -13,7 +13,7 @@ from types import ModuleType
 
 import pytest
 import pytest_asyncio
-from platform_shared.core.audit_erasure_constants import MASKED_AUDIT_VALUE
+from platform_shared.core.audit_erasure_constants import ERASED_AUDIT_VALUE, MASKED_AUDIT_VALUE
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -34,6 +34,7 @@ _ROWS = [
     ("users", "UPDATE", "email", "old@example.com", "new@example.com"),
     ("users", "UPDATE", "totp_secret", _MASK, _MASK),
     ("users", "UPDATE", "totp_secret", None, None),
+    ("users", "UPDATE", "totp_secret", ERASED_AUDIT_VALUE, "NEWSECRET"),
 ]
 _EXPECTED = [
     (_MASK, _MASK),
@@ -45,6 +46,7 @@ _EXPECTED = [
     ("old@example.com", "new@example.com"),
     (_MASK, _MASK),
     (None, None),
+    (ERASED_AUDIT_VALUE, _MASK),
 ]
 
 
