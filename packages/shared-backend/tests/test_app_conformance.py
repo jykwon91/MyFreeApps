@@ -2943,3 +2943,35 @@ class TestFastPasswordHelperInstalledFirst:
             _read("infra", "templates", "scaffold", "backend", "tests", "conftest.py"),
             "the scaffold template's tests/conftest.py",
         )
+
+
+class TestSentryDisabledInTests:
+    """A conftest must blank SENTRY_DSN before importing any app code.
+
+    Settings read the developer's ``.env``, which holds the real DSN; a test
+    that boots the lifespan would otherwise report to the live Sentry project.
+    CI has no ``.env``, so only this structural check can catch a deleted or
+    reordered guard.
+    """
+
+    @staticmethod
+    def _assert_blanks_dsn_before_app_imports(conftest: str, where: str) -> None:
+        guard = re.search(r'^os\.environ\["SENTRY_DSN"\] = ""$', conftest, re.MULTILINE)
+        assert guard, f'{where} must set os.environ["SENTRY_DSN"] = "" at module level.'
+        first_app_import = re.search(r"^(?:from|import) app\b", conftest, re.MULTILINE)
+        assert first_app_import, f"{where} imports no app code, so the check is meaningless."
+        assert guard.start() < first_app_import.start(), (
+            f"{where} must blank SENTRY_DSN before its first app import."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_app_conftest_blanks_dsn_before_app_imports(self, app: str) -> None:
+        self._assert_blanks_dsn_before_app_imports(
+            _read("apps", app, "backend", "tests", "conftest.py"), f"apps/{app}/backend/tests/conftest.py",
+        )
+
+    def test_scaffold_conftest_blanks_dsn_before_app_imports(self) -> None:
+        self._assert_blanks_dsn_before_app_imports(
+            _read("infra", "templates", "scaffold", "backend", "tests", "conftest.py"),
+            "the scaffold template's tests/conftest.py",
+        )

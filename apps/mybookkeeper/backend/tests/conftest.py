@@ -16,6 +16,13 @@ os.environ.setdefault("MAGIC_DISABLED", "1")
 # Must be set before settings is imported.
 os.environ.setdefault("ENVIRONMENT", "test")
 
+# Never report to the real Sentry from a test run. Settings read the app's
+# ``.env``, which on a developer machine holds the real SENTRY_DSN, and any
+# test that boots the lifespan would then send every WARNING+ log to the live
+# project. Plain assignment (not setdefault) so neither the shell nor ``.env``
+# can switch it back on. Must be set before settings is imported.
+os.environ["SENTRY_DSN"] = ""
+
 # Storage env vars — set before settings is imported so ``get_storage()``
 # doesn't raise StorageNotConfiguredError when the lifespan or any
 # service touches it. The ``_patch_storage_for_tests`` autouse fixture
