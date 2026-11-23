@@ -67,8 +67,8 @@ describe("ScenarioPath", () => {
   it("shows a placeholder until the scenarios load", () => {
     scenarios = { data: undefined, isError: false };
     renderPath();
-    expect(screen.getByRole("status")).toHaveTextContent("Loading scenarios…");
-    const skeleton = screen.getByLabelText("Loading scenarios…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading scenarios");
+    const skeleton = screen.getByLabelText("Loading scenarios");
     expect(skeleton).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
     // Its boxes are the loaded page's (catalogLayout), so nothing moves when the path arrives.

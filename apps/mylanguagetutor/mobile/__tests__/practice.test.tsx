@@ -1,3 +1,4 @@
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
@@ -139,11 +140,11 @@ describe("the Practice tab", () => {
 
     // The profile has loaded and the scenarios are on their way.
     await waitFor(() => expect(answer).toBeDefined());
-    expect(screen.getByLabelText(CATALOG_MESSAGES.loadingScenarios)).toBeTruthy();
+    expect(screen.getByLabelText(LOADING_COPY.scenarios)).toBeTruthy();
     expect(screen.getAllByTestId("catalog-skeleton-card")).toHaveLength(4);
     await act(async () => answer?.());
     expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
-    expect(screen.queryByLabelText(CATALOG_MESSAGES.loadingScenarios)).toBeNull();
+    expect(screen.queryByLabelText(LOADING_COPY.scenarios)).toBeNull();
   });
 
   it("says so when the language has no scenarios", async () => {

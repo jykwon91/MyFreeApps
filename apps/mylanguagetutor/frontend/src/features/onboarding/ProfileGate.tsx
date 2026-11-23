@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import CatalogError from "@/features/catalog/CatalogError";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useGetProfileQuery } from "@mylanguagetutor/api-client/store/profileApi";
@@ -18,6 +19,6 @@ export default function ProfileGate({ children }: ProfileGateProps) {
   const { data: profile, isError, refetch } = useGetProfileQuery();
   if (profile) return <>{children(profile)}</>;
   if (isError) return <CatalogError onRetry={() => void refetch()} />;
-  if (profile === undefined) return <PageSkeleton />;
+  if (profile === undefined) return <PageSkeleton label={LOADING_COPY.scenarios} />;
   return <Navigate to={ONBOARDING_LANGUAGE_PATH} replace />;
 }

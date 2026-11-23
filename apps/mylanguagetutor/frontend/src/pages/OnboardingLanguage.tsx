@@ -6,6 +6,7 @@ import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardin
 import { useListLanguagesQuery } from "@mylanguagetutor/api-client/store/catalogApi";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
 import CatalogError from "@/features/catalog/CatalogError";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 
 /** Onboarding step 1: which language to practice. */
@@ -13,7 +14,7 @@ export default function OnboardingLanguage() {
   const { data: languages, isError, refetch } = useListLanguagesQuery();
 
   let body;
-  if (!languages) body = isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton />;
+  if (!languages) body = isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton label={LOADING_COPY.languages} />;
   else if (languages.length === 0) {
     body = <p className="text-sm text-muted-foreground">{CATALOG_COPY.noLanguages}</p>;
   } else {

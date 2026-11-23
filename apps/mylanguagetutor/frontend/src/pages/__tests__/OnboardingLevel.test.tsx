@@ -93,7 +93,7 @@ describe("OnboardingLevel page", () => {
   it("waits for the profile before deciding there's no language", () => {
     profile = { data: undefined, isError: false, isFetching: false, refetch };
     renderPage("/onboarding/level");
-    expect(screen.getByRole("status")).toHaveTextContent("Loading page…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your level");
   });
 
   it("offers a retry when the saved profile can't load and no language was chosen, instead of the language step", () => {

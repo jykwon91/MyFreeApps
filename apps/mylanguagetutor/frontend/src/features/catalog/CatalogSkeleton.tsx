@@ -1,4 +1,5 @@
 import { LoadingRegion, Skeleton } from "@platform/ui";
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import {
   CATALOG_HEADER,
   CATALOG_HEADER_LINE,
@@ -21,7 +22,7 @@ import TwoLinePlaceholder from "@/features/catalog/TwoLinePlaceholder";
  */
 export default function CatalogSkeleton() {
   return (
-    <LoadingRegion label="Loading scenarios…" className={CATALOG_PAGE}>
+    <LoadingRegion label={LOADING_COPY.scenarios} className={CATALOG_PAGE}>
       <div className={CATALOG_HEADER}>
         <Skeleton className="h-8 w-2/3 max-w-sm" />
         {/* A div, not the page's <p>: Skeleton renders a div, which a <p> can't hold. Same boxes. */}

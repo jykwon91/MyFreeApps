@@ -45,7 +45,7 @@ describe("OnboardingLanguage page", () => {
   it("shows a placeholder while the languages load, then lists them", () => {
     const { rerender } = renderPage();
     expect(screen.getByText(ONBOARDING_COPY.languageStep)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Loading page…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading languages");
 
     languages = { data: [SPANISH], isError: false };
     rerender(page());

@@ -1,9 +1,10 @@
+import { LOADING_COPY } from "@mylanguagetutor/api-client/constants/loadingCopy";
 import { ONBOARDING_LANGUAGE_PATH } from "@mylanguagetutor/api-client/constants/onboardingLanguagePath";
 import { useGetProfileQuery } from "@mylanguagetutor/api-client/store/profileApi";
 import { EmptyState, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
-import { CATALOG_MESSAGES, SCENARIO_SKELETON_ROWS } from "../../constants/catalog";
+import { SCENARIO_SKELETON_ROWS } from "../../constants/catalog";
 import { PROFILE_GATE_MESSAGES } from "../../constants/onboarding";
 import type { ProfileGateProps } from "../../types/ProfileGateProps";
 import CardListSkeleton from "../catalog/CardListSkeleton";
@@ -28,7 +29,7 @@ export default function ProfileGate({ children }: ProfileGateProps) {
   if (profile) return children(profile);
   if (isError) return <CatalogLoadError isRetrying={isRefreshing} onRetry={refresh} />;
   if (profile === undefined) {
-    return <CardListSkeleton accessibilityLabel={CATALOG_MESSAGES.loadingScenarios} rows={SCENARIO_SKELETON_ROWS} />;
+    return <CardListSkeleton accessibilityLabel={LOADING_COPY.scenarios} rows={SCENARIO_SKELETON_ROWS} />;
   }
   return (
     <EmptyState
