@@ -87,4 +87,39 @@ describe("Login page errors", () => {
       "Invalid authentication code. Please try again.",
     );
   });
+
+  it("shows the shared 2FA step on totp_required, signs in with the code, and lands on home", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    const user = await submitCredentials();
+
+    await user.type(await screen.findByLabelText("Authentication code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByText("Home")).toBeInTheDocument();
+    expect(mockSignIn).toHaveBeenLastCalledWith("user@example.com", "a-password-123", "123456");
+  });
+
+  it("says the code didn't go through when the server still asks for one", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    const user = await submitCredentials();
+
+    await user.type(await screen.findByLabelText("Authentication code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Authentication code didn't go through. Please try again.",
+    );
+  });
+
+  it("goes back to the sign-in form from the 2FA step", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    const user = await submitCredentials();
+
+    await user.click(await screen.findByRole("button", { name: "Back to login" }));
+
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument();
+  });
 });
