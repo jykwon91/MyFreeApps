@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
+import { formatCount } from "@platform/core/utils/count";
 import { EmptyState, LoadMoreFooter, StaleDataBanner, cn, useIsAuthenticated } from "@platform/ui";
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import { RECIPES_EMPTY_COPY } from "@myrecipes/api-client/constants/recipesEmptyCopy";
@@ -102,17 +103,23 @@ export default function Recipes() {
   const { recipes } = list;
   const hasSearch = query.length > 0;
 
+  // Said once a search or filter has settled, for screen readers: the rows change out of sight.
+  const isResultSettled = (hasSearch || ownerMe) && !list.isLoading && !list.isFiltering && list.loadError === undefined;
+  const resultAnnouncement = isResultSettled ? formatCount(list.total, "recipe") : "";
+
   let content: ReactNode;
   if (list.isLoading) {
     content = <RecipesListSkeleton />;
   } else if (list.loadError !== undefined) {
     content = (
-      <EmptyState
-        icon={<ChefHat className="w-12 h-12 text-destructive" />}
-        heading={RECIPES_LIST_ERROR_COPY.heading}
-        body={recipesListErrorMessage(list.loadError)}
-        action={{ label: STALE_DATA_MESSAGES.tryAgain, onClick: () => void list.refetch(), loading: list.isFetching }}
-      />
+      <div role="alert">
+        <EmptyState
+          icon={<ChefHat className="w-12 h-12 text-destructive" />}
+          heading={RECIPES_LIST_ERROR_COPY.heading}
+          body={recipesListErrorMessage(list.loadError)}
+          action={{ label: STALE_DATA_MESSAGES.tryAgain, onClick: () => void list.refetch(), loading: list.isFetching }}
+        />
+      </div>
     );
   } else if (recipes.length === 0 && hasSearch) {
     content = (
@@ -234,6 +241,9 @@ export default function Recipes() {
         ) : null}
       </div>
 
+      <p role="status" className="sr-only">
+        {resultAnnouncement}
+      </p>
       {content}
     </div>
   );

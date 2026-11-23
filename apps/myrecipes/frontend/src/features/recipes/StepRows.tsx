@@ -1,11 +1,17 @@
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
-import { Button } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 import { STEP_INSTRUCTION_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
 import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
 import { TOUCH_TARGET } from "@/constants/touchTarget";
+import { stepControlId } from "@/features/recipes/rowControlIds";
+import { useRowListFocus } from "@/features/recipes/useRowListFocus";
 
 interface Props {
   rows: EditableStepRow[];
+  /** What's wrong with each step, by the row's key. */
+  problems: Record<string, string>;
+  /** What's wrong with the list as a whole, for the Add button to carry. */
+  listProblem?: string;
   disabled?: boolean;
   onChange: (key: string, instruction: string) => void;
   onAdd: () => void;
@@ -20,66 +26,95 @@ interface Props {
  */
 export default function StepRows({
   rows,
+  problems,
+  listProblem,
   disabled,
   onChange,
   onAdd,
   onRemove,
   onMove,
 }: Props) {
+  const addId = "add-step";
+  const { containerRef, announcement, add, remove, move } = useRowListFocus({
+    noun: "step",
+    rowCount: rows.length,
+    addButtonId: addId,
+    onAdd,
+    onRemove,
+    onMove,
+  });
   return (
-    <div className="space-y-2">
+    <div ref={containerRef} className="space-y-2">
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       {rows.map((row, idx) => (
-        <div key={row.key} className="flex items-start gap-2">
-          <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-            {idx + 1}
-          </span>
-          <textarea
-            aria-label={`Step ${idx + 1}`}
-            placeholder="Describe this step"
-            maxLength={STEP_INSTRUCTION_MAX_LENGTH}
-            value={row.instruction}
-            disabled={disabled}
-            rows={2}
-            onChange={(e) => onChange(row.key, e.target.value)}
-            className="flex-1 rounded-md border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-          />
-          <div className="flex items-center">
-            <button
-              type="button"
-              aria-label="Move step up"
-              disabled={disabled || idx === 0}
-              onClick={() => onMove(row.key, -1)}
-              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Move step down"
-              disabled={disabled || idx === rows.length - 1}
-              onClick={() => onMove(row.key, 1)}
-              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Remove step"
+        <div key={row.key}>
+          <div className="flex items-start gap-2">
+            <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+              {idx + 1}
+            </span>
+            <textarea
+              id={stepControlId(row.key)}
+              data-row-first=""
+              {...fieldFeedbackAria({ id: stepControlId(row.key), error: problems[row.key] })}
+              aria-label={`Step ${idx + 1}`}
+              placeholder="Describe this step"
+              maxLength={STEP_INSTRUCTION_MAX_LENGTH}
+              value={row.instruction}
               disabled={disabled}
-              onClick={() => onRemove(row.key)}
-              className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30`}
-            >
-              <X className="w-4 h-4" />
-            </button>
+              rows={2}
+              onChange={(e) => onChange(row.key, e.target.value)}
+              className="flex-1 rounded-md border bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+            <div className="flex items-center">
+              <button
+                type="button"
+                aria-label="Move step up"
+                disabled={disabled || idx === 0}
+                onClick={() => move(row.key, idx, -1)}
+                className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move step down"
+                disabled={disabled || idx === rows.length - 1}
+                onClick={() => move(row.key, idx, 1)}
+                className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30`}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Remove step"
+                disabled={disabled}
+                onClick={() => remove(row.key, idx)}
+                className={`flex ${TOUCH_TARGET} items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-30`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+          <FieldFeedback id={stepControlId(row.key)} error={problems[row.key]} />
         </div>
       ))}
-      <Button type="button" variant="secondary" size="sm" onClick={onAdd} disabled={disabled}>
+      <Button
+        id={addId}
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={add}
+        disabled={disabled}
+        {...fieldFeedbackAria({ id: addId, error: listProblem })}
+      >
         <span className="inline-flex items-center gap-1.5">
           <Plus className="w-4 h-4" />
           Add step
         </span>
       </Button>
+      <FieldFeedback id={addId} error={listProblem} />
     </div>
   );
 }

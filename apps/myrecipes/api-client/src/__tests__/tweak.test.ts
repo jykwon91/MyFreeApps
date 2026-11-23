@@ -125,8 +125,9 @@ describe("changeNoteProblem", () => {
 });
 
 describe("tweakFormProblem", () => {
-  it("names the content's problems first, then the missing note", () => {
-    expect(tweakFormProblem(values({ ingredients: [] }), "", ".")).toBe(PROBLEMS.ingredientsRequired);
+  it("names the problems in form order: the note on top, then the content", () => {
+    expect(tweakFormProblem(values({ ingredients: [] }), "", ".")).toBe(PROBLEMS.changeNoteRequired);
+    expect(tweakFormProblem(values({ ingredients: [] }), "Note", ".")).toBe(PROBLEMS.ingredientsRequired);
     expect(tweakFormProblem(values({ cookMinutes: "soon" }), "Note", ".")).toBe(PROBLEMS.minutesInvalid);
     expect(tweakFormProblem(values(), "", ".")).toBe(PROBLEMS.changeNoteRequired);
     expect(tweakFormProblem(values(), "x".repeat(CHANGE_NOTE_MAX_LENGTH + 1), ".")).toMatch(/Keep this to 2,000/);

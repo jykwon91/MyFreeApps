@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertBox,
   Button,
-  FormField,
   LoadingButton,
   UnsavedChangesDialog,
   showError,
@@ -12,6 +11,7 @@ import {
 } from "@platform/ui";
 import { DISCARD_MESSAGES } from "@platform/core/constants/discard";
 import type { DiscardCopy } from "@platform/core/types/discard/discard-copy";
+import ProblemFormField from "@/features/recipes/ProblemFormField";
 import IngredientRows from "@/features/recipes/IngredientRows";
 import StepRows from "@/features/recipes/StepRows";
 import { useRecipeEditorForm } from "@/features/recipes/useRecipeEditorForm";
@@ -32,6 +32,7 @@ import { DRAFT_DISCARD_COPY } from "@myrecipes/api-client/constants/recipeDiscar
 import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
 import { buildVersionCreateRequest } from "@myrecipes/api-client/utils/buildVersionCreateRequest";
+import { changeNoteProblem } from "@myrecipes/api-client/utils/changeNoteProblem";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
 import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
 import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
@@ -39,8 +40,10 @@ import { newRecipeFormIsDirty } from "@myrecipes/api-client/utils/newRecipeFormI
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
 import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { tweakFormIsDirty } from "@myrecipes/api-client/utils/tweakFormIsDirty";
+import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContentProblems";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import type { DraftSeed } from "@myrecipes/api-client/types/recipe/draft-seed";
+import type { RecipeFormProblems } from "@myrecipes/api-client/types/recipe/recipe-form-problems";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe-form-values";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
@@ -125,6 +128,21 @@ export default function RecipeEditorForm(props: Props) {
   };
   const [initialValues] = useState(values);
 
+  // A field past its limit says so as it's typed; what's missing waits for the first save attempt.
+  const [hasTried, setHasTried] = useState(false);
+  const scope = { lengthsOnly: !hasTried };
+  const problems: RecipeFormProblems = isTweak
+    ? recipeContentProblems(values, decimalSeparator, scope)
+    : recipeFormProblems(values, decimalSeparator, scope);
+  const noteProblem = isTweak ? changeNoteProblem(changeNote, scope) : undefined;
+  // Bumped on each save attempt that finds problems, to move focus to the first invalid field once they render.
+  const [rejectedSaves, setRejectedSaves] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (rejectedSaves === 0) return;
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [rejectedSaves]);
+
   // Keyed on the draft the form started from, not the `seed` prop: a page may rebuild that
   // object on every render, and refocusing Title each time would pull focus out of other fields.
   const [startsWithoutTitle] = useState(draft != null && draft.title.trim() === "");
@@ -157,8 +175,10 @@ export default function RecipeEditorForm(props: Props) {
     const problem = isTweak
       ? tweakFormProblem(values, changeNote, decimalSeparator)
       : firstRecipeFormProblem(recipeFormProblems(values, decimalSeparator));
+    setHasTried(true);
     if (problem) {
       showError(problem);
+      setRejectedSaves((count) => count + 1);
       return;
     }
 
@@ -186,7 +206,7 @@ export default function RecipeEditorForm(props: Props) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
         {needsReview ? (
           <AlertBox variant="warning">
             We filled in what we could from your photo — double-check everything before saving.
@@ -194,7 +214,7 @@ export default function RecipeEditorForm(props: Props) {
         ) : null}
         {isTweak ? (
           <section className="bg-card border rounded-lg p-6 space-y-4">
-            <FormField label="What did you change?" required highlight>
+            <ProblemFormField label="What did you change?" error={noteProblem} required highlight>
               {(field) => (
                 <textarea
                   value={changeNote}
@@ -207,11 +227,11 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
+            </ProblemFormField>
           </section>
         ) : (
           <section className="bg-card border rounded-lg p-6 space-y-4">
-            <FormField label="Title" required>
+            <ProblemFormField label="Title" error={problems.title} required>
               {(field) => (
                 <input
                   ref={titleRef}
@@ -219,14 +239,13 @@ export default function RecipeEditorForm(props: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={isSubmitting}
-                  required
                   maxLength={RECIPE_TITLE_MAX_LENGTH}
                   className={META_INPUT}
                   {...field}
                 />
               )}
-            </FormField>
-            <FormField label="Description">
+            </ProblemFormField>
+            <ProblemFormField label="Description" error={problems.description}>
               {(field) => (
                 <textarea
                   value={description}
@@ -238,8 +257,8 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
-            <FormField label="Source">
+            </ProblemFormField>
+            <ProblemFormField label="Source" error={problems.source}>
               {(field) => (
                 <input
                   type="text"
@@ -252,13 +271,13 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
+            </ProblemFormField>
           </section>
         )}
 
         <section className="bg-card border rounded-lg p-6 space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField label="Servings">
+            <ProblemFormField label="Servings" error={problems.servings}>
               {(field) => (
                 <input
                   type="text"
@@ -271,8 +290,8 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
-            <FormField label="Prep (min)">
+            </ProblemFormField>
+            <ProblemFormField label="Prep (min)" error={problems.prepMinutes}>
               {(field) => (
                 <input
                   inputMode="decimal"
@@ -283,8 +302,8 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
-            <FormField label="Cook (min)">
+            </ProblemFormField>
+            <ProblemFormField label="Cook (min)" error={problems.cookMinutes}>
               {(field) => (
                 <input
                   inputMode="decimal"
@@ -295,7 +314,7 @@ export default function RecipeEditorForm(props: Props) {
                   {...field}
                 />
               )}
-            </FormField>
+            </ProblemFormField>
           </div>
         </section>
 
@@ -303,6 +322,8 @@ export default function RecipeEditorForm(props: Props) {
           <h2 className="text-base font-medium">Ingredients</h2>
           <IngredientRows
             rows={form.ingredients}
+            problems={problems.rows}
+            listProblem={problems.ingredients}
             disabled={isSubmitting}
             onChange={form.setIngredient}
             onAdd={form.addIngredient}
@@ -315,6 +336,8 @@ export default function RecipeEditorForm(props: Props) {
           <h2 className="text-base font-medium">Steps</h2>
           <StepRows
             rows={form.steps}
+            problems={problems.stepRows}
+            listProblem={problems.steps}
             disabled={isSubmitting}
             onChange={form.setStep}
             onAdd={form.addStep}
