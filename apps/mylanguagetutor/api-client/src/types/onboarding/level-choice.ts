@@ -9,8 +9,13 @@ export interface LevelChoice {
   /** The level picked on this visit, else the saved one. */
   selected: Level | null;
   pick: (level: Level) => void;
-  /** The saved profile hasn't loaded yet. */
-  isProfilePending: boolean;
+  /** Still loading what's needed to know the language: the saved profile, or the languages a chosen one is checked against. */
+  isPending: boolean;
+  /** The saved profile couldn't load and no language was chosen, so there is nothing to show but a way to retry. */
+  loadFailed: boolean;
+  retry: () => Promise<void>;
+  /** A retry of the profile load is in flight. */
+  isRetrying: boolean;
   /** No saved profile, so this is the second onboarding step rather than "Change level". */
   isFirstTime: boolean;
   isSaving: boolean;

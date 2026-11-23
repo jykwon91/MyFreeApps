@@ -9,6 +9,7 @@ import { LEVEL_SKELETON_ROWS } from "../../constants/catalog";
 import { LOADING_LEVEL_MESSAGE } from "../../constants/onboarding";
 import { PRACTICE_PATH } from "../../constants/routes";
 import CardListSkeleton from "../catalog/CardListSkeleton";
+import CatalogLoadError from "../catalog/CatalogLoadError";
 import LevelOptionRow from "./LevelOptionRow";
 import OnboardingIntro from "./OnboardingIntro";
 
@@ -17,11 +18,12 @@ export default function LevelScreen() {
   const { colors, spacing } = useTheme();
   const { showToast } = useToast();
   const { language } = useLocalSearchParams<{ language?: string }>();
-  const { languageCode, selected, pick, isProfilePending, isFirstTime, isSaving, save } = useLevelChoice(language ?? null);
+  const { languageCode, selected, pick, isPending, loadFailed, retry, isRetrying, isFirstTime, isSaving, save } = useLevelChoice(language ?? null);
 
   if (!languageCode) {
-    // Profile still loading: wait; no profile and no language chosen: step 1.
-    if (isProfilePending) return <CardListSkeleton accessibilityLabel={LOADING_LEVEL_MESSAGE} rows={LEVEL_SKELETON_ROWS} />;
+    // Still loading: wait; the profile won't load: offer a retry; no usable language chosen: step 1.
+    if (isPending) return <CardListSkeleton accessibilityLabel={LOADING_LEVEL_MESSAGE} rows={LEVEL_SKELETON_ROWS} />;
+    if (loadFailed) return <CatalogLoadError isRetrying={isRetrying} onRetry={retry} />;
     return <Redirect href={ONBOARDING_LANGUAGE_PATH} />;
   }
 

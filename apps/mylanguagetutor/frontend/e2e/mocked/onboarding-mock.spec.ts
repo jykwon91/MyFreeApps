@@ -3,11 +3,11 @@
  * "Change level": a new learner picks a language and a level, which is saved
  * with PUT /profile and lands them on their scenarios; a save whose answer was
  * lost says it isn't sure (it may have saved) and keeps the choice so it can be
- * sent again; a refused save says it couldn't; Change level starts from the
+ * sent again; Change level starts from the
  * saved level; a failed or empty language list says so.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { LIST_LANGUAGES, SAVE_PROFILE } from "./constants/stubbedEndpoints";
+import { GET_PROFILE, LIST_LANGUAGES, SAVE_PROFILE } from "./constants/stubbedEndpoints";
 import {
   LANGUAGE_STEP,
   LESSONS_LOAD_FAILED,
@@ -43,16 +43,12 @@ test("a new learner picks a language and a level, which is saved, and lands on t
   expect(api.writes).toEqual([{ method: "PUT", path: "/profile", body: { language_code: "es", level: "some_phrases" } }]);
 });
 
-test("a refused save says it couldn't save the choice", async ({ page }) => {
-  await signedInTutor(page, { profile: null });
+test("a language that isn't on offer sends the learner back to choose one instead of trying to save it", async ({ page }) => {
+  const api = await signedInTutor(page, { profile: null });
 
   await page.goto("/onboarding/level?language=xx");
-  await page.getByRole("radio", { name: /^Just starting/ }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(page.getByText(PROFILE_SAVE_FAILED)).toBeVisible();
-  await expect(page.getByText(PROFILE_SAVE_UNSURE)).toHaveCount(0);
-  await expect(page).toHaveURL(/\/onboarding\/level\?language=xx$/);
+  await expect(page).toHaveURL(/\/onboarding\/language$/);
+  expect(api.writes).toEqual([]);
 });
 
 test("a server error with no reason says it isn't sure, keeps the choice, and sending it again works", async ({ page }) => {
@@ -100,6 +96,18 @@ test("the level step without a language or a profile goes back to the language s
   await signedInTutor(page, { profile: null });
 
   await page.goto("/onboarding/level");
+  await expect(page).toHaveURL(/\/onboarding\/language$/);
+});
+
+test("the level step offers a retry when the saved profile can't load, instead of the language step", async ({ page }) => {
+  const api = await signedInTutor(page, { profile: null, failWith: [GET_PROFILE] });
+
+  await page.goto("/onboarding/level");
+  await expect(page.getByText(LESSONS_LOAD_FAILED)).toBeVisible();
+  await expect(page).toHaveURL(/\/onboarding\/level$/);
+
+  api.stopFailing(GET_PROFILE);
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(page).toHaveURL(/\/onboarding\/language$/);
 });
 

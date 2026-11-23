@@ -10,6 +10,7 @@ export const ONBOARDING_COPY = {
   levelIntro: "The tutor adjusts how fast and how simply it speaks. You can change this any time.",
   levelLegend: "Your level",
   saveFailed: "Couldn't save your choice. Try again.",
+  saveBadLanguage: "That language isn't available. Go back and choose a language.",
   saveUnsure: "We didn't get an answer, so we're not sure your choice was saved. Trying again is safe.",
   continue: "Continue",
   saving: "Saving",
@@ -18,5 +19,6 @@ export const ONBOARDING_COPY = {
 /** What to say for each way a level save can fail. Saving a level again is harmless, so a lost answer says so. */
 export const LEVEL_SAVE_FAILURE_COPY: Readonly<Record<LevelSaveFailure, string>> = {
   failed: ONBOARDING_COPY.saveFailed,
+  language: ONBOARDING_COPY.saveBadLanguage,
   unsure: ONBOARDING_COPY.saveUnsure,
 };
