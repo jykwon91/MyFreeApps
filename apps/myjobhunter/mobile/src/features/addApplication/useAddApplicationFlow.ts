@@ -17,7 +17,7 @@ import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { rateLimitedMessage } from "@myjobhunter/api-client/utils/rateLimitedMessage";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
-import { serverFailureMessage } from "@myjobhunter/api-client/utils/serverFailureMessage";
+import { clientRefusalMessage } from "@myjobhunter/api-client/utils/clientRefusalMessage";
 import { typedCompany } from "@myjobhunter/api-client/utils/typedCompany";
 import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
@@ -250,7 +250,7 @@ export function useAddApplicationFlow() {
         // Not stopped by leaving: a company added here always gets its application.
         companyId = await companyIdForSave(review.company);
       } catch (error) {
-        if (isMounted.current) saveFailed(serverFailureMessage(error, MESSAGES.couldntAddCompany));
+        if (isMounted.current) saveFailed(clientRefusalMessage(error, MESSAGES.couldntAddCompany));
         return;
       }
       if (!companyId) {

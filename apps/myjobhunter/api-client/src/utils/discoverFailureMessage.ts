@@ -1,6 +1,6 @@
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { DISCOVER_ACTION_MESSAGES } from "../constants/discoverMessages";
-import { serverFailureMessage } from "./serverFailureMessage";
+import { clientRefusalMessage } from "./clientRefusalMessage";
 
 /**
  * What to say when a Discovery action fails: a plain line when what it acted on is gone (a 404, whose own text is a generic
@@ -8,5 +8,5 @@ import { serverFailureMessage } from "./serverFailureMessage";
  */
 export function discoverFailureMessage(error: unknown, fallback: string): string {
   if (isNotFound(error)) return DISCOVER_ACTION_MESSAGES.gone;
-  return serverFailureMessage(error, fallback);
+  return clientRefusalMessage(error, fallback);
 }

@@ -9,7 +9,7 @@ import { companyFormCounters } from "@myjobhunter/api-client/utils/companyFormCo
 import { companyFormProblems } from "@myjobhunter/api-client/utils/companyFormProblems";
 import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
 import { lostCreateMessage } from "@myjobhunter/api-client/utils/lostCreateMessage";
-import { serverFailureMessage } from "@myjobhunter/api-client/utils/serverFailureMessage";
+import { clientRefusalMessage } from "@myjobhunter/api-client/utils/clientRefusalMessage";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
@@ -76,7 +76,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
       return;
     }
     if (writeOutcome(error) !== "unknown") {
-      setFailure(serverFailureMessage(error, MESSAGES.couldntAdd));
+      setFailure(clientRefusalMessage(error, MESSAGES.couldntAdd));
       return;
     }
     // The server commits before it answers, so a lost answer may mean it was added.

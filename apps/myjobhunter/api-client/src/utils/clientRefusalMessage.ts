@@ -1,5 +1,5 @@
 import { httpStatus } from "@platform/core/utils/httpStatus";
-import { serverFailureMessage } from "./serverFailureMessage";
+import { serverDetail } from "./serverDetail";
 
 /**
  * What to say when the server turned a request down (a 4xx): its own reason when it gave one, else `fallback`. A 5xx
@@ -7,5 +7,5 @@ import { serverFailureMessage } from "./serverFailureMessage";
  */
 export function clientRefusalMessage(error: unknown, fallback: string): string {
   const status = httpStatus(error);
-  return typeof status === "number" && status < 500 ? serverFailureMessage(error, fallback) : fallback;
+  return typeof status === "number" && status < 500 ? (serverDetail(error) ?? fallback) : fallback;
 }

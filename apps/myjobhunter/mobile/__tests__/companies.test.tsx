@@ -378,7 +378,8 @@ describe("adding a company", () => {
   });
 
   it.each([
-    ["no detail", { status: 500, data: {} }],
+    ["no detail", { status: 422, data: {} }],
+    ["a server error with a detail, which is never read out", { status: 500, data: { detail: "KeyError: 'x'" } }],
     ["a detail that isn't text", { status: 422, data: { detail: [{ msg: "bad" }] } }],
   ])("says it couldn't add, in the app's own words, when the server refuses with %s", async (_label, reply: FakeReply) => {
     serveCompanies([ACME], { "POST /companies": () => reply });

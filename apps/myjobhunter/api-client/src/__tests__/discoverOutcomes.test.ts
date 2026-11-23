@@ -54,6 +54,7 @@ describe("discoverFailureMessage", () => {
     expect(discoverFailureMessage({ status: 409, data: { detail: "Already promoted" } }, "Couldn't add")).toBe("Already promoted");
     expect(discoverFailureMessage({ status: 422, data: { detail: [{ msg: "bad" }] } }, "Couldn't add")).toBe("Couldn't add");
     expect(discoverFailureMessage(new Error("Network Error"), "Couldn't add")).toBe("Couldn't add");
+    expect(discoverFailureMessage({ status: 502, data: { detail: "KeyError: 'x'" } }, "Couldn't add")).toBe("Couldn't add");
   });
 
   it("says what it acted on is gone on a 404, not the server's generic \"not found\"", () => {

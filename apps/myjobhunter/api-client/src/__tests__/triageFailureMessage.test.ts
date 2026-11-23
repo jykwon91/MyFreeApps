@@ -24,9 +24,9 @@ describe("triageFailureMessage", () => {
     );
   });
 
-  it("passes on the server's reason for any other failure, an uncoded 409 included", () => {
+  it("passes on the server's reason for any other 4xx, an uncoded 409 included, but never a 5xx's words", () => {
     expect(triageFailureMessage({ status: 500, data: { detail: "Something broke upstream" } }, DISCOVER_ACTION_MESSAGES.dismissFailed)).toBe(
-      "Something broke upstream",
+      DISCOVER_ACTION_MESSAGES.dismissFailed,
     );
     expect(triageFailureMessage({ status: 409, data: { detail: "Try again in a moment" } }, DISCOVER_ACTION_MESSAGES.saveFailed)).toBe(
       "Try again in a moment",
