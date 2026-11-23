@@ -22,6 +22,9 @@ jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-su
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 
+/** Longer than a toast stays up (6s). */
+const PAST_TOAST_MS = 6500;
+
 /** A learner who hasn't onboarded yet: PUT /profile saves what they choose. */
 function serveNewLearner(overrides: Record<string, FakeRoute> = {}): SentRequest[] {
   let profile: Profile | null = null;
@@ -168,6 +171,22 @@ describe("onboarding", () => {
     expect(await screen.findByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toBeTruthy();
     expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveFailed })).toBeNull();
     expect(screen).toHavePathname("/onboarding/level");
+  });
+
+  it("keeps the level save message on the screen after a toast would have gone", async () => {
+    serveNewLearner({ "PUT /profile": () => ({ status: 502, data: "<html>Bad Gateway</html>" }) });
+    await renderApp();
+    await chooseSpanish();
+
+    await fireEvent.press(screen.getByRole("radio", { name: "I can hold a conversation" }));
+    await fireEvent.press(screen.getByRole("button", { name: ONBOARDING_COPY.continue }));
+    expect(await screen.findByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toBeTruthy();
+
+    await act(async () => jest.advanceTimersByTime(PAST_TOAST_MS));
+    expect(screen.getAllByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toHaveLength(1);
+
+    await fireEvent.press(screen.getByRole("radio", { name: "Just starting" }));
+    expect(screen.queryByRole("alert", { name: ONBOARDING_COPY.saveUnsure })).toBeNull();
   });
 
   it("says when the level couldn't be saved, and keeps the choice to try again", async () => {
