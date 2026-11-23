@@ -116,6 +116,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_audit_table_record", "audit_logs", ["table_name", "record_id"])
     op.execute("CREATE INDEX ix_audit_changed_at ON audit_logs (changed_at DESC)")
+    op.create_index(
+        "ix_audit_changed_by_record", "audit_logs", ["changed_by", "table_name", "record_id"],
+    )
 
     # -------------------------------------------------------------- auth_events
     # Matches platform_shared.db.models.auth_event.AuthEvent. ``metadata`` is

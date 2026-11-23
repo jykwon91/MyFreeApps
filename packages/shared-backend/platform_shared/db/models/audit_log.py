@@ -38,4 +38,8 @@ class AuditLog(Base):
     __table_args__ = (
         Index("ix_audit_table_record", "table_name", "record_id"),
         Index("ix_audit_changed_at", text("changed_at DESC")),
+        # Account erasure finds a user's rows by changed_by
+        # (platform_shared.repositories.audit_log_repo). With table_name and
+        # record_id as well, listing what they touched reads only the index.
+        Index("ix_audit_changed_by_record", "changed_by", "table_name", "record_id"),
     )
