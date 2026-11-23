@@ -1,5 +1,5 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import { Banner, LoadingButton, Thumbnail, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, Thumbnail, useMotion, useTheme } from "@platform/mobile";
 import { useRef } from "react";
 import { Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,6 +26,7 @@ interface ListingPhotoViewerProps {
 /** One photo, large, with a way to step through the rest and what can be done to it. */
 export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, failure, onIndexChange, onClose, onMove, onRemove, onRetryPhoto }: ListingPhotoViewerProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { sheetAnimation } = useMotion();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const asking = useRef(false);
@@ -35,7 +36,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
   const url = photoUrl(photo);
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} statusBarTranslucent visible>
+    <Modal animationType={sheetAnimation} onRequestClose={onClose} statusBarTranslucent visible>
       <ScrollView testID="listing-photo-viewer" contentContainerStyle={{ gap: spacing.md, padding: spacing.lg, paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom }} style={{ backgroundColor: colors.background }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {photoPosition(index, photos.length)}

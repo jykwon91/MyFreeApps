@@ -1,4 +1,4 @@
-import { useAnnouncement } from "@platform/mobile";
+import { useAnnouncement, useMotion } from "@platform/mobile";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { FlatList, Modal, Text, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
@@ -18,6 +18,7 @@ import WelcomeManualViewerButton from "./WelcomeManualViewerButton";
 /** Every photo of a section, full screen: swipe or use the buttons to page, with a count and each caption. */
 export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, onEdit, onRetry }: WelcomeManualPhotoViewerProps) {
   const { width } = useWindowDimensions();
+  const { isAnimated } = useMotion();
   const insets = useSafeAreaInsets();
   const list = useRef<FlatList>(null);
   const [index, setIndex] = useState(startIndex);
@@ -36,7 +37,7 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
   }
 
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent testID="welcome-manual-photo-viewer" visible>
+    <Modal animationType={isAnimated ? "fade" : "none"} onRequestClose={onClose} statusBarTranslucent testID="welcome-manual-photo-viewer" visible>
       <StatusBar style="light" />
       <View style={{ flex: 1, backgroundColor: STYLE.backdrop }}>
         <FlatList
