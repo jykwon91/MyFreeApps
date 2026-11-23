@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Login from "@/pages/Login";
 
 vi.mock("@/lib/auth", () => ({
@@ -25,20 +25,31 @@ function axiosError(status: number, detail: string): Error {
   });
 }
 
-function renderLogin() {
+function CurrentPath() {
+  const location = useLocation();
+  return <div data-testid="current-path">{location.pathname + location.search}</div>;
+}
+
+interface Entry {
+  search?: string;
+  state?: { from: string };
+}
+
+function renderLogin({ search = "", state }: Entry = {}) {
   return render(
-    <MemoryRouter initialEntries={["/login"]}>
+    <MemoryRouter initialEntries={[{ pathname: "/login", search, state }]}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<div>Home</div>} />
+        <Route path="*" element={<CurrentPath />} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
-async function submitCredentials() {
+async function submitCredentials(entry: Entry = {}) {
   const user = userEvent.setup();
-  renderLogin();
+  renderLogin(entry);
   await user.type(screen.getByLabelText("Email"), "user@example.com");
   await user.type(screen.getByLabelText("Password"), "a-password-123");
   await user.click(screen.getByRole("button", { name: /^sign in$/i }));
@@ -122,4 +133,56 @@ describe("Login page errors", () => {
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument();
   });
+});
+
+describe("Login destination", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("goes home when nothing asked to come back", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    await submitCredentials();
+
+    expect(await screen.findByText("Home")).toBeInTheDocument();
+  });
+
+  it("keeps a safe in-app path from the page RequireAuth sent them from", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    await submitCredentials({ state: { from: "/recipes/42?tab=notes" } });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/recipes/42?tab=notes");
+  });
+
+  it("honours the returnTo query parameter", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    await submitCredentials({ search: `?returnTo=${encodeURIComponent("/recipes/42?tab=notes")}` });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/recipes/42?tab=notes");
+  });
+
+  it("prefers the page it was sent from over returnTo", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    await submitCredentials({ search: "?returnTo=%2Fsettings", state: { from: "/recipes/42" } });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/recipes/42");
+  });
+
+  it.each(["https://evil.example/steal", "//evil.example"])(
+    "goes home instead of %s when it is the router state",
+    async (bad) => {
+      mockSignIn.mockResolvedValueOnce({ status: "ok" });
+      await submitCredentials({ state: { from: bad } });
+
+      expect(await screen.findByText("Home")).toBeInTheDocument();
+    },
+  );
+
+  it.each(["https://evil.example/steal", "//evil.example"])(
+    "goes home instead of %s when it is the returnTo",
+    async (bad) => {
+      mockSignIn.mockResolvedValueOnce({ status: "ok" });
+      await submitCredentials({ search: `?returnTo=${encodeURIComponent(bad)}` });
+
+      expect(await screen.findByText("Home")).toBeInTheDocument();
+    },
+  );
 });

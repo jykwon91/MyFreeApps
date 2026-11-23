@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Login from "@/pages/Login";
 
 // Mock auth lib so tests don't hit the network
@@ -31,12 +31,18 @@ const mockRegister = vi.mocked(register);
 const mockRequestVerifyToken = vi.mocked(requestVerifyToken);
 const mockUseIsAuthenticated = vi.mocked(useIsAuthenticated);
 
-function renderLogin(initialEntries = ["/login"]) {
+function CurrentPath() {
+  const location = useLocation();
+  return <div data-testid="current-path">{location.pathname + location.search}</div>;
+}
+
+function renderLogin(initialEntries: Parameters<typeof MemoryRouter>[0]["initialEntries"] = ["/login"]) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route path="*" element={<CurrentPath />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -237,4 +243,56 @@ describe("Login page", () => {
       );
     });
   });
+});
+
+describe("Login destination", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsAuthenticated.mockReturnValue(false);
+  });
+
+  async function signInAt(entry: { search?: string; state?: { from: string } }) {
+    mockSignIn.mockResolvedValue({ status: "ok" });
+    const user = userEvent.setup();
+    renderLogin([{ pathname: "/login", ...entry }]);
+    await user.type(screen.getByLabelText("Email"), "test@example.com");
+    await user.type(screen.getByLabelText("Password"), "password123456");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+  }
+
+  it("keeps a safe in-app path from the router state", async () => {
+    await signInAt({ state: { from: "/applications?tab=open" } });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/applications?tab=open");
+  });
+
+  it("honours the returnTo query parameter", async () => {
+    await signInAt({ search: `?returnTo=${encodeURIComponent("/applications?tab=open")}` });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/applications?tab=open");
+  });
+
+  it("prefers the router state over returnTo", async () => {
+    await signInAt({ search: "?returnTo=%2Fsettings", state: { from: "/applications" } });
+
+    expect(await screen.findByTestId("current-path")).toHaveTextContent("/applications");
+  });
+
+  it.each(["https://evil.example/steal", "//evil.example"])(
+    "goes to the dashboard instead of %s from the router state",
+    async (bad) => {
+      await signInAt({ state: { from: bad } });
+
+      expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    },
+  );
+
+  it.each(["https://evil.example/steal", "//evil.example"])(
+    "goes to the dashboard instead of %s from returnTo",
+    async (bad) => {
+      await signInAt({ search: `?returnTo=${encodeURIComponent(bad)}` });
+
+      expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    },
+  );
 });

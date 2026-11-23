@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Briefcase } from "lucide-react";
 import {
   AuthPageFooter,
@@ -8,10 +8,11 @@ import {
   TwoFactorStep,
   useTurnstileToken,
   isUnverifiedLoginError,
+  resolveLoginDestination,
   useIsAuthenticated,
   ResendStatusAlert,
 } from "@platform/ui";
-import type { RequireAuthLocationState, ResendStatus } from "@platform/ui";
+import type { ResendStatus } from "@platform/ui";
 import { register, requestVerifyToken, signIn } from "@/lib/auth";
 
 /**
@@ -28,6 +29,7 @@ import { register, requestVerifyToken, signIn } from "@/lib/auth";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isAuthenticated = useIsAuthenticated();
 
   // Email-verification state (C4)
@@ -49,16 +51,14 @@ export default function Login() {
   // require_turnstile dependency short-circuits in that case.
   const turnstile = useTurnstileToken();
 
+  const destination = resolveLoginDestination(location.state, searchParams.get("returnTo"), "/dashboard");
+
   useEffect(() => {
-    if (isAuthenticated) {
-      const state = location.state as RequireAuthLocationState | null;
-      navigate(state?.from ?? "/dashboard", { replace: true });
-    }
-  }, [isAuthenticated, navigate, location.state]);
+    if (isAuthenticated) navigate(destination, { replace: true });
+  }, [isAuthenticated, navigate, destination]);
 
   function navigateAfterLogin(): void {
-    const state = location.state as RequireAuthLocationState | null;
-    navigate(state?.from ?? "/dashboard", { replace: true });
+    navigate(destination, { replace: true });
   }
 
   async function onSignIn(email: string, password: string): Promise<void> {
