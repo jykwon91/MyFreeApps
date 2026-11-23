@@ -1,5 +1,4 @@
 import os
-import subprocess
 from unittest.mock import patch
 
 import pytest

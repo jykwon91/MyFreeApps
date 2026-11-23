@@ -5,7 +5,6 @@ All tests operate on pure functions — no DB or async fixtures required.
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.services.transactions.attribution_matcher import (
     _levenshtein,

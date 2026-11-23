@@ -117,7 +117,6 @@ async def test_run_jsearch_passes_pages_per_fetch_setting() -> None:
 async def test_run_jsearch_default_setting_is_five() -> None:
     """When the setting is at its default (5), _run_jsearch passes num_pages=5."""
     from app.core.config import settings as real_settings
-    from app.services.discovery import discovery_fetch_service
     from app.services.discovery.discovery_fetch_service import _run_jsearch
 
     mock_search = AsyncMock(return_value=[])

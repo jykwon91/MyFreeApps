@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import require_role
 from app.models.user.user import Role, User

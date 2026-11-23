@@ -1,7 +1,7 @@
 """Tests for duplicate detection and clean re-extract features."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -19,8 +19,6 @@ from app.models.organization.organization import Organization
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories.transactions import transaction_repo
-from app.repositories.documents import document_repo
-from app.repositories.extraction import extraction_repo
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────

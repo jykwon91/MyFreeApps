@@ -25,7 +25,7 @@ from platform_shared.services.storage.rows_present import RowsPresent
 
 from app.core.config import settings
 from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
-from app.core.storage import StorageNotConfiguredError, get_storage
+from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.application.document import Document
 from app.repositories.documents import document_repo
@@ -34,7 +34,7 @@ from app.schemas.documents.document_list_page import DocumentListPage
 from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
-from app.services.jobs.resume_validator import ResumeRejected, validate_resume
+from app.services.jobs.resume_validator import validate_resume
 
 # Allowed MIME types for document uploads (mirrors resume_validator allowlist).
 _ALLOWED_MIME_TYPES: frozenset[str] = frozenset({

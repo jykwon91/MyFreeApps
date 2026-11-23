@@ -17,7 +17,7 @@ from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.repositories import tax_return_repo
 
-from ._types import FormFieldIndex, ValidationResult, index_fields
+from ._types import ValidationResult, index_fields
 from . import (
     deduction_rules,
     depreciation_rules,

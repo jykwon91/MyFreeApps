@@ -978,7 +978,6 @@ class TestListingSlugUniqueness:
     def test_migration_drops_old_constraint_and_creates_partial_index(self) -> None:
         """The migration source must drop ``uq_listings_slug`` and create
         ``uq_listings_slug_active`` with ``postgresql_where='deleted_at IS NULL'``."""
-        import re
         from pathlib import Path
 
         migration_path = (

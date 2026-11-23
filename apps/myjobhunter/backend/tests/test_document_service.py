@@ -605,7 +605,6 @@ def test_document_text_create_request_schema():
 
 def test_document_file_create_internal_schema():
     """DocumentFileCreateInternal holds all file-metadata fields."""
-    import uuid as _uuid
     from app.schemas.documents.document_file_create_internal import DocumentFileCreateInternal
 
     internal = DocumentFileCreateInternal(

@@ -7,7 +7,6 @@ projection.
 """
 from __future__ import annotations
 
-import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 

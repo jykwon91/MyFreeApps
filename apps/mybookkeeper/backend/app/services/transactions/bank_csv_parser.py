@@ -3,7 +3,7 @@ import csv
 import hashlib
 import io
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from app.models.transactions.transaction import Transaction

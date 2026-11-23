@@ -191,7 +191,7 @@ class TestProcessTaxDocument:
             )
 
     @pytest.mark.asyncio
-    async def test_dedup_same_document_returns_existing_instance(
+    async def test_reextracting_same_1099_misc_document_updates_existing_instance(
         self, db: AsyncSession, test_user: User, test_org: Organization
     ) -> None:
         """Re-extracting the same document should update, not create a duplicate."""

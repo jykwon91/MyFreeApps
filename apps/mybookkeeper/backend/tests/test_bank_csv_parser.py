@@ -2,7 +2,6 @@
 import uuid
 from decimal import Decimal
 
-import pytest
 
 from app.services.transactions.bank_csv_parser import detect_bank_format, parse_bank_csv, _make_external_id
 

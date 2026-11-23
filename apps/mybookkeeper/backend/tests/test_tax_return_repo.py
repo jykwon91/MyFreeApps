@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.organization.organization import Organization
-from app.models.tax.tax_return import TaxReturn
 from app.models.user.user import User
 from app.repositories import tax_return_repo
 

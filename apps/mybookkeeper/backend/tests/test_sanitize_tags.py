@@ -1,4 +1,4 @@
-from app.core.tags import sanitize_tags, REVENUE_TAGS, EXPENSE_TAGS
+from app.core.tags import sanitize_tags
 
 
 def test_single_revenue_tag_unchanged():

@@ -1,6 +1,5 @@
 """Tests for password reset flow — email template, rate limiting, and router registration."""
 
-import importlib
 from unittest.mock import patch
 
 import pytest

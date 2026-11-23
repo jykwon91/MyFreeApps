@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 
 import httpx
 from tenacity import (
@@ -47,7 +47,6 @@ from tenacity import (
 )
 
 from app.schemas.discovery.greenhouse_source_config import (
-    GreenhouseFetchConfig,
     GreenhouseSourceConfig,
 )
 

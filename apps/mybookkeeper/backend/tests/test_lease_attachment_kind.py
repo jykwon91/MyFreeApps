@@ -15,7 +15,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, require_write_access
+from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.services.leases.lease_import_service import (

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Literal
 
 from platform_shared.extraction import AnthropicFailureKind, ExtractionError
 

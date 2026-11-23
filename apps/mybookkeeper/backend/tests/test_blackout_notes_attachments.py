@@ -19,14 +19,14 @@ from __future__ import annotations
 import io
 import uuid
 from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, require_write_access
+from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.repositories.listings import listing_blackout_repo, listing_blackout_attachment_repo
@@ -302,7 +302,6 @@ class TestTenantIsolation:
     ) -> None:
         blackout_id_a = uuid.uuid4()
         user_a = uuid.uuid4()
-        user_b = uuid.uuid4()
 
         # Org A uploads an attachment.
         now = datetime.now(timezone.utc)

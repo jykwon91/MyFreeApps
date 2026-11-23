@@ -10,11 +10,9 @@ Covers:
 """
 from __future__ import annotations
 
-import os
 from datetime import date
 from pathlib import Path
 
-import pytest
 
 from app.services.email.booking_parser import (
     BookingParseResult,

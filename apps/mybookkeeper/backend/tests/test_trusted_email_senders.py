@@ -8,7 +8,6 @@ etc.), in which case they auto-approve.
 from __future__ import annotations
 
 import uuid
-from datetime import date
 from decimal import Decimal
 
 import pytest

@@ -12,6 +12,7 @@ done), ``abandoned`` (user explicitly walked away or auto-aged out),
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -28,6 +29,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.resume_refinement.turn import ResumeRefinementTurn
 
 
 class ResumeRefinementSession(Base):

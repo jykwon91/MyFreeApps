@@ -1,7 +1,6 @@
 """Tests for property_matcher_service — address matching logic."""
 import uuid
 
-import pytest
 
 from app.models.properties.property import Property
 from app.services.extraction.property_matcher_service import (

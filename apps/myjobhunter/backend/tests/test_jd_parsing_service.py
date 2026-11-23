@@ -25,7 +25,6 @@ from app.core.ai_failure_messages import AI_BUSY_MESSAGE, AI_UNREADABLE_REPLY_ME
 from app.core.claude_retry_constants import REQUEST_PATH_CLAUDE_RETRY
 from app.services.application.jd_parsing_service import (
     JdParseError,
-    JdParseResult,
     _normalise,
     parse_jd,
 )

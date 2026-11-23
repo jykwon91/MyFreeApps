@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, DateTime, Index, Numeric, String, Text,
+    Boolean, CheckConstraint, DateTime, Numeric, String, Text,
     UniqueConstraint, ForeignKey,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship

@@ -20,7 +20,7 @@ from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.jobs.resume_upload_job import ResumeUploadJob
 from app.repositories.jobs import resume_upload_job_repo
-from app.services.jobs.resume_validator import ResumeRejected, validate_resume
+from app.services.jobs.resume_validator import validate_resume
 
 # Presigned URL TTL: 1 hour, matching MBK's pattern.
 _PRESIGNED_URL_TTL_SECONDS = 3600

@@ -1,5 +1,4 @@
 """Tests for admin DB query and maintenance endpoints."""
-import pytest
 
 from app.repositories.db_admin_repo import _FORBIDDEN_KEYWORDS
 

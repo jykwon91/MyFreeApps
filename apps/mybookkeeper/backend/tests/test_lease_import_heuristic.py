@@ -4,7 +4,6 @@ The heuristic is a pure function — test it directly.
 """
 from __future__ import annotations
 
-import pytest
 
 from app.services.leases.lease_import_service import _infer_attachment_kind
 

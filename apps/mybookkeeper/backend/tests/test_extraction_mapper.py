@@ -2,7 +2,6 @@
 import uuid
 from decimal import Decimal
 
-import pytest
 
 from app.mappers.extraction_mapper import (
     derive_category,

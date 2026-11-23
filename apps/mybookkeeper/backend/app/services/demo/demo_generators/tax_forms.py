@@ -266,10 +266,10 @@ class DemoTaxPdfGenerator:
         c.setFont("Helvetica", 8)
         c.drawString(36, h - 48, "Wage and Tax Statement")
         c.setFont("Helvetica-Bold", 10)
-        c.drawRightString(w - 36, h - 36, f"Copy B — To Be Filed With Employee's FEDERAL Tax Return")
+        c.drawRightString(w - 36, h - 36, "Copy B — To Be Filed With Employee's FEDERAL Tax Return")
         c.setFont("Helvetica", 7)
         c.setFillColor(colors.black)
-        c.drawRightString(w - 36, h - 48, f"Department of the Treasury — Internal Revenue Service")
+        c.drawRightString(w - 36, h - 48, "Department of the Treasury — Internal Revenue Service")
         c.drawRightString(w - 36, h - 58, data["tax_year"])
 
         # W-2 layout: grid of labeled boxes

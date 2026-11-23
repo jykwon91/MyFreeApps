@@ -1,9 +1,7 @@
 """Tests for GET /admin/auth-events endpoint."""
 import uuid
-from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 

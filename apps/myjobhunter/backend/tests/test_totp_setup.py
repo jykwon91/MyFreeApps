@@ -12,7 +12,6 @@ to generate a code that the server will accept.
 """
 import hashlib
 import time
-import uuid
 
 import pyotp
 import pytest

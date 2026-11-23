@@ -12,7 +12,7 @@ import datetime as _dt
 import uuid
 from contextlib import asynccontextmanager
 from decimal import Decimal
-from typing import AsyncIterator, Callable, NamedTuple
+from typing import AsyncIterator, NamedTuple
 from unittest.mock import patch
 
 import pytest

@@ -286,10 +286,6 @@ class TestGetGenerateDefaults:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         template_id, applicant_id = uuid.uuid4(), uuid.uuid4()
 
-        from app.schemas.leases.generate_defaults_response import (
-            GenerateDefaultsResponse,
-            PlaceholderDefault,
-        )
 
         app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
         try:

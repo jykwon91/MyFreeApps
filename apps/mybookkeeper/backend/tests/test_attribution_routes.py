@@ -19,7 +19,6 @@ from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.transactions.attribution import (
-    AttributionReviewQueueResponse,
     AttributionReviewItemRead,
     AttributionTransactionSummary,
     PropertyPnLResponse,
@@ -77,9 +76,6 @@ def override_ctx(org_id, user_id):
 class TestListAttributionQueue:
     def test_returns_queue(self, client, override_ctx, org_id):
         item = _queue_item(org_id)
-        queue_resp = AttributionReviewQueueResponse(
-            items=[item], total=1, pending_count=1,
-        )
         with (
             patch(
                 "app.services.transactions.attribution_service.list_review_queue",

@@ -53,7 +53,7 @@ def cmd_create_test_user(args):
         """), {"id": str(uuid.uuid4()), "org_id": str(org_id), "user_id": str(user_id)})
 
         session.commit()
-        print(f"Created test user:")
+        print("Created test user:")
         print(f"  Email: {email}")
         print("  Password: (TEST_PASSWORD in app/cli/seed.py)")
         print(f"  Role: {args.role.upper()}")

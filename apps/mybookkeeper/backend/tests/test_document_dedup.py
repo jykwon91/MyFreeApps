@@ -4,12 +4,10 @@ After the Phase 3 cutover, dedup operates on transactions, not documents.
 """
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.organization.organization import Organization

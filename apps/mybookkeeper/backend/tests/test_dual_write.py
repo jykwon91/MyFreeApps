@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-import pytest
 
 from app.mappers.transaction_mapper import build_transaction_from_mapped_item
 from app.mappers.booking_statement_mapper import build_booking_statements_from_line_items

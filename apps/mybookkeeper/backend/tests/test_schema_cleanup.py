@@ -1,11 +1,10 @@
 """Tests for schema cleanup: FK cascades, filing_status dedup, org_id NOT NULL, new tax vision tables."""
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.documents.document import Document

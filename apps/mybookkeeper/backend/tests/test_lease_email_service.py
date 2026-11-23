@@ -12,7 +12,6 @@ Three layers:
 """
 from __future__ import annotations
 
-import datetime as _dt
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,7 +19,6 @@ import pytest
 
 from app.services.leases import lease_email_service, signed_lease_service
 from app.services.leases.lease_email_service import (
-    ApplicantEmailMissingError,
     LEASE_EMAIL_ATTACHMENT_KINDS,
     LeaseNotFoundError,
     build_body_html,

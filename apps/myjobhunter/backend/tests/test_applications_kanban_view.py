@@ -19,8 +19,6 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.application.application import Application
-from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.models.job_analysis.job_analysis import JobAnalysis
 

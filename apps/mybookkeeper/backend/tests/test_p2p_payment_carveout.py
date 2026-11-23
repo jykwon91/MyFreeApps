@@ -12,7 +12,6 @@ These tests pin two layers:
 """
 from __future__ import annotations
 
-import pytest
 
 from app.services.extraction.extraction_persistence import (
     _is_payment_confirmation,

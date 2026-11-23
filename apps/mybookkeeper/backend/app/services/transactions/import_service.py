@@ -1,10 +1,8 @@
 """Bank CSV import business logic."""
 import uuid
-from collections.abc import Sequence
 
 from app.core.context import RequestContext
 from app.db.session import unit_of_work
-from app.models.transactions.transaction import Transaction
 from app.repositories.transactions import transaction_repo
 from app.schemas.transactions.imports import ImportResult, TransactionPreview
 from app.services.transactions.bank_csv_parser import detect_bank_format, parse_bank_csv

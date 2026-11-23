@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.services.discovery.discovery_fetch_service import (
     _apply_post_fetch_filters,
     _build_jsearch_query,
@@ -84,9 +85,8 @@ def test_all_known_chip_keys_have_non_empty_expansions() -> None:
 # ===========================================================================
 
 
-def _cfg(**kwargs) -> "JSearchSourceConfig":
+def _cfg(**kwargs) -> JSearchSourceConfig:
     """Tiny helper so test bodies stay focused on inputs."""
-    from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
     return JSearchSourceConfig(**kwargs)
 
 

@@ -1,7 +1,6 @@
 """Tests for booking_statement_mapper — building BookingStatement models from line items."""
 import uuid
 
-import pytest
 from decimal import Decimal
 
 from app.mappers.booking_statement_mapper import (

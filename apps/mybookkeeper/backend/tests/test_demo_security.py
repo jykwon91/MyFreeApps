@@ -1,8 +1,6 @@
 """Tests for demo security — rate limiting, endpoint blocking, and is_demo flag checks."""
 
 import uuid
-from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession

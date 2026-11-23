@@ -18,11 +18,10 @@ from app.repositories.leases import lease_template_file_repo, signed_lease_attac
 from app.services.leases.exceptions.lease_documents_locked_error import LeaseDocumentsLockedError
 from app.services.leases.exceptions.lease_attachment_locked_error import LeaseAttachmentLockedError
 from app.services.leases.lease_attachment_service import delete_attachment, update_attachment_kind
-from app.services.leases.lease_pdf_service import add_templates_and_generate, generate_lease
+from app.services.leases.lease_pdf_service import generate_lease
 from app.services.leases.lease_prefill_service import prefill_addendum_placeholders
 from tests.lease_regenerate_support import (
     OLD_KEY,
-    PDF,
     lease_with_rendered_attachment,
     patches,
     real_uow,  # noqa: F401 — fixture

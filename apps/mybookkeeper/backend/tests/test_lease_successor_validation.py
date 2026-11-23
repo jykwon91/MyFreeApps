@@ -10,7 +10,6 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession

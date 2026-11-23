@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext

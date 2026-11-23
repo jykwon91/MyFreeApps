@@ -409,10 +409,7 @@ async def test_fetch_board_returns_resolved_name_for_caller_to_cache() -> None:
 @pytest.mark.asyncio
 async def test_fetch_board_metadata_call_count_without_cache() -> None:
     """Without a cached name exactly one metadata call is made per fetch_board."""
-    handler = _TwoCallHandler(_company_response(), _board_response())
     calls = []
-
-    original_init = _OriginalAsyncClient.__init__
 
     def tracking_handler(request: httpx.Request) -> httpx.Response:
         calls.append(request.url.path)

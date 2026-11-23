@@ -10,7 +10,7 @@ Covers:
 - Unauthenticated request → 401
 """
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient

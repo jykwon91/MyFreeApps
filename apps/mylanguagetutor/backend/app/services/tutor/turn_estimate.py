@@ -9,7 +9,6 @@ reservation agree. ``reserve`` stays the authoritative check.
 from __future__ import annotations
 
 import json
-import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +20,7 @@ from app.domain.scenarios import get_scenario, list_scenarios
 from app.domain.tutoring.level_rules import rules_for
 from app.models.tutor.tutor_session import TutorSession
 from app.models.tutor.tutor_turn import TutorTurn
-from app.repositories.tutor import tutor_session_repository, tutor_turn_repository
+from app.repositories.tutor import tutor_turn_repository
 from app.schemas.tutor.turn_schemas import MAX_TURN_CHARS
 from app.services.tutor.prompt_builder import (
     ClaudeRequest,

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -19,6 +20,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from app.core.company_domain import normalize_company_domain
 from app.core.company_research_constants import COMPANY_NON_EDIT_COLUMNS
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.application.application import Application
+    from app.models.company.company_research import CompanyResearch
 
 
 class Company(Base):
