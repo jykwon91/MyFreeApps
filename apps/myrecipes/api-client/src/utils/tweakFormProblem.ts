@@ -4,11 +4,11 @@ import { changeNoteProblem } from "./changeNoteProblem";
 import { firstRecipeFormProblem } from "./firstRecipeFormProblem";
 import { recipeContentProblems } from "./recipeContentProblems";
 
-/** The problem to name first that stops a tweak saving, or undefined when it can be saved. */
+/** The problem to name first that stops a tweak saving, in form order (the change note is on top), or undefined when it can be saved. */
 export function tweakFormProblem(
   values: RecipeVersionFormValues,
   changeNote: string,
   decimalSeparator: DecimalSeparator,
 ): string | undefined {
-  return firstRecipeFormProblem(recipeContentProblems(values, decimalSeparator)) ?? changeNoteProblem(changeNote);
+  return changeNoteProblem(changeNote) ?? firstRecipeFormProblem(recipeContentProblems(values, decimalSeparator));
 }

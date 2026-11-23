@@ -195,6 +195,31 @@ describe("Recipes", () => {
     expect(screen.queryByText("Can't load recipes")).not.toBeInTheDocument();
   });
 
+  it("announces the load error as an alert", async () => {
+    respond = () => ({ status: 503, data: { detail: "down" } });
+    renderRecipes();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Can't load recipes");
+  });
+
+  it("has a polite live region that stays quiet until a search settles, then counts the results", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderRecipes();
+    await screen.findByRole("heading", { name: "Recipe 1" });
+    expect(screen.queryByText(/^\d+ recipes?$/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Search recipes by title"), "soup");
+    await act(async () => {
+      vi.advanceTimersByTime(RECIPE_SEARCH_DEBOUNCE_MS);
+    });
+
+    const count = await screen.findByText("2 recipes");
+    expect(count).toHaveAttribute("role", "status");
+    expect(count).toHaveClass("sr-only");
+  });
+
   it("keeps the recipes with a notice and Try again when a refresh fails", async () => {
     const user = userEvent.setup();
     const working = respond;

@@ -114,7 +114,10 @@ test("a draft with more ingredients than a recipe can have says so and isn't pos
   await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
 
   await page.getByRole("button", { name: "Create recipe" }).click();
-  await expect(page.getByText(RECIPE_FORM_PROBLEMS.ingredientsTooMany)).toBeVisible();
+  // Said on the list (the Add button carries it) and as a toast.
+  const addIngredient = page.getByRole("button", { name: "Add ingredient" });
+  await expect(addIngredient).toHaveAccessibleDescription(RECIPE_FORM_PROBLEMS.ingredientsTooMany);
+  await expect(addIngredient).toBeFocused();
   await expect(page).toHaveURL(/\/recipes\/import$/);
   expect(posted).toEqual([]);
 });
