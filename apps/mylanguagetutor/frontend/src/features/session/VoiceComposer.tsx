@@ -5,7 +5,7 @@ import type { VoiceComposerProps } from "@/types/session/voice-composer-props";
 
 /**
  * Microphone control, what's been heard while listening, and a way to switch to typing. What's heard
- * isn't a live region: a screen reader would read it aloud into the open microphone.
+ * isn't a live region: a screen reader would read it aloud into the open microphone. The failure hint isn't either; the practice screen's live region says it.
  */
 export default function VoiceComposer({
   phase,
@@ -25,7 +25,7 @@ export default function VoiceComposer({
         </p>
       )}
       {hint && (
-        <p className="text-center text-sm text-muted-foreground" role="status">
+        <p className="text-center text-sm text-muted-foreground">
           {hint}
         </p>
       )}

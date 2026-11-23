@@ -10,12 +10,14 @@ import type { PracticeAnnouncementSources } from "@/types/session/practice-annou
 export function practiceAnnouncements({
   spoken,
   failure,
+  recognitionHint,
   block,
   scenarioComplete,
 }: PracticeAnnouncementSources): string[] {
   const messages: string[] = [];
   if (spoken) messages.push(spoken);
   if (failure) messages.push(turnErrorCopy(failure.code));
+  if (recognitionHint) messages.push(recognitionHint);
   if (block) messages.push(sessionBlockMessage(block));
   if (scenarioComplete) messages.push(`${PRACTICE_COPY.scenarioComplete}. ${PRACTICE_COPY.scenarioCompleteBody}`);
   return messages;

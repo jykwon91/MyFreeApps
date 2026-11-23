@@ -6,6 +6,8 @@ export interface PracticeAnnouncementSources {
   /** The phase change or the finished tutor reply, whichever is current. */
   spoken: string | undefined;
   failure: TurnFailure | null;
+  /** Why the last spoken attempt didn't work, shown under the microphone. */
+  recognitionHint: string | null;
   block: SessionBlock | null;
   scenarioComplete: boolean;
 }

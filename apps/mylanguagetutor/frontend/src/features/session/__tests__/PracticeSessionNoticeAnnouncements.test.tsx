@@ -8,6 +8,7 @@ import type { PracticeSessionConfig } from "@mylanguagetutor/api-client/types/se
 import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
+import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
@@ -109,5 +110,13 @@ describe("PracticeSession notices are read by the one live region", () => {
     expect(container.querySelectorAll(LIVE)).toHaveLength(1);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("holds the recognition hint, and the hint itself is in no live region", () => {
+    recognition = { ...recognition, failure: "no_speech" };
+    const { container } = renderScreen();
+
+    expect(announcerText()).toContain(VOICE_COPY.noSpeech);
+    expect(container.querySelectorAll(LIVE)).toHaveLength(1);
   });
 });

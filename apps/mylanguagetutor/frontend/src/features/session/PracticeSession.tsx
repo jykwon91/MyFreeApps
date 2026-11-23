@@ -32,6 +32,7 @@ import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/start
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { latestReply } from "@mylanguagetutor/api-client/utils/latestReply";
+import { recognitionFailureHint } from "@mylanguagetutor/api-client/utils/recognitionFailureHint";
 import { phaseAnnouncement } from "@mylanguagetutor/api-client/utils/phaseAnnouncement";
 import type { PracticeSessionProps } from "@/types/session/practice-session-props";
 
@@ -76,6 +77,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
   const announcements = practiceAnnouncements({
     spoken: phaseAnnouncement(voice.phase, voice.view) ?? latestReply(session.entries),
     failure: session.failure,
+    recognitionHint: voice.view === "voice" ? recognitionFailureHint(recognition.failure) : null,
     block,
     scenarioComplete: showComplete,
   });
