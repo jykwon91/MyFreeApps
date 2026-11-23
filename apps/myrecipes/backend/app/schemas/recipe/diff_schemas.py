@@ -35,7 +35,9 @@ class IngredientChange(BaseModel):
 
 
 class StepChange(BaseModel):
-    """One step-level difference, matched by 1-based position."""
+    """One step-level difference. Steps have no lineage key, so the two versions'
+    steps are aligned by their text; ``position`` is the step's 1-based place in the
+    new version, or in the old version for a removed step."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,6 +73,7 @@ class DiffResponse(BaseModel):
     field_changes: list[FieldChange] = []
     ingredient_changes: list[IngredientChange] = []
     step_changes: list[StepChange] = []
-    # The same ingredients or steps in another order. A reorder is not an added,
-    # removed or changed row, so without this a reorder-only version reads as identical.
+    # The same ingredients in another order, or a step moved. An ingredient reorder is
+    # not an added, removed or changed row, so without this it would read as identical;
+    # a moved step also shows as removed in one place and added in another.
     order_changed: bool = False
