@@ -211,5 +211,6 @@
 "22011":{"quests":[8906,8914]},
 "22075":{"quests":[9005,9012]},
 "22267":{"instance":{"mobs":[["General Drakkisath",62,62,25.0,229,"boss"]],"more":0}},
+"22331":{"instance":{"mobs":[["Kormok",58,60,20.0,289,"boss"]],"more":0}},
 "22651":{"vendors":[[14754,"Kelm Hargunth","Warsong Supply Officer",1413,"The Mor'shan Rampart",46.7,8.4,"H",0,0]]}
 }}

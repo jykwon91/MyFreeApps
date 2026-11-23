@@ -1,4 +1,4 @@
-{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70888","tables":"LFGDungeons, ContentTuning, Map, DungeonEncounter; areas from areas.json"},"columns":["instance","name","minLevel","maxLevel","zone","area","x","y"],"bossColumns":["encounter","name"],"rows":[[3065,"The Hall of Thanes",13,13,null,null,null,null],
+{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.71037","tables":"LFGDungeons, ContentTuning, Map, DungeonEncounter; areas from areas.json"},"columns":["instance","name","minLevel","maxLevel","zone","area","x","y"],"bossColumns":["encounter","name"],"rows":[[3065,"The Hall of Thanes",13,13,null,null,null,null],
 [2999,"Ruins of Lordaeron",15,15,1458,"Ruins of Lordaeron",63.5,11.9],
 [2998,"Excavation Site: Wetlands",26,26,1437,"Excavation Site: Wetlands",38.5,60.3],
 [2959,"City of Dalaran",28,28,1416,"City of Dalaran",19.4,73.2],

@@ -1,4 +1,4 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 13,356 records)","clientBuild":"1.60.1.70888","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":12,"shardCount":64,
+{"source":"wago.tools DB2 wowf 1.60.1.71037 with hotfixes, plus the Forever client hotfix cache (build 71037, 14,066 records)","clientBuild":"1.60.1.71037","attribution":"Item data from the WoW Forever client via wago.tools. Game data © Blizzard Entertainment.","columns":["id","name","quality","slot","itemType","itemLevel","requiredLevel","armor","weapon","stats","classes","damageUnknown","otherEffects","spellPowerUnknown"],"craftedColumns":["profession","skill","spell","recipe","reagents","learn","learnItem"],"shard":12,"shardCount":64,
 "items":[
 [1292,"Butcher's Cleaver","rare","one_hand","Axe",25,20,null,[19,36,1.7],{"agility":2,"strength":5},null,0,0,0],
 [1484,"Witching Stave","rare","two_hand","Staff",22,17,null,null,{"intellect":5,"shadow_resistance":8,"shadow_spell_damage":27,"stamina":6},null,1,0,0],
@@ -141,6 +141,7 @@
 [273356,"Premier Ringmail Helm","rare","head","Mail",60,55,288,null,{"healing":22,"intellect":8,"spell_damage":7,"spirit":8,"stamina":26},["shaman"],0,0,0],
 [273420,"Premier Legionnaire's Kodohide Belt","epic","waist","Leather",65,60,111,null,{"healing":18,"intellect":12,"spell_damage":6,"spirit":12,"stamina":26},["druid"],0,0,0],
 [273804,"Executioner Mantle","rare","shoulder","Leather",26,21,72,null,{"attack_power":10,"spirit":9},null,0,0,0],
+[273932,"Spiritcaller Leggings","epic","legs","Mail",60,60,338,null,{"agility":14,"expertise_rating":12,"intellect":15,"nature_resistance":9,"stamina":19,"strength":16},["shaman"],0,0,0],
 [274188,"Premier Field Marshal's Flatmail Helm","epic","head","Mail",65,60,338,null,{"crit_rating":14,"intellect":11,"stamina":34,"strength":16},["shaman"],0,0,0],
 [274252,"Premier Warlord's Lamellar Chestplate","epic","chest","Plate",65,60,738,null,{"crit_rating":7,"healing":33,"intellect":13,"mp5":5,"spell_damage":11,"stamina":33},["paladin"],0,0,0],
 [274380,"Decaying Flesh Bands","rare","wrist","Cloth",42,37,27,null,{"agility":9,"nature_resistance":13,"spirit":-6,"stamina":-6},null,0,0,0],
@@ -302,6 +303,7 @@
 "273356":{"bind":1},
 "273420":{"bind":1},
 "273804":{"bind":1,"buy":7120},
+"273932":{"bind":2,"buy":211047,"crafted":[["leatherworking",300,1292969,"Spiritcaller Leggings",[[274030,5,"Malleable Essence of Nature"],[15407,4,"Cured Rugged Hide"],[248825,24,"Fel Leather"],[14341,8,"Rune Thread"]],"item","Pattern: Spiritcaller Leggings"]]},
 "274188":{"bind":1},
 "274252":{"bind":1},
 "274380":{"bind":1,"buy":15365},

@@ -17,6 +17,8 @@ from scripts.wow_world_map import sources
 
 DOWNLOAD_THREADS = 6
 RETRIES = 5
+HTTP_TOO_MANY_REQUESTS = 429
+RATE_LIMIT_BACKOFF_SECONDS = 15
 
 
 def _url(file_data_id: int) -> str:
@@ -27,14 +29,18 @@ def _url(file_data_id: int) -> str:
 
 
 def client_file(file_data_id: int) -> bytes:
-    """A client file's bytes; a dropped connection is retried with back-off
-    (a continent is thousands of downloads), an HTTP error is not."""
+    """A client file's bytes; a dropped connection or a 429 is retried with back-off
+    (a continent is thousands of downloads), any other HTTP error is not."""
     path = sources.CACHE_DIR / sources.WAGO_BUILD / "files" / f"{file_data_id}.bin"
     for attempt in range(RETRIES):
         try:
             return sources._fetch(_url(file_data_id), path).read_bytes()
-        except urllib.error.HTTPError:
-            raise
+        except urllib.error.HTTPError as exc:
+            if exc.code != HTTP_TOO_MANY_REQUESTS or attempt == RETRIES - 1:
+                raise
+            wait = RATE_LIMIT_BACKOFF_SECONDS * 2 ** attempt
+            print(f"  file {file_data_id}: rate limited, waiting {wait}s")
+            time.sleep(wait)
         except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
             if attempt == RETRIES - 1:
                 raise

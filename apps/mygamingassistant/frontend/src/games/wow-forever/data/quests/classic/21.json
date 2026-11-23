@@ -48,7 +48,7 @@
 "6421":[6421,"Boulderslide Ravine",18,14,"H","",null,[["npc",11861,"Mor'rogal",1442,"Sun Rock Retreat",47.2,64.0,null]],[],[["item",16581,10]],[],[],["npc:11861"],true,[6481]],
 "6805":[6805,"Stormers and Rumblers",57,55,"N","",null,[["npc",13278,"Duke Hydraxis",1447,"",79.3,73.7,null]],[],[["npc",11744,15],["npc",11746,15]],[],[],["npc:13278"],true,[6821,6822,6823,6824,7486]],
 "7061":[7061,"The Feast of Winter Veil",60,10,"H","",null,[["npc",13417,"Sagorne Creststrider",1454,"",38.7,35.9,null]],[6964],[["item",17735,1]],[],[],["npc:3057"],false,[]],
-"7509":[7509,"The Forging of Quel'Serrar",60,60,"N","",null,[["npc",14368,"Lorekeeper Lydros",null,"",null,null,429]],[7507,7508],[["item",18492,1]],[],[],["npc:14368"],false,[]],
+"7509":[7509,"The Forging of Quel'Serrar",60,60,"N","",null,[["npc",14368,"Lorekeeper Lydros",null,"",null,null,429]],[7507,7508],[["item",18492,1]],[[18348,1]],[],["npc:14368"],false,[]],
 "7637":[7637,"Emphasis on Sacrifice",60,60,"A","paladin",null,[["npc",928,"Lord Grayson Shadowbreaker",1453,"",48.4,50.2,null]],[7638],[],[],[],["npc:11406"],false,[7639,7640,7641,7642,7643,7644,7646,7647]],
 "7701":[7701,"WANTED: Overseer Maltorius",50,45,"N","",null,[["object",179827,"Wanted/Missing/Lost & Found",1427,"Firewatch Ridge",37.6,26.5,null]],[],[["item",18946,1]],[],[[19128,1],[19127,1]],["npc:14634"],true,[]],
 "7829":[7829,"Hunt the Savages",48,44,"H","",null,[["npc",14741,"Huntsman Markhor",1425,"The Overlook Cliffs",79.2,79.5,null]],[],[["npc",2929,20]],[],[],["npc:14741"],true,[]],

@@ -104,6 +104,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_quests.build", "--quest-cache", str(quest_cache)],
         # WoW Forever's own dungeons' quests, from the Game Data API; reads the World Map's foreverDungeons.json.
         ["scripts.wow_forever_quests.build"],
+        # The dungeon pages: Classic boss loot and quests, keeping only reward items the Item output above lists.
+        ["scripts.wow_dungeons.build", "--quest-cache", str(quest_cache)],
         # Reads the Item, Talent and Quest output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache],
         # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.
