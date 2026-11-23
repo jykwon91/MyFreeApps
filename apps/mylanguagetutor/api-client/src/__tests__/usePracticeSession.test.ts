@@ -116,6 +116,17 @@ describe("usePracticeSession", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   }
 
+  /**
+   * Freezes the clock (only ``Date``, so ``waitFor`` still works) a moment after the usage the hook
+   * starts with was read, so a refusal is always stamped later than that usage. On the real clock both
+   * can land in the same millisecond, and usage then counts as asked after the refusal.
+   */
+  function freezeClockAfterInitialUsage() {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-20T15:00:00Z") });
+    usage = answered(BUDGET_LEFT, Date.now());
+    vi.setSystemTime(Date.now() + 1);
+  }
+
   function wait(ms: number) {
     act(() => vi.advanceTimersByTime(ms));
   }
@@ -331,6 +342,7 @@ describe("usePracticeSession", () => {
   });
 
   it("a turn refused because the tutor is unavailable keeps the learner's words, to send once it's back", async () => {
+    freezeClockAfterInitialUsage();
     streamTurn.mockRejectedValue(new TurnRequestError(503, "tutor_unavailable"));
     const { result } = setup();
     act(() => result.current.send("hola"));
@@ -351,6 +363,7 @@ describe("usePracticeSession", () => {
   });
 
   it("lifts the tutor-unavailable block once usage asked after the refusal says the tutor is back, and resends the kept words", async () => {
+    freezeClockAfterInitialUsage();
     streamTurn.mockRejectedValueOnce(new TurnRequestError(503, "tutor_unavailable"));
     const { result, rerender } = setup();
     act(() => result.current.send("hola"));
