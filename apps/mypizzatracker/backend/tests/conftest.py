@@ -16,12 +16,13 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 
-# Importing this installs the fast password helper (SHA-256 instead of argon2)
-# process-wide, as the MyJobHunter and MyLanguageTutor conftests do. It must
-# happen here, before any test module is collected: a module that binds
-# ``fastapi_users.password.PasswordHelper`` before the patch hashes with argon2,
-# while login verifies with the fast helper, so its user can never log in.
-import platform_shared.testing.factories  # noqa: F401
+from platform_shared.testing.factories import install_fast_password_helper
+
+# Swap argon2 for the fast test hasher before any app module is imported: a
+# module that binds ``fastapi_users.password.PasswordHelper`` earlier keeps the
+# real argon2 class, and its hashes can never be verified by login.
+install_fast_password_helper()
+
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool

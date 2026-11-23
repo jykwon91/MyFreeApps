@@ -22,6 +22,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.testing.factories import hash_test_password
+
 from app.core.rate_limit import public_lookup_limiter, public_order_limiter
 from app.models.customer.customer import Customer
 from app.models.user.user import User
@@ -34,18 +36,15 @@ from app.models.user.user import User
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
     """Owner-auth client -- used to create drops + menu items, NOT to place orders."""
-    from fastapi_users.password import PasswordHelper
-
     TEST_EMAIL = "public-orders-test@example.com"
     TEST_PASSWORD = "testpassword123!"
 
     result = await db.execute(select(User).where(User.email == TEST_EMAIL))
     user = result.scalar_one_or_none()
     if user is None:
-        helper = PasswordHelper()
         user = User(
             email=TEST_EMAIL,
-            hashed_password=helper.hash(TEST_PASSWORD),
+            hashed_password=hash_test_password(TEST_PASSWORD),
             is_verified=True,
             is_active=True,
         )

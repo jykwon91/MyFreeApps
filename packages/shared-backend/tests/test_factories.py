@@ -12,7 +12,7 @@ Pattern B — make_api_user_factory (API-register / Postgres)
     behaviour is exercised by MJH's own test suite.
 
 Fast-password-helper
-    Verifies that importing the module installs the monkeypatch correctly and
+    Verifies that install_fast_password_helper() patches fastapi-users correctly and
     that the helper round-trips hash → verify correctly.
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ from platform_shared.db.models.audit_log import AuditLog  # noqa: F401 — regis
 from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401 — registers table
 from platform_shared.testing.factories import (
     _FastPasswordHelper,
-    _install_fast_password_helper,
+    install_fast_password_helper,
     make_api_user_factory,
     make_user_fixture,
 )
@@ -252,7 +252,7 @@ class TestFastPasswordHelper:
 
 
 class TestInstallFastPasswordHelper:
-    """_install_fast_password_helper patches fastapi-users if installed."""
+    """install_fast_password_helper patches fastapi-users if installed."""
 
     def test_idempotent_when_fastapi_users_absent(self, monkeypatch: Any) -> None:
         """Should not raise when fastapi-users is not installed."""
@@ -267,17 +267,17 @@ class TestInstallFastPasswordHelper:
 
         monkeypatch.setattr(builtins, "__import__", _mock_import)
         # Should not raise.
-        _install_fast_password_helper()
+        install_fast_password_helper()
 
     def test_patches_password_helper_when_available(self) -> None:
-        """After calling _install_fast_password_helper, fastapi-users uses the fast helper."""
+        """After calling install_fast_password_helper, fastapi-users uses the fast helper."""
         try:
             import fastapi_users.password as _fa_password
             from fastapi_users.manager import BaseUserManager
         except ImportError:
             pytest.skip("fastapi-users not installed in shared-package test env")
 
-        _install_fast_password_helper()
+        install_fast_password_helper()
 
         # The class-level attribute should be our stub.
         assert isinstance(BaseUserManager.password_helper, _FastPasswordHelper)

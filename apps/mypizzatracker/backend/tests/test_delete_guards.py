@@ -17,13 +17,13 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.testing.factories import hash_test_password
+
 from app.models.user.user import User
 
 
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
-    from fastapi_users.password import PasswordHelper
-
     test_email = "delete-guards@example.com"
     test_password = "testpassword123!"
 
@@ -32,7 +32,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
         db.add(
             User(
                 email=test_email,
-                hashed_password=PasswordHelper().hash(test_password),
+                hashed_password=hash_test_password(test_password),
                 is_verified=True,
                 is_active=True,
             ),

@@ -16,24 +16,23 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.testing.factories import hash_test_password
+
 from app.models.user.user import User
 
 
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
     """Create + log in a test user; return the client with Bearer token set."""
-    from fastapi_users.password import PasswordHelper
-
     TEST_EMAIL = "menu-test@example.com"
     TEST_PASSWORD = "testpassword123!"
 
     result = await db.execute(select(User).where(User.email == TEST_EMAIL))
     user = result.scalar_one_or_none()
     if user is None:
-        helper = PasswordHelper()
         user = User(
             email=TEST_EMAIL,
-            hashed_password=helper.hash(TEST_PASSWORD),
+            hashed_password=hash_test_password(TEST_PASSWORD),
             is_verified=True,
             is_active=True,
         )

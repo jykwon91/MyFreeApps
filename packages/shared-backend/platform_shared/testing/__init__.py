@@ -7,6 +7,9 @@ Modules
 
       from platform_shared.testing.factories import make_user_fixture, make_api_user_factory
 
+- ``factories.install_fast_password_helper``: swaps argon2 for a fast hasher in
+  tests. Every app ``conftest.py`` calls it before importing any app code;
+  importing ``factories`` alone installs nothing.
 - ``model_loading``: ``load_all_models`` imports every model file so
   ``Base.metadata`` is complete.
 - ``account_deletion_schema`` / ``account_deletion_assertions``: pure schema

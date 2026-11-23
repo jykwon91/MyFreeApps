@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 from fastapi_users.jwt import decode_jwt
-from fastapi_users.password import PasswordHelper
+from platform_shared.testing.factories import hash_test_password
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -114,8 +114,7 @@ class TestCreateUser:
         assert user is not None
         assert user.email == "e2e-viewer-new@example.com"
         assert user.is_verified and user.is_active and not user.is_superuser
-        verified, _ = PasswordHelper().verify_and_update("E2eViewerMemb3r!Secure", user.hashed_password)
-        assert verified
+        assert user.hashed_password == hash_test_password("E2eViewerMemb3r!Secure")
         claims = decode_jwt(created.access_token, settings.secret_key, ["fastapi-users:auth"])
         assert claims["sub"] == str(created.id)
         # The platform's strategy rejects tokens without these.

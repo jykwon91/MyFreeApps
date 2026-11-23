@@ -28,11 +28,16 @@ os.environ.setdefault("MINIO_BUCKET", "test-bucket")
 os.environ.setdefault("MINIO_PUBLIC_ENDPOINT", "test-minio:9000")
 import pytest_asyncio
 from platform_shared.testing.audit_erasure import audit_listener_attached
-from platform_shared.testing.factories import make_user_fixture
+from platform_shared.testing.factories import install_fast_password_helper, make_user_fixture
 from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
+
+# Swap argon2 for the fast test hasher before any app module is imported: a
+# module that binds ``fastapi_users.password.PasswordHelper`` earlier keeps the
+# real argon2 class, and its hashes can never be verified by login.
+install_fast_password_helper()
 
 import app.models  # noqa: F401 — registers every table before the patch below
 from app.core.audit import AUDIT_CONFIG

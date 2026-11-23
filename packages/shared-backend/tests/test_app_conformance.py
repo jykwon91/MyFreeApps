@@ -2876,3 +2876,40 @@ class TestAuditConfigPassedToLifespan:
         assert "audit_config=AUDIT_CONFIG" in main_src
         assert "AUDIT_CONFIG = AuditConfig(" in audit_src
         assert "register_" not in audit_src
+
+
+# mygamingassistant logs in with the real argon2 helper and never installs the
+# fast one, so it is the one app whose conftest must NOT be held to this.
+_FAST_HASHER_APPS = [app for app in _APPS if app != "mygamingassistant"]
+
+
+class TestFastPasswordHelperInstalledFirst:
+    """A conftest must install the fast password helper before importing any app code.
+
+    A test module that does ``from fastapi_users.password import PasswordHelper``
+    before the install keeps the real argon2 class, and the password it hashes
+    can never log in. New apps inherit the scaffold's conftest, so it is held to
+    the same rule as the apps.
+    """
+
+    @staticmethod
+    def _assert_installs_before_app_imports(conftest: str, where: str) -> None:
+        call = re.search(r"^install_fast_password_helper\(\)$", conftest, re.MULTILINE)
+        assert call, f"{where} must call install_fast_password_helper() at module level."
+        first_app_import = re.search(r"^(?:from|import) app\b", conftest, re.MULTILINE)
+        assert first_app_import, f"{where} imports no app code, so the check is meaningless."
+        assert call.start() < first_app_import.start(), (
+            f"{where} must call install_fast_password_helper() before its first app import."
+        )
+
+    @pytest.mark.parametrize("app", _FAST_HASHER_APPS)
+    def test_app_conftest_installs_before_app_imports(self, app: str) -> None:
+        self._assert_installs_before_app_imports(
+            _read("apps", app, "backend", "tests", "conftest.py"), f"apps/{app}/backend/tests/conftest.py",
+        )
+
+    def test_scaffold_conftest_installs_before_app_imports(self) -> None:
+        self._assert_installs_before_app_imports(
+            _read("infra", "templates", "scaffold", "backend", "tests", "conftest.py"),
+            "the scaffold template's tests/conftest.py",
+        )

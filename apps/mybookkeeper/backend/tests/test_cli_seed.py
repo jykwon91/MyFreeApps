@@ -1,7 +1,7 @@
 """The test-user seed CLI hashes with the same PasswordHelper the login path verifies with (no passlib)."""
 from unittest.mock import MagicMock, patch
 
-from fastapi_users.password import PasswordHelper
+from platform_shared.testing.factories import hash_test_password
 
 from app.cli import seed
 
@@ -19,5 +19,4 @@ def test_create_test_user_stores_verifiable_bcrypt_hash() -> None:
     )
     hashed = user_params["hashed"]
     assert hashed != seed.TEST_PASSWORD
-    verified, _ = PasswordHelper().verify_and_update(seed.TEST_PASSWORD, hashed)
-    assert verified
+    assert hashed == hash_test_password(seed.TEST_PASSWORD)

@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
-from fastapi_users.password import PasswordHelper
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from platform_shared.testing.factories import hash_test_password
 
 from app.models.user.user import User
 
@@ -20,7 +21,7 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
     if user is None:
         db.add(User(
             email=TEST_EMAIL,
-            hashed_password=PasswordHelper().hash(TEST_PASSWORD),
+            hashed_password=hash_test_password(TEST_PASSWORD),
             is_verified=True,
             is_active=True,
         ))
