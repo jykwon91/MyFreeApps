@@ -3,7 +3,7 @@ import { useCallback, useRef } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent, ScrollViewInstance } from "react-native";
 import { STICK_TO_BOTTOM_DISTANCE } from "../constants/conversation";
 import type { StickToBottom } from "../types/StickToBottom";
-import { isNearBottom } from "../utils/isNearBottom";
+import { isNearBottom } from "@mylanguagetutor/api-client/utils/isNearBottom";
 
 /** Keeps the newest message in view, unless the reader has scrolled up to read an earlier one. */
 export function useStickToBottom(): StickToBottom {

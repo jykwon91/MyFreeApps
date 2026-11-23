@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
 import TranscriptItem from "@/features/session/TranscriptItem";
 import TypingDots from "@/features/session/TypingDots";
+import { useFollowTranscript } from "@/features/session/useFollowTranscript";
 import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 
 interface TranscriptListProps {
@@ -17,7 +17,7 @@ interface TranscriptListProps {
   onSkipRetry: (key: string) => void;
 }
 
-/** The conversation so far; keeps the newest exchange in view. Not a live region: the practice screen announces the finished reply. */
+/** The conversation so far; keeps the newest exchange in view while the reader is at the end. Not a live region: the practice screen announces the finished reply. */
 export default function TranscriptList({
   entries,
   languageName,
@@ -29,12 +29,8 @@ export default function TranscriptList({
   onTryRetry,
   onSkipRetry,
 }: TranscriptListProps) {
-  const end = useRef<HTMLDivElement>(null);
   const last = entries[entries.length - 1];
-
-  useEffect(() => {
-    end.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
-  }, [entries, waiting]);
+  const end = useFollowTranscript(last?.key, entries, waiting);
 
   return (
     <div className="space-y-4">
