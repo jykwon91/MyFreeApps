@@ -4,6 +4,7 @@ import { Lock } from "lucide-react";
 import {
   AuthPageFooter,
   LoadingButton,
+  TwoFactorStep,
   describeAuthError,
   isUnverifiedLoginError,
   useIsAuthenticated,
@@ -40,9 +41,6 @@ export default function Login() {
   const [pendingCredentials, setPendingCredentials] = useState<
     { email: string; password: string } | null
   >(null);
-  const [totpCode, setTotpCode] = useState("");
-  const [totpError, setTotpError] = useState("");
-  const [isVerifyingTotp, setIsVerifyingTotp] = useState(false);
 
   const handleTurnstileExpire = useCallback(() => {}, []);
   void handleTurnstileExpire;
@@ -68,8 +66,6 @@ export default function Login() {
       const result = await signIn(email, password);
       if (result.status === "totp_required") {
         setPendingCredentials({ email, password });
-        setTotpCode("");
-        setTotpError("");
         return;
       }
       navigateAfterLogin();
@@ -97,28 +93,12 @@ export default function Login() {
     }
   }
 
-  async function onTotpSubmit(e: React.FormEvent): Promise<void> {
-    e.preventDefault();
-    if (!pendingCredentials || totpCode.length < 6) return;
-
-    setTotpError("");
-    setIsVerifyingTotp(true);
-    try {
-      const result = await signIn(
-        pendingCredentials.email,
-        pendingCredentials.password,
-        totpCode,
-      );
-      if (result.status === "ok") {
-        navigateAfterLogin();
-      } else {
-        setTotpError("Authentication code didn't go through. Please try again.");
-      }
-    } catch (err) {
-      setTotpError(describeAuthError(err));
-    } finally {
-      setIsVerifyingTotp(false);
-    }
+  async function onVerifyTotp(code: string): Promise<boolean> {
+    if (!pendingCredentials) return false;
+    const result = await signIn(pendingCredentials.email, pendingCredentials.password, code);
+    if (result.status !== "ok") return false;
+    navigateAfterLogin();
+    return true;
   }
 
   return (
@@ -132,57 +112,7 @@ export default function Login() {
 
       <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-xs">
         {pendingCredentials ? (
-          <form onSubmit={onTotpSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="totp-code" className="block text-sm font-medium mb-1">
-                Authentication code
-              </label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Enter the 6-digit code from your authenticator app, or a recovery code.
-              </p>
-              <input
-                id="totp-code"
-                type="text"
-                inputMode="text"
-                autoComplete="one-time-code"
-                value={totpCode}
-                onChange={(e) =>
-                  setTotpCode(
-                    e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 8),
-                  )
-                }
-                className="w-full border rounded-md px-3 py-2 text-sm font-mono text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-                placeholder="000000"
-                maxLength={8}
-                autoFocus
-              />
-            </div>
-            {totpError ? (
-              <p className="text-destructive text-sm" role="alert">
-                {totpError}
-              </p>
-            ) : null}
-            <LoadingButton
-              type="submit"
-              isLoading={isVerifyingTotp}
-              loadingText="Verifying..."
-              className="w-full"
-              disabled={totpCode.length < 6}
-            >
-              Verify
-            </LoadingButton>
-            <button
-              type="button"
-              onClick={() => {
-                setPendingCredentials(null);
-                setTotpCode("");
-                setTotpError("");
-              }}
-              className="w-full text-sm text-muted-foreground hover:underline min-h-[44px]"
-            >
-              Back to login
-            </button>
-          </form>
+          <TwoFactorStep onVerify={onVerifyTotp} onBack={() => setPendingCredentials(null)} />
         ) : (
           <>
             <h1 className="text-lg font-semibold mb-6">Sign in</h1>

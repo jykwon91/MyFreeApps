@@ -87,4 +87,39 @@ describe("Login page errors", () => {
       "Invalid authentication code. Please try again.",
     );
   });
+
+  it("signs in and leaves the login page once the code is accepted", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    mockSignIn.mockResolvedValueOnce({ status: "ok" });
+    const user = await submitCredentials();
+
+    await user.type(await screen.findByLabelText("Authentication code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByText("Home")).toBeInTheDocument();
+    expect(mockSignIn).toHaveBeenLastCalledWith("user@example.com", "a-password-123", "123456");
+  });
+
+  it("keeps the code step and says so when the server still asks for a code", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    const user = await submitCredentials();
+
+    await user.type(await screen.findByLabelText("Authentication code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Authentication code didn't go through. Please try again.",
+    );
+  });
+
+  it("goes back to the email and password form from the code step", async () => {
+    mockSignIn.mockResolvedValueOnce({ status: "totp_required" });
+    const user = await submitCredentials();
+
+    await user.click(await screen.findByRole("button", { name: "Back to login" }));
+
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument();
+  });
 });
