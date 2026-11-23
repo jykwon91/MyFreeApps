@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
 import { FileText, Loader2 } from "lucide-react";
 import { fetchDocumentBlob } from "@/shared/services/documentService";
-import { FormField, LoadingRegion, showError } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField, LoadingRegion, showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
@@ -19,7 +19,6 @@ import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-clie
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import SourcePreviewDialog from "./SourcePreviewDialog";
-import TransactionFieldError from "./TransactionFieldError";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -223,12 +222,11 @@ export default function TransactionForm({
                 className={`${fieldClass("amount")} pl-7`}
                 step="0.01"
                 min="0.01"
-                aria-invalid={errors?.amount ? true : undefined}
-                aria-describedby={errors?.amount ? `${field.id}-error` : undefined}
+                {...fieldFeedbackAria({ id: field.id, error: errors?.amount?.message })}
                 {...field}
               />
             </div>
-            <TransactionFieldError id={`${field.id}-error`} message={errors?.amount?.message} />
+            <FieldFeedback id={field.id} error={errors?.amount?.message} />
           </>
         )}
       </FormField>
