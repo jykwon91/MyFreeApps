@@ -15,7 +15,6 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { AppState, Linking } from "react-native";
 import type { AppStateStatus } from "react-native";
-import { CATALOG_MESSAGES } from "../src/constants/catalog";
 import { store } from "../src/lib/store";
 import { renderApp } from "../test-support/renderApp";
 import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
@@ -151,7 +150,7 @@ describe("the Practice tab", () => {
     serveCatalog({ "GET /scenarios": () => ({ status: 200, data: [] }) });
     await renderApp();
 
-    expect(await screen.findByRole("header", { name: CATALOG_MESSAGES.noScenariosHeading })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: CATALOG_COPY.noScenariosHeading })).toBeTruthy();
     expect(screen.getByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
   });
 

@@ -64,6 +64,21 @@ describe("ScenarioPath", () => {
     usage = { remaining_fraction: 0.6, cap_reached: false, tutor_available: true, session_limit_reached: false };
   });
 
+  it("says so when the language has no scenarios, with the page header still in place", () => {
+    scenarios = { data: [], isError: false };
+    const { container } = renderPath();
+    expect(screen.getByRole("heading", { name: CATALOG_COPY.noScenariosHeading })).toBeInTheDocument();
+    expect(screen.getByText(CATALOG_COPY.noScenariosBody)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Practice Spanish" })).toBeInTheDocument();
+    expect(container.querySelector("ul")).toBeNull();
+  });
+
+  it("shows the loading placeholder, not the empty state, while the scenarios load", () => {
+    scenarios = { data: undefined, isError: false };
+    renderPath();
+    expect(screen.queryByText(CATALOG_COPY.noScenariosHeading)).not.toBeInTheDocument();
+  });
+
   it("shows a placeholder until the scenarios load", () => {
     scenarios = { data: undefined, isError: false };
     renderPath();

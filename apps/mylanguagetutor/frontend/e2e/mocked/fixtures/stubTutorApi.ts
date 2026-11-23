@@ -40,7 +40,7 @@ const MISSING_LANGUAGE_QUERY: ValidationErrorBody = {
 
 export async function stubTutorApi(
   page: Page,
-  { profile: initialProfile = profileOf(), usage: initialUsage = PLENTY_LEFT, languages = [SPANISH], turns = [], holdTurns, failWith = [] }: TutorApiStubOptions = {},
+  { profile: initialProfile = profileOf(), usage: initialUsage = PLENTY_LEFT, languages = [SPANISH], scenarios = SCENARIOS, turns = [], holdTurns, failWith = [] }: TutorApiStubOptions = {},
 ): Promise<TutorApi> {
   let profile: Profile | null = initialProfile;
   let usage = initialUsage;
@@ -99,7 +99,7 @@ export async function stubTutorApi(
     if (method === "GET" && path === "/scenarios") {
       const language = url.searchParams.get("language");
       if (!language) return route.fulfill(json(MISSING_LANGUAGE_QUERY, 422));
-      return route.fulfill(supported(language) ? json(SCENARIOS) : unknownLanguage(language));
+      return route.fulfill(supported(language) ? json(scenarios) : unknownLanguage(language));
     }
     if (method === "GET" && path === "/profile") return route.fulfill(json(profile));
     if (method === "GET" && path === "/usage/today") {
