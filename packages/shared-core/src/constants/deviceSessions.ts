@@ -27,6 +27,11 @@ export function signOutDeviceLabel(name: string): string {
   return `Sign out ${name}`;
 }
 
+/** One spoken line for a device's name, whether it's this phone, when it was last used and when it signed in. */
+export function deviceRowLabel(name: string, isThisDevice: boolean, lastUsed: string, signedIn: string): string {
+  return [name, isThisDevice ? "this device" : null, lastUsed, signedIn].filter(Boolean).join(", ");
+}
+
 export function confirmSignOutDeviceTitle(name: string): string {
   return `Sign out ${name}?`;
 }

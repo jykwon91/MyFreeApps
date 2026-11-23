@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import SectionError from "../components/SectionError";
 
@@ -21,5 +21,15 @@ describe("SectionError", () => {
     await render(<SectionError message="Couldn't load" onRetry={onRetry} retryLabel="Try again" />);
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("says it's trying again while the retry is in flight", async () => {
+    let finish: () => void = () => {};
+    const onRetry = jest.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    await render(<SectionError message="Couldn't load" onRetry={onRetry} retryLabel="Try again" retryingLabel="Trying again..." />);
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.getByText("Trying again...")).toBeTruthy();
+    await act(async () => finish());
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   });
 });
