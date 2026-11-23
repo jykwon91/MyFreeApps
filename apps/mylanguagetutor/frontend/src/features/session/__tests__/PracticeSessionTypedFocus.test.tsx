@@ -59,6 +59,8 @@ describe("typed practice during a turn", () => {
       interrupt: vi.fn(),
       resume: vi.fn(),
       dismissFailure: vi.fn(),
+      dismissNotice: vi.fn(),
+      notice: null,
       dismissRetryPrompt: vi.fn(),
     };
   });

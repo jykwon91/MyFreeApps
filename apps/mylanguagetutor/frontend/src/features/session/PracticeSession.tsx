@@ -13,6 +13,7 @@ import PrivacyNotice from "@/features/session/PrivacyNotice";
 import MicDeniedState from "@/features/session/MicDeniedState";
 import SessionBlockNotice from "@/features/session/SessionBlockNotice";
 import TurnErrorAlert from "@/features/session/TurnErrorAlert";
+import PracticeNoticeAlert from "@/features/session/PracticeNoticeAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
 import PracticeAnnouncer from "@/features/session/PracticeAnnouncer";
@@ -107,6 +108,8 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
       {session.failure && (
         <TurnErrorAlert failure={session.failure} onRetry={session.retry} onDismiss={session.dismissFailure} />
       )}
+
+      {session.notice && <PracticeNoticeAlert notice={session.notice} onDismiss={session.dismissNotice} />}
 
       <div className={PRACTICE_COMPOSER} data-testid={PRACTICE_SECTION_IDS.composer}>
         {block && <SessionBlockNotice block={block} />}

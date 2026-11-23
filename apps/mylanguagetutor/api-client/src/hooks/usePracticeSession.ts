@@ -7,6 +7,7 @@ import { isConnectionLost } from "../utils/isConnectionLost";
 import { nextUtcMidnight } from "../utils/nextUtcMidnight";
 import { replayRate } from "../utils/replayRate";
 import { usageAnsweredSince } from "../utils/usageAnsweredSince";
+import { truncateTurn } from "../utils/truncateTurn";
 import { usageBlock } from "../utils/usageBlock";
 import { MAX_TURN_CHARS } from "../constants/turnLimits";
 import { RESUMED_TURN_SILENCE_MS } from "../constants/turnRequest";
@@ -23,6 +24,7 @@ import type { ScenarioState } from "../types/tutor/scenario-state";
 import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
 import type { TranscriptEntry } from "../types/session/transcript-entry";
 import type { TurnFailure } from "../types/session/turn-failure";
+import type { PracticeNotice } from "../types/session/practice-notice";
 import type { SessionBlock } from "../types/session/session-block";
 import type { RequestPhase } from "../types/session/request-phase";
 import type { PracticeSession } from "../types/session/practice-session";
@@ -81,7 +83,10 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   // after it says the tutor is back, usage read before it may still say a turn fits.
   const [unavailableSince, setUnavailableSince] = useState<number | null>(null);
   const [scenarioState, setScenarioState] = useState<ScenarioState>(EMPTY_STATE);
+  const [notice, setNotice] = useState<PracticeNotice | null>(null);
   const sessionRef = useRef<string | null>(null);
+  // The server no longer knows the session this conversation had: the next one it opens replaces it.
+  const sessionLost = useRef(false);
   const inFlight = useRef(false);
   const abort = useRef<AbortController | null>(null);
   // The turn ``interrupt`` stopped, as opposed to one abandoned by unmounting.
@@ -164,6 +169,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     }).unwrap();
     sessionRef.current = session.id;
     setSessionId(session.id);
+    if (sessionLost.current) {
+      // Goals met belonged to the lost session. What was said stays in the transcript; the notice says where it restarted.
+      sessionLost.current = false;
+      setScenarioState(EMPTY_STATE);
+      setNotice("restarted");
+    }
     return session.id;
   }, [createSession, languageCode, scenarioSlug, level]);
 
@@ -197,6 +208,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     if (code === SESSION_NOT_FOUND) {
       // The session is gone (deleted elsewhere): a retry starts a fresh one.
       sessionRef.current = null;
+      sessionLost.current = true;
       setSessionId(null);
     }
     setFailure({
@@ -209,11 +221,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
 
   const send = useCallback(
     (rawText: string) => {
-      const text = rawText.trim().slice(0, MAX_TURN_CHARS);
+      const { text, truncated } = truncateTurn(rawText, MAX_TURN_CHARS);
       if (!text || inFlight.current || block) return;
       inFlight.current = true;
       stopSpeaking();
       setFailure(null);
+      setNotice(truncated ? "truncated" : null);
       const key = nextKey();
       setEntries((all) => [...all, newEntry(key, text)]);
       setRequestPhase("waiting");
@@ -352,6 +365,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const replay = useCallback((text: string, slow: boolean) => speakAll(text, replayRate(slow)), [speakAll]);
 
   const dismissFailure = useCallback(() => setFailure(null), []);
+  const dismissNotice = useCallback(() => setNotice(null), []);
 
   const dismissRetryPrompt = useCallback(
     (key: string) => patchEntry(key, (e) => ({ ...e, retryPrompt: null })),
@@ -366,12 +380,14 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     failure: shownFailure,
     block,
     scenarioState,
+    notice,
     send,
     retry,
     interrupt,
     resume,
     replay,
     dismissFailure,
+    dismissNotice,
     dismissRetryPrompt,
   };
 }

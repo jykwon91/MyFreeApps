@@ -22,6 +22,7 @@ import { recognizerPrivacy } from "../../utils/recognizerPrivacy";
 import Composer from "./Composer";
 import ConversationHeader from "./ConversationHeader";
 import KeepAwake from "./KeepAwake";
+import PracticeNoticeBanner from "./PracticeNoticeBanner";
 import ScenarioCompleteBanner from "./ScenarioCompleteBanner";
 import SessionBlockNotice from "./SessionBlockNotice";
 import Transcript from "./Transcript";
@@ -125,6 +126,7 @@ export default function Conversation({ language, scenario, level }: Conversation
         )}
         {session.scenarioState.complete && !completeDismissed ? <ScenarioCompleteBanner onKeepTalking={() => setCompleteDismissed(true)} /> : null}
         {session.failure ? <TurnErrorBanner failure={session.failure} onDismiss={session.dismissFailure} onRetry={session.retry} /> : null}
+        {session.notice ? <PracticeNoticeBanner notice={session.notice} onDismiss={session.dismissNotice} /> : null}
       </ScrollView>
       <PinnedBar bottomSpacing={spacing.lg} style={{ padding: spacing.lg, borderTopWidth: 1, borderColor: colors.border }}>
         {block ? (
