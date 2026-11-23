@@ -33,6 +33,8 @@ from platform_shared.core.tracked_task_constants import (
 from platform_shared.infra import render as _render
 from platform_shared.infra import screen_map as _screen_map
 
+from tests.audit_config_source import audit_config_names
+
 # Repo root, relative to this test file: tests/ -> shared-backend/ -> packages/ -> repo/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _APPS = [
@@ -2762,17 +2764,7 @@ class TestApiShutdownWindowCoversTheDrain:
 
 def _audit_registry(app: str, suffix: str) -> set[str]:
     """String names in ``apps/<app>/backend/app/core/audit.py``'s ``*<suffix>`` frozenset."""
-    tree = ast.parse(_read("apps", app, "backend", "app", "core", "audit.py"))
-    names: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.AnnAssign | ast.Assign):
-            targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
-            if any(isinstance(t, ast.Name) and t.id.endswith(suffix) for t in targets) and node.value:
-                names |= {
-                    c.value for c in ast.walk(node.value)
-                    if isinstance(c, ast.Constant) and isinstance(c.value, str)
-                }
-    return names
+    return audit_config_names(_REPO_ROOT / "apps" / app / "backend" / "app" / "core" / "audit.py", suffix)
 
 
 def _is_encrypted_string_column(value: ast.expr | None) -> bool:

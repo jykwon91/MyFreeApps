@@ -13,8 +13,10 @@ so the listener cannot attach without it. Apps build their ``AuditConfig`` in
     lifespan = create_app_lifespan(settings=settings, audit_config=AUDIT_CONFIG, ...)
 
 Before attaching, the configuration is checked against the mapped models and
-boot fails (:class:`AuditConfigurationError`) if a sensitive name matches no
-column, or if an audited ``EncryptedString`` column is not masked.
+boot fails (:class:`AuditConfigurationError`) if a sensitive field, skip field
+or skip table matches no column or table, or if an audited ``EncryptedString``
+column is not masked. The lifespan also fails boot when an app's configuration
+leaves out the shared baseline (:func:`verify_audit_baseline`).
 
 The audit table itself is always skipped to prevent recursion. The listener
 writes ``changed_by`` from the ``current_user_id`` ContextVar by default; pass
@@ -38,6 +40,10 @@ from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.orm.attributes import NO_VALUE
 from sqlalchemy.orm.base import NEVER_SET
 
+from platform_shared.core.audit_baseline_constants import (
+    AUDIT_BASELINE_SENSITIVE_FIELDS,
+    AUDIT_BASELINE_SKIP_TABLES,
+)
 from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.audit_erasure_constants import MASKED_AUDIT_VALUE
 from platform_shared.core.encrypted_string_type import EncryptedString
@@ -47,9 +53,10 @@ from platform_shared.db.models.audit_log import AuditLog
 
 class AuditConfigurationError(RuntimeError):
     """Raised when the audit configuration would let plaintext reach
-    ``audit_logs``: no configuration at all, a sensitive-field name that matches
-    no ORM column, an unmasked ``EncryptedString`` column, or a second listener
-    with a different configuration.
+    ``audit_logs``: no configuration at all, a configured name that matches no
+    ORM column or table, a missing baseline entry, an unmasked
+    ``EncryptedString`` column, or a second listener with a different
+    configuration.
     """
 
 
@@ -115,6 +122,10 @@ def _all_mapped_column_keys(base: type[DeclarativeBase]) -> set[str]:
     return {col.key for table in base.metadata.tables.values() for col in table.columns}
 
 
+def _all_table_names(base: type[DeclarativeBase]) -> set[str]:
+    return {table.name for table in base.metadata.tables.values()}
+
+
 def _unmasked_encrypted_columns(config: AuditConfig, base: type[DeclarativeBase]) -> list[str]:
     """``table.attribute`` for every audited :class:`EncryptedString` column
     whose attribute key is neither masked nor skipped.
@@ -136,13 +147,23 @@ def _unmasked_encrypted_columns(config: AuditConfig, base: type[DeclarativeBase]
     return sorted(set(unmasked))
 
 
+def _list_config_names(names_by_field: dict[str, frozenset[str]]) -> str:
+    """``AuditConfig.<field>: [sorted names]`` for each field with names, ``; ``-joined."""
+    return "; ".join(
+        f"AuditConfig.{field}: {sorted(names)}" for field, names in names_by_field.items() if names
+    )
+
+
 def verify_audit_config(config: AuditConfig, *, base: type[DeclarativeBase] = Base) -> None:
     """Raise :class:`AuditConfigurationError` if ``config`` would let plaintext
     reach ``audit_logs`` for the models mapped on ``base``:
 
-    1. a sensitive-field name matches no column attribute on any mapped class
-       (a typo: the mask would never fire — how plaintext TOTP secrets leaked in
-       MJH + MGA before this check), or
+    1. a name matches nothing in the mapped models: a sensitive field or skip
+       field that is no column attribute on any mapped class, or a skip table
+       that is no mapped table. A typo means the mask or skip never fires (how
+       plaintext TOTP secrets leaked in MJH + MGA before this check), and the
+       column or table it was meant for is audited in full. Sensitive and skip
+       fields match a column of that name in every table, as the listener does.
     2. an audited :class:`EncryptedString` column is not a sensitive field (or
        skip field, or on a skip table). The ORM attribute is the decrypted
        value, so encryption at rest would be undone in the audit table.
@@ -150,14 +171,19 @@ def verify_audit_config(config: AuditConfig, *, base: type[DeclarativeBase] = Ba
     Every model module must be imported before this runs; apps' ``app.main``
     imports them all before the lifespan starts.
     """
-    unknown = config.sensitive_fields - _all_mapped_column_keys(base)
-    if unknown:
+    column_keys = _all_mapped_column_keys(base)
+    unknown = {
+        "sensitive_fields": config.sensitive_fields - column_keys,
+        "skip_fields": config.skip_fields - column_keys,
+        "skip_tables": config.skip_tables - _all_table_names(base),
+    }
+    unknown_listed = _list_config_names(unknown)
+    if unknown_listed:
         raise AuditConfigurationError(
-            "AuditConfig.sensitive_fields has names that don't match any ORM "
-            f"column on any mapped class: {sorted(unknown)}. The audit mask will "
-            "never fire for these names — plaintext values in the columns they were "
-            "meant to mask will leak into audit_logs. Check spelling against the "
-            "actual SQLAlchemy attribute names on your models.",
+            f"AuditConfig names that don't match any mapped column or table: {unknown_listed}. "
+            "A mask or skip on a name that matches nothing never fires, so the column or "
+            "table it was meant for is copied into audit_logs in plaintext. Check spelling "
+            "against the actual SQLAlchemy attribute and table names on your models.",
         )
     unmasked = _unmasked_encrypted_columns(config, base)
     if unmasked:
@@ -167,6 +193,31 @@ def verify_audit_config(config: AuditConfig, *, base: type[DeclarativeBase] = Ba
             "columns would be copied into audit_logs as cleartext. Add each "
             "attribute name to the app's sensitive fields in app/core/audit.py "
             "(or skip the column or table there if it shouldn't be audited).",
+        )
+
+
+def verify_audit_baseline(config: AuditConfig) -> None:
+    """Raise :class:`AuditConfigurationError` if an app's ``config`` leaves out
+    any of the shared baseline (:mod:`platform_shared.core.audit_baseline_constants`):
+    the auth secrets every app's user table has, and the secret-bearing tables
+    every app has.
+
+    The app boot path (:func:`platform_shared.core.lifespan.create_app_lifespan`)
+    runs this before attaching the listener. It is not part of
+    :func:`verify_audit_config`, which checks any configuration against any
+    models, including test models that have no user table.
+    """
+    missing = {
+        "sensitive_fields": AUDIT_BASELINE_SENSITIVE_FIELDS - config.sensitive_fields,
+        "skip_tables": AUDIT_BASELINE_SKIP_TABLES - config.skip_tables,
+    }
+    missing_listed = _list_config_names(missing)
+    if missing_listed:
+        raise AuditConfigurationError(
+            f"The app's AuditConfig is missing the shared baseline: {missing_listed}. "
+            "Every app has these auth secrets and secret-bearing tables, and without "
+            "them their values are copied into audit_logs. Add them to app/core/audit.py "
+            "(see platform_shared.core.audit_baseline_constants).",
         )
 
 
