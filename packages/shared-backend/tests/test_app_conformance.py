@@ -83,6 +83,15 @@ _SENTRY_EXEMPT = {"mygamingassistant", "mylanguagetutor"}
 # Discovered rather than listed, so a new app can't dodge the mobile checks.
 _ALL_APPS = _render._list_apps(_REPO_ROOT)
 
+_CADDY_MAX_SIZE = re.compile(r"^\s*max_size\s+(\d+)\s*([A-Za-z]+)\s*$", re.MULTILINE)
+# Units as go-humanize (which Caddy uses for ``max_size``) reads them: MB is decimal, MiB binary.
+_CADDY_UNIT_BYTES = {"KB": 1000, "MB": 1000**2, "GB": 1000**3, "KiB": 1024, "MiB": 1024**2, "GiB": 1024**3}
+# Multipart framing (boundaries + part headers) allowed on top of a file limit.
+_MULTIPART_OVERHEAD_BYTES = 1024 * 1024
+# Apps whose edge body cap must track a single app-level upload limit:
+# app -> (config file under backend/app/core, Settings field holding the limit in bytes).
+_BODY_LIMITED_APPS = {"myrecipes": ("config.py", "max_photo_upload_bytes")}
+
 _TEST_ROUTE_MOUNT = re.compile(r"include_router\(\s*(_?test_helpers_router|test_helpers\.router)")
 
 
@@ -695,10 +704,31 @@ class TestEdgeHardeningDirectives:
     @pytest.mark.parametrize("app", _APPS)
     def test_caddy_has_body_size_cap(self, app: str) -> None:
         caddy = _read("apps", app, "docker", "Caddyfile.docker")
-        assert "request_body {" in caddy and "max_size 30MB" in caddy, (
+        assert "request_body {" in caddy and _CADDY_MAX_SIZE.search(caddy), (
             f"{app} docker Caddyfile is missing the request-body size cap — a "
             f"large-body flood would buffer into the worker's memory (OOM). "
             f"Restore it in infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+
+    @pytest.mark.parametrize("app", sorted(_BODY_LIMITED_APPS))
+    def test_caddy_body_cap_tracks_app_upload_limit(self, app: str) -> None:
+        config_file, field = _BODY_LIMITED_APPS[app]
+        tree = ast.parse(_read("apps", app, "backend", "app", "core", config_file))
+        limit = next(
+            eval(compile(ast.Expression(node.value), config_file, "eval"))  # noqa: S307 - literal int arithmetic
+            for node in ast.walk(tree)
+            if isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == field
+            and node.value is not None
+        )
+        match = _CADDY_MAX_SIZE.search(_read("apps", app, "docker", "Caddyfile.docker"))
+        assert match, f"{app} docker Caddyfile has no request_body max_size"
+        cap = int(match.group(1)) * _CADDY_UNIT_BYTES[match.group(2)]
+        assert limit <= cap <= limit + _MULTIPART_OVERHEAD_BYTES, (
+            f"{app} Caddy request_body max_size is {cap} bytes but {field} is {limit}: the proxy "
+            f"must accept a max-size upload plus multipart overhead (<= {_MULTIPART_OVERHEAD_BYTES} "
+            f"bytes) and no more. Set `request_body_max_size` in apps/{app}/app.yaml and re-render."
         )
 
     @pytest.mark.parametrize("app", _APPS)

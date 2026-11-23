@@ -27,4 +27,7 @@ csp: 'default-src ''self''; script-src ''self'' https://challenges.cloudflare.co
 drain_on_shutdown: true
 workers: []
 post_deploy_commands: []
+# Largest body is the 15 MiB photo import (max_photo_upload_bytes) plus multipart
+# overhead (Caddy MB is decimal: 16MB = 15.26 MiB, ~270 KB over the limit).
+request_body_max_size: 16MB
 mobile: true
