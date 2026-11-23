@@ -21,6 +21,7 @@ are cheap and don't need throttling beyond the global gateway.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -37,6 +38,11 @@ from app.core.discovered_job_conflicts import (
     NO_LONGER_LISTED_MESSAGE,
 )
 from app.core.discovered_job_state import DiscoveredJobState
+from app.core.discovery_refresh_messages import (
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_SOURCE_UNSUPPORTED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
+)
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.mappers.discovered_job_mapper import to_discovered_job_response
@@ -81,6 +87,8 @@ from app.services.discovery.sources.jsearch import (
     JSearchQuotaError,
     JSearchTransientError,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/discover", tags=["discovery"])
 
@@ -233,7 +241,8 @@ async def refresh_source(
             status_code=409, detail="Source is deactivated",
         )
     except DiscoveryUnsupportedSourceError as exc:
-        raise HTTPException(status_code=501, detail=str(exc))
+        logger.error("Discovery refresh: %s source_id=%s", exc, source_id)
+        raise HTTPException(status_code=501, detail=DISCOVERY_SOURCE_UNSUPPORTED_DETAIL) from exc
     except JSearchAuthError as exc:
         raise HTTPException(
             status_code=503,
@@ -250,12 +259,11 @@ async def refresh_source(
         # agree.
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except JSearchTransientError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"JSearch upstream is unavailable: {exc}",
-        ) from exc
+        logger.warning("Discovery refresh: JSearch unavailable source_id=%s", source_id, exc_info=True)
+        raise HTTPException(status_code=502, detail=DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL) from exc
     except (JSearchInvalidResponseError, DiscoveryFetchError) as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.error("Discovery refresh failed: source_id=%s", source_id, exc_info=True)
+        raise HTTPException(status_code=502, detail=DISCOVERY_FETCH_FAILED_DETAIL) from exc
 
     # Phase C: kick off scoring of the freshly-fetched postings as a
     # background task so /refresh returns immediately. The frontend

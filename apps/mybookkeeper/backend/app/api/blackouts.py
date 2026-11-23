@@ -13,6 +13,7 @@ All endpoints require org-member auth and are tenant-scoped:
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.config import settings
@@ -89,7 +90,7 @@ async def upload_attachment(
     except blackout_service.AttachmentTypeRejectedError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
     except blackout_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
 
 
 @router.get(

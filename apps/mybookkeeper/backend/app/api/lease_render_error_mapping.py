@@ -1,10 +1,12 @@
 """HTTP status mapping for failures while rendering and writing lease documents."""
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 
 from fastapi import HTTPException
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.storage import StorageNotConfiguredError
 
 from app.core.lease_render_constants import (
@@ -16,6 +18,7 @@ from app.core.lease_render_constants import (
     LEASE_VALUE_LOCKED_CODE,
     LEASE_VALUE_LOCKED_MESSAGE,
 )
+from app.core.lease_template_constants import STORAGE_UNAVAILABLE_MESSAGE
 from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
 from app.services.leases.exceptions.lease_attachment_locked_error import LeaseAttachmentLockedError
 from app.services.leases.exceptions.lease_changed_during_render_error import (
@@ -28,6 +31,8 @@ from app.services.leases.exceptions.template_storage_unavailable_error import (
 )
 from app.services.leases._lease_helpers import CannotEditValuesError
 from app.services.storage.stored_file import StoredFileMissingError
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -66,5 +71,8 @@ def lease_render_errors() -> Iterator[None]:
             status_code=422,
             detail={"code": LEASE_VALUE_LOCKED_CODE, "message": LEASE_VALUE_LOCKED_MESSAGE, "keys": []},
         ) from exc
-    except (TemplateStorageUnavailableError, StorageNotConfiguredError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except TemplateStorageUnavailableError as exc:
+        logger.error("Storage failed while rendering lease documents", exc_info=True)
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_MESSAGE) from exc
+    except StorageNotConfiguredError as exc:
+        raise storage_not_configured_http_exception(exc) from exc

@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.context import RequestContext
@@ -147,7 +148,7 @@ async def upload_photos(
     except listing_photo_service.ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Listing not found") from exc
     except listing_photo_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
     except image_processor.ImageRejected as exc:
         # 413 (payload too large) for size; 415 for everything else.
         status = 413 if "MB" in exc.reason else 415

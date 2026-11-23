@@ -9,4 +9,7 @@ class GmailSendError(Exception):
     The caller (the inquiry-reply service) treats this as a hard failure:
     no InquiryMessage row is created and the inquiry stage doesn't advance.
     The host sees a clear error and can retry.
+
+    The message is shown to the host as the reply's ``detail``: raise it only
+    with fixed copy written for them, never with Google's or a library's text.
     """

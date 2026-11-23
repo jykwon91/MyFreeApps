@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.api.lease_render_error_mapping import lease_attachment_lock_errors
@@ -59,7 +60,7 @@ async def upload_attachment(
     except signed_lease_service.AttachmentTypeRejectedError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
     except signed_lease_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
 
 
 @router.get(

@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.ai_failure_http import ai_failure_http_exception
 from app.core.auth import current_active_user, released_active_user
+from app.core.company_research_messages import TAVILY_NOT_CONFIGURED_DETAIL
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -280,10 +281,8 @@ async def trigger_company_research(
     except ResearchAlreadyRunningError as exc:
         raise HTTPException(status_code=409, detail=_RESEARCH_ALREADY_RUNNING_DETAIL) from exc
     except TavilyNotConfiguredError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Tavily research is not configured: {exc}",
-        ) from exc
+        logger.error("Company research failed: %s company_id=%s", exc, company_id)
+        raise HTTPException(status_code=503, detail=TAVILY_NOT_CONFIGURED_DETAIL) from exc
     except ExtractionError as exc:
         logger.exception(
             "Company research failed: AI synthesis error company_id=%s kind=%s type=%s",

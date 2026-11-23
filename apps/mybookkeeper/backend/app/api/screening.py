@@ -22,6 +22,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.context import RequestContext
@@ -170,7 +171,7 @@ async def upload_screening_result(
         # Storage is a deploy-time config issue — distinct from a request
         # error. 503 lets the operator distinguish "missing config" from
         # "client did something wrong".
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
     except screening_service.ScreeningServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

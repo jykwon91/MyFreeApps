@@ -25,6 +25,7 @@ and change nothing.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Literal
 
@@ -38,6 +39,7 @@ from app.core.resume_refinement_conflicts import (
     SUGGESTION_CHANGED_MESSAGE,
 )
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
+from app.core.resume_export_messages import RESUME_EXPORT_FAILED_MESSAGE
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.resume_refinement.session import (
@@ -64,6 +66,8 @@ from app.services.resume_refinement.export_service import (
     ExportFidelityError,
     export_resume,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/resume-refinement", tags=["resume-refinement"])
 
@@ -428,7 +432,8 @@ async def export_session(
             detail=f"export_fidelity_check_failed: {exc.missing_facts[:5]}",
         ) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("Resume export failed: session_id=%s format=%s", session_id, fmt)
+        raise HTTPException(status_code=502, detail=RESUME_EXPORT_FAILED_MESSAGE) from exc
 
     media_type = (
         "application/pdf"
