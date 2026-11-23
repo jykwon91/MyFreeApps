@@ -333,6 +333,21 @@ describe("working with a photo", () => {
     expect(button(MESSAGES.next).props.accessibilityState.disabled).toBe(true);
   });
 
+  it("keeps Previous and Next on screen at both ends, disabled so pressing does nothing", async () => {
+    withTwo();
+    await show(<ListingPhotosScreen id="l1" />);
+    await open("Photo 1 of 2, Cover");
+    expect(button(MESSAGES.previous).props.accessibilityState.disabled).toBe(true);
+    expect(button(MESSAGES.next).props.accessibilityState.disabled).toBe(false);
+    await fireEvent.press(button(MESSAGES.previous));
+    expect(screen.getByText("Photo 1 of 2")).toBeTruthy();
+    await fireEvent.press(button(MESSAGES.next));
+    expect(button(MESSAGES.previous).props.accessibilityState.disabled).toBe(false);
+    expect(button(MESSAGES.next).props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(button(MESSAGES.next));
+    expect(screen.getByText("Photo 2 of 2")).toBeTruthy();
+  });
+
   it("makes a photo the cover with one request that sets the whole order", async () => {
     const server = withTwo();
     await show(<ListingPhotosScreen id="l1" />);
