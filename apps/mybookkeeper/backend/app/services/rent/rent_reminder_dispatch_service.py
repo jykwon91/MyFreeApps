@@ -19,8 +19,9 @@ operator. SMS goes out from the operator's Twilio number; the row sits at
 (``rent_reminder_webhook_service``), or the watchdog
 (``rent_reminder_watchdog_service``) fails it.
 
-**Failures** of any kind mark the row ``failed`` with a short code and email
-the operator once (``rent_reminder_alert_service``).
+**Failures** of any kind mark the row ``failed`` with a short code
+(``rent_reminder_failure_code``) and email the operator once
+(``rent_reminder_alert_service``).
 
 All data access goes through repositories; this module never imports SQLAlchemy.
 """
@@ -33,9 +34,7 @@ import uuid
 from decimal import Decimal
 
 from platform_shared.core.audit_actor import audit_actor
-from platform_shared.services.email_service import EmailNotConfiguredError, EmailSendError
 from platform_shared.services.phone_number import to_e164
-from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
 from app.core.datetime_utils import as_utc
 from app.core.rent_reminder_channel import RentReminderChannel
@@ -44,14 +43,9 @@ from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
     ERROR_NO_RECIPIENT,
     ERROR_SMS_NOT_CONFIGURED,
-    ERROR_EMAIL_NOT_CONFIGURED,
-    ERROR_EMAIL_OUTCOME_UNKNOWN,
-    ERROR_EMAIL_SEND_FAILED,
-    ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
-    SMS_REFUSED_CODE_PREFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
@@ -65,6 +59,7 @@ from app.services.rent import rent_reminder_math as math
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent import rent_reminder_send_state as send_state
 from app.services.rent import rent_reminder_watchdog_service as watchdog
+from app.services.rent.rent_reminder_failure_code import ReminderUndeliverable, failure_code
 from app.services.rent.rent_reminder_outbound import ReminderOutbound
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
@@ -105,12 +100,6 @@ class TenancyEndedError(ValueError):
     """The tenant has moved out, so they get no more rent reminders."""
 
 
-class _Undeliverable(Exception):
-    def __init__(self, code: str) -> None:
-        super().__init__(code)
-        self.code = code
-
-
 def _now() -> _dt.datetime:
     return _dt.datetime.now(_dt.timezone.utc)
 
@@ -125,7 +114,7 @@ async def _send(outbound: ReminderOutbound) -> str | None:
     if outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
         recipient = (outbound.tenant_email or "").strip()
         if not recipient:
-            raise _Undeliverable(ERROR_NO_RECIPIENT)
+            raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
         await email_service.send_email_or_raise(
             [recipient],
             outbound.subject,
@@ -134,12 +123,12 @@ async def _send(outbound: ReminderOutbound) -> str | None:
         )
         return None
     if not sms_service.is_configured():
-        raise _Undeliverable(ERROR_SMS_NOT_CONFIGURED)
+        raise ReminderUndeliverable(ERROR_SMS_NOT_CONFIGURED)
     if not (outbound.tenant_phone or "").strip():
-        raise _Undeliverable(ERROR_NO_RECIPIENT)
+        raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
     phone = to_e164(outbound.tenant_phone)
     if phone is None:
-        raise _Undeliverable(ERROR_INVALID_PHONE)
+        raise ReminderUndeliverable(ERROR_INVALID_PHONE)
     return await asyncio.to_thread(
         sms_service.send_or_raise,
         phone,
@@ -148,22 +137,6 @@ async def _send(outbound: ReminderOutbound) -> str | None:
     )
 
 
-def _failure_code(exc: Exception) -> str:
-    if isinstance(exc, _Undeliverable):
-        return exc.code
-    if isinstance(exc, SmsSendError):
-        if exc.outcome_unknown:
-            return ERROR_SMS_OUTCOME_UNKNOWN
-        return f"{SMS_REFUSED_CODE_PREFIX}{exc.provider_code or exc.code or 'send_failed'}"
-    if isinstance(exc, SmsNotConfiguredError):
-        return ERROR_SMS_NOT_CONFIGURED
-    if isinstance(exc, EmailNotConfiguredError):
-        return ERROR_EMAIL_NOT_CONFIGURED
-    if isinstance(exc, EmailSendError):
-        if exc.delivery_unconfirmed:
-            return ERROR_EMAIL_OUTCOME_UNKNOWN
-        return ERROR_EMAIL_SEND_FAILED
-    return ERROR_UNEXPECTED
 
 
 async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
@@ -173,7 +146,7 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
     try:
         provider_id = await _send(outbound)
     except Exception as exc:  # noqa: BLE001 — every failure is recorded on the row + alerted
-        error_code = _failure_code(exc)
+        error_code = failure_code(exc)
         if error_code == ERROR_UNEXPECTED:
             logger.exception("Rent reminder %s crashed while sending", outbound.send_id)
         elif error_code in MAY_STILL_ARRIVE_ERRORS:
