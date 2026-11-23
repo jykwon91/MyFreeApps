@@ -36,6 +36,12 @@ def _report_limit(monkeypatch: pytest.MonkeyPatch, limit: int) -> None:
     monkeypatch.setenv("MAX_SCREENING_REPORT_BYTES", str(limit))
 
 
+def _upload_ceiling_under_report_limit(monkeypatch: pytest.MonkeyPatch, limit: int) -> None:
+    """The general upload ceiling is the tighter limit; the report cap is far above it."""
+    monkeypatch.setattr(settings, "max_upload_size_bytes", limit)
+    monkeypatch.setenv("MAX_SCREENING_REPORT_BYTES", str(limit * 10))
+
+
 _documents = _setting("max_upload_size_bytes")
 _attachments = _setting("max_blackout_attachment_size_bytes")
 _templates = _setting("max_lease_template_file_size_bytes")
@@ -49,7 +55,7 @@ def _lowercase_file_exceeds(limit: int) -> str:
     return f"file exceeds {_mb(limit)}MB limit"
 
 
-UPLOAD_CAP_CASES: list[UploadCapCase] = [
+READ_CAPPED_CASES: list[UploadCapCase] = [
     UploadCapCase(
         id="listing-photos", method="POST", path=f"/listings/{_ID}/photos",
         service="app.api.listings.listing_photo_service.upload_photos",
@@ -132,6 +138,18 @@ UPLOAD_CAP_CASES: list[UploadCapCase] = [
         received=lambda args, kwargs: kwargs["file_content"], form={"status": "pass"},
     ),
     UploadCapCase(
+        id="screening-result-upload-ceiling",
+        method="POST", path=f"/applicants/{_ID}/screening/upload-result",
+        service="app.api.screening.screening_service.record_result",
+        set_limit=_upload_ceiling_under_report_limit, too_large_detail=_file_exceeds,
+        received=lambda args, kwargs: kwargs["file_content"], form={"status": "pass"},
+    ),
+]
+
+# Lease templates refuse a file by its declared size before reading any of it;
+# the capped read only matters when no size is declared.
+DECLARED_SIZE_CASES: list[UploadCapCase] = [
+    UploadCapCase(
         id="lease-template-create", method="POST", path="/lease-templates",
         service="app.api.lease_templates.lease_template_upload_service.upload_template",
         set_limit=_templates,
@@ -148,3 +166,5 @@ UPLOAD_CAP_CASES: list[UploadCapCase] = [
         file_field="files", filename="lease.docx",
     ),
 ]
+
+UPLOAD_CAP_CASES: list[UploadCapCase] = READ_CAPPED_CASES + DECLARED_SIZE_CASES

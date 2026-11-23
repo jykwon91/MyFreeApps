@@ -147,10 +147,8 @@ async def upload_screening_result(
         422 — bad status or missing snippet on adverse outcome
         503 — storage backend unavailable
     """
-    cap = report_processor.max_report_bytes()
-    content = await read_upload_or_reject(
-        file, cap, status_code=413, detail=report_processor.report_too_large_reason(cap),
-    )
+    cap, too_large_detail = report_processor.report_upload_limit()
+    content = await read_upload_or_reject(file, cap, status_code=413, detail=too_large_detail)
 
     try:
         return await screening_service.record_result(

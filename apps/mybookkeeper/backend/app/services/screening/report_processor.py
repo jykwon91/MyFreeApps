@@ -29,7 +29,11 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from app.core.upload_size_messages import exceeds_limit_message
+from app.core.config import settings
+from app.core.upload_size_messages import (
+    document_too_large_message,
+    exceeds_limit_message,
+)
 from app.services.storage.image_processor import (
     ImageRejected,
     ProcessedImage,
@@ -71,6 +75,19 @@ def max_report_bytes() -> int:
 def report_too_large_reason(cap: int) -> str:
     """The ``ReportRejected`` reason for a report over ``cap`` bytes."""
     return exceeds_limit_message("file", cap)
+
+
+def report_upload_limit() -> tuple[int, str]:
+    """The bytes a report upload may have, and the 413 detail for one past that.
+
+    The report cap applies, but never above the general upload ceiling
+    (``settings.max_upload_size_bytes``), which the route enforced first before
+    it read uploads in capped chunks. Each limit keeps its own message.
+    """
+    report_cap = max_report_bytes()
+    if report_cap <= settings.max_upload_size_bytes:
+        return report_cap, report_too_large_reason(report_cap)
+    return settings.max_upload_size_bytes, document_too_large_message()
 
 
 class ReportRejected(ValueError):

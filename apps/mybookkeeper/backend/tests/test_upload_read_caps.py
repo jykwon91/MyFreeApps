@@ -23,7 +23,11 @@ from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from tests.upload_cap_case import UploadCapCase
-from tests.upload_cap_cases import UPLOAD_CAP_CASES
+from tests.upload_cap_cases import (
+    DECLARED_SIZE_CASES,
+    READ_CAPPED_CASES,
+    UPLOAD_CAP_CASES,
+)
 
 _MB = 1024 * 1024
 
@@ -68,7 +72,7 @@ def _send(case: UploadCapCase, content: bytes):
     )
 
 
-@pytest.mark.parametrize("case", UPLOAD_CAP_CASES, ids=lambda c: c.id)
+@pytest.mark.parametrize("case", READ_CAPPED_CASES, ids=lambda c: c.id)
 def test_oversized_upload_is_refused_without_reading_it_all(
     case: UploadCapCase,
     monkeypatch: pytest.MonkeyPatch,
@@ -84,8 +88,28 @@ def test_oversized_upload_is_refused_without_reading_it_all(
 
     assert resp.status_code == case.too_large_status, resp.text
     assert resp.json()["detail"] == case.too_large_detail(limit)
-    assert all(size > 0 for size in asked)  # never "read everything"
+    assert asked and all(size > 0 for size in asked)  # read in chunks, never "read everything"
     assert sum(returned) <= limit + UPLOAD_READ_CHUNK_BYTES
+    service.assert_not_called()
+
+
+@pytest.mark.parametrize("case", DECLARED_SIZE_CASES, ids=lambda c: c.id)
+def test_oversized_upload_is_refused_by_its_declared_size_before_any_read(
+    case: UploadCapCase,
+    monkeypatch: pytest.MonkeyPatch,
+    recorded_reads: tuple[list[int], list[int]],
+) -> None:
+    limit = 1 * _MB
+    case.set_limit(monkeypatch, limit)
+    service = AsyncMock(side_effect=_ServiceReached)
+    asked, _ = recorded_reads
+
+    with patch(case.service, new=service):
+        resp = _send(case, b"\0" * (limit * 4))
+
+    assert resp.status_code == case.too_large_status, resp.text
+    assert resp.json()["detail"] == case.too_large_detail(limit)
+    assert asked == []
     service.assert_not_called()
 
 
