@@ -1,3 +1,5 @@
+import type { DiscardCopy } from "@platform/core/types/discard/discard-copy";
+
 export const TRANSACTION_EDIT_MESSAGES = {
   unsavedTitle: "Save your changes?",
   unsavedBody:
@@ -15,3 +17,11 @@ export const TRANSACTION_EDIT_MESSAGES = {
   capitalImprovementHint:
     "A one-time project like a remodel or new roof. Left out of Rental ROI averages.",
 } as const;
+
+/** The unsaved-edits question, in the shape the shared dialog takes. */
+export const TRANSACTION_DISCARD_COPY: DiscardCopy = {
+  discardTitle: TRANSACTION_EDIT_MESSAGES.unsavedTitle,
+  discardBody: TRANSACTION_EDIT_MESSAGES.unsavedBody,
+  keepEditing: TRANSACTION_EDIT_MESSAGES.keepEditing,
+  discard: TRANSACTION_EDIT_MESSAGES.discard,
+};

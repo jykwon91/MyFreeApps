@@ -2,12 +2,14 @@
  * Tweak mode of the recipe editor: it starts from the base version with each
  * ingredient's lineage key carried, needs a change note, posts the body the
  * shared builder makes, and says why a save failed by status (the copy shared
- * with the phone).
+ * with the phone). Leaving with a changed version or a change note asks first;
+ * leaving after the save doesn't.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DISCARD_MESSAGES } from "@platform/core/constants/discard";
 import { RECIPE_FORM_PROBLEMS } from "@myrecipes/api-client/constants/recipeForm";
 import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
@@ -52,14 +54,27 @@ const BASE: VersionResponse = {
 };
 
 function renderTweak() {
-  render(
-    <MemoryRouter initialEntries={["/recipes/r1/tweak"]}>
-      <Routes>
-        <Route path="/recipes/r1/tweak" element={<RecipeEditorForm mode="tweak" recipeId="r1" baseVersion={BASE} />} />
-        <Route path="/recipes/r1" element={<p>Recipe page</p>} />
-      </Routes>
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [
+      {
+        path: "/recipes/r1/tweak",
+        element: (
+          <>
+            <Link to="/recipes/r1">Back to recipe</Link>
+            <RecipeEditorForm mode="tweak" recipeId="r1" baseVersion={BASE} />
+          </>
+        ),
+      },
+      { path: "/recipes/r1", element: <p>Recipe page</p> },
+    ],
+    { initialEntries: ["/recipes/r1", "/recipes/r1/tweak"], initialIndex: 1 },
   );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+function discardQuestion() {
+  return screen.queryByRole("alertdialog", { name: DISCARD_MESSAGES.discardTitle });
 }
 
 beforeEach(() => {
@@ -123,5 +138,33 @@ describe("RecipeEditorForm (tweak)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save new version" }));
     expect(showError).toHaveBeenCalledWith(message);
     expect(screen.queryByText("Recipe page")).toBeNull();
+  });
+
+  it("leaves without asking when nothing changed", async () => {
+    renderTweak();
+    await userEvent.click(screen.getByRole("link", { name: "Back to recipe" }));
+    expect(await screen.findByText("Recipe page")).toBeInTheDocument();
+    expect(discardQuestion()).toBeNull();
+  });
+
+  it("asks before leaving a typed change note, and Keep editing keeps it", async () => {
+    const router = renderTweak();
+    await userEvent.type(screen.getByLabelText(/What did you change\?/), "More salt");
+    await userEvent.click(screen.getByRole("link", { name: "Back to recipe" }));
+    expect(discardQuestion()).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: DISCARD_MESSAGES.keepEditing }));
+    expect(router.state.location.pathname).toBe("/recipes/r1/tweak");
+    expect(screen.getByLabelText(/What did you change\?/)).toHaveValue("More salt");
+  });
+
+  it("asks before Cancel throws away a changed amount, and Discard goes back", async () => {
+    renderTweak();
+    const quantities = screen.getAllByLabelText("Quantity");
+    await userEvent.clear(quantities[1]);
+    await userEvent.type(quantities[1], "3");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(discardQuestion()).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: DISCARD_MESSAGES.discard }));
+    expect(await screen.findByText("Recipe page")).toBeInTheDocument();
   });
 });

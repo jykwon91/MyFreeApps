@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Compass, Search } from "lucide-react";
-import { AlertBox, EmptyState, LoadingButton } from "@platform/ui";
+import { AlertBox, EmptyState, LoadingButton, useWarnBeforeUnload } from "@platform/ui";
 import DiscoveryCard from "@/features/discovery/DiscoveryCard";
 import DiscoveryDetailView from "@/features/discovery/DiscoveryDetailView";
 import DiscoveryResultsSkeleton from "@/features/discovery/DiscoveryResultsSkeleton";
@@ -64,15 +64,7 @@ export default function Discover() {
 
   // Warn before a browser close or refresh throws away an in-flight call —
   // the request keeps running server-side and the answer would be lost.
-  useEffect(() => {
-    if (!isBusy) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isBusy]);
+  useWarnBeforeUnload(isBusy);
 
   async function runSearch(rawQuery: string) {
     const query = rawQuery.trim();
@@ -130,7 +122,7 @@ export default function Discover() {
         />
         <RecipeEditorForm
           mode="create"
-          initialDraft={discoveredRecipeDraft(detail)}
+          seed={{ draft: discoveredRecipeDraft(detail), origin: "discover" }}
           onCancel={() => setIsSaving(false)}
         />
       </div>

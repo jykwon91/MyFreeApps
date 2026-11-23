@@ -1,5 +1,4 @@
-import { DISCARD_MESSAGES, type DiscardCopy } from "@platform/mobile";
-import type { DraftOrigin } from "../types/DraftOrigin";
+import type { DraftOrigin } from "@myrecipes/api-client/types/recipe/draft-origin";
 
 /** Copy for creating a recipe on the phone. Problems with what's typed come from the API client. */
 export const NEW_RECIPE_MESSAGES = {
@@ -53,34 +52,6 @@ export const DRAFT_NEEDS_REVIEW: Record<DraftOrigin, string> = {
 export const DRAFT_FILLED_IN: Record<DraftOrigin, string | null> = {
   discover: null,
   photo: "We've filled this in from your photo. Edit anything that looks off, then create it.",
-};
-
-/**
- * Whether leaving an untouched draft loses nothing: a discovered recipe can be opened again from
- * its page, but a photo's read can't be rebuilt without picking the photo and waiting for another read.
- */
-export const DRAFT_CAN_BE_REBUILT: Record<DraftOrigin, boolean> = {
-  discover: true,
-  photo: false,
-};
-
-/** What's asked before a draft is left: a photo's says it would need reading again. */
-export const DRAFT_DISCARD_COPY: Record<DraftOrigin, DiscardCopy> = {
-  discover: DISCARD_MESSAGES,
-  photo: {
-    discardTitle: "Leave without creating this recipe?",
-    discardBody: "I'd have to read your photo again if you want it back.",
-    keepEditing: "Stay here",
-    discard: "Leave",
-  },
-};
-
-/** What's asked before a photo's draft is thrown away to pick another photo. */
-export const CHOOSE_AGAIN_DISCARD_COPY: DiscardCopy = {
-  discardTitle: "Choose a different photo?",
-  discardBody: "This recipe won't be created, and I'd have to read the new photo.",
-  keepEditing: "Stay here",
-  discard: "Choose another",
 };
 
 /** How tall a box for a description or a step starts, so it reads as somewhere to write. */

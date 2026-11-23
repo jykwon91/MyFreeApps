@@ -3,6 +3,7 @@ import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
 import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
+import { newRecipeFormIsDirty } from "@myrecipes/api-client/utils/newRecipeFormIsDirty";
 import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
 import { recipeFormValuesFromDraft } from "@myrecipes/api-client/utils/recipeFormValuesFromDraft";
@@ -10,7 +11,7 @@ import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { DRAFT_CAN_BE_REBUILT, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { AppStore } from "../../lib/store";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { nextRowKey } from "../../utils/nextRowKey";
@@ -29,16 +30,6 @@ function emptyForm(): RecipeFormValues {
     ingredients: [emptyIngredientRow(nextRowKey())],
     steps: [emptyStepRow(nextRowKey())],
   };
-}
-
-function hasText(values: RecipeFormValues): boolean {
-  const { ingredients, steps, ...meta } = values;
-  const texts = [
-    ...Object.values(meta),
-    ...ingredients.flatMap((row) => [row.name, row.quantity, row.unit, row.note]),
-    ...steps.map((row) => row.instruction),
-  ];
-  return texts.some((text) => text.trim() !== "");
 }
 
 /**
@@ -115,7 +106,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
     rows,
     isSaving,
     isLeaving: created !== null,
-    isDirty: seed ? values !== initialValues || !DRAFT_CAN_BE_REBUILT[seed.origin] : hasText(values),
+    isDirty: newRecipeFormIsDirty(values, initialValues, seed?.origin),
     edit,
     save,
   };
