@@ -21,7 +21,6 @@ from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
-from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories import document_repo, transaction_repo

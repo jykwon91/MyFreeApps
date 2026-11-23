@@ -1,71 +1,71 @@
-from app.repositories.extraction import extraction_repo
-from app.repositories.extraction import extraction_prompt_repo
-from app.repositories.documents import document_repo
-from app.repositories.documents import document_list_repo
-from app.repositories.email import email_queue_repo
-from app.repositories.email import email_filter_log_repo
-from app.repositories.email import gmail_skipped_message_repo
-from app.repositories.email import processed_email_repo
-from app.repositories.email import sync_log_repo
-from app.repositories.transactions import transaction_repo
-from app.repositories.transactions import booking_statement_repo
-from app.repositories.transactions import reconciliation_repo
-from app.repositories.transactions import summary_repo
-from app.repositories.transactions import attribution_repo
-from app.repositories.transactions import payer_alias_repo
-from app.repositories.tax import tax_return_repo
-from app.repositories.tax import tax_form_repo
-from app.repositories.tax import tax_year_profile_repo
-from app.repositories.tax import cost_basis_lot_repo
-from app.repositories.tax import tax_advisor_repo
-from app.repositories.tax import tax_carryforward_repo
-from app.repositories.tax import estimated_tax_payment_repo
-from app.repositories.integrations import integration_repo
-from app.repositories.system import system_event_repo
-from app.repositories.system import usage_log_repo
-from app.repositories.system import audit_repo
-from app.repositories.system import admin_repo
-from app.repositories.system import cost_repo
-from app.repositories.organization import organization_repo
-from app.repositories.organization import activity_repo
-from app.repositories.organization import tax_profile_repo
-from app.repositories.organization import taxpayer_profile_repo
-from app.repositories.properties import property_repo
-from app.repositories.properties import tenant_repo
-from app.repositories.properties import lease_repo
-from app.repositories.properties import utility_account_link_repo
-from app.repositories.properties import utility_plan_repo
-from app.repositories.listings import listing_repo
-from app.repositories.listings import listing_photo_repo
-from app.repositories.listings import listing_external_id_repo
-from app.repositories.listings import channel_repo
-from app.repositories.listings import channel_listing_repo
-from app.repositories.listings import listing_blackout_repo
-from app.repositories.listings import listing_blackout_attachment_repo
-from app.repositories.welcome_manuals import welcome_manual_repo
-from app.repositories.welcome_manuals import welcome_manual_room_repo
-from app.repositories.welcome_manuals import welcome_manual_section_repo
-from app.repositories.welcome_manuals import welcome_manual_section_image_repo
-from app.repositories.welcome_manuals import welcome_manual_section_field_repo
-from app.repositories.welcome_manuals import welcome_manual_place_repo
-from app.repositories.welcome_manuals import welcome_manual_send_repo
-from app.repositories.welcome_manuals import display_order_repo
-from app.repositories.calendar import calendar_repository
-from app.repositories.calendar import review_queue_repo
-from app.repositories.calendar import blocklist_repo
-from app.repositories.inquiries import inquiry_repo
-from app.repositories.inquiries import inquiry_message_repo
-from app.repositories.inquiries import inquiry_reply_send_repo
-from app.repositories.inquiries import inquiry_event_repo
-from app.repositories.inquiries import inquiry_spam_assessment_repo
-from app.repositories.inquiries import reply_template_repo
-from app.repositories.applicants import applicant_repo
-from app.repositories.applicants import screening_result_repo
-from app.repositories.applicants import reference_repo
-from app.repositories.applicants import video_call_note_repo
-from app.repositories.applicants import applicant_event_repo
-from app.repositories.user import user_repo
-from app.repositories.classification import classification_rule_repo
-from app.repositories.demo import demo_repo
-from app.repositories.analytics import utility_trends_repo
-from app.repositories import db_admin_repo
+from app.repositories.extraction import extraction_repo  # noqa: F401
+from app.repositories.extraction import extraction_prompt_repo  # noqa: F401
+from app.repositories.documents import document_repo  # noqa: F401
+from app.repositories.documents import document_list_repo  # noqa: F401
+from app.repositories.email import email_queue_repo  # noqa: F401
+from app.repositories.email import email_filter_log_repo  # noqa: F401
+from app.repositories.email import gmail_skipped_message_repo  # noqa: F401
+from app.repositories.email import processed_email_repo  # noqa: F401
+from app.repositories.email import sync_log_repo  # noqa: F401
+from app.repositories.transactions import transaction_repo  # noqa: F401
+from app.repositories.transactions import booking_statement_repo  # noqa: F401
+from app.repositories.transactions import reconciliation_repo  # noqa: F401
+from app.repositories.transactions import summary_repo  # noqa: F401
+from app.repositories.transactions import attribution_repo  # noqa: F401
+from app.repositories.transactions import payer_alias_repo  # noqa: F401
+from app.repositories.tax import tax_return_repo  # noqa: F401
+from app.repositories.tax import tax_form_repo  # noqa: F401
+from app.repositories.tax import tax_year_profile_repo  # noqa: F401
+from app.repositories.tax import cost_basis_lot_repo  # noqa: F401
+from app.repositories.tax import tax_advisor_repo  # noqa: F401
+from app.repositories.tax import tax_carryforward_repo  # noqa: F401
+from app.repositories.tax import estimated_tax_payment_repo  # noqa: F401
+from app.repositories.integrations import integration_repo  # noqa: F401
+from app.repositories.system import system_event_repo  # noqa: F401
+from app.repositories.system import usage_log_repo  # noqa: F401
+from app.repositories.system import audit_repo  # noqa: F401
+from app.repositories.system import admin_repo  # noqa: F401
+from app.repositories.system import cost_repo  # noqa: F401
+from app.repositories.organization import organization_repo  # noqa: F401
+from app.repositories.organization import activity_repo  # noqa: F401
+from app.repositories.organization import tax_profile_repo  # noqa: F401
+from app.repositories.organization import taxpayer_profile_repo  # noqa: F401
+from app.repositories.properties import property_repo  # noqa: F401
+from app.repositories.properties import tenant_repo  # noqa: F401
+from app.repositories.properties import lease_repo  # noqa: F401
+from app.repositories.properties import utility_account_link_repo  # noqa: F401
+from app.repositories.properties import utility_plan_repo  # noqa: F401
+from app.repositories.listings import listing_repo  # noqa: F401
+from app.repositories.listings import listing_photo_repo  # noqa: F401
+from app.repositories.listings import listing_external_id_repo  # noqa: F401
+from app.repositories.listings import channel_repo  # noqa: F401
+from app.repositories.listings import channel_listing_repo  # noqa: F401
+from app.repositories.listings import listing_blackout_repo  # noqa: F401
+from app.repositories.listings import listing_blackout_attachment_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_room_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_section_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_section_image_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_section_field_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_place_repo  # noqa: F401
+from app.repositories.welcome_manuals import welcome_manual_send_repo  # noqa: F401
+from app.repositories.welcome_manuals import display_order_repo  # noqa: F401
+from app.repositories.calendar import calendar_repository  # noqa: F401
+from app.repositories.calendar import review_queue_repo  # noqa: F401
+from app.repositories.calendar import blocklist_repo  # noqa: F401
+from app.repositories.inquiries import inquiry_repo  # noqa: F401
+from app.repositories.inquiries import inquiry_message_repo  # noqa: F401
+from app.repositories.inquiries import inquiry_reply_send_repo  # noqa: F401
+from app.repositories.inquiries import inquiry_event_repo  # noqa: F401
+from app.repositories.inquiries import inquiry_spam_assessment_repo  # noqa: F401
+from app.repositories.inquiries import reply_template_repo  # noqa: F401
+from app.repositories.applicants import applicant_repo  # noqa: F401
+from app.repositories.applicants import screening_result_repo  # noqa: F401
+from app.repositories.applicants import reference_repo  # noqa: F401
+from app.repositories.applicants import video_call_note_repo  # noqa: F401
+from app.repositories.applicants import applicant_event_repo  # noqa: F401
+from app.repositories.user import user_repo  # noqa: F401
+from app.repositories.classification import classification_rule_repo  # noqa: F401
+from app.repositories.demo import demo_repo  # noqa: F401
+from app.repositories.analytics import utility_trends_repo  # noqa: F401
+from app.repositories import db_admin_repo  # noqa: F401

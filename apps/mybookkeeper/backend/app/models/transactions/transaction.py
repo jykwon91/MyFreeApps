@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index,
-    Integer, Numeric, SmallInteger, String, Text, text,
+    Numeric, SmallInteger, String, Text, text,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship

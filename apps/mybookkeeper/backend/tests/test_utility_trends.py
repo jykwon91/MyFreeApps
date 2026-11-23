@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.context import RequestContext
 from app.core.tags import UTILITY_SUB_CATEGORIES
 from app.mappers.extraction_mapper import map_single_item
 from app.models.organization.organization import Organization

@@ -14,9 +14,7 @@ this file focuses on the new endpoints + service surface.
 from __future__ import annotations
 
 import datetime as _dt
-import os
 import uuid
-from io import BytesIO
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -28,12 +26,10 @@ from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.applicants.screening_result_response import ScreeningResultResponse
 from app.services.screening import (
-    ScreeningServiceError,
     ScreeningUploadValidationError,
     UnknownProviderError,
     get_provider,
 )
-from app.services.screening import keycheck_provider as _keycheck_module
 from app.services.screening.keycheck_provider import (
     DEFAULT_KEYCHECK_DASHBOARD_URL,
     KeyCheckProvider,

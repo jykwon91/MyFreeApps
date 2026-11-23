@@ -1,7 +1,7 @@
 """Tests for GET /tax-returns/{return_id}/source-documents endpoint."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 

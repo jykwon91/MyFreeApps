@@ -12,7 +12,7 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -26,7 +26,6 @@ from app.schemas.leases.signed_lease_add_templates_request import (
     SignedLeaseAddTemplatesRequest,
 )
 from app.services.leases.signed_lease_service import (
-    ImportedLeaseTemplateError,
     SignedLeaseNotFoundError,
     add_templates_and_generate,
 )

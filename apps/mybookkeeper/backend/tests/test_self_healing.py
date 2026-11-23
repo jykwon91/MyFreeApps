@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.documents.document import Document
 from app.models.organization.organization import Organization
-from app.models.system.system_event import SystemEvent
-from app.models.system.usage_log import UsageLog
 from app.models.user.user import User
 from app.repositories import system_event_repo
 from app.services.extraction.claude_retry_policy import is_retryable_extraction_error
@@ -380,7 +378,6 @@ class TestHealthSummaryAggregation:
     async def test_healthy_when_no_problems(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        from app.schemas.system.health import ActiveProblem
         from app.services.system.health_service import _derive_status
 
         assert _derive_status([]) == "healthy"

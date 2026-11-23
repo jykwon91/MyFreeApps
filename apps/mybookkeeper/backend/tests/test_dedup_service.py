@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.organization.organization import Organization
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
-from app.services.extraction.dedup_service import DedupDecision, evaluate_dedup
+from app.services.extraction.dedup_service import evaluate_dedup
 from app.services.extraction.dedup_resolution_service import handle_amount_conflict
 
 

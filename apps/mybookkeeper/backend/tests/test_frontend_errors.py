@@ -1,6 +1,4 @@
 """Tests for the frontend error logging endpoint."""
-import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 

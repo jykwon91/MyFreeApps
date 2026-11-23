@@ -47,7 +47,6 @@ class DemoDocumentPdfGenerator:
         vendor = txn["vendor"]
         amount = txn["amount"]
         date_str = txn["date"]
-        description = txn["description"]
         property_address = txn.get("property_address", "")
         sub_category = txn.get("sub_category", "electricity")
 
@@ -186,7 +185,7 @@ class DemoDocumentPdfGenerator:
         c.drawString(w - 140, y, make_invoice_number(vendor, date_str))
         c.setFont("Helvetica", 10)
         c.drawString(w - 140, y - 16, date_str)
-        c.drawString(w - 140, y - 32, f"Due on receipt")
+        c.drawString(w - 140, y - 32, "Due on receipt")
 
         # Bill To section
         y = h - 160
@@ -311,7 +310,6 @@ class DemoDocumentPdfGenerator:
         txn = txns[0]
         amount = txn["amount"]
         date_str = txn["date"]
-        description = txn["description"]
         property_name = txn.get("property_name", "Rental Property")
 
         buf = io.BytesIO()
@@ -550,7 +548,7 @@ class DemoDocumentPdfGenerator:
         y = h - 100
         c.setFillColor(colors.black)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, y, f"Insured: Demo User")
+        c.drawString(50, y, "Insured: Demo User")
         c.drawString(50, y - 16, f"Property: {property_address}")
         c.drawString(50, y - 32, f"Statement Date: {date_str}")
         c.drawString(50, y - 48, f"Policy Number: INS-{vendor.replace(' ', '')[:6].upper()}-2025")
@@ -558,7 +556,7 @@ class DemoDocumentPdfGenerator:
         y -= 75
         rows = [
             ("Description", "Amount"),
-            (f"Quarterly premium payment", f"${amount}"),
+            ("Quarterly premium payment", f"${amount}"),
             ("", ""),
             ("Amount Due", f"${amount}"),
         ]

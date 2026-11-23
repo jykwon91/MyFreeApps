@@ -13,14 +13,11 @@ from __future__ import annotations
 
 import io
 import uuid
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from httpx import AsyncClient
 
 from app.services.jobs.resume_validator import (
-    ALLOWED_RESUME_MIME_TYPES,
     ResumeRejected,
     sniff_content_type,
     validate_resume,

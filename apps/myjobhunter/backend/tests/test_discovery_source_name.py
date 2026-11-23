@@ -19,8 +19,6 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.discovery.discovery_source import DiscoverySource
-from app.repositories.discovery import discovery_repository
 from app.services.discovery.discovery_source_service import (
     DiscoverySourceNameConflictError,
     create_source,

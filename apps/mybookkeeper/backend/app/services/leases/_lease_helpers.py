@@ -24,7 +24,6 @@ from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
 from app.repositories.leases import (
     lease_template_repo,
     lease_term_version_repo,
-    signed_lease_attachment_repo,
     signed_lease_template_repo,
 )
 from app.repositories.listings import listing_repo

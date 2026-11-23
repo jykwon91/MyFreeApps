@@ -113,22 +113,6 @@ class TestValidatorLogicMatchesProductionConfig:
 
     def test_production_settings_class_rejects_short_encryption_key(self) -> None:
         """Import the Settings class and verify the validator fires."""
-        import importlib
-        import sys
-
-        # Load the module using the file path, not the module singleton.
-        # We access the Settings *class* without calling it via the singleton.
-        spec = importlib.util.spec_from_file_location(
-            "app_config_test",
-            # Resolve relative to the test dir's parent (backend root)
-            __file__.replace(
-                "tests/test_config_key_validation.py",
-                "app/core/config.py",
-            ).replace(
-                "tests\\test_config_key_validation.py",
-                "app/core/config.py",
-            ),
-        )
         # We can't easily isolate the module-level Settings() call, so
         # instead just verify our _KeySettings (which mirrors the logic)
         # correctly rejects short keys — the integration smoke above is

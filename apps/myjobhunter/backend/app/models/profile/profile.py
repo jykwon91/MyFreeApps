@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -22,6 +23,13 @@ from app.db.base import Base
 # tables share the same model + dim so the score loop can compute
 # cosine similarity directly.
 _EMBED_DIMS = 384
+
+if TYPE_CHECKING:
+    from app.models.profile.education import Education
+    from app.models.jobs.resume_upload_job import ResumeUploadJob
+    from app.models.profile.screening_answer import ScreeningAnswer
+    from app.models.profile.skill import Skill
+    from app.models.profile.work_history import WorkHistory
 
 
 class Profile(Base):

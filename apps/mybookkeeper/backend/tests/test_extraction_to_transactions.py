@@ -4,23 +4,19 @@ Tests the full pipeline through process_document(), mocking Claude extraction
 and AsyncSessionLocal to use the test SQLite session.
 """
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
-from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.reconciliation_source import ReconciliationSource
-from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.transaction import Transaction
-from app.models.user.user import User
 from tests.document_support import (
     make_document as _make_document,
     mock_session_factory as _mock_session_factory,
@@ -413,7 +409,7 @@ class TestFailedExtraction:
             mock_dedup.return_value = DedupDecision(action="create", reason="No match")
 
             from app.services.extraction.document_extraction_service import process_document
-            result = await process_document(doc.id)
+            await process_document(doc.id)
 
         # Extraction was created
         ext_rows = (await db.execute(

@@ -31,8 +31,6 @@ from app.schemas.leases.suggest_placeholders_response import (
 from app.services.leases import lease_template_service
 from app.services.leases.template_placeholder_extractor import (
     MAX_TEMPLATE_CHARS,
-    SuggestPlaceholdersResult,
-    SuggestedPlaceholder,
     suggest_placeholders,
 )
 

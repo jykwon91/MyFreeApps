@@ -83,7 +83,6 @@ class TestEmailDiscoveryServiceExcInfo:
         # Patch unit_of_work to yield a session that returns our stubs
         mock_db = AsyncMock()
 
-        import asyncio
         from contextlib import asynccontextmanager
 
         @asynccontextmanager

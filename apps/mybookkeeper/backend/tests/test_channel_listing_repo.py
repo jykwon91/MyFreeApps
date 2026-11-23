@@ -9,14 +9,13 @@ works on either DB.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.channel import Channel
-from app.models.listings.channel_listing import ChannelListing
 from app.models.listings.listing import Listing
 from app.models.listings.listing_blackout import ListingBlackout
 from app.models.organization.organization import Organization

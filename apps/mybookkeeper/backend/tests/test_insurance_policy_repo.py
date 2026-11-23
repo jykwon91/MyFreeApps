@@ -10,11 +10,9 @@ import uuid
 from decimal import Decimal
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.organization.organization import Organization
-from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
 from app.models.properties.property import Property
 from app.repositories.insurance import (

@@ -11,8 +11,6 @@ from app.services.tax.tax_validation import (
 from app.services.tax.tax_validation._types import (
     FormFieldIndex,
     ValidationResult,
-    index_fields as _index_fields,
-    sum_field as _sum_field,
 )
 
 __all__ = [

@@ -1,7 +1,7 @@
 """Tests for transaction_service — unit tests with mocked DB sessions."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 

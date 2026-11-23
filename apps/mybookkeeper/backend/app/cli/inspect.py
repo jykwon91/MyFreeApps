@@ -10,10 +10,9 @@ Usage:
     python -m app.cli.inspect costs --period month
 """
 import argparse
-import sys
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import desc, func, text
+from sqlalchemy import desc, text
 from sqlalchemy.orm import Query, Session
 
 from app.cli.db import SyncSession
@@ -23,7 +22,6 @@ from app.models.system.system_event import SystemEvent
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.extraction.extraction import Extraction
-from app.models.transactions.transaction import Transaction
 
 
 def _parse_duration(s: str) -> timedelta:
@@ -150,7 +148,7 @@ def cmd_costs(args):
             {"cutoff": cutoff},
         ).fetchall()
         if rows:
-            print(f"\n  By status:")
+            print("\n  By status:")
             for r in rows:
                 print(f"    {r[0]}: {r[1]}")
 

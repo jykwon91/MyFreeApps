@@ -28,7 +28,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.job_analysis.job_analysis import JobAnalysis

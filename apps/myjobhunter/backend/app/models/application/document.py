@@ -8,6 +8,7 @@ linked to a specific application.
 """
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -28,6 +29,9 @@ from app.core.document_limits import (
     DOCUMENT_TITLE_MAX_LEN,
 )
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.application.application import Application
 
 
 class Document(Base):

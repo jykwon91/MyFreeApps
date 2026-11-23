@@ -2,7 +2,7 @@
 import csv
 import io
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch

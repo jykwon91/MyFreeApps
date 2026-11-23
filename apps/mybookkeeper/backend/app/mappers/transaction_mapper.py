@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS, UTILITY_SUB_CATEGORIES, transaction_type_for_category
+from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS, UTILITY_SUB_CATEGORIES
 from app.core.tax_line_mapping import resolve_tax_line
 from app.models.extraction.metered_usage import MeteredUsage
 from app.models.transactions.transaction import Transaction

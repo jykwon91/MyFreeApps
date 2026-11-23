@@ -18,8 +18,6 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
-from app.models.discovery.discovery_fetch import DiscoveryFetch
-from app.models.discovery.discovery_source import DiscoverySource
 
 
 _SEARCH_PATH = "app.services.discovery.discovery_fetch_service.jsearch.search"

@@ -1,7 +1,7 @@
 """Tests for tax_recompute_service — schedule E, 4562, and 1040 aggregation."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -11,8 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property, PropertyType
 from app.models.properties.property_classification import PropertyClassification
-from app.models.tax.tax_form_field import TaxFormField
-from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User

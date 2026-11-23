@@ -45,8 +45,8 @@ from app.services.welcome_manuals.welcome_manual_scope import (
     load_section_for_update,
 )
 from app.services.welcome_manuals.welcome_manual_section_service import (
-    ManualNotFoundError,
-    SectionNotFoundError,
+    ManualNotFoundError as ManualNotFoundError,
+    SectionNotFoundError as SectionNotFoundError,
 )
 
 

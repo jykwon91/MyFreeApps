@@ -13,7 +13,6 @@ NOT on from-address or subject shape — so emails the user forwards to
 themselves keep flowing into ingestion.
 """
 
-import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 

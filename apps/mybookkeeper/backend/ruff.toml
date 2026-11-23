@@ -1,0 +1,22 @@
+# Ruff settings for the MyBookkeeper backend. CI runs `ruff check --select F,E9`
+# (see .github/workflows/ci-python-lint.yml).
+
+[lint.per-file-ignores]
+# These test modules import pytest fixtures from a sibling support module and
+# then request them by name as test parameters; Ruff reads each parameter as a
+# redefinition of the import (F811). Only these files are exempt, so a genuinely
+# shadowed definition anywhere else still fails the gate.
+"tests/test_drill_down_totals.py" = ["F811"]
+"tests/test_lease_documents_lock_race.py" = ["F811"]
+"tests/test_lease_documents_locked.py" = ["F811"]
+"tests/test_lease_email_lock.py" = ["F811"]
+"tests/test_lease_record_file_rules.py" = ["F811"]
+"tests/test_lease_regenerate_atomic.py" = ["F811"]
+"tests/test_lease_template_atomic_upload.py" = ["F811"]
+"tests/test_lease_template_snapshot.py" = ["F811"]
+"tests/test_lease_write_races.py" = ["F811"]
+"tests/test_organization_name_validation.py" = ["F811"]
+"tests/test_transaction_export_filters.py" = ["F811"]
+"tests/test_transaction_list_order.py" = ["F811"]
+"tests/test_transaction_page.py" = ["F811"]
+"tests/test_url_redaction.py" = ["F811"]

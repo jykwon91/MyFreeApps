@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
+from app.core.permissions import require_write_access
 from app.schemas.welcome_manuals.welcome_manual_section_field_create_request import (
     WelcomeManualSectionFieldCreateRequest,
 )

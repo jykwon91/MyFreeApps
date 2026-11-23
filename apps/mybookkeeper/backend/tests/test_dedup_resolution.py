@@ -1,6 +1,6 @@
 """Tests for dedup resolution service and DedupDecision logic."""
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 
 import pytest

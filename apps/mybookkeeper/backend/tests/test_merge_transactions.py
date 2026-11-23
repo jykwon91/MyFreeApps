@@ -6,7 +6,6 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +13,6 @@ from app.models.organization.organization import Organization
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
-from app.repositories import transaction_repo
 from app.schemas.transactions.duplicate import DuplicateMergeFieldSource, DuplicateMergeOverrides
 from app.services.transactions import transaction_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
@@ -366,7 +364,6 @@ class TestMergeTransactions:
         db.add(txn_a)
         db.add(txn_b)
         await db.commit()
-        loser_id = txn_b.id
 
         @asynccontextmanager
         async def _fake():

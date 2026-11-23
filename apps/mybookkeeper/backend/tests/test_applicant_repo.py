@@ -13,7 +13,6 @@ import datetime as _dt
 import uuid
 
 import pytest
-from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 

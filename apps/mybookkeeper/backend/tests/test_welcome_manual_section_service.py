@@ -165,7 +165,7 @@ class TestReorder:
     @pytest.mark.asyncio
     async def test_reorder_rejects_unknown_id(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         manual = await _make_manual(db, test_org, test_user)
-        a = await welcome_manual_section_repo.create(db, manual_id=manual.id, title="A", body=None, display_order=0)
+        await welcome_manual_section_repo.create(db, manual_id=manual.id, title="A", body=None, display_order=0)
         await db.commit()
         with _patch_uow(db):
             with pytest.raises(welcome_manual_section_service.InvalidReorderError):

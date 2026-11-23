@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
-from app.models.applicants.applicant import Applicant
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.repositories import (

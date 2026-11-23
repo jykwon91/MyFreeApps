@@ -9,11 +9,8 @@ httpx.AsyncClient to exercise the two key behaviors:
 """
 from __future__ import annotations
 
-import json
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 from app.services.integrations.tavily_service import (

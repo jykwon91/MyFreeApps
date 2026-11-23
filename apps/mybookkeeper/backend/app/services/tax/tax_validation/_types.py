@@ -1,5 +1,4 @@
 """Shared types and helpers for tax validation rules."""
-import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Literal

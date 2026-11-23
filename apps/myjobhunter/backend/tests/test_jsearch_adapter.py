@@ -31,7 +31,6 @@ import pytest
 from app.services.discovery.sources import jsearch
 from app.services.discovery.sources.jsearch import (
     JSearchAuthError,
-    JSearchError,
     JSearchInvalidResponseError,
     JSearchQuotaError,
     JSearchTransientError,

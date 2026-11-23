@@ -17,14 +17,13 @@ import datetime as _dt
 import uuid
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import EventType
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.services.application.application_transition_service import (
-    TransitionNotAllowedError,
     transition_application,
 )
 

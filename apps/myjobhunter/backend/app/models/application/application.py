@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +18,12 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.application.application_contact import ApplicationContact
+    from app.models.application.application_event import ApplicationEvent
+    from app.models.company.company import Company
+    from app.models.application.document import Document
 
 
 class Application(Base):

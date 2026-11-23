@@ -10,7 +10,6 @@ Tests cover:
 """
 import uuid
 from datetime import date
-from unittest.mock import patch, AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient

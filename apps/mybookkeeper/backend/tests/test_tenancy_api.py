@@ -241,7 +241,6 @@ class TestEndTenancyEndpoint:
 
     @pytest.mark.asyncio
     async def test_cross_tenant_returns_404(self) -> None:
-        from app.services.applicants.tenancy_service import NotATenantError
 
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)

@@ -1,6 +1,5 @@
 """Integration test: discover_gmail_emails skips bounces and logs them."""
 
-import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 

@@ -199,7 +199,7 @@ class TestAnonymousWritesBlocked:
             await client.post(f"/recipes/{rid}/versions/{vid}/restore")
         ).status_code == 401
         assert (
-            await client.post(f"/recipes/extract", files={"file": ("x.png", b"x", "image/png")})
+            await client.post("/recipes/extract", files={"file": ("x.png", b"x", "image/png")})
         ).status_code == 401
         # Cook logs are private — every /cooks endpoint requires auth.
         assert (

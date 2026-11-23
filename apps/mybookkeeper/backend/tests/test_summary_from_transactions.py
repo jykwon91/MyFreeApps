@@ -102,7 +102,6 @@ class TestGetSummary:
 
     @pytest.mark.asyncio
     async def test_totals_match_approved_transactions(self, db: AsyncSession) -> None:
-        from unittest.mock import patch
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
