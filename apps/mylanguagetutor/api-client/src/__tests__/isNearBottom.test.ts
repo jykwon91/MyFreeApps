@@ -1,13 +1,12 @@
-import type { NativeScrollEvent } from "react-native";
-import { isNearBottom } from "../src/utils/isNearBottom";
+import { describe, expect, it } from "vitest";
+import type { ScrollPosition } from "../types/session/scroll-position";
+import { isNearBottom } from "../utils/isNearBottom";
 
-function scrolledTo(y: number): NativeScrollEvent {
+function scrolledTo(y: number): ScrollPosition {
   return {
-    contentOffset: { x: 0, y },
-    contentSize: { width: 300, height: 1000 },
-    layoutMeasurement: { width: 300, height: 600 },
-    contentInset: { top: 0, left: 0, bottom: 0, right: 0 },
-    zoomScale: 1,
+    contentOffset: { y },
+    contentSize: { height: 1000 },
+    layoutMeasurement: { height: 600 },
   };
 }
 
