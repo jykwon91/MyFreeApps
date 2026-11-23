@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useSpeechSynthesis } from "@/features/speech/useSpeechSynthesis";
+import { useMicrophonePermission } from "@/features/speech/useMicrophonePermission";
 import { useSpeechRecognition } from "@/features/speech/useSpeechRecognition";
 import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
@@ -49,6 +50,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     stopSpeaking: synthesis.cancel,
   });
   const recognition = useSpeechRecognition(language.stt_locale, session.send);
+  const micRechecks = useMicrophonePermission(recognition.failure === "denied", recognition.clearFailure);
   const [privacyAcked, setPrivacyAcked] = useState(hasAckedVoicePrivacy);
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const textInput = useRef<HTMLInputElement>(null);
@@ -116,7 +118,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
 
       <div className={PRACTICE_COMPOSER} data-testid={PRACTICE_SECTION_IDS.composer}>
         {block && <SessionBlockNotice block={block} />}
-        {voice.view === "denied" && <MicDeniedState onTypeInstead={voice.switchToText} />}
+        {voice.view === "denied" && <MicDeniedState rechecks={micRechecks} onTypeInstead={voice.switchToText} />}
         {voice.view === "privacy" && (
           <PrivacyNotice onContinue={voice.acceptPrivacy} onTypeInstead={voice.switchToText} />
         )}
