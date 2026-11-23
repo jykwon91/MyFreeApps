@@ -465,19 +465,6 @@ async def count_retry_pending(
     return result.scalar_one()
 
 
-async def list_by_org_and_user(
-    db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID,
-) -> Sequence[Document]:
-    """Return a user's non-deleted documents in one organization (for data export)."""
-    result = await db.execute(
-        select(Document)
-        .where(Document.organization_id == organization_id, Document.user_id == user_id)
-        .where(Document.deleted_at.is_(None))
-        .order_by(Document.created_at.desc())
-    )
-    return result.scalars().all()
-
-
 async def reset_failed_retryable(
     db: AsyncSession,
     organization_id: uuid.UUID,

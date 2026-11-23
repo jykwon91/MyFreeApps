@@ -200,19 +200,6 @@ async def count_to_review(db: AsyncSession, organization_id: uuid.UUID) -> int:
     return result.scalar_one()
 
 
-async def list_by_org_and_user(
-    db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID,
-) -> Sequence[Transaction]:
-    """Return a user's non-deleted transactions in one organization (for data export)."""
-    result = await db.execute(
-        select(Transaction)
-        .where(Transaction.organization_id == organization_id, Transaction.user_id == user_id)
-        .where(Transaction.deleted_at.is_(None))
-        .order_by(Transaction.transaction_date.desc())
-    )
-    return result.scalars().all()
-
-
 async def list_unassigned_tax_relevant(
     db: AsyncSession,
     organization_id: uuid.UUID,

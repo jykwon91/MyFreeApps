@@ -424,11 +424,10 @@ async def test_data_export_creates_event(db: AsyncSession) -> None:
     ctx = RequestContext(organization_id=org_id, user_id=user.id, org_role=OrgRole.OWNER)
     app.dependency_overrides[current_org_member] = lambda: ctx
 
-    with (
-        patch("app.services.user.account_service.property_repo.list_by_org", new_callable=AsyncMock, return_value=[]),
-        patch("app.services.user.account_service.document_repo.list_by_org_and_user", new_callable=AsyncMock, return_value=[]),
-        patch("app.services.user.account_service.transaction_repo.list_by_org_and_user", new_callable=AsyncMock, return_value=[]),
-        patch("app.services.user.account_service.integration_repo.list_by_org", new_callable=AsyncMock, return_value=[]),
+    with patch(
+        "app.services.user.account_service.account_export_repo.list_account_export_rows",
+        new_callable=AsyncMock,
+        return_value={},
     ):
         async with _auth_client(user)() as client:
             resp = await client.get("/users/me/export")
