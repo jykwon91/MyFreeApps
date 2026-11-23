@@ -1,5 +1,5 @@
 import { type RouteObject } from "react-router-dom";
-import { AuthRequired, StandaloneLayout, Support } from "@platform/ui";
+import { AuthRequired, SettingsPage, StandaloneLayout, Support } from "@platform/ui";
 import Recipes from "@/pages/Recipes";
 import RecipeDetail from "@/pages/RecipeDetail";
 import RecipeEditor from "@/pages/RecipeEditor";
@@ -7,7 +7,6 @@ import RecipeImport from "@/pages/RecipeImport";
 import Discover from "@/pages/Discover";
 import VersionDiff from "@/pages/VersionDiff";
 import Security from "@/pages/Security";
-import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -76,7 +75,7 @@ export const routes: RouteObject[] = [
         path: "/settings",
         element: (
           <AuthRequired action="manage your settings">
-            <Settings />
+            <SettingsPage />
           </AuthRequired>
         ),
       },

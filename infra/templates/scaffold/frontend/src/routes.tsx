@@ -1,8 +1,7 @@
 import { type RouteObject } from "react-router-dom";
-import { StandaloneLayout, Support } from "@platform/ui";
+import { SettingsPage, StandaloneLayout, Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import Security from "@/pages/Security";
-import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -18,7 +17,7 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     children: [
       { index: true, element: <Home /> },
-      { path: "/settings", element: <Settings /> },
+      { path: "/settings", element: <SettingsPage /> },
       { path: "/security", element: <Security /> },
     ],
   },

@@ -1,12 +1,11 @@
 import { type RouteObject } from "react-router-dom";
-import { StandaloneLayout, Support } from "@platform/ui";
+import { SettingsPage, StandaloneLayout, Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import OnboardingLanguage from "@/pages/OnboardingLanguage";
 import OnboardingLevel from "@/pages/OnboardingLevel";
 import Scenarios from "@/pages/Scenarios";
 import Practice from "@/pages/Practice";
 import Security from "@/pages/Security";
-import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -27,7 +26,7 @@ export const routes: RouteObject[] = [
       { path: "/onboarding/level", element: <OnboardingLevel /> },
       { path: "/scenarios", element: <Scenarios /> },
       { path: "/practice", element: <Practice /> },
-      { path: "/settings", element: <Settings /> },
+      { path: "/settings", element: <SettingsPage /> },
       { path: "/security", element: <Security /> },
     ],
   },
