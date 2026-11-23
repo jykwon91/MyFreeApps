@@ -85,7 +85,7 @@ class TestFailureCode:
             (None, "sms_failed: unknown"),
             ("", "sms_failed: unknown"),
             ("cannot send to +17135550100", "sms_failed: unknown"),
-            ("３０００７", "sms_failed: unknown"),
+            ("\uff13\uff10\uff10\uff10\uff17", "sms_failed: unknown"),  # fullwidth "30007"
             ("123456789", "sms_failed: unknown"),
             ("123456", "sms_failed: unknown"),
             ("1234", "sms_failed: unknown"),
