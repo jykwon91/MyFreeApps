@@ -24,6 +24,7 @@ export const RENTAL_ROI_MESSAGES = {
   addPurchasePrice: "Add purchase price",
   addLoanOriginalAmount: "Add the loan's original amount",
   addMortgage: "Add mortgage",
+  addLoan: "Add a loan",
   mortgageFromTransactions: "Mortgage estimated from transactions",
   mortgageNone: "No mortgage found — costs exclude it.",
   couldntLoad: "I couldn't load your rental ROI. Want me to try again?",
