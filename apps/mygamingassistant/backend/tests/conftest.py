@@ -6,6 +6,7 @@ directly via the DB, then log in via /auth/jwt/login.
 Mirrors apps/myjobhunter/backend/tests/conftest.py for all shared patterns.
 """
 import asyncio
+import os
 import sys
 
 if sys.platform == "win32":
@@ -23,6 +24,13 @@ from platform_shared.services.discord import DiscordRestClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+
+# Never report to the real Sentry from a test run. Settings read the app's
+# ``.env``, which on a developer machine holds the real SENTRY_DSN, and any
+# test that boots the lifespan would then send every WARNING+ log to the live
+# project. Plain assignment (not setdefault) so neither the shell nor ``.env``
+# can switch it back on. Must be set before settings is imported.
+os.environ["SENTRY_DSN"] = ""
 
 from app.core.config import settings
 from app.main import app

@@ -10,6 +10,7 @@ Mirrors apps/myjobhunter/backend/tests/conftest.py (minus MJH-specific
 discovery / scheduler / embedding fixtures).
 """
 import asyncio
+import os
 import sys
 
 # Windows: asyncpg is incompatible with the default ProactorEventLoop when a
@@ -33,6 +34,13 @@ from platform_shared.testing.factories import install_fast_password_helper, make
 # module that binds ``fastapi_users.password.PasswordHelper`` earlier keeps the
 # real argon2 class, and its hashes can never be verified by login.
 install_fast_password_helper()
+
+# Never report to the real Sentry from a test run. Settings read the app's
+# ``.env``, which on a developer machine holds the real SENTRY_DSN, and any
+# test that boots the lifespan would then send every WARNING+ log to the live
+# project. Plain assignment (not setdefault) so neither the shell nor ``.env``
+# can switch it back on. Must be set before settings is imported.
+os.environ["SENTRY_DSN"] = ""
 
 from app.core.config import settings
 from app.main import app
