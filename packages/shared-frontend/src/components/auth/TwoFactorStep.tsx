@@ -1,6 +1,9 @@
 import { useState } from "react";
 import LoadingButton from "../ui/LoadingButton";
+import { useCooldown } from "../../hooks/useCooldown";
 import { describeAuthError } from "../../utils/describeAuthError";
+import { isRateLimitedError } from "../../utils/isRateLimitedError";
+import { RATE_LIMIT_COOLDOWN_SECONDS } from "../../constants/rate-limit-cooldown";
 import {
   TWO_FACTOR_CODE_MAX_LENGTH,
   TWO_FACTOR_CODE_MIN_LENGTH,
@@ -18,6 +21,7 @@ export default function TwoFactorStep({ onVerify, onBack }: TwoFactorStepProps) 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const cooldown = useCooldown();
   const isComplete = code.length >= TWO_FACTOR_CODE_MIN_LENGTH;
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
@@ -29,7 +33,12 @@ export default function TwoFactorStep({ onVerify, onBack }: TwoFactorStepProps) 
     try {
       if (!(await onVerify(code))) setError(TWO_FACTOR_STEP_COPY.notAccepted);
     } catch (err) {
-      setError(describeAuthError(err));
+      if (isRateLimitedError(err)) {
+        setError(TWO_FACTOR_STEP_COPY.rateLimited);
+        cooldown.start(RATE_LIMIT_COOLDOWN_SECONDS);
+      } else {
+        setError(describeAuthError(err));
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -67,9 +76,11 @@ export default function TwoFactorStep({ onVerify, onBack }: TwoFactorStepProps) 
         isLoading={isVerifying}
         loadingText={TWO_FACTOR_STEP_COPY.verifying}
         className="w-full"
-        disabled={!isComplete}
+        disabled={!isComplete || cooldown.secondsLeft > 0}
       >
-        {TWO_FACTOR_STEP_COPY.verify}
+        {cooldown.secondsLeft > 0
+          ? TWO_FACTOR_STEP_COPY.retryIn(cooldown.secondsLeft)
+          : TWO_FACTOR_STEP_COPY.verify}
       </LoadingButton>
       <button
         type="button"
