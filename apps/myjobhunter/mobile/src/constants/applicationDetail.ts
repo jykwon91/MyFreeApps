@@ -3,7 +3,6 @@ export const APPLICATION_DETAIL_MESSAGES = {
   screenTitle: "Application",
   backTitle: "Applications",
   loading: "Loading this application",
-  loadingCompany: "Loading the company",
   cantFind: "I couldn't find that application.",
   maybeDeleted: "It may have been deleted.",
   back: "Back to applications",

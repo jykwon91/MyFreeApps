@@ -5,7 +5,6 @@ import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanban
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { EmptyState, KeyboardAwareScroll, StaleDataBanner, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
-import { APPLICATION_MESSAGES } from "../../constants/applications";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../../constants/applicationDetail";
 import type { ApplicationDetailScreenProps } from "../../types/ApplicationDetailScreenProps";
 import ApplicationActions from "./ApplicationActions";
@@ -56,8 +55,8 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   }
 
   const column = currentKanbanColumn(application.events);
-  // A company that won't load shouldn't hold the screen up; the list says the same when it has no name.
-  const companyName = company.currentData?.name ?? (company.isError ? APPLICATION_MESSAGES.unknownCompany : null);
+  // A company that won't load shouldn't hold the screen up: the header says so, with a retry, and the rest stays usable.
+  const companyName = company.currentData?.name ?? null;
   // Any section still showing what it loaded before a failed refresh; a failed next page says so itself.
   const isStale =
     Boolean(error) ||
@@ -73,7 +72,11 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
       testID="application-detail"
     >
       <StaleDataBanner isShown={isStale} />
-      <ApplicationHeader application={application} column={column} companyName={companyName} />
+      <ApplicationHeader application={application} column={column}
+        companyFailed={company.isError}
+        companyName={companyName}
+        onRetryCompany={company.refetch}
+      />
       <ApplicationActions application={application} column={column} isLeaving={isLeaving} onDeleted={() => setIsLeaving(true)} />
       <OverviewSection application={application} />
       <NotesSection applicationId={id} isLeaving={isLeaving} notes={application.notes} />

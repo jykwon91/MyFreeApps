@@ -49,7 +49,7 @@ describe("application row status chip", () => {
 
 describe("application header chips", () => {
   it.each(KANBAN_COLUMN_ORDER)("shows the %s stage in blue, as the web does", async (column) => {
-    await render(<ApplicationHeader application={applicationRecord({ id: "a" })} column={column} companyName="Acme" />);
+    await render(<ApplicationHeader application={applicationRecord({ id: "a" })} column={column} companyFailed={false} companyName="Acme" onRetryCompany={jest.fn()} />);
 
     expect(backgroundOf(KANBAN_COLUMN_LABELS[column])).toBe(LIGHT_TONE_BACKGROUND.info);
   });
@@ -59,7 +59,9 @@ describe("application header chips", () => {
       <ApplicationHeader
         application={applicationRecord({ id: "a", archived: true, remote_type: "remote" })}
         column="applied"
+        companyFailed={false}
         companyName="Acme"
+        onRetryCompany={jest.fn()}
       />,
     );
 

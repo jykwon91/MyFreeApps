@@ -16,6 +16,7 @@ import {
   showError,
   extractErrorMessage,
 } from "@platform/ui";
+import ApplicationCompanyName from "@/features/applications/ApplicationCompanyName";
 import ApplicationDetailSkeleton from "@/features/applications/ApplicationDetailSkeleton";
 import OverviewSection from "@/features/applications/sections/OverviewSection";
 import EventsSection from "@/features/applications/sections/EventsSection";
@@ -42,7 +43,7 @@ export default function ApplicationDetail() {
   const { data: app, isLoading, error } = useGetApplicationQuery(id ?? "", {
     skip: !id,
   });
-  const { data: company } = useGetCompanyQuery(app?.company_id ?? "", {
+  const { currentData: company, isError: companyFailed, refetch: refetchCompany } = useGetCompanyQuery(app?.company_id ?? "", {
     skip: !app?.company_id,
   });
   const [deleteApplication, { isLoading: deleting }] = useDeleteApplicationMutation();
@@ -122,9 +123,7 @@ export default function ApplicationDetail() {
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">{app.role_title}</h1>
-          <p className="text-sm text-muted-foreground">
-            {company?.name ?? <span className="italic">(loading company...)</span>}
-          </p>
+          <ApplicationCompanyName name={company?.name} isError={companyFailed} onRetry={refetchCompany} />
           <div className="flex items-center gap-2 pt-1 flex-wrap">
             <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color={getStageColor(currentColumn)} />
             {app.archived ? <Badge label="Archived" color="gray" /> : null}

@@ -10,7 +10,7 @@ vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useUpdateApplicationMutation: () => [vi.fn(), { isLoading: false }],
 }));
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
-  useGetCompanyQuery: () => ({ data: { name: "Acme Corp" } }),
+  useGetCompanyQuery: () => ({ currentData: { name: "Acme Corp" }, isError: false, refetch: vi.fn() }),
 }));
 vi.mock("@/features/applications/useStageMove", () => ({
   useStageMove: () => ({ selectedColumn: "applied", isMoving: false, moveTo: vi.fn() }),
