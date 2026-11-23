@@ -1,7 +1,7 @@
 """Errors the discovery fetch service raises, mapped to HTTP statuses by the refresh route.
 
 Kept apart from ``discovery_fetch_service`` so modules it imports can name
-them; that service re-exports them for its existing callers.
+them without an import cycle.
 """
 
 

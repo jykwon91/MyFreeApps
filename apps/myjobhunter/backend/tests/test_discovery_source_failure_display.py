@@ -11,16 +11,18 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.discovery_refresh_messages import (
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
+)
 from app.core.discovery_source_failure_display import displayable_failure_message
 from app.core.discovery_source_failure_messages import (
     GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
     JSEARCH_MONTHLY_QUOTA_MESSAGE,
     JSEARCH_THROTTLED_MESSAGE_TEMPLATE,
     LEVER_COMPANY_NOT_FOUND_MESSAGE,
-    SAVED_SEARCH_FETCH_FAILED_MESSAGE,
     SAVED_SEARCH_MISSING_QUERY_MESSAGE,
     SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-    SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
 )
 from app.models.discovery.discovery_source import DiscoverySource
 
@@ -34,15 +36,15 @@ _LEGACY_RAW_TEXT = (
     "message",
     [
         None,
+        DISCOVERY_FETCH_FAILED_DETAIL,
+        DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
         GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
         JSEARCH_MONTHLY_QUOTA_MESSAGE,
         JSEARCH_THROTTLED_MESSAGE_TEMPLATE.format(seconds=45),
         JSEARCH_THROTTLED_MESSAGE_TEMPLATE.format(seconds=3600),
         LEVER_COMPANY_NOT_FOUND_MESSAGE,
-        SAVED_SEARCH_FETCH_FAILED_MESSAGE,
         SAVED_SEARCH_MISSING_QUERY_MESSAGE,
         SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-        SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
     ],
 )
 def test_fixed_copy_is_shown_as_stored(message: str | None) -> None:
@@ -61,7 +63,7 @@ def test_fixed_copy_is_shown_as_stored(message: str | None) -> None:
     ],
 )
 def test_any_other_stored_text_is_shown_as_the_generic_line(stored: str) -> None:
-    assert displayable_failure_message(stored) == SAVED_SEARCH_FETCH_FAILED_MESSAGE
+    assert displayable_failure_message(stored) == DISCOVERY_FETCH_FAILED_DETAIL
 
 
 @pytest.mark.asyncio
@@ -84,7 +86,7 @@ async def test_legacy_row_lists_with_the_generic_line_and_keeps_its_stored_text(
         listed = await client.get("/discover/sources")
 
     (row,) = [s for s in listed.json() if s["id"] == str(src.id)]
-    assert row["last_error_message"] == SAVED_SEARCH_FETCH_FAILED_MESSAGE
+    assert row["last_error_message"] == DISCOVERY_FETCH_FAILED_DETAIL
     assert _LEGACY_RAW_TEXT not in listed.text
     await db.refresh(src)
     assert src.last_error_message == _LEGACY_RAW_TEXT

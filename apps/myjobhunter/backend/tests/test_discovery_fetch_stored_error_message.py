@@ -17,15 +17,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.discovery_refresh_messages import (
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
+)
 from app.core.discovery_source_failure_messages import (
     GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
     JSEARCH_MONTHLY_QUOTA_MESSAGE,
     JSEARCH_THROTTLED_MESSAGE_TEMPLATE,
     LEVER_COMPANY_NOT_FOUND_MESSAGE,
-    SAVED_SEARCH_FETCH_FAILED_MESSAGE,
     SAVED_SEARCH_MISSING_QUERY_MESSAGE,
     SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-    SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
 )
 from app.models.discovery.discovery_fetch import DiscoveryFetch
 from app.models.discovery.discovery_source import DiscoverySource
@@ -87,17 +89,17 @@ async def _stored_reasons(db: AsyncSession, src: DiscoverySource) -> tuple[str |
     ("source", "error", "expected"),
     [
         ("jsearch", JSearchAuthError(f"JSearch returned 401 via {_SECRET_TEXT}"), SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE),
-        ("jsearch", JSearchTransientError(f"network error: {_SECRET_TEXT}"), SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
-        ("jsearch", JSearchInvalidResponseError(f"non-JSON body: {_SECRET_TEXT}"), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
-        ("jsearch", JSearchError(f"unexpected status 418: {_SECRET_TEXT}"), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
-        ("jsearch", httpx.ConnectError(_SECRET_TEXT), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
-        ("greenhouse", GreenhouseTransientError(f"Greenhouse network error: {_SECRET_TEXT}"), SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
+        ("jsearch", JSearchTransientError(f"network error: {_SECRET_TEXT}"), DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
+        ("jsearch", JSearchInvalidResponseError(f"non-JSON body: {_SECRET_TEXT}"), DISCOVERY_FETCH_FAILED_DETAIL),
+        ("jsearch", JSearchError(f"unexpected status 418: {_SECRET_TEXT}"), DISCOVERY_FETCH_FAILED_DETAIL),
+        ("jsearch", httpx.ConnectError(_SECRET_TEXT), DISCOVERY_FETCH_FAILED_DETAIL),
+        ("greenhouse", GreenhouseTransientError(f"Greenhouse network error: {_SECRET_TEXT}"), DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
         ("greenhouse", GreenhouseInvalidBoardError(f"board not found (404) {_SECRET_TEXT}"), GREENHOUSE_BOARD_NOT_FOUND_MESSAGE),
-        ("greenhouse", GreenhouseError(f"non-JSON body: {_SECRET_TEXT}"), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
-        ("greenhouse", ValueError(f"Greenhouse source config is missing {_SECRET_TEXT}"), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
-        ("lever", LeverTransientError(f"Lever network error: {_SECRET_TEXT}"), SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
+        ("greenhouse", GreenhouseError(f"non-JSON body: {_SECRET_TEXT}"), DISCOVERY_FETCH_FAILED_DETAIL),
+        ("greenhouse", ValueError(f"Greenhouse source config is missing {_SECRET_TEXT}"), DISCOVERY_FETCH_FAILED_DETAIL),
+        ("lever", LeverTransientError(f"Lever network error: {_SECRET_TEXT}"), DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
         ("lever", LeverInvalidSlugError(f"company not found (404) {_SECRET_TEXT}"), LEVER_COMPANY_NOT_FOUND_MESSAGE),
-        ("lever", LeverError(f"response is not a list: {_SECRET_TEXT}"), SAVED_SEARCH_FETCH_FAILED_MESSAGE),
+        ("lever", LeverError(f"response is not a list: {_SECRET_TEXT}"), DISCOVERY_FETCH_FAILED_DETAIL),
     ],
 )
 async def test_failed_fetch_stores_the_fixed_message_for_its_error_class(
@@ -196,5 +198,5 @@ async def test_transient_failure_row_never_shows_the_network_text(as_user, user_
         listed = await client.get("/discover/sources")
 
     (row,) = [s for s in listed.json() if s["id"] == source_id]
-    assert row["last_error_message"] == SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE
+    assert row["last_error_message"] == DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL
     assert _SECRET_TEXT not in listed.text

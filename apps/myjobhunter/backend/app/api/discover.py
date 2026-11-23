@@ -75,7 +75,7 @@ from app.services.discovery import (
     discovery_score_service,
     discovery_source_service,
 )
-from app.services.discovery.discovery_fetch_service import (
+from app.services.discovery.discovery_fetch_errors import (
     DiscoveryFetchError,
     DiscoverySourceInactiveError,
     DiscoverySourceNotFoundError,

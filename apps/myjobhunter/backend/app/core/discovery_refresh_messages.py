@@ -2,6 +2,8 @@
 
 Adapter errors carry provider and library text (network errors, response
 bodies), so the route logs them and sends this fixed copy instead.
+The fetch service stores the generic and "unavailable" lines as a saved
+search's failure reason too, so the row and the reply use the same words.
 """
 from typing import Final
 

@@ -9,25 +9,27 @@ from __future__ import annotations
 
 import re
 
+from app.core.discovery_refresh_messages import (
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
+)
 from app.core.discovery_source_failure_messages import (
     GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
     JSEARCH_MONTHLY_QUOTA_MESSAGE,
     JSEARCH_THROTTLED_MESSAGE_TEMPLATE,
     LEVER_COMPANY_NOT_FOUND_MESSAGE,
-    SAVED_SEARCH_FETCH_FAILED_MESSAGE,
     SAVED_SEARCH_MISSING_QUERY_MESSAGE,
     SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-    SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
 )
 
 _FIXED_MESSAGES: frozenset[str] = frozenset({
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
     GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
     JSEARCH_MONTHLY_QUOTA_MESSAGE,
     LEVER_COMPANY_NOT_FOUND_MESSAGE,
-    SAVED_SEARCH_FETCH_FAILED_MESSAGE,
     SAVED_SEARCH_MISSING_QUERY_MESSAGE,
     SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-    SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
 })
 
 _THROTTLED_MESSAGE_RE = re.compile(
@@ -39,4 +41,4 @@ def displayable_failure_message(stored: str | None) -> str | None:
     """``stored`` if it is fixed copy, the generic line for any other text."""
     if stored is None or stored in _FIXED_MESSAGES or _THROTTLED_MESSAGE_RE.fullmatch(stored):
         return stored
-    return SAVED_SEARCH_FETCH_FAILED_MESSAGE
+    return DISCOVERY_FETCH_FAILED_DETAIL

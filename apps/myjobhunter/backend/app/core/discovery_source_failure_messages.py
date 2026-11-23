@@ -3,17 +3,14 @@
 Adapter errors carry provider and library text (network errors, URLs,
 response bodies), so the fetch service logs them and stores one of these
 as ``discovery_sources.last_error_message`` instead. The web and phone
-saved-search rows show it as-is.
+saved-search rows show it as-is. The generic and "unavailable" lines are
+the refresh route's, in ``discovery_refresh_messages``.
 
 The two JSearch quota messages are also the 429 reply's detail on
 ``POST /discover/sources/{id}/refresh``, so the row and the reply agree.
 """
 from typing import Final
 
-SAVED_SEARCH_FETCH_FAILED_MESSAGE: Final = "We couldn't refresh this saved search. Please try again later."
-SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE: Final = (
-    "The job search service is unavailable right now. Please try again in a few minutes."
-)
 SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE: Final = (
     "The job search service isn't available right now. Please try again later."
 )

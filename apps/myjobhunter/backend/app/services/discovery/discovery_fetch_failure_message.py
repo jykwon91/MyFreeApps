@@ -7,13 +7,15 @@ row matches the 429 reply the refresh route sends with the same text.
 """
 from __future__ import annotations
 
+from app.core.discovery_refresh_messages import (
+    DISCOVERY_FETCH_FAILED_DETAIL,
+    DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL,
+)
 from app.core.discovery_source_failure_messages import (
     GREENHOUSE_BOARD_NOT_FOUND_MESSAGE,
     LEVER_COMPANY_NOT_FOUND_MESSAGE,
-    SAVED_SEARCH_FETCH_FAILED_MESSAGE,
     SAVED_SEARCH_MISSING_QUERY_MESSAGE,
     SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE,
-    SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE,
 )
 from app.services.discovery.discovery_fetch_errors import DiscoverySourceMissingQueryError
 from app.services.discovery.sources.greenhouse import (
@@ -29,9 +31,9 @@ from app.services.discovery.sources.lever import LeverInvalidSlugError, LeverTra
 
 _FIXED_MESSAGES: tuple[tuple[type[Exception], str], ...] = (
     (JSearchAuthError, SAVED_SEARCH_SERVICE_NOT_SET_UP_MESSAGE),
-    (JSearchTransientError, SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
-    (GreenhouseTransientError, SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
-    (LeverTransientError, SAVED_SEARCH_UPSTREAM_UNAVAILABLE_MESSAGE),
+    (JSearchTransientError, DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
+    (GreenhouseTransientError, DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
+    (LeverTransientError, DISCOVERY_UPSTREAM_UNAVAILABLE_DETAIL),
     (GreenhouseInvalidBoardError, GREENHOUSE_BOARD_NOT_FOUND_MESSAGE),
     (LeverInvalidSlugError, LEVER_COMPANY_NOT_FOUND_MESSAGE),
     (DiscoverySourceMissingQueryError, SAVED_SEARCH_MISSING_QUERY_MESSAGE),
@@ -45,4 +47,4 @@ def stored_failure_message(exc: Exception) -> str:
     for error_class, message in _FIXED_MESSAGES:
         if isinstance(exc, error_class):
             return message
-    return SAVED_SEARCH_FETCH_FAILED_MESSAGE
+    return DISCOVERY_FETCH_FAILED_DETAIL

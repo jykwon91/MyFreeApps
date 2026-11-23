@@ -34,7 +34,6 @@ from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfi
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
 from app.services.discovery.discovery_fetch_errors import (
-    DiscoveryFetchError,
     DiscoverySourceInactiveError,
     DiscoverySourceMissingQueryError,
     DiscoverySourceNotFoundError,
@@ -45,15 +44,6 @@ from app.services.discovery.industry_denylists import expand_excluded_keywords
 from app.services.discovery.sources import greenhouse, jsearch, lever
 
 logger = logging.getLogger(__name__)
-
-__all__ = [
-    "DiscoveryFetchError",
-    "DiscoverySourceInactiveError",
-    "DiscoverySourceMissingQueryError",
-    "DiscoverySourceNotFoundError",
-    "DiscoveryUnsupportedSourceError",
-    "fetch_source",
-]
 
 
 # ---------------------------------------------------------------------------

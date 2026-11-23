@@ -31,7 +31,7 @@ from httpx import AsyncClient
 from app.api import applications, companies, discover, resume_refinement, resumes
 from app.core.rate_limit import RateLimiter
 from app.services.application.jd_parsing_service import JdParseError
-from app.services.discovery.discovery_fetch_service import DiscoverySourceNotFoundError
+from app.services.discovery.discovery_fetch_errors import DiscoverySourceNotFoundError
 from app.services.extraction.jd_url_extractor import JDFetchError
 from app.services.jobs.resume_validator import ResumeRejected
 from app.services.resume_refinement.errors import SessionNotFound, SourceJobNotFound
