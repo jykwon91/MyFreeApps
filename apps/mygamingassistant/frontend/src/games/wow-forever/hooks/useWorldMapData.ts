@@ -2,6 +2,8 @@ import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import type { LoadStatus } from "@/games/wow-forever/types/loadStatus";
 import { useCallback, useEffect, useState } from "react";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
+import { withCreatures } from "@/games/wow-forever/worldMap/decodeWorldMap";
+import { loadCreatures } from "@/games/wow-forever/worldMap/loadCreatures";
 import { loadWorldMap } from "@/games/wow-forever/worldMap/loadWorldMap";
 
 export interface WorldMapDataState {
@@ -22,6 +24,12 @@ export function useWorldMapData(): WorldMapDataState {
         if (!active) return;
         setData(loaded);
         setStatus(LOAD_STATUS.ready);
+        // The creatures only add to the search, so the map never waits for them or fails without them.
+        loadCreatures()
+          .then((raw) => {
+            if (active) setData((current) => (current ? withCreatures(current, raw) : current));
+          })
+          .catch((error: unknown) => console.warn("World Map: the creature index didn't load", error));
       })
       .catch(() => {
         if (active) setStatus(LOAD_STATUS.error);

@@ -8,6 +8,7 @@
  */
 import { isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import {
+  CREATURE_SUBKIND,
   FACTION,
   INSTANCE_KIND,
   MAP_KIND,
@@ -191,6 +192,53 @@ function decodeServices(raw: unknown): MapPoi[] {
       npcId: num(col(row, "npcId"), "service npc id"),
     };
   });
+}
+
+/** How many numbers one spot takes in a creature row's `spots`: zone, sub-zone index, x, y. */
+const CREATURE_SPOT_WIDTH = 4;
+
+/** `classicCreatures.json`: one POI per spot, `creature-<npc id>-<n>`, so a creature with several spots has them all. */
+export function decodeCreatures(raw: unknown): MapPoi[] {
+  const payload = record(raw, "creatures");
+  const col = columnReader(payload.columns, "creatures");
+  const subzones = list(payload.subzones, "creature subzones").map((s) => str(s, "creature subzone"));
+  return list(payload.rows, "creature rows").flatMap((r) => {
+    const row = list(r, "creature row");
+    const npcId = num(col(row, "npcId"), "creature npc id");
+    const spots = list(col(row, "spots"), "creature spots");
+    if (spots.length % CREATURE_SPOT_WIDTH !== 0) fail(`creature ${npcId} has a spot with missing numbers`);
+    const common = {
+      kind: POI_KIND.creature,
+      subkind: CREATURE_SUBKIND,
+      tag: "",
+      name: str(col(row, "name"), "creature name"),
+      title: str(col(row, "title"), "creature title"),
+      faction: faction(col(row, "side"), "creature"),
+      source: POI_SOURCE.classic,
+      npcId,
+      levelMin: num(col(row, "levelMin"), "creature min level"),
+      levelMax: num(col(row, "levelMax"), "creature max level"),
+    } as const;
+    return Array.from({ length: spots.length / CREATURE_SPOT_WIDTH }, (_, n): MapPoi => {
+      const at = n * CREATURE_SPOT_WIDTH;
+      const subzone = subzones[num(spots[at + 1], "creature subzone index")];
+      if (subzone === undefined) fail(`creature ${npcId} names a sub-zone that is not listed`);
+      return {
+        ...common,
+        id: `creature-${npcId}-${n}`,
+        zone: num(spots[at], "creature zone"),
+        subzone,
+        x: num(spots[at + 2], "creature x"),
+        y: num(spots[at + 3], "creature y"),
+      };
+    });
+  });
+}
+
+/** The data with the creatures added (and findable by id). */
+export function withCreatures(data: WorldMapData, raw: unknown): WorldMapData {
+  const creatures = decodeCreatures(raw);
+  return { ...data, creatures, poiById: new Map([...data.poiById, ...creatures.map((p): [string, MapPoi] => [p.id, p])]) };
 }
 
 function decodeQuest(raw: unknown, col: ReturnType<typeof columnReader>): QuestInfo {
@@ -404,6 +452,7 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
     pois,
     questGivers,
     instances,
+    creatures: [],
     poiById: new Map([...pois, ...questGivers, ...instances].map((p) => [p.id, p])),
     ...travel,
     areas: decodeAreas(files.areas),
