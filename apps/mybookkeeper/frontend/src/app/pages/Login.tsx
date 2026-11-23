@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 import { login } from "@/shared/lib/auth";
@@ -9,14 +9,15 @@ import {
   isUnverifiedLoginError,
   LoadingButton,
   ResendStatusAlert,
+  RATE_LIMIT_COOLDOWN_SECONDS,
   TwoFactorStep,
+  useCooldown,
   safeReturnPath,
   withReturnTo,
 } from "@platform/ui";
 import type { ResendStatus } from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
 
-const LOCKOUT_COOLDOWN_SECONDS = 30;
 const RATE_LIMITED_MESSAGE = "Too many sign-in attempts. Try again in a few minutes.";
 
 interface PendingCredentials {
@@ -35,30 +36,9 @@ export default function Login() {
   const [pendingCredentials, setPendingCredentials] = useState<PendingCredentials | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { secondsLeft: cooldownSeconds, start: startCooldown } = useCooldown();
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
-
-  useEffect(() => {
-    return () => {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
-    };
-  }, []);
-
-  function startCooldown() {
-    setCooldownSeconds(LOCKOUT_COOLDOWN_SECONDS);
-    cooldownRef.current = setInterval(() => {
-      setCooldownSeconds((s) => {
-        if (s <= 1) {
-          clearInterval(cooldownRef.current!);
-          cooldownRef.current = null;
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,7 +65,7 @@ export default function Login() {
     } catch (err) {
       if (isRateLimitedError(err)) {
         setError(RATE_LIMITED_MESSAGE);
-        startCooldown();
+        startCooldown(RATE_LIMIT_COOLDOWN_SECONDS);
       } else if (isUnverifiedLoginError(err)) {
         setNeedsVerification(true);
         setResendStatus("idle");
@@ -98,13 +78,8 @@ export default function Login() {
 
   async function handleVerifyTotp(code: string): Promise<boolean> {
     if (!pendingCredentials) return false;
-    try {
-      const result = await login(pendingCredentials.email, pendingCredentials.password, code);
-      if (result.detail === "totp_required") return false;
-    } catch (err) {
-      if (isRateLimitedError(err)) throw Object.assign(new Error(RATE_LIMITED_MESSAGE), { cause: err });
-      throw err;
-    }
+    const result = await login(pendingCredentials.email, pendingCredentials.password, code);
+    if (result.detail === "totp_required") return false;
     navigate(returnTo ?? "/");
     return true;
   }

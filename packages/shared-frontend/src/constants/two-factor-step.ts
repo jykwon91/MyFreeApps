@@ -12,5 +12,7 @@ export const TWO_FACTOR_STEP_COPY = {
   verify: "Verify",
   verifying: "Verifying...",
   back: "Back to login",
+  rateLimited: "Too many sign-in attempts. Try again in a few minutes.",
+  retryIn: (seconds: number) => `Try again in ${seconds}s`,
   notAccepted: "Authentication code didn't go through. Please try again.",
 } as const;

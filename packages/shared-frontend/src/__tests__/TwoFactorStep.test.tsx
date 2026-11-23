@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TwoFactorStep from "../components/auth/TwoFactorStep";
 
@@ -62,5 +62,45 @@ describe("TwoFactorStep", () => {
 
     await user.click(screen.getByRole("button", { name: "Back to login" }));
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  describe("when the server says too many attempts", () => {
+    const tooMany = Object.assign(new Error("Request failed with status code 429"), {
+      response: { status: 429, data: { detail: "Too many attempts" } },
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    async function hitLimit() {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const onVerify = vi.fn().mockRejectedValueOnce(tooMany).mockResolvedValue(true);
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<TwoFactorStep onVerify={onVerify} onBack={vi.fn()} />);
+      await user.type(screen.getByLabelText("Authentication code"), "123456");
+      await user.click(screen.getByRole("button", { name: "Verify" }));
+      return { onVerify, user };
+    }
+
+    it("shows the lockout message and a Try again countdown on a disabled button", async () => {
+      await hitLimit();
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Too many sign-in attempts. Try again in a few minutes.",
+      );
+      expect(screen.getByRole("button", { name: "Try again in 30s" })).toBeDisabled();
+    });
+
+    it("counts down and turns back into Verify when the wait is over", async () => {
+      const { onVerify } = await hitLimit();
+      await screen.findByRole("button", { name: "Try again in 30s" });
+
+      act(() => vi.advanceTimersByTime(5000));
+      expect(screen.getByRole("button", { name: "Try again in 25s" })).toBeDisabled();
+
+      act(() => vi.advanceTimersByTime(25000));
+      const verify = screen.getByRole("button", { name: "Verify" });
+      expect(verify).toBeEnabled();
+      expect(onVerify).toHaveBeenCalledTimes(1);
+    });
   });
 });

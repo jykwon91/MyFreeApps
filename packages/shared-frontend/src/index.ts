@@ -203,6 +203,9 @@ export type { ScrollTopOnNavigateOptions } from "./types/scroll-top-on-navigate-
 export { useDismissable } from "./hooks/useDismissable";
 export { useTheme } from "./hooks/useTheme";
 export { useToast } from "./hooks/useToast";
+export { useCooldown } from "./hooks/useCooldown";
+export type { Cooldown } from "./hooks/useCooldown";
+export { RATE_LIMIT_COOLDOWN_SECONDS } from "./constants/rate-limit-cooldown";
 export { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 export { useRestoreFocusOnClose } from "./hooks/useRestoreFocusOnClose";
 export type { UnsavedChangesGuard } from "./types/unsaved-changes-guard";
