@@ -69,8 +69,15 @@ def error_from_refused_recipients(
     )
 
 
-def error_from_smtp_exception(exc: SmtpFailure, *, recipient_count: int) -> EmailSendError:
-    """Classify an exception raised before the server accepted the message."""
+def error_from_smtp_exception(
+    exc: SmtpFailure, *, recipient_count: int, failed_before_handover: bool,
+) -> EmailSendError:
+    """Classify an exception from an SMTP send.
+
+    ``failed_before_handover`` says the exception came before the message was
+    handed to the server (connecting, starting TLS, logging in), so a timeout or
+    dropped connection then is a definite failure rather than an unconfirmed one.
+    """
     if isinstance(exc, smtplib.SMTPRecipientsRefused):
         return error_from_refused_recipients(exc.recipients, recipient_count=recipient_count)
 
@@ -81,6 +88,7 @@ def error_from_smtp_exception(exc: SmtpFailure, *, recipient_count: int) -> Emai
             f"The email could not be encoded for SMTP (a header or address it can't carry): "
             f"{type(exc).__name__}: {exc}",
             kind="message_rejected",
+            failed_before_handover=failed_before_handover,
         )
 
     if isinstance(exc, _CONFIG_REPLY_ERRORS) and exc.smtp_code >= _FIRST_TRANSIENT_CODE:
@@ -88,6 +96,7 @@ def error_from_smtp_exception(exc: SmtpFailure, *, recipient_count: int) -> Emai
             f"SMTP server refused our connection, credentials or sender ({exc.smtp_code}): {exc}",
             kind=_kind_for_reply(exc.smtp_code, "misconfigured"),
             smtp_code=exc.smtp_code,
+            failed_before_handover=failed_before_handover,
         )
 
     if isinstance(exc, smtplib.SMTPResponseException) and exc.smtp_code >= _FIRST_TRANSIENT_CODE:
@@ -95,17 +104,23 @@ def error_from_smtp_exception(exc: SmtpFailure, *, recipient_count: int) -> Emai
             f"SMTP server replied {exc.smtp_code}: {exc}",
             kind=_kind_for_reply(exc.smtp_code, "message_rejected"),
             smtp_code=exc.smtp_code,
+            failed_before_handover=failed_before_handover,
         )
 
     if isinstance(exc, _CONFIG_ERRORS) or _is_bare_smtp_exception(exc):
         return EmailSendError(
             f"SMTP is misconfigured (unknown host, or no TLS / AUTH method we can use): {exc!r}",
             kind="misconfigured",
+            failed_before_handover=failed_before_handover,
         )
 
     # Timeouts, refused or dropped connections, and replies without a usable
     # code (e.g. a connect greeting of -1).
-    return EmailSendError(f"SMTP connection failed: {exc!r}", kind="transient")
+    return EmailSendError(
+        f"SMTP connection failed: {exc!r}",
+        kind="transient",
+        failed_before_handover=failed_before_handover,
+    )
 
 
 def _is_bare_smtp_exception(exc: SmtpFailure) -> bool:
