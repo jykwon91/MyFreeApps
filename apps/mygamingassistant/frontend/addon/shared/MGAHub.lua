@@ -40,7 +40,7 @@ _G.MGAHub = Hub
 
 local TITLE = "MGA"
 local PREFIX = "|cff33aaff" .. TITLE .. ":|r "
-local DEFAULT_ANGLE = math.rad(215)
+local DEFAULT_ANGLE = math.rad(165) -- left edge: clear of the 225° spot LibDBIcon buttons (Questie) default to
 local RING_GAP = 10 -- how far the button's centre sits outside the minimap's edge
 local MENU_WIDTH, ROW_HEIGHT, GAP_HEIGHT, PAD = 240, 22, 8, 8
 local SECTION_WIDTH, HEADING_HEIGHT, SECTION_GAP = 560, 28, 18
