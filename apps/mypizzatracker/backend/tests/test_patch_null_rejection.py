@@ -7,20 +7,20 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.testing.factories import hash_test_password
+
 from app.models.user.user import User
 
 
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
-    from fastapi_users.password import PasswordHelper
-
     email = "patch-null-test@example.com"
     password = "testpassword123!"
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None:
         db.add(User(
             email=email,
-            hashed_password=PasswordHelper().hash(password),
+            hashed_password=hash_test_password(password),
             is_verified=True,
             is_active=True,
         ))

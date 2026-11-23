@@ -13,10 +13,11 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 import pytest
 import pytest_asyncio
-from fastapi_users.password import PasswordHelper
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+
+from platform_shared.testing.factories import hash_test_password
 
 from app.models.customer.customer import Customer
 from app.models.drop.drop import Drop
@@ -39,7 +40,7 @@ FreshSession = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
     db.add(User(
         email=TEST_EMAIL,
-        hashed_password=PasswordHelper().hash(TEST_PASSWORD),
+        hashed_password=hash_test_password(TEST_PASSWORD),
         is_verified=True,
         is_active=True,
     ))

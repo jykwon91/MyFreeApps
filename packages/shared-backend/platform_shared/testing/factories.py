@@ -58,7 +58,6 @@ import uuid
 from collections.abc import AsyncGenerator, Callable
 from typing import TYPE_CHECKING, Any
 
-import pytest
 import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Fast password helper — installed once when this module is first imported.
+# Fast password helper — installed by calling ``install_fast_password_helper()``.
 #
 # fastapi-users' default PasswordHelper uses argon2 (~250ms/hash). Tests
 # that exercise login or lockout run many hash operations; across an entire
@@ -78,10 +77,13 @@ if TYPE_CHECKING:
 # We replace the default-constructor symbol AND patch the class-level
 # attribute so every fresh PasswordHelper() and every newly-constructed
 # UserManager uses our fast stub. Production code is unaffected because
-# this file is only imported inside test processes.
+# only test conftests call the installer.
 #
-# Apps that do NOT import this module (e.g. MBK, which doesn't go through
-# the login endpoint in repository-layer tests) are also unaffected.
+# Importing this module does NOT install anything. Each app's tests/conftest.py
+# calls ``install_fast_password_helper()`` before importing any app code: a
+# module that did ``from fastapi_users.password import PasswordHelper`` before
+# the install keeps the real argon2 class, so the hash it stores can never be
+# verified by the fast helper login uses.
 # ---------------------------------------------------------------------------
 
 class _FastPasswordHelper:
@@ -108,16 +110,16 @@ class _FastPasswordHelper:
 def hash_test_password(password: str) -> str:
     """The ``hashed_password`` that ``password`` verifies against in tests.
 
-    Matches what the fast helper installed below checks, so a route that asks
+    Matches what the fast helper from ``install_fast_password_helper`` checks, so a route that asks
     for the user's password accepts ``password`` for a user stored with this.
     """
     return _FastPasswordHelper().hash(password)
 
 
-def _install_fast_password_helper() -> None:
+def install_fast_password_helper() -> None:
     """Monkeypatch fastapi-users to use the fast test hasher.
 
-    Safe to call multiple times — idempotent after the first call.
+    Safe to call multiple times — later calls do nothing.
     """
     try:
         import fastapi_users.password as _fa_password
@@ -125,6 +127,9 @@ def _install_fast_password_helper() -> None:
     except ImportError:
         # fastapi-users not installed (e.g. running shared-package tests
         # directly). Nothing to patch.
+        return
+
+    if _fa_password.PasswordHelper is _FastPasswordHelper:
         return
 
     _fa_password.PasswordHelper = _FastPasswordHelper  # type: ignore[misc,assignment]
@@ -137,11 +142,6 @@ def _install_fast_password_helper() -> None:
         self.password_helper = _FastPasswordHelper()
 
     BaseUserManager.__init__ = _fast_init  # type: ignore[method-assign]
-
-
-# Install at import time so the effect is in place before any test module
-# that imports this file starts collecting.
-_install_fast_password_helper()
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +290,7 @@ def make_api_user_factory(
     -------
     A ``pytest_asyncio.fixture(scope="function")`` function.
     """
-    from httpx import ASGITransport, AsyncClient  # noqa: PLC0415
+    from httpx import AsyncClient  # noqa: PLC0415
 
     @pytest_asyncio.fixture(scope="function")
     async def _user_factory(

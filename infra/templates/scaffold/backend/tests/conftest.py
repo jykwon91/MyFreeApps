@@ -11,14 +11,20 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from collections.abc import AsyncGenerator, Callable
-from typing import Any
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+
+from platform_shared.testing.factories import install_fast_password_helper
+
+# Swap argon2 for the fast test hasher before any app module is imported: a
+# module that binds ``fastapi_users.password.PasswordHelper`` earlier keeps the
+# real argon2 class, and its hashes can never be verified by login.
+install_fast_password_helper()
 
 from app.core.config import settings
 from app.main import app

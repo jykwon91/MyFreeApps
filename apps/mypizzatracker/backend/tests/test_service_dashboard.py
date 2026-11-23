@@ -27,6 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from twilio.base.exceptions import TwilioRestException
 from urllib3.exceptions import ReadTimeoutError
 
+from platform_shared.testing.factories import hash_test_password
+
 from app.core.config import settings
 from app.models.order.order import Order
 from app.models.user.user import User
@@ -39,18 +41,15 @@ from app.services.sms import sms_sender
 
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
-    from fastapi_users.password import PasswordHelper
-
     email = "service-dashboard-test@example.com"
     password = "testpassword123!"
 
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None:
-        helper = PasswordHelper()
         user = User(
             email=email,
-            hashed_password=helper.hash(password),
+            hashed_password=hash_test_password(password),
             is_verified=True,
             is_active=True,
         )

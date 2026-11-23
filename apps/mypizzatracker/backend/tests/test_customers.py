@@ -25,7 +25,8 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi_users.password import PasswordHelper
+
+from platform_shared.testing.factories import hash_test_password
 
 from app.models.customer.customer import Customer
 from app.models.menu.pizza_type import PizzaType
@@ -48,10 +49,9 @@ async def auth_client(client: AsyncClient, db: AsyncSession) -> AsyncClient:
     result = await db.execute(select(User).where(User.email == TEST_EMAIL))
     user = result.scalar_one_or_none()
     if user is None:
-        helper = PasswordHelper()
         user = User(
             email=TEST_EMAIL,
-            hashed_password=helper.hash(TEST_PASSWORD),
+            hashed_password=hash_test_password(TEST_PASSWORD),
             is_verified=True,
             is_active=True,
         )

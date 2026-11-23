@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, patch
 import pyotp
 import pytest
 import pytest_asyncio
-from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,12 +21,13 @@ from app.db.session import get_db
 from app.main import app
 from app.models.user.user import User
 from platform_shared.services.totp_service import generate_recovery_codes
+from platform_shared.testing.factories import hash_test_password
 
 from app.services.user import totp_service
 
 
 _PASSWORD = "correct-password"
-_PASSWORD_HASH = PasswordHelper().hash(_PASSWORD)
+_PASSWORD_HASH = hash_test_password(_PASSWORD)
 
 
 # ---------------------------------------------------------------------------

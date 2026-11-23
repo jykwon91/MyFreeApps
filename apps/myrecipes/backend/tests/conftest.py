@@ -27,13 +27,15 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from platform_shared.testing.factories import install_fast_password_helper, make_api_user_factory
+
+# Swap argon2 for the fast test hasher before any app module is imported: a
+# module that binds ``fastapi_users.password.PasswordHelper`` earlier keeps the
+# real argon2 class, and its hashes can never be verified by login.
+install_fast_password_helper()
+
 from app.core.config import settings
 from app.main import app
-
-# Importing this installs the fast-password-helper monkeypatch at import time
-# (replaces argon2 ~250ms/hash with SHA-256 for test speed). See
-# platform_shared.testing.factories for the rationale + safety notes.
-from platform_shared.testing.factories import make_api_user_factory
 
 
 @pytest.fixture(autouse=True)
