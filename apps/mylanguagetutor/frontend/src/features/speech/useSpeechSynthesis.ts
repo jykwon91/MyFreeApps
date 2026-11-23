@@ -24,7 +24,8 @@ export interface SpeechSynthesisControls {
  */
 export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
   const supported = hasSpeechSynthesis();
-  const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
+  // A ref, so a voice that finishes loading mid-turn is used by the next sentence.
+  const voice = useRef<SpeechSynthesisVoice | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const pending = useRef(0);
   const generation = useRef(0);
@@ -35,7 +36,9 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
   useEffect(() => {
     if (!supported) return;
     const synth = window.speechSynthesis;
-    const pick = () => setVoice(voiceForLocale(synth.getVoices(), locale));
+    const pick = () => {
+      voice.current = voiceForLocale(synth.getVoices(), locale);
+    };
     pick();
     synth.addEventListener("voiceschanged", pick);
     return () => synth.removeEventListener("voiceschanged", pick);
@@ -59,7 +62,7 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
       if (!text) return;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = locale;
-      if (voice) utterance.voice = voice;
+      if (voice.current) utterance.voice = voice.current;
       utterance.rate = rate;
       const myGeneration = generation.current;
       const finished = () => {
@@ -75,7 +78,7 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
       setSpeaking(true);
       window.speechSynthesis.speak(utterance);
     },
-    [supported, locale, voice],
+    [supported, locale],
   );
 
   const speakAll = useCallback(
