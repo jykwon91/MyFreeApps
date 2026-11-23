@@ -4,9 +4,9 @@ import { PHOTO_IMPORT_COPY, PHOTO_IMPORT_TIME_HINT_DELAY_MS } from "@myrecipes/a
 
 /**
  * Full-section loading display for the synchronous (~5-30s) extraction call.
- * Deliberately offers no Cancel — cancelling the request would not stop the
- * server-side work, so it would imply a guarantee we can't keep. Focus moves
- * here on mount and the status is announced for screen readers.
+ * Offers no Cancel button, only leaving the page, which asks first and then
+ * aborts the request (as on the phone). Focus moves here on mount and the
+ * status is announced for screen readers.
  */
 export default function RecipeExtractionProgress() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,7 +34,7 @@ export default function RecipeExtractionProgress() {
       {showTimeHint ? (
         <p className="text-sm text-muted-foreground">{PHOTO_IMPORT_COPY.timeHint}</p>
       ) : null}
-      <p className="text-xs text-muted-foreground">Navigating away will cancel the import.</p>
+      <p className="text-xs text-muted-foreground">{PHOTO_IMPORT_COPY.leavingCancels}</p>
       <span className="sr-only" aria-live="polite">
         {showTimeHint ? "Still working — this can take up to 30 seconds." : ""}
       </span>

@@ -1,7 +1,7 @@
 /**
  * No-backend E2E for /recipes/import: a signed-in user picks a photo, it's read
  * into the editor for review, and creating it lands on the new recipe; a failed
- * read says why (the copy shared with the phone) and goes back to picking, and a
+ * read says why (the copy shared with the phone) and keeps the photo unless it's the problem, and a
  * draft with more rows than a recipe can have says so instead of posting.
  */
 import type { Page } from "@playwright/test";
@@ -73,7 +73,7 @@ test("reads a photo into the editor, then creates the recipe from it", async ({ 
   expect(posted).toEqual([expect.objectContaining({ title: DRAFT.title, source: DRAFT.source, prep_minutes: 10 })]);
 });
 
-test("a failed read says why and goes back to picking a photo", async ({ page }) => {
+test("a failed read says why; the photo stays unless it is what can't be read", async ({ page }) => {
   await stubSignedInShell(page);
   const { extracts } = await stubImport(page, [413, 429, 422, 200]);
 
@@ -88,10 +88,13 @@ test("a failed read says why and goes back to picking a photo", async ({ page })
   await page.getByRole("button", { name: "Extract recipe" }).click();
   await expect(page.getByText("You've imported a lot of photos recently. Give it a few minutes and try again.")).toBeVisible();
 
-  await pickPhoto(page);
+  // Busy isn't the photo's fault: it's still there to try again.
+  await expect(page.getByAltText(`Preview of ${PHOTO.name}`)).toBeVisible();
   await page.getByRole("button", { name: "Extract recipe" }).click();
   await expect(page.getByText("We couldn't read a recipe from that photo. Try a clearer or better-lit photo.")).toBeVisible();
 
+  // No recipe in it is: it's cleared, so another is picked.
+  await expect(page.getByAltText(`Preview of ${PHOTO.name}`)).toBeHidden();
   await pickPhoto(page);
   await page.getByRole("button", { name: "Extract recipe" }).click();
   await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
