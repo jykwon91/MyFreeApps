@@ -19,12 +19,15 @@ require a Claude key to boot).
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 from typing import Any
 
 from PIL import Image, ImageOps
 
+from platform_shared.core.image_pixel_limit import ensure_within_pixel_limit
+from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
 from platform_shared.extraction import (
     AnthropicFailureKind,
     ExtractionError,
@@ -34,6 +37,7 @@ from platform_shared.extraction import (
 )
 
 from app.core.config import settings
+from app.core.photo_import_constants import MAX_PHOTO_PIXELS
 from app.schemas.recipe.extraction_schemas import (
     DraftIngredient,
     DraftStep,
@@ -91,10 +95,23 @@ def is_configured() -> bool:
 def _normalize_image(file_bytes: bytes) -> bytes:
     """Honor EXIF orientation, downscale to the vision target, re-encode JPEG.
 
-    Raises on bytes PIL cannot decode (i.e. not a usable image) — the caller
-    maps that to "unreadable".
+    CPU-bound and blocking, so callers run it in a worker thread. Raises
+    ``ImagePixelLimitError`` when the header declares more than
+    ``MAX_PHOTO_PIXELS`` (checked before any pixel is decoded), and other
+    exceptions on bytes PIL cannot decode (i.e. not a usable image) — the
+    caller maps those to "unreadable".
     """
-    with Image.open(io.BytesIO(file_bytes), formats=_DECODABLE_FORMATS) as img:
+    try:
+        opened = Image.open(io.BytesIO(file_bytes), formats=_DECODABLE_FORMATS)
+    except Image.DecompressionBombError as exc:
+        # Pillow refuses outright at twice its own limit, before our check can run.
+        raise ImagePixelLimitError(MAX_PHOTO_PIXELS) from exc
+    with opened as img:
+        ensure_within_pixel_limit(img.width, img.height, MAX_PHOTO_PIXELS)
+        # JPEG only (a no-op for other formats): decode at the smallest DCT scale
+        # still at least the target, instead of every pixel. The box is square, so
+        # the EXIF rotation below can't make it too small; thumbnail sizes it exactly.
+        img.draft("RGB", (_MAX_EDGE_PX, _MAX_EDGE_PX))
         img = ImageOps.exif_transpose(img)  # apply camera rotation
         img = img.convert("RGB")  # flatten alpha / palette -> JPEG-safe
         img.thumbnail((_MAX_EDGE_PX, _MAX_EDGE_PX))  # in-place, keeps aspect ratio
@@ -106,12 +123,17 @@ def _normalize_image(file_bytes: bytes) -> bytes:
 async def extract_recipe_from_photo(
     file_bytes: bytes, content_type: str
 ) -> RecipeDraftResponse:
-    """Extract an editable recipe draft from a photo. Never persists anything."""
+    """Extract an editable recipe draft from a photo. Never persists anything.
+
+    Raises ``ImagePixelLimitError`` for a photo with too many pixels (HTTP 413).
+    """
     if not _extraction.is_configured():
         raise PhotoExtractionUnavailableError("Photo import is not configured.")
 
     try:
-        normalized = _normalize_image(file_bytes)
+        normalized = await asyncio.to_thread(_normalize_image, file_bytes)
+    except ImagePixelLimitError:
+        raise
     except Exception as exc:  # noqa: BLE001 — any decode failure means "not an image"
         logger.warning("Photo could not be decoded (content_type=%s): %s", content_type, exc)
         raise PhotoNotReadableError("That image could not be read.") from exc

@@ -38,12 +38,16 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_capped
+from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
+from platform_shared.core.upload_too_large_error import UploadTooLargeError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, current_user_optional
 from app.core.config import settings
 from app.core.invalid_lineage_key_error import InvalidLineageKeyError
 from app.core.invalid_recipe_cursor_error import InvalidRecipeCursorError
+from app.core.photo_import_constants import MAX_PHOTO_PIXELS
 from app.core.recipe_list_constants import DEFAULT_RECIPE_PAGE_SIZE, MAX_RECIPE_PAGE_SIZE
 from app.core.rate_limit import check_photo_import_rate_limit
 from app.db.session import get_db
@@ -218,15 +222,18 @@ async def extract_recipe_photo(
 
     The image is a transient input — it is never stored. The returned draft is
     for the user to review and edit; saving happens through ``POST /recipes``.
-    Status codes: 413 too large, 415 unsupported type, 422 unreadable / no
+    Status codes: 413 too large (bytes or pixels), 415 unsupported type, 422 unreadable / no
     recipe found, 429 per-IP budget spent, 503 photo import not available.
     """
-    content = await file.read()
+    try:
+        content = await read_upload_capped(file, settings.max_photo_upload_bytes)
+    except UploadTooLargeError as exc:
+        limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
+        raise HTTPException(
+            status_code=413, detail=f"Image exceeds the {limit_mb} MB limit."
+        ) from exc
     if not content:
         raise HTTPException(status_code=422, detail="The uploaded image is empty.")
-    if len(content) > settings.max_photo_upload_bytes:
-        limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
-        raise HTTPException(status_code=413, detail=f"Image exceeds the {limit_mb} MB limit.")
     if (file.content_type or "") not in photo_extraction_service.SUPPORTED_MEDIA_TYPES:
         raise HTTPException(
             status_code=415, detail="Unsupported image type. Use JPEG, PNG, or WebP."
@@ -241,6 +248,11 @@ async def extract_recipe_photo(
         ) from exc
     except photo_extraction_service.PhotoNotReadableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ImagePixelLimitError as exc:
+        megapixels = MAX_PHOTO_PIXELS // 1_000_000
+        raise HTTPException(
+            status_code=413, detail=f"Image exceeds the {megapixels} megapixel limit."
+        ) from exc
 
 
 @auth_router.patch("/{recipe_id}", response_model=RecipeDetailResponse)

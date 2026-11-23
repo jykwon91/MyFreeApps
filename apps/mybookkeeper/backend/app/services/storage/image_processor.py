@@ -24,6 +24,9 @@ from dataclasses import dataclass
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
 
+from platform_shared.core.image_pixel_limit import ensure_within_pixel_limit
+from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
+
 from app.services.storage.image_color import flatten_alpha, to_srgb
 
 # Pillow has no HEIC decoder of its own; this registers pillow-heif's opener
@@ -184,11 +187,10 @@ def strip_metadata(content: bytes, content_type: str) -> ProcessedImage:
         with Image.open(io.BytesIO(content)) as image:
             # Check the size from the header before decoding, so an oversized
             # image is refused without allocating its pixels.
-            pixel_count = image.width * image.height
-            if pixel_count > MAX_IMAGE_PIXELS:
-                raise ImageRejected(
-                    f"image dimensions exceed {MAX_IMAGE_PIXELS} pixels",
-                )
+            try:
+                ensure_within_pixel_limit(image.width, image.height, MAX_IMAGE_PIXELS)
+            except ImagePixelLimitError as exc:
+                raise ImageRejected(str(exc)) from exc
 
             decoded = (image.format or "").upper()
             pil_format = _DECODED_FORMAT_ALIASES.get(decoded, decoded)

@@ -1,8 +1,10 @@
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import {
   RECIPE_FORM_PROBLEMS as PROBLEMS,
+  RECIPE_INGREDIENTS_MAX,
   RECIPE_MINUTES_MAX,
   RECIPE_SERVINGS_MAX_LENGTH,
+  RECIPE_STEPS_MAX,
   STEP_INSTRUCTION_MAX_LENGTH,
 } from "../constants/recipeForm";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
@@ -44,13 +46,18 @@ export function recipeContentProblems(
     const tooLong = tooLongProblem(row.instruction.trim(), STEP_INSTRUCTION_MAX_LENGTH);
     if (tooLong) problems.stepRows[row.key] = tooLong;
   }
+  // Counted on the rows that are sent: blank ones are dropped.
+  const ingredientCount = ingredientInputs(values.ingredients, decimalSeparator).length;
+  const stepCount = stepInputs(values.steps).length;
+  if (ingredientCount > RECIPE_INGREDIENTS_MAX) problems.ingredients = PROBLEMS.ingredientsTooMany;
+  if (stepCount > RECIPE_STEPS_MAX) problems.steps = PROBLEMS.stepsTooMany;
   if (scope.lengthsOnly) return problems;
 
   const prep = minutesProblem(values.prepMinutes, decimalSeparator);
   if (prep) problems.prepMinutes = prep;
   const cook = minutesProblem(values.cookMinutes, decimalSeparator);
   if (cook) problems.cookMinutes = cook;
-  if (ingredientInputs(values.ingredients, decimalSeparator).length === 0) problems.ingredients = PROBLEMS.ingredientsRequired;
-  if (stepInputs(values.steps).length === 0) problems.steps = PROBLEMS.stepsRequired;
+  if (ingredientCount === 0) problems.ingredients = PROBLEMS.ingredientsRequired;
+  if (stepCount === 0) problems.steps = PROBLEMS.stepsRequired;
   return problems;
 }

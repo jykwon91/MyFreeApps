@@ -23,66 +23,9 @@ from app.services.recipe import photo_extraction_service as pes
 from platform_shared.extraction import (
     ExtractionError,
     ExtractionParseError,
-    ExtractionResponse,
     ExtractionService,
 )
-
-_GOOD_RECIPE = {
-    "title": "Lemon Butter Chicken",
-    "description": "A quick weeknight dinner.",
-    "source": "Julia Child",
-    "servings": "4",
-    "prep_minutes": 10,
-    "cook_minutes": 25,
-    "ingredients": [
-        {"name": "all-purpose flour", "quantity": "1 1/2", "unit": "cups", "note": "sifted"},
-        {"name": "eggs", "quantity": 3, "unit": None, "note": None},
-        {"name": "", "quantity": None, "unit": None, "note": "For the sauce:"},
-        {"name": "salt", "quantity": "to taste", "unit": None, "note": "to taste", "confidence": "x"},
-    ],
-    "steps": [{"instruction": "Season chicken."}, {"instruction": "   "}, "Cook through."],
-}
-
-
-def _image_bytes(fmt: str = "PNG", size: tuple[int, int] = (48, 48)) -> bytes:
-    buf = io.BytesIO()
-    Image.new("RGB", size, "white").save(buf, format=fmt)
-    return buf.getvalue()
-
-
-class _FakeExtraction:
-    """Stand-in for the shared ExtractionService — no network, no API key."""
-
-    def __init__(self, configured: bool, data: dict | None, raises: Exception | None) -> None:
-        self._configured = configured
-        self._data = data
-        self._raises = raises
-
-    def is_configured(self) -> bool:
-        return self._configured
-
-    async def extract_document(self, prompt, file_bytes, media_type, **kwargs):
-        if self._raises is not None:
-            raise self._raises
-        return ExtractionResponse(
-            data=self._data if self._data is not None else _GOOD_RECIPE,
-            input_tokens=10,
-            output_tokens=20,
-            total_tokens=30,
-            model=pes._MODEL,
-        )
-
-
-def _mock_extraction(
-    monkeypatch: pytest.MonkeyPatch,
-    *,
-    configured: bool = True,
-    data: dict | None = None,
-    raises: Exception | None = None,
-) -> None:
-    """Replace the module-level ExtractionService so no real API call happens."""
-    monkeypatch.setattr(pes, "_extraction", _FakeExtraction(configured, data, raises))
-
+from recipe_photo_helpers import GOOD_RECIPE, image_bytes, mock_extraction, photo_files
 
 _ANTHROPIC_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -104,24 +47,20 @@ def _real_service_raising(monkeypatch: pytest.MonkeyPatch, exc: Exception) -> No
     monkeypatch.setattr(pes, "_extraction", service)
 
 
-def _files(name: str = "recipe.png", content: bytes | None = None, ctype: str = "image/png"):
-    return {"file": (name, content if content is not None else _image_bytes(), ctype)}
-
-
 class TestExtractRecipePhoto:
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(self, client: AsyncClient) -> None:
-        resp = await client.post("/recipes/extract", files=_files())
+        resp = await client.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_happy_path_returns_coerced_draft(
         self, user_factory, as_user, monkeypatch
     ) -> None:
-        _mock_extraction(monkeypatch, data=_GOOD_RECIPE)
+        mock_extraction(monkeypatch, data=GOOD_RECIPE)
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
 
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -142,10 +81,10 @@ class TestExtractRecipePhoto:
 
     @pytest.mark.asyncio
     async def test_not_configured_returns_503(self, user_factory, as_user, monkeypatch) -> None:
-        _mock_extraction(monkeypatch, configured=False)
+        mock_extraction(monkeypatch, configured=False)
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 503
 
     @pytest.mark.asyncio
@@ -153,7 +92,7 @@ class TestExtractRecipePhoto:
         user = await user_factory()
         async with await as_user(user) as authed:
             resp = await authed.post(
-                "/recipes/extract", files=_files(name="r.txt", content=b"hello", ctype="text/plain")
+                "/recipes/extract", files=photo_files(name="r.txt", content=b"hello", ctype="text/plain")
             )
         assert resp.status_code == 415
 
@@ -161,7 +100,7 @@ class TestExtractRecipePhoto:
     async def test_empty_file_returns_422(self, user_factory, as_user) -> None:
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files(content=b""))
+            resp = await authed.post("/recipes/extract", files=photo_files(content=b""))
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
@@ -169,27 +108,27 @@ class TestExtractRecipePhoto:
         monkeypatch.setattr(settings, "max_photo_upload_bytes", 10)
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())  # a real PNG > 10 bytes
+            resp = await authed.post("/recipes/extract", files=photo_files())  # a real PNG > 10 bytes
         assert resp.status_code == 413
 
     @pytest.mark.asyncio
     async def test_undecodable_image_returns_422(self, user_factory, as_user, monkeypatch) -> None:
         # Declared image/png but the bytes aren't a real image -> PIL fails to
         # decode -> 422 (the extraction call is never reached).
-        _mock_extraction(monkeypatch)
+        mock_extraction(monkeypatch)
         user = await user_factory()
         async with await as_user(user) as authed:
             resp = await authed.post(
-                "/recipes/extract", files=_files(content=b"definitely-not-an-image")
+                "/recipes/extract", files=photo_files(content=b"definitely-not-an-image")
             )
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_parse_error_returns_422(self, user_factory, as_user, monkeypatch) -> None:
-        _mock_extraction(monkeypatch, raises=ExtractionParseError("not json"))
+        mock_extraction(monkeypatch, raises=ExtractionParseError("not json"))
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
@@ -210,18 +149,18 @@ class TestExtractRecipePhoto:
         monkeypatch.setattr(pes, "_extraction", service)
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_api_error_returns_503(self, user_factory, as_user, monkeypatch) -> None:
-        _mock_extraction(
+        mock_extraction(
             monkeypatch,
             raises=ExtractionError("overloaded", error_type="overloaded_error", status=529),
         )
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 503
 
     @pytest.mark.parametrize(
@@ -241,7 +180,7 @@ class TestExtractRecipePhoto:
         _real_service_raising(monkeypatch, provider_error)
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 503
         assert resp.json()["detail"] == "Photo import is not available right now."
 
@@ -255,19 +194,19 @@ class TestExtractRecipePhoto:
         )
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_no_recipe_found_returns_422(self, user_factory, as_user, monkeypatch) -> None:
         # The model's documented "nothing readable" all-empty response.
-        _mock_extraction(
+        mock_extraction(
             monkeypatch,
             data={"title": "", "ingredients": [], "steps": []},
         )
         user = await user_factory()
         async with await as_user(user) as authed:
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 422
 
 
@@ -276,27 +215,27 @@ class TestExtractRateLimit:
 
     @pytest.mark.asyncio
     async def test_under_budget_passes(self, user_factory, as_user, monkeypatch) -> None:
-        _mock_extraction(monkeypatch)
+        mock_extraction(monkeypatch)
         user = await user_factory()
         async with await as_user(user) as authed:
             for _ in range(20):
-                assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
+                assert (await authed.post("/recipes/extract", files=photo_files())).status_code == 200
 
     @pytest.mark.asyncio
     async def test_over_budget_returns_429_without_calling_extractor(
         self, user_factory, as_user, monkeypatch
     ) -> None:
-        _mock_extraction(monkeypatch)
+        mock_extraction(monkeypatch)
         user = await user_factory()
         async with await as_user(user) as authed:
             for _ in range(20):
-                assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
+                assert (await authed.post("/recipes/extract", files=photo_files())).status_code == 200
 
             async def _boom(*args, **kwargs):
                 raise AssertionError("extractor called while rate limited")
 
             monkeypatch.setattr(pes, "extract_recipe_from_photo", _boom)
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
 
         assert resp.status_code == 429
         assert resp.json()["detail"] == RATE_LIMIT_GENERIC_DETAIL
@@ -306,13 +245,13 @@ class TestExtractRateLimit:
         self, user_factory, as_user, monkeypatch
     ) -> None:
         """An exhausted budget rejects even an oversize upload with 429, not 413."""
-        _mock_extraction(monkeypatch)
+        mock_extraction(monkeypatch)
         user = await user_factory()
         async with await as_user(user) as authed:
             for _ in range(20):
-                await authed.post("/recipes/extract", files=_files())
+                await authed.post("/recipes/extract", files=photo_files())
             monkeypatch.setattr(settings, "max_photo_upload_bytes", 10)
-            resp = await authed.post("/recipes/extract", files=_files())
+            resp = await authed.post("/recipes/extract", files=photo_files())
         assert resp.status_code == 429
 
     @pytest.mark.asyncio
@@ -321,18 +260,18 @@ class TestExtractRateLimit:
     ) -> None:
         from app.core.rate_limit import discovery_limiter
 
-        _mock_extraction(monkeypatch)
+        mock_extraction(monkeypatch)
         for _ in range(20):
             discovery_limiter.check("127.0.0.1")
         user = await user_factory()
         async with await as_user(user) as authed:
-            assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
+            assert (await authed.post("/recipes/extract", files=photo_files())).status_code == 200
 
 
 class TestPhotoFormats:
     @pytest.mark.parametrize("fmt", ["JPEG", "PNG", "WEBP"])
     def test_supported_formats_become_jpeg(self, fmt: str) -> None:
-        result = Image.open(io.BytesIO(pes._normalize_image(_image_bytes(fmt))))
+        result = Image.open(io.BytesIO(pes._normalize_image(image_bytes(fmt))))
         assert result.format == "JPEG"
 
     def test_multi_frame_phone_jpeg_is_accepted(self) -> None:
@@ -347,17 +286,17 @@ class TestPhotoFormats:
     @pytest.mark.parametrize("fmt", ["TIFF", "GIF", "BMP"])
     def test_other_formats_are_not_decoded(self, fmt: str) -> None:
         with pytest.raises(UnidentifiedImageError):
-            pes._normalize_image(_image_bytes(fmt))
+            pes._normalize_image(image_bytes(fmt))
 
     @pytest.mark.asyncio
     async def test_other_format_declared_as_png_returns_422(
         self, user_factory, as_user, monkeypatch
     ) -> None:
-        _mock_extraction(monkeypatch, data=_GOOD_RECIPE)
+        mock_extraction(monkeypatch, data=GOOD_RECIPE)
         user = await user_factory()
         async with await as_user(user) as authed:
             resp = await authed.post(
-                "/recipes/extract", files=_files(content=_image_bytes("TIFF"), ctype="image/png")
+                "/recipes/extract", files=photo_files(content=image_bytes("TIFF"), ctype="image/png")
             )
         assert resp.status_code == 422, resp.text
 

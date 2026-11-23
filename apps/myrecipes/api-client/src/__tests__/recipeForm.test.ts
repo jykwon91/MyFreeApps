@@ -3,6 +3,8 @@ import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import {
   RECIPE_FORM_PROBLEMS as PROBLEMS,
   RECIPE_DESCRIPTION_MAX_LENGTH,
+  RECIPE_INGREDIENTS_MAX,
+  RECIPE_STEPS_MAX,
   RECIPE_TITLE_MAX_LENGTH,
   STEP_INSTRUCTION_MAX_LENGTH,
 } from "../constants/recipeForm";
@@ -89,6 +91,27 @@ describe("recipeFormProblems", () => {
       steps: PROBLEMS.stepsRequired,
     });
     expect(firstRecipeFormProblem(problems)).toBe(PROBLEMS.titleRequired);
+  });
+
+  it("says when there are more ingredients or steps than a recipe can have, straight away", () => {
+    const ingredients = Array.from({ length: RECIPE_INGREDIENTS_MAX + 1 }, (_, i) => ingredient(`i${i}`, { name: `item ${i}` }));
+    const steps = Array.from({ length: RECIPE_STEPS_MAX + 1 }, (_, i) => ({ ...emptyStepRow(`s${i}`), instruction: `Step ${i}.` }));
+    const problems = recipeFormProblems(form({ ingredients, steps }), EN, { lengthsOnly: true });
+    expect(problems.ingredients).toBe(PROBLEMS.ingredientsTooMany);
+    expect(problems.steps).toBe(PROBLEMS.stepsTooMany);
+    expect(PROBLEMS.ingredientsTooMany).toContain(String(RECIPE_INGREDIENTS_MAX));
+  });
+
+  it("counts only the rows that are sent, so the cap itself still saves", () => {
+    const ingredients = [
+      ...Array.from({ length: RECIPE_INGREDIENTS_MAX }, (_, i) => ingredient(`i${i}`, { name: `item ${i}` })),
+      ingredient("blank"),
+    ];
+    const steps = [
+      ...Array.from({ length: RECIPE_STEPS_MAX }, (_, i) => ({ ...emptyStepRow(`s${i}`), instruction: `Step ${i}.` })),
+      emptyStepRow("blank"),
+    ];
+    expect(recipeFormProblems(form({ ingredients, steps }), EN)).toEqual({ rows: {}, stepRows: {} });
   });
 
   it("won't quietly drop an amount that isn't a number, or one with no ingredient named", () => {
