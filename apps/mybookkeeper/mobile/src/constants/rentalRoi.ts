@@ -37,3 +37,6 @@ export const RENTAL_ROI_MESSAGES = {
 
 /** Skeleton row count for the property cards. */
 export const RENTAL_ROI_SKELETON_CARDS = [0, 1, 2] as const;
+
+/** Least width of the target input at the default text size; it grows with the text size so the typed number is never cut off. */
+export const RENTAL_ROI_TARGET_INPUT_MIN_WIDTH = 72;
