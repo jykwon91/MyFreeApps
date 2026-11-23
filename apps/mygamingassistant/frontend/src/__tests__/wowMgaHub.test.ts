@@ -160,7 +160,7 @@ describe("the MGA minimap button", () => {
     expect(lines.filter((l) => l.startsWith("tip: "))).toEqual(["tip: MGA", "tip: Click: menu · Right-click: settings"]);
   });
 
-  it("starts on the minimap's ring and follows the cursor around it, saving where it was left", () => {
+  it("starts on the left of the minimap ring, clear of where Questie and other LibDBIcon buttons sit, and follows the cursor around it, saving where it was left", () => {
     const lines = run(`registerAll(); fire("PLAYER_LOGIN")
       local b = MGAHubMinimapButton
       ${say("string.format('%.0f,%.0f', b.point[4], b.point[5])")}
@@ -170,7 +170,7 @@ describe("the MGA minimap button", () => {
       b.scripts.OnDragStop(b)
       ${say("string.format('%.0f,%.0f %s', b.point[4], b.point[5], tostring(b.scripts.OnUpdate))")}
       ${say("string.format('%.2f', MGAHubSettings.angle)")}`);
-    expect(lines.slice(-3)).toEqual(["chat: -66,-46", "chat: 80,0 nil", "chat: 0.00"]);
+    expect(lines.slice(-3)).toEqual(["chat: -77,21", "chat: 80,0 nil", "chat: 0.00"]);
   });
 
   it("goes back where it was saved at the next login, and hides when asked", () => {
