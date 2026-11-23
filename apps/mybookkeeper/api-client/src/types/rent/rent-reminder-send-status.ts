@@ -8,9 +8,13 @@
  *  - `failed`: gave up. It didn't go out, or may have with nothing to
  *    confirm it (`error_code` says which)
  */
+export const RENT_REMINDER_SEND_STATUSES = {
+  QUEUED: "queued",
+  SENT_TO_PROVIDER: "sent_to_provider",
+  SENT: "sent",
+  DELIVERED: "delivered",
+  FAILED: "failed",
+} as const;
+
 export type RentReminderSendStatus =
-  | "queued"
-  | "sent_to_provider"
-  | "sent"
-  | "delivered"
-  | "failed";
+  (typeof RENT_REMINDER_SEND_STATUSES)[keyof typeof RENT_REMINDER_SEND_STATUSES];
