@@ -47,10 +47,10 @@ def _written_event_types() -> list[tuple[str, int, ast.expr | None]]:
             "**/services/system/event_service.py"
         ):
             continue
-        tree = ast.parse(path.read_text(), filename=str(path))
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and _writer_name(node) is not None:
-                rel = str(path.relative_to(_APP_DIR.parent))
+                rel = path.relative_to(_APP_DIR.parent).as_posix()
                 found.append((rel, node.lineno, _event_type_arg(node)))
     return found
 

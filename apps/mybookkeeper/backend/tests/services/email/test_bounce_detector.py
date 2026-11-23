@@ -252,7 +252,7 @@ class TestRealWorldFixtures:
     """End-to-end sanity tests against sanitized real-world bounce bodies."""
 
     def test_postfix_dsn_fixture_filters_via_body(self) -> None:
-        body = (FIXTURES_DIR / "postfix_dsn.txt").read_text()
+        body = (FIXTURES_DIR / "postfix_dsn.txt").read_text(encoding="utf-8")
         result = BounceDetector().detect(
             _signals(
                 from_address="MAILER-DAEMON@mail.example.com",
@@ -264,7 +264,7 @@ class TestRealWorldFixtures:
         assert result.filtered is True
 
     def test_postfix_body_alone_filters(self) -> None:
-        body = (FIXTURES_DIR / "postfix_dsn.txt").read_text()
+        body = (FIXTURES_DIR / "postfix_dsn.txt").read_text(encoding="utf-8")
         # Even with neutral From/subject and no headers, the DSN body
         # fingerprints should still trip the detector.
         result = BounceDetector().detect(
@@ -279,7 +279,7 @@ class TestRealWorldFixtures:
         assert result.reason == "body_dsn_fingerprint"
 
     def test_exchange_undeliverable_subject_filters(self) -> None:
-        body = (FIXTURES_DIR / "exchange_undeliverable.txt").read_text()
+        body = (FIXTURES_DIR / "exchange_undeliverable.txt").read_text(encoding="utf-8")
         result = BounceDetector().detect(
             _signals(
                 from_address="postmaster@contoso.example",
@@ -291,7 +291,7 @@ class TestRealWorldFixtures:
         assert result.filtered is True
 
     def test_vacation_autoreply_filters_via_header(self) -> None:
-        body = (FIXTURES_DIR / "vacation_autoreply.txt").read_text()
+        body = (FIXTURES_DIR / "vacation_autoreply.txt").read_text(encoding="utf-8")
         result = BounceDetector().detect(
             _signals(
                 from_address="Person <person@example.com>",
@@ -307,7 +307,7 @@ class TestRealWorldFixtures:
         # If the auto-reply doesn't set the Auto-Submitted header (some
         # clients don't), and the subject is innocuous, we err on the side
         # of letting it through — better than dropping a real invoice.
-        body = (FIXTURES_DIR / "vacation_autoreply.txt").read_text()
+        body = (FIXTURES_DIR / "vacation_autoreply.txt").read_text(encoding="utf-8")
         result = BounceDetector().detect(
             _signals(
                 from_address="Person <person@example.com>",

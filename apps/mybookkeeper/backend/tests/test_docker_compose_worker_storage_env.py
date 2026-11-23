@@ -34,7 +34,7 @@ def _service_env_keys(service: dict) -> set[str]:
 
 
 def _load_services() -> dict:
-    return yaml.safe_load(_COMPOSE.read_text())["services"]
+    return yaml.safe_load(_COMPOSE.read_text(encoding="utf-8"))["services"]
 
 
 def test_api_declares_minio_env() -> None:

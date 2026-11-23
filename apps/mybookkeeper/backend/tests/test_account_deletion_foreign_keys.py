@@ -314,11 +314,11 @@ def test_every_excused_stored_file_column_exists_and_has_a_reason() -> None:
 def test_every_table_is_loaded_with_the_models_package() -> None:
     """The shared records check reads the schema, so it can't see an unloaded model."""
     models_dir = Path(app.models.__file__).parent
-    loaded = (models_dir / "__init__.py").read_text()
+    loaded = (models_dir / "__init__.py").read_text(encoding="utf-8")
     defining_a_table = [
         ".".join(path.relative_to(models_dir).with_suffix("").parts)
         for path in models_dir.rglob("*.py")
-        if "__tablename__" in path.read_text()
+        if "__tablename__" in path.read_text(encoding="utf-8")
     ]
     assert [module for module in defining_a_table if f"app.models.{module} " not in loaded] == []
 

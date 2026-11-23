@@ -31,7 +31,7 @@ def _load_fixture(filename: str) -> tuple[str, str]:
     Fixture format: first line is ``Subject: …``, second is ``From: …``,
     rest is body.
     """
-    text = (FIXTURES_DIR / filename).read_text()
+    text = (FIXTURES_DIR / filename).read_text(encoding="utf-8")
     lines = text.splitlines()
     subject = ""
     from_address = ""

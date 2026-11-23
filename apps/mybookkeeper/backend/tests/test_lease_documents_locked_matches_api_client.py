@@ -20,7 +20,7 @@ API_CLIENT = Path(__file__).parents[2] / "api-client" / "src"
 
 
 def _string(constant: str) -> str:
-    source = (API_CLIENT / "constants" / "leaseDocumentsLocked.ts").read_text()
+    source = (API_CLIENT / "constants" / "leaseDocumentsLocked.ts").read_text(encoding="utf-8")
     literal = source.split(f"export const {constant} =")[1].split(";")[0]
     return "".join(re.findall(r'"([^"]*)"', literal))
 

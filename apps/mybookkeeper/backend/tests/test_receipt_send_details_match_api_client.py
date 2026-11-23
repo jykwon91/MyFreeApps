@@ -22,10 +22,10 @@ def _server_codes() -> set[str]:
 def test_every_send_code_is_in_the_api_client_type() -> None:
     codes = _server_codes()
     assert len(codes) == 7
-    assert set(re.findall(r'"(\w+)"', CODE_TYPE.read_text())) == codes
+    assert set(re.findall(r'"(\w+)"', CODE_TYPE.read_text(encoding="utf-8"))) == codes
 
 
 def test_every_send_code_has_a_message() -> None:
-    block = MESSAGES.read_text().split("RECEIPT_SEND_ERROR_MESSAGES")[1].split("};")[0]
+    block = MESSAGES.read_text(encoding="utf-8").split("RECEIPT_SEND_ERROR_MESSAGES")[1].split("};")[0]
     explained = set(re.findall(r"^\s+(\w+):", block, re.MULTILINE))
     assert explained == _server_codes()

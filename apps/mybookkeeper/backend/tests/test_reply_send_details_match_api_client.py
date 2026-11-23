@@ -12,6 +12,6 @@ def test_api_client_has_the_same_reply_send_codes() -> None:
         name: value for name, value in vars(reply_send_error_details).items()
         if name.isupper() and isinstance(value, str)
     }
-    client = dict(re.findall(r'export const (\w+) = "(\w+)";', DETAILS.read_text()))
+    client = dict(re.findall(r'export const (\w+) = "(\w+)";', DETAILS.read_text(encoding="utf-8")))
     assert len(server) == 7
     assert client == server
