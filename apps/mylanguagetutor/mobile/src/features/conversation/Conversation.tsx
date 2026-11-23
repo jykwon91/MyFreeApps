@@ -9,6 +9,7 @@ import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, ty
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
 import { useOnBackground } from "../../hooks/useOnBackground";
 import { useOnDeviceRecognition } from "../../hooks/useOnDeviceRecognition";
+import { useCorrectionsAnnouncement } from "../../hooks/useCorrectionsAnnouncement";
 import { useOnResume } from "../../hooks/useOnResume";
 import { useSpeechInput } from "../../hooks/useSpeechInput";
 import { useTutorVoice } from "../../hooks/useTutorVoice";
@@ -32,7 +33,7 @@ import TurnErrorBanner from "./TurnErrorBanner";
  * read and hear the reply as it streams, see corrections, answer again. Speaking is tap to talk: the
  * phone stops listening once the learner goes quiet and sends what it heard; tapping the microphone
  * while the tutor speaks interrupts it. Screen readers are also told each finished
- * reply, as the website's live region tells them: TalkBack speaks on its own audio stream while the
+ * reply, and then its suggestions, the note that they didn't arrive and the retry prompt, as the website's live region tells them: TalkBack speaks on its own audio stream while the
  * tutor's voice plays as media, so a learner who has the media volume down still hears it. Going to the background stops a reply mid-stream as a
  * dropped connection would, and the learner tries again from there, as on the website; a reply that
  * has fully arrived is left to finish, and once the app is back it is waited on while its connection
@@ -82,6 +83,7 @@ export default function Conversation({ language, scenario, level }: Conversation
   useOnBackground(synthesis.cancel);
   useOnResume(session.resume, 0);
   useAnnouncement(latestReply(session.entries), "polite");
+  useCorrectionsAnnouncement(session.entries);
   useAnnouncement(phaseAnnouncement(voice.phase, voice.view), "polite");
   const { awake, onActivity } = useAwakeUntilIdle(busy || recognition.listening);
 
