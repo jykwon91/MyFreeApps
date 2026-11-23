@@ -3,10 +3,11 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
+from app.core.permissions import require_write_access
 from app.schemas.welcome_manuals.welcome_manual_section_image_reorder_request import (
     WelcomeManualSectionImageReorderRequest,
 )
@@ -56,7 +57,7 @@ async def upload_section_images(
     except welcome_manual_section_image_service.TooManyImagesError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except welcome_manual_section_image_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
     except welcome_manual_section_image_service.ImageRejected as exc:
         # 413 (payload too large) for size; 415 for everything else.
         status = 413 if "MB" in exc.reason else 415

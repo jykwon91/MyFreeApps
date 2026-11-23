@@ -3,4 +3,7 @@ from __future__ import annotations
 
 
 class TemplateStorageUnavailableError(RuntimeError):
-    pass
+    """Routes reply with ``STORAGE_UNAVAILABLE_MESSAGE``, never this exception's text.
+
+    The underlying storage error is the ``__cause__``; it is logged, not sent.
+    """

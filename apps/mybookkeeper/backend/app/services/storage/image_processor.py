@@ -18,6 +18,7 @@ That keeps tests runnable on dev machines without libmagic installed.
 from __future__ import annotations
 
 import io
+import logging
 import re
 from dataclasses import dataclass
 
@@ -27,8 +28,14 @@ from pillow_heif import register_heif_opener
 from platform_shared.core.image_pixel_limit import ensure_within_pixel_limit
 from platform_shared.core.image_pixel_limit_error import ImagePixelLimitError
 
+from app.core.image_rejection_messages import (
+    IMAGE_PROCESSING_FAILED_REASON,
+    IMAGE_UNDECODABLE_REASON,
+)
 from app.core.upload_size_messages import exceeds_limit_message
 from app.services.storage.image_color import flatten_alpha, to_srgb
+
+logger = logging.getLogger(__name__)
 
 # Pillow has no HEIC decoder of its own; this registers pillow-heif's opener
 # so `Image.open` can read HEIC/HEIF (decoded format name "HEIF").
@@ -237,8 +244,10 @@ def strip_metadata(content: bytes, content_type: str) -> ProcessedImage:
                 content_type=stored_content_type(content_type),
             )
     except UnidentifiedImageError as exc:
-        raise ImageRejected(f"cannot decode image: {exc}") from exc
+        logger.warning("Image rejected: Pillow couldn't identify it: %s", exc)
+        raise ImageRejected(IMAGE_UNDECODABLE_REASON) from exc
     except ImageRejected:
         raise
     except Exception as exc:  # noqa: BLE001 - PIL throws a wide variety
-        raise ImageRejected(f"image processing failed: {exc}") from exc
+        logger.warning("Image rejected: processing failed", exc_info=True)
+        raise ImageRejected(IMAGE_PROCESSING_FAILED_REASON) from exc

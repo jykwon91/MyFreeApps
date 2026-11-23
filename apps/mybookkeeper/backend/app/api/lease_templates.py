@@ -22,10 +22,12 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 
 from app.core.config import settings
 from app.core.context import RequestContext
+from app.core.lease_template_constants import STORAGE_UNAVAILABLE_MESSAGE
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import lease_placeholder_suggest_limiter
 from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
@@ -109,11 +111,11 @@ async def create_template(
     except lease_template_service.TemplateNoFilesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except lease_template_service.TemplateStorageUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_MESSAGE) from exc
     except lease_template_upload_service.TemplateWriteConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
 
 
 @router.get("", response_model=LeaseTemplateListResponse)
@@ -315,7 +317,7 @@ async def suggest_placeholders(
     except StoredFileMissingError as exc:
         raise HTTPException(status_code=409, detail=MISSING_TEMPLATE_FILE_DETAIL) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc
 
 
 @router.post(
@@ -348,8 +350,8 @@ async def replace_files(
     except lease_template_service.TemplateNoFilesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except lease_template_service.TemplateStorageUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_MESSAGE) from exc
     except lease_template_upload_service.TemplateWriteConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise storage_not_configured_http_exception(exc) from exc

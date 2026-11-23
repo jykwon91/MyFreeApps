@@ -102,12 +102,18 @@ _research = ResearchService(
 class DiscoveryUnavailableError(RuntimeError):
     """Discovery cannot run right now (not configured, or upstream error).
 
-    Maps to HTTP 503 — retryable, distinct from "nothing found".
+    Maps to HTTP 503 — retryable, distinct from "nothing found". The message
+    is the reply's ``detail``: raise it only with our fixed copy, never with
+    the provider's or a library's text.
     """
 
 
 class DiscoveryFailedError(RuntimeError):
-    """The research turn produced nothing usable. Maps to HTTP 422."""
+    """The research turn produced nothing usable. Maps to HTTP 422.
+
+    The message is the reply's ``detail``: raise it only with our fixed copy,
+    never with the provider's or a library's text.
+    """
 
 
 def is_configured() -> bool:

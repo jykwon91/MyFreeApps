@@ -13,10 +13,16 @@ Coverage:
 from __future__ import annotations
 
 import io
+import logging
 
 import pytest
 from PIL import Image
 
+from app.core.image_rejection_messages import (
+    IMAGE_PROCESSING_FAILED_REASON,
+    IMAGE_UNDECODABLE_REASON,
+)
+from app.services.storage import image_processor
 from app.services.storage.image_processor import (
     ALLOWED_PHOTO_MIME_TYPES,
     MAX_IMAGE_BYTES,
@@ -242,6 +248,36 @@ class TestStripMetadata:
     def test_undecodable_image_is_rejected_not_passed_through(self) -> None:
         with pytest.raises(ImageRejected):
             strip_metadata(b"\xff\xd8\xff" + b"MZ\x90\x00" * 100, "image/jpeg")
+
+    def test_undecodable_reason_is_fixed_copy_not_pillows_message(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        with (
+            caplog.at_level(logging.WARNING, logger="app.services.storage.image_processor"),
+            pytest.raises(ImageRejected) as exc_info,
+        ):
+            strip_metadata(b"\xff\xd8\xff" + b"MZ\x90\x00" * 100, "image/jpeg")
+
+        assert exc_info.value.reason == IMAGE_UNDECODABLE_REASON
+        assert any("BytesIO" in r.getMessage() for r in caplog.records)
+
+    def test_processing_failure_reason_is_fixed_copy_not_the_error_text(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        def broken_open(_fp: object) -> object:
+            raise OSError("/var/lib/mbk/tmp/upload-91.jpg: disk quota exceeded")
+
+        monkeypatch.setattr(image_processor.Image, "open", broken_open)
+        with (
+            caplog.at_level(logging.WARNING, logger="app.services.storage.image_processor"),
+            pytest.raises(ImageRejected) as exc_info,
+        ):
+            strip_metadata(_build_jpeg(), "image/jpeg")
+
+        assert exc_info.value.reason == IMAGE_PROCESSING_FAILED_REASON
+        assert any(
+            r.exc_info and "disk quota" in str(r.exc_info[1]) for r in caplog.records
+        )
 
     def test_image_that_decodes_as_another_format_is_rejected(self) -> None:
         with pytest.raises(ImageRejected) as exc_info:

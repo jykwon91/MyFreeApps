@@ -15,6 +15,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from platform_shared.api.storage_http import storage_not_configured_http_exception
 from platform_shared.core.capped_upload import read_upload_or_reject
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,10 +115,7 @@ async def upload_document(
         status_code = 413 if "exceeds" in msg else 415
         raise HTTPException(status_code=status_code, detail=msg) from exc
     except StorageNotConfiguredError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="File storage is not available — contact support",
-        ) from exc
+        raise storage_not_configured_http_exception(exc) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -239,10 +237,7 @@ async def download_document(
     try:
         url = await document_service.presigned_download_url(db, user.id, document_id)
     except StorageNotConfiguredError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="File storage is not available — contact support",
-        ) from exc
+        raise storage_not_configured_http_exception(exc) from exc
     if url is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return {"url": url}
