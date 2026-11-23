@@ -31,6 +31,7 @@ from app.services.discovery import discovery_embedding_service
 from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.system.admin_user_service_factory import shared_admin_user_service
+from app.services.user import account_deletion_service
 
 
 async def _on_startup() -> None:
@@ -155,6 +156,7 @@ app.include_router(
         user_read=UserRead,
         user_update=UserUpdate,
         current_strict_superuser=current_strict_superuser,
+        prepare_deletion=account_deletion_service.prepare_deletion,
     ),
     prefix="/users",
     tags=["users"],

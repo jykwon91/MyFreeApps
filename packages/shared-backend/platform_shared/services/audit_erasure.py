@@ -2,10 +2,12 @@
 
 The audit listener copies every changed value into ``audit_logs``, and deleting
 the user row adds a final snapshot of it (email, name). ``audit_logs`` has no
-foreign key to anything, so none of that goes with the account. The shared
-``DELETE /users/me`` route calls :func:`capture_deletion_scope` before the
-app's ``prepare_deletion`` and :func:`erase_audit_history` after
-``delete_account``, in the same transaction, so every app gets the erasure.
+foreign key to anything, so none of that goes with the account. Both shared
+deletion routes, ``DELETE /users/me`` and the admin's ``DELETE /users/{id}``, run
+:func:`~platform_shared.services.account_deletion.delete_account_and_erase_history`,
+which calls :func:`capture_deletion_scope` before the app's ``prepare_deletion``
+and :func:`erase_audit_history` after ``delete_account``, in the same
+transaction, so every app gets the erasure whoever deletes the account.
 
 Erasing overwrites ``old_value`` and ``new_value`` with ``[erased]``; a NULL or
 the listener's ``"***"`` mask is left as it is. The table, record id, field,

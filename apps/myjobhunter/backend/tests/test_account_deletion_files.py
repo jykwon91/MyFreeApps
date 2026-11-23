@@ -164,7 +164,7 @@ async def test_a_failed_deletion_removes_no_files(db: AsyncSession, storage: Mag
     user, _ = await _user_with_files(db, "kept")
 
     with patch(
-        "platform_shared.api.account_deletion_router.delete_account",
+        "platform_shared.services.account_deletion.delete_account",
         side_effect=RuntimeError("db failure"),
     ):
         with pytest.raises(RuntimeError, match="db failure"):
