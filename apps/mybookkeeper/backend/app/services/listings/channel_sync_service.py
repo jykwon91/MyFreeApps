@@ -9,10 +9,11 @@ DB-stored blackouts for that (listing, source) pair:
 - Existing UID with new dates → update in place
 - UID disappears → delete (cancellation)
 
-On HTTP / parse failure we set ``last_import_error`` on the
-channel_listing row and PRESERVE the existing blackouts — better to
-hold a few stale dates than to over-block by accident or under-block
-during a transient outage.
+On HTTP / parse failure we log the real error and set ``last_import_error``
+on the channel_listing row to fixed copy chosen by the error's class (the
+error's own text names the feed's host or a private IP), and PRESERVE
+the existing blackouts — better to hold a few stale dates than to
+over-block by accident or under-block during a transient outage.
 
 The poll goes through ``platform_shared.core.capped_fetch`` (SSRF guard on
 every hop, one overall deadline, a streamed size cap; limits in
@@ -45,6 +46,7 @@ from app.core.url_redaction import redact_url, redact_urls_in_text
 from app.db.session import unit_of_work
 from app.models.listings.channel_listing import ChannelListing
 from app.repositories import channel_listing_repo, listing_blackout_repo
+from app.services.listings.channel_import_failure_message import import_failure_message
 from app.services.listings.ical_parser import parse_ical_blackouts
 
 logger = logging.getLogger(__name__)
@@ -52,7 +54,7 @@ logger = logging.getLogger(__name__)
 ImportErrorCategory = Literal["transient", "auth", "config", "unknown"]
 
 def _failure_message(exc: BaseException) -> str:
-    """Exception text safe to log and store: httpx embeds the full feed URL in it."""
+    """Exception text safe to log: httpx embeds the full feed URL in it."""
     return redact_urls_in_text(f"{type(exc).__name__}: {exc}")
 
 
@@ -122,21 +124,19 @@ async def poll_one(
         payload = await _fetch(channel_listing.ical_import_url, client=client)
         parsed = parse_ical_blackouts(payload)
     except CappedFetchError as exc:
-        # fetch_capped already logged the reason and host. Its message names
-        # the host only; the redacted feed keeps the stored error in the same
-        # form as every other branch.
+        # fetch_capped already logged the reason and host; its message names
+        # the host only.
         category = _category_for(exc)
-        message = f"{type(exc).__name__} ({feed}): {exc}"
         logger.warning(
-            "iCal poll %s for channel_listing=%s url=%s: %s",
-            category, channel_listing.id, feed, message,
+            "iCal poll %s for channel_listing=%s url=%s: %s: %s",
+            category, channel_listing.id, feed, type(exc).__name__, exc,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
                 db,
                 channel_listing.id,
                 last_imported_at=datetime.now(timezone.utc),
-                last_import_error=message[:500],
+                last_import_error=import_failure_message(exc),
                 last_import_error_category=category,
             )
         return
@@ -155,7 +155,7 @@ async def poll_one(
                 db,
                 channel_listing.id,
                 last_imported_at=datetime.now(timezone.utc),
-                last_import_error=message[:500],
+                last_import_error=import_failure_message(exc),
                 last_import_error_category=category,
             )
         return
@@ -175,7 +175,7 @@ async def poll_one(
                 db,
                 channel_listing.id,
                 last_imported_at=datetime.now(timezone.utc),
-                last_import_error=message[:500],
+                last_import_error=import_failure_message(exc),
                 last_import_error_category=category,
             )
         return

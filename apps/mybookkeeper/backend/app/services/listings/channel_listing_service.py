@@ -37,10 +37,7 @@ from app.schemas.listings.channel_listing_update_request import (
     ChannelListingUpdateRequest,
 )
 from app.schemas.listings.channel_response import ChannelResponse
-
-
-class ListingNotFoundError(LookupError):
-    """Listing missing, soft-deleted, or out of caller's organization."""
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 
 
 class ChannelNotFoundError(LookupError):

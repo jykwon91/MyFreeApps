@@ -46,9 +46,11 @@ from app.schemas.welcome_manuals.welcome_manual_summary import WelcomeManualSumm
 from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 from app.services.welcome_manuals.section_image_response_builder import (
     attach_presigned_urls,
 )
+from app.services.welcome_manuals.welcome_manual_scope import ManualNotFoundError
 
 
 async def _build_section_responses(sections, images, fields) -> list[WelcomeManualSectionResponse]:
@@ -109,13 +111,13 @@ async def get_manual(
 ) -> WelcomeManualResponse:
     """Load a single manual with its sections.
 
-    Raises LookupError if the manual does not exist, is soft-deleted, or
-    belongs to a different organization.
+    Raises ManualNotFoundError if the manual does not exist, is soft-deleted,
+    or belongs to a different organization.
     """
     async with AsyncSessionLocal() as db:
         manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
         if manual is None:
-            raise LookupError(f"Welcome manual {manual_id} not found")
+            raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
         section_ids = [s.id for s in sections]
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
@@ -173,13 +175,13 @@ async def create_manual(
     If ``property_id`` is supplied, verifies it belongs to the same org before
     insert. When ``seed_default_sections`` is True, pre-seeds the stub sections.
 
-    Raises LookupError if ``property_id`` is not in the caller's org.
+    Raises PropertyNotFoundError if ``property_id`` is not in the caller's org.
     """
     async with unit_of_work() as db:
         if payload.property_id is not None:
             prop = await property_repo.get_by_id(db, payload.property_id, organization_id)
             if prop is None:
-                raise LookupError(f"Property {payload.property_id} not found")
+                raise PropertyNotFoundError(f"Property {payload.property_id} not found")
 
         manual = await welcome_manual_repo.create_manual(
             db,
@@ -228,9 +230,9 @@ async def update_manual(
 ) -> WelcomeManualResponse:
     """Apply allowlisted updates to a manual.
 
-    Raises LookupError if the manual does not exist / is soft-deleted /
-    belongs to a different org, or if the update re-tags it to a property
-    outside the caller's organization.
+    Raises ManualNotFoundError if the manual does not exist / is soft-deleted
+    / belongs to a different org, or PropertyNotFoundError if the update
+    re-tags it to a property outside the caller's organization.
     """
     fields = payload.to_update_dict()
 
@@ -239,13 +241,13 @@ async def update_manual(
         if new_property_id is not None:
             prop = await property_repo.get_by_id(db, new_property_id, organization_id)
             if prop is None:
-                raise LookupError(f"Property {new_property_id} not found")
+                raise PropertyNotFoundError(f"Property {new_property_id} not found")
 
         manual = await welcome_manual_repo.update_manual(
             db, manual_id, organization_id, fields,
         )
         if manual is None:
-            raise LookupError(f"Welcome manual {manual_id} not found")
+            raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
 
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
         section_ids = [s.id for s in sections]
@@ -270,10 +272,10 @@ async def soft_delete_manual(
 ) -> None:
     """Soft-delete a manual scoped to the caller's organization.
 
-    Raises LookupError if no row was updated (missing, already deleted, or
-    in a different org).
+    Raises ManualNotFoundError if no row was updated (missing, already
+    deleted, or in a different org).
     """
     async with unit_of_work() as db:
         deleted = await welcome_manual_repo.soft_delete_by_id(db, manual_id, organization_id)
     if not deleted:
-        raise LookupError(f"Welcome manual {manual_id} not found")
+        raise ManualNotFoundError(f"Welcome manual {manual_id} not found")

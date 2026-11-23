@@ -13,6 +13,7 @@ from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.repositories import integration_repo
 from app.services.email import gmail_attachment_send_service, gmail_service
+from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
 from app.services.email.exceptions import GmailSendOutcomeUnknownError
 from app.test_helpers.auth import _require_test_mode
 
@@ -195,7 +196,7 @@ async def seed_integration_reauth_state(
         now = _dt.datetime.now(_dt.timezone.utc)
         if payload.needs_reauth:
             await integration_repo.mark_needs_reauth_if_unchanged(
-                db, integration, "e2e-test-forced-reauth", now,
+                db, integration, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR, now,
             )
         else:
             await integration_repo.clear_reauth_state(db, integration)

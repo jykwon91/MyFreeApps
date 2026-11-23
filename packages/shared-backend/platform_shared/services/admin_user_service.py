@@ -29,6 +29,7 @@ from typing import Any, Generic, TypeVar
 from platform_shared.core.permissions import Role
 from platform_shared.repositories import admin_user_repo
 from platform_shared.schemas.admin_user import UserStats
+from platform_shared.services.admin_target_user_not_found_error import AdminTargetUserNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ class AdminUserService(Generic[TUser]):
             PermissionError: when the target is a superuser and the
                 admin is not.
             ValueError: when the admin tries to change their own role.
-            LookupError: when the target user does not exist.
+            AdminTargetUserNotFoundError: when the target user does not exist.
         """
         if user_id == _admin_id(admin):
             raise ValueError("Cannot change your own role")
@@ -105,7 +106,7 @@ class AdminUserService(Generic[TUser]):
                 db, self._user_model, user_id,
             )
             if target is None:
-                raise LookupError("User not found")
+                raise AdminTargetUserNotFoundError()
             _ensure_may_modify(target, admin)
 
             old_role = getattr(target, "role", None)
@@ -128,7 +129,7 @@ class AdminUserService(Generic[TUser]):
             PermissionError: when the target is a superuser and the
                 admin is not.
             ValueError: when the admin tries to deactivate themselves.
-            LookupError: when the target user does not exist.
+            AdminTargetUserNotFoundError: when the target user does not exist.
         """
         if user_id == _admin_id(admin):
             raise ValueError("Cannot deactivate yourself")
@@ -138,7 +139,7 @@ class AdminUserService(Generic[TUser]):
                 db, self._user_model, user_id,
             )
             if target is None:
-                raise LookupError("User not found")
+                raise AdminTargetUserNotFoundError()
             _ensure_may_modify(target, admin)
 
             result = await admin_user_repo.set_active(
@@ -160,7 +161,7 @@ class AdminUserService(Generic[TUser]):
             PermissionError: when the target is a superuser and the
                 admin is not.
             ValueError: when the admin tries to activate themselves.
-            LookupError: when the target user does not exist.
+            AdminTargetUserNotFoundError: when the target user does not exist.
         """
         if user_id == _admin_id(admin):
             raise ValueError("Cannot activate yourself")
@@ -170,7 +171,7 @@ class AdminUserService(Generic[TUser]):
                 db, self._user_model, user_id,
             )
             if target is None:
-                raise LookupError("User not found")
+                raise AdminTargetUserNotFoundError()
             _ensure_may_modify(target, admin)
 
             result = await admin_user_repo.set_active(
@@ -192,7 +193,7 @@ class AdminUserService(Generic[TUser]):
             PermissionError: when the calling admin is not themselves a
                 superuser.
             ValueError: when the admin tries to change their own flag.
-            LookupError: when the target user does not exist.
+            AdminTargetUserNotFoundError: when the target user does not exist.
         """
         if not getattr(admin, "is_superuser", False):
             raise PermissionError(
@@ -206,7 +207,7 @@ class AdminUserService(Generic[TUser]):
                 db, self._user_model, user_id,
             )
             if target is None:
-                raise LookupError("User not found")
+                raise AdminTargetUserNotFoundError()
 
             new_status = not bool(getattr(target, "is_superuser", False))
             result = await admin_user_repo.set_superuser(

@@ -23,8 +23,10 @@ from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
 from app.schemas.listings.public_listing_response import PublicListingResponse
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 from app.services.listings.listing_slug import generate_slug
 from app.services.listings.photo_response_builder import attach_presigned_urls
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 
 # Number of slug-collision retries before giving up. The 32^6 keyspace makes
 # even a single collision astronomically unlikely on a small portfolio, but
@@ -59,13 +61,13 @@ async def get_listing(
 ) -> ListingResponse:
     """Load a single listing with its photos and external IDs.
 
-    Raises LookupError if the listing does not exist, is soft-deleted, or
-    belongs to a different organization.
+    Raises ListingNotFoundError if the listing does not exist, is soft-deleted,
+    or belongs to a different organization.
     """
     async with AsyncSessionLocal() as db:
         listing = await listing_repo.get_by_id(db, listing_id, organization_id)
         if listing is None:
-            raise LookupError(f"Listing {listing_id} not found")
+            raise ListingNotFoundError(f"Listing {listing_id} not found")
         photos = await listing_photo_repo.list_by_listing(db, listing.id)
         external_ids = await listing_external_id_repo.list_by_listing(db, listing.id)
     return await _to_listing_response(listing, photos, external_ids)
@@ -74,7 +76,7 @@ async def get_listing(
 async def get_public_listing(slug: str) -> PublicListingResponse:
     """Public listing lookup for the inquiry form header.
 
-    Raises LookupError for unknown / soft-deleted slugs. Before raising, logs a
+    Raises ListingNotFoundError for unknown / soft-deleted slugs. Before raising, logs a
     WARNING with the slug AND whether it exists in an archived state, so the
     operator can tell a typo'd URL from a still-live link to an archived listing.
     """
@@ -90,7 +92,7 @@ async def get_public_listing(slug: str) -> PublicListingResponse:
             slug,
             archived_match,
         )
-        raise LookupError(f"Listing slug {slug!r} not found")
+        raise ListingNotFoundError(f"Listing slug {slug!r} not found")
     return PublicListingResponse.model_validate(listing)
 
 
@@ -131,12 +133,12 @@ async def create_listing(
     Verifies the supplied `property_id` belongs to the same organization
     before insert — forbids creating listings against another org's property.
 
-    Raises LookupError if `property_id` is not in the caller's org.
+    Raises PropertyNotFoundError if `property_id` is not in the caller's org.
     """
     async with unit_of_work() as db:
         prop = await property_repo.get_by_id(db, payload.property_id, organization_id)
         if prop is None:
-            raise LookupError(f"Property {payload.property_id} not found")
+            raise PropertyNotFoundError(f"Property {payload.property_id} not found")
 
         # Generate the public-form slug. Pre-check for collisions so we don't
         # rely on catching IntegrityError mid-transaction (which would taint
@@ -181,9 +183,10 @@ async def update_listing(
 ) -> ListingResponse:
     """Apply allowlisted updates to a listing.
 
-    Raises LookupError if the listing does not exist / is soft-deleted /
-    belongs to a different organization, or if the update changes
-    `property_id` to a property outside the caller's organization.
+    Raises ListingNotFoundError if the listing does not exist / is
+    soft-deleted / belongs to a different organization, or
+    PropertyNotFoundError if the update changes `property_id` to a property
+    outside the caller's organization.
     """
     fields = payload.to_update_dict()
 
@@ -194,11 +197,11 @@ async def update_listing(
         if new_property_id is not None:
             prop = await property_repo.get_by_id(db, new_property_id, organization_id)
             if prop is None:
-                raise LookupError(f"Property {new_property_id} not found")
+                raise PropertyNotFoundError(f"Property {new_property_id} not found")
 
         listing = await listing_repo.update_listing(db, listing_id, organization_id, fields)
         if listing is None:
-            raise LookupError(f"Listing {listing_id} not found")
+            raise ListingNotFoundError(f"Listing {listing_id} not found")
 
         photos = await listing_photo_repo.list_by_listing(db, listing.id)
         external_ids = await listing_external_id_repo.list_by_listing(db, listing.id)
@@ -212,10 +215,10 @@ async def soft_delete_listing(
 ) -> None:
     """Soft-delete a listing scoped to the caller's organization.
 
-    Raises LookupError if no row was updated (listing missing, already
-    soft-deleted, or in a different org).
+    Raises ListingNotFoundError if no row was updated (listing missing,
+    already soft-deleted, or in a different org).
     """
     async with unit_of_work() as db:
         deleted = await listing_repo.soft_delete_by_id(db, listing_id, organization_id)
     if not deleted:
-        raise LookupError(f"Listing {listing_id} not found")
+        raise ListingNotFoundError(f"Listing {listing_id} not found")

@@ -17,6 +17,9 @@ GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR = "Gmail is temporarily unavailable
 GMAIL_TEMPORARILY_UNAVAILABLE_API_DETAIL = "Gmail is temporarily unavailable, please try again shortly"
 GMAIL_TEMPORARILY_UNAVAILABLE_API_STATUS = 503
 GMAIL_MESSAGE_GONE_ERROR = "This email no longer exists in Gmail"
+# A queue item whose download failed for a reason with no message of its own.
+# The error itself (Google's or a library's text) is logged, not stored.
+GMAIL_FETCH_FAILED_ERROR = "I couldn't download this email from Gmail. Retry it when you're ready."
 # OAuth ``error`` values from Google's token endpoint that mean the grant is gone
 # (revoked, expired, password changed) and only a new consent can fix it.
 GOOGLE_REVOKED_GRANT_OAUTH_ERRORS = frozenset({"invalid_grant"})

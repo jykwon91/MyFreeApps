@@ -35,6 +35,8 @@ from app.services.listings import (
     listing_photo_service,
     listing_service,
 )
+from app.services.listings.listing_not_found_error import ListingNotFoundError
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 from app.services.storage import image_processor
 
 router = APIRouter(prefix="/listings", tags=["listings"])
@@ -81,7 +83,7 @@ async def create_listing(
 ) -> ListingResponse:
     try:
         return await listing_service.create_listing(ctx.organization_id, ctx.user_id, payload)
-    except LookupError as exc:
+    except PropertyNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
@@ -92,7 +94,7 @@ async def get_listing(
 ) -> ListingResponse:
     try:
         return await listing_service.get_listing(ctx.organization_id, ctx.user_id, listing_id)
-    except LookupError as exc:
+    except ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Listing not found") from exc
 
 
@@ -106,7 +108,7 @@ async def update_listing(
         return await listing_service.update_listing(
             ctx.organization_id, ctx.user_id, listing_id, payload,
         )
-    except LookupError as exc:
+    except (ListingNotFoundError, PropertyNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
@@ -117,7 +119,7 @@ async def delete_listing(
 ) -> Response:
     try:
         await listing_service.soft_delete_listing(ctx.organization_id, ctx.user_id, listing_id)
-    except LookupError as exc:
+    except ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Listing not found") from exc
     return Response(status_code=204)
 

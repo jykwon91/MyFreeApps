@@ -17,6 +17,8 @@ from app.models.email.email_types import EmailBodyData, FetchResult
 from app.models.integrations.integration import Integration
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
 from app.services.email.constants import (
+    GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
+    GMAIL_FETCH_FAILED_ERROR,
     GMAIL_MESSAGE_GONE_ERROR,
     GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
     GMAIL_TEMPORARILY_UNAVAILABLE_SYNC_LOG_ERROR,
@@ -159,14 +161,14 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
         if kind is not GmailFailureKind.REAUTH:
             logger.error(
                 "Gmail token refresh failed for org=%s while fetching queue item %s: oauth_error=%s",
-                ctx.organization_id, item_id, code,
+                ctx.organization_id, item_id, code, exc_info=True,
             )
-            return await _fail_item(item_id, sync_log_id, str(exc))
+            return await _fail_item(item_id, sync_log_id, GMAIL_FETCH_FAILED_ERROR)
         logger.warning(
             "Gmail refresh token revoked for org=%s while fetching queue item %s: oauth_error=%s",
             ctx.organization_id, item_id, code,
         )
-        await _mark_reauth_and_fail_item(integration, item_id, repr(exc), "Gmail auth expired")
+        await _mark_reauth_and_fail_item(integration, item_id, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR, "Gmail auth expired")
         raise GmailReauthRequiredError(str(exc)) from exc
 
     except HttpError as exc:
@@ -176,11 +178,13 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             ctx.organization_id, item_id, describe_http_error(exc), kind.value,
         )
         if kind is GmailFailureKind.REAUTH:
-            await _mark_reauth_and_fail_item(integration, item_id, f"HttpError 401: {exc!r}", "Gmail auth expired (401)")
+            await _mark_reauth_and_fail_item(
+                integration, item_id, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR, "Gmail auth expired (401)",
+            )
             raise GmailReauthRequiredError(str(exc)) from exc
         if kind is GmailFailureKind.SCOPE_MISSING:
             await _mark_reauth_and_fail_item(
-                integration, item_id, f"HttpError 403: {exc!r}", GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+                integration, item_id, GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR, GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
             )
             raise GmailReauthRequiredError(str(exc)) from exc
         if kind is GmailFailureKind.TRANSIENT:
@@ -188,7 +192,7 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
         if kind is GmailFailureKind.NOT_FOUND:
             return await _fail_item(item_id, sync_log_id, GMAIL_MESSAGE_GONE_ERROR)
         logger.exception("Gmail HttpError fetching queue item %s", item_id)
-        return await _fail_item(item_id, sync_log_id, str(exc))
+        return await _fail_item(item_id, sync_log_id, GMAIL_FETCH_FAILED_ERROR)
 
     except UnreadableImage:
         # Stored as emailed it would keep the photo's GPS location, so it isn't stored.
@@ -200,9 +204,9 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
         await _save_refreshed_token(integration, creds, prior_token)
         return FetchResult("failed", error=UNREADABLE_EMAIL_PHOTO_ERROR)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to fetch queue item %s", item_id)
-        return await _fail_item(item_id, sync_log_id, str(e))
+        return await _fail_item(item_id, sync_log_id, GMAIL_FETCH_FAILED_ERROR)
 
 
 async def _fail_item(item_id: uuid.UUID, sync_log_id: int, error: str) -> FetchResult:
@@ -218,7 +222,7 @@ async def _mark_reauth_and_fail_item(
     integration: Integration, item_id: uuid.UUID, reason: str, item_error: str,
 ) -> None:
     async with unit_of_work() as db:
-        await integration_repo.mark_needs_reauth_if_unchanged(db, integration, reason[:200], datetime.now(timezone.utc))
+        await integration_repo.mark_needs_reauth_if_unchanged(db, integration, reason, datetime.now(timezone.utc))
         item_ref = await email_queue_repo.get_by_id(db, item_id)
         if item_ref:
             await email_queue_repo.mark_status(db, item_ref, "failed", error=item_error)

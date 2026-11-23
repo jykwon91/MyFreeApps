@@ -36,10 +36,7 @@ from app.schemas.listings.listing_external_id_response import ListingExternalIdR
 from app.schemas.listings.listing_external_id_update_request import (
     ListingExternalIdUpdateRequest,
 )
-
-
-class ListingNotFoundError(LookupError):
-    """Listing missing, soft-deleted, or out of caller's organization."""
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 
 
 class ExternalIdNotFoundError(LookupError):

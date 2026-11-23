@@ -179,7 +179,7 @@ async def test_worker_logs_warning_and_returns_on_gmail_auth_expired() -> None:
 
 
 @pytest.mark.asyncio
-async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
+async def test_discovery_sets_needs_reauth_on_refresh_error(caplog: pytest.LogCaptureFixture) -> None:
     """When RefreshError is raised during discovery, mark_needs_reauth is called
     on the integration before GmailAuthExpiredError propagates to the caller.
 
@@ -265,5 +265,7 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
     integration_arg, error_arg, failed_at_arg = mark_reauth_calls[0]
     assert integration_arg.id == fake_integration.id
     assert integration_arg.refresh_token_encrypted == fake_integration.refresh_token_encrypted
-    assert "invalid_grant" in error_arg or "RefreshError" in error_arg
+    # Fixed copy, not Google's text: the API returns this column. The code is logged.
+    assert error_arg == GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
+    assert "oauth_error=invalid_grant" in caplog.text
     assert failed_at_arg is not None

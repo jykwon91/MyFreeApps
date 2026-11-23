@@ -10,7 +10,9 @@ without credentials), the token is the secret.
 """
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.core.channel_import_error_display import displayable_import_error
 
 from app.schemas.listings.channel_response import ChannelResponse
 
@@ -35,3 +37,9 @@ class ChannelListingResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("last_import_error")
+    @classmethod
+    def _hide_legacy_raw_error_text(cls, value: str | None) -> str | None:
+        """Rows stored before fixed copy may hold raw fetch error text."""
+        return displayable_import_error(value)

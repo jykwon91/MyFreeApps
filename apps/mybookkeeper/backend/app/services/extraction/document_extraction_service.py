@@ -207,8 +207,9 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
         async with unit_of_work() as db:
             doc_ref = await document_repo.get_by_id(db, document_id, ctx.organization_id)
             if doc_ref:
+                # The error's text is not for users: the upload worker stores
+                # the reason the document shows when it handles this raise.
                 doc_ref.status = "failed"
-                doc_ref.error_message = str(e)[:1000]
         try:
             await record_event(
                 organization_id, "extraction_failed", "error",

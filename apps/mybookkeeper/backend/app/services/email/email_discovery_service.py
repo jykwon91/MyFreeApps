@@ -69,7 +69,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
         # Discovery's transaction rolled back; these must be saved on their own.
         async with unit_of_work() as db:
             marked = await integration_repo.mark_needs_reauth_if_unchanged(
-                db, rejected.connection, rejected.reason[:200], datetime.now(timezone.utc)
+                db, rejected.connection, rejected.sync_log_error, datetime.now(timezone.utc)
             )
             if marked:
                 await _record_failed_sync_log(db, ctx, rejected.sync_log_error)
@@ -259,7 +259,7 @@ def _raise_for_refresh_failure(
             "Gmail refresh token revoked for org=%s user=%s while %s: oauth_error=%s",
             ctx.organization_id, ctx.user_id, doing, code,
         )
-        raise GmailDiscoveryAuthRejectedError(connection, repr(exc), str(exc)) from exc
+        raise GmailDiscoveryAuthRejectedError(connection, str(exc)) from exc
     if kind is GmailFailureKind.TRANSIENT:
         logger.warning(
             "Google token endpoint unavailable for org=%s user=%s while %s: oauth_error=%s; will retry next cycle",
@@ -282,10 +282,10 @@ def _raise_for_http_failure(
         ctx.organization_id, ctx.user_id, doing, describe_http_error(exc), kind.value,
     )
     if kind is GmailFailureKind.REAUTH:
-        raise GmailDiscoveryAuthRejectedError(connection, f"HttpError 401: {exc!r}", str(exc)) from exc
+        raise GmailDiscoveryAuthRejectedError(connection, str(exc)) from exc
     if kind is GmailFailureKind.SCOPE_MISSING:
         raise GmailDiscoveryAuthRejectedError(
-            connection, f"HttpError 403: {exc!r}", str(exc), GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
+            connection, str(exc), GMAIL_SCOPE_MISSING_SYNC_LOG_ERROR,
         ) from exc
     if kind is GmailFailureKind.TRANSIENT:
         raise GmailTemporarilyUnavailableError(str(exc)) from exc

@@ -128,18 +128,20 @@ def _build(
 
 async def _patch_user(
     harness: _Harness, target: _FakeUser | None, path: str, body, headers=None,
-    *, target_id: uuid.UUID | None = None,
+    *, target_id: uuid.UUID | None = None, get_by_id: AsyncMock | None = None,
+    raise_app_exceptions: bool = True,
 ):
     user_id = target_id or (target.id if target else uuid.uuid4())
     with (
         patch(
             "platform_shared.services.admin_user_service.admin_user_repo.get_by_id",
-            new=AsyncMock(return_value=target),
+            new=get_by_id or AsyncMock(return_value=target),
         ),
         patch("platform_shared.core.permissions.release_connection", new=AsyncMock()),
         patch("platform_shared.core.permissions.log_auth_event", new=harness.events),
     ):
-        async with AsyncClient(transport=ASGITransport(app=harness.app), base_url="http://t") as client:
+        transport = ASGITransport(app=harness.app, raise_app_exceptions=raise_app_exceptions)
+        async with AsyncClient(transport=transport, base_url="http://t") as client:
             return await client.patch(
                 f"/admin/users/{user_id}/{path}", json=body, headers=headers or {},
             )
@@ -287,6 +289,59 @@ async def test_missing_target_is_404() -> None:
     resp = await _patch_user(harness, None, "deactivate", None)
 
     assert resp.status_code == 404
+    assert resp.json() == {"detail": "User not found"}
+
+
+_ENUM_MISMATCH = (
+    "'OWNER' is not among the defined enum values. Enum name: role. "
+    "Possible values: ADMIN, USER"
+)
+
+# Each action with the lookups it makes: the superuser-target check loads the
+# user first (not for the toggle, which always takes the strict gate), then the
+# action loads it again.
+_ACTIONS_WITH_LOOKUPS = [
+    ("role", {"role": "user"}, 2, None),
+    ("deactivate", None, 2, None),
+    ("activate", None, 2, None),
+    ("superuser", None, 1, TOTP_HEADERS),
+]
+
+
+def _enum_mismatch_on_action_lookup(target: _FakeUser, lookups: int) -> AsyncMock:
+    """The action's own load of the user hits an enum value the code doesn't know."""
+    return AsyncMock(side_effect=[target] * (lookups - 1) + [LookupError(_ENUM_MISMATCH)])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("path", "body", "lookups", "headers"), _ACTIONS_WITH_LOOKUPS)
+async def test_enum_mismatch_is_a_500_not_a_404_echoing_it(path, body, lookups, headers) -> None:
+    """A stored role the code doesn't know is a server fault: never a 404 quoting SQLAlchemy."""
+    target = _FakeUser(is_superuser=False)
+    harness = _build(_FakeUser(is_superuser=True))
+
+    resp = await _patch_user(
+        harness, target, path, body, headers,
+        get_by_id=_enum_mismatch_on_action_lookup(target, lookups), raise_app_exceptions=False,
+    )
+
+    assert resp.status_code == 500
+    assert "enum" not in resp.text
+    assert "OWNER" not in resp.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("path", "body", "lookups", "headers"), _ACTIONS_WITH_LOOKUPS)
+async def test_enum_mismatch_reaches_the_server_error_handler(path, body, lookups, headers) -> None:
+    """The real error propagates out of the app, where the server and Sentry log it."""
+    target = _FakeUser(is_superuser=False)
+    harness = _build(_FakeUser(is_superuser=True))
+
+    with pytest.raises(LookupError, match="not among the defined enum values"):
+        await _patch_user(
+            harness, target, path, body, headers,
+            get_by_id=_enum_mismatch_on_action_lookup(target, lookups),
+        )
 
 
 @pytest.mark.asyncio

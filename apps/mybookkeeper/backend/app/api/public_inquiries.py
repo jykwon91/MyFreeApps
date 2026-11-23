@@ -26,6 +26,7 @@ from app.schemas.listings.public_listing_response import PublicListingResponse
 from app.services.inquiries import public_inquiry_service
 from app.services.inquiries.public_inquiry_service import PublicInquiryOutcome
 from app.services.listings import listing_service
+from app.services.listings.listing_not_found_error import ListingNotFoundError
 from app.services.system.inquiry_notification_email import (
     send_inquiry_notification,
 )
@@ -81,7 +82,7 @@ async def get_public_listing(slug: str) -> PublicListingResponse:
     """
     try:
         return await listing_service.get_public_listing(slug)
-    except LookupError as exc:
+    except ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Listing not found") from exc
 
 

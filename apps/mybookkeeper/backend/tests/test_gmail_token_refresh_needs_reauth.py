@@ -23,6 +23,7 @@ from googleapiclient.errors import HttpError
 
 from app.core.context import RequestContext
 from app.models.organization.organization_member import OrgRole
+from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
 from app.services.email.exceptions import GmailReauthRequiredError
 from tests.gmail_send_fakes import fake_gmail_post, gmail_response
 
@@ -72,7 +73,7 @@ class TestFetchPathHttpError401:
     """_fetch_next_pending must set needs_reauth when Gmail returns 401."""
 
     @pytest.mark.asyncio
-    async def test_fetch_401_sets_needs_reauth(self) -> None:
+    async def test_fetch_401_sets_needs_reauth(self, caplog: pytest.LogCaptureFixture) -> None:
         """HttpError 401 during Gmail fetch must mark the integration for reauth
         and raise GmailReauthRequiredError to stop the drain loop."""
         ctx = _make_ctx()
@@ -145,7 +146,9 @@ class TestFetchPathHttpError401:
         assert len(mark_calls) == 1, "mark_needs_reauth must be called exactly once"
         marked_integration, error_msg, failed_at = mark_calls[0]
         assert marked_integration is integration
-        assert "401" in error_msg
+        # Fixed copy, not the HttpError repr: the API returns this column. The failure is logged.
+        assert error_msg == GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
+        assert "kind=reauth" in caplog.text
         assert failed_at.tzinfo is not None
         assert integration.needs_reauth is True
         assert item.status == "failed"

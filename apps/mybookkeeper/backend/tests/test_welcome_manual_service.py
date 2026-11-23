@@ -25,7 +25,9 @@ from app.schemas.welcome_manuals.welcome_manual_create_request import (
 from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 from app.services.welcome_manuals import welcome_manual_service
+from app.services.welcome_manuals.welcome_manual_scope import ManualNotFoundError
 
 
 def _patch(db: AsyncSession):
@@ -110,7 +112,7 @@ class TestCreate:
     @pytest.mark.asyncio
     async def test_invalid_property_raises(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         with _patch(db):
-            with pytest.raises(LookupError):
+            with pytest.raises(PropertyNotFoundError):
                 await welcome_manual_service.create_manual(
                     test_org.id, test_user.id,
                     WelcomeManualCreateRequest(title="Guide", property_id=uuid.uuid4()),
@@ -137,7 +139,7 @@ class TestGetListUpdateDelete:
                 WelcomeManualCreateRequest(title="G", seed_default_sections=False),
             )
             await db.commit()
-            with pytest.raises(LookupError):
+            with pytest.raises(ManualNotFoundError):
                 await welcome_manual_service.get_manual(uuid.uuid4(), test_user.id, created.id)
 
     @pytest.mark.asyncio
@@ -180,7 +182,7 @@ class TestGetListUpdateDelete:
                 WelcomeManualCreateRequest(title="X", seed_default_sections=False),
             )
             await db.commit()
-            with pytest.raises(LookupError):
+            with pytest.raises(PropertyNotFoundError):
                 await welcome_manual_service.update_manual(
                     test_org.id, test_user.id, created.id,
                     WelcomeManualUpdateRequest(property_id=uuid.uuid4()),
@@ -189,7 +191,7 @@ class TestGetListUpdateDelete:
     @pytest.mark.asyncio
     async def test_update_missing_raises(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         with _patch(db):
-            with pytest.raises(LookupError):
+            with pytest.raises(ManualNotFoundError):
                 await welcome_manual_service.update_manual(
                     test_org.id, test_user.id, uuid.uuid4(),
                     WelcomeManualUpdateRequest(title="x"),
@@ -205,11 +207,11 @@ class TestGetListUpdateDelete:
             await db.commit()
             await welcome_manual_service.soft_delete_manual(test_org.id, test_user.id, created.id)
             await db.commit()
-            with pytest.raises(LookupError):
+            with pytest.raises(ManualNotFoundError):
                 await welcome_manual_service.get_manual(test_org.id, test_user.id, created.id)
 
     @pytest.mark.asyncio
     async def test_soft_delete_missing_raises(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         with _patch(db):
-            with pytest.raises(LookupError):
+            with pytest.raises(ManualNotFoundError):
                 await welcome_manual_service.soft_delete_manual(test_org.id, test_user.id, uuid.uuid4())
