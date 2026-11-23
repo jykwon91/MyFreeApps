@@ -37,7 +37,7 @@ def _server() -> MagicMock:
     return server
 
 
-def _send_failure(server: MagicMock, to: list[str] | None = None) -> EmailSendError:
+def _send_failure(server: smtplib.SMTP | MagicMock, to: list[str] | None = None) -> EmailSendError:
     with patch("smtplib.SMTP", return_value=server), pytest.raises(EmailSendError) as exc:
         _service().send_or_raise(to or ["x@example.com"], "subj", "<p>b</p>")
     return exc.value
@@ -179,6 +179,38 @@ class TestDeliveryUnconfirmed:
         assert EmailSendError("timed out", kind="transient").delivery_unconfirmed
 
 
+class TestReplyLineTooLong:
+    """smtplib makes up a 500 "Line too long." and closes the connection when a
+    reply line runs past 8192 bytes. The server never sent that 500."""
+
+    def test_while_handing_over_it_leaves_delivery_unconfirmed(self) -> None:
+        # The overlong line is the server's answer to the message, which it may have taken.
+        server, sock = _scripted_server(
+            b"250 sender ok\r\n250 recipient ok\r\n354 go ahead\r\n250 " + b"x" * 9000 + b"\r\n",
+        )
+        error = _send_failure(server)
+        assert b"Subject: subj" in _sent(sock)
+        assert (error.kind, error.smtp_code) == ("transient", None)
+        assert error.delivery_unconfirmed
+
+    def test_while_connecting_it_is_a_definite_failure(self) -> None:
+        greeting = MagicMock()
+        greeting.makefile.return_value = io.BytesIO(b"220 " + b"x" * 9000 + b"\r\n")
+        with patch.object(smtplib.SMTP, "_get_socket", return_value=greeting), \
+                pytest.raises(EmailSendError) as exc:
+            _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert (exc.value.kind, exc.value.smtp_code) == ("transient", None)
+        assert exc.value.failed_before_handover
+        assert not exc.value.delivery_unconfirmed
+
+    def test_a_server_replying_500_line_too_long_is_refusing_the_message(self) -> None:
+        server, _sock = _scripted_server(
+            b"250 sender ok\r\n250 recipient ok\r\n354 go ahead\r\n500 Line too long.\r\n250 reset\r\n",
+        )
+        error = _send_failure(server)
+        assert (error.kind, error.smtp_code) == ("message_rejected", 500)
+
+
 class TestRecipientsAreNotLogged:
     def test_a_successful_send_logs_the_count_and_domain_only(self, caplog: pytest.LogCaptureFixture) -> None:
         with patch("smtplib.SMTP", return_value=_server()), caplog.at_level(logging.INFO):
@@ -260,6 +292,8 @@ class TestRefusedRecipients:
         assert error.kind == "recipient_rejected"
         assert error.smtp_code == 550
         assert error.refused_recipients == {"x@example.com": 550}
+        assert error.failed_before_handover
+        assert "nobody got the email" in str(error)
         assert "delivered" not in str(error)
 
     def test_partial_refusal_raises_and_names_the_refused(
@@ -271,6 +305,7 @@ class TestRefusedRecipients:
             error = _send_failure(server, ["a@example.com", "b@example.com"])
         assert error.kind == "recipient_rejected"
         assert error.refused_recipients == {"b@example.com": 550}
+        assert not error.failed_before_handover
         assert "delivered to the other 1" in str(error)
         failure = next(r.getMessage() for r in caplog.records if "SMTP send failed" in r.getMessage())
         assert "refused=1" in failure and "2 recipient(s) at example.com" in failure
@@ -290,6 +325,21 @@ class TestRefusedRecipients:
             {"x@example.com": (450, b"greylisted")},
         )
         assert _send_failure(server).kind == "transient"
+
+    def test_a_421_partway_through_the_recipients_sends_to_nobody(self) -> None:
+        # smtplib stops at a 421 (the server is closing the session) and never
+        # sends the message: the recipient accepted before it doesn't get it,
+        # and the one after it is never tried.
+        server, sock = _scripted_server(b"250 sender ok\r\n250 recipient ok\r\n421 4.7.0 closing\r\n")
+        error = _send_failure(server, ["a@example.com", "b@example.com", "c@example.com"])
+        assert b"Subject: subj" not in _sent(sock)
+        assert error.refused_recipients == {"b@example.com": 421}
+        assert "refused 1 of 3 recipient(s)" in str(error)
+        assert (error.kind, error.smtp_code) == ("transient", 421)
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
+        assert "nobody got the email" in str(error)
+        assert "delivered" not in str(error)
 
 
 class TestQuitAfterSend:
@@ -378,6 +428,21 @@ class _OfflineSmtp(smtplib.SMTP):
 
     def login(self, *_args: object, **_kwargs: object) -> tuple[int, bytes]:
         return 235, b"ok"
+
+
+def _scripted_server(replies: bytes) -> tuple[_OfflineSmtp, MagicMock]:
+    """An ``_OfflineSmtp`` whose server answers with ``replies``, in order, and
+    its fake socket, which smtplib lets go of when it closes the connection."""
+    server = _OfflineSmtp()
+    sock = MagicMock()
+    server.sock = sock
+    server.file = io.BytesIO(replies)
+    return server, sock
+
+
+def _sent(sock: MagicMock) -> bytes:
+    """Everything smtplib wrote to the fake socket."""
+    return b"".join(call.args[0] for call in sock.sendall.call_args_list)
 
 
 class TestUnsendableMessages:
