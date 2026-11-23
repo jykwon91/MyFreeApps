@@ -23,6 +23,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import sqlalchemy.exc
+from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import RateLimitPausedError, rate_limit_pause_seconds
 from platform_shared.workers.entrypoint import run_until_signalled, run_worker
 from platform_shared.workers.heartbeat import clear_heartbeat, touch_heartbeat
@@ -71,95 +72,98 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
 
     Claims nothing while Anthropic is rate limiting us: the read would only
     be rate limited too and charged a retry. The poll loop comes back once
-    POLL_INTERVAL_SECONDS has passed.
+    POLL_INTERVAL_SECONDS has passed. Every audited write is recorded as made
+    by ``user_id``, so it goes with their audit history if they delete their
+    account.
     """
     if rate_limit_pause_seconds() > 0:
         return False
-    async with AsyncSessionLocal() as db:
-        doc = await document_repo.claim_next_processing(db, user_id)
-        if not doc:
-            return False
-        doc_id = doc.id
-        org_id = doc.organization_id
-        retry_count = doc.retry_count
-        logger.info("Processing document %s for user %s (retry=%d)", doc_id, user_id, retry_count)
-
-    try:
-        result = await asyncio.wait_for(
-            process_document(doc_id),
-            timeout=EXTRACTION_TIMEOUT_SECONDS,
-        )
-        if result.discarded:
-            logger.info("Discarded extraction of document %s (deleted or settled mid-read)", doc_id)
-            return True
-        logger.info("Completed document %s", doc_id)
-        # Auto-resolve any previous failure events for this document
-        try:
-            async with AsyncSessionLocal() as resolve_db:
-                await system_event_repo.resolve_by_type(resolve_db, org_id, "extraction_failed")
-                await resolve_db.commit()
-        except Exception:
-            logger.exception("Failed to resolve extraction_failed events for org %s", org_id)
-        try:
-            msg = f"Document {doc_id} extracted successfully"
-            if retry_count > 0:
-                msg = f"Document {doc_id} succeeded after {retry_count} retries"
-            await record_event(
-                org_id,
-                "extraction_retried" if retry_count > 0 else "extraction_completed",
-                "info",
-                msg,
-                {"document_id": str(doc_id), "retry_count": retry_count},
-            )
-        except Exception:
-            logger.exception("Failed to record extraction success event for document %s", doc_id)
-        try:
-            await check_cost_alerts(org_id)
-        except Exception:
-            logger.exception("Cost alert check failed for org %s", org_id)
-    except RateLimitPausedError as exc:
-        await _requeue_until_rate_limit_lifts(doc_id, exc)
-    except Exception as exc:
-        logger.exception("Failed to process document %s", doc_id)
-        failure = classify_extraction_failure(exc)
-        transient = failure.retryable
-        error_msg, diagnostic = _classify_extraction_error(exc, failure)
-
+    with audit_actor(user_id):
         async with AsyncSessionLocal() as db:
-            failed_doc = await document_repo.get_by_id_internal(db, doc_id)
-            if failed_doc:
-                new_retry_count = failed_doc.retry_count + 1
-                if transient and new_retry_count < MAX_RETRIES:
-                    failed_doc.retry_count = new_retry_count
-                    failed_doc.next_retry_at = next_attempt_at(new_retry_count, exc, datetime.now(timezone.utc))
-                    failed_doc.status = "processing"
-                    failed_doc.error_message = error_msg
-                    logger.info(
-                        "Transient error for document %s, scheduling retry %d at %s",
-                        doc_id, new_retry_count, failed_doc.next_retry_at,
-                    )
-                else:
-                    failed_doc.status = "failed"
-                    failed_doc.error_message = error_msg
-                await db.commit()
+            doc = await document_repo.claim_next_processing(db, user_id)
+            if not doc:
+                return False
+            doc_id = doc.id
+            org_id = doc.organization_id
+            retry_count = doc.retry_count
+            logger.info("Processing document %s for user %s (retry=%d)", doc_id, user_id, retry_count)
 
-        severity = "warning" if transient else "error"
-        event_msg = f"Document {doc_id} extraction failed: {diagnostic}"
         try:
-            await record_event(
-                org_id, "extraction_failed", severity, event_msg,
-                {
-                    "document_id": str(doc_id),
-                    "error": error_msg[:500],
-                    "exception_type": type(exc).__name__,
-                    "exception_detail": str(exc)[:500],
-                    "transient": transient,
-                    "retry_count": retry_count + 1,
-                },
+            result = await asyncio.wait_for(
+                process_document(doc_id),
+                timeout=EXTRACTION_TIMEOUT_SECONDS,
             )
-        except Exception:
-            logger.exception("Failed to record extraction failure event for document %s", doc_id)
-    return True
+            if result.discarded:
+                logger.info("Discarded extraction of document %s (deleted or settled mid-read)", doc_id)
+                return True
+            logger.info("Completed document %s", doc_id)
+            # Auto-resolve any previous failure events for this document
+            try:
+                async with AsyncSessionLocal() as resolve_db:
+                    await system_event_repo.resolve_by_type(resolve_db, org_id, "extraction_failed")
+                    await resolve_db.commit()
+            except Exception:
+                logger.exception("Failed to resolve extraction_failed events for org %s", org_id)
+            try:
+                msg = f"Document {doc_id} extracted successfully"
+                if retry_count > 0:
+                    msg = f"Document {doc_id} succeeded after {retry_count} retries"
+                await record_event(
+                    org_id,
+                    "extraction_retried" if retry_count > 0 else "extraction_completed",
+                    "info",
+                    msg,
+                    {"document_id": str(doc_id), "retry_count": retry_count},
+                )
+            except Exception:
+                logger.exception("Failed to record extraction success event for document %s", doc_id)
+            try:
+                await check_cost_alerts(org_id)
+            except Exception:
+                logger.exception("Cost alert check failed for org %s", org_id)
+        except RateLimitPausedError as exc:
+            await _requeue_until_rate_limit_lifts(doc_id, exc)
+        except Exception as exc:
+            logger.exception("Failed to process document %s", doc_id)
+            failure = classify_extraction_failure(exc)
+            transient = failure.retryable
+            error_msg, diagnostic = _classify_extraction_error(exc, failure)
+
+            async with AsyncSessionLocal() as db:
+                failed_doc = await document_repo.get_by_id_internal(db, doc_id)
+                if failed_doc:
+                    new_retry_count = failed_doc.retry_count + 1
+                    if transient and new_retry_count < MAX_RETRIES:
+                        failed_doc.retry_count = new_retry_count
+                        failed_doc.next_retry_at = next_attempt_at(new_retry_count, exc, datetime.now(timezone.utc))
+                        failed_doc.status = "processing"
+                        failed_doc.error_message = error_msg
+                        logger.info(
+                            "Transient error for document %s, scheduling retry %d at %s",
+                            doc_id, new_retry_count, failed_doc.next_retry_at,
+                        )
+                    else:
+                        failed_doc.status = "failed"
+                        failed_doc.error_message = error_msg
+                    await db.commit()
+
+            severity = "warning" if transient else "error"
+            event_msg = f"Document {doc_id} extraction failed: {diagnostic}"
+            try:
+                await record_event(
+                    org_id, "extraction_failed", severity, event_msg,
+                    {
+                        "document_id": str(doc_id),
+                        "error": error_msg[:500],
+                        "exception_type": type(exc).__name__,
+                        "exception_detail": str(exc)[:500],
+                        "transient": transient,
+                        "retry_count": retry_count + 1,
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to record extraction failure event for document %s", doc_id)
+        return True
 
 
 async def _requeue_until_rate_limit_lifts(doc_id: uuid.UUID, exc: RateLimitPausedError) -> None:

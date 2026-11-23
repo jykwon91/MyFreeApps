@@ -407,7 +407,8 @@
         "test_pdf_unreadable_text_reply.py",
         "test_claude_service_legacy_mapping.py",
         "test_document_draft_reader.py",
-        "test_upload_processor_retries.py"
+        "test_upload_processor_retries.py",
+        "test_upload_processor_audit_actor.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [
@@ -2527,6 +2528,7 @@
         "test_scheduler_worker_gmail_task.py",
         "test_upload_processor_heartbeat.py",
         "test_upload_processor_retries.py",
+        "test_upload_processor_audit_actor.py",
         "test_self_healing.py",
         "test_lease_auto_end_scheduler.py",
         "test_utility_plan_scheduler.py",

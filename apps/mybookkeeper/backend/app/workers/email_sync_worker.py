@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from platform_shared.core.audit_actor import audit_actor
+
 from app.core.context import worker_context
 from app.db.session import AsyncSessionLocal
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
@@ -24,8 +26,9 @@ logger = logging.getLogger(__name__)
 async def sync_gmail_connection(target: GmailSyncTarget) -> None:
     """Full pipeline for one org's Gmail: discover emails, fetch bytes, then extract with Claude.
 
-    Runs as the member who connected it. If they've left the org, nothing is
-    synced: their mailbox no longer belongs to that org's books.
+    Runs as the member who connected it, and every audited write is recorded
+    as theirs. If they've left the org, nothing is synced: their mailbox no
+    longer belongs to that org's books.
 
     A GmailAuthExpiredError means the refresh token has been invalidated by
     Google (password change, revoke, or test-app expiry). The discovery
@@ -45,34 +48,35 @@ async def sync_gmail_connection(target: GmailSyncTarget) -> None:
             target.organization_id, target.user_id,
         )
         return
-    ctx = worker_context(target.organization_id, target.user_id)
+    with audit_actor(target.user_id):
+        ctx = worker_context(target.organization_id, target.user_id)
 
-    try:
-        result = await discover_gmail_emails(ctx)
-    except GmailAuthExpiredError:
-        logger.warning(
-            "Gmail auth expired for user=%s org=%s -- user must reconnect",
-            target.user_id, target.organization_id,
-        )
-        return
-    except GmailTemporarilyUnavailableError as exc:
-        # Not a revoked token: leave the connection alone and try again next cycle.
-        logger.warning(
-            "Gmail temporarily unavailable for user=%s org=%s -- retrying next cycle: %s",
-            target.user_id, target.organization_id, exc,
-        )
-        return
-    except GmailLabelNotFoundError:
-        # Discovery already recorded a failed sync_log row naming the label.
-        return
+        try:
+            result = await discover_gmail_emails(ctx)
+        except GmailAuthExpiredError:
+            logger.warning(
+                "Gmail auth expired for user=%s org=%s -- user must reconnect",
+                target.user_id, target.organization_id,
+            )
+            return
+        except GmailTemporarilyUnavailableError as exc:
+            # Not a revoked token: leave the connection alone and try again next cycle.
+            logger.warning(
+                "Gmail temporarily unavailable for user=%s org=%s -- retrying next cycle: %s",
+                target.user_id, target.organization_id, exc,
+            )
+            return
+        except GmailLabelNotFoundError:
+            # Discovery already recorded a failed sync_log row naming the label.
+            return
 
-    sync_log_id = result.sync_log_id
-    try:
-        await drain_gmail_fetch(ctx, sync_log_id=sync_log_id)
-        await drain_claude_extraction(ctx, sync_log_id=sync_log_id)
-        if sync_log_id is not None:
-            await finalize_sync_log(sync_log_id, ctx)
-    except asyncio.CancelledError:
-        if sync_log_id is not None:
-            await asyncio.shield(close_interrupted_sync_log(sync_log_id))
-        raise
+        sync_log_id = result.sync_log_id
+        try:
+            await drain_gmail_fetch(ctx, sync_log_id=sync_log_id)
+            await drain_claude_extraction(ctx, sync_log_id=sync_log_id)
+            if sync_log_id is not None:
+                await finalize_sync_log(sync_log_id, ctx)
+        except asyncio.CancelledError:
+            if sync_log_id is not None:
+                await asyncio.shield(close_interrupted_sync_log(sync_log_id))
+            raise

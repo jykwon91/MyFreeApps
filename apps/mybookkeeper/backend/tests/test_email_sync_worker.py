@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from platform_shared.core.audit import current_user_id
 
 from app.core.context import RequestContext
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
@@ -114,3 +115,36 @@ async def test_a_google_outage_ends_this_cycle_quietly_and_skips_fetching() -> N
         await sync_gmail_connection(target)
 
     drain.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_every_stage_is_audited_as_the_member_who_connected_gmail() -> None:
+    target = _target()
+    actors: list[str | None] = []
+
+    async def fake_discover(ctx: RequestContext) -> FakeDiscoverResult:
+        actors.append(current_user_id.get())
+        return FakeDiscoverResult(sync_log_id=7)
+
+    async def fake_stage(*_args: object, **_kwargs: object) -> None:
+        actors.append(current_user_id.get())
+
+    with (
+        patch("app.workers.email_sync_worker.AsyncSessionLocal") as mock_session_cls,
+        patch("app.workers.email_sync_worker.organization_repo") as mock_org_repo,
+        patch("app.workers.email_sync_worker.discover_gmail_emails", side_effect=fake_discover),
+        patch("app.workers.email_sync_worker.drain_gmail_fetch", side_effect=fake_stage),
+        patch("app.workers.email_sync_worker.drain_claude_extraction", side_effect=fake_stage),
+        patch("app.workers.email_sync_worker.finalize_sync_log", side_effect=fake_stage),
+    ):
+        mock_db = AsyncMock()
+        mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_org_repo.get_member = AsyncMock(
+            return_value=FakeMembership(organization_id=target.organization_id, user_id=target.user_id),
+        )
+
+        await sync_gmail_connection(target)
+
+    assert actors == [str(target.user_id)] * 4
+    assert current_user_id.get() is None
