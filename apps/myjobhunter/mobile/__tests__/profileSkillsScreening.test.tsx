@@ -19,6 +19,7 @@ import { skillRecord } from "../test-support/skillRecord";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -92,7 +93,7 @@ describe("skills", () => {
     await fireEvent.press(screen.getByRole("button", { name: SKILLS.create }));
     expect(await screen.findByText(PROBLEMS.skillRequired, SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(`${SKILLS.nameLabel}, required`), "typescript");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${SKILLS.nameLabel}, required`)), "typescript");
     expect(await screen.findByText(PROBLEMS.skillDuplicate, SHOWN)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: SKILLS.create }));
     expect(sentTo(sent, "POST /skills")).toEqual([]);

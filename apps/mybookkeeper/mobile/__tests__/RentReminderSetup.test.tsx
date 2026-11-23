@@ -51,7 +51,7 @@ async function start(overview: RentReminderOverview, role = "owner"): Promise<Re
 }
 
 function field(label: string) {
-  return screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(, required)?$`));
+  return screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(, required)?(, error: .*)?$`));
 }
 
 async function openSheet(title: string, buttonText: string) {

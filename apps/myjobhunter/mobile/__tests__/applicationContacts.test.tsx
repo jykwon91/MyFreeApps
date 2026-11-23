@@ -23,6 +23,7 @@ import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -90,7 +91,7 @@ describe("adding a contact", () => {
     await openSheet();
     const noAutofill = { autoComplete: "off", textContentType: "none" };
     expect(screen.getByLabelText(CONTACTS.nameLabel).props).toMatchObject({ ...noAutofill, autoCapitalize: "words" });
-    expect(screen.getByLabelText(CONTACTS.emailLabel).props).toMatchObject({ ...noAutofill, keyboardType: "email-address", autoCapitalize: "none" });
+    expect(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)).props).toMatchObject({ ...noAutofill, keyboardType: "email-address", autoCapitalize: "none" });
     expect(screen.getByLabelText(CONTACTS.linkedInLabel).props).toMatchObject({ inputMode: "url", autoCapitalize: "none", autoCorrect: false });
   });
 
@@ -100,7 +101,7 @@ describe("adding a contact", () => {
     await openSheet();
 
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "  Grace Hopper ");
-    await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "grace@stripe.com");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)), "grace@stripe.com");
     await fireEvent.press(screen.getByRole("radio", { name: "Hiring manager" }));
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.linkedInLabel), "https://www.linkedin.com/in/grace");
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.notesLabel), "Met at the meetup.");
@@ -147,7 +148,7 @@ describe("adding a contact", () => {
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
     expect(await screen.findByText(PROBLEMS.name.identity_required ?? "", SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam at stripe");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)), "sam at stripe");
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.linkedInLabel), "intent://evil");
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
     expect(await screen.findByText(PROBLEMS.email.invalid ?? "", SHOWN)).toBeTruthy();
@@ -163,11 +164,11 @@ describe("adding a contact", () => {
     expect(email).toHaveLength(CONTACT_EMAIL_MAX_LENGTH + 1);
 
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.nameLabel), "n".repeat(CONTACT_NAME_MAX_LENGTH + 1));
-    await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), email);
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)), email);
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.linkedInLabel), `https://${"l".repeat(CONTACT_LINKEDIN_MAX_LENGTH)}`);
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.notesLabel), "o".repeat(CONTACT_NOTES_MAX_LENGTH + 1));
     expect(screen.getByLabelText(CONTACTS.nameLabel).props.maxLength).toBeUndefined();
-    expect(screen.getByLabelText(CONTACTS.emailLabel).props.value).toBe(email);
+    expect(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)).props.value).toBe(email);
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
 
     expect(await screen.findByText(PROBLEMS.name.too_long ?? "", SHOWN)).toBeTruthy();
@@ -196,12 +197,12 @@ describe("adding a contact", () => {
     });
     await renderApplicationDetail(ID);
     await openSheet();
-    await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam@stripe.com");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)), "sam@stripe.com");
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
 
     expect(await screen.findByText(reason, SHOWN)).toBeTruthy();
     expect(screen.getByText(CONTACTS.checkFields)).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam@stripe.co");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(CONTACTS.emailLabel)), "sam@stripe.co");
     expect(screen.queryByText(reason, SHOWN)).toBeNull();
   });
 

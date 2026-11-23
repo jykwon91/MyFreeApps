@@ -27,6 +27,7 @@ import { aLease } from "../test-support/aLease";
 import { holdWrites } from "../test-support/holdWrites";
 import { aPrefillItem, type FakeLeaseWritesServer, lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -292,8 +293,8 @@ describe("filling in what the documents need", () => {
     expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number("."), SHOWN)).toBeTruthy();
     expect(lastRequest(server, "post", "/templates")).toBeUndefined();
 
-    await fireEvent.changeText(screen.getByLabelText("Tenant name, required"), "Dana");
-    await fireEvent.changeText(screen.getByLabelText("Rent"), "$1,600.50");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel("Tenant name, required")), "Dana");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel("Rent")), "$1,600.50");
     await make();
     await screen.findByText("lease-page-l1");
     expect(sent(server, "post", "/signed-leases/l1/templates").values.Rent).toBe("$1,600.50");

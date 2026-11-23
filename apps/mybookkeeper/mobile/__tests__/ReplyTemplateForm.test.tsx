@@ -16,6 +16,7 @@ import { aReplyTemplate } from "../test-support/aReplyTemplate";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
 import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -59,7 +60,7 @@ async function show(element: React.ReactElement) {
   );
 }
 
-const nameInput = () => screen.getByLabelText("Name, required");
+const nameInput = () => screen.getByLabelText(fieldLabel("Name, required"));
 const subjectInput = () => screen.getByLabelText("Subject, required");
 const messageInput = () => screen.getByLabelText("Message, required");
 const saveButton = (label: string = MESSAGES.saveTemplate) => screen.getByRole("button", { name: label });

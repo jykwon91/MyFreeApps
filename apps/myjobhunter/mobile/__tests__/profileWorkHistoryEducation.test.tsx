@@ -18,6 +18,7 @@ import type { SentRequest } from "@platform/mobile/test-support/types/SentReques
 import { workHistoryRecord } from "../test-support/workHistoryRecord";
 import { forgetFocusedFields, lastFocusedField } from "@platform/mobile/test-support/focusedField";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -308,7 +309,7 @@ describe("education", () => {
     expect(screen.getByText(PROBLEMS.year, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.gpa("."), SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(EDUCATION.startYearLabel), "2018");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EDUCATION.startYearLabel)), "2018");
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.endYearLabel), "2014");
     expect(await screen.findByText(PROBLEMS.endYearBeforeStart, SHOWN)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([]);
@@ -325,7 +326,7 @@ describe("education", () => {
     expect(await screen.findByText("Enter a GPA from 0 to 9,99, like 3,8.", SHOWN)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([]);
 
-    await fireEvent.changeText(screen.getByLabelText(EDUCATION.gpaLabel), "3,85");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(EDUCATION.gpaLabel)), "3,85");
     await fireEvent.press(screen.getByRole("button", { name: EDUCATION.create }));
     expect(await screen.findByText(EDUCATION.created)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([{ school: "Tech Institute", degree: null, field: null, start_year: null, end_year: null, gpa: "3.85" }]);

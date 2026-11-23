@@ -27,10 +27,15 @@ describe("PickerField", () => {
     expect(screen.getByText("Pick the trade.")).toBeTruthy();
   });
 
-  it("reads the error as the hint, shows it only once, and outlines the field in the error colour", async () => {
+  it("has no error wording in its name when there is no error", async () => {
+    await setup({ hint: "Pick the trade." });
+    expect(screen.getByRole("button", { name: "Category, Plumber" }).props.accessibilityLabel).not.toMatch(/error/i);
+  });
+
+  it("reads the error in the name, keeps the hint, shows the hint only once, and outlines the field in the error colour", async () => {
     await setup({ hint: "Pick the trade.", error: "Choose a category." });
-    const field = screen.getByRole("button", { name: "Category, Plumber" });
-    expect(field.props.accessibilityHint).toBe("Choose a category.");
+    const field = screen.getByRole("button", { name: "Category, Plumber, error: Choose a category." });
+    expect(field.props.accessibilityHint).toBe("Pick the trade.");
     expect(screen.queryByText("Pick the trade.")).toBeNull();
     const { style } = field.props;
     expect(StyleSheet.flatten(typeof style === "function" ? style({ pressed: false }) : style).borderColor).toBe(lightColors.destructiveText);

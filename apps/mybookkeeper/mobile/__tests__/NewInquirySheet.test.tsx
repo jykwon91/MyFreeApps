@@ -13,6 +13,7 @@ import { queriesSettled } from "../test-support/queriesSettled";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
 import { pressAlertButton } from "../test-support/pressAlertButton";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path) } }));
@@ -108,7 +109,7 @@ describe("adding an inquiry by hand", () => {
     expect(await screen.findByText("Required for non-direct inquiries", SHOWN)).toBeTruthy();
     expect(posts(server)).toBe(0);
 
-    await fireEvent.changeText(screen.getByLabelText("Furnished Finder inquiry ID, required"), " I-12345 ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel("Furnished Finder inquiry ID, required")), " I-12345 ");
     await fireEvent.press(screen.getByRole("button", SAVE));
     await waitFor(() => expect(posts(server)).toBe(1));
     expect(lastInquiryWrite(server)?.body).toMatchObject({ source: "FF", external_inquiry_id: "I-12345", inquirer_name: "Sam Ortiz" });
@@ -262,7 +263,7 @@ describe("adding an inquiry by hand", () => {
     startInquiryServer([]);
     await openSheet();
     await fireEvent.press(screen.getByRole("radio", { name: "Furnished Finder" }));
-    expect(screen.getByLabelText("Furnished Finder inquiry ID, required").props.maxLength).toBe(100);
+    expect(screen.getByLabelText(fieldLabel("Furnished Finder inquiry ID, required")).props.maxLength).toBe(100);
     expect(screen.getByLabelText("Inquirer name, required").props.maxLength).toBe(255);
     expect(screen.getByLabelText("Email").props.maxLength).toBe(255);
     expect(screen.getByLabelText("Phone").props.maxLength).toBe(50);

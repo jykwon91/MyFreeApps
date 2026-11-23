@@ -18,6 +18,7 @@ import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { makeStore } from "../src/lib/store";
 import { formatVersionDate } from "../src/utils/formatVersionDate";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-router", () => ({
   router: { dismissTo: jest.fn() },
@@ -122,7 +123,7 @@ async function openLog() {
   expect(screen.getByRole("header", { name: SHARED.logTitle })).toBeTruthy();
 }
 
-const notesField = () => screen.getByLabelText(`${SHARED.notesLabel} ${SHARED.notesOptional}`);
+const notesField = () => screen.getByLabelText(fieldLabel(`${SHARED.notesLabel} ${SHARED.notesOptional}`));
 const saveButton = () => screen.getByRole("button", { name: SHARED.save });
 
 beforeEach(() => alert.mockClear());
@@ -297,7 +298,7 @@ describe("logging a cook", () => {
 
     const problem = tooLongProblem(long, COOK_NOTES_MAX_LENGTH) ?? "";
     expect(screen.getByText(problem, SHOWN)).toBeTruthy();
-    expect(notesField().props.accessibilityHint).toBe(problem);
+    expect(notesField().props.accessibilityLabel).toContain(`, error: ${problem}`);
     await fireEvent.press(saveButton());
     expect(posts()).toHaveLength(0);
   });

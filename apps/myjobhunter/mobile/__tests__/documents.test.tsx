@@ -28,6 +28,7 @@ import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -407,8 +408,8 @@ describe("a document's actions", () => {
     expect(await screen.findByText(DOCUMENTS.titleRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(DOCUMENTS.contentRequired, SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`), "General cover letter");
-    await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.contentLabel}, required`), "Dear hiring team");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)), "General cover letter");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${DOCUMENTS.contentLabel}, required`)), "Dear hiring team");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.create }));
 
     expect(await screen.findByText(DOCUMENTS.created)).toBeTruthy();
@@ -427,8 +428,8 @@ describe("a document's actions", () => {
     await fireEvent.changeText(screen.getByLabelText(`${DOCUMENTS.contentLabel}, required`), "Body");
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.create }));
 
-    expect(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`).props.value).toBe(tooLong);
-    expect(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`).props.maxLength).toBeUndefined();
+    expect(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)).props.value).toBe(tooLong);
+    expect(screen.getByLabelText(fieldLabel(`${DOCUMENTS.titleLabel}, required`)).props.maxLength).toBeUndefined();
     expect(sent.filter(({ route }) => route === "POST /documents")).toEqual([]);
   });
 

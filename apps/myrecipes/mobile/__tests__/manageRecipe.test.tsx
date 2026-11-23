@@ -19,6 +19,7 @@ import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { recipeSaved } from "../src/features/discovery/discoverySlice";
 import { makeStore } from "../src/lib/store";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-notifications", () => ({
   cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
@@ -103,7 +104,7 @@ async function openEdit() {
   expect(screen.getByRole("header", { name: SHARED.editTitle })).toBeTruthy();
 }
 
-const titleField = () => screen.getByLabelText("Title, required");
+const titleField = () => screen.getByLabelText(fieldLabel("Title, required"));
 const saveButton = () => screen.getByRole("button", { name: MESSAGES.save });
 
 beforeEach(() => {
@@ -204,7 +205,7 @@ describe("editing a recipe's details", () => {
     await fireEvent.press(saveButton());
 
     expect(screen.getByText(PROBLEMS.titleRequired, SHOWN)).toBeTruthy();
-    expect(titleField().props.accessibilityHint).toBe(PROBLEMS.titleRequired);
+    expect(titleField().props.accessibilityLabel).toBe(`Title, required, error: ${PROBLEMS.titleRequired}`);
     expect(patches()).toHaveLength(0);
   });
 

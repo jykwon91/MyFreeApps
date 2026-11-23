@@ -7,6 +7,7 @@ import { session } from "../src/lib/session";
 import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -100,7 +101,7 @@ describe("signing in", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
 
     expect(await screen.findByText(/Each code works once/, SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText("Authentication code")).toBeTruthy();
+    expect(screen.getByLabelText(fieldLabel("Authentication code"))).toBeTruthy();
     expect(storedSession()).toBeNull();
   });
 });

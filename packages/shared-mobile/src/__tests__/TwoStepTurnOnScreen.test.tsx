@@ -9,6 +9,7 @@ import TwoStepTurnOnScreen from "../components/TwoStepTurnOnScreen";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import type { TwoStepVerifyResult } from "../types/TwoStepVerifyResult";
 import { SHOWN } from "../../test-support/shown";
+import { fieldLabel } from "../../test-support/fieldLabelPattern";
 
 jest.mock("../auth/mobileAuthApi");
 jest.mock("../auth/twoStepApi");
@@ -77,7 +78,7 @@ describe("password", () => {
     await open();
     await sendPassword();
     expect(await screen.findByText(MESSAGES.wrongPassword, SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText(MESSAGES.password).props.value).toBe("");
+    expect(screen.getByLabelText(fieldLabel(MESSAGES.password)).props.value).toBe("");
   });
 
   it("too many tries says sign-in is blocked", async () => {
@@ -154,7 +155,7 @@ describe("adding to the authenticator", () => {
     await openAddStep();
     await sendCode({ outcome: "wrong_code" });
     expect(await screen.findByText(MESSAGES.wrongSetupCode, SHOWN)).toBeTruthy();
-    expect(screen.getByLabelText(MESSAGES.codeLabel).props.value).toBe("");
+    expect(screen.getByLabelText(fieldLabel(MESSAGES.codeLabel)).props.value).toBe("");
   });
 
   it("too many tries says so", async () => {

@@ -21,6 +21,7 @@ import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -51,7 +52,7 @@ async function openFromMore(): Promise<void> {
 }
 
 function field(label: string) {
-  return screen.getByLabelText(label);
+  return screen.getByLabelText(fieldLabel(label));
 }
 
 async function chooseSource(label: string): Promise<void> {

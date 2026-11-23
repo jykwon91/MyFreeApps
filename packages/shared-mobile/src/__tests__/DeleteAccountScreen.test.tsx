@@ -7,6 +7,7 @@ import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 import { lastFocusedField } from "../../test-support/focusedField";
 import { SHOWN } from "../../test-support/shown";
+import { fieldLabel } from "../../test-support/fieldLabelPattern";
 
 jest.mock("../auth/mobileAuthApi");
 jest.mock("@platform/core/auth/deviceSessions");
@@ -121,7 +122,7 @@ it("clears a wrong password and keeps the email", async () => {
   await fillIn();
   await press();
 
-  expect(screen.getByLabelText("Password").props.value).toBe("");
+  expect(screen.getByLabelText(fieldLabel("Password")).props.value).toBe("");
   expect(screen.getByLabelText("Type your email to confirm").props.value).toBe("me@example.com");
   expect(screen.getAllByText("That password isn't right.", SHOWN).length).toBeGreaterThan(0);
 });
@@ -134,7 +135,7 @@ it("clears a wrong code", async () => {
   await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123456");
   await press();
 
-  expect(screen.getByLabelText("Authentication code").props.value).toBe("");
+  expect(screen.getByLabelText(fieldLabel("Authentication code")).props.value).toBe("");
   expect(screen.getByText("That code didn't work. Enter a new one.", SHOWN)).toBeTruthy();
 });
 
@@ -145,7 +146,7 @@ it("asks for a code if the server says one is needed after all", async () => {
   await fillIn();
   await press();
 
-  expect(screen.getByLabelText("Authentication code")).toBeTruthy();
+  expect(screen.getByLabelText(fieldLabel("Authentication code"))).toBeTruthy();
   expect(isDisabled()).toBe(true);
 });
 

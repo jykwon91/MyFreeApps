@@ -19,6 +19,7 @@ import TweakRecipeScreen from "../src/features/tweakRecipe/TweakRecipeScreen";
 import { makeStore } from "../src/lib/store";
 import { type FakeStack, fakeStack } from "./support/fakeStack";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -158,7 +159,7 @@ async function showForm(state: SessionState = SAM) {
 const NOTE = "What did you change?, required";
 
 async function type(label: string, text: string) {
-  await fireEvent.changeText(screen.getByLabelText(label), text);
+  await fireEvent.changeText(screen.getByLabelText(fieldLabel(label)), text);
 }
 
 async function press(name: string) {

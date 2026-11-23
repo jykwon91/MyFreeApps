@@ -28,6 +28,7 @@ import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { SHOWN } from "@platform/mobile/test-support/shown";
+import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -264,10 +265,10 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "  Hooli ");
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), " hooli.xyz ");
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.industryLabel), "   ");
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.hqLabel), "Palo Alto, CA");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "  Hooli ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.domainLabel)), " hooli.xyz ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.industryLabel)), "   ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.hqLabel)), "Palo Alto, CA");
     await fireEvent.press(saveButton());
 
     // The button says it's working the moment it's pressed, and Cancel waits.
@@ -294,7 +295,7 @@ describe("adding a company", () => {
     });
     await showScreen();
     await openAddSheet();
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     const save = saveButton();
     // Two touches are two events: work queued by the first runs before the second lands, but the
     // sheet hasn't re-rendered, so it still looks idle. Only a guard held until the add answers stops it.
@@ -318,7 +319,7 @@ describe("adding a company", () => {
     await fireEvent.press(saveButton());
     expect(await screen.findByText(PROBLEMS.nameRequired, SHOWN)).toBeTruthy();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "   ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "   ");
     await fireEvent.press(saveButton());
     expect(screen.getByText(PROBLEMS.nameRequired, SHOWN)).toBeTruthy();
     expect(posts(sent)).toEqual([]);
@@ -330,10 +331,10 @@ describe("adding a company", () => {
     await openAddSheet();
 
     const longName = "n".repeat(COMPANY_NAME_MAX_LENGTH + 1);
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), longName);
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "d".repeat(COMPANY_DOMAIN_MAX_LENGTH + 1));
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.industryLabel), "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH + 1));
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.hqLabel), "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH + 1));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), longName);
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.domainLabel)), "d".repeat(COMPANY_DOMAIN_MAX_LENGTH + 1));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.industryLabel)), "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH + 1));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.hqLabel)), "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH + 1));
     await fireEvent.press(saveButton());
 
     expect(await screen.findByText(PROBLEMS.nameTooLong, SHOWN)).toBeTruthy();
@@ -341,15 +342,15 @@ describe("adding a company", () => {
     expect(screen.getByText(PROBLEMS.industryTooLong, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.hqLocationTooLong, SHOWN)).toBeTruthy();
     // No maxLength: nothing was cut off.
-    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe(longName);
-    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.maxLength).toBeUndefined();
+    expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.value).toBe(longName);
+    expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.maxLength).toBeUndefined();
     expect(posts(sent)).toEqual([]);
 
     // Right at the limits it goes through.
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "n".repeat(COMPANY_NAME_MAX_LENGTH));
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "d".repeat(COMPANY_DOMAIN_MAX_LENGTH));
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.industryLabel), "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH));
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.hqLabel), "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "n".repeat(COMPANY_NAME_MAX_LENGTH));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.domainLabel)), "d".repeat(COMPANY_DOMAIN_MAX_LENGTH));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.industryLabel)), "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH));
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.hqLabel)), "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH));
     await fireEvent.press(saveButton());
     expect(await screen.findByText(MESSAGES.added("n".repeat(COMPANY_NAME_MAX_LENGTH)))).toBeTruthy();
     expect(posts(sent)).toHaveLength(1);
@@ -361,12 +362,12 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     await fireEvent.press(saveButton());
 
     expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
     expect(screen.getByRole("header", { name: MESSAGES.addTitle })).toBeTruthy();
-    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe("Hooli");
+    expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.value).toBe("Hooli");
     expect(screen.queryByText(MESSAGES.added("Hooli"))).toBeNull();
 
     reply = { status: 201, data: companyRecord({ id: "c-new", name: "Hooli" }) };
@@ -390,7 +391,7 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), " Hooli ");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), " Hooli ");
     await fireEvent.press(saveButton());
 
     expect(await screen.findByText(MESSAGES.added("Hooli"))).toBeTruthy();
@@ -405,7 +406,7 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     await fireEvent.press(saveButton());
 
     expect(await screen.findByText(MESSAGES.couldntAdd)).toBeTruthy();
@@ -429,14 +430,14 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     await fireEvent.press(saveButton());
 
     expect(
       await screen.findByText("I lost the connection, so I'm not sure that saved. Check your companies before trying again, so you don't end up with two."),
     ).toBeTruthy();
     expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
-    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe("Hooli");
+    expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.value).toBe("Hooli");
   });
 
   it("says on the domain field when another company already has it, until the domain changes", async () => {
@@ -444,15 +445,15 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Acme Again");
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "acme.com");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Acme Again");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.domainLabel)), "acme.com");
     await fireEvent.press(saveButton());
 
     expect(await screen.findByText(PROBLEMS.duplicateDomain, SHOWN)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.domainHint)).toBeNull();
     expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
 
-    await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "acme.io");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(MESSAGES.domainLabel)), "acme.io");
     expect(screen.queryByText(PROBLEMS.duplicateDomain, SHOWN)).toBeNull();
     expect(screen.getByText(MESSAGES.domainHint)).toBeTruthy();
   });
@@ -462,7 +463,7 @@ describe("adding a company", () => {
     await showScreen();
     await openAddSheet();
 
-    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    await fireEvent.changeText(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)), "Hooli");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
     expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
     await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
@@ -470,6 +471,6 @@ describe("adding a company", () => {
     expect(posts(sent)).toEqual([]);
 
     await openAddSheet();
-    expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe("");
+    expect(screen.getByLabelText(fieldLabel(`${MESSAGES.nameLabel}, required`)).props.value).toBe("");
   });
 });

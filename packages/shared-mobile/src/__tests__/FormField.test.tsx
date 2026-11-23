@@ -85,6 +85,18 @@ describe("FormField", () => {
     expect(screen.getByText("*", { exact: false, includeHiddenElements: true })).toBeTruthy();
   });
 
+  it("says nothing about an error in the name when there is none", async () => {
+    await render(<FormField hint="We never share it." label="Email" />);
+
+    expect(screen.getByLabelText("Email").props.accessibilityLabel).not.toMatch(/error/i);
+  });
+
+  it("adds the error after a custom accessibility label", async () => {
+    await render(<FormField accessibilityLabel="Note for the payment" error="Too long." label="Note" />);
+
+    expect(screen.getByLabelText("Note for the payment, error: Too long.")).toBeTruthy();
+  });
+
   it("shows the hint when there's no error", async () => {
     await render(<FormField hint="We never share it." label="Email" />);
 
@@ -92,11 +104,11 @@ describe("FormField", () => {
     expect(screen.getByLabelText("Email").props.accessibilityHint).toBe("We never share it.");
   });
 
-  it("replaces the hint with the error, and keeps the shown error reachable as plain text, not an alert", async () => {
-    await render(<FormField error="Enter a valid email." hint="We never share it." label="Email" />);
+  it("puts the error in the name, keeps the hint as the hint, and keeps the shown error reachable as plain text, not an alert", async () => {
+    await render(<FormField error="Enter a valid email." hint="We never share it." label="Email" required />);
 
-    const input = screen.getByLabelText("Email");
-    expect(input.props.accessibilityHint).toBe("Enter a valid email.");
+    const input = screen.getByLabelText("Email, required, error: Enter a valid email.");
+    expect(input.props.accessibilityHint).toBe("We never share it.");
     expect(StyleSheet.flatten(input.props.style).borderColor).toBe(lightColors.destructiveText);
     expect(screen.queryByText("We never share it.", { includeHiddenElements: true })).toBeNull();
 
@@ -162,7 +174,7 @@ describe("FormField", () => {
     const { rerender } = await render(<FormField counter="5,100 / 5,000" error={error} label="Notes" />);
     expect(screen.getByText("5,100 / 5,000", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText("5,100 / 5,000")).toBeNull();
-    expect(screen.getByLabelText("Notes").props.accessibilityHint).toBe(error);
+    expect(screen.getByLabelText(`Notes, error: ${error}`)).toBeTruthy();
     expect(announce).toHaveBeenCalledTimes(1);
 
     // Another over-limit value: the counter moves, the announced message does not.

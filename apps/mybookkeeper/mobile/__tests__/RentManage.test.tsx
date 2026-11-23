@@ -47,7 +47,7 @@ async function renderRent(server: RentWritesServer) {
 }
 
 async function pickDate(label: string, date: Date) {
-  if (!screen.queryByTestId(`${label}-picker`)) await fireEvent.press(screen.getByLabelText(new RegExp(`^(Choose|Change) ${label.toLowerCase().replace(/[()]/g, "\\$&")}(, required)?$`)));
+  if (!screen.queryByTestId(`${label}-picker`)) await fireEvent.press(screen.getByLabelText(new RegExp(`^(Choose|Change) ${label.toLowerCase().replace(/[()]/g, "\\$&")}(, required)?(, error: .*)?$`)));
   await act(async () => {
     screen.getByTestId(`${label}-picker`).props.onChange({ type: "set" }, date);
   });
@@ -55,7 +55,7 @@ async function pickDate(label: string, date: Date) {
 
 /** A field's accessibility label is its label plus ", required" when it must be filled. */
 function field(label: string) {
-  return screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(, required)?$`));
+  return screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(, required)?(, error: .*)?$`));
 }
 
 async function typeInto(label: string, text: string) {

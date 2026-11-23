@@ -5,7 +5,7 @@ export interface PickerFieldProps {
   /** Opens the choices, e.g. an OptionSheet. */
   onPress: () => void;
   hint?: string;
-  /** Read as the hint and outlines the field; show the same message with a FieldError beside it. */
+  /** Read as part of the field's name and outlines the field; show the same message with a FieldError beside it. */
   error?: string;
   disabled?: boolean;
 }
