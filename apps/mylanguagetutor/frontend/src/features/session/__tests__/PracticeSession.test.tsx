@@ -11,6 +11,7 @@ import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/type
 import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
+import { SHOWN } from "@/test/shownText";
 
 const send = vi.fn();
 const startRecognition = vi.fn();
@@ -232,7 +233,7 @@ describe("PracticeSession", () => {
     sessionState = { ...sessionState, block: "daily_limit" };
     renderScreen();
 
-    expect(screen.getByText(/used today's practice time/)).toBeInTheDocument();
+    expect(screen.getByText(/used today's practice time/, SHOWN)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tap to speak" })).not.toBeInTheDocument();
   });
 
@@ -360,7 +361,7 @@ describe("CorrectionCard", () => {
     renderScreen();
 
     // The screen reader's copy in the live region aside, the reply is shown once.
-    expect(screen.getByText("¡Hola! ¿Qué quieres?", { ignore: '[data-testid="practice-announcer"]' })).toBeInTheDocument();
+    expect(screen.getByText("¡Hola! ¿Qué quieres?", SHOWN)).toBeInTheDocument();
     expect(screen.getByText("Suggestions for this reply didn't load.")).toBeInTheDocument();
     expect(screen.queryByText("The reply was cut off.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();

@@ -8,7 +8,7 @@ export default function PracticeNoticeAlert({ notice, onDismiss }: PracticeNotic
   return (
     <AlertBox variant="info">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span role="status">{PRACTICE_NOTICE_COPY[notice]}</span>
+        <span>{PRACTICE_NOTICE_COPY[notice]}</span>
         <button type="button" onClick={onDismiss} className="min-h-[44px] rounded-md px-3 font-medium underline">
           {PRACTICE_COPY.dismiss}
         </button>

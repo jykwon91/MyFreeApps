@@ -1,4 +1,4 @@
 export interface PracticeAnnouncerProps {
-  /** What the screen reader should read now; nothing keeps the region empty. */
-  message: string | undefined;
+  /** What the screen reader should read; each entry is read when it appears. None keeps the region empty. */
+  messages: readonly string[];
 }

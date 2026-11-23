@@ -53,7 +53,7 @@ test("a session that couldn't start says so, and Try again starts it and sends t
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByRole("alert")).toContainText(SESSION_CREATE_FAILED_COPY);
+  await expect(shownText(page, SESSION_CREATE_FAILED_COPY, false)).toBeVisible();
   // The words aren't left in the transcript as if they were sent.
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(0);
   expect(api.turnRequests).toEqual([]);
@@ -62,7 +62,7 @@ test("a session that couldn't start says so, and Try again starts it and sends t
   await page.getByRole("button", { name: "Try again" }).click();
 
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   expect(api.writes.filter((write) => write.path === "/sessions")).toHaveLength(2);
   expect(api.turnRequests.map((turn) => [turn.sessionId, turn.body])).toEqual([[sessionIdAt(1), { text: LEARNER_GREETING }]]);
 });
@@ -77,7 +77,7 @@ test("a tutor that fails mid-reply keeps what arrived, marks it cut off, and Try
 
   await expect(shownText(page, PARTIAL_REPLY, false)).toBeVisible();
   await expect(page.getByText(REPLY_CUT_OFF)).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(TUTOR_BUSY_COPY);
+  await expect(shownText(page, TUTOR_BUSY_COPY, false)).toBeVisible();
 
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
@@ -92,7 +92,7 @@ test("a tutor that fails before any reply shows no reply, and Try again sends th
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByRole("alert")).toContainText(TUTOR_BUSY_COPY);
+  await expect(shownText(page, TUTOR_BUSY_COPY, false)).toBeVisible();
   await expect(page.getByText(REPLY_CUT_OFF)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Replay", exact: true })).toHaveCount(0);
 
@@ -114,12 +114,12 @@ test("a turn the server never answers says the connection dropped, and Try again
   await expect(page.getByRole("button", { name: /Sending/ })).toBeDisabled();
 
   await page.clock.runFor(TURN_RESPONSE_TIMEOUT_MS);
-  await expect(page.getByRole("alert")).toContainText(CONNECTION_LOST_COPY);
+  await expect(shownText(page, CONNECTION_LOST_COPY, false)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
 
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
 });
@@ -130,11 +130,10 @@ test("a failure the tutor says not to retry offers only Dismiss", async ({ page 
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText(TUTOR_INPUT_REJECTED_COPY);
-  await expect(alert.getByRole("button", { name: "Try again" })).toHaveCount(0);
-  await alert.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(shownText(page, TUTOR_INPUT_REJECTED_COPY, false)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect(shownText(page, TUTOR_INPUT_REJECTED_COPY, false)).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
 });
 
@@ -146,7 +145,7 @@ test("a stream cut after the whole reply keeps the reply, notes the missing sugg
 
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByText(CORRECTIONS_MISSING)).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   expect(api.turnRequests).toHaveLength(1);
 });
@@ -168,7 +167,7 @@ test("a goal met in a turn whose stream was cut after the reply is ticked once t
   await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
   await expect(goal(page, GREETINGS.goals[1])).toContainText(GOAL_MET);
   await expect(goal(page, GREETINGS.goals[2])).not.toContainText(GOAL_MET);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   expect(api.turnRequests).toHaveLength(2);
 });
 
@@ -184,7 +183,7 @@ test("a stream cut after the suggestions arrived shows them, with no missing-sug
   await expect(page.getByRole("list", { name: SUGGESTIONS_LABEL })).toContainText(RECAST_LINE);
   await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
   await expect(page.getByText(CORRECTIONS_MISSING)).toHaveCount(0);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   expect(api.turnRequests).toHaveLength(1);
 });
@@ -200,10 +199,10 @@ for (const [label, now, copy] of [
     await openPractice(page, GREETINGS.title);
     await sendTyped(page, LEARNER_GREETING);
 
-    await expect(page.getByText(copy, { exact: true })).toBeVisible();
+    await expect(shownText(page, copy)).toBeVisible();
     // The refused answer stays on screen, and says why it wasn't sent; it can't be sent again yet.
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText(DAILY_LIMIT_KEPT_COPY);
+    await expect(shownText(page, DAILY_LIMIT_KEPT_COPY, false)).toBeVisible();
     await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Pick a scenario" })).toHaveCount(0);
     // A block replaces the composer: there is nothing left to answer with.
@@ -221,7 +220,7 @@ for (const [detail, copy] of [
     await openPractice(page, GREETINGS.title);
     await sendTyped(page, LEARNER_GREETING);
 
-    await expect(page.getByText(copy)).toBeVisible();
+    await expect(shownText(page, copy, false)).toBeVisible();
     // The refused answer stays on screen; nothing can send it in this conversation.
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
@@ -237,11 +236,11 @@ test("a conversation that used its last turn says so before the learner speaks a
   api.setUsage(SESSION_FULL);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(SESSION_LIMIT_COPY)).toBeVisible();
+  await expect(shownText(page, SESSION_LIMIT_COPY, false)).toBeVisible();
   // The finished turn stays, and nothing is left to answer with.
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   expect(api.turnRequests).toHaveLength(1);
 });
 
@@ -251,7 +250,7 @@ test("a turn refused for the turn limit in a race keeps the learner's answer on 
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(SESSION_LIMIT_COPY)).toBeVisible();
+  await expect(shownText(page, SESSION_LIMIT_COPY, false)).toBeVisible();
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
@@ -262,7 +261,7 @@ test("a tutor switched off is announced on arrival, before the learner answers",
 
   await openPractice(page, GREETINGS.title);
 
-  await expect(page.getByText(UNAVAILABLE_COPY)).toBeVisible();
+  await expect(shownText(page, UNAVAILABLE_COPY, false)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
   expect(api.writes).toEqual([]);
 });
@@ -281,9 +280,9 @@ test("a 503 tutor_unavailable on a turn blocks the conversation, keeps the answe
     api.setUsage(TUTOR_OFF);
     gate.release();
 
-    await expect(page.getByText(UNAVAILABLE_COPY)).toBeVisible();
+    await expect(shownText(page, UNAVAILABLE_COPY, false)).toBeVisible();
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText(TUTOR_UNAVAILABLE_KEPT_COPY);
+    await expect(shownText(page, TUTOR_UNAVAILABLE_KEPT_COPY, false)).toBeVisible();
     await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
 
@@ -292,7 +291,7 @@ test("a 503 tutor_unavailable on a turn blocks the conversation, keeps the answe
     await page.getByRole("button", { name: "Try again" }).click();
 
     await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
-    await expect(page.getByText(UNAVAILABLE_COPY)).toHaveCount(0);
+    await expect(shownText(page, UNAVAILABLE_COPY, false)).toHaveCount(0);
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
   } finally {
@@ -310,7 +309,7 @@ for (const [detail, copy] of [
     await openPractice(page, GREETINGS.title);
     await sendTyped(page, LEARNER_GREETING);
 
-    await expect(page.getByRole("alert")).toContainText(copy);
+    await expect(shownText(page, copy, false)).toBeVisible();
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Try again" }).click();
 
@@ -328,7 +327,7 @@ test("a session deleted elsewhere (404) says so, and Try again starts a new sess
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByRole("alert")).toContainText(SESSION_NOT_FOUND_COPY);
+  await expect(shownText(page, SESSION_NOT_FOUND_COPY, false)).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
 
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();

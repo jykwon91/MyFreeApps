@@ -25,9 +25,9 @@ export function goal(page: Page, text: string): Locator {
 }
 
 /**
- * Text the conversation shows, leaving out the screen reader's copy of the finished reply in the
- * practice screen's live region, which holds the same words.
+ * Text the screen shows, leaving out the screen reader's copy of it in the practice screen's live
+ * region (the finished reply, a failed turn, a block, scenario complete), which holds the same words.
  */
 export function shownText(page: Page, text: string, exact = true): Locator {
-  return page.getByText(text, { exact }).and(page.locator(':not([data-testid="practice-announcer"])'));
+  return page.getByText(text, { exact }).and(page.locator(':not([data-testid="practice-announcer"], [data-testid="practice-announcer"] *)'));
 }

@@ -13,6 +13,7 @@ import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import PracticeSession from "@/features/session/PracticeSession";
+import { SHOWN } from "@/test/shownText";
 
 /** Whether GET /usage/today says the tutor is on: a test flips it to see the screen follow. */
 const server = vi.hoisted(() => ({ tutorAvailable: true }));
@@ -44,8 +45,7 @@ vi.mock("@platform/core/store/baseQuery", () => ({
 }));
 
 const LANGUAGE: Language = { code: "es", display_name: "Spanish", dialect_label: "Latin American", stt_locale: "es-MX", tts_locale: "es-MX" };
-/** The transcript's own text, not the screen reader's copy of the finished reply in the live region. */
-const SHOWN = { ignore: '[data-testid="practice-announcer"]' };
+/** The screen's own text, not the screen reader's copy of it in the live region. */
 const SCENARIO: Scenario = { slug: "cafe", title: "At the café", goal: "Order a drink", goals: ["Greet", "Order"], order: 4 };
 
 /** A turn stream that sends the whole reply, then loses the connection before the corrections. */
@@ -189,15 +189,15 @@ describe("PracticeSession when the turn's connection goes quiet", () => {
 
     sendTypedTurn();
     expect(await screen.findByText("¡Hola! Bien", { ...SHOWN, exact: false })).toBeInTheDocument();
-    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).not.toBeInTheDocument();
 
     await act(() => vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS));
-    expect(await screen.findByText(turnErrorCopy(CONNECTION_LOST))).toBeInTheDocument();
-    expect(screen.getByText(PRACTICE_COPY.replyCutOff)).toBeInTheDocument();
+    expect(await screen.findByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).toBeInTheDocument();
+    expect(screen.getByText(PRACTICE_COPY.replyCutOff, SHOWN)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
     expect(await screen.findByText("¡Hola! Bienvenido.", SHOWN)).toBeInTheDocument();
-    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).not.toBeInTheDocument();
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).not.toBeInTheDocument();
     expect(turns).toEqual(["hola", "hola"]);
   });
@@ -229,8 +229,8 @@ describe("PracticeSession when the server refuses a turn that can't be answered 
 
     const store = sendTypedTurn();
 
-    expect(await screen.findByText(turnErrorCopy("tutor_unavailable"))).toBeInTheDocument();
-    expect(screen.getByText(SESSION_BLOCK_COPY.unavailable)).toBeInTheDocument();
+    expect(await screen.findByText(turnErrorCopy("tutor_unavailable"), SHOWN)).toBeInTheDocument();
+    expect(screen.getByText(SESSION_BLOCK_COPY.unavailable, SHOWN)).toBeInTheDocument();
     expect(screen.getByText("hola")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).not.toBeInTheDocument();
 
@@ -241,7 +241,7 @@ describe("PracticeSession when the server refuses a turn that can't be answered 
 
     fireEvent.click(await screen.findByRole("button", { name: PRACTICE_COPY.tryAgain }));
     expect(await screen.findByText("¡Hola! Bienvenido.", SHOWN)).toBeInTheDocument();
-    expect(screen.queryByText(SESSION_BLOCK_COPY.unavailable)).not.toBeInTheDocument();
+    expect(screen.queryByText(SESSION_BLOCK_COPY.unavailable, SHOWN)).not.toBeInTheDocument();
     expect(screen.getAllByText("hola")).toHaveLength(1);
     expect(turns).toEqual(["hola", "hola"]);
   });
@@ -251,7 +251,7 @@ describe("PracticeSession when the server refuses a turn that can't be answered 
 
     sendTypedTurn();
 
-    expect(await screen.findByText(SESSION_BLOCK_COPY.session_ended)).toBeInTheDocument();
+    expect(await screen.findByText(SESSION_BLOCK_COPY.session_ended, SHOWN)).toBeInTheDocument();
     expect(screen.getByText("hola")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: PRACTICE_COPY.pickScenario })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.tryAgain })).not.toBeInTheDocument();
