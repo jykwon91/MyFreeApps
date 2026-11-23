@@ -40,6 +40,13 @@ describe("FieldFeedback", () => {
     expect(screen.getByText("5,101 / 5,000")).not.toHaveAttribute("role");
   });
 
+  it("gives the error a test id when asked, and only the error", () => {
+    render(<FieldFeedback id="price" error={ERROR} counter="5,100 / 5,000" testId="price-problem" />);
+
+    expect(screen.getByTestId("price-problem")).toHaveTextContent(ERROR);
+    expect(screen.getByTestId("price-problem")).toHaveAttribute("id", "price-error");
+  });
+
   it("describes a control by its counter alone when there is no error", () => {
     expect(fieldFeedbackAria({ id: "n", counter: "4,600 / 5,000" })).toEqual({ "aria-describedby": "n-counter" });
     expect(fieldFeedbackAria({ id: "n" })).toEqual({});

@@ -5,4 +5,6 @@ export interface FieldFeedbackProps {
   error?: string;
   /** How much of a length limit is used, for example "5,100 / 5,000". Never announced: it changes with every keystroke. */
   counter?: string;
+  /** A `data-testid` for the error message, for forms whose tests find it by a stable name. */
+  testId?: string;
 }

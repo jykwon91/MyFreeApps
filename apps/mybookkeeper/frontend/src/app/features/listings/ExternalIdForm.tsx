@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import {
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,
 } from "@mybookkeeper/api-client/store/listingsApi";
-import { EXTERNAL_ID_MAX_LENGTH, EXTERNAL_ID_SOURCE_HINTS, EXTERNAL_URL_MAX_LENGTH } from "@mybookkeeper/api-client/constants/externalIdForm";
+import {
+  EXTERNAL_ID_FORM_PROBLEMS,
+  EXTERNAL_ID_MAX_LENGTH,
+  EXTERNAL_ID_SOURCE_HINTS,
+  EXTERNAL_URL_MAX_LENGTH,
+} from "@mybookkeeper/api-client/constants/externalIdForm";
 import type { ExternalIdRequestErrorShape } from "@mybookkeeper/api-client/types/listing/external-id-request-error-shape";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
@@ -56,6 +61,13 @@ export default function ExternalIdForm({
     existing?.external_url ?? "",
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  // A bad URL is said under the URL; "enter at least one" is about both fields, so it stays under the form.
+  const isUrlProblem = validationError === EXTERNAL_ID_FORM_PROBLEMS.urlInvalid;
+  const urlFeedback = {
+    id: "external-id-form-url",
+    error: isUrlProblem ? validationError : undefined,
+    testId: "external-id-form-validation-error",
+  };
 
   const [createExternalId, { isLoading: isCreating }] =
     useCreateListingExternalIdMutation();
@@ -166,20 +178,24 @@ export default function ExternalIdForm({
 
       <FormField label={`${LISTING_SOURCE_LABELS[source]} URL`}>
         {(field) => (
-          <input
-            type="url"
-            value={externalUrl}
-            onChange={(e) => setExternalUrl(e.target.value)}
-            placeholder="https://..."
-            maxLength={EXTERNAL_URL_MAX_LENGTH}
-            data-testid="external-id-form-external-url"
-            className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-            {...field}
-          />
+          <>
+            <input
+              type="url"
+              value={externalUrl}
+              onChange={(e) => setExternalUrl(e.target.value)}
+              placeholder="https://..."
+              maxLength={EXTERNAL_URL_MAX_LENGTH}
+              data-testid="external-id-form-external-url"
+              className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+              {...fieldFeedbackAria(urlFeedback)}
+              {...field}
+            />
+            <FieldFeedback {...urlFeedback} />
+          </>
         )}
       </FormField>
 
-      {validationError ? (
+      {validationError && !isUrlProblem ? (
         <p
           role="alert"
           data-testid="external-id-form-validation-error"

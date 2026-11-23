@@ -1,8 +1,7 @@
-import { FormField } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, FormField } from "@platform/ui";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
-import MortgageFieldProblem from "./MortgageFieldProblem";
-import { fieldProblemAria } from "@/shared/utils/field-problem-aria";
+import { mortgageFieldFeedback } from "./mortgage-field-feedback";
 import { MORTGAGE_INPUT_CLASS } from "./mortgage-input-class";
 
 export interface MortgageFormFieldsProps {
@@ -58,10 +57,10 @@ export default function MortgageFormFields({
                 step="0.001"
                 className={MORTGAGE_INPUT_CLASS}
                 data-testid="mortgage-interest-rate-input"
-                {...fieldProblemAria(problems, "interestRate", "mortgage")}
+                {...fieldFeedbackAria(mortgageFieldFeedback(problems, "interestRate"))}
                 {...field}
               />
-              <MortgageFieldProblem problems={problems} field="interestRate" />
+              <FieldFeedback {...mortgageFieldFeedback(problems, "interestRate")} />
             </>
           )}
         </FormField>
@@ -74,7 +73,7 @@ export default function MortgageFormFields({
                 onChange={(e) => onChange("rateType", e.target.value)}
                 className={MORTGAGE_INPUT_CLASS}
                 data-testid="mortgage-rate-type-select"
-                {...fieldProblemAria(problems, "rateType", "mortgage")}
+                {...fieldFeedbackAria(mortgageFieldFeedback(problems, "rateType"))}
                 {...field}
               >
                 {/* No default. Whether the rate can move is the one thing this
@@ -84,7 +83,7 @@ export default function MortgageFormFields({
                 <option value="fixed">Fixed for the life of the loan</option>
                 <option value="arm">Adjustable (ARM)</option>
               </select>
-              <MortgageFieldProblem problems={problems} field="rateType" />
+              <FieldFeedback {...mortgageFieldFeedback(problems, "rateType")} />
             </>
           )}
         </FormField>
@@ -125,10 +124,10 @@ export default function MortgageFormFields({
                 step="0.01"
                 className={MORTGAGE_INPUT_CLASS}
                 data-testid="mortgage-balance-input"
-                {...fieldProblemAria(problems, "balanceDollars", "mortgage")}
+                {...fieldFeedbackAria(mortgageFieldFeedback(problems, "balanceDollars"))}
                 {...field}
               />
-              <MortgageFieldProblem problems={problems} field="balanceDollars" />
+              <FieldFeedback {...mortgageFieldFeedback(problems, "balanceDollars")} />
             </>
           )}
         </FormField>
@@ -142,10 +141,10 @@ export default function MortgageFormFields({
                 onChange={(e) => onChange("statementDate", e.target.value)}
                 className={MORTGAGE_INPUT_CLASS}
                 data-testid="mortgage-statement-date-input"
-                {...fieldProblemAria(problems, "statementDate", "mortgage")}
+                {...fieldFeedbackAria(mortgageFieldFeedback(problems, "statementDate"))}
                 {...field}
               />
-              <MortgageFieldProblem problems={problems} field="statementDate" />
+              <FieldFeedback {...mortgageFieldFeedback(problems, "statementDate")} />
             </>
           )}
         </FormField>
@@ -186,10 +185,10 @@ export default function MortgageFormFields({
                   step="0.01"
                   className={MORTGAGE_INPUT_CLASS}
                   data-testid="mortgage-monthly-principal-input"
-                  {...fieldProblemAria(problems, "monthlyPrincipalDollars", "mortgage")}
+                  {...fieldFeedbackAria(mortgageFieldFeedback(problems, "monthlyPrincipalDollars"))}
                   {...field}
                 />
-                <MortgageFieldProblem problems={problems} field="monthlyPrincipalDollars" />
+                <FieldFeedback {...mortgageFieldFeedback(problems, "monthlyPrincipalDollars")} />
               </>
             )}
           </FormField>
@@ -206,10 +205,10 @@ export default function MortgageFormFields({
                   step="0.01"
                   className={MORTGAGE_INPUT_CLASS}
                   data-testid="mortgage-monthly-interest-input"
-                  {...fieldProblemAria(problems, "monthlyInterestDollars", "mortgage")}
+                  {...fieldFeedbackAria(mortgageFieldFeedback(problems, "monthlyInterestDollars"))}
                   {...field}
                 />
-                <MortgageFieldProblem problems={problems} field="monthlyInterestDollars" />
+                <FieldFeedback {...mortgageFieldFeedback(problems, "monthlyInterestDollars")} />
               </>
             )}
           </FormField>
@@ -232,10 +231,10 @@ export default function MortgageFormFields({
                 step="0.01"
                 className={MORTGAGE_INPUT_CLASS}
                 data-testid="mortgage-monthly-escrow-input"
-                {...fieldProblemAria(problems, "monthlyEscrowDollars", "mortgage")}
+                {...fieldFeedbackAria(mortgageFieldFeedback(problems, "monthlyEscrowDollars"))}
                 {...field}
               />
-              <MortgageFieldProblem problems={problems} field="monthlyEscrowDollars" />
+              <FieldFeedback {...mortgageFieldFeedback(problems, "monthlyEscrowDollars")} />
               <p className="mt-1 text-xs text-muted-foreground">
                 Taxes and insurance. Recorded for your records but left out of the comparison — they
                 follow the property, not the loan, so refinancing doesn&apos;t change them.
@@ -259,10 +258,10 @@ export default function MortgageFormFields({
                   step="0.01"
                   className={MORTGAGE_INPUT_CLASS}
                   data-testid="mortgage-original-principal-input"
-                  {...fieldProblemAria(problems, "originalPrincipalDollars", "mortgage")}
+                  {...fieldFeedbackAria(mortgageFieldFeedback(problems, "originalPrincipalDollars"))}
                   {...field}
                 />
-                <MortgageFieldProblem problems={problems} field="originalPrincipalDollars" />
+                <FieldFeedback {...mortgageFieldFeedback(problems, "originalPrincipalDollars")} />
               </>
             )}
           </FormField>
@@ -280,10 +279,10 @@ export default function MortgageFormFields({
                   step="1"
                   className={MORTGAGE_INPUT_CLASS}
                   data-testid="mortgage-term-months-input"
-                  {...fieldProblemAria(problems, "termMonths", "mortgage")}
+                  {...fieldFeedbackAria(mortgageFieldFeedback(problems, "termMonths"))}
                   {...field}
                 />
-                <MortgageFieldProblem problems={problems} field="termMonths" />
+                <FieldFeedback {...mortgageFieldFeedback(problems, "termMonths")} />
               </>
             )}
           </FormField>

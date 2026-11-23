@@ -104,6 +104,9 @@ describe("LogEventDialog — interview_details", () => {
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(logEventMock).not.toHaveBeenCalled();
     expect(screen.getByText(/Pick the interview type/i)).toBeInTheDocument();
+    const type = screen.getByLabelText(/Type/i);
+    expect(type).toHaveAttribute("aria-invalid", "true");
+    expect(type).toHaveAccessibleDescription("Pick the interview type");
   });
 
   it("submits a full interview payload with only the non-empty optional fields", async () => {
@@ -153,6 +156,9 @@ describe("LogEventDialog — interview_details", () => {
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(logEventMock).not.toHaveBeenCalled();
     expect(screen.getByText(/Between 1 and 1440/i)).toBeInTheDocument();
+    const duration = screen.getByLabelText(/Duration/i);
+    expect(duration).toHaveAttribute("aria-invalid", "true");
+    expect(duration).toHaveAccessibleDescription("Between 1 and 1440");
   });
 
   it("keeps a note over the backend's limit, says so, and doesn't log it", async () => {

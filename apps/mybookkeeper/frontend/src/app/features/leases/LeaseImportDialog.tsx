@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useNavigate } from "react-router-dom";
-import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { useApplicantsPages } from "@mybookkeeper/api-client/hooks/useApplicantsPages";
 import ListingSelect from "@/app/features/listings/ListingSelect";
 import PagedSelect from "@/shared/components/ui/PagedSelect";
@@ -43,6 +43,11 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const values: LeaseImportFormValues = { applicantId, listingId, startsOn, endsOn, notes };
   const problems = leaseImportProblems(values, files.length);
   const isValid = Object.keys(problems).length === 0;
+  const endsOnFeedback = {
+    id: "import-ends-on",
+    error: problems.endsOn && LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn],
+    testId: "import-ends-on-error",
+  };
   const notesRemaining = LEASE_NOTES_MAX_LENGTH - notes.length;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -168,12 +173,9 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
                 onChange={(e) => setEndsOn(e.target.value)}
                 className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
                 data-testid="import-ends-on"
+                {...fieldFeedbackAria(endsOnFeedback)}
               />
-              {problems.endsOn ? (
-                <p role="alert" className="text-xs text-destructive" data-testid="import-ends-on-error">
-                  {LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn]}
-                </p>
-              ) : null}
+              <FieldFeedback {...endsOnFeedback} />
             </div>
           </div>
 

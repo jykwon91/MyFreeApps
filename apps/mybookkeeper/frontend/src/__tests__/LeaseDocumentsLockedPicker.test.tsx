@@ -277,10 +277,7 @@ describe("LeaseAddTemplateModal on a locked lease", () => {
     renderDetail();
     await reachValuesStep();
     expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toHaveAttribute("readonly");
-    expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toHaveAttribute(
-      "aria-describedby",
-      "addendum-readonly-NEW LEASE END DATE",
-    );
+    expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toHaveAccessibleDescription(LEASE_VALUE_READ_ONLY_NOTE);
     expect(screen.getByTestId("addendum-readonly-NEW LEASE END DATE")).toHaveTextContent(
       LEASE_VALUE_READ_ONLY_NOTE,
     );

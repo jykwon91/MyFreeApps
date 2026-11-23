@@ -35,6 +35,8 @@ describe("menu price validation", () => {
     setPrice(/^Price/, value);
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByLabelText(/^Price/)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/^Price/)).toHaveAccessibleDescription(message);
   });
 
   it("PizzaRowEditor disables Save on a cleared price and re-enables on a valid one", () => {
@@ -44,6 +46,8 @@ describe("menu price validation", () => {
     setPrice("Price", "13.50");
     expect(screen.getByLabelText("Save")).toBeEnabled();
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("Price")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("Price")).not.toHaveAttribute("aria-describedby");
   });
 
   it("ToppingRowEditor disables Save on more than 2 decimals but allows a free topping", () => {
@@ -52,5 +56,7 @@ describe("menu price validation", () => {
     setPrice("Price delta", "0.125");
     expect(screen.getByLabelText("Save")).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(MENU_PRICE_ERRORS.decimals);
+    expect(screen.getByLabelText("Price delta")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Price delta")).toHaveAccessibleDescription(MENU_PRICE_ERRORS.decimals);
   });
 });

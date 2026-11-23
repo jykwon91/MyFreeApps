@@ -75,6 +75,8 @@ describe("ExternalIdForm — create mode", () => {
     await user.type(screen.getByTestId("external-id-form-external-url"), "ff.example/12");
     await user.click(screen.getByTestId("external-id-form-submit"));
     expect(screen.getByTestId("external-id-form-validation-error")).toHaveTextContent(EXTERNAL_ID_FORM_PROBLEMS.urlInvalid);
+    expect(screen.getByTestId("external-id-form-external-url")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("external-id-form-external-url")).toHaveAccessibleDescription(EXTERNAL_ID_FORM_PROBLEMS.urlInvalid);
     expect(createMutationMock).not.toHaveBeenCalled();
   });
 

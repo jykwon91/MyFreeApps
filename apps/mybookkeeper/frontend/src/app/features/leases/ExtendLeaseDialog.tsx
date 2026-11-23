@@ -2,7 +2,7 @@ import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefu
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, LoadingButton, ModalDialog, showError, showSuccess } from "@platform/ui";
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 const NOTES_MAX_LENGTH = 2000;
@@ -79,6 +79,11 @@ export default function ExtendLeaseDialog({
     newEndsOn !== ""
     && newEndsOn > currentEndsOn
     && notes.length <= NOTES_MAX_LENGTH;
+  const newEndFeedback = {
+    id: "extend-lease-new-end",
+    error: newEndsOn !== "" && newEndsOn <= currentEndsOn ? `New end date must be after ${currentEndsOn}.` : undefined,
+    testId: "extend-lease-new-end-error",
+  };
 
   async function handleConfirm() {
     if (!isValid) return;
@@ -144,15 +149,9 @@ export default function ExtendLeaseDialog({
           min={currentEndsOn}
           onChange={(e) => setNewEndsOn(e.target.value)}
           className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
+          {...fieldFeedbackAria(newEndFeedback)}
         />
-        {newEndsOn !== "" && newEndsOn <= currentEndsOn ? (
-          <p
-            className="text-xs text-red-600"
-            data-testid="extend-lease-new-end-error"
-          >
-            New end date must be after {currentEndsOn}.
-          </p>
-        ) : null}
+        <FieldFeedback {...newEndFeedback} />
       </div>
 
       <div className="space-y-1">

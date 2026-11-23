@@ -76,11 +76,16 @@ describe("ChannelListingFormModal (create mode)", () => {
     await user.type(screen.getByTestId("channel-listing-form-external-url"), "nope");
     await user.click(screen.getByTestId("channel-listing-form-submit"));
     expect(screen.getByTestId("channel-listing-form-validation-error")).toHaveTextContent(CHANNEL_LISTING_FORM_PROBLEMS.urlInvalid);
+    expect(screen.getByTestId("channel-listing-form-external-url")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("channel-listing-form-external-url")).toHaveAccessibleDescription(CHANNEL_LISTING_FORM_PROBLEMS.urlInvalid);
     await user.clear(screen.getByTestId("channel-listing-form-external-url"));
     await user.type(screen.getByTestId("channel-listing-form-external-url"), "https://air.example/1");
     await user.type(screen.getByTestId("channel-listing-form-ical-import-url"), "also nope");
     await user.click(screen.getByTestId("channel-listing-form-submit"));
     expect(screen.getByTestId("channel-listing-form-validation-error")).toHaveTextContent(CHANNEL_LISTING_FORM_PROBLEMS.icalInvalid);
+    expect(screen.getByTestId("channel-listing-form-ical-import-url")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("channel-listing-form-ical-import-url")).toHaveAccessibleDescription(CHANNEL_LISTING_FORM_PROBLEMS.icalInvalid);
+    expect(screen.getByTestId("channel-listing-form-external-url")).not.toHaveAttribute("aria-invalid");
   });
 
   it("calls create mutation with the entered fields and closes on success", async () => {

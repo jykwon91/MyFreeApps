@@ -1,5 +1,5 @@
 import { ArrowLeft, Plus } from "lucide-react";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import { LEASE_VALUE_READ_ONLY_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
 import type { LeasePrefillProblem } from "@mybookkeeper/api-client/types/lease/lease-prefill-problem";
@@ -53,9 +53,22 @@ export default function LeaseAddTemplateValuesStep({
           className="space-y-3 max-h-[60vh] overflow-y-auto pr-1"
           data-testid="lease-add-template-values-list"
         >
-          {items.map((item) => {
+          {items.map((item, index) => {
             const value = values[item.key] ?? "";
             const provenanceLabel = prefillProvenanceLabel(item);
+            const problem = problems[item.key];
+            // Keys can hold spaces ("NEW LEASE END DATE"), which can't sit in an aria-describedby list,
+            // so the notes under the input are named by position.
+            const readOnlyNoteId = `addendum-${index}-readonly`;
+            const feedback = {
+              id: `addendum-${index}`,
+              error: problem && LEASE_PREFILL_PROBLEM_MESSAGES[problem],
+              testId: `addendum-error-${item.key}`,
+            };
+            const describedBy = [
+              item.is_read_only ? readOnlyNoteId : null,
+              fieldFeedbackAria(feedback)["aria-describedby"],
+            ].filter(Boolean).join(" ");
             return (
               <li key={item.key} className="flex flex-col gap-1">
                 <label
@@ -82,24 +95,20 @@ export default function LeaseAddTemplateValuesStep({
                   className="px-3 py-2 text-sm border rounded-md bg-background read-only:bg-muted read-only:text-muted-foreground"
                   data-testid={`addendum-input-${item.key}`}
                   placeholder={item.required ? "Required" : "Optional"}
-                  aria-invalid={problems[item.key] ? true : undefined}
+                  aria-invalid={problem ? true : undefined}
                   readOnly={item.is_read_only}
-                  aria-describedby={item.is_read_only ? `addendum-readonly-${item.key}` : undefined}
+                  aria-describedby={describedBy || undefined}
                 />
                 {item.is_read_only ? (
                   <p
-                    id={`addendum-readonly-${item.key}`}
+                    id={readOnlyNoteId}
                     className="text-xs text-muted-foreground"
                     data-testid={`addendum-readonly-${item.key}`}
                   >
                     {LEASE_VALUE_READ_ONLY_NOTE}
                   </p>
                 ) : null}
-                {problems[item.key] ? (
-                  <p role="alert" className="text-xs text-destructive" data-testid={`addendum-error-${item.key}`}>
-                    {LEASE_PREFILL_PROBLEM_MESSAGES[problems[item.key]]}
-                  </p>
-                ) : null}
+                <FieldFeedback {...feedback} />
               </li>
             );
           })}

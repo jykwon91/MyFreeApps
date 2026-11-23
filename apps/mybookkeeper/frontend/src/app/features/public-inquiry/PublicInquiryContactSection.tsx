@@ -204,6 +204,7 @@ export default function PublicInquiryContactSection({
                 markTouched("hasPets");
               }}
               aria-invalid={!!visibleErrors.hasPets}
+              aria-describedby={visibleErrors.hasPets ? "has-pets-error" : undefined}
               data-testid="public-inquiry-pets-no"
             />
             No
@@ -220,6 +221,7 @@ export default function PublicInquiryContactSection({
                 markTouched("hasPets");
               }}
               aria-invalid={!!visibleErrors.hasPets}
+              aria-describedby={visibleErrors.hasPets ? "has-pets-error" : undefined}
               data-testid="public-inquiry-pets-yes"
             />
             Yes

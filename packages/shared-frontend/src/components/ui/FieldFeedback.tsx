@@ -5,12 +5,12 @@ import type { FieldFeedbackProps } from "./FieldFeedbackProps";
  * not one. The counter is plain text (no role, no live region), so it is read when the control is
  * focused through `fieldFeedbackAria`, never on each keystroke. Spread `fieldFeedbackAria` onto the control.
  */
-export default function FieldFeedback({ id, error, counter }: FieldFeedbackProps) {
+export default function FieldFeedback({ id, error, counter, testId }: FieldFeedbackProps) {
   if (!error && !counter) return null;
   return (
     <div className="mt-1 flex items-start justify-between gap-2 text-xs">
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-destructive" data-testid={testId}>
           {error}
         </p>
       ) : (

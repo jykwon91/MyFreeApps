@@ -63,6 +63,8 @@ export default function InterviewDetailsFields({
     id: `${idPrefix}-interviewers`,
     error: errors.interview_interviewer_names?.message,
   };
+  const typeFeedback = { id: `${idPrefix}-type`, error: errors.interview_type?.message };
+  const durationFeedback = { id: `${idPrefix}-duration`, error: errors.interview_duration_minutes?.message };
   return (
     <fieldset className="border rounded-md p-3 space-y-3">
       <legend className="px-1 text-xs font-medium text-muted-foreground">
@@ -75,6 +77,7 @@ export default function InterviewDetailsFields({
         </label>
         <select
           id={`${idPrefix}-type`}
+          {...fieldFeedbackAria(typeFeedback)}
           {...register("interview_type", {
             required: "Pick the interview type",
           })}
@@ -85,11 +88,7 @@ export default function InterviewDetailsFields({
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        {errors.interview_type ? (
-          <p className="text-xs text-destructive mt-1">
-            {errors.interview_type.message}
-          </p>
-        ) : null}
+        <FieldFeedback {...typeFeedback} />
       </div>
 
       <div className={dateDurationLayout}>
@@ -113,6 +112,7 @@ export default function InterviewDetailsFields({
             type="number"
             min={INTERVIEW_DURATION_MIN_MINUTES}
             max={INTERVIEW_DURATION_MAX_MINUTES}
+            {...fieldFeedbackAria(durationFeedback)}
             {...register("interview_duration_minutes", {
               valueAsNumber: false,
               validate: (v) =>
@@ -122,11 +122,7 @@ export default function InterviewDetailsFields({
             placeholder="e.g. 60"
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           />
-          {errors.interview_duration_minutes ? (
-            <p className="text-xs text-destructive mt-1">
-              {errors.interview_duration_minutes.message}
-            </p>
-          ) : null}
+          <FieldFeedback {...durationFeedback} />
         </div>
       </div>
 

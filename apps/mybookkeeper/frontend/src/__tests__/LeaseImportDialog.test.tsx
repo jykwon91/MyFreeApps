@@ -217,6 +217,8 @@ describe("LeaseImportDialog", () => {
     fireEvent.change(screen.getByTestId("import-ends-on"), { target: { value: "2026-05-01" } });
 
     expect(screen.getByTestId("import-ends-on-error")).toHaveTextContent("can't be before");
+    expect(screen.getByTestId("import-ends-on")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("import-ends-on")).toHaveAccessibleDescription(screen.getByTestId("import-ends-on-error").textContent ?? "");
     expect(screen.getByTestId("import-submit")).toBeDisabled();
     fireEvent.change(screen.getByTestId("import-ends-on"), { target: { value: "2026-06-02" } });
     expect(screen.queryByTestId("import-ends-on-error")).toBeNull();

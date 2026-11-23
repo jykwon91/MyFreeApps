@@ -115,6 +115,8 @@ describe("Register \u2014 validation", () => {
     await user.click(termsCheckbox());
     await user.click(screen.getByRole("button", { name: "Sign up" }));
     await screen.findByText("Password must be at least 12 characters");
+    expect(passwordInput(container)).toHaveAttribute("aria-invalid", "true");
+    expect(passwordInput(container)).toHaveAccessibleDescription("Password must be at least 12 characters");
   });
 
   it("does not call the API when the password is too short", async () => {

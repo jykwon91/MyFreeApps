@@ -61,7 +61,7 @@ describe("utility plan form checks", () => {
     expect(await screen.findByTestId("utility-plan-energyCharge-problem")).toHaveTextContent("cents");
     const input = screen.getByTestId("utility-plan-energy-input");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAttribute("aria-describedby", "utility-plan-energyCharge-problem");
+    expect(input).toHaveAccessibleDescription(screen.getByTestId("utility-plan-energyCharge-problem").textContent ?? "");
     expect(mockCreate).not.toHaveBeenCalled();
 
     await user.clear(input);

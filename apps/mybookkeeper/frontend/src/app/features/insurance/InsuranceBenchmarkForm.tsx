@@ -1,6 +1,4 @@
-import { Button, LoadingButton } from "@platform/ui";
-import FieldProblem from "@/shared/components/FieldProblem";
-import { problemAria } from "@/shared/utils/field-problem-aria";
+import { Button, FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import {
   BENCHMARK_NOTES_MAX_LENGTH,
   BENCHMARK_SOURCE_MAX_LENGTH,
@@ -51,10 +49,10 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setPremium(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-premium"
-            {...problemAria(form.problems.premium, "insurance-benchmark-premium-problem")}
+            {...fieldFeedbackAria({ id: "insurance-benchmark-premium", error: form.problems.premium, testId: "insurance-benchmark-premium-problem" })}
             required
           />
-          <FieldProblem id="insurance-benchmark-premium-problem" message={form.problems.premium} />
+          <FieldFeedback id="insurance-benchmark-premium" error={form.problems.premium} testId="insurance-benchmark-premium-problem" />
           <p className="text-xs text-muted-foreground mt-1">
             The yearly cost, even if the quote was monthly.
           </p>
@@ -77,10 +75,10 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setCoverage(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-coverage"
-            {...problemAria(form.problems.coverage, "insurance-benchmark-coverage-problem")}
+            {...fieldFeedbackAria({ id: "insurance-benchmark-coverage", error: form.problems.coverage, testId: "insurance-benchmark-coverage-problem" })}
             required
           />
-          <FieldProblem id="insurance-benchmark-coverage-problem" message={form.problems.coverage} />
+          <FieldFeedback id="insurance-benchmark-coverage" error={form.problems.coverage} testId="insurance-benchmark-coverage-problem" />
           <p className="text-xs text-muted-foreground mt-1">
             What that premium buys — your policies are measured per $1,000 of it.
           </p>
@@ -103,9 +101,9 @@ export default function InsuranceBenchmarkForm({
           placeholder="Harris County, TX"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-region"
-          {...problemAria(form.problems.regionLabel, "insurance-benchmark-region-problem")}
+          {...fieldFeedbackAria({ id: "insurance-benchmark-region", error: form.problems.regionLabel, testId: "insurance-benchmark-region-problem" })}
         />
-        <FieldProblem id="insurance-benchmark-region-problem" message={form.problems.regionLabel} />
+        <FieldFeedback id="insurance-benchmark-region" error={form.problems.regionLabel} testId="insurance-benchmark-region-problem" />
         <p className="text-xs text-muted-foreground mt-1">
           Premiums swing hard by county — coastal wind exposure alone can double
           them, so a figure with no area attached cannot be sanity-checked later.
@@ -128,9 +126,9 @@ export default function InsuranceBenchmarkForm({
           placeholder="TDI HelpInsure quote, HO-3, $2,500 deductible"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-source"
-          {...problemAria(form.problems.source, "insurance-benchmark-source-problem")}
+          {...fieldFeedbackAria({ id: "insurance-benchmark-source", error: form.problems.source, testId: "insurance-benchmark-source-problem" })}
         />
-        <FieldProblem id="insurance-benchmark-source-problem" message={form.problems.source} />
+        <FieldFeedback id="insurance-benchmark-source" error={form.problems.source} testId="insurance-benchmark-source-problem" />
         <p className="text-xs text-muted-foreground mt-1">
           Include the policy form and deductible — they are what makes the number
           checkable against your own.
@@ -152,10 +150,10 @@ export default function InsuranceBenchmarkForm({
           onChange={(e) => form.setObservedOn(e.target.value)}
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-observed-on"
-          {...problemAria(form.problems.observedOn, "insurance-benchmark-observed-on-problem")}
+          {...fieldFeedbackAria({ id: "insurance-benchmark-observed-on", error: form.problems.observedOn, testId: "insurance-benchmark-observed-on-problem" })}
           required
         />
-        <FieldProblem id="insurance-benchmark-observed-on-problem" message={form.problems.observedOn} />
+        <FieldFeedback id="insurance-benchmark-observed-on" error={form.problems.observedOn} testId="insurance-benchmark-observed-on-problem" />
       </div>
 
       <div>
@@ -173,9 +171,9 @@ export default function InsuranceBenchmarkForm({
           className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
           maxLength={BENCHMARK_NOTES_MAX_LENGTH}
           data-testid="insurance-benchmark-notes"
-          {...problemAria(form.problems.notes, "insurance-benchmark-notes-problem")}
+          {...fieldFeedbackAria({ id: "insurance-benchmark-notes", error: form.problems.notes, testId: "insurance-benchmark-notes-problem" })}
         />
-        <FieldProblem id="insurance-benchmark-notes-problem" message={form.problems.notes} />
+        <FieldFeedback id="insurance-benchmark-notes" error={form.problems.notes} testId="insurance-benchmark-notes-problem" />
       </div>
 
       {/* Removal sits apart from save/cancel: without it a premium recorded

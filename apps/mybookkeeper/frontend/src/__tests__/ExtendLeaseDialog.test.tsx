@@ -74,6 +74,8 @@ describe("ExtendLeaseDialog", () => {
     expect(
       screen.getByTestId("extend-lease-new-end-error"),
     ).toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription("New end date must be after 2026-12-31.");
   });
 
   it("enables Confirm when new date is strictly after current", () => {

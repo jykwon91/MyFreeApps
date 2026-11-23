@@ -1,6 +1,5 @@
-import { FormField } from "@platform/ui";
-import InsuranceFieldProblem from "./InsuranceFieldProblem";
-import { fieldProblemAria } from "@/shared/utils/field-problem-aria";
+import { FieldFeedback, fieldFeedbackAria, FormField } from "@platform/ui";
+import { insuranceFieldFeedback } from "./insurance-field-feedback";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
@@ -43,10 +42,10 @@ export default function InsurancePolicyFormFields({
               maxLength={255}
               required
               data-testid="insurance-policy-name-input"
-              {...fieldProblemAria(problems, "policyName", "insurance")}
+              {...fieldFeedbackAria(insuranceFieldFeedback(problems, "policyName"))}
               {...field}
             />
-            <InsuranceFieldProblem problems={problems} field="policyName" />
+            <FieldFeedback {...insuranceFieldFeedback(problems, "policyName")} />
           </>
         )}
       </FormField>
@@ -62,10 +61,10 @@ export default function InsurancePolicyFormFields({
               className={INSURANCE_POLICY_INPUT_CLASS}
               maxLength={255}
               data-testid="insurance-carrier-input"
-              {...fieldProblemAria(problems, "carrier", "insurance")}
+              {...fieldFeedbackAria(insuranceFieldFeedback(problems, "carrier"))}
               {...field}
             />
-            <InsuranceFieldProblem problems={problems} field="carrier" />
+            <FieldFeedback {...insuranceFieldFeedback(problems, "carrier")} />
           </>
         )}
       </FormField>
@@ -81,10 +80,10 @@ export default function InsurancePolicyFormFields({
               className={INSURANCE_POLICY_INPUT_CLASS}
               maxLength={255}
               data-testid="insurance-policy-number-input"
-              {...fieldProblemAria(problems, "policyNumber", "insurance")}
+              {...fieldFeedbackAria(insuranceFieldFeedback(problems, "policyNumber"))}
               {...field}
             />
-            <InsuranceFieldProblem problems={problems} field="policyNumber" />
+            <FieldFeedback {...insuranceFieldFeedback(problems, "policyNumber")} />
           </>
         )}
       </FormField>
@@ -112,10 +111,10 @@ export default function InsurancePolicyFormFields({
                 onChange={(e) => onChange("expirationDate", e.target.value)}
                 className={INSURANCE_POLICY_INPUT_CLASS}
                 data-testid="insurance-expiration-date-input"
-                {...fieldProblemAria(problems, "expirationDate", "insurance")}
+                {...fieldFeedbackAria(insuranceFieldFeedback(problems, "expirationDate"))}
                 {...field}
               />
-              <InsuranceFieldProblem problems={problems} field="expirationDate" />
+              <FieldFeedback {...insuranceFieldFeedback(problems, "expirationDate")} />
             </>
           )}
         </FormField>
@@ -133,10 +132,10 @@ export default function InsurancePolicyFormFields({
               step="1"
               className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-coverage-input"
-              {...fieldProblemAria(problems, "coverageDollars", "insurance")}
+              {...fieldFeedbackAria(insuranceFieldFeedback(problems, "coverageDollars"))}
               {...field}
             />
-            <InsuranceFieldProblem problems={problems} field="coverageDollars" />
+            <FieldFeedback {...insuranceFieldFeedback(problems, "coverageDollars")} />
           </>
         )}
       </FormField>
@@ -160,10 +159,10 @@ export default function InsurancePolicyFormFields({
                   step="0.01"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-premium-input"
-                  {...fieldProblemAria(problems, "premiumDollars", "insurance")}
+                  {...fieldFeedbackAria(insuranceFieldFeedback(problems, "premiumDollars"))}
                   {...field}
                 />
-                <InsuranceFieldProblem problems={problems} field="premiumDollars" />
+                <FieldFeedback {...insuranceFieldFeedback(problems, "premiumDollars")} />
               </>
             )}
           </FormField>
@@ -176,7 +175,7 @@ export default function InsurancePolicyFormFields({
                   onChange={(e) => onChange("premiumFrequency", e.target.value)}
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-premium-frequency-select"
-                  {...fieldProblemAria(problems, "premiumFrequency", "insurance")}
+                  {...fieldFeedbackAria(insuranceFieldFeedback(problems, "premiumFrequency"))}
                   {...field}
                 >
                   {/* Blank rather than a default period: guessing "annually" over a
@@ -188,7 +187,7 @@ export default function InsurancePolicyFormFields({
                     </option>
                   ))}
                 </select>
-                <InsuranceFieldProblem problems={problems} field="premiumFrequency" />
+                <FieldFeedback {...insuranceFieldFeedback(problems, "premiumFrequency")} />
               </>
             )}
           </FormField>
@@ -209,10 +208,10 @@ export default function InsurancePolicyFormFields({
                 step="0.01"
                 className={INSURANCE_POLICY_INPUT_CLASS}
                 data-testid="insurance-fees-and-taxes-input"
-                {...fieldProblemAria(problems, "feesAndTaxesDollars", "insurance")}
+                {...fieldFeedbackAria(insuranceFieldFeedback(problems, "feesAndTaxesDollars"))}
                 {...field}
               />
-              <InsuranceFieldProblem problems={problems} field="feesAndTaxesDollars" />
+              <FieldFeedback {...insuranceFieldFeedback(problems, "feesAndTaxesDollars")} />
               <p className="mt-1 text-xs text-muted-foreground">
                 Policy, inspection and agent fees, surplus lines tax and stamping
                 fee — everything on the bill that isn&apos;t premium, for the whole
@@ -235,10 +234,10 @@ export default function InsurancePolicyFormFields({
                   step="1"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-deductible-input"
-                  {...fieldProblemAria(problems, "deductibleDollars", "insurance")}
+                  {...fieldFeedbackAria(insuranceFieldFeedback(problems, "deductibleDollars"))}
                   {...field}
                 />
-                <InsuranceFieldProblem problems={problems} field="deductibleDollars" />
+                <FieldFeedback {...insuranceFieldFeedback(problems, "deductibleDollars")} />
               </>
             )}
           </FormField>
@@ -256,10 +255,10 @@ export default function InsurancePolicyFormFields({
                   step="0.01"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-wind-hail-input"
-                  {...fieldProblemAria(problems, "windHailPct", "insurance")}
+                  {...fieldFeedbackAria(insuranceFieldFeedback(problems, "windHailPct"))}
                   {...field}
                 />
-                <InsuranceFieldProblem problems={problems} field="windHailPct" />
+                <FieldFeedback {...insuranceFieldFeedback(problems, "windHailPct")} />
               </>
             )}
           </FormField>
@@ -277,10 +276,10 @@ export default function InsurancePolicyFormFields({
               rows={3}
               maxLength={5000}
               data-testid="insurance-notes-input"
-              {...fieldProblemAria(problems, "notes", "insurance")}
+              {...fieldFeedbackAria(insuranceFieldFeedback(problems, "notes"))}
               {...field}
             />
-            <InsuranceFieldProblem problems={problems} field="notes" />
+            <FieldFeedback {...insuranceFieldFeedback(problems, "notes")} />
           </>
         )}
       </FormField>

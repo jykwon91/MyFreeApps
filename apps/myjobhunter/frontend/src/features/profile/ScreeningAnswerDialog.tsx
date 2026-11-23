@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
 import {
   useCreateScreeningAnswerMutation,
@@ -18,8 +18,6 @@ import { unansweredScreeningQuestions } from "@myjobhunter/api-client/utils/unan
 import { problemsResolver } from "@/lib/problems-resolver";
 
 const resolver = problemsResolver(screeningAnswerFormProblems);
-const QUESTION_PROBLEM_ID = "sa-question-key-problem";
-const ANSWER_PROBLEM_ID = "sa-answer-problem";
 
 export interface ScreeningAnswerDialogProps {
   open: boolean;
@@ -63,6 +61,8 @@ export default function ScreeningAnswerDialog({
     }
   }, [open, existing, reset]);
 
+  const questionFeedback = { id: "sa-question-key", error: errors.question_key?.message };
+  const answerFeedback = { id: "sa-answer", error: errors.answer?.message };
   const availableKeys = isEdit ? SCREENING_QUESTIONS : unansweredScreeningQuestions(existingKeys);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
@@ -131,8 +131,7 @@ export default function ScreeningAnswerDialog({
                   id="sa-question-key"
                   {...register("question_key")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                  aria-invalid={errors.question_key ? true : undefined}
-                  aria-describedby={errors.question_key ? QUESTION_PROBLEM_ID : undefined}
+                  {...fieldFeedbackAria(questionFeedback)}
                 >
                   <option value="">Select a question...</option>
                   {availableKeys.map((q) => (
@@ -142,11 +141,7 @@ export default function ScreeningAnswerDialog({
                     </option>
                   ))}
                 </select>
-                {errors.question_key ? (
-                  <p id={QUESTION_PROBLEM_ID} role="alert" className="text-xs text-destructive mt-1">
-                    {errors.question_key.message}
-                  </p>
-                ) : null}
+                <FieldFeedback {...questionFeedback} />
               </div>
             )}
 
@@ -159,14 +154,9 @@ export default function ScreeningAnswerDialog({
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"
                 placeholder="Enter your pre-filled answer..."
                 autoFocus={isEdit}
-                aria-invalid={errors.answer ? true : undefined}
-                aria-describedby={errors.answer ? ANSWER_PROBLEM_ID : undefined}
+                {...fieldFeedbackAria(answerFeedback)}
               />
-              {errors.answer ? (
-                <p id={ANSWER_PROBLEM_ID} role="alert" className="text-xs text-destructive mt-1">
-                  {errors.answer.message}
-                </p>
-              ) : null}
+              <FieldFeedback {...answerFeedback} />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
