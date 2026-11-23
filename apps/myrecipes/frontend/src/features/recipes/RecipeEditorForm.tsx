@@ -53,6 +53,8 @@ interface CreateProps {
   onCancel?: () => void;
   /** What Cancel asks when it would lose something, if not what leaving asks. */
   cancelCopy?: DiscardCopy;
+  /** Told the new recipe's id once it's created, before the form leaves for it. */
+  onCreated?: (recipeId: string) => void;
 }
 
 interface TweakProps {
@@ -164,6 +166,7 @@ export default function RecipeEditorForm(props: Props) {
       try {
         if (props.mode === "create") {
           const created = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
+          props.onCreated?.(created.id);
           showSuccess("Recipe created.");
           guard.leaveWithoutAsking(() => navigate(`/recipes/${created.id}`, { replace: true }));
         } else {

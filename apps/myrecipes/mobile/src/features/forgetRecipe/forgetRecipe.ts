@@ -2,7 +2,7 @@ import type { ThunkAction, UnknownAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../lib/store";
 import { cancelCookTimerAlert } from "../../services/cookTimerNotifications";
 import { deleteCookCopy } from "../cook/cookCopies";
-import { recipeForgotten } from "./recipeForgotten";
+import { recipeForgotten } from "@myrecipes/api-client/store/recipeForgotten";
 
 /**
  * Everything the phone keeps for a recipe that no longer exists: its Discover save, cook session,

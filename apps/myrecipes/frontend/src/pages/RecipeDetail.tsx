@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, ChefHat, GitBranch, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   useListRecipeCooksQuery,
   useDeleteRecipeMutation,
 } from "@myrecipes/api-client/store/recipesApi";
+import { recipeForgotten } from "@myrecipes/api-client/store/recipeForgotten";
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { RECIPE_BYLINE } from "@myrecipes/api-client/constants/recipeByline";
 import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
@@ -39,6 +41,7 @@ export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
   const recipeId = id ?? "";
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const recipeQuery = useGetRecipeQuery(recipeId, { skip: !recipeId });
   // Public-read / auth-write: reads are public, but cook logs, write buttons,
@@ -93,6 +96,8 @@ export default function RecipeDetail() {
   async function handleDelete() {
     try {
       await deleteRecipe(recipeId).unwrap();
+      // A Discover result saved as this recipe goes back to offering Save.
+      dispatch(recipeForgotten(recipeId));
       showSuccess(RECIPE_MANAGE_MESSAGES.deleted);
       navigate("/", { replace: true });
     } catch (error) {
@@ -101,6 +106,7 @@ export default function RecipeDetail() {
         showError(message);
         return;
       }
+      dispatch(recipeForgotten(recipeId));
       showSuccess(message);
       navigate("/", { replace: true });
     }

@@ -1,6 +1,6 @@
-import type { DiscoveryResults } from "@myrecipes/api-client/types/recipe/discovery";
-import type { DiscoveryRead } from "./DiscoveryRead";
-import type { DiscoverySearch } from "./DiscoverySearch";
+import type { DiscoveryResults } from "./discovery";
+import type { DiscoveryRead } from "./discovery-read";
+import type { DiscoverySearch } from "./discovery-search";
 
 export interface DiscoveryState {
   /** Bumped when the account leaves, so work it started can't land in the next account's state. */

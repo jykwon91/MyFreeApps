@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
+import { recipeForgotten } from "@myrecipes/api-client/store/recipeForgotten";
 import type { CookTimer } from "../../types/CookTimer";
 import type { CookTimerAlert } from "../../types/CookTimerAlert";
 

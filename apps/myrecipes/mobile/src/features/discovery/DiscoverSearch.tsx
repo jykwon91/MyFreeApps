@@ -1,9 +1,11 @@
 import {
+  DISCOVERY_NO_RESULTS_COPY,
   DISCOVERY_QUERY_MAX_LENGTH,
   DISCOVERY_QUERY_MIN_LENGTH,
   DISCOVERY_QUERY_PLACEHOLDER,
   DISCOVERY_SEARCH_STAGES,
 } from "@myrecipes/api-client/constants/discovery";
+import { searchDiscoveredRecipes } from "@myrecipes/api-client/store/searchDiscoveredRecipes";
 import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 import { Banner, EmptyState, ListSeparator, LoadingButton, SearchField, useScreenFocused, useTheme, useToast } from "@platform/mobile";
 import { useRouter } from "expo-router";
@@ -17,7 +19,6 @@ import DiscoverIdle from "./DiscoverIdle";
 import DiscoveryCard from "./DiscoveryCard";
 import DiscoveryResultsSkeleton from "./DiscoveryResultsSkeleton";
 import DiscoveryStatus from "./DiscoveryStatus";
-import { searchDiscoveredRecipes } from "./searchDiscoveredRecipes";
 
 /**
  * Search the web for versions of a dish (the website's /discover).
@@ -88,7 +89,7 @@ export default function DiscoverSearch() {
       <FlatList
         ItemSeparatorComponent={ListSeparator}
         ListEmptyComponent={
-          <EmptyState body="Try another dish name, or a shorter one." heading={`Nothing found for ${results.query}`} />
+          <EmptyState body={DISCOVERY_NO_RESULTS_COPY.body} heading={DISCOVERY_NO_RESULTS_COPY.heading(results.query)} />
         }
         ListHeaderComponent={
           results.recipes.length > 0 ? (

@@ -16,7 +16,7 @@ import { Provider } from "react-redux";
 import { MANAGE_RECIPE_MESSAGES as MESSAGES } from "../src/constants/manageRecipe";
 import { RECIPES_LIST_PATH } from "../src/constants/routes";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
-import { recipeSaved } from "../src/features/discovery/discoverySlice";
+import { recipeSaved } from "@myrecipes/api-client/store/discoverySlice";
 import { makeStore } from "../src/lib/store";
 import { SHOWN } from "@platform/mobile/test-support/shown";
 import { fieldLabel } from "@platform/mobile/test-support/fieldLabelPattern";

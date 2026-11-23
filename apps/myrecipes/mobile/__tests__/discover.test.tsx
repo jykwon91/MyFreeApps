@@ -18,9 +18,9 @@ import DiscoveryDetailRoute from "../app/discover/[id]";
 import { API_BASE_URL } from "../src/constants/api";
 import { DISCOVERY_DETAIL_COPY } from "../src/constants/discovery";
 import { DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
-import { discoveryCleared } from "../src/features/discovery/discoverySlice";
-import { readDiscoveredRecipe } from "../src/features/discovery/readDiscoveredRecipe";
-import { searchDiscoveredRecipes } from "../src/features/discovery/searchDiscoveredRecipes";
+import { discoveryCleared } from "@myrecipes/api-client/store/discoverySlice";
+import { readDiscoveredRecipe } from "@myrecipes/api-client/store/readDiscoveredRecipe";
+import { searchDiscoveredRecipes } from "@myrecipes/api-client/store/searchDiscoveredRecipes";
 import { store } from "../src/lib/store";
 import { APP_ROUTES } from "../test-support/renderApp";
 

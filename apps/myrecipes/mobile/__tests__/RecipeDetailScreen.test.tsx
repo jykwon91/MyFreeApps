@@ -9,7 +9,7 @@ import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
-import { recipeSaved } from "../src/features/discovery/discoverySlice";
+import { recipeSaved } from "@myrecipes/api-client/store/discoverySlice";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import { makeStore } from "../src/lib/store";

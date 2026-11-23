@@ -2,6 +2,7 @@
  * No-backend E2E for /discover: a signed-in user searches the web for a dish, sees the loading
  * state and then the result cards, opens one to read it (a second open costs no call), recovers
  * from a failed search or read, and hands a read recipe to the editor, which posts it intact.
+ * Leaving Discover and coming back keeps the results, the read and the save.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -150,7 +151,7 @@ test("a failed search says so, keeps the query, and a retry shows the results", 
   expect(api.searches).toEqual(["asdfghjkl", "asdfghjkl"]);
 });
 
-test("a page that can't be read leaves the results, and opening it again retries", async ({ page }) => {
+test("a page that can't be read stays open, and Try again reads it", async ({ page }) => {
   await stubSignedInShell(page);
   const api = await stubDiscoveryApi(page, { readStatuses: [422] });
 
@@ -158,12 +159,52 @@ test("a page that can't be read leaves the results, and opening it again retries
   await openFirstResult(page);
 
   await expect(page.getByText(READ_FAILED)).toBeVisible();
-  await expect(resultCards(page)).toHaveCount(3);
+  await expect(page.getByRole("heading", { level: 1, name: NAPOLITANO.title })).toBeVisible();
+  const original = page.getByRole("link", { name: /View original/ });
+  await expect(original).toHaveAttribute("href", NAPOLITANO.url);
+  await expect(original).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(page.getByRole("button", { name: "Back to results" })).toBeVisible();
 
-  await resultCards(page).first().click();
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("button", { name: SAVE_BUTTON })).toBeVisible();
   await expect(page.getByText(READ_FAILED)).toHaveCount(0);
   expect(api.reads).toHaveLength(2);
+});
+
+test("a failed read goes back to the results, and opening it again retries", async ({ page }) => {
+  await stubSignedInShell(page);
+  const api = await stubDiscoveryApi(page, { readStatuses: [422] });
+
+  await page.goto("/discover");
+  await openFirstResult(page);
+  await expect(page.getByText(READ_FAILED)).toBeVisible();
+
+  await page.getByRole("button", { name: "Back to results" }).click();
+  await expect(resultCards(page)).toHaveCount(3);
+  await resultCards(page).first().click();
+  await expect(page.getByRole("button", { name: SAVE_BUTTON })).toBeVisible();
+  expect(api.reads).toHaveLength(2);
+});
+
+test("leaving Discover and coming back keeps the results, the read and the save", async ({ page }) => {
+  await stubSignedInShell(page);
+  const api = await stubDiscoveryApi(page);
+  await stubRecipeCreate(page, CREATED_ID);
+
+  await page.goto("/discover");
+  await openFirstResult(page);
+  await page.getByRole("button", { name: SAVE_BUTTON }).click();
+  await page.getByRole("button", { name: "Create recipe" }).click();
+  await expect(page).toHaveURL(new RegExp(`/recipes/${CREATED_ID}$`));
+
+  await page.getByRole("link", { name: "Discover" }).first().click();
+  await expect(resultCards(page)).toHaveCount(3);
+  await expect(page.getByLabel("Dish to search the web for")).toHaveValue(DISCOVERY_QUERY);
+  await resultCards(page).first().click();
+  await expect(page.getByRole("link", { name: "Open saved recipe" })).toHaveAttribute("href", `/recipes/${CREATED_ID}`);
+  await expect(page.getByRole("button", { name: SAVE_BUTTON })).toHaveCount(0);
+  expect(api.searches).toHaveLength(1);
+  expect(api.reads).toHaveLength(1);
 });
 
 test("saving hands the read recipe to the editor, which posts it with its source", async ({ page }) => {
