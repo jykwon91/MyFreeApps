@@ -1,12 +1,10 @@
-import { X } from "lucide-react";
-import { AlertBox, useLiveSearchParams, Tabs, TabPanel } from "@platform/ui";
+import { AlertBox, useLiveSearchParams, Tabs, TabPanel, useDismissable, DismissButton } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import RentalRoi from "@/app/features/analytics/RentalRoi";
 import UtilityTrends from "@/app/features/analytics/UtilityTrends";
 import { ANALYTICS_TABS, DEFAULT_ANALYTICS_TAB } from "@/shared/lib/analytics-tabs";
 import type { AnalyticsTabKey } from "@/shared/types/analytics/analytics-tab-key";
 import { isAnalyticsTabKey } from "@/shared/utils/is-analytics-tab-key";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function Analytics() {
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("analytics-info-dismissed");
@@ -33,13 +31,7 @@ export default function Analytics() {
           <span>
             I track your utility costs over time so you can spot seasonal patterns, catch unusual spikes, and have a clear picture of operating costs for each property.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

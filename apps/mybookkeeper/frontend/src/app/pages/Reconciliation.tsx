@@ -1,8 +1,6 @@
-import { X } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import ReconciliationWizard from "@/app/features/reconciliation/ReconciliationWizard";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 
@@ -28,13 +26,7 @@ export default function Reconciliation() {
           <span>
             Reconciliation compares what your rental platform (Airbnb, VRBO) reported on your 1099 against the reservation income I&rsquo;ve tracked. Discrepancies can mean missing income, double-counting, or a platform error &mdash; and they can flag you for an audit.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

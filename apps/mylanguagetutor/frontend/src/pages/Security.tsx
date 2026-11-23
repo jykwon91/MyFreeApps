@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { X, Trash2 } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { Trash2 } from "lucide-react";
+import { AlertBox, useDismissable, DismissButton } from "@platform/ui";
 
 import { ACCOUNT_COPY } from "@mylanguagetutor/api-client/constants/accountCopy";
-import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import SignedInDevices from "@platform/ui/components/auth/SignedInDevices";
 import DisplayNameSetting from "@platform/ui/components/auth/DisplayNameSetting";
@@ -33,14 +32,7 @@ export default function Security() {
       {!infoDismissed && (
         <AlertBox variant="info" className="flex items-center justify-between gap-3">
           <span>{ACCOUNT_COPY.twoFactorIntro}</span>
-          <button
-            type="button"
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 

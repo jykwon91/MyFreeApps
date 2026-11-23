@@ -1,13 +1,12 @@
 import { useState, useCallback, useMemo } from "react";
-import { ChevronDown, X } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { ChevronDown } from "lucide-react";
+import { AlertBox, useDismissable, DismissButton } from "@platform/ui";
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { taxReturnYears } from "@mybookkeeper/api-client/utils/taxReturnYears";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import TaxDocumentsContent from "@/app/features/tax/TaxDocumentsContent";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxDocuments() {
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("tax-docs-info-dismissed");
@@ -60,13 +59,7 @@ export default function TaxDocuments() {
           <span>
             I track which tax documents you&rsquo;re expected to receive based on your properties and past filings &mdash; W-2s from employers, 1099s from rental platforms, 1098s from your mortgage lender. Upload them as they arrive and I&rsquo;ll keep this checklist up to date.
           </span>
-          <button
-            onClick={dismissInfo}
-            aria-label="Dismiss"
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
-          >
-            <X size={14} />
-          </button>
+          <DismissButton onClick={dismissInfo} />
         </AlertBox>
       )}
 
