@@ -98,6 +98,8 @@ describe("PracticeSession", () => {
       interrupt: vi.fn(),
       resume: vi.fn(),
       dismissFailure: vi.fn(),
+      dismissNotice: vi.fn(),
+      notice: null,
       dismissRetryPrompt: vi.fn(),
     };
   });

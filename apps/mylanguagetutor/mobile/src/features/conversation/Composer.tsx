@@ -11,8 +11,9 @@ import VoicePrivacyNotice from "./VoicePrivacyNotice";
 
 /**
  * How the learner answers, as the website's practice page lays it out: speaking (after the privacy
- * notice, once), the blocked-microphone notice, or typing, with a way back to the microphone. Nothing
- * while it's still being found out which privacy notice applies, which takes a moment.
+ * notice, once), the blocked-microphone notice, or typing, with a way back to the microphone. While
+ * it's still being found out which privacy notice applies, which takes a moment, the typed answer
+ * stands in, so the learner is never left without a way to answer.
  */
 export default function Composer({ voice, recognition, privacy, busy, ...typed }: ComposerProps) {
   const { colors, spacing, fontSize } = useTheme();
@@ -22,7 +23,8 @@ export default function Composer({ voice, recognition, privacy, busy, ...typed }
     case "denied":
       return <MicDeniedNotice onTypeInstead={voice.switchToText} />;
     case "privacy":
-      return privacy ? <VoicePrivacyNotice onContinue={voice.acceptPrivacy} onTypeInstead={voice.switchToText} privacy={privacy} /> : null;
+      if (!privacy) return <TypedComposer {...typed} busy={busy} label={typedAnswerLabel(recognition.supported)} />;
+      return <VoicePrivacyNotice onContinue={voice.acceptPrivacy} onTypeInstead={voice.switchToText} privacy={privacy} />;
     case "voice":
       return (
         <VoiceComposer

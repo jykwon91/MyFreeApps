@@ -21,6 +21,8 @@ const sessionState: Omit<PracticeSessionState, "busy" | "replay"> = {
   interrupt: vi.fn(),
   resume: vi.fn(),
   dismissFailure: vi.fn(),
+  dismissNotice: vi.fn(),
+  notice: null,
   dismissRetryPrompt: vi.fn(),
 };
 
