@@ -10,10 +10,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
+from platform_shared.repositories.audited_writes import insert_if_absent
 
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 
@@ -100,28 +100,21 @@ async def insert_if_not_exists(
     Returns the inserted row, or None if it was a no-op conflict.
     Idempotent: re-scanning the same email never creates duplicate entries.
     """
-    new_id = uuid.uuid4()
-    stmt = (
-        pg_insert(CalendarEmailReviewQueue)
-        .values(
-            id=new_id,
-            user_id=user_id,
-            organization_id=organization_id,
-            email_message_id=email_message_id,
-            source_channel=source_channel,
-            parsed_payload=parsed_payload,
-            status="pending",
-        )
-        # The dedup guard is a unique INDEX, not a constraint, so the conflict
-        # target is inferred from its columns — Postgres rejects
-        # ``ON CONFLICT ON CONSTRAINT`` for an index name.
-        .on_conflict_do_nothing(
-            index_elements=["user_id", "email_message_id"],
-        )
-        .returning(CalendarEmailReviewQueue)
+    # The dedup key is the unique index on (user_id, email_message_id),
+    # whatever the existing item's status or deleted_at.
+    return await insert_if_absent(
+        db, CalendarEmailReviewQueue,
+        CalendarEmailReviewQueue.user_id == user_id,
+        CalendarEmailReviewQueue.email_message_id == email_message_id,
+        create={
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "email_message_id": email_message_id,
+            "source_channel": source_channel,
+            "parsed_payload": parsed_payload,
+            "status": "pending",
+        },
     )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
 
 
 async def mark_resolved(

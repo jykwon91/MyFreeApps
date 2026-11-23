@@ -1,15 +1,15 @@
 """Repository for ``calendar_listing_blocklist``.
 
-INSERT … ON CONFLICT DO NOTHING makes every write idempotent — ignoring the
-same external listing twice is a no-op, so the service doesn't need to
-pre-check for existence.
+Inserts are idempotent — ignoring the same external listing twice is a no-op,
+so the service doesn't need to pre-check for existence. They go through the
+ORM (``insert_if_absent``), so the audit log records each new entry.
 """
 from __future__ import annotations
 
 import uuid
 
+from platform_shared.repositories.audited_writes import insert_if_absent
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.calendar.calendar_listing_blocklist import CalendarListingBlocklist
@@ -43,18 +43,16 @@ async def insert_if_not_exists(
     reason: str | None,
 ) -> None:
     """Insert a blocklist entry, silently skipping duplicates."""
-    stmt = (
-        pg_insert(CalendarListingBlocklist)
-        .values(
-            id=uuid.uuid4(),
-            user_id=user_id,
-            organization_id=organization_id,
-            source_channel=source_channel,
-            source_listing_id=source_listing_id,
-            reason=reason,
-        )
-        .on_conflict_do_nothing(
-            constraint="uq_blocklist_user_channel_listing",
-        )
+    await insert_if_absent(
+        db, CalendarListingBlocklist,
+        CalendarListingBlocklist.user_id == user_id,
+        CalendarListingBlocklist.source_channel == source_channel,
+        CalendarListingBlocklist.source_listing_id == source_listing_id,
+        create={
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "source_channel": source_channel,
+            "source_listing_id": source_listing_id,
+            "reason": reason,
+        },
     )
-    await db.execute(stmt)

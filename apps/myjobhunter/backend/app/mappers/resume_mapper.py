@@ -128,7 +128,7 @@ def map_skills(
     """Convert the ``skills`` array from Claude output into model instances.
 
     Skills with a blank ``name`` are skipped. The ``UNIQUE(user_id, lower(name))``
-    constraint is enforced by the caller via ``INSERT ... ON CONFLICT DO NOTHING``;
+    constraint is enforced by the caller (``skill_repository.add_if_absent``);
     this mapper does not deduplicate in memory (the DB is authoritative).
     """
     entries: list[Skill] = []

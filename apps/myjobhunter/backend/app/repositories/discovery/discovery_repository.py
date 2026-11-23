@@ -16,9 +16,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from platform_shared.repositories.audited_writes import lock_rows, update_rows
-from sqlalchemy import desc, nulls_last, outerjoin, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from platform_shared.repositories.audited_writes import lock_rows, update_rows, upsert_row
+from sqlalchemy import Column, DefaultClause, desc, nulls_last, outerjoin, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.discovered_job_state import DiscoveredJobState
@@ -112,6 +111,37 @@ async def mark_reaped(db: AsyncSession, fetch: DiscoveryFetch) -> None:
 # ===========================================================================
 
 
+# Columns a re-fetch refreshes from the latest feed. Everything else (state
+# such as dismissed_at, saved_at, score) is left as the user or scorer set it.
+# source_expires_at is refreshed so a re-listed posting that pushed its close
+# date out is honored.
+_REFRESHED_ON_REFETCH: tuple[str, ...] = (
+    "title", "company_name", "location", "remote_type", "description",
+    "description_normalized", "content_hash", "posted_at", "salary_min",
+    "salary_max", "salary_currency", "salary_period", "source_expires_at",
+    "raw_payload",
+)
+
+
+def _refetched_values(raw: dict[str, Any]) -> dict[str, Any]:
+    """The refreshed columns as the new insert would have written them.
+
+    A column the posting leaves out takes its insert value, the column's server
+    default (``remote_type`` 'unknown', ``salary_currency`` 'USD') or NULL, as
+    the ``EXCLUDED`` row of the former ``ON CONFLICT DO UPDATE`` did.
+    """
+    columns = DiscoveredJob.__table__.c
+    return {
+        name: raw[name] if name in raw else _server_default(columns[name])
+        for name in _REFRESHED_ON_REFETCH
+    }
+
+
+def _server_default(column: Column[Any]) -> object:
+    default = column.server_default
+    return default.arg if isinstance(default, DefaultClause) else None
+
+
 async def upsert_postings(
     db: AsyncSession,
     *,
@@ -132,45 +162,19 @@ async def upsert_postings(
     new_count = updated_count = 0
 
     for raw in postings:
-        now = datetime.now(timezone.utc)  # one value for both: is_new compares them
-        payload = {**raw, "user_id": user_id, "fetch_id": fetch_id,
-                   "created_at": now, "updated_at": now}
-
-        stmt = pg_insert(DiscoveredJob.__table__).values(**payload)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["user_id", "source", "source_external_id"],
-            set_={
-                "title": stmt.excluded.title,
-                "company_name": stmt.excluded.company_name,
-                "location": stmt.excluded.location,
-                "remote_type": stmt.excluded.remote_type,
-                "description": stmt.excluded.description,
-                "description_normalized": stmt.excluded.description_normalized,
-                "content_hash": stmt.excluded.content_hash,
-                "posted_at": stmt.excluded.posted_at,
-                "salary_min": stmt.excluded.salary_min,
-                "salary_max": stmt.excluded.salary_max,
-                "salary_currency": stmt.excluded.salary_currency,
-                "salary_period": stmt.excluded.salary_period,
-                # Feed-declared expiry — refresh it from the latest fetch so
-                # a re-listed posting that pushed its close date out is honored.
-                "source_expires_at": stmt.excluded.source_expires_at,
-                "raw_payload": stmt.excluded.raw_payload,
-                "fetch_id": stmt.excluded.fetch_id,
-                "updated_at": datetime.now(timezone.utc),
-                # Clear expired_at — if we see a posting again, it's
-                # not expired anymore (it reappeared in a fetch).
-                "expired_at": None,
-            },
-        ).returning(
-            DiscoveredJob.__table__.c.id,
-            (DiscoveredJob.__table__.c.created_at
-             == DiscoveredJob.__table__.c.updated_at).label("is_new"),
+        now = datetime.now(timezone.utc)
+        _, created = await upsert_row(
+            db, DiscoveredJob,
+            DiscoveredJob.user_id == user_id,
+            DiscoveredJob.source == raw["source"],
+            DiscoveredJob.source_external_id == raw["source_external_id"],
+            create={**raw, "user_id": user_id, "fetch_id": fetch_id,
+                    "created_at": now, "updated_at": now},
+            update={**_refetched_values(raw), "fetch_id": fetch_id, "updated_at": now,
+                    # Seen again, so it's not expired anymore (it reappeared in a fetch).
+                    "expired_at": None},
         )
-
-        result = await db.execute(stmt)
-        row = result.first()
-        if row is not None and row.is_new:
+        if created:
             new_count += 1
         else:
             updated_count += 1

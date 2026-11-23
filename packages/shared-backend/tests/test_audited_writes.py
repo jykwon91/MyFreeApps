@@ -1,10 +1,12 @@
 """Tests for platform_shared.repositories.audited_writes.
 
-A bulk ``update()`` / ``delete()`` never reaches the audit listener; these
-helpers make the same conditional change through the ORM so it does. The
-SQLite tests check the audit rows and the conditional semantics. The Postgres
-test checks the row lock: a second writer with the same guard waits for the
-first and then finds nothing to change, as a second conditional UPDATE would.
+A bulk ``update()`` / ``delete()`` or an ``INSERT ... ON CONFLICT`` upsert never
+reaches the audit listener; these helpers make the same change through the ORM
+so it does. The SQLite tests check the audit rows and the conditional
+semantics. The Postgres tests check the concurrency: a second writer with the
+same guard waits for the first and then finds nothing to change, as a second
+conditional UPDATE would; and two writers upserting one new key end up on one
+row, as two ``ON CONFLICT`` inserts would.
 """
 from __future__ import annotations
 
@@ -17,7 +19,8 @@ from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import Executable, Integer, String, select, text, update
+from sqlalchemy import Executable, Integer, String, func, select, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -28,8 +31,10 @@ from platform_shared.core.audit_config import AuditConfig
 from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.repositories.audited_writes import (
     delete_rows,
+    insert_if_absent,
     lock_rows,
     update_rows,
+    upsert_row,
 )
 
 POSTGRES_URL_ENV = "SHARED_BACKEND_TEST_POSTGRES_URL"
@@ -46,6 +51,17 @@ class _Job(_Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     status: Mapped[str] = mapped_column(String(16))
     note: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    secret: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+
+class _Item(_Base):
+    """A row keyed by a unique ``code`` that isn't its primary key, as upserts usually are."""
+
+    __tablename__ = "test_audited_upsert_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(16), unique=True)
+    value: Mapped[str] = mapped_column(String(100))
     secret: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
@@ -235,3 +251,184 @@ async def test_a_second_writer_wins_when_the_first_rolls_back(
 
         assert [job.id for job in await asyncio.wait_for(racing, timeout=5)] == [1]
         await second.commit()
+
+
+# --------------------------------------------------------------------------
+# Upserts (SQLite): audit rows and ON CONFLICT semantics
+# --------------------------------------------------------------------------
+
+
+async def _seed_item(db: AsyncSession, code: str, value: str) -> _Item:
+    item = _Item(code=code, value=value)
+    db.add(item)
+    await db.flush()
+    await db.flush()  # writes the listener's INSERT audit rows, so they can be cleared
+    await db.execute(AuditLog.__table__.delete())
+    return item
+
+
+async def _item_audit(db: AsyncSession) -> list[tuple[str, str, str, str | None, str | None, str | None]]:
+    await db.flush()  # the listener's audit rows are written on the next flush
+    result = await db.execute(
+        select(AuditLog).where(AuditLog.table_name == _Item.__tablename__).order_by(AuditLog.field_name),
+    )
+    return [
+        (r.operation, r.record_id, r.field_name, r.old_value, r.new_value, r.changed_by)
+        for r in result.scalars()
+    ]
+
+
+async def test_upsert_row_inserts_a_new_key_and_audits_the_insert(db: AsyncSession) -> None:
+    with audit_actor(ACTOR):
+        item, created = await upsert_row(
+            db, _Item, _Item.code == "a",
+            create={"code": "a", "value": "one", "secret": "s"}, update={"value": "one"},
+        )
+
+    assert created is True
+    assert item.id is not None
+    assert await _item_audit(db) == [
+        ("INSERT", str(item.id), "code", None, "a", ACTOR),
+        ("INSERT", str(item.id), "id", None, str(item.id), ACTOR),
+        ("INSERT", str(item.id), "secret", None, "***", ACTOR),
+        ("INSERT", str(item.id), "value", None, "one", ACTOR),
+    ]
+
+
+async def test_upsert_row_updates_an_existing_key_and_audits_the_change(db: AsyncSession) -> None:
+    existing = await _seed_item(db, "a", "one")
+
+    with audit_actor(ACTOR):
+        item, created = await upsert_row(
+            db, _Item, _Item.code == "a", create={"code": "a", "value": "two"}, update={"value": "two"},
+        )
+
+    assert (item, created) == (existing, False)
+    assert await _item_audit(db) == [("UPDATE", str(existing.id), "value", "one", "two", ACTOR)]
+    assert (await db.execute(select(func.count()).select_from(_Item))).scalar_one() == 1
+
+
+async def test_upsert_row_writes_nothing_when_the_update_changes_nothing(db: AsyncSession) -> None:
+    existing = await _seed_item(db, "a", "one")
+
+    item, created = await upsert_row(
+        db, _Item, _Item.code == "a", create={"code": "a", "value": "one"}, update={"value": "one"},
+    )
+
+    assert (item, created) == (existing, False)
+    assert await _item_audit(db) == []
+
+
+async def test_upsert_row_refuses_a_name_that_is_no_column(db: AsyncSession) -> None:
+    with pytest.raises(ValueError, match="no columns \\['bogus'\\]"):
+        await upsert_row(db, _Item, _Item.code == "a", create={"code": "a", "value": "x"}, update={"bogus": 1})
+
+
+async def test_insert_if_absent_inserts_a_new_key_and_audits_it(db: AsyncSession) -> None:
+    with audit_actor(ACTOR):
+        item = await insert_if_absent(db, _Item, _Item.code == "a", create={"code": "a", "value": "one"})
+
+    assert item is not None
+    assert [(op, field, new) for op, _, field, _, new, _ in await _item_audit(db)] == [
+        ("INSERT", "code", "a"), ("INSERT", "id", str(item.id)), ("INSERT", "value", "one"),
+    ]
+
+
+async def test_insert_if_absent_leaves_an_existing_key_alone(db: AsyncSession) -> None:
+    await _seed_item(db, "a", "one")
+
+    assert await insert_if_absent(db, _Item, _Item.code == "a", create={"code": "a", "value": "two"}) is None
+
+    assert await _item_audit(db) == []
+    assert (await db.execute(select(_Item.value))).scalars().all() == ["one"]
+
+
+async def test_insert_if_absent_raises_a_violation_that_is_not_the_key(db: AsyncSession) -> None:
+    """A NOT NULL failure is no conflict: it surfaces, as it did from the INSERT."""
+    with pytest.raises(IntegrityError):
+        await insert_if_absent(db, _Item, _Item.code == "a", create={"code": "a", "value": None})
+
+    # The SAVEPOINT rolled back only the insert; the session still works.
+    assert await insert_if_absent(db, _Item, _Item.code == "a", create={"code": "a", "value": "ok"}) is not None
+
+
+# --------------------------------------------------------------------------
+# Upserts (Postgres): two writers on one new key end up on one row
+# --------------------------------------------------------------------------
+
+
+async def _audited_pg_setup(pg_sessions: async_sessionmaker[AsyncSession]) -> None:
+    async with pg_sessions() as setup:
+        await (await setup.connection()).run_sync(lambda conn: AuditLog.__table__.create(conn))
+        await setup.commit()
+    register_audit_listeners(_CONFIG, base=_Base)
+
+
+async def test_upsert_row_loser_of_an_insert_race_updates_the_winner(
+    pg_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await _audited_pg_setup(pg_sessions)
+
+    async with pg_sessions() as first, pg_sessions() as second:
+        with audit_actor(ACTOR):
+            _, first_created = await upsert_row(
+                first, _Item, _Item.code == "a", create={"code": "a", "value": "one"}, update={"value": "one"},
+            )
+            racing = asyncio.create_task(upsert_row(
+                second, _Item, _Item.code == "a", create={"code": "a", "value": "two"}, update={"value": "two"},
+            ))
+        await asyncio.sleep(0.3)
+        assert not racing.done(), "the second insert didn't wait for the first one's uncommitted key"
+
+        await first.commit()
+        item, second_created = await asyncio.wait_for(racing, timeout=5)
+        await second.commit()
+
+    assert (first_created, second_created) == (True, False)
+    async with pg_sessions() as check:
+        assert (await check.execute(select(_Item.code, _Item.value))).all() == [("a", "two")]
+        assert await _item_audit(check) == [
+            ("INSERT", str(item.id), "code", None, "a", ACTOR),
+            ("INSERT", str(item.id), "id", None, str(item.id), ACTOR),
+            ("INSERT", str(item.id), "value", None, "one", ACTOR),
+            ("UPDATE", str(item.id), "value", "one", "two", ACTOR),
+        ]
+
+
+async def test_insert_if_absent_loser_of_an_insert_race_finds_the_winner(
+    pg_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    async with pg_sessions() as first, pg_sessions() as second:
+        won = await insert_if_absent(first, _Item, _Item.code == "a", create={"code": "a", "value": "one"})
+        racing = asyncio.create_task(
+            insert_if_absent(second, _Item, _Item.code == "a", create={"code": "a", "value": "two"}),
+        )
+        await asyncio.sleep(0.3)
+        assert not racing.done()
+
+        await first.commit()
+        assert won is not None
+        assert await asyncio.wait_for(racing, timeout=5) is None
+        await second.commit()
+
+    async with pg_sessions() as check:
+        assert (await check.execute(select(_Item.value))).scalars().all() == ["one"]
+
+
+async def test_upsert_row_inserts_when_the_racing_insert_rolls_back(
+    pg_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    async with pg_sessions() as first, pg_sessions() as second:
+        await upsert_row(first, _Item, _Item.code == "a", create={"code": "a", "value": "one"}, update={"value": "one"})
+        racing = asyncio.create_task(upsert_row(
+            second, _Item, _Item.code == "a", create={"code": "a", "value": "two"}, update={"value": "two"},
+        ))
+        await asyncio.sleep(0.3)
+        await first.rollback()
+
+        _, created = await asyncio.wait_for(racing, timeout=5)
+        await second.commit()
+
+    assert created is True
+    async with pg_sessions() as check:
+        assert (await check.execute(select(_Item.value))).scalars().all() == ["two"]

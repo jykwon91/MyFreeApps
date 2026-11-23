@@ -349,6 +349,7 @@
         "test_stored_file_missing.py",
         "test_sync_log_cancel.py",
         "test_email_queue_dedup_filter.py",
+        "test_audited_upserts.py",
         "test_booking_parser.py",
         "test_gmail_fetch_email_body.py",
         "test_email_sync_worker.py",
@@ -824,6 +825,7 @@
         "test_review_queue_repo.py",
         "test_blocklist_repo.py",
         "test_on_conflict_targets.py",
+        "test_audited_upserts.py",
         "test_cleanup_seed_routes.py",
         "test_attachment_content.py",
         "test_document_photo_metadata.py"
