@@ -66,7 +66,7 @@ test("the first typed answer starts a session, streams the reply, and speaks it 
     // The turn is held: the learner's words show, the tutor is thinking, and nothing can be sent.
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
     await expect(page.getByRole("status", { name: TUTOR_THINKING })).toBeVisible();
-    await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeDisabled();
+    await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
     await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveValue("");
     await expect(page.getByRole("button", { name: /Sending/ })).toBeDisabled();
     gate.release();
@@ -85,6 +85,41 @@ test("the first typed answer starts a session, streams the reply, and speaks it 
     await expect.poll(() => spokenUtterances(page)).toEqual(
       TUTOR_GREETING_SENTENCES.map((text) => ({ text, lang: "es-MX", rate: NORMAL_RATE })),
     );
+  } finally {
+    gate.release();
+  }
+});
+
+test("typing two turns in a row never needs the field focused again, and Enter mid-turn sends nothing", async ({ page }) => {
+  const gate = createGate();
+  const api = await signedInTutor(page, {
+    holdTurns: gate,
+    turns: [completeTurn({ reply: TUTOR_GREETING }), completeTurn({ reply: TUTOR_NAME_REPLY })],
+  });
+
+  try {
+    await openPractice(page, GREETINGS.title);
+    const field = page.getByLabel(TYPING_ONLY_LABEL);
+    await field.fill(LEARNER_GREETING);
+    await field.press("Enter");
+
+    // The first reply is held: the field keeps focus, takes the next answer, and Enter does not send it.
+    await expect(page.getByRole("status", { name: TUTOR_THINKING })).toBeVisible();
+    await expect(field).toBeFocused();
+    await page.keyboard.type(LEARNER_FOLLOW_UP);
+    await expect(field).toHaveValue(LEARNER_FOLLOW_UP);
+    await page.keyboard.press("Enter");
+    await expect(field).toHaveValue(LEARNER_FOLLOW_UP);
+
+    gate.release();
+    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(page.getByRole("status", { name: TUTOR_THINKING })).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+    await expect(field).toBeFocused();
+    expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_FOLLOW_UP }]);
   } finally {
     gate.release();
   }
