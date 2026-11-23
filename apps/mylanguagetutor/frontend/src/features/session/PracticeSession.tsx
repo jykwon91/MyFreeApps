@@ -25,6 +25,8 @@ import {
   PRACTICE_START_PROMPT,
   PRACTICE_TRANSCRIPT,
 } from "@/constants/practiceLayout";
+import { TYPING_ONLY_NOTE } from "@/constants/typingOnlyCopy";
+import { practiceAnnouncements } from "@/utils/practiceAnnouncements";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
@@ -70,11 +72,17 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     focusTypedAnswer: () => textInput.current?.focus(),
   });
   const busy = session.busy;
-  const announcement = phaseAnnouncement(voice.phase, voice.view) ?? latestReply(session.entries);
+  const showComplete = session.scenarioState.complete && !completeDismissed;
+  const announcements = practiceAnnouncements({
+    spoken: phaseAnnouncement(voice.phase, voice.view) ?? latestReply(session.entries),
+    failure: session.failure,
+    block,
+    scenarioComplete: showComplete,
+  });
 
   return (
     <div className={PRACTICE_PAGE}>
-      <PracticeAnnouncer message={announcement} />
+      <PracticeAnnouncer messages={announcements} />
       <header className={PRACTICE_HEADER} data-testid={PRACTICE_SECTION_IDS.header}>
         <h1 className="text-xl font-semibold">{scenario.title}</h1>
         <p className="text-sm text-muted-foreground">{scenario.goal}</p>
@@ -101,7 +109,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
         )}
       </div>
 
-      {session.scenarioState.complete && !completeDismissed && (
+      {showComplete && (
         <ScenarioCompleteBanner onKeepTalking={() => setCompleteDismissed(true)} />
       )}
 
@@ -138,10 +146,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
               inputRef={textInput}
             />
             {!recognition.supported && (
-              <p className="text-xs text-muted-foreground">
-                This browser can't turn speech into text, so you'll practice by typing. Chrome,
-                Edge, or Safari let you practice speaking.
-              </p>
+              <p className="text-xs text-muted-foreground">{TYPING_ONLY_NOTE}</p>
             )}
             {recognition.supported && (
               <button

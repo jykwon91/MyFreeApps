@@ -2,15 +2,24 @@ import type { PracticeAnnouncerProps } from "@/types/session/practice-announcer-
 
 /**
  * The practice screen's one live region, mounted for the whole conversation so screen readers are
- * listening before anything is put in it. It only ever holds the finished reply and the phases that
- * aren't listening (`latestReply`, `phaseAnnouncement`, the same ones the phone announces): never what
- * the microphone is hearing, which the microphone would then hear read back, and never a reply still
- * streaming in, which would be read chunk by chunk over the tutor's voice.
+ * listening before anything is put in it. Everything the screen reader should say goes in here
+ * (`practiceAnnouncements`): the finished reply, the phases that aren't listening, a failed turn, a
+ * block, scenario complete. Never what the microphone is hearing, which it would then hear read back,
+ * and never a reply still streaming in, which would be read chunk by chunk over the tutor's voice.
+ * Each message is its own entry, so a new one is read without reading the others again.
  */
-export default function PracticeAnnouncer({ message }: PracticeAnnouncerProps) {
+export default function PracticeAnnouncer({ messages }: PracticeAnnouncerProps) {
   return (
-    <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="practice-announcer">
-      {message ?? ""}
-    </p>
+    <div
+      className="sr-only"
+      aria-live="polite"
+      aria-atomic="false"
+      aria-relevant="additions text"
+      data-testid="practice-announcer"
+    >
+      {messages.map((message) => (
+        <p key={message}>{message}</p>
+      ))}
+    </div>
   );
 }

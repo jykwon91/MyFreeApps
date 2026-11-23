@@ -222,9 +222,9 @@ test("covering every goal says the scenario is complete; the learner can keep ta
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_FOLLOW_UP);
 
-  await expect(page.getByText(SCENARIO_COMPLETE)).toBeVisible();
+  await expect(shownText(page, SCENARIO_COMPLETE)).toBeVisible();
   await page.getByRole("button", { name: "Keep talking" }).click();
-  await expect(page.getByText(SCENARIO_COMPLETE)).toHaveCount(0);
+  await expect(shownText(page, SCENARIO_COMPLETE)).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
 });
 

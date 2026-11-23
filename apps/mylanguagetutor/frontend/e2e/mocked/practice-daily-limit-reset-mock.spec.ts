@@ -37,24 +37,24 @@ test("the daily-cap block lifts when the learner comes back after the reset and 
   const readsBeforeTurn = usageReads();
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
   // What the learner wrote stays, with why it wasn't sent; it can't be sent again before the reset.
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(DAILY_LIMIT_KEPT_COPY);
+  await expect(shownText(page, DAILY_LIMIT_KEPT_COPY, false)).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
   // The refusal refreshes usage, now for this conversation. Read before budget was spent
   // elsewhere, usage may still say a turn fits: the block stays until the day's budget resets.
   await expect.poll(usageReads).toBeGreaterThan(readsBeforeTurn);
   expect(api.reads).toContain(`${USAGE_PATH}?session_id=${sessionIdAt(1)}`);
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toBeVisible();
 
   await page.clock.fastForward(PAST_RESET);
   const readsBeforeReturn = usageReads();
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect.poll(usageReads).toBeGreaterThan(readsBeforeReturn);
 
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toHaveCount(0);
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
@@ -72,7 +72,7 @@ test("the daily-cap block lifts by itself when the reset passes with the page le
 
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toBeVisible();
   await expect.poll(usageReads).toBeGreaterThan(0);
 
   // No focus, no navigation: only time passes.
@@ -80,7 +80,7 @@ test("the daily-cap block lifts by itself when the reset passes with the page le
   await page.clock.fastForward(PAST_RESET);
   await expect.poll(usageReads).toBeGreaterThan(readsBeforeReset);
 
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toHaveCount(0);
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
@@ -94,7 +94,7 @@ test("after the reset, usage that still says the budget is spent keeps the block
 
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
-  await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DAILY_LIMIT_COPY)).toBeVisible();
 
   api.setUsage(CAP_REACHED);
   await page.clock.fastForward(PAST_RESET);
@@ -102,7 +102,7 @@ test("after the reset, usage that still says the budget is spent keeps the block
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect.poll(usageReads).toBeGreaterThan(readsBeforeReturn);
 
-  await expect(page.getByText(DAILY_LIMIT_AFTER_RESET_COPY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DAILY_LIMIT_AFTER_RESET_COPY)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
   expect(api.turnRequests).toHaveLength(1);
 });

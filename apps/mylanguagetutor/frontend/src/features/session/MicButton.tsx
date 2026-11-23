@@ -26,7 +26,6 @@ export default function MicButton({ phase, disabled, onStart, onStop }: MicButto
         onClick={listening ? onStop : onStart}
         disabled={disabled}
         aria-label={label}
-        aria-pressed={listening}
         className={cn(
           "flex h-16 w-16 min-h-[44px] min-w-[44px] items-center justify-center rounded-full shadow-sm transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

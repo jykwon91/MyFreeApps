@@ -6,12 +6,11 @@ interface ScenarioCompleteBannerProps {
   onKeepTalking: () => void;
 }
 
-/** Every goal is covered. The learner can keep chatting or move on. */
+/** Every goal is covered. The live region on the practice screen says so; the banner is not live itself. */
 export default function ScenarioCompleteBanner({ onKeepTalking }: ScenarioCompleteBannerProps) {
   return (
     <section
       className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100"
-      aria-live="polite"
     >
       <div className="flex items-center gap-2 font-semibold">
         <PartyPopper className="h-5 w-5" aria-hidden="true" />

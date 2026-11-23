@@ -232,7 +232,7 @@ describe("PracticeSession", () => {
     sessionState = { ...sessionState, block: "daily_limit" };
     renderScreen();
 
-    expect(screen.getByText(/used today's practice time/)).toBeInTheDocument();
+    expect(screen.getByText(/used today's practice time/, { ignore: '[data-testid="practice-announcer"], [data-testid="practice-announcer"] *' })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tap to speak" })).not.toBeInTheDocument();
   });
 
@@ -360,7 +360,7 @@ describe("CorrectionCard", () => {
     renderScreen();
 
     // The screen reader's copy in the live region aside, the reply is shown once.
-    expect(screen.getByText("¡Hola! ¿Qué quieres?", { ignore: '[data-testid="practice-announcer"]' })).toBeInTheDocument();
+    expect(screen.getByText("¡Hola! ¿Qué quieres?", { ignore: '[data-testid="practice-announcer"], [data-testid="practice-announcer"] *' })).toBeInTheDocument();
     expect(screen.getByText("Suggestions for this reply didn't load.")).toBeInTheDocument();
     expect(screen.queryByText("The reply was cut off.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();

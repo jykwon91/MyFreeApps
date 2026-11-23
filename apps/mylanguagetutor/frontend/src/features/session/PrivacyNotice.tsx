@@ -1,5 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@platform/ui";
+import { BROWSER_SPEECH_PRIVACY } from "@/constants/privacyCopy";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 
 interface PrivacyNoticeProps {
@@ -21,10 +22,7 @@ export default function PrivacyNotice({ onContinue, onTypeInstead }: PrivacyNoti
         </h2>
       </div>
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-        <li>
-          Your browser turns your speech into text. Chrome and Edge send the audio to Google to do
-          this; Safari sends it to Apple. We never receive or store your audio.
-        </li>
+        <li>{BROWSER_SPEECH_PRIVACY}</li>
         <li>{VOICE_COPY.privacyTutor}</li>
         <li>{VOICE_COPY.privacySaved}</li>
       </ul>

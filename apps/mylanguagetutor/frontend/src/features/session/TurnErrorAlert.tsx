@@ -11,11 +11,14 @@ interface TurnErrorAlertProps {
 
 const ACTION_CLASS = "min-h-[44px] rounded-md px-3 font-medium underline";
 
-/** A failed turn. "Try again" resubmits exactly what the learner said. */
+/**
+ * A failed turn. "Try again" resubmits exactly what the learner said. Not an alert itself: the practice
+ * screen's live region says the message, so the buttons aren't read out as part of it.
+ */
 export default function TurnErrorAlert({ failure, onRetry, onDismiss }: TurnErrorAlertProps) {
   return (
     <AlertBox variant="error">
-      <div className="flex flex-wrap items-center justify-between gap-2" role="alert">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span>{turnErrorCopy(failure.code)}</span>
         <div className="flex gap-1">
           {failure.retryable && (
