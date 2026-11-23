@@ -22,7 +22,8 @@ Boot order (rationale documented inline below):
   2. check_turnstile_configured() — fail loud on missing CAPTCHA in prod
   3. check_email_configured()     — fail loud on missing SMTP creds /
                                     console mode in prod
-  4. register_audit_listeners()   — verify the app's AuditConfig and wire
+  4. register_audit_listeners()   — verify the app's AuditConfig (shared
+                                    baseline present, every name real) and wire
                                     the SQLAlchemy listener before any
                                     request handler can write
   5. bucket_init()                — verify MinIO reachable; refuse to
@@ -79,7 +80,11 @@ from typing import Any, Protocol
 
 from fastapi import FastAPI
 
-from platform_shared.core.audit import register_audit_listeners, registered_audit_config
+from platform_shared.core.audit import (
+    register_audit_listeners,
+    registered_audit_config,
+    verify_audit_baseline,
+)
 from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.boot_guards import (
     check_email_configured,
@@ -149,7 +154,9 @@ def create_app_lifespan(
             (tests/test_app_conformance.py enforces this). None is the
             legacy path for MGA only: the configuration is read from the
             import-time registry (``registered_audit_config``), which
-            refuses to boot when nothing was registered.
+            refuses to boot when nothing was registered. Either way boot
+            fails if the configuration leaves out the shared baseline
+            (``verify_audit_baseline``).
         init_sentry: Optional. The app's wrapper around
             platform_shared.core.observability.init_sentry, binding its
             own settings.sentry_dsn / settings.environment internally so
@@ -245,9 +252,9 @@ def create_app_lifespan(
         # 3. Side-effect inits — wire SQLAlchemy listeners before any
         #    request handler can run a write, and verify MinIO is
         #    reachable.
-        register_audit_listeners(
-            audit_config if audit_config is not None else registered_audit_config(),
-        )
+        config = audit_config if audit_config is not None else registered_audit_config()
+        verify_audit_baseline(config)
+        register_audit_listeners(config)
         bucket_init()
 
         # 4. Platform-admin seed (multi-user apps) — after the audit

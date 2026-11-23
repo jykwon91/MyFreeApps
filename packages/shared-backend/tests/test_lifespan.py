@@ -13,6 +13,11 @@ from fastapi import FastAPI
 from platform_shared.core.audit import (
     AuditConfigurationError,
     register_sensitive_fields,
+    register_skip_tables,
+)
+from platform_shared.core.audit_baseline_constants import (
+    AUDIT_BASELINE_SENSITIVE_FIELDS,
+    AUDIT_BASELINE_SKIP_TABLES,
 )
 from platform_shared.core.audit_config import AuditConfig
 from platform_shared.core.boot_guards import (
@@ -63,11 +68,12 @@ def _settings(
     )
 
 
-# Verifiable against the shared Base alone: some tests below run the real
-# audit step, which checks the names against the mapped models.
+# The shared baseline and nothing else: the lifespan refuses a configuration
+# without it. The shared Base has no user table to verify the names against,
+# so every test below stubs the listener itself.
 _AUDIT_CONFIG = AuditConfig(
-    sensitive_fields=frozenset(),
-    skip_tables=frozenset({"auth_events"}),
+    sensitive_fields=AUDIT_BASELINE_SENSITIVE_FIELDS,
+    skip_tables=AUDIT_BASELINE_SKIP_TABLES,
     skip_fields=frozenset(),
 )
 
@@ -748,7 +754,10 @@ class TestShutdownDrainsTrackedTasks:
     """In-flight tracked work must be awaited before the app-specific shutdown."""
 
     @pytest.mark.asyncio
-    async def test_pending_task_is_awaited_before_on_shutdown(self, app: FastAPI) -> None:
+    async def test_pending_task_is_awaited_before_on_shutdown(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        monkeypatch.setattr("platform_shared.core.lifespan.register_audit_listeners", MagicMock())
         order: list[str] = []
         gate = asyncio.Event()
 
@@ -773,6 +782,7 @@ class TestShutdownDrainsTrackedTasks:
         monkeypatch.setattr(
             "platform_shared.core.tracked_task.SHUTDOWN_DRAIN_TIMEOUT_SECONDS", 0.05,
         )
+        monkeypatch.setattr("platform_shared.core.lifespan.register_audit_listeners", MagicMock())
         never = asyncio.Event()
 
         async def work() -> None:
@@ -825,7 +835,8 @@ class TestAuditConfig:
         self, app: FastAPI, monkeypatch,
     ) -> None:
         """MGA's path: its sets are registered at import time."""
-        register_sensitive_fields(["hashed_password"])
+        register_sensitive_fields(AUDIT_BASELINE_SENSITIVE_FIELDS)
+        register_skip_tables(AUDIT_BASELINE_SKIP_TABLES)
         received: list[AuditConfig] = []
         monkeypatch.setattr(
             "platform_shared.core.lifespan.register_audit_listeners", received.append,
@@ -833,4 +844,4 @@ class TestAuditConfig:
         lifespan = create_app_lifespan(settings=_settings())
         async with lifespan(app):
             pass
-        assert [c.sensitive_fields for c in received] == [frozenset({"hashed_password"})]
+        assert received == [_AUDIT_CONFIG]
