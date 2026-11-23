@@ -1,0 +1,57 @@
+name: Python Lint CI
+
+# Fails a pull request that leaves an unused import, an undefined name, a
+# redefined-but-unused name or a syntax error in any Python backend
+# (`ruff check --select F,E9`). Runs on EVERY pull request to main and every push
+# to main, with deliberately NO `paths:` filter: `python-lint` is meant to be a
+# required status check, and a path-filtered workflow never reports its check
+# context on PRs it skips (see ci-shared-backend.yml for the same reasoning).
+#
+# The ruff version is pinned to the one in .pre-commit-config.yaml; a test in
+# packages/shared-backend (test_python_lint_gate.py) fails if they drift apart or
+# if a backend is neither linted here nor listed there as exempt.
+#
+# apps/mygamingassistant/backend is not linted yet: it still has pyflakes errors
+# that need their own cleanup PR. Add it to the paths below (and drop it from
+# the exempt list in the test) once it is clean.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-python-lint-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python-lint:
+    name: python-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install ruff
+        run: pip install ruff==0.8.4
+
+      - name: Ruff (pyflakes errors and syntax errors)
+        run: |
+          ruff check --select F,E9 \
+            packages/shared-backend \
+            apps/mybookkeeper/backend \
+            apps/myjobhunter/backend \
+            apps/mylanguagetutor/backend \
+            apps/myrecipes/backend \
+            apps/mypizzatracker/backend \
+            infra/templates
