@@ -1,21 +1,16 @@
 """MyRecipes audit listener -- thin wrapper over :mod:`platform_shared.core.audit`.
 
-Registers app-specific sensitive-field column names + skip-tables at import time
-so the shared listener masks PII the moment it attaches. Re-exports
-``current_user_id`` and ``register_audit_listeners`` so the rest of the app
-keeps importing from the same path.
+Defines the app's sensitive-field column names, skip-tables and skip-fields as
+``AUDIT_CONFIG``, which ``app.main`` passes to ``create_app_lifespan``: the
+shared listener cannot attach without it. Re-exports ``current_user_id`` so the
+rest of the app keeps importing it from the same path.
 
 Field names MUST match the SQLAlchemy attribute keys on the actual ORM
-columns -- verified at boot by platform_shared.core.audit.verify_sensitive_field_names.
+columns -- verified at boot by platform_shared.core.audit.verify_audit_config.
 Misspellings silently disable masking and leak plaintext into audit_logs.
 """
-from platform_shared.core.audit import (
-    current_user_id,
-    register_audit_listeners,
-    register_sensitive_fields,
-    register_skip_fields,
-    register_skip_tables,
-)
+from platform_shared.core.audit import current_user_id
+from platform_shared.core.audit_config import AuditConfig
 
 # Sensitive-field allowlist -- generic auth secrets from the shared User model.
 # Add domain-specific PII column names here as new tables come online.
@@ -34,14 +29,19 @@ APP_SKIP_TABLES: frozenset[str] = frozenset({
 APP_SKIP_FIELDS: frozenset[str] = frozenset()
 
 
-register_sensitive_fields(APP_SENSITIVE_FIELDS)
-register_skip_tables(APP_SKIP_TABLES)
-register_skip_fields(APP_SKIP_FIELDS)
+# Passed to create_app_lifespan(audit_config=...) in app.main. The listener can
+# only be attached with a configuration, and boot fails if an EncryptedString
+# column is missing from the sensitive fields.
+AUDIT_CONFIG = AuditConfig(
+    sensitive_fields=APP_SENSITIVE_FIELDS,
+    skip_tables=APP_SKIP_TABLES,
+    skip_fields=APP_SKIP_FIELDS,
+)
 
 
 __all__ = [
     "current_user_id",
-    "register_audit_listeners",
+    "AUDIT_CONFIG",
     "APP_SENSITIVE_FIELDS",
     "APP_SKIP_TABLES",
     "APP_SKIP_FIELDS",

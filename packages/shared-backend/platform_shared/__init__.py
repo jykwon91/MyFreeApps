@@ -12,11 +12,10 @@ Modules:
                                                 make_require_turnstile,
                                                 make_check_login_ip_limit,
                                                 make_check_account_not_locked
-    platform_shared.core.audit               — register_audit_listeners(),
-                                                register_sensitive_fields(),
-                                                register_skip_tables(),
-                                                register_skip_fields(),
+    platform_shared.core.audit               — register_audit_listeners(config),
+                                                verify_audit_config(),
                                                 current_user_id
+    platform_shared.core.audit_config        — AuditConfig
     platform_shared.core.auth_events         — AuthEventType
     platform_shared.core.auth_messages       — RATE_LIMIT_GENERIC_DETAIL
     platform_shared.services.email_service   — EmailService

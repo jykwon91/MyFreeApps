@@ -10,17 +10,6 @@ import uuid
 from collections.abc import Iterator
 
 import pytest
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.audit import MJH_SENSITIVE_FIELDS, MJH_SKIP_FIELDS, MJH_SKIP_TABLES
-from app.core.auth import current_active_user
-from app.db.session import get_db
-from app.main import app
-from app.models.application.application import Application
-from app.models.application.application_contact import ApplicationContact
-from app.models.company.company import Company
-from app.models.user.user import User
 from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.testing.audit_erasure import (
     TEST_ACCOUNT_PASSWORD_HASH,
@@ -30,13 +19,22 @@ from platform_shared.testing.audit_erasure import (
     delete_account_through_route,
     write_as,
 )
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.audit import AUDIT_CONFIG
+from app.core.auth import current_active_user
+from app.db.session import get_db
+from app.main import app
+from app.models.application.application import Application
+from app.models.application.application_contact import ApplicationContact
+from app.models.company.company import Company
+from app.models.user.user import User
 
 
 @pytest.fixture(autouse=True)
 def _audit_listener() -> Iterator[None]:
-    with audit_listener_attached(
-        sensitive_fields=MJH_SENSITIVE_FIELDS, skip_tables=MJH_SKIP_TABLES, skip_fields=MJH_SKIP_FIELDS,
-    ):
+    with audit_listener_attached(AUDIT_CONFIG):
         yield
 
 

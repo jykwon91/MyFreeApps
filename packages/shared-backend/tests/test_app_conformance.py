@@ -2521,3 +2521,129 @@ class TestApiShutdownWindowCoversTheDrain:
     def test_scaffold_dockerfile_bounds_in_flight_requests(self) -> None:
         dockerfile = _read("infra", "templates", "scaffold", "docker", "backend.Dockerfile")
         assert f'"--timeout-graceful-shutdown", "{UVICORN_GRACEFUL_SHUTDOWN_SECONDS}"' in dockerfile
+
+
+def _audit_registry(app: str, suffix: str) -> set[str]:
+    """String names in ``apps/<app>/backend/app/core/audit.py``'s ``*<suffix>`` frozenset."""
+    tree = ast.parse(_read("apps", app, "backend", "app", "core", "audit.py"))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign | ast.Assign):
+            targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
+            if any(isinstance(t, ast.Name) and t.id.endswith(suffix) for t in targets) and node.value:
+                names |= {
+                    c.value for c in ast.walk(node.value)
+                    if isinstance(c, ast.Constant) and isinstance(c.value, str)
+                }
+    return names
+
+
+def _is_encrypted_string_column(value: ast.expr | None) -> bool:
+    if not (isinstance(value, ast.Call) and getattr(value.func, "id", None) == "mapped_column"):
+        return False
+    first = value.args[0] if value.args else None
+    return isinstance(first, ast.Call) and getattr(first.func, "id", None) == "EncryptedString"
+
+
+def _encrypted_columns(app: str) -> list[tuple[str, str]]:
+    """(table, attribute) for every ``mapped_column(EncryptedString(...))`` in the app's models."""
+    columns: list[tuple[str, str]] = []
+    models = _REPO_ROOT / "apps" / app / "backend" / "app" / "models"
+    for path in sorted(models.rglob("*.py")):
+        for cls in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            table = next(
+                (
+                    s.value.value for s in cls.body
+                    if isinstance(s, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "__tablename__" for t in s.targets)
+                    and isinstance(s.value, ast.Constant)
+                ),
+                cls.name,
+            )
+            for stmt in cls.body:
+                if (
+                    isinstance(stmt, ast.AnnAssign)
+                    and isinstance(stmt.target, ast.Name)
+                    and _is_encrypted_string_column(stmt.value)
+                ):
+                    columns.append((table, stmt.target.id))
+    return columns
+
+
+class TestEncryptedColumnsMaskedInAuditLog:
+    """The audit listener copies the DECRYPTED attribute value into audit_logs,
+    so every EncryptedString column must be a sensitive (masked) field. MLT's
+    tutor transcripts were copied in cleartext before this check. The same rule
+    fails app boot via platform_shared.core.audit.verify_audit_config;
+    this catches it in CI.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_every_encrypted_column_is_masked(self, app: str) -> None:
+        masked = _audit_registry(app, "_SENSITIVE_FIELDS") | _audit_registry(app, "_SKIP_FIELDS")
+        skipped_tables = _audit_registry(app, "_SKIP_TABLES")
+        unmasked = [
+            f"{table}.{attr}" for table, attr in _encrypted_columns(app)
+            if attr not in masked and table not in skipped_tables
+        ]
+        assert not unmasked, (
+            f"apps/{app}: EncryptedString columns {unmasked} would be copied into "
+            "audit_logs as cleartext. Add them to the sensitive fields in "
+            f"apps/{app}/backend/app/core/audit.py."
+        )
+
+    def test_finds_the_encrypted_columns(self) -> None:
+        # Guards the parser: an AST change that finds nothing would pass vacuously.
+        assert ("tutor_turn", "learner_text") in _encrypted_columns("mylanguagetutor")
+        assert ("inquiries", "inquirer_email") in _encrypted_columns("mybookkeeper")
+
+
+# The one app still on the legacy import-time audit registry. Its main.py must
+# keep importing app.core.audit (that import is what fills the registry); the
+# lifespan refuses to boot if the registry is empty. Remove it from here once
+# its main.py passes audit_config=AUDIT_CONFIG like every other app.
+_LEGACY_AUDIT_REGISTRY_APPS = {"mygamingassistant"}
+
+
+class TestAuditConfigPassedToLifespan:
+    """Every app hands its AuditConfig to create_app_lifespan explicitly.
+
+    The audit listener used to read sets each app registered as an import-time
+    side effect of app.core.audit. PR #2623 removed the only import of that
+    module from five apps' main.py (it looked unused), so the listener attached
+    with nothing registered and copied TOTP secrets, password hashes and
+    encrypted PII into audit_logs in cleartext.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_main_passes_audit_config(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        if app in _LEGACY_AUDIT_REGISTRY_APPS:
+            assert re.search(r"^from app\.core\.audit import ", main_src, re.MULTILINE), (
+                f"{app} still uses the import-time audit registry, so app/main.py must "
+                "import from app.core.audit. Better: pass audit_config=AUDIT_CONFIG to "
+                f"create_app_lifespan and drop {app} from _LEGACY_AUDIT_REGISTRY_APPS."
+            )
+            return
+        assert "audit_config=AUDIT_CONFIG" in main_src, (
+            f"apps/{app}/backend/app/main.py must pass audit_config=AUDIT_CONFIG "
+            "(from app.core.audit) to create_app_lifespan."
+        )
+
+    @pytest.mark.parametrize("app", [a for a in _APPS if a not in _LEGACY_AUDIT_REGISTRY_APPS])
+    def test_audit_module_builds_config_without_side_effects(self, app: str) -> None:
+        src = _read("apps", app, "backend", "app", "core", "audit.py")
+        assert "AUDIT_CONFIG = AuditConfig(" in src
+        assert "register_" not in src, (
+            f"apps/{app}/backend/app/core/audit.py must not register audit sets as an "
+            "import side effect; AUDIT_CONFIG is passed to the lifespan instead."
+        )
+
+    def test_scaffold_passes_audit_config(self) -> None:
+        main_src = _read("infra", "templates", "scaffold", "backend", "app", "main.py")
+        audit_src = _read("infra", "templates", "scaffold", "backend", "app", "core", "audit.py")
+        assert "audit_config=AUDIT_CONFIG" in main_src
+        assert "AUDIT_CONFIG = AuditConfig(" in audit_src
+        assert "register_" not in audit_src

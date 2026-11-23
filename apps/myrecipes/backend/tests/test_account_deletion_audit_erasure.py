@@ -11,19 +11,6 @@ from collections.abc import AsyncIterator, Iterator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.audit import APP_SENSITIVE_FIELDS, APP_SKIP_FIELDS, APP_SKIP_TABLES
-from app.core.auth import current_active_user
-from app.db.session import get_db
-from app.main import app
-from app.models.recipe.cook_log import CookLog
-from app.models.recipe.recipe import Recipe
-from app.models.recipe.recipe_ingredient import RecipeIngredient
-from app.models.recipe.recipe_step import RecipeStep
-from app.models.recipe.recipe_version import RecipeVersion
-from app.models.user.user import User
 from platform_shared.db.models.audit_log import AuditLog
 from platform_shared.testing.audit_erasure import (
     TEST_ACCOUNT_PASSWORD_HASH,
@@ -35,13 +22,24 @@ from platform_shared.testing.audit_erasure import (
     remove_committed_test_rows,
     write_as,
 )
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.audit import AUDIT_CONFIG
+from app.core.auth import current_active_user
+from app.db.session import get_db
+from app.main import app
+from app.models.recipe.cook_log import CookLog
+from app.models.recipe.recipe import Recipe
+from app.models.recipe.recipe_ingredient import RecipeIngredient
+from app.models.recipe.recipe_step import RecipeStep
+from app.models.recipe.recipe_version import RecipeVersion
+from app.models.user.user import User
 
 
 @pytest.fixture(autouse=True)
 def _audit_listener() -> Iterator[None]:
-    with audit_listener_attached(
-        sensitive_fields=APP_SENSITIVE_FIELDS, skip_tables=APP_SKIP_TABLES, skip_fields=APP_SKIP_FIELDS,
-    ):
+    with audit_listener_attached(AUDIT_CONFIG):
         yield
 
 

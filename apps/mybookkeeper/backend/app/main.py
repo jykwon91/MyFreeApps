@@ -16,6 +16,7 @@ from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
 
+from app.core.audit import AUDIT_CONFIG
 from app.core.auth import fastapi_users, auth_backend
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
@@ -82,6 +83,7 @@ async def _on_shutdown() -> None:
 
 lifespan = create_app_lifespan(
     settings=settings,
+    audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     on_startup=_on_startup,

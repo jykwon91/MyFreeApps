@@ -26,7 +26,7 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 
 from app.api import account, admin, health, totp
-from app.core.audit import current_user_id
+from app.core.audit import AUDIT_CONFIG, current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
@@ -86,6 +86,7 @@ async def _on_startup() -> None:
 
 lifespan = create_app_lifespan(
     settings=settings,
+    audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     on_startup=_on_startup,

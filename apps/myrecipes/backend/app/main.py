@@ -27,6 +27,7 @@ from platform_shared.services.seed_admin_service import build_seed_admin_hook
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
 
 from app.api import account, admin, discovery, health, mobile_auth, recipes, totp
+from app.core.audit import AUDIT_CONFIG
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
@@ -58,6 +59,7 @@ install_crlf_safe_logging()
 
 lifespan = create_app_lifespan(
     settings=settings,
+    audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     # Boot-seeded platform admin (SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD_HASH).
