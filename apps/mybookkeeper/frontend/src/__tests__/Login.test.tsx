@@ -102,7 +102,7 @@ describe("Login — normal login", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith("user@example.com", "secret123", undefined);
+      expect(login).toHaveBeenCalledWith("user@example.com", "secret123");
     });
   });
 
@@ -198,7 +198,7 @@ describe("Login — error handling", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith("user@example.com", "secret", undefined);
+      expect(login).toHaveBeenCalledWith("user@example.com", "secret");
     });
   });
 });
@@ -317,6 +317,62 @@ describe("Login — TOTP challenge", () => {
     await user.click(screen.getByRole("button", { name: "Verify" }));
 
     await screen.findByText("Invalid TOTP code");
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps Verify disabled until the code has 6 characters", async () => {
+    const user = await submitCredentials();
+
+    await user.type(screen.getByPlaceholderText("000000"), "12345");
+    expect(screen.getByRole("button", { name: "Verify" })).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText("000000"), "6");
+    expect(screen.getByRole("button", { name: "Verify" })).toBeEnabled();
+  });
+
+  it("focuses the code field when the step opens", async () => {
+    await submitCredentials();
+
+    expect(screen.getByPlaceholderText("000000")).toHaveFocus();
+  });
+
+  it("says the code didn't go through when the server still asks for a code", async () => {
+    const user = await submitCredentials();
+    vi.mocked(login).mockResolvedValueOnce({ detail: "totp_required" });
+
+    await user.type(screen.getByPlaceholderText("000000"), "654321");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await screen.findByText("Authentication code didn't go through. Please try again.");
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("goes to returnTo after a valid code", async () => {
+    vi.mocked(login).mockResolvedValueOnce({ detail: "totp_required" });
+    const user = userEvent.setup();
+    const { container } = renderLogin("?returnTo=%2Fdashboard");
+    await user.type(emailInput(container), "user@example.com");
+    await user.type(passwordInput(container), "secret123");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByText("Authentication code");
+    vi.mocked(login).mockResolvedValueOnce({ access_token: "tok123" });
+
+    await user.type(screen.getByPlaceholderText("000000"), "654321");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("shows the sign-in lockout message when the code attempt is rate limited", async () => {
+    const user = await submitCredentials();
+    vi.mocked(login).mockRejectedValueOnce(axiosError(429, "Too many attempts"));
+
+    await user.type(screen.getByPlaceholderText("000000"), "654321");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await screen.findByText("Too many sign-in attempts. Try again in a few minutes.");
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
