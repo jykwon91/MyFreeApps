@@ -6,9 +6,11 @@
  */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { VersionResponse, VersionSummary } from "@myrecipes/api-client/types/recipe/version";
+import { makeStore } from "@/lib/store";
 import RecipeDetail from "@/pages/RecipeDetail";
 
 type VersionState = "loaded" | "loading" | "failed";
@@ -83,11 +85,13 @@ function answerVersions(states: Record<string, VersionState>) {
 
 function renderPage() {
   render(
-    <MemoryRouter initialEntries={["/recipes/r1"]}>
-      <Routes>
-        <Route path="/recipes/:id" element={<RecipeDetail />} />
-      </Routes>
-    </MemoryRouter>,
+    <Provider store={makeStore()}>
+      <MemoryRouter initialEntries={["/recipes/r1"]}>
+        <Routes>
+          <Route path="/recipes/:id" element={<RecipeDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>,
   );
 }
 

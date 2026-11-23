@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { DISCOVER_ROUTE, DISCOVERY_MISSING_RESULT } from "../../constants/discovery";
 import type { RootState } from "../../lib/store";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
-import { recipeSaved } from "../discovery/discoverySlice";
+import { recipeSaved } from "@myrecipes/api-client/store/discoverySlice";
 import NewRecipeForm from "./NewRecipeForm";
 
 /**

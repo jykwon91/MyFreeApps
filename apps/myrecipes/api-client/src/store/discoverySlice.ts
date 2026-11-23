@@ -1,11 +1,20 @@
-import { discoveryReadErrorMessage } from "@myrecipes/api-client/utils/discoveryReadErrorMessage";
-import { discoverySearchErrorMessage } from "@myrecipes/api-client/utils/discoverySearchErrorMessage";
+import { discoveryReadErrorMessage } from "../utils/discoveryReadErrorMessage";
+import { discoverySearchErrorMessage } from "../utils/discoverySearchErrorMessage";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { DiscoveryState } from "../../types/DiscoveryState";
-import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
+import type { DiscoveryRead } from "../types/recipe/discovery-read";
+import type { DiscoverySearch } from "../types/recipe/discovery-search";
+import type { DiscoveryState } from "../types/recipe/discovery-state";
+import type { DiscoveryStoreState } from "../types/recipe/discovery-store-state";
+import type { DiscoveryResults } from "../types/recipe/discovery";
+import { recipeForgotten } from "./recipeForgotten";
 import { readDiscoveredRecipe } from "./readDiscoveredRecipe";
 import { searchDiscoveredRecipes } from "./searchDiscoveredRecipes";
 
+/**
+ * Discover's search, reads and saves, for the website and the phone. Each search and read is a
+ * paid Claude call, so they live in the store, not a screen: leaving Discover and coming back keeps
+ * them, until the account leaves (`discoveryCleared`) or the app is reloaded.
+ */
 const initialState: DiscoveryState = { generation: 0, search: null, results: null, reads: {}, saved: {} };
 
 const discoverySlice = createSlice({
@@ -58,6 +67,19 @@ function isCurrentRead(state: DiscoveryState, resultId: string, requestId: strin
   const read = state.reads[resultId];
   return read?.status === "reading" && read.requestId === requestId;
 }
+
+export const selectDiscoverySearch = (state: DiscoveryStoreState): DiscoverySearch | null => state.discovery.search;
+export const selectDiscoveryResults = (state: DiscoveryStoreState): DiscoveryResults | null => state.discovery.results;
+export const selectDiscoveryGeneration = (state: DiscoveryStoreState): number => state.discovery.generation;
+export const selectDiscoveryRead = (state: DiscoveryStoreState, resultId: string): DiscoveryRead | undefined =>
+  state.discovery.reads[resultId];
+/** The recipe this result was saved as, if it has been. */
+export const selectSavedRecipeId = (state: DiscoveryStoreState, resultId: string): string | undefined =>
+  state.discovery.saved[resultId];
+/** Whether a search or any read is still waiting on its answer. */
+export const selectDiscoveryIsBusy = (state: DiscoveryStoreState): boolean =>
+  state.discovery.search?.status === "searching" ||
+  Object.values(state.discovery.reads).some((read) => read.status === "reading");
 
 export const { discoveryCleared, recipeSaved } = discoverySlice.actions;
 export default discoverySlice.reducer;

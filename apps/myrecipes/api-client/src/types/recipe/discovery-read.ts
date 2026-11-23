@@ -1,4 +1,4 @@
-import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
+import type { DiscoveredDetail } from "./discovery";
 
 /**
  * How far opening one discovered recipe has got. A read in flight keeps its request id, as result

@@ -63,3 +63,9 @@ export const DISCOVERY_SUGGESTIONS = [
   "Chicken tikka masala",
   "Sourdough focaccia",
 ] as const;
+
+/** A search that came back with nothing: say so, rather than looking as if none ran. */
+export const DISCOVERY_NO_RESULTS_COPY = {
+  heading: (query: string) => `Nothing found for ${query}`,
+  body: "Try another dish name, or a shorter one.",
+} as const;

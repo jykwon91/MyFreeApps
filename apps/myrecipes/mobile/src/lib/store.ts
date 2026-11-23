@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../constants/api";
 import { clearCookCopies } from "../features/cook/cookCopies";
 import cookSessions, { sessionsCleared } from "../features/cook/cookSessionsSlice";
 import cookTimers, { timersCleared } from "../features/cook/cookTimersSlice";
-import discovery, { discoveryCleared } from "../features/discovery/discoverySlice";
+import discovery, { discoveryCleared } from "@myrecipes/api-client/store/discoverySlice";
 import { cancelAllCookTimerAlerts } from "../services/cookTimerNotifications";
 import { session } from "./session";
 

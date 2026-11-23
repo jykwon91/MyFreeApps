@@ -1,7 +1,7 @@
 import { DISCOVERY_READ_STAGES, DISCOVERY_STAGE_SECONDS } from "@myrecipes/api-client/constants/discovery";
 import { render, screen } from "@testing-library/react-native";
 import DiscoveryStatus from "../src/features/discovery/DiscoveryStatus";
-import reducer, { discoveryCleared, recipeSaved } from "../src/features/discovery/discoverySlice";
+import reducer, { discoveryCleared, recipeSaved } from "@myrecipes/api-client/store/discoverySlice";
 
 describe("DiscoveryStatus", () => {
   it("shows the stage the wait has reached, even after time away, and stops at the last", async () => {

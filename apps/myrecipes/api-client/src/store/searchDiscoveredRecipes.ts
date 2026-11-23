@@ -1,6 +1,6 @@
-import discoveryApi from "@myrecipes/api-client/store/discoveryApi";
-import type { DiscoveryResults } from "@myrecipes/api-client/types/recipe/discovery";
-import { discoverySearchErrorMessage } from "@myrecipes/api-client/utils/discoverySearchErrorMessage";
+import discoveryApi from "./discoveryApi";
+import type { DiscoveryResults } from "../types/recipe/discovery";
+import { discoverySearchErrorMessage } from "../utils/discoverySearchErrorMessage";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 /**

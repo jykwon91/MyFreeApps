@@ -6,7 +6,7 @@ import { loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import { timerStarted } from "../src/features/cook/cookTimersSlice";
 import DiscoverySaveAction from "../src/features/discovery/DiscoverySaveAction";
-import { recipeSaved } from "../src/features/discovery/discoverySlice";
+import { recipeSaved } from "@myrecipes/api-client/store/discoverySlice";
 import { forgetRecipe } from "../src/features/forgetRecipe/forgetRecipe";
 import { makeStore } from "../src/lib/store";
 import type { CookTimer } from "../src/types/CookTimer";

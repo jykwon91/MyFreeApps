@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { CookSession } from "../../types/CookSession";
 import type { CookSessionTarget } from "../../types/CookSessionTarget";
 import { resumableCookSession } from "../../utils/resumableCookSession";
-import { recipeForgotten } from "../forgetRecipe/recipeForgotten";
+import { recipeForgotten } from "@myrecipes/api-client/store/recipeForgotten";
 
 const initialState: Record<string, CookSession> = {};
 

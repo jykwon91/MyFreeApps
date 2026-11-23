@@ -1,4 +1,5 @@
 import { DISCOVERY_READ_STAGES } from "@myrecipes/api-client/constants/discovery";
+import { readDiscoveredRecipe } from "@myrecipes/api-client/store/readDiscoveredRecipe";
 import { Banner, EmptyState, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
@@ -11,7 +12,6 @@ import RecipeDetailSkeleton from "../recipes/RecipeDetailSkeleton";
 import DiscoveryDetailContent from "./DiscoveryDetailContent";
 import DiscoveryDetailHeader from "./DiscoveryDetailHeader";
 import DiscoveryStatus from "./DiscoveryStatus";
-import { readDiscoveredRecipe } from "./readDiscoveredRecipe";
 
 /**
  * One discovered result, read in full. Pushed over Discover, so the back gesture returns to the

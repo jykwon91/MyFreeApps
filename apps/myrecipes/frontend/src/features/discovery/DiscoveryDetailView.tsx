@@ -1,5 +1,9 @@
-import { ArrowLeft, Clock, ExternalLink, Lightbulb, MessagesSquare, Users } from "lucide-react";
-import { Badge, Button } from "@platform/ui";
+import type { Ref } from "react";
+import { Clock, Lightbulb, MessagesSquare, Users } from "lucide-react";
+import { Badge } from "@platform/ui";
+import DiscoveryBackButton from "@/features/discovery/DiscoveryBackButton";
+import DiscoveryOriginalLink from "@/features/discovery/DiscoveryOriginalLink";
+import DiscoverySaveAction from "@/features/discovery/DiscoverySaveAction";
 import DiscoveryThumbnail from "@/features/discovery/DiscoveryThumbnail";
 import { SOURCE_COLORS } from "@/features/discovery/discovery-display";
 import { DISCOVERY_SOURCE_LABELS } from "@myrecipes/api-client/constants/discovery";
@@ -7,10 +11,13 @@ import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
-import { TOUCH_TARGET } from "@/constants/touchTarget";
 
 interface Props {
   detail: DiscoveredDetail;
+  /** The recipe this result was already saved as, if it was. */
+  savedRecipeId: string | undefined;
+  /** The step's heading, focused when Discover moves to it. */
+  headingRef: Ref<HTMLHeadingElement>;
   onBack: () => void;
   onSave: () => void;
 }
@@ -21,14 +28,15 @@ interface Props {
  *
  * This is a reading view, not an editor. "Save to my recipes" hands the draft
  * to the ordinary recipe editor, which is where the user corrects whatever the
- * page got wrong. Keeping the two apart means the common case (read it, decide
- * against it) never puts a form in front of anyone.
+ * page got wrong; once saved, it opens that recipe instead. Keeping the two
+ * apart means the common case (read it, decide against it) never puts a form
+ * in front of anyone.
  *
  * Every link out carries rel="noopener noreferrer" and opens in a new tab:
  * these URLs came off the open web, and the reader should keep their place in
  * the results either way.
  */
-export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
+export default function DiscoveryDetailView({ detail, savedRecipeId, headingRef, onBack, onSave }: Props) {
   const decimalSeparator = browserDecimalSeparator();
   const publisher = detail.site_name ?? hostLabel(detail.url);
   const { draft } = detail;
@@ -37,14 +45,7 @@ export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
 
   return (
     <div className="space-y-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className={`inline-flex ${TOUCH_TARGET} items-center gap-1 text-sm text-muted-foreground hover:text-foreground`}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to results
-      </button>
+      <DiscoveryBackButton onBack={onBack} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
@@ -58,21 +59,15 @@ export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
                 <span className="text-sm text-muted-foreground">{publisher}</span>
               ) : null}
             </div>
-            <h1 className="text-2xl font-semibold leading-tight">{detail.title}</h1>
+            <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold leading-tight outline-none">
+              {detail.title}
+            </h1>
             {detail.summary ? (
               <p className="text-muted-foreground">{detail.summary}</p>
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={onSave}>Save to my recipes</Button>
-              <a
-                href={detail.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-2"
-              >
-                View original
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
+              <DiscoverySaveAction savedRecipeId={savedRecipeId} onSave={onSave} />
+              <DiscoveryOriginalLink url={detail.url} />
             </div>
           </header>
 

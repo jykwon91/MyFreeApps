@@ -1,8 +1,8 @@
-import discoveryApi from "@myrecipes/api-client/store/discoveryApi";
-import type { DiscoveredDetail, DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
-import { discoveryReadErrorMessage } from "@myrecipes/api-client/utils/discoveryReadErrorMessage";
+import discoveryApi from "./discoveryApi";
+import type { DiscoveredDetail, DiscoveredRecipe } from "../types/recipe/discovery";
+import { discoveryReadErrorMessage } from "../utils/discoveryReadErrorMessage";
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import type { DiscoveryState } from "../../types/DiscoveryState";
+import type { DiscoveryStoreState } from "../types/recipe/discovery-store-state";
 
 /**
  * Reads one discovered page in full. Kept in the store rather than the screen, so leaving the
@@ -12,7 +12,7 @@ import type { DiscoveryState } from "../../types/DiscoveryState";
 export const readDiscoveredRecipe = createAsyncThunk<
   DiscoveredDetail,
   DiscoveredRecipe,
-  { state: { discovery: DiscoveryState }; rejectValue: string; pendingMeta: { startedAt: number } }
+  { state: DiscoveryStoreState; rejectValue: string; pendingMeta: { startedAt: number } }
 >(
   "discovery/read",
   async (recipe, { dispatch, rejectWithValue }) => {

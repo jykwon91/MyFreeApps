@@ -1,12 +1,16 @@
 /**
  * Deleting a recipe from its page: a 404 means it's already gone, so the page treats it as deleted
  * (says so and leaves for the list); any other failure keeps the recipe and says the delete failed.
+ * A Discover result saved as the recipe stops pointing at it once it's gone.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
+import { recipeSaved, selectSavedRecipeId } from "@myrecipes/api-client/store/discoverySlice";
+import { makeStore, type AppStore } from "@/lib/store";
 import RecipeDetail from "@/pages/RecipeDetail";
 
 const { deleteRecipe, showSuccess, showError } = vi.hoisted(() => ({
@@ -40,14 +44,16 @@ function failWith(error: unknown) {
   deleteRecipe.mockReturnValue({ unwrap: () => Promise.reject(error) });
 }
 
-async function confirmDelete() {
+async function confirmDelete(store: AppStore = makeStore()) {
   render(
-    <MemoryRouter initialEntries={["/recipes/r1"]}>
-      <Routes>
-        <Route path="/recipes/:id" element={<RecipeDetail />} />
-        <Route path="/" element={<p>Recipes list</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <Provider store={store}>
+      <MemoryRouter initialEntries={["/recipes/r1"]}>
+        <Routes>
+          <Route path="/recipes/:id" element={<RecipeDetail />} />
+          <Route path="/" element={<p>Recipes list</p>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>,
   );
   await userEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
   await userEvent.click(screen.getByRole("button", { name: RECIPE_MANAGE_MESSAGES.deleteConfirm }));
@@ -65,6 +71,19 @@ describe("RecipeDetail delete", () => {
     expect(showSuccess).toHaveBeenCalledWith(RECIPE_MANAGE_MESSAGES.gone);
     expect(showError).not.toHaveBeenCalled();
     expect(await screen.findByText("Recipes list")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["deleted", () => deleteRecipe.mockReturnValue({ unwrap: () => Promise.resolve() })],
+    ["already gone", () => failWith({ status: 404, data: { detail: "Recipe not found" } })],
+  ])("once %s, the Discover result saved as it offers Save again", async (_, respond) => {
+    respond();
+    const store = makeStore();
+    store.dispatch(recipeSaved({ resultId: "result-1", recipeId: "r1", generation: 0 }));
+    await confirmDelete(store);
+
+    expect(await screen.findByText("Recipes list")).toBeInTheDocument();
+    expect(selectSavedRecipeId(store.getState(), "result-1")).toBeUndefined();
   });
 
   it("keeps the recipe and says it failed on any other failure", async () => {
