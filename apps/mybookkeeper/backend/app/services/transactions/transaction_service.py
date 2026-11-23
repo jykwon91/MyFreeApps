@@ -27,6 +27,7 @@ from app.services.classification import rule_learning_service
 from app.services.transactions.capital_improvement import placed_in_service_date_for
 from app.services.transactions.duplicate_absorb import absorb_duplicates
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
+from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
 from app.services.transactions.reference_ownership import assert_references_owned
 
 # Union of all possible value types in a Transaction field dict
@@ -49,6 +50,11 @@ UPDATABLE_FIELDS = frozenset({
     "amount",
     "transaction_type",
     "category",
+    "sub_category",
+    "usage_quantity",
+    "usage_unit",
+    "service_period_start",
+    "service_period_end",
     "tags",
     "tax_relevant",
     "schedule_e_line",
@@ -189,6 +195,7 @@ async def update_transaction(
         )
         for field, value in updates.items():
             setattr(txn, field, value)
+        assert_metered_usage_consistent(txn)
         txn.placed_in_service_date = placed_in_service_date_for(
             txn.is_capital_improvement, txn.placed_in_service_date, txn.transaction_date,
         )

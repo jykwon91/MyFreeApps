@@ -2252,6 +2252,8 @@
         "test_transaction_filter_args.py",
         "test_transaction_export_filters.py",
         "test_transaction_routes.py",
+        "test_transaction_metered_usage_edit.py",
+        "test_update_allowlist_parity.py",
         "test_transaction_document_path_soft_delete.py",
         "test_transaction_schema.py",
         "test_transaction_service.py",
