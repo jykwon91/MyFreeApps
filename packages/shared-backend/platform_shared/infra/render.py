@@ -36,7 +36,11 @@ Boolean flags (optional, all default false/disabled when absent):
   include_bundle_tripwire bool   True to enable the post-deploy bundle freshness check.
   automated_deploy        bool   True (default) to deploy automatically once the app's
                                  CI passes on main (workflow_run trigger).
-  registry_images         bool   True to build images in CI (GHCR) instead of on-VPS.
+  registry_images         bool   Must be true: images are built in CI and pushed to GHCR,
+                                 and the VPS only pulls them. An on-VPS build would
+                                 read its build context from the shared /srv/myfreeapps
+                                 checkout, not the commit the app's CI passed, so
+                                 render refuses anything else.
   serve_only_build_arg    bool   True (MGA only) to wire the VITE_SERVE_ONLY build arg.
   discord_activity        bool   True to let Discord iframe the SPA as an Activity.
                                  Non-minio Caddyfile branch only. The SPA handler gets
@@ -288,6 +292,12 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     When ``write`` is True, the file is also written to disk.
     """
     ctx = _load_app_config(repo_root, app_slug)
+    if ctx.get("registry_images") is not True:
+        raise ValueError(
+            f"{app_slug}: registry_images must be true. Deploys pull prebuilt images; "
+            "an on-VPS build would read its build context from the shared checkout, "
+            "not the commit the app's CI passed."
+        )
 
     # Compute the Permissions-Policy header value from the app's opt-in list and
     # inject it so templates can reference {{ permissions_policy }} directly.

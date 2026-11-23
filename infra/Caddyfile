@@ -17,10 +17,10 @@
 #   4. Add the app's card to the landing page (sites/landing/public/index.html)
 #      — test_landing_page.py fails CI until every app hostname here is linked.
 #
-# Note: deploys only sync + `caddy reload` this file when it DIFFERS from
-# /etc/caddy/Caddyfile (infra/sync-host-caddyfile.sh). A push to main that
-# changes this file triggers deploy-landing.yml, which applies it on its own —
-# no app deploy needed. If a block's DNS record is created AFTER the block
+# Note: only deploy-landing.yml syncs this file, and it runs `caddy reload` only
+# when the file DIFFERS from /etc/caddy/Caddyfile (infra/sync-host-caddyfile.sh). A
+# push to main that changes this file runs Landing CI, and deploy-landing.yml
+# applies it once that passes. App deploys never touch host Caddy. If a block's DNS record is created AFTER the block
 # was already synced (ACME has been failing + backing off), touch this file
 # (any comment change) to force the reload that re-attempts certificate
 # issuance. Done 2026-07-02 for myrecipes go-live (x2 — first post-DNS attempt

@@ -1,4 +1,5 @@
-"""Unit tests for platform_shared.infra.render._build_permissions_policy.
+"""Unit tests for platform_shared.infra.render: _build_permissions_policy and the
+registry_images guard.
 
 These tests are intentionally narrow — they only cover the new helper, not the
 full render pipeline (that's covered by TestInfraTemplateDrift in
@@ -6,11 +7,14 @@ test_app_conformance.py via the diff_app call).
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from platform_shared.infra.render import (
     _PERMISSIONS_POLICY_FEATURES,
     _build_permissions_policy,
+    render_app,
 )
 
 
@@ -80,3 +84,17 @@ class TestBuildPermissionsPolicy:
             "interest-cohort=(), browsing-topics=()"
         )
         assert _build_permissions_policy([]) == expected
+
+
+def test_render_refuses_an_on_vps_build(tmp_path: Path) -> None:
+    """An on-VPS build would read its build context from the shared checkout,
+    not the commit the app's CI passed, so only registry apps render."""
+    real_root = Path(__file__).resolve().parents[3]
+    app_dir = tmp_path / "apps" / "myrecipes"
+    app_dir.mkdir(parents=True)
+    config = (real_root / "apps" / "myrecipes" / "app.yaml").read_text("utf-8")
+    (app_dir / "app.yaml").write_text(
+        config.replace("registry_images: true", "registry_images: false"), "utf-8",
+    )
+    with pytest.raises(ValueError, match="registry_images must be true"):
+        render_app(tmp_path, "myrecipes", write=False)

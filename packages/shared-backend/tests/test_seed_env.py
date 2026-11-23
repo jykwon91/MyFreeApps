@@ -511,3 +511,42 @@ class TestRealAppTemplates:
         assert re.fullmatch(r"[0-9a-f]{48}", compose["DB_PASSWORD"])
         assert re.fullmatch(r"[0-9a-f]{64}", docker["SECRET_KEY"])
         assert not docker["ENCRYPTION_KEY"].startswith("change-me")
+
+
+class TestEnvRoot:
+    """The seed-env workflow runs the seeder from an extract of one commit
+    (--repo-root) and writes into the VPS checkout (--env-root)."""
+
+    @pytest.fixture()
+    def env_root(self, tmp_path: Path) -> Path:
+        root = tmp_path / "checkout"
+        root.mkdir()
+        return root
+
+    def test_writes_env_files_under_env_root_only(self, repo: Path, env_root: Path):
+        rc = run(repo, "--env-root", str(env_root))
+        assert rc == 1  # operator blanks remain
+        target = env_root / "apps" / "testapp"
+        assert re.fullmatch(r"[0-9a-f]{48}", read_env(target / ".env")["DB_PASSWORD"])
+        assert read_env(target / "backend" / ".env.docker")["LOCKOUT_THRESHOLD"] == "5"
+        assert not (repo / "apps" / "testapp" / ".env").exists()
+        assert not (repo / "apps" / "testapp" / "backend" / ".env.docker").exists()
+
+    def test_keeps_existing_values_under_env_root(self, repo: Path, env_root: Path):
+        existing = env_root / "apps" / "testapp" / ".env"
+        existing.parent.mkdir(parents=True)
+        existing.write_text("DB_PASSWORD=already-set\n", encoding="utf-8")
+        run(repo, "--env-root", str(env_root))
+        assert read_env(existing)["DB_PASSWORD"] == "already-set"
+
+    def test_check_reads_env_root(self, repo: Path, env_root: Path, capsys):
+        assert run(repo, "--check", "--env-root", str(env_root)) == 1
+        assert f"MISSING file: {env_root / 'apps' / 'testapp' / '.env'}" in capsys.readouterr().out
+
+    def test_copy_source_is_read_from_env_root(self, repo: Path, env_root: Path):
+        source = env_root / "apps" / "otherapp" / "backend" / ".env.docker"
+        source.parent.mkdir(parents=True)
+        source.write_text("SMTP_USER=shared@example.org\n", encoding="utf-8")
+        run(repo, "--env-root", str(env_root), "--copy-from", "otherapp", "--copy-keys", "SMTP_USER")
+        docker = read_env(env_root / "apps" / "testapp" / "backend" / ".env.docker")
+        assert docker["SMTP_USER"] == "shared@example.org"

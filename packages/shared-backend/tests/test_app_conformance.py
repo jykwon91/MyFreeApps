@@ -131,18 +131,6 @@ def _mobile_react_native_versions() -> set[str]:
     return versions
 
 
-def _uses_registry_images(app: str) -> bool:
-    """True when the app builds its images in CI + pulls them from GHCR on the
-    VPS (``registry_images: true`` in app.yaml) instead of building on-box.
-
-    Apps on the registry path wire the VITE_* build args through the deploy
-    workflow's build-and-push job rather than docker-compose ``build.args``, so
-    the bundle-wiring conformance assertions below branch on this.
-    """
-    app_yaml = _read("apps", app, "app.yaml")
-    return re.search(r"^registry_images:\s*true\b", app_yaml, re.MULTILINE) is not None
-
-
 @pytest.mark.parametrize("app", _APPS)
 class TestSettingsInheritsBaseAppSettings:
     """Each app's Settings class must inherit from BaseAppSettings.
@@ -422,128 +410,84 @@ class TestTurnstileBundleWiring:
 
     def test_docker_compose_passes_turnstile_arg_to_caddy(self, app: str) -> None:
         """The VITE_TURNSTILE_SITE_KEY build arg must reach the caddy image at
-        build time. WHERE it's wired depends on the build location:
-
-        - VPS-build apps: through the caddy service's docker-compose
-          ``build.args`` block (sourced from backend/.env.docker via --env-file).
-        - Registry apps (``registry_images: true``): the image is built in the
-          deploy workflow's build-and-push job, so the build arg is wired there
-          (from a GitHub Actions variable) and the compose caddy service just
-          references the prebuilt GHCR image — no build.args block exists.
-        """
-        if _uses_registry_images(app):
-            workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
-            assert "VITE_TURNSTILE_SITE_KEY=" in workflow_src, (
-                f"deploy-{app}.yml builds the caddy image in CI "
-                f"(registry_images: true) but its build-and-push job does not "
-                f"pass VITE_TURNSTILE_SITE_KEY as a --build-arg. Without it the "
-                f"bundle is baked with an empty key and TurnstileWidget renders "
-                f"null. Add it under the caddy build step's `build-args:` in "
-                f"infra/templates/.github/workflows/deploy.yml.j2 and re-render."
-            )
-            compose_src = _read("apps", app, "docker-compose.yml")
-            assert f"myfreeapps-{app}-caddy:" in compose_src, (
-                f"{app}/docker-compose.yml has registry_images: true but the "
-                f"caddy service does not reference the prebuilt image "
-                f"ghcr.io/jykwon91/myfreeapps-{app}-caddy. Re-render from the "
-                f"template."
-            )
-            return
-        compose_src = _read("apps", app, "docker-compose.yml")
-        assert "VITE_TURNSTILE_SITE_KEY:" in compose_src, (
-            f"{app}/docker-compose.yml must include `VITE_TURNSTILE_SITE_KEY: "
-            f"${{TURNSTILE_SITE_KEY:-}}` under the caddy service's "
-            f"`build.args:` block. Without this, the caddy.Dockerfile's "
-            f"ARG sees no value at build time and the bundle is baked "
-            f"with an empty Turnstile site key."
-        )
-        assert "${TURNSTILE_SITE_KEY" in compose_src, (
-            f"{app}/docker-compose.yml: VITE_TURNSTILE_SITE_KEY build "
-            f"arg must reference ${{TURNSTILE_SITE_KEY}} (no VITE_ "
-            f"prefix on the right-hand side) so docker compose reads "
-            f"the value from the same env var name the backend uses."
-        )
-
-    def test_deploy_workflow_uses_env_file_for_build(self, app: str) -> None:
-        """The deploy workflow must build the bundle correctly for its build
-        location:
-
-        - VPS-build apps: `docker compose --env-file backend/.env.docker ...
-          build` so the build-args block can resolve TURNSTILE_SITE_KEY.
-        - Registry apps: build + push the images to GHCR in CI
-          (docker/build-push-action), then the VPS authenticates and pulls
-          them (`docker login ghcr.io` + `docker compose ... pull`) — never
-          building on-box.
+        build time. The image is built in the deploy workflow's build-and-push
+        job, so the build arg is wired there (from a GitHub Actions variable)
+        and the compose caddy service just references the prebuilt GHCR image.
         """
         workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
-        if _uses_registry_images(app):
-            assert "docker/build-push-action" in workflow_src, (
-                f"deploy-{app}.yml has registry_images: true but no "
-                f"docker/build-push-action step — the backend + caddy images "
-                f"must be built and pushed in CI. Re-render from "
-                f"infra/templates/.github/workflows/deploy.yml.j2."
-            )
-            assert "ghcr.io/jykwon91/myfreeapps-" in workflow_src, (
-                f"deploy-{app}.yml registry path must push to (and pull from) "
-                f"ghcr.io/jykwon91/myfreeapps-{app}-*. Re-render from the "
-                f"template."
-            )
-            assert "docker login ghcr.io" in workflow_src, (
-                f"deploy-{app}.yml registry path must `docker login ghcr.io` "
-                f"on the VPS (using GHCR_PULL_TOKEN) before pulling the "
-                f"private images. Re-render from the template."
-            )
-            assert "docker-compose.yml pull" in workflow_src, (
-                f"deploy-{app}.yml registry path must `docker compose ... "
-                f"pull` the prebuilt images on the VPS instead of building "
-                f"them. Re-render from the template."
-            )
-            # Registry-pull deploys fetch a fresh SHA-tagged image every time
-            # but never remove the prior one, so orphaned layers accumulate
-            # across all apps on the shared droplet until the disk fills (the
-            # next deploy's SSH step then fails). The per-deploy prune reclaims
-            # them AFTER the health check passes (the in-use image is safe).
-            # This assertion fails if the prune step is ever dropped from the
-            # template — re-render from deploy.yml.j2.
-            assert "docker image prune -af" in workflow_src, (
-                f"deploy-{app}.yml registry path must run `docker image prune "
-                f"-af` after the health check so superseded GHCR image layers "
-                f"are reclaimed instead of accumulating until the shared "
-                f"droplet fills. Re-render from the template."
-            )
-            assert "docker builder prune -af" in workflow_src, (
-                f"deploy-{app}.yml registry path must run `docker builder prune "
-                f"-af` to reclaim build cache alongside the image prune. "
-                f"Re-render from the template."
-            )
-            # The prune must come AFTER the health check, never before — pruning
-            # before the new containers are confirmed healthy could remove the
-            # only good image on a failed roll-forward.
-            assert workflow_src.index("API is healthy") < workflow_src.index(
-                "docker image prune -af"
-            ), (
-                f"deploy-{app}.yml: the image prune must run AFTER the "
-                f"`API is healthy` check, so the in-use image is never removed "
-                f"on a failed deploy. Re-render from the template."
-            )
-            return
-        # Match a `docker compose ... --env-file ...backend/.env.docker ... build`
-        # invocation, allowing shell line-continuations (backslash + newline)
-        # between the segments. Re-DOTALL lets `.` cross newlines so the
-        # wrapped multi-line form in the workflow is matched.
-        match = re.search(
-            r"docker\s+compose.*?--env-file.*?backend/\.env\.docker.*?\bbuild\b",
-            workflow_src,
-            re.DOTALL,
+        assert "VITE_TURNSTILE_SITE_KEY=" in workflow_src, (
+            f"deploy-{app}.yml builds the caddy image in CI but its "
+            f"build-and-push job does not pass VITE_TURNSTILE_SITE_KEY as a "
+            f"--build-arg. Without it the bundle is baked with an empty key and "
+            f"TurnstileWidget renders null. Add it under the caddy build step's "
+            f"`build-args:` in infra/templates/.github/workflows/deploy.yml.j2 "
+            f"and re-render."
         )
-        assert match is not None, (
-            f".github/workflows/deploy-{app}.yml must invoke "
-            f"`docker compose --env-file apps/{app}/backend/.env.docker "
-            f"... build` so TURNSTILE_SITE_KEY (and other build-time env "
-            f"vars) are exposed to docker compose's build.args block. "
-            f"Without --env-file, the build runs with no .env.docker "
-            f"values and bundles get baked with empty defaults."
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert f"myfreeapps-{app}-caddy:" in compose_src, (
+            f"{app}/docker-compose.yml: the caddy service does not reference "
+            f"the prebuilt image ghcr.io/jykwon91/myfreeapps-{app}-caddy. "
+            f"Re-render from the template."
         )
+
+    def test_deploy_workflow_builds_in_ci_and_pulls_on_the_vps(self, app: str) -> None:
+        """The deploy workflow builds + pushes the images to GHCR in CI
+        (docker/build-push-action), then the VPS authenticates and pulls them
+        (`docker login ghcr.io` + `docker compose ... pull`), never building
+        on-box: an on-box build would read its context from the shared checkout,
+        not the commit the app's CI passed.
+        """
+        workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "docker/build-push-action" in workflow_src, (
+            f"deploy-{app}.yml has no "
+            f"docker/build-push-action step — the backend + caddy images "
+            f"must be built and pushed in CI. Re-render from "
+            f"infra/templates/.github/workflows/deploy.yml.j2."
+        )
+        assert "ghcr.io/jykwon91/myfreeapps-" in workflow_src, (
+            f"deploy-{app}.yml registry path must push to (and pull from) "
+            f"ghcr.io/jykwon91/myfreeapps-{app}-*. Re-render from the "
+            f"template."
+        )
+        assert "docker login ghcr.io" in workflow_src, (
+            f"deploy-{app}.yml registry path must `docker login ghcr.io` "
+            f"on the VPS (using GHCR_PULL_TOKEN) before pulling the "
+            f"private images. Re-render from the template."
+        )
+        assert "app_compose pull" in workflow_src, (
+            f"deploy-{app}.yml registry path must `docker compose ... "
+            f"pull` the prebuilt images on the VPS instead of building "
+            f"them. Re-render from the template."
+        )
+        # Registry-pull deploys fetch a fresh SHA-tagged image every time
+        # but never remove the prior one, so orphaned layers accumulate
+        # across all apps on the shared droplet until the disk fills (the
+        # next deploy's SSH step then fails). The per-deploy prune reclaims
+        # them AFTER the health check passes (the in-use image is safe).
+        # This assertion fails if the prune step is ever dropped from the
+        # template — re-render from deploy.yml.j2.
+        assert "docker image prune -af" in workflow_src, (
+            f"deploy-{app}.yml registry path must run `docker image prune "
+            f"-af` after the health check so superseded GHCR image layers "
+            f"are reclaimed instead of accumulating until the shared "
+            f"droplet fills. Re-render from the template."
+        )
+        assert "docker builder prune -af" in workflow_src, (
+            f"deploy-{app}.yml registry path must run `docker builder prune "
+            f"-af` to reclaim build cache alongside the image prune. "
+            f"Re-render from the template."
+        )
+        # The prune must come AFTER the health check, never before — pruning
+        # before the new containers are confirmed healthy could remove the
+        # only good image on a failed roll-forward.
+        assert workflow_src.index("API is healthy") < workflow_src.index(
+            "docker image prune -af"
+        ), (
+            f"deploy-{app}.yml: the image prune must run AFTER the "
+            f"`API is healthy` check, so the in-use image is never removed "
+            f"on a failed deploy. Re-render from the template."
+        )
+
 
 
 # Apps that render the VITE_SERVE_ONLY frontend build-arg chain. Only MGA has
@@ -599,46 +543,24 @@ class TestServeOnlyBundleWiring:
 
     @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
     def test_docker_compose_passes_serve_only_arg_to_caddy(self, app: str) -> None:
-        """WHERE VITE_SERVE_ONLY is wired depends on the build location (mirrors
-        TestTurnstileBundleWiring):
-
-        - VPS-build apps: through the caddy service's docker-compose
-          ``build.args`` block (sourced from backend/.env.docker via --env-file).
-        - Registry apps (``registry_images: true``): the caddy image is built in
-          the deploy workflow's build-and-push job, so VITE_SERVE_ONLY is wired
-          there (a literal flag) and the compose caddy service just references
-          the prebuilt GHCR image — no build.args block exists.
-        """
-        if _uses_registry_images(app):
-            workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
-            assert "VITE_SERVE_ONLY=true" in workflow_src, (
-                f"deploy-{app}.yml builds the caddy image in CI "
-                f"(registry_images: true) but its build-and-push job does not "
-                f"pass VITE_SERVE_ONLY=true as a --build-arg. Without it the "
-                f"serve-only bundle re-enables the auth UI in the public "
-                f"library. Add it under the caddy build step's `build-args:` in "
-                f"infra/templates/.github/workflows/deploy.yml.j2 (gated by "
-                f"serve_only_build_arg) and re-render."
-            )
-            compose_src = _read("apps", app, "docker-compose.yml")
-            assert f"myfreeapps-{app}-caddy:" in compose_src, (
-                f"{app}/docker-compose.yml has registry_images: true but the "
-                f"caddy service does not reference the prebuilt image "
-                f"ghcr.io/jykwon91/myfreeapps-{app}-caddy. Re-render from the "
-                f"template."
-            )
-            return
-        compose_src = _read("apps", app, "docker-compose.yml")
-        assert "VITE_SERVE_ONLY:" in compose_src, (
-            f"{app}/docker-compose.yml must include `VITE_SERVE_ONLY: "
-            f"${{SERVE_ONLY:-}}` under the caddy service's `build.args:` block "
-            f"so the caddy.Dockerfile ARG sees a value at build time."
+        """The caddy image is built in the deploy workflow's build-and-push job,
+        so VITE_SERVE_ONLY is wired there (a literal flag) and the compose caddy
+        service just references the prebuilt GHCR image (mirrors
+        TestTurnstileBundleWiring)."""
+        workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "VITE_SERVE_ONLY=true" in workflow_src, (
+            f"deploy-{app}.yml builds the caddy image in CI but its "
+            f"build-and-push job does not pass VITE_SERVE_ONLY=true as a "
+            f"--build-arg. Without it the serve-only bundle re-enables the auth "
+            f"UI in the public library. Add it under the caddy build step's "
+            f"`build-args:` in infra/templates/.github/workflows/deploy.yml.j2 "
+            f"(gated by serve_only_build_arg) and re-render."
         )
-        assert "${SERVE_ONLY" in compose_src, (
-            f"{app}/docker-compose.yml: VITE_SERVE_ONLY build arg must "
-            f"reference ${{SERVE_ONLY}} (no VITE_ prefix on the right-hand "
-            f"side) so docker compose reads the value from the same env var "
-            f"name the backend uses — one .env.docker line drives both layers."
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert f"myfreeapps-{app}-caddy:" in compose_src, (
+            f"{app}/docker-compose.yml: the caddy service does not reference "
+            f"the prebuilt image ghcr.io/jykwon91/myfreeapps-{app}-caddy. "
+            f"Re-render from the template."
         )
 
     @pytest.mark.parametrize(
@@ -1879,25 +1801,16 @@ class TestDeployRunsOnlyAfterMainCiPasses:
         assert checkout.get("with", {}).get("ref") == _CHOSEN, f"{deploy}.yml must check out the chosen commit."
         code = "\n".join(_code_lines(_read(".github", "workflows", f"{deploy}.yml")))
         assert "github.sha" not in code, f"{deploy}.yml uses github.sha; use {_CHOSEN}."
-        if _uses_registry_images(app):
-            for image in ("backend", "caddy"):
-                assert f"myfreeapps-{app}-{image}:{_CHOSEN}" in code
-            assert f"GIT_COMMIT={_CHOSEN}" in code
-            assert _ssh_step(deploy)["env"]["IMAGE_TAG"] == _CHOSEN
+        for image in ("backend", "caddy"):
+            assert f"myfreeapps-{app}-{image}:{_CHOSEN}" in code
+        assert f"GIT_COMMIT={_CHOSEN}" in code
+        assert _ssh_step(deploy)["env"]["IMAGE_TAG"] == _CHOSEN
 
     @pytest.mark.parametrize("deploy", _ALL_DEPLOYS)
-    def test_vps_fast_forwards_to_the_chosen_commit(self, deploy: str) -> None:
-        """The box's checkout supplies the compose file and host Caddyfile. Pulling
-        would move it to main's head, which may not have passed CI."""
+    def test_vps_gets_the_chosen_commit(self, deploy: str) -> None:
         ssh = _ssh_step(deploy)
         assert ssh["env"]["DEPLOY_SHA"] == _CHOSEN, f"{deploy}.yml must pass the chosen commit to the box."
         assert "DEPLOY_SHA" in ssh["with"]["envs"].split(","), f"{deploy}.yml must forward DEPLOY_SHA via envs."
-        script = [line.strip() for line in _code_lines(ssh["with"]["script"])]
-        assert not any("git pull" in line for line in script), f"{deploy}.yml must never `git pull` on the box."
-        fetch, merge = "git fetch origin main", 'git merge --ff-only "$DEPLOY_SHA"'
-        assert fetch in script and merge in script and script.index(fetch) < script.index(merge), (
-            f"{deploy}.yml must `{fetch}` then `{merge}` on the box."
-        )
 
     def test_landing_chooses_its_commit_like_the_apps(self) -> None:
         app = _AUTO_DEPLOY_APPS[0]
@@ -1953,6 +1866,123 @@ class TestDeployRunsOnlyAfterMainCiPasses:
         assert set(wf["on"]) == {"workflow_dispatch"}
         assert wf["jobs"]["deploy"]["if"] == _MANUAL_FROM_MAIN
         assert "actions" not in wf["jobs"]["deploy"]["permissions"]
+
+# A git command that changes the files of the checkout it runs in.
+_MOVES_THE_CHECKOUT = re.compile(r"\bgit\s+(pull|merge|checkout|switch|reset|rebase|restore|stash|clean)(?=\s|$)")
+
+
+def _server_script(workflow: str, job: str = "deploy") -> list[str]:
+    """The code lines (comments dropped, stripped) of a job's SSH script."""
+    steps = _workflow(workflow)["jobs"][job]["steps"]
+    ssh = next(step for step in steps if step.get("uses", "").startswith("appleboy/ssh-action@"))
+    return [line.strip() for line in _code_lines(ssh["with"]["script"])]
+
+
+def _all_workflow_commands() -> dict[str, str]:
+    """Every shell body run by any workflow — `run:` steps and SSH `script:`s —
+    keyed by workflow file name, comments dropped."""
+    commands: dict[str, str] = {}
+    for path in sorted((_REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        bodies = []
+        for job in (data.get("jobs") or {}).values():
+            for step in job.get("steps") or []:
+                bodies.append(step.get("run") or "")
+                bodies.append((step.get("with") or {}).get("script") or "")
+        commands[path.name] = "\n".join(_code_lines("\n".join(bodies)))
+    return commands
+
+
+class TestServerUsesOnlyItsOwnCommit:
+    """All apps share one checkout on the VPS. Each deploy must use only files
+    from the commit its own checks passed, so only deploy-landing.yml moves that
+    checkout's files (host Caddy serves the landing page and the host Caddyfile
+    from them). App deploys and seed-env.yml read their files out of git at
+    their own commit."""
+
+    @pytest.mark.parametrize("workflow", [*_ALL_DEPLOYS, "seed-env"])
+    def test_never_git_pull_on_the_box(self, workflow: str) -> None:
+        job = "seed" if workflow == "seed-env" else "deploy"
+        script = _server_script(workflow, job)
+        assert not any(re.search(r"\bgit\s+pull(?=\s|$)", line) for line in script), (
+            f"{workflow}.yml must never `git pull` on the box: main's head may not have passed CI."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_app_deploy_reads_its_compose_file_from_deploy_sha(self, app: str) -> None:
+        script = _server_script(f"deploy-{app}")
+        fetch = "git fetch origin main"
+        show = f'git show "$DEPLOY_SHA:apps/{app}/docker-compose.yml" > "$DEPLOY_DIR/docker-compose.yml"'
+        assert fetch in script and show in script and script.index(fetch) < script.index(show), (
+            f"deploy-{app}.yml must `{fetch}` then `{show}`."
+        )
+        assert not any(_MOVES_THE_CHECKOUT.search(line) for line in script), (
+            f"deploy-{app}.yml must not move the shared checkout; only deploy-landing.yml does."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_every_compose_call_uses_the_deploy_sha_file(self, app: str) -> None:
+        """One wrapper runs compose with the DEPLOY_SHA file, keeping the app's
+        checkout directory as the project directory (project name, .env and
+        env_file backend/.env.docker resolve there)."""
+        script = _server_script(f"deploy-{app}")
+        wrapper = (
+            f'docker compose --project-directory /srv/myfreeapps/apps/{app} '
+            f'-f "$DEPLOY_DIR/docker-compose.yml" "$@"'
+        )
+        compose_lines = [line for line in script if "docker compose" in line]
+        assert compose_lines == [wrapper], (
+            f"deploy-{app}.yml must run compose only through app_compose ({wrapper}); got {compose_lines}"
+        )
+        assert sum("app_compose" in line for line in script) > 1
+        assert not any(f"apps/{app}/docker-compose.yml" in line for line in script if "git show" not in line), (
+            f"deploy-{app}.yml reads apps/{app}/docker-compose.yml from the checkout, not DEPLOY_SHA."
+        )
+
+    def test_landing_fast_forwards_the_checkout_to_its_commit(self) -> None:
+        script = _server_script("deploy-landing")
+        fetch, merge = "git fetch origin main", 'git merge --ff-only "$DEPLOY_SHA"'
+        assert fetch in script and merge in script and script.index(fetch) < script.index(merge), (
+            f"deploy-landing.yml must `{fetch}` then `{merge}`: a fast-forward never moves back."
+        )
+
+    def test_only_landing_syncs_the_host_caddyfile(self) -> None:
+        syncing = sorted(
+            name for name, commands in _all_workflow_commands().items()
+            if "sync-host-caddyfile" in commands or "/etc/caddy" in commands
+        )
+        assert syncing == ["deploy-landing.yml"], (
+            "Only deploy-landing.yml may sync the host Caddyfile: it is the one deploy whose "
+            f"commit passed Landing CI, which tests infra/Caddyfile. Syncing: {syncing}"
+        )
+
+    def test_only_landing_moves_the_checkout(self) -> None:
+        moving = sorted(
+            name for name, commands in _all_workflow_commands().items()
+            if "/srv/myfreeapps" in commands and _MOVES_THE_CHECKOUT.search(commands)
+        )
+        assert moving == ["deploy-landing.yml"], f"Only deploy-landing.yml may move the VPS checkout: {moving}"
+
+    def test_seed_env_reads_the_seeder_from_its_own_commit(self) -> None:
+        job = _workflow("seed-env")["jobs"]["seed"]
+        assert job.get("if") == _MANUAL_FROM_MAIN, "seed-env.yml must run only from main: the VPS fetches main."
+        ssh = next(step for step in job["steps"] if step.get("uses", "").startswith("appleboy/ssh-action@"))
+        assert ssh["env"]["SEED_SHA"] == "${{ github.sha }}"
+        assert "SEED_SHA" in ssh["with"]["envs"].split(",")
+        script = _server_script("seed-env", "seed")
+        assert 'git archive -o "$SEED_DIR/seed.tar" "$SEED_SHA" \\' in script
+        assert not any(_MOVES_THE_CHECKOUT.search(line) for line in script), (
+            "seed-env.yml must not move the shared checkout; only deploy-landing.yml does."
+        )
+        runs = [line for line in script if "python3 -m platform_shared.infra.seed_env" in line]
+        assert runs and all(line.startswith('PYTHONPATH="$SEED_DIR/packages/shared-backend" ') for line in runs), (
+            "seed-env.yml must run the seeder extracted from SEED_SHA, not the checkout's copy."
+        )
+        roots = '--repo-root "$SEED_DIR" --env-root /srv/myfreeapps \\'
+        assert script.count(roots) == len(runs), (
+            "Every seeder run must read templates from SEED_DIR and write env files into the checkout."
+        )
+
 
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API

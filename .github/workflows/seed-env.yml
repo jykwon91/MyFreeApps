@@ -38,6 +38,11 @@
 # The job FAILS (via the final --check) while required operator values are
 # still blank; the log lists the blank KEY NAMES only — values are never
 # printed by seed_env, and GitHub masks secret values regardless.
+#
+# The seeder and the app's env templates come from the main commit this run was
+# started on, read straight out of git on the VPS. The run never moves the
+# shared /srv/myfreeapps checkout (deploy-landing.yml owns its files); it only
+# writes the app's two gitignored env files into it.
 
 name: Seed VPS env files
 
@@ -90,6 +95,8 @@ permissions: {}
 jobs:
   seed:
     runs-on: ubuntu-latest
+    # Main only: the VPS fetches main, so another branch's commit isn't there.
+    if: github.ref == 'refs/heads/main'
     steps:
       # Validate the free-text copy inputs on the runner BEFORE anything is
       # sent to the VPS. Inputs arrive via env vars (never `${{ }}` in the
@@ -124,8 +131,10 @@ jobs:
         env:
           COPY_FROM: ${{ inputs.copy_from }}
           COPY_KEYS: ${{ inputs.copy_keys }}
+          # The commit the seeder and templates are read from.
+          SEED_SHA: ${{ github.sha }}
         with:
-          envs: COPY_FROM,COPY_KEYS
+          envs: COPY_FROM,COPY_KEYS,SEED_SHA
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -133,10 +142,10 @@ jobs:
           script: |
             set -e
 
-            # Same lock as the deploy workflows — never git-pull the shared
-            # /srv/myfreeapps checkout while a deploy is mid-flight. The 9m
-            # wait stays under command_timeout (10m) so a contended lock
-            # fails HERE with this message, not via a generic SSH kill.
+            # Same lock as the deploy workflows — they fetch into the same
+            # git repo and read the env files this writes. The 9m wait stays
+            # under command_timeout (10m) so a contended lock fails HERE with
+            # this message, not via a generic SSH kill.
             exec 9>/tmp/myfreeapps-deploy.lock
             if ! flock -w 540 9; then
               echo "::error::Timed out (9m) waiting for the VPS deploy lock."
@@ -145,19 +154,31 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Pull latest code ---"
-            git pull --ff-only
+            # mktemp -d makes the directory owner-only. Remove it, and the
+            # secrets file inside it, however this script exits (timeout,
+            # seeder error) — never leave it in /tmp.
+            SEED_DIR="$(mktemp -d)"
+            trap 'rm -rf "$SEED_DIR"' EXIT
+
+            echo "--- Read the seeder and env templates from $SEED_SHA ---"
+            # Never `git pull` or move the checkout: fetch only git objects and
+            # extract the files from the chosen commit. A file, not a pipe:
+            # the remote shell may lack pipefail, and a failed archive must fail.
+            git fetch origin main
+            git archive -o "$SEED_DIR/seed.tar" "$SEED_SHA" \
+              packages/shared-backend/platform_shared \
+              "apps/${{ inputs.app }}/.env.example" \
+              "apps/${{ inputs.app }}/backend/.env.docker.example"
+            tar -xf "$SEED_DIR/seed.tar" -C "$SEED_DIR"
 
             # Secret values are substituted by GitHub Actions before this
             # script is sent; the quoted heredoc means the remote shell never
             # word-splits or expands them, so spaces (Gmail app passwords),
             # `$` (bcrypt hashes), and quotes survive byte-for-byte. Unset
             # secrets produce blank lines, which seed_env ignores.
-            OVERRIDES="$(mktemp)"
+            OVERRIDES="$SEED_DIR/overrides.env"
+            : > "$OVERRIDES"
             chmod 600 "$OVERRIDES"
-            # Remove the secrets file however this script exits (timeout,
-            # lock contention, seeder error) — never leave it in /tmp.
-            trap 'rm -f "$OVERRIDES"' EXIT
             cat > "$OVERRIDES" <<'SEED_ENV_OVERRIDES_EOF'
             SENTRY_DSN=${{ secrets[format('{0}_sentry_dsn', inputs.app)] }}
             SMTP_USER=${{ secrets[format('{0}_smtp_user', inputs.app)] }}
@@ -192,17 +213,21 @@ jobs:
             fi
 
             echo "--- Seed ---"
+            # --repo-root: the extracted seeder and templates. --env-root: the
+            # checkout, where the env files live and the deploys read them.
             # Exit 1 = required values still blank (expected on partial
             # seed; the --check below reports it). Exit >=2 = hard error
             # (bad slug, missing template, rejected copy request) — fail
             # immediately with it.
             rc=0
-            PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env \
+            PYTHONPATH="$SEED_DIR/packages/shared-backend" python3 -m platform_shared.infra.seed_env \
+              --repo-root "$SEED_DIR" --env-root /srv/myfreeapps \
               --app "${{ inputs.app }}" --overrides "$OVERRIDES" "$@" || rc=$?
             if [ "$rc" -gt 1 ]; then
               exit "$rc"
             fi
 
             echo "--- Verify ---"
-            PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env \
+            PYTHONPATH="$SEED_DIR/packages/shared-backend" python3 -m platform_shared.infra.seed_env \
+              --repo-root "$SEED_DIR" --env-root /srv/myfreeapps \
               --app "${{ inputs.app }}" --check

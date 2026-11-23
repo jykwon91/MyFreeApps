@@ -234,7 +234,9 @@ class TestFailureLeavesNothingBehind:
 
     def test_incomplete_app_yaml_at_render(self, repo: Path) -> None:
         app_yaml = repo / "apps" / _SLUG / "app.yaml"
-        app_yaml.write_text(f"# Keep.\napp_slug: {_SLUG}\napp_display_name: X\n", "utf-8")
+        app_yaml.write_text(
+            f"# Keep.\napp_slug: {_SLUG}\napp_display_name: X\nregistry_images: true\n", "utf-8",
+        )
         before = self._tree(repo)
 
         with pytest.raises(ScaffoldError, match="nothing changed.*is undefined"):
