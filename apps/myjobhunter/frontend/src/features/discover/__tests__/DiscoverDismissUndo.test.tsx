@@ -116,7 +116,7 @@ function renderInbox(): Store {
     <Provider store={store}>
       <MemoryRouter>
         <Toaster />
-        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId={null} scoringWindow={CLOSED_WINDOW} />
+        <DiscoverInboxView hasNoSources={false} areSourcesLoading={false} activeSourceId={null} scoringWindow={CLOSED_WINDOW} onShowAllSources={() => undefined} />
       </MemoryRouter>
     </Provider>,
   );

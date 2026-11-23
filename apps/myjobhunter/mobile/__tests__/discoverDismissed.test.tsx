@@ -12,7 +12,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, waitFor, within } from "@testing-library/react-native";
 import { screen } from "expo-router/testing-library";
 import { AccessibilityInfo } from "react-native";
-import { DISCOVER_SCREEN_MESSAGES as MESSAGES } from "../src/constants/discoverScreen";
+import { DISCOVER_SCREEN_MESSAGES as MESSAGES, DISCOVER_VIEW_COPY } from "../src/constants/discoverScreen";
 import { DISCOVERED_JOB_MESSAGES as JOB } from "../src/constants/discoveredJob";
 import { store } from "../src/lib/store";
 import { discoveredJobRecord } from "../test-support/discoveredJobRecord";
@@ -131,7 +131,7 @@ describe("the Dismissed tab", () => {
 
     expect(await screen.findByText(ACTIONS.restored)).toBeTruthy();
     expect(sent.filter(({ route }) => route === "POST /discover/j-newer/undo-dismiss")).toHaveLength(1);
-    expect(await screen.findByRole("header", { name: MESSAGES.dismissedEmptyHeading })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.dismissed.emptyHeading })).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("tab", { name: "Inbox" }));
     expect(await screen.findByTestId("discovered-job-j-newer")).toBeTruthy();
@@ -179,7 +179,7 @@ describe("the Dismissed tab", () => {
 
     expect(await screen.findByText(ACTIONS.undoDismissGone)).toBeTruthy();
     expect(screen.queryByText("Discovery resource not found")).toBeNull();
-    expect(await screen.findByRole("header", { name: MESSAGES.dismissedEmptyHeading })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.dismissed.emptyHeading })).toBeTruthy();
     expect(screen.queryByTestId("discovered-job-j-newer")).toBeNull();
   });
 
@@ -196,8 +196,8 @@ describe("the Dismissed tab", () => {
   it("says when nothing is dismissed, and when the list couldn't load", async () => {
     serveJobs([]);
     await openDismissed();
-    expect(await screen.findByRole("header", { name: MESSAGES.dismissedEmptyHeading })).toBeTruthy();
-    expect(screen.getByText(MESSAGES.dismissedEmptyBody)).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DISCOVER_VIEW_COPY.dismissed.emptyHeading })).toBeTruthy();
+    expect(screen.getByText(DISCOVER_VIEW_COPY.dismissed.emptyBody)).toBeTruthy();
 
     store.dispatch(baseApi.util.resetApiState());
     serveJobs([NEWER], { "GET /discover": (_body, params) => (params.state === "dismissed" ? { status: 500 } : discoverPage([], params)) });

@@ -1,7 +1,7 @@
-import { Telescope } from "lucide-react";
-import { EmptyState, LoadMoreFooter } from "@platform/ui";
+import { LoadMoreFooter } from "@platform/ui";
 import ListLoadError from "@/components/ListLoadError";
-import { DISCOVER_LIST_VIEW_COPY } from "@/constants/discover-list-view-copy";
+import { DISCOVER_LIST_VIEW_MESSAGES } from "@/constants/discover-list-view-messages";
+import DiscoverEmptyState from "@/features/discover/DiscoverEmptyState";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import type { DiscoverListViewKind } from "@/types/discover-list-view-kind";
@@ -24,7 +24,7 @@ export default function DiscoverListView({ view, activeSourceId, onShowAllSource
   const list = useDiscoveredJobsPages(discoveredJobsFilter(view, activeSourceId), 0);
   const { data: sources } = useListDiscoverySourcesQuery();
   const { data: profile } = useGetProfileQuery();
-  const { messages, empty, emptyFiltered } = DISCOVER_LIST_VIEW_COPY[view];
+  const messages = DISCOVER_LIST_VIEW_MESSAGES[view];
 
   if (list.loadError) {
     return <ListLoadError message={messages.couldntLoad} retryLabel={messages.retry} onRetry={list.refetch} />;
@@ -35,20 +35,7 @@ export default function DiscoverListView({ view, activeSourceId, onShowAllSource
   }
 
   if (list.jobs.length === 0) {
-    return activeSourceId ? (
-      <EmptyState
-        icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-        heading={emptyFiltered.heading}
-        body={emptyFiltered.body}
-        action={{ label: emptyFiltered.actionLabel, onClick: onShowAllSources }}
-      />
-    ) : (
-      <EmptyState
-        icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-        heading={empty.heading}
-        body={empty.body}
-      />
-    );
+    return <DiscoverEmptyState view={view} isFiltered={activeSourceId !== null} onShowAllSources={onShowAllSources} />;
   }
 
   return (

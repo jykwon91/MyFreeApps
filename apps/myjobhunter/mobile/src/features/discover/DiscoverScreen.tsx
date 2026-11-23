@@ -66,8 +66,12 @@ export default function DiscoverScreen() {
         />
       );
     }
-    const showAll = sourceId ? { label: MESSAGES.showAllSources, onPress: () => setChosenSourceId(ALL_SOURCES) } : undefined;
-    return <EmptyState action={showAll} body={copy.emptyBody} heading={copy.emptyHeading} />;
+    const showAll = { label: MESSAGES.showAllSources, onPress: () => setChosenSourceId(ALL_SOURCES) };
+    return sourceId ? (
+      <EmptyState action={showAll} body={copy.emptyFilteredBody} heading={copy.emptyFilteredHeading} />
+    ) : (
+      <EmptyState body={copy.emptyBody} heading={copy.emptyHeading} />
+    );
   }
 
   return (
