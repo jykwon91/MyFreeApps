@@ -1,9 +1,9 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, confirmDiscard, FieldError, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SwitchRow, useTheme, useToast, useMotion } from "@platform/mobile";
+import { Banner, confirmDiscard, FieldError, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, SheetModal, SwitchRow, useMotion, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Modal, Text, View } from "react-native";
+import { Alert, Text } from "react-native";
 import {
   alreadyEnds,
   emailAddendumLabel,
@@ -32,7 +32,7 @@ interface ExtendLeaseSheetProps {
 
 export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, endsOn, onClose }: ExtendLeaseSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation, isAnimated } = useMotion();
+  const { isAnimated } = useMotion();
   const { showToast } = useToast();
   const [extendLease] = useExtendSignedLeaseMutation();
   const { refetch } = useGetSignedLeaseByIdQuery(leaseId);
@@ -126,57 +126,55 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
 
   const longEnd = formatLongDate(endsOn);
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <KeyboardAwareScroll
-          contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          ref={scroller}
-        >
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {LEASE_MESSAGES.extend}
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{extendContext(longEnd)}</Text>
-          {failure ? <Banner message={failure} /> : null}
+    <SheetModal isOpen onRequestClose={close}>
+      <KeyboardAwareScroll
+        contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        ref={scroller}
+      >
+        <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+          {LEASE_MESSAGES.extend}
+        </Text>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{extendContext(longEnd)}</Text>
+        {failure ? <Banner message={failure} /> : null}
 
-          <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>
-            {LEASE_MESSAGES.newEndDate}
-          </Text>
-          <DatePicker
-            hint={dateError}
-            label={LEASE_MESSAGES.newEndDate}
-            minimum={endsOn}
-            onChange={(date) => {
-              if (!isBusy) setPicked(date);
-            }}
-            value={picked && picked > endsOn ? picked : endsOn}
-          />
-          <FieldError message={dateError} name={LEASE_MESSAGES.newEndDate} />
+        <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>
+          {LEASE_MESSAGES.newEndDate}
+        </Text>
+        <DatePicker
+          hint={dateError}
+          label={LEASE_MESSAGES.newEndDate}
+          minimum={endsOn}
+          onChange={(date) => {
+            if (!isBusy) setPicked(date);
+          }}
+          value={picked && picked > endsOn ? picked : endsOn}
+        />
+        <FieldError message={dateError} name={LEASE_MESSAGES.newEndDate} />
 
-          <FormField
-            editable={!isBusy}
-            hint={LEASE_MESSAGES.extensionNoteHint}
-            label={LEASE_MESSAGES.extensionNote}
-            maxLength={EXTENSION_NOTE_MAX_LENGTH}
-            multiline
-            onChangeText={setNote}
-            value={note}
-          />
+        <FormField
+          editable={!isBusy}
+          hint={LEASE_MESSAGES.extensionNoteHint}
+          label={LEASE_MESSAGES.extensionNote}
+          maxLength={EXTENSION_NOTE_MAX_LENGTH}
+          multiline
+          onChangeText={setNote}
+          value={note}
+        />
 
-          {applicant?.has_contact_email ? (
-            <SwitchRow disabled={isBusy} label={emailAddendumLabel(tenantName)} onValueChange={setEmailTenant} value={emailTenant} />
-          ) : null}
-          {applicant?.has_contact_email === false ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_MESSAGES.noEmailOnFile}</Text> : null}
+        {applicant?.has_contact_email ? (
+          <SwitchRow disabled={isBusy} label={emailAddendumLabel(tenantName)} onValueChange={setEmailTenant} value={emailTenant} />
+        ) : null}
+        {applicant?.has_contact_email === false ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_MESSAGES.noEmailOnFile}</Text> : null}
 
-          <LoadingButton accessibilityHint={dateError} disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={submit}>
-            {LEASE_MESSAGES.extend}
-          </LoadingButton>
-          <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
-            {LEASE_MESSAGES.cancel}
-          </LoadingButton>
-        </KeyboardAwareScroll>
-      </View>
-    </Modal>
+        <LoadingButton accessibilityHint={dateError} disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={submit}>
+          {LEASE_MESSAGES.extend}
+        </LoadingButton>
+        <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
+          {LEASE_MESSAGES.cancel}
+        </LoadingButton>
+      </KeyboardAwareScroll>
+    </SheetModal>
   );
 }

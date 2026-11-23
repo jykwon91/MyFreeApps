@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
+import { SHEET_MODAL_ROOT_TEST_ID } from "@platform/mobile";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -137,6 +138,28 @@ describe("a booking's notes", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Close" }));
     await act(async () => alertButton("Save")?.onPress?.());
     expect(await screen.findByText("I couldn't save the notes. Want to try again?")).toBeTruthy();
+    expect(screen.getByText("Booking notes")).toBeTruthy();
+  });
+
+  it("asks the same on the screen reader's escape gesture, and stays open on Keep editing", async () => {
+    startCalendarServer({ events: [aBookingThisMonth()] });
+    await openBooking();
+    await fireEvent.changeText(await screen.findByLabelText(NOTES), "Unsaved");
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(Alert.alert).toHaveBeenCalledWith("Save your notes?", "I haven't saved them yet.", expect.any(Array));
+    expect(alertButton("Keep editing")?.onPress).toBeUndefined();
+    expect(screen.getByDisplayValue("Unsaved")).toBeTruthy();
+  });
+
+  it("ignores the escape gesture while the notes are saving", async () => {
+    startCalendarServer({ events: [aBookingThisMonth()] });
+    await openBooking();
+    await fireEvent.changeText(await screen.findByLabelText(NOTES), "Unsaved");
+    holdWrites();
+    await fireEvent.press(screen.getByRole("button", { name: "Save notes" }));
+    await screen.findByRole("button", { name: "Saving…" });
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(Alert.alert).not.toHaveBeenCalled();
     expect(screen.getByText("Booking notes")).toBeTruthy();
   });
 

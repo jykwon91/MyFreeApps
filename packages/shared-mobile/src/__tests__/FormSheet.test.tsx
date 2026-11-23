@@ -6,6 +6,7 @@ import FormSheetCancelButton from "../components/FormSheetCancelButton";
 import LoadingButton from "../components/LoadingButton";
 import { DISCARD_MESSAGES } from "@platform/core/constants/discard";
 import { FORM_SHEET_TEST_ID } from "../constants/formSheet";
+import { SHEET_MODAL_ROOT_TEST_ID } from "../constants/sheetModal";
 
 const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 
@@ -114,6 +115,31 @@ describe("FormSheet closing with unsaved changes", () => {
     expect(screen.getByDisplayValue("Leaky tap")).toBeTruthy();
     await act(async () => lastAlertButton(DISCARD_MESSAGES.discard).onPress?.());
     expect(screen.getByText("sheet closed")).toBeTruthy();
+  });
+
+  it("asks the same question on the screen reader's escape gesture, and closes on Discard", async () => {
+    await render(<NoteSheet />);
+    await fireEvent.changeText(screen.getByLabelText("Note"), "Leaky tap");
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert).toHaveBeenCalledTimes(1);
+    expect(screen.getByDisplayValue("Leaky tap")).toBeTruthy();
+    await act(async () => lastAlertButton(DISCARD_MESSAGES.discard).onPress?.());
+    expect(screen.getByText("sheet closed")).toBeTruthy();
+  });
+
+  it("closes on the escape gesture straight away when nothing was typed", async () => {
+    await render(<NoteSheet />);
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByText("sheet closed")).toBeTruthy();
+  });
+
+  it("ignores the escape gesture while a save is on its way", async () => {
+    await render(<NoteSheet isBusy />);
+    await fireEvent.changeText(screen.getByLabelText("Note"), "Leaky tap");
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("Leaky tap")).toBeTruthy();
   });
 
   it("doesn't ask when a save closes it", async () => {

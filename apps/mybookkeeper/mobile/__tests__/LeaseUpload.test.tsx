@@ -3,7 +3,7 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHEET_MODAL_ROOT_TEST_ID, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import * as DocumentPicker from "expo-document-picker";
@@ -325,6 +325,45 @@ describe("adding a file to a lease", () => {
     await act(async () => discard?.onPress?.());
     expect(screen.queryByRole("button", ADD)).toBeNull();
     expect(heldFiles()).toHaveLength(0);
+  });
+
+  it("asks the same on the screen reader's escape gesture", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    startServer();
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add the signed copy" }));
+    await chooseFile();
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert.mock.calls[0][0]).toBe("Discard this upload?");
+    expect(screen.getByRole("button", ADD)).toBeTruthy();
+    const discard = alert.mock.calls[0][2]?.find((button) => button.text === "Discard");
+    await act(async () => discard?.onPress?.());
+    expect(screen.queryByRole("button", ADD)).toBeNull();
+    expect(heldFiles()).toHaveLength(0);
+  });
+
+  it("ignores the escape gesture while a file is going up", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    const server = startServer();
+    const answer = api.defaults.adapter as AxiosAdapter;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.defaults.adapter = async (config) => {
+      if (config.url === "/signed-leases/l1/attachments") await held;
+      return answer(config);
+    };
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add the signed copy" }));
+    await chooseFile();
+    await fireEvent.press(screen.getByRole("button", ADD));
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByText("paper.pdf")).toBeTruthy();
+    await act(async () => release());
+    await waitFor(() => expect(server.uploads).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole("button", ADD)).toBeNull());
   });
 
   it("can't save while another file is on its way in, and ignores a second pick", async () => {

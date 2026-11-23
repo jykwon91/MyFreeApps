@@ -5,7 +5,7 @@ export interface FormSheetProps {
   title: string;
   isOpen: boolean;
   /**
-   * Really closes the sheet. Back, the system's dismiss and a FormSheetCancelButton come here only
+   * Really closes the sheet. Back, the system's dismiss, the screen reader's escape gesture and a FormSheetCancelButton come here only
    * once it's safe: straight away with nothing to lose, or after the person agrees to discard.
    * A save that succeeded calls it directly, so it never asks.
    */

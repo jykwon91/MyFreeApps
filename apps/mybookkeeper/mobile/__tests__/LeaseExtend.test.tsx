@@ -3,7 +3,7 @@ import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/sig
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHEET_MODAL_ROOT_TEST_ID, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
@@ -275,6 +275,35 @@ describe("extending a lease", () => {
       expect(screen.getByTestId("date-picker")).toBeTruthy();
       await act(async () => alertButtons()[1].onPress?.());
       expect(screen.queryByTestId("date-picker")).toBeNull();
+    });
+    it("asks the same way on the screen reader's escape gesture", async () => {
+      startServer();
+      await renderScreen();
+      await openSheet();
+      await pickDate(2027, 8, 31);
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("date-picker")).toBeTruthy();
+      await act(async () => alertButtons()[1].onPress?.());
+      expect(screen.queryByTestId("date-picker")).toBeNull();
+    });
+
+    it("ignores the escape gesture while the extension is being saved", async () => {
+      const server = startServer();
+      let release = () => {};
+      server.writeGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await renderScreen();
+      await openSheet();
+      await pickDate(2027, 8, 31);
+      await fireEvent.press(submitButton());
+      await waitFor(() => expect(server.writes).toHaveLength(1));
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(screen.getByTestId("date-picker")).toBeTruthy();
+      await act(async () => release());
+      await waitFor(() => expect(screen.queryByTestId("date-picker")).toBeNull());
     });
   });
 

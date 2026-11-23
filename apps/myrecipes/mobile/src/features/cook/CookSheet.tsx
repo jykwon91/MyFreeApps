@@ -1,18 +1,16 @@
-import { useTheme } from "@platform/mobile";
+import { SheetModal, useTheme } from "@platform/mobile";
 import type { ReactNode } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CookBarButton from "./CookBarButton";
 
 export default function CookSheet({
   children,
-  isAnimated,
   onClose,
   testID,
   title,
 }: {
   children: ReactNode;
-  isAnimated: boolean;
   onClose: () => void;
   testID: string;
   title: string;
@@ -20,14 +18,8 @@ export default function CookSheet({
   const { colors, spacing, fontSize } = useTheme();
 
   return (
-    <Modal
-      animationType={isAnimated ? "slide" : "none"}
-      onRequestClose={onClose}
-      presentationStyle="pageSheet"
-      testID={testID}
-      visible
-    >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SheetModal isOpen onRequestClose={onClose} testID={testID}>
+      <SafeAreaView style={{ flex: 1 }}>
         <View
           style={{
             flexDirection: "row",
@@ -47,6 +39,6 @@ export default function CookSheet({
         </View>
         {children}
       </SafeAreaView>
-    </Modal>
+    </SheetModal>
   );
 }

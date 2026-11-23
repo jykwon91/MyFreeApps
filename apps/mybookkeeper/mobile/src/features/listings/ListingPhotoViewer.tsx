@@ -37,7 +37,7 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
 
   return (
     <Modal animationType={sheetAnimation} onRequestClose={onClose} statusBarTranslucent visible>
-      <ScrollView testID="listing-photo-viewer" contentContainerStyle={{ gap: spacing.md, padding: spacing.lg, paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom }} style={{ backgroundColor: colors.background }}>
+      <ScrollView onAccessibilityEscape={onClose} testID="listing-photo-viewer" contentContainerStyle={{ gap: spacing.md, padding: spacing.lg, paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom }} style={{ backgroundColor: colors.background }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           {photoPosition(index, photos.length)}
         </Text>

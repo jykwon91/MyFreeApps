@@ -4,9 +4,9 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
-import { Banner, CharacterCounter, FieldError, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme, useMotion } from "@platform/mobile";
+import { Banner, CharacterCounter, FieldError, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, SheetModal, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { FlatList, Modal, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { CompanyPickerSheetProps } from "../../types/CompanyPickerSheetProps";
 import CompanyPickerRow from "./CompanyPickerRow";
@@ -19,7 +19,6 @@ import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
  */
 export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onAdd, onClose }: CompanyPickerSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation } = useMotion();
   const { currentData, isFetching, error, refetch } = useListCompaniesQuery();
   const [query, setQuery] = useState(initialQuery);
 
@@ -52,8 +51,8 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
   }
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
-      <View style={{ flex: 1, backgroundColor: colors.background }} testID="company-picker">
+    <SheetModal isOpen={isOpen} onRequestClose={onClose}>
+      <View style={{ flex: 1 }} testID="company-picker">
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {MESSAGES.pickerTitle}
@@ -95,6 +94,6 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           )}
         />
       </View>
-    </Modal>
+    </SheetModal>
   );
 }

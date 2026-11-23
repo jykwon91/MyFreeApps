@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text } from "react-native";
 import { requestTwoStepDisable } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
-import { useMotion } from "../hooks/useMotion";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useTheme } from "../theme/useTheme";
 import type { TwoStepTurnOffSheetProps } from "../types/TwoStepTurnOffSheetProps";
@@ -10,10 +9,10 @@ import Banner from "./Banner";
 import FormField from "./FormField";
 import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
+import SheetModal from "./SheetModal";
 
 export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnOffSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation } = useMotion();
   const secondFactor = useSecondFactorCode();
   const [codeError, setCodeError] = useState<string | undefined>();
   const [failure, setFailure] = useState<string | null>(null);
@@ -44,39 +43,37 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
   }
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-          <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}>
-            {MESSAGES.turnOffCodeHeading}
-          </Text>
-          {failure ? <Banner message={failure} /> : null}
-          <FormField
-            autoComplete="one-time-code"
-            autoFocus
-            editable={!isTurningOff}
-            error={codeError}
-            keyboardType="number-pad"
-            label={MESSAGES.turnOffCodeLabel}
-            onChangeText={secondFactor.change}
-            textContentType="oneTimeCode"
-            value={secondFactor.code}
-          />
-          <LoadingButton
-            disabled={!secondFactor.isComplete}
-            isLoading={isTurningOff}
-            loadingText={MESSAGES.turningOff}
-            onPress={submit}
-            variant="destructive"
-          >
-            {MESSAGES.confirmTurnOff}
-          </LoadingButton>
-          <LoadingButton disabled={isTurningOff} onPress={close} variant="ghost">
-            {MESSAGES.cancel}
-          </LoadingButton>
-          <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{MESSAGES.turnOffNote}</Text>
-        </KeyboardAwareScroll>
-      </View>
-    </Modal>
+    <SheetModal isOpen onRequestClose={close}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}>
+          {MESSAGES.turnOffCodeHeading}
+        </Text>
+        {failure ? <Banner message={failure} /> : null}
+        <FormField
+          autoComplete="one-time-code"
+          autoFocus
+          editable={!isTurningOff}
+          error={codeError}
+          keyboardType="number-pad"
+          label={MESSAGES.turnOffCodeLabel}
+          onChangeText={secondFactor.change}
+          textContentType="oneTimeCode"
+          value={secondFactor.code}
+        />
+        <LoadingButton
+          disabled={!secondFactor.isComplete}
+          isLoading={isTurningOff}
+          loadingText={MESSAGES.turningOff}
+          onPress={submit}
+          variant="destructive"
+        >
+          {MESSAGES.confirmTurnOff}
+        </LoadingButton>
+        <LoadingButton disabled={isTurningOff} onPress={close} variant="ghost">
+          {MESSAGES.cancel}
+        </LoadingButton>
+        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{MESSAGES.turnOffNote}</Text>
+      </KeyboardAwareScroll>
+    </SheetModal>
   );
 }

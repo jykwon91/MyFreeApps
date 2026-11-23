@@ -1,6 +1,8 @@
 import "@platform/mobile/test-support/reactNativeFormData";
 import api from "@platform/core/lib/api";
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { SHEET_MODAL_ROOT_TEST_ID } from "@platform/mobile";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import type { AxiosAdapter } from "axios";
 import * as DocumentPicker from "expo-document-picker";
 import { Alert } from "react-native";
 import { POLICY_ATTACHMENT_MESSAGES } from "../src/constants/insuranceForm";
@@ -171,6 +173,42 @@ describe("policy documents", () => {
     await addFile();
     expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.getByText("paper.pdf")).toBeTruthy();
+  });
+
+  it("asks before throwing away a chosen file on the screen reader's escape gesture", async () => {
+    startInsuranceServer();
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    await renderInsurance(<PolicyDetailScreen id="p1" />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Add a document" }));
+    pickPdf();
+    await fireEvent.press(screen.getByRole("button", { name: "Choose a file" }));
+    await screen.findByText("paper.pdf");
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert.mock.calls[0][0]).toBe("Discard this upload?");
+    expect(screen.getByText("paper.pdf")).toBeTruthy();
+    await act(async () => alert.mock.calls[0][2]?.find((button) => button.text === "Discard")?.onPress?.());
+    expect(screen.queryByText("paper.pdf")).toBeNull();
+  });
+
+  it("ignores the escape gesture while a file is going up", async () => {
+    startInsuranceServer();
+    const answer = api.defaults.adapter as AxiosAdapter;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.defaults.adapter = async (config) => {
+      if (config.url?.endsWith("/attachments") && config.method === "post") await held;
+      return answer(config);
+    };
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    await renderInsurance(<PolicyDetailScreen id="p1" />);
+    await addFile();
+    await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.getByText("paper.pdf")).toBeTruthy();
+    await act(async () => release());
+    expect(await screen.findByText("Document added.")).toBeTruthy();
   });
 
   it("asks before removing a document, then removes it", async () => {

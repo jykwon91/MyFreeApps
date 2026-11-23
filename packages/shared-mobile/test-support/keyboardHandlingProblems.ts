@@ -20,7 +20,7 @@ const TAP_PROBLEM =
   `a ${[...RAW_SCROLL_VIEWS].join("/")} that holds a text field must set keyboardShouldPersistTaps="handled" (or be a KeyboardAwareScroll); ` +
   "without it the first tap on a button only dismisses the keyboard";
 // A sheet draws its own scroll view over the screen, so its fields don't sit in the screen's scroll view.
-const SHEET = /<(?:Modal|FormSheet)\b/;
+const SHEET = /<(?:Modal|SheetModal|FormSheet)\b/;
 const SOURCE_EXTENSIONS = [".tsx", ".ts", "/index.tsx", "/index.ts"];
 // The form's own content, padded for the home indicator, scrolls clear of the keyboard with the rest, so it never
 // floats. A horizontal scroll view is a row inside something else, such as a bar, so its content doesn't count.
@@ -184,7 +184,7 @@ function problemsIn(path: string, code: string): string[] {
     problems.push('a field with returnKeyType "next" needs onSubmitEditing to move to the next field, or Next just closes the keyboard');
   }
   if (HEADER_KEYBOARD_AVOIDING_VIEW.test(code)) problems.push(...homeIndicatorProblems(path, code));
-  if (/<Modal\b/.test(code) && TEXT_INPUT.test(code) && !KEYBOARD_AWARE_SCROLL.test(code)) {
+  if (/<(?:Modal|SheetModal)\b/.test(code) && TEXT_INPUT.test(code) && !KEYBOARD_AWARE_SCROLL.test(code)) {
     problems.push("a Modal with a text field has to keep it above the keyboard with KeyboardAwareScroll");
   }
   return problems;

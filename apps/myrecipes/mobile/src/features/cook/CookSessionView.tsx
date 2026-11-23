@@ -215,7 +215,6 @@ export default function CookSessionView({
         </View>
         {isTimersSheetOpen ? (
           <CookTimersSheet
-            isAnimated={isAnimated}
             onClose={() => setIsTimersSheetOpen(false)}
             onRemove={removeTimer}
             timers={timers}
@@ -225,7 +224,6 @@ export default function CookSessionView({
           <CookIngredientsSheet
             checked={checked}
             ingredients={version.ingredients}
-            isAnimated={isAnimated}
             onClose={() => setIsSheetOpen(false)}
             onToggle={toggleIngredient}
           />

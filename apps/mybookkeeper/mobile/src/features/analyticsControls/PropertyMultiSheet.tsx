@@ -1,5 +1,5 @@
-import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useAnnouncement, useTheme, useMotion } from "@platform/mobile";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, SheetModal, useAnnouncement, useTheme } from "@platform/mobile";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 
 interface PropertyMultiSheetProps {
@@ -15,7 +15,6 @@ interface PropertyMultiSheetProps {
 /** Each tap counts straight away, so the choice shows in the numbers behind the sheet. */
 export default function PropertyMultiSheet({ isOpen, properties, selectedIds, onChange, onClose, maxSelected }: PropertyMultiSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation } = useMotion();
   const isAtLimit = maxSelected !== undefined && selectedIds.length >= maxSelected;
   const limitNotice = isAtLimit ? MESSAGES.propertyLimit(maxSelected) : undefined;
   // Read when a tap reaches the limit, not each time the sheet is opened at it.
@@ -26,39 +25,37 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
   };
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
-          <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {MESSAGES.propertiesSheetTitle}
-          </Text>
-          <Pressable accessibilityRole="button" onPress={onClose} style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", paddingHorizontal: spacing.lg }}>
-            <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{MESSAGES.done}</Text>
-          </Pressable>
-        </View>
-        {limitNotice ? (
-          <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
-            {limitNotice}
-          </Text>
-        ) : null}
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          {properties.map((property) => (
-            <OptionRow
-              disabled={isAtLimit && !selectedIds.includes(property.id)}
-              isSelected={selectedIds.includes(property.id)}
-              key={property.id}
-              kind="checkbox"
-              label={property.name}
-              onPress={() => toggle(property.id)}
-            />
-          ))}
-          <View style={{ padding: spacing.lg }}>
-            <LoadingButton disabled={selectedIds.length === 0} onPress={() => onChange([])} variant="secondary">
-              {MESSAGES.allProperties}
-            </LoadingButton>
-          </View>
-        </ScrollView>
+    <SheetModal isOpen={isOpen} onRequestClose={onClose}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
+        <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+          {MESSAGES.propertiesSheetTitle}
+        </Text>
+        <Pressable accessibilityRole="button" onPress={onClose} style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", paddingHorizontal: spacing.lg }}>
+          <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{MESSAGES.done}</Text>
+        </Pressable>
       </View>
-    </Modal>
+      {limitNotice ? (
+        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
+          {limitNotice}
+        </Text>
+      ) : null}
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        {properties.map((property) => (
+          <OptionRow
+            disabled={isAtLimit && !selectedIds.includes(property.id)}
+            isSelected={selectedIds.includes(property.id)}
+            key={property.id}
+            kind="checkbox"
+            label={property.name}
+            onPress={() => toggle(property.id)}
+          />
+        ))}
+        <View style={{ padding: spacing.lg }}>
+          <LoadingButton disabled={selectedIds.length === 0} onPress={() => onChange([])} variant="secondary">
+            {MESSAGES.allProperties}
+          </LoadingButton>
+        </View>
+      </ScrollView>
+    </SheetModal>
   );
 }
