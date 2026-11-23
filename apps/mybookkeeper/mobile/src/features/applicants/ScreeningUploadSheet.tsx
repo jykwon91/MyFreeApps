@@ -1,9 +1,9 @@
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
-import { Banner, confirmDiscard, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast, useMotion } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, SheetModal, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import { screeningOutcomeLabel } from "./applicantDisplay";
@@ -14,7 +14,6 @@ import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
 export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: { applicantId: string; isOpen: boolean; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation } = useMotion();
   const { showToast } = useToast();
   const [upload, { isLoading: isUploading }] = useUploadScreeningResultMutation();
   const [outcome, setOutcome] = useState<ScreeningStatus | null>(null);
@@ -68,58 +67,56 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
   }
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {SCREENING_MESSAGES.sheetTitle}
-          </Text>
-          {failure ? <Banner message={failure} /> : null}
+    <SheetModal isOpen={isOpen} onRequestClose={close}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+          {SCREENING_MESSAGES.sheetTitle}
+        </Text>
+        {failure ? <Banner message={failure} /> : null}
 
-          <HeldFileButtons
-            file={file}
-            fileTypes={SCREENING_REPORT_FILE_TYPES}
-            isDisabled={isUploading}
-            isPicking={isPicking}
-            onPick={(from) => void pick(from)}
-            photoName={SCREENING_PHOTO_NAME}
-            takePhotoLabel={SCREENING_MESSAGES.takePhoto}
-          />
+        <HeldFileButtons
+          file={file}
+          fileTypes={SCREENING_REPORT_FILE_TYPES}
+          isDisabled={isUploading}
+          isPicking={isPicking}
+          onPick={(from) => void pick(from)}
+          photoName={SCREENING_PHOTO_NAME}
+          takePhotoLabel={SCREENING_MESSAGES.takePhoto}
+        />
 
-          <View accessibilityLabel={SCREENING_MESSAGES.outcome} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
-            <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{SCREENING_MESSAGES.outcome}</Text>
-            {SCREENING_UPLOAD_OUTCOMES.map((choice) => (
-              <OptionRow
-                isSelected={outcome === choice}
-                key={choice}
-                label={screeningOutcomeLabel(choice)}
-                onPress={() => {
-                  if (!isUploading) setOutcome(choice);
-                }}
-              />
-            ))}
-          </View>
-
-          {needsReason ? (
-            <FormField
-              editable={!isUploading}
-              hint={`${SCREENING_MESSAGES.reasonHint} ${reason.length}/${SCREENING_REASON_MAX_LENGTH}`}
-              label={SCREENING_MESSAGES.reason}
-              maxLength={SCREENING_REASON_MAX_LENGTH}
-              multiline
-              onChangeText={setReason}
-              value={reason}
+        <View accessibilityLabel={SCREENING_MESSAGES.outcome} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
+          <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{SCREENING_MESSAGES.outcome}</Text>
+          {SCREENING_UPLOAD_OUTCOMES.map((choice) => (
+            <OptionRow
+              isSelected={outcome === choice}
+              key={choice}
+              label={screeningOutcomeLabel(choice)}
+              onPress={() => {
+                if (!isUploading) setOutcome(choice);
+              }}
             />
-          ) : null}
+          ))}
+        </View>
 
-          <LoadingButton disabled={!isReady || isPicking} isLoading={isUploading} loadingText={SCREENING_MESSAGES.saving} onPress={() => void submit()}>
-            {SCREENING_MESSAGES.save}
-          </LoadingButton>
-          <LoadingButton disabled={isUploading || isPicking} onPress={close} variant="ghost">
-            {SCREENING_MESSAGES.cancel}
-          </LoadingButton>
-        </KeyboardAwareScroll>
-      </View>
-    </Modal>
+        {needsReason ? (
+          <FormField
+            editable={!isUploading}
+            hint={`${SCREENING_MESSAGES.reasonHint} ${reason.length}/${SCREENING_REASON_MAX_LENGTH}`}
+            label={SCREENING_MESSAGES.reason}
+            maxLength={SCREENING_REASON_MAX_LENGTH}
+            multiline
+            onChangeText={setReason}
+            value={reason}
+          />
+        ) : null}
+
+        <LoadingButton disabled={!isReady || isPicking} isLoading={isUploading} loadingText={SCREENING_MESSAGES.saving} onPress={() => void submit()}>
+          {SCREENING_MESSAGES.save}
+        </LoadingButton>
+        <LoadingButton disabled={isUploading || isPicking} onPress={close} variant="ghost">
+          {SCREENING_MESSAGES.cancel}
+        </LoadingButton>
+      </KeyboardAwareScroll>
+    </SheetModal>
   );
 }

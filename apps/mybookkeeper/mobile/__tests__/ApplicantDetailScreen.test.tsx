@@ -1,7 +1,8 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { DISCARD_MESSAGES, ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, SHEET_MODAL_ROOT_TEST_ID, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import type { AxiosAdapter } from "axios";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
@@ -320,6 +321,39 @@ describe("ApplicantDetailScreen", () => {
       await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
       await fireEvent.press(await screen.findByRole("button", { name: "Change contract start" }));
       expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    it("drops an unsaved pick on the screen reader's escape gesture, the way Cancel does", async () => {
+      startApplicantServer([anApplicant()]);
+      await renderScreen();
+      await fireEvent.press(await screen.findByRole("button", { name: "Change contract start" }));
+      await pick(2027, 0, 15);
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(screen.queryByTestId("date-picker")).toBeNull();
+      await fireEvent.press(await screen.findByRole("button", { name: "Change contract start" }));
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    it("ignores the escape gesture while the date is being saved", async () => {
+      startApplicantServer([anApplicant()]);
+      const serverAdapter = api.defaults.adapter as AxiosAdapter;
+      let release = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      api.defaults.adapter = async (config) => {
+        if (config.method === "patch") await gate;
+        return serverAdapter(config);
+      };
+      await renderScreen();
+      await fireEvent.press(await screen.findByRole("button", { name: "Change contract start" }));
+      await pick(2027, 0, 15);
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled());
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(screen.getByTestId("date-picker")).toBeTruthy();
+      await act(async () => release());
+      expect(await screen.findByText("Contract start saved.")).toBeTruthy();
     });
   });
 });

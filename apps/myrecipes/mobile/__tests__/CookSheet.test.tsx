@@ -12,7 +12,7 @@ const LONG_TITLE = "Grandmother's slow-braised short ribs with red wine, shallot
 async function renderSheet() {
   const onClose = jest.fn();
   await render(
-    <CookSheet isAnimated={false} onClose={onClose} testID="sheet" title={LONG_TITLE}>
+    <CookSheet onClose={onClose} testID="sheet" title={LONG_TITLE}>
       <Text>body</Text>
     </CookSheet>,
   );

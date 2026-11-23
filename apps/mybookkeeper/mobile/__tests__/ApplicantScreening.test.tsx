@@ -2,7 +2,7 @@ import "@platform/mobile/test-support/reactNativeFormData";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { AxiosAdapter } from "axios";
-import { ToastProvider } from "@platform/mobile";
+import { SHEET_MODAL_ROOT_TEST_ID, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
@@ -459,6 +459,43 @@ describe("screening on the applicant page", () => {
         finishPick({ canceled: false, assets: [{ uri: source.uri, name: "report.pdf", mimeType: "application/pdf" }] } as DocumentPicker.DocumentPickerResult);
       });
       expect(await screen.findByText("report.pdf")).toBeTruthy();
+    });
+
+    it("asks first on the screen reader's escape gesture too", async () => {
+      startApplicantServer([anApplicant()]);
+      const alert = jest.spyOn(Alert, "alert");
+      await renderScreen();
+      await openSheet();
+      await chooseFile();
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(alert.mock.calls[0][0]).toBe("Discard this upload?");
+      expect(screen.getByText("report.pdf")).toBeTruthy();
+      await act(async () => {
+        alert.mock.calls[0][2]?.find((button) => button.text === "Discard")?.onPress?.();
+      });
+      expect(screen.queryByText("Upload a screening result")).toBeNull();
+    });
+
+    it("ignores the escape gesture mid upload", async () => {
+      startApplicantServer([anApplicant()]);
+      const answer = api.defaults.adapter as AxiosAdapter;
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      api.defaults.adapter = async (config) => {
+        if (config.url?.endsWith("/upload-result")) await held;
+        return answer(config);
+      };
+      const alert = jest.spyOn(Alert, "alert");
+      await renderScreen();
+      await openSheet();
+      await chooseFile();
+      await fireEvent.press(screen.getByRole("radio", { name: "Passed" }));
+      await fireEvent.press(screen.getByRole("button", SAVE));
+      await fireEvent(screen.getByTestId(SHEET_MODAL_ROOT_TEST_ID), "accessibilityEscape");
+      expect(alert).not.toHaveBeenCalled();
+      expect(screen.getByText("Upload a screening result")).toBeTruthy();
+      await act(async () => { release(); });
+      await screen.findByText("Saved the screening result.");
     });
 
     it("deletes a held report when the page goes away", async () => {

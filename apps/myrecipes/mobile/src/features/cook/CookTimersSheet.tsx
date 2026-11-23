@@ -6,12 +6,10 @@ import CookSheet from "./CookSheet";
 import CookTimerButton from "./CookTimerButton";
 
 export default function CookTimersSheet({
-  isAnimated,
   onClose,
   onRemove,
   timers,
 }: {
-  isAnimated: boolean;
   onClose: () => void;
   onRemove: (timerId: string) => void;
   timers: CookTimer[];
@@ -19,7 +17,7 @@ export default function CookTimersSheet({
   const { colors, spacing, fontSize } = useTheme();
 
   return (
-    <CookSheet isAnimated={isAnimated} onClose={onClose} testID="cook-timers-sheet" title="Timers">
+    <CookSheet onClose={onClose} testID="cook-timers-sheet" title="Timers">
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         {timers.map((timer) => (
           <View key={timer.id} style={{ gap: spacing.xs }}>

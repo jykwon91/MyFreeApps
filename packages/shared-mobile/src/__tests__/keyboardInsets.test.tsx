@@ -132,6 +132,7 @@ describe("keyboard insets", () => {
       write("SafeAreaBarScreen.tsx", 'import SafeAreaBar from "./SafeAreaBar";\nexport default () => <HeaderKeyboardAvoidingView><SafeAreaBar /></HeaderKeyboardAvoidingView>;');
       write("SafeAreaBar.tsx", 'export default function SafeAreaBar() {\n  return <SafeAreaView edges={["bottom"]} />;\n}');
       // Outside an avoiding view, a SafeAreaView is fine.
+      write("SheetModalForm.tsx", 'export default () => <SheetModal isOpen onRequestClose={close}><ScrollView keyboardShouldPersistTaps="handled"><FormField label="Name" /></ScrollView></SheetModal>;');
       write("SafeAreaSheet.tsx", "export default () => <Modal visible><SafeAreaView style={{ flex: 1 }} /></Modal>;");
       // A bar reached through a barrel's named re-export, with single quotes.
       write("BarrelScreen.tsx", "import { FooterBar } from './bars';\nexport default () => <HeaderKeyboardAvoidingView><FooterBar /></HeaderKeyboardAvoidingView>;");
@@ -158,6 +159,8 @@ describe("keyboard insets", () => {
       write("tapsKept/ReadOnly.tsx", "export default () => <ScrollView><Text>Hello</Text></ScrollView>;");
       write("tapsKept/Opener.tsx", 'import AddSheet from "./AddSheet";\nexport default () => <ScrollView><AddSheet /></ScrollView>;');
       write("tapsKept/AddSheet.tsx", "export default () => <FormSheet><FormField label=\"Name\" /></FormSheet>;");
+      write("tapsKept/ModalOpener.tsx", 'import NoteSheet from "./NoteSheet";\nexport default () => <ScrollView><NoteSheet /></ScrollView>;');
+      write("tapsKept/NoteSheet.tsx", "export default () => <SheetModal isOpen onRequestClose={close}><KeyboardAwareScroll><FormField label=\"Note\" /></KeyboardAwareScroll></SheetModal>;");
       // Next only moves on when the field says where to; without it the key just closes the keyboard.
       write("NextDead.tsx", 'export default () => <FormField label="Name" returnKeyType="next" />;');
       write("NextConditional.tsx", 'export default ({ more }) => <TextInput returnKeyType={more ? "next" : "done"} />;');
@@ -186,6 +189,7 @@ describe("keyboard insets", () => {
         "src/ScrollAndBar.tsx",
         "src/Sheet.tsx",
         "src/Sheet.tsx",
+        "src/SheetModalForm.tsx",
         "src/bars/FooterBar.tsx",
         "src/tapsLost/ListWithSearch.tsx",
         "src/tapsLost/NotesScreen.tsx",

@@ -1,7 +1,7 @@
 import { useUpdateApplicantContractDatesMutation } from "@mybookkeeper/api-client/store/applicantsApi";
-import { Banner, LoadingButton, useTheme, useToast, useMotion } from "@platform/mobile";
+import { Banner, LoadingButton, SheetModal, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, ScrollView, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { isoFromDate } from "../../lib/localDate";
 import DatePicker from "../shell/DatePicker";
 import { contractStartFailure } from "./applicantFailures";
@@ -19,7 +19,6 @@ export default function ContractStartSheet({
   value: string | null;
 }) {
   const { colors, spacing, fontSize } = useTheme();
-  const { sheetAnimation } = useMotion();
   const { showToast } = useToast();
   const [updateDates, { isLoading }] = useUpdateApplicantContractDatesMutation();
   // Null until something's picked, so reopening starts from the saved date.
@@ -53,8 +52,8 @@ export default function ContractStartSheet({
   }
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} style={{ backgroundColor: colors.background }}>
+    <SheetModal isOpen={isOpen} onRequestClose={close}>
+      <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
           Contract start
         </Text>
@@ -72,6 +71,6 @@ export default function ContractStartSheet({
           Cancel
         </LoadingButton>
       </ScrollView>
-    </Modal>
+    </SheetModal>
   );
 }

@@ -39,7 +39,7 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
   return (
     <Modal animationType={isAnimated ? "fade" : "none"} onRequestClose={onClose} statusBarTranslucent testID="welcome-manual-photo-viewer" visible>
       <StatusBar style="light" />
-      <View style={{ flex: 1, backgroundColor: STYLE.backdrop }}>
+      <View onAccessibilityEscape={onClose} style={{ flex: 1, backgroundColor: STYLE.backdrop }}>
         <FlatList
           ref={list}
           data={images}

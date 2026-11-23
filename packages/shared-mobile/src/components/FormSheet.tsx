@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text } from "react-native";
 import { FORM_SHEET_TEST_ID } from "../constants/formSheet";
 import { useMotion } from "../hooks/useMotion";
 import { useTheme } from "../theme/useTheme";
@@ -9,14 +9,15 @@ import { confirmDiscard } from "../utils/confirmDiscard";
 import Banner from "./Banner";
 import { FormSheetCloseContext } from "./FormSheetCloseContext";
 import KeyboardAwareScroll from "./KeyboardAwareScroll";
+import SheetModal from "./SheetModal";
 
 /**
  * A full-height sheet for filling something in: a title, a failure banner, and fields that stay clear of the keyboard.
- * Back and its Cancel button ask before throwing away unsaved changes; a sheet isn't a screen, so nothing else would.
+ * Back, the screen reader's escape gesture and its Cancel button ask before throwing away unsaved changes; a sheet isn't a screen, so nothing else would.
  */
 export default function FormSheet({ title, isOpen, onRequestClose, hasUnsavedChanges = false, discardCopy, isBusy = false, failure = null, children }: FormSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { isAnimated, sheetAnimation } = useMotion();
+  const { isAnimated } = useMotion();
   const scroller = useRef<KeyboardAwareScrollRef>(null);
 
   // The buttons sit below the fields, so a message at the top would be off screen.
@@ -31,23 +32,21 @@ export default function FormSheet({ title, isOpen, onRequestClose, hasUnsavedCha
   }
 
   return (
-    <Modal animationType={sheetAnimation} onRequestClose={requestClose} presentationStyle="pageSheet" testID={FORM_SHEET_TEST_ID} visible={isOpen}>
+    <SheetModal isOpen={isOpen} onRequestClose={requestClose} testID={FORM_SHEET_TEST_ID}>
       <FormSheetCloseContext.Provider value={{ requestClose, isBusy }}>
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-          <KeyboardAwareScroll
-            contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            ref={scroller}
-          >
-            <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-              {title}
-            </Text>
-            {failure ? <Banner message={failure} /> : null}
-            {children}
-          </KeyboardAwareScroll>
-        </View>
+        <KeyboardAwareScroll
+          contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          ref={scroller}
+        >
+          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+            {title}
+          </Text>
+          {failure ? <Banner message={failure} /> : null}
+          {children}
+        </KeyboardAwareScroll>
       </FormSheetCloseContext.Provider>
-    </Modal>
+    </SheetModal>
   );
 }
