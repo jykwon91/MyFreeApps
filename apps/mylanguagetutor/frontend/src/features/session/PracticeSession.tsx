@@ -28,7 +28,6 @@ import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
-import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { latestReply } from "@mylanguagetutor/api-client/utils/latestReply";
 import { phaseAnnouncement } from "@mylanguagetutor/api-client/utils/phaseAnnouncement";
 import type { PracticeSessionProps } from "@/types/session/practice-session-props";
@@ -48,6 +47,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     streamTurn,
     speak: synthesis.enqueue,
     stopSpeaking: synthesis.cancel,
+    speakAll: synthesis.speakAll,
   });
   const recognition = useSpeechRecognition(language.stt_locale, session.send);
   const micRechecks = useMicrophonePermission(recognition.failure === "denied", recognition.clearFailure);
@@ -66,18 +66,10 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
       ackVoicePrivacy();
       setPrivacyAcked(true);
     },
+    focusTypedAnswer: () => textInput.current?.focus(),
   });
-  const busy = session.requestPhase !== "idle";
+  const busy = session.busy;
   const announcement = phaseAnnouncement(voice.phase, voice.view) ?? latestReply(session.entries);
-
-  const replay = (text: string, slow: boolean) => {
-    synthesis.speakAll(text, replayRate(slow));
-  };
-
-  const tryRetryPrompt = () => {
-    if (voice.mode === "voice") voice.startListening();
-    else textInput.current?.focus();
-  };
 
   return (
     <div className={PRACTICE_PAGE}>
@@ -101,8 +93,8 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
             canReplay={voice.canReplay}
             waiting={session.requestPhase === "waiting"}
             busy={busy}
-            onReplay={replay}
-            onTryRetry={tryRetryPrompt}
+            onReplay={session.replay}
+            onTryRetry={voice.tryRetry}
             onSkipRetry={session.dismissRetryPrompt}
           />
         )}

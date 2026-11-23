@@ -1,21 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { hasSpeechSynthesis } from "@/features/speech/speechSupport";
-import { NORMAL_RATE } from "@mylanguagetutor/api-client/constants/speechRates";
-import { speakableText } from "@mylanguagetutor/api-client/utils/speakableText";
-import { spokenSentences } from "@mylanguagetutor/api-client/utils/spokenSentences";
+import { useSpeechQueue } from "@mylanguagetutor/api-client/hooks/useSpeechQueue";
 import { voiceForLocale } from "@mylanguagetutor/api-client/utils/voiceForLocale";
-
-export interface SpeechSynthesisControls {
-  supported: boolean;
-  /** True while any queued sentence is still being spoken. */
-  speaking: boolean;
-  /** Queue one sentence (glosses / markdown stripped) behind anything already queued. */
-  enqueue: (sentence: string, rate?: number) => void;
-  /** Stop everything, then read ``text`` from the start. */
-  speakAll: (text: string, rate?: number) => void;
-  /** Stop speaking now (barge-in). */
-  cancel: () => void;
-}
+import type { QueuedSentence } from "@mylanguagetutor/api-client/types/speech/queued-sentence";
+import type { SpeechSynthesisControls } from "@/types/speech/speech-synthesis-controls";
 
 /**
  * Sentence-by-sentence text-to-speech in the target language's voice.
@@ -26,9 +14,6 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
   const supported = hasSpeechSynthesis();
   // A ref, so a voice that finishes loading mid-turn is used by the next sentence.
   const voice = useRef<SpeechSynthesisVoice | null>(null);
-  const [speaking, setSpeaking] = useState(false);
-  const pending = useRef(0);
-  const generation = useRef(0);
   // Chrome can garbage-collect an in-flight utterance (its onend never
   // fires) unless something holds a reference to it.
   const live = useRef(new Set<SpeechSynthesisUtterance>());
@@ -44,50 +29,32 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
     return () => synth.removeEventListener("voiceschanged", pick);
   }, [supported, locale]);
 
-  const cancel = useCallback(() => {
+  const canSpeak = useCallback(() => supported, [supported]);
+
+  const stop = useCallback(() => {
     if (!supported) return;
-    generation.current += 1;
-    pending.current = 0;
     live.current.clear();
     window.speechSynthesis.cancel();
-    setSpeaking(false);
   }, [supported]);
 
-  useEffect(() => cancel, [cancel]);
-
-  const enqueue = useCallback(
-    (sentence: string, rate: number = NORMAL_RATE) => {
-      if (!supported) return;
-      const text = speakableText(sentence);
-      if (!text) return;
+  const speak = useCallback(
+    (text: string, rate: number, sentence: QueuedSentence) => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = locale;
       if (voice.current) utterance.voice = voice.current;
       utterance.rate = rate;
-      const myGeneration = generation.current;
       const finished = () => {
         live.current.delete(utterance);
-        if (myGeneration !== generation.current) return;
-        pending.current = Math.max(0, pending.current - 1);
-        if (pending.current === 0) setSpeaking(false);
+        sentence.done();
       };
       utterance.onend = finished;
       utterance.onerror = finished;
       live.current.add(utterance);
-      pending.current += 1;
-      setSpeaking(true);
       window.speechSynthesis.speak(utterance);
     },
-    [supported, locale],
+    [locale],
   );
 
-  const speakAll = useCallback(
-    (text: string, rate: number = NORMAL_RATE) => {
-      cancel();
-      for (const sentence of spokenSentences(text, locale)) enqueue(sentence, rate);
-    },
-    [cancel, enqueue, locale],
-  );
-
-  return { supported, speaking, enqueue, speakAll, cancel };
+  const queue = useSpeechQueue(locale, { speak, stop, canSpeak });
+  return { supported, ...queue };
 }

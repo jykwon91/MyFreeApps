@@ -20,6 +20,7 @@ export function useVoiceInput({
   block,
   privacyAcked,
   ackPrivacy,
+  focusTypedAnswer,
 }: VoiceInputConfig): VoiceInput {
   const [mode, setMode] = useState<InputMode>(recognition.supported ? "voice" : "text");
   const busy = requestPhase !== "idle";
@@ -45,6 +46,11 @@ export function useVoiceInput({
 
   const switchToVoice = useCallback(() => setMode("voice"), []);
 
+  const tryRetry = useCallback(() => {
+    if (mode === "voice") startListening();
+    else focusTypedAnswer();
+  }, [focusTypedAnswer, mode, startListening]);
+
   return {
     mode,
     phase,
@@ -54,5 +60,6 @@ export function useVoiceInput({
     acceptPrivacy,
     switchToText,
     switchToVoice,
+    tryRetry,
   };
 }

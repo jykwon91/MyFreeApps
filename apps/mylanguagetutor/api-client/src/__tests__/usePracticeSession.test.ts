@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NORMAL_RATE, SLOW_RATE } from "../constants/speechRates";
 import { RESUMED_TURN_SILENCE_MS } from "../constants/turnRequest";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import { usePracticeSession } from "../hooks/usePracticeSession";
@@ -80,6 +81,7 @@ const COMPLETE_TURN: TurnStreamEvent[] = [
 function setup() {
   const speak = vi.fn();
   const stopSpeaking = vi.fn();
+  const speakAll = vi.fn();
   const hook = renderHook(
     () =>
       usePracticeSession({
@@ -90,10 +92,11 @@ function setup() {
         streamTurn,
         speak,
         stopSpeaking,
+        speakAll,
       }),
     { wrapper },
   );
-  return { ...hook, speak, stopSpeaking };
+  return { ...hook, speak, stopSpeaking, speakAll };
 }
 
 describe("usePracticeSession", () => {
@@ -748,5 +751,29 @@ describe("usePracticeSession", () => {
     act(() => result.current.send("   "));
     expect(result.current.entries).toHaveLength(0);
     expect(streamTurn).not.toHaveBeenCalled();
+  });
+
+  it("is busy from sending a turn until it ends", async () => {
+    let finish: () => void = () => {};
+    streamTurn.mockImplementation(() => new Promise<void>((resolve) => (finish = resolve)));
+    const { result } = setup();
+    expect(result.current.busy).toBe(false);
+
+    act(() => result.current.send("hola"));
+    expect(result.current.busy).toBe(true);
+    await waitFor(() => expect(streamTurn).toHaveBeenCalled());
+    await act(async () => finish());
+
+    await waitFor(() => expect(result.current.busy).toBe(false));
+  });
+
+  it("replays a reply from the start, at the normal rate or slowly", () => {
+    const { result, speakAll } = setup();
+    act(() => result.current.replay("¡Hola! ¿Qué quieres?", false));
+    act(() => result.current.replay("¡Hola! ¿Qué quieres?", true));
+    expect(speakAll.mock.calls).toEqual([
+      ["¡Hola! ¿Qué quieres?", NORMAL_RATE],
+      ["¡Hola! ¿Qué quieres?", SLOW_RATE],
+    ]);
   });
 });

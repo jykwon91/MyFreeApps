@@ -2,12 +2,14 @@ import { MemoryRouter } from "react-router-dom";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PracticeSession from "@/features/session/PracticeSession";
+import { fakePracticeSession } from "@/test/fakePracticeSession";
 import { MIC_DENIED_COPY } from "@/constants/micDeniedCopy";
 import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
+import type { PracticeSessionConfig } from "@mylanguagetutor/api-client/types/session/practice-session-config";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
-const sessionState: PracticeSessionState = {
+const sessionState: Omit<PracticeSessionState, "busy" | "replay"> = {
   sessionId: null,
   entries: [],
   requestPhase: "idle",
@@ -23,7 +25,7 @@ const sessionState: PracticeSessionState = {
 };
 
 vi.mock("@mylanguagetutor/api-client/hooks/usePracticeSession", () => ({
-  usePracticeSession: () => sessionState,
+  usePracticeSession: (config: PracticeSessionConfig) => fakePracticeSession(sessionState, config),
 }));
 // A recognizer the browser has already refused, that really forgets the refusal when told to.
 vi.mock("@/features/speech/useSpeechRecognition", async () => {

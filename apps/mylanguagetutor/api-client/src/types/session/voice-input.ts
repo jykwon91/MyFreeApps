@@ -15,4 +15,6 @@ export interface VoiceInput {
   /** Stops listening (delivering what was heard) and shows the typed answer. */
   switchToText: () => void;
   switchToVoice: () => void;
+  /** The learner takes up a retry prompt: listening when they speak their answers, else in the typed answer. */
+  tryRetry: () => void;
 }

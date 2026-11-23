@@ -3,8 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PracticeSession from "@/features/session/PracticeSession";
+import { fakePracticeSession } from "@/test/fakePracticeSession";
 import CorrectionCard from "@/features/session/CorrectionCard";
 import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
+import type { PracticeSessionConfig } from "@mylanguagetutor/api-client/types/session/practice-session-config";
 import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
@@ -15,10 +17,10 @@ const startRecognition = vi.fn();
 const cancelSpeech = vi.fn();
 const speakAll = vi.fn();
 let recognition: SpeechRecognitionControls;
-let sessionState: PracticeSessionState;
+let sessionState: Omit<PracticeSessionState, "busy" | "replay">;
 
 vi.mock("@mylanguagetutor/api-client/hooks/usePracticeSession", () => ({
-  usePracticeSession: () => sessionState,
+  usePracticeSession: (config: PracticeSessionConfig) => fakePracticeSession(sessionState, config),
 }));
 vi.mock("@/features/speech/useSpeechRecognition", () => ({
   useSpeechRecognition: () => recognition,

@@ -8,6 +8,8 @@ export interface PracticeSession {
   sessionId: string | null;
   entries: TranscriptEntry[];
   requestPhase: RequestPhase;
+  /** A turn is in flight: ``requestPhase`` isn't idle. */
+  busy: boolean;
   failure: TurnFailure | null;
   /**
    * Why no turn can be sent now, from today's usage or a refusal; null when the learner can go on.
@@ -32,6 +34,8 @@ export interface PracticeSession {
    * is left alone.
    */
   resume: () => void;
+  /** Reads ``text`` aloud again from the start, slowly when ``slow``, over anything still being spoken. */
+  replay: (text: string, slow: boolean) => void;
   dismissFailure: () => void;
   dismissRetryPrompt: (key: string) => void;
 }
