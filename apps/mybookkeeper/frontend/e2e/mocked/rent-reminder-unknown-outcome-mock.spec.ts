@@ -28,7 +28,7 @@ const OVERVIEW = {
     send_days_before: 1,
     send_time: "18:00:00",
     timezone: "America/Chicago",
-    email_enabled: false,
+    email_enabled: true,
     sms_enabled: true,
     amount_override: null,
     payment_instructions: "Zelle to host@example.com",
@@ -50,10 +50,10 @@ const PREVIEW: RentReminderPreview = {
   possibly_sent: [],
 };
 
-const failedText = (id: string, dueDate: string, errorCode: string) => ({
+const failedReminder = (id: string, dueDate: string, errorCode: string, channel: "sms" | "email" = "sms") => ({
   id,
   due_date: dueDate,
-  channel: "sms",
+  channel,
   status: "failed",
   amount: "300.00",
   error_code: errorCode,
@@ -62,9 +62,15 @@ const failedText = (id: string, dueDate: string, errorCode: string) => ({
   confirmed_at: null,
 });
 
-const SENDS = [
+const failedText = (id: string, dueDate: string, errorCode: string) => failedReminder(id, dueDate, errorCode);
+
+const TEXT_SENDS = [
   failedText("send-unknown", "2026-11-22", "sms_outcome_unknown"),
   failedText("send-unreachable", "2026-11-15", "sms_network_error"),
+];
+const EMAIL_SENDS = [
+  failedReminder("send-email-unknown", "2026-11-22", "email_outcome_unknown", "email"),
+  failedReminder("send-email-refused", "2026-11-15", "email_send_failed", "email"),
 ];
 
 const EMPTY_LEDGER = {
@@ -80,7 +86,11 @@ const EMPTY_LEDGER = {
   unapplied_credit: "0.00",
 };
 
-async function showTenant(page: Page, preview: RentReminderPreview): Promise<unknown[]> {
+async function showTenant(
+  page: Page,
+  preview: RentReminderPreview,
+  sends: readonly unknown[] = TEXT_SENDS,
+): Promise<unknown[]> {
   const sendBodies: unknown[] = [];
   await plantAuth(page);
   await stubUnmatchedApi(page, { answer: "empty" });
@@ -105,7 +115,7 @@ async function showTenant(page: Page, preview: RentReminderPreview): Promise<unk
     route.fulfill(json(preview)),
   );
   await page.route(new RegExp(`/api/rent-reminders/tenants/${APPLICANT_ID}/sends`), (route) =>
-    route.fulfill(json(SENDS)),
+    route.fulfill(json(sends)),
   );
   await page.route(new RegExp(`/api/rent-reminders/tenants/${APPLICANT_ID}/send-now$`), (route) => {
     sendBodies.push(route.request().postDataJSON());
@@ -141,4 +151,34 @@ test("Send now waits for the host to confirm they checked a text that may have g
   await send.click();
 
   await expect.poll(() => sendBodies).toEqual([expect.objectContaining({ confirmed_possibly_sent: [{ channel: "sms", attempt: 2 }] })]);
+});
+
+test("an email the mail server never confirmed says to ask the tenant, not to check httpSMS", async ({ page }) => {
+  await showTenant(page, PREVIEW, EMAIL_SENDS);
+
+  const rows = page.getByTestId("rent-reminder-history-row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("may already have been sent");
+  await expect(rows.nth(0)).toContainText("Ask the tenant");
+  await expect(rows.nth(0)).not.toContainText("httpsms.com");
+  await expect(rows.nth(1)).toContainText("The mail server refused it");
+});
+
+test("Send now waits for the host to confirm they asked the tenant about an email that may have gone out", async ({ page }) => {
+  const sendBodies = await showTenant(
+    page,
+    { ...PREVIEW, possibly_sent: [{ channel: "email", attempt: 2 }] },
+    EMAIL_SENDS,
+  );
+
+  await expect(page.getByTestId("rent-reminder-possibly-sent")).toContainText(
+    "The last email may already have reached the tenant",
+  );
+  const send = page.getByTestId("rent-reminder-send-now");
+  await expect(send).toBeDisabled();
+  await page.getByTestId("rent-reminder-confirm-possibly-sent").check();
+  await expect(send).toBeEnabled();
+  await send.click();
+
+  await expect.poll(() => sendBodies).toEqual([expect.objectContaining({ confirmed_possibly_sent: [{ channel: "email", attempt: 2 }] })]);
 });

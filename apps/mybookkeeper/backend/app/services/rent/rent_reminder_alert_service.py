@@ -15,6 +15,7 @@ import logging
 import uuid
 
 from app.core.rent_reminder_constants import (
+    ERROR_EMAIL_OUTCOME_UNKNOWN,
     ERROR_INVALID_PHONE,
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
@@ -42,9 +43,17 @@ PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SMS_EXPIRED,
 })
+_OUTCOME_UNKNOWN_ERRORS: frozenset[str] = frozenset({
+    ERROR_SMS_OUTCOME_UNKNOWN,
+    ERROR_EMAIL_OUTCOME_UNKNOWN,
+})
 _CHECK_PROVIDER_LOG = (
     "It may already have been sent, so check the message log on httpsms.com "
     "(or the phone's Messages app) before sending it again."
+)
+_ASK_TENANT = (
+    "It may already be in their inbox, and an email can't be looked up "
+    "anywhere, so ask the tenant whether it arrived before sending it again."
 )
 _PHONE_CHECKLIST = (
     "Check the Android phone is on, online, and that httpSMS isn't "
@@ -74,7 +83,7 @@ def _settled_text(*, tenant: str, code: str) -> tuple[str, str]:
 
 def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
     what = "rent text" if channel == _SMS else "rent reminder email"
-    outcome = "may already have been sent" if code == ERROR_SMS_OUTCOME_UNKNOWN else "didn't go out"
+    outcome = "may already have been sent" if code in _OUTCOME_UNKNOWN_ERRORS else "didn't go out"
     subject = f"{tenant}'s {what} {outcome}"
     if code in PHONE_SIDE_ERRORS:
         detail = _PHONE_CHECKLIST
@@ -88,6 +97,8 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
         detail = "The server couldn't reach httpSMS, so the text wasn't sent."
     elif code == ERROR_SMS_OUTCOME_UNKNOWN:
         detail = "httpSMS didn't confirm it took the text."
+    elif code == ERROR_EMAIL_OUTCOME_UNKNOWN:
+        detail = "The mail server didn't confirm it took the email."
     else:
         detail = f"Reason: {code}."
     retry = (
@@ -98,6 +109,8 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
     )
     if code == ERROR_SMS_OUTCOME_UNKNOWN:
         retry = f"{_CHECK_PROVIDER_LOG} {retry}"
+    elif code == ERROR_EMAIL_OUTCOME_UNKNOWN:
+        retry = f"{_ASK_TENANT} {retry}"
     elif code in MAY_STILL_ARRIVE_ERRORS:
         retry = f"It may still reach them, so check before sending again. {retry}"
     body = f"{subject}. {detail} {retry}"

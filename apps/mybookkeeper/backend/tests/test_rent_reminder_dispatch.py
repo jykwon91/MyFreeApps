@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from platform_shared.services.email_service import EmailService
+from platform_shared.services.email_service import EmailSendError, EmailService
 from platform_shared.services.httpsms_service import HttpSmsService
 from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
@@ -1410,3 +1410,111 @@ class TestOperatorAlertClaim:
         assert await alerts.alert_operator(row.id, 2)
         assert not await alerts.alert_operator(row.id, 2)
         assert wired["alert"].call_count == 2
+
+
+class TestEmailThatMayHaveBeenDelivered:
+    """A timeout or dropped connection with no SMTP reply code can strike after
+    the server took the email, so it is never recorded as a definite failure."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("error", "code"),
+        [
+            (EmailSendError("timed out", kind="transient"), "email_outcome_unknown"),
+            (EmailSendError("server busy", kind="transient", smtp_code=421), "email_send_failed"),
+            (EmailSendError("bad address", kind="recipient_rejected", smtp_code=550), "email_send_failed"),
+            (EmailSendError("auth refused", kind="misconfigured", smtp_code=535), "email_send_failed"),
+        ],
+    )
+    async def test_only_an_unconfirmed_delivery_is_recorded_as_unknown(
+        self, db: AsyncSession, wired, error: EmailSendError, code: str,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = error
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", code)
+
+    @pytest.mark.asyncio
+    async def test_unknown_outcome_is_never_resent_and_the_operator_is_told_to_ask(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = EmailSendError("timed out", kind="transient")
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        for hours in (1, 2, 3):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=hours)) == 0
+        await watchdog.run_watchdog(SATURDAY_EVENING + _dt.timedelta(hours=3))
+        wired["email"].assert_called_once()
+
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "email_outcome_unknown")
+        wired["alert"].assert_called_once()
+        subject, body = wired["alert"].call_args.args[1], wired["alert"].call_args.args[2]
+        assert subject == "Sonu's rent reminder email may already have been sent"
+        assert "didn't go out" not in body
+        assert "ask the tenant whether it arrived before sending it again" in body
+
+    @pytest.mark.asyncio
+    async def test_a_definite_email_failure_still_says_it_didnt_go_out(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = EmailSendError("busy", kind="transient", smtp_code=421)
+
+        await dispatch.run_due_reminders(SATURDAY_EVENING)
+        assert wired["alert"].call_args.args[1] == "Sonu's rent reminder email didn't go out"
+
+    @pytest.mark.asyncio
+    async def test_an_early_send_now_email_that_may_have_arrived_is_not_retried_by_the_sweep(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id)
+        db.add(
+            RentReminderSend(
+                id=uuid.uuid4(), plan_id=plan.id, applicant_id=applicant_id,
+                organization_id=ORG, user_id=USER, due_date=_dt.date(2026, 11, 1),
+                channel="email", status="failed", amount=Decimal("300.00"),
+                message_body="early attempt", error_code="email_outcome_unknown",
+                created_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
+                updated_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
+            ),
+        )
+        await db.flush()
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        wired["email"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_now_resends_only_when_the_landlord_confirms(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = [EmailSendError("timed out", kind="transient"), None]
+
+        [first] = await _send_now(applicant_id)
+        assert (first.status, first.error_code) == ("failed", "email_outcome_unknown")
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=_SEND_NOW_AT,
+        )
+        assert preview.possibly_sent == [RentReminderPossiblySent(channel="email", attempt=1)]
+
+        with pytest.raises(dispatch.ReminderMayHaveBeenSentError):
+            await _send_now(applicant_id)
+        assert wired["email"].call_count == 1
+
+        [retry] = await _send_now(applicant_id, confirmed_possibly_sent=preview.possibly_sent)
+        assert retry.status == "sent"
+        assert wired["email"].call_count == 2

@@ -44,6 +44,7 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_RECIPIENT,
     ERROR_SMS_NOT_CONFIGURED,
     ERROR_EMAIL_NOT_CONFIGURED,
+    ERROR_EMAIL_OUTCOME_UNKNOWN,
     ERROR_EMAIL_SEND_FAILED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
@@ -158,6 +159,8 @@ def _failure_code(exc: Exception) -> str:
     if isinstance(exc, EmailNotConfiguredError):
         return ERROR_EMAIL_NOT_CONFIGURED
     if isinstance(exc, EmailSendError):
+        if exc.delivery_unconfirmed:
+            return ERROR_EMAIL_OUTCOME_UNKNOWN
         return ERROR_EMAIL_SEND_FAILED
     return ERROR_UNEXPECTED
 

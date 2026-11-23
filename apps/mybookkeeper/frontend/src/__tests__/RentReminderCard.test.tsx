@@ -289,6 +289,26 @@ describe("RentReminderCard", () => {
     expect(message).not.toContain("httpsms.com");
   });
 
+  it("tells the operator an email the mail server never confirmed may already have been sent", async () => {
+    mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({ data: { ...PREVIEW, sent_channels: [] }, isLoading: false, isError: false });
+    mockSendNow.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve([
+          { ...FAILED_TEXT, channel: "email", status: "failed", error_code: "email_outcome_unknown" },
+          { ...FAILED_TEXT, status: "sent_to_phone", error_code: null },
+        ]),
+    });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+    const message = mockShowError.mock.calls[0][0] as string;
+    expect(message).toContain("The email may already have been sent");
+    expect(message).toContain("Ask the tenant whether the email arrived");
+    expect(message).not.toContain("email didn't go out");
+    expect(message).not.toContain("httpsms.com");
+  });
+
   it("won't resend a text that may have gone out until the operator confirms they checked", () => {
     mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
     mockPreview.mockReturnValue({

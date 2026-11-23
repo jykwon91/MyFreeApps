@@ -44,6 +44,10 @@ ERROR_SMS_NETWORK = f"sms_{SMS_PROVIDER_CODE_NETWORK_ERROR}"
 ERROR_SMS_OUTCOME_UNKNOWN = "sms_outcome_unknown"
 ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 ERROR_EMAIL_SEND_FAILED = "email_send_failed"
+# The mail server may have taken the email before the connection dropped or
+# timed out (no SMTP reply code), so it may already be in the tenant's inbox.
+# Never retried automatically.
+ERROR_EMAIL_OUTCOME_UNKNOWN = "email_outcome_unknown"
 ERROR_UNEXPECTED = "unexpected_error"
 # Codes with a fixed spelling, each of which the apps describe in words
 # (api-client ``rentReminderError.ts``). The others are prefixed: ``sms_<code>``
@@ -59,6 +63,7 @@ REMINDER_ERROR_CODES: frozenset[str] = frozenset({
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_NOT_CONFIGURED,
     ERROR_EMAIL_SEND_FAILED,
+    ERROR_EMAIL_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
 })
 # Sending may have got further than we know, so a retry can double up. These
@@ -68,6 +73,7 @@ MAY_STILL_ARRIVE_ERRORS: frozenset[str] = frozenset({
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     ERROR_SMS_OUTCOME_UNKNOWN,
+    ERROR_EMAIL_OUTCOME_UNKNOWN,
 })
 # Send now's 409 when the last attempt may have gone out and the operator
 # didn't confirm sending again.

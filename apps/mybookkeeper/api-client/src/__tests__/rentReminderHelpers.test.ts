@@ -21,6 +21,13 @@ describe("describeReminderError", () => {
     expect(reason).toContain("httpsms.com");
   });
 
+  it("says an email the mail server never confirmed may already have been sent, and to ask the tenant", () => {
+    const reason = describeReminderError("email_outcome_unknown");
+    expect(reason).toContain("may already have been sent");
+    expect(reason).toContain("Ask the tenant");
+    expect(reason).not.toContain("httpsms.com");
+  });
+
   it("says a text that never reached the relay wasn't sent", () => {
     expect(describeReminderError("sms_network_error")).toBe("The server couldn't reach the text relay, so it wasn't sent");
   });

@@ -526,4 +526,16 @@ describe("reminder wording", () => {
     }
     expect(sendOutcome([email, unsure], "Dana").message).toBe(`${channelWent("email")} ${channelMayHaveGone("text", reason)}`);
   });
+
+  it("never says an email the mail server never confirmed didn't go out, or to try again", () => {
+    const text = aReminderSend({ id: "s2", channel: "sms" });
+    const unsure = aReminderSend({ channel: "email", status: "failed", error_code: "email_outcome_unknown" });
+    const reason = "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again";
+
+    const outcome = sendOutcome([unsure, text], "Dana");
+    expect(outcome.isProblem).toBe(true);
+    expect(outcome.message).toBe(`${channelMayHaveGone("email", reason)} ${channelWent("text")}`);
+    expect(outcome.message).not.toContain("didn't go out");
+    expect(outcome.message).not.toContain("try again");
+  });
 });

@@ -7,6 +7,7 @@ describe("reminderMayStillArrive", () => {
     expect(reminderMayStillArrive("sms_outcome_unknown")).toBe(true);
     expect(reminderMayStillArrive("no_phone_confirmation")).toBe(true);
     expect(reminderMayStillArrive("send_interrupted")).toBe(true);
+    expect(reminderMayStillArrive("email_outcome_unknown")).toBe(true);
     expect(reminderMayStillArrive("sms_network_error")).toBe(false);
     expect(reminderMayStillArrive("email_send_failed")).toBe(false);
     expect(reminderMayStillArrive(null)).toBe(false);
