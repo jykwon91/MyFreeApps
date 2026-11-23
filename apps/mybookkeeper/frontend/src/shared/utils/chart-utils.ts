@@ -17,7 +17,6 @@ export interface PropertyBarKey {
 
 // Distinct hues per property — each property gets a unique color pair
 const PROPERTY_COLORS = [
-  { revenue: "#22c55e", expense: "#ef4444" }, // green / red
   { revenue: "#3b82f6", expense: "#f97316" }, // blue / orange
   { revenue: "#a855f7", expense: "#ec4899" }, // purple / pink
   { revenue: "#14b8a6", expense: "#eab308" }, // teal / yellow
