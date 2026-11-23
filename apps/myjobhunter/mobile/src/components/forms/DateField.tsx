@@ -3,7 +3,7 @@ import { dateToIsoDate } from "../../lib/dateToIsoDate";
 import { formatIsoDate } from "../../lib/formatIsoDate";
 import { isoDateToDate } from "../../lib/isoDateToDate";
 import type { DateFieldProps } from "../../types/DateFieldProps";
-import PickerField from "./PickerField";
+import DateTimePickerField from "./DateTimePickerField";
 
 /** A calendar day, between `minimumDate` and `maximumDate` when they're given. */
 export default function DateField({ label, value, onChange, minimumDate, maximumDate, required, error, disabled }: DateFieldProps) {
@@ -12,7 +12,7 @@ export default function DateField({ label, value, onChange, minimumDate, maximum
   const latest = maximumDate ? isoDateToDate(maximumDate) : undefined;
   const pick = (date: Date) => onChange(dateToIsoDate(date));
   return (
-    <PickerField
+    <DateTimePickerField
       disabled={disabled}
       error={error}
       label={label}

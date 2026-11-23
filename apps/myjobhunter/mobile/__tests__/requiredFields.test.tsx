@@ -1,6 +1,6 @@
 import { ChoiceGroup } from "@platform/mobile";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import PickerField from "../src/components/forms/PickerField";
+import DateTimePickerField from "../src/components/forms/DateTimePickerField";
 
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
@@ -14,7 +14,7 @@ const OPTIONS = [
 
 function renderPicker(required: boolean) {
   return render(
-    <PickerField label="Start date" mode="date" onClear={jest.fn()} onPick={jest.fn()} openAndroid={jest.fn()} pickerDate={new Date(2026, 0, 1)} required={required} valueText={null} />,
+    <DateTimePickerField label="Start date" mode="date" onClear={jest.fn()} onPick={jest.fn()} openAndroid={jest.fn()} pickerDate={new Date(2026, 0, 1)} required={required} valueText={null} />,
   );
 }
 

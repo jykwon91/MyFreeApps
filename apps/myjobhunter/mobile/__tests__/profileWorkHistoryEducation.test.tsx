@@ -57,12 +57,14 @@ beforeEach(() => {
   mockDecimalSeparator = ".";
 });
 
-/** Opens a date field's picker, turns it to `date`, and closes it again. A required field's buttons say so. */
-async function pickDate(label: string, date: Date, required = false): Promise<void> {
+const problemSuffix = (problem?: string): string => (problem ? `, error: ${problem}` : "");
+
+/** Opens a date field's picker, turns it to `date`, and closes it again. A required field's buttons say so, and a field with a problem says that too. */
+async function pickDate(label: string, date: Date, required = false, problemBefore?: string, problemAfter?: string): Promise<void> {
   const suffix = required ? ", required" : "";
-  await fireEvent.press(screen.getByRole("button", { name: `Choose ${label.toLowerCase()}${suffix}` }));
+  await fireEvent.press(screen.getByRole("button", { name: `Choose ${label.toLowerCase()}${suffix}${problemSuffix(problemBefore)}` }));
   await fireEvent(screen.getByTestId(`${label}-picker`), "change", {}, date);
-  await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${label.toLowerCase()}${suffix}` }));
+  await fireEvent.press(screen.getByRole("button", { name: `Done choosing ${label.toLowerCase()}${suffix}${problemSuffix(problemAfter)}` }));
 }
 
 describe("work history", () => {
@@ -134,8 +136,8 @@ describe("work history", () => {
     expect(screen.getByText(PROBLEMS.titleRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.startDateRequired)).toBeTruthy();
 
-    await pickDate(WORK.startLabel, new Date(2022, 0, 1), true);
-    await pickDate(WORK.endLabel, new Date(2021, 0, 1));
+    await pickDate(WORK.startLabel, new Date(2022, 0, 1), true, PROBLEMS.startDateRequired);
+    await pickDate(WORK.endLabel, new Date(2021, 0, 1), false, undefined, PROBLEMS.endBeforeStart);
     expect(await screen.findByText(PROBLEMS.endBeforeStart)).toBeTruthy();
     expect(sentTo(sent, "POST /work-history")).toEqual([]);
   });

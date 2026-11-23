@@ -2,7 +2,7 @@ import { dateToLocalDateTime } from "@myjobhunter/api-client/utils/interviewEven
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { formatDateTime } from "@myjobhunter/api-client/utils/formatDateTime";
 import type { DateTimeFieldProps } from "../../types/DateTimeFieldProps";
-import PickerField from "../../components/forms/PickerField";
+import DateTimePickerField from "../../components/forms/DateTimePickerField";
 
 /** A day and a time. Android has no single dialog for both, so it asks for the day, then the time. */
 export default function DateTimeField({ label, value, onChange, maximumDate, required, error, hint, disabled }: DateTimeFieldProps) {
@@ -10,7 +10,7 @@ export default function DateTimeField({ label, value, onChange, maximumDate, req
   const pickerDate = value ? new Date(value) : new Date();
   const pick = (date: Date) => onChange(dateToLocalDateTime(date));
   return (
-    <PickerField
+    <DateTimePickerField
       disabled={disabled}
       error={error}
       hint={hint}
