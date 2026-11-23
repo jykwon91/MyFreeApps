@@ -6,12 +6,28 @@ name: Deploy MyRecipes
 
 on:
   # Manual "Run workflow" button — always available so any app can be
-  # deployed on demand, even when push-triggered auto-deploy is off.
+  # deployed on demand, even when auto-deploy is off. Deploys the commit the
+  # run was started on.
   workflow_dispatch:
-  # Push-triggered auto-deploy. Rendered ONLY when `automated_deploy` is
-  # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
-  # existing apps keep auto-deploying. Set `automated_deploy: false` to make
-  # an app manual-dispatch-only (e.g. not yet ready for production).
+  # Auto-deploy. Rendered ONLY when `automated_deploy` is truthy in
+  # apps/<slug>/app.yaml. A missing key defaults to enabled. Set
+  # `automated_deploy: false` to make an app manual-dispatch-only.
+  #
+  # Production deploys only a commit that passed this app's CI ON MAIN. PRs
+  # merge without being rebased on the latest main, so two PRs can each pass
+  # CI alone and break once combined — the main run is the first to test the
+  # combination. Triggering on `push` would ship that combination before its
+  # CI finished.
+  #
+  # The CI workflow's push `paths:` (apps/<slug>/** and packages/**, minus
+  # mobile, plus the root npm manifest + lockfile) decide which commits get
+  # here; mobile-only changes do not run it, so they do not redeploy.
+
+env:
+  # The commit to build and ship. Under workflow_run, github.sha is main's
+  # CURRENT head — possibly a newer, untested commit — so use the commit the
+  # CI run actually tested. Manual dispatch has no CI run: use github.sha.
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 concurrency:
   group: deploy-myrecipes
@@ -31,6 +47,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       # Build images on the GitHub runner (fast, layer-cached via type=gha) and
       # push to GHCR. The VPS step below PULLS these prebuilt images instead of
@@ -56,10 +74,10 @@ jobs:
           file: apps/myrecipes/docker/backend.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-myrecipes-backend:${{ github.sha }}
+            ghcr.io/jykwon91/myfreeapps-myrecipes-backend:${{ env.DEPLOY_SHA }}
             ghcr.io/jykwon91/myfreeapps-myrecipes-backend:latest
           build-args: |
-            GIT_COMMIT=${{ github.sha }}
+            GIT_COMMIT=${{ env.DEPLOY_SHA }}
           cache-from: type=gha,scope=myrecipes-backend
           cache-to: type=gha,mode=max,scope=myrecipes-backend
 
@@ -70,7 +88,7 @@ jobs:
           file: apps/myrecipes/docker/caddy.Dockerfile
           push: true
           tags: |
-            ghcr.io/jykwon91/myfreeapps-myrecipes-caddy:${{ github.sha }}
+            ghcr.io/jykwon91/myfreeapps-myrecipes-caddy:${{ env.DEPLOY_SHA }}
             ghcr.io/jykwon91/myfreeapps-myrecipes-caddy:latest
           # VITE_* values are inlined into the frozen bundle at build time. They
           # now come from GitHub Actions variables (public values — the Turnstile
@@ -88,7 +106,7 @@ jobs:
           # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
           # exact images the build steps above just pushed; GHCR_* authenticate
           # the VPS to pull the (private) packages.
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ env.DEPLOY_SHA }}
           GHCR_USER: ${{ github.repository_owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         with:

@@ -1150,9 +1150,6 @@ _NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
 class TestReactVersionAlignment:
     """Web and mobile share one hoisted React. Expo pins an exact version, so
     the root override owns it and every web range must ask for that version.
-
-    Deploy paths exclude root package.json and the lockfile, so a web range left
-    behind would change what ships without triggering that app's deploy.
     """
 
     @pytest.mark.parametrize(
@@ -1680,67 +1677,150 @@ class TestTotpRoutesAreShared:
         assert any("totp_last_used_step" in path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
 
 
+def _workflow(name: str) -> dict:
+    """Parse .github/workflows/<name>.yml. YAML 1.1 reads the bare key `on` as
+    the boolean True, so it is put back under "on"."""
+    data = yaml.safe_load(_read(".github", "workflows", f"{name}.yml"))
+    data["on"] = data.pop(True)
+    return data
+
+
+_AUTO_DEPLOY_APPS = sorted(set(_APPS) - _NO_AUTO_DEPLOY)
+# Every production deploy that runs on its own: each auto-deploy app plus the
+# static landing page. Maps the deploy workflow to the CI workflow it waits on.
+_AUTO_DEPLOYS = {f"deploy-{app}": f"ci-{app}" for app in _AUTO_DEPLOY_APPS} | {"deploy-landing": "ci-landing"}
+_MAIN_CI_PASSED = (
+    "github.event_name == 'workflow_dispatch' || "
+    "(github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')"
+)
+_DEPLOY_SHA = "${{ github.event.workflow_run.head_sha || github.sha }}"
+_GATED = "steps.gate.outputs.deploy == 'true'"
+
+
+class TestDeployRunsOnlyAfterMainCiPasses:
+    """PRs merge without being rebased on the latest main, so two PRs can each
+    pass CI alone and break once combined. The CI run on main is the first to
+    test the combination, so production may deploy a commit only after that
+    run passed, and must deploy exactly the commit it tested."""
+
+    @pytest.mark.parametrize(("deploy", "ci"), sorted(_AUTO_DEPLOYS.items()))
+    def test_deploy_waits_for_the_apps_ci_on_main(self, deploy: str, ci: str) -> None:
+        triggers = _workflow(deploy)["on"]
+        assert set(triggers) == {"workflow_dispatch", "workflow_run"}, (
+            f"{deploy}.yml must auto-deploy only on workflow_run of {ci}.yml (plus the manual "
+            f"button), never on push. Got {sorted(triggers)}."
+        )
+        assert triggers["workflow_run"] == {
+            "workflows": [_workflow(ci)["name"]],
+            "types": ["completed"],
+            "branches": ["main"],
+        }, f"{deploy}.yml must run when {ci}.yml completes on main; workflow_run matches it by its `name:`."
+
+    @pytest.mark.parametrize("deploy", sorted(_AUTO_DEPLOYS))
+    def test_deploy_job_needs_a_successful_push_run(self, deploy: str) -> None:
+        assert _workflow(deploy)["jobs"]["deploy"].get("if") == _MAIN_CI_PASSED, (
+            f"{deploy}.yml's deploy job must run only for the manual button or a successful CI "
+            f"run for a push to main — workflow_run also fires on failed runs and on PR runs."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_deploy_builds_and_ships_the_tested_commit(self, app: str) -> None:
+        """Under workflow_run, github.sha is main's current head, which may be newer
+        and untested. Everything must use the commit the CI run tested."""
+        wf = _workflow(f"deploy-{app}")
+        assert wf["env"]["DEPLOY_SHA"] == _DEPLOY_SHA, (
+            f"deploy-{app}.yml must define DEPLOY_SHA once as {_DEPLOY_SHA}. Re-render from deploy.yml.j2."
+        )
+        steps = wf["jobs"]["deploy"]["steps"]
+        checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
+        assert checkout.get("with", {}).get("ref") == "${{ env.DEPLOY_SHA }}", (
+            f"deploy-{app}.yml must check out DEPLOY_SHA, not main's head."
+        )
+        lines = _read(".github", "workflows", f"deploy-{app}.yml").replace(_DEPLOY_SHA, "").splitlines()
+        source = "\n".join(line for line in lines if not line.lstrip().startswith("#"))
+        assert "github.sha" not in source, (
+            f"deploy-{app}.yml uses github.sha outside DEPLOY_SHA; use ${{{{ env.DEPLOY_SHA }}}}."
+        )
+        if _uses_registry_images(app):
+            for image in ("backend", "caddy"):
+                assert f"myfreeapps-{app}-{image}:${{{{ env.DEPLOY_SHA }}}}" in source
+            assert "IMAGE_TAG: ${{ env.DEPLOY_SHA }}" in source
+
+    @pytest.mark.parametrize("app", _AUTO_DEPLOY_APPS)
+    def test_older_commit_never_ships_over_a_newer_one(self, app: str) -> None:
+        """Re-running an older commit's CI fires the deploy again. If a newer commit
+        has already passed, shipping the older one would roll production back."""
+        job = _workflow(f"deploy-{app}")["jobs"]["deploy"]
+        gate, *rest = job["steps"]
+        assert gate.get("id") == "gate", f"deploy-{app}.yml must start with the newer-commit check."
+        assert f"--workflow ci-{app}.yml" in gate["run"]
+        assert "--branch main --event push --status success" in gate["run"]
+        assert '[ "$STATUS" = "ahead" ]' in gate["run"]
+        assert job["permissions"].get("actions") == "read", "`gh run list` needs actions: read."
+        ungated = [step["name"] for step in rest if step.get("if") != _GATED]
+        assert not ungated, f"deploy-{app}.yml steps {ungated} must be skipped when the check says not to deploy."
+
+    @pytest.mark.parametrize("app", sorted(_NO_AUTO_DEPLOY))
+    def test_manual_only_app_has_no_auto_trigger_or_gate(self, app: str) -> None:
+        wf = _workflow(f"deploy-{app}")
+        assert set(wf["on"]) == {"workflow_dispatch"}
+        assert "if" not in wf["jobs"]["deploy"]
+        assert all(step.get("id") != "gate" for step in wf["jobs"]["deploy"]["steps"])
+
+
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
-    image, so it must not trigger a production deploy."""
+    image, so it must not trigger a production deploy. Deploys follow the app's
+    CI on main, so that CI's push filter is what has to skip mobile."""
 
-    @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
-    def test_deploy_paths_exclude_mobile(self, app: str) -> None:
-        wf = _read(".github", "workflows", f"deploy-{app}.yml")
-        for excluded in (f"!apps/{app}/mobile/**", "!packages/shared-mobile/**"):
-            assert f"'{excluded}'" in wf, (
-                f"deploy-{app}.yml must exclude {excluded}. Edit "
-                f"infra/templates/.github/workflows/deploy.yml.j2 and re-render."
+    @pytest.mark.parametrize("app", _AUTO_DEPLOY_APPS)
+    def test_ci_push_paths_exclude_mobile(self, app: str) -> None:
+        paths = _workflow(f"ci-{app}")["on"]["push"]["paths"]
+        for included, excluded in ((f"apps/{app}/**", f"!apps/{app}/mobile/**"), ("packages/**", "!packages/shared-mobile/**")):
+            assert excluded in paths and paths.index(included) < paths.index(excluded), (
+                f"ci-{app}.yml push paths must list {excluded} after {included}: a successful push run "
+                f"deploys {app}, and a mobile-only change must not."
             )
+
+    def test_landing_ci_covers_everything_its_deploy_ships(self) -> None:
+        paths = _workflow("ci-landing")["on"]["push"]["paths"]
+        for shipped in ("sites/landing/**", "infra/Caddyfile", "infra/sync-host-caddyfile.sh"):
+            assert shipped in paths, f"ci-landing.yml push paths must include {shipped}, or a change to it never deploys."
 
 
 class TestAutomatedDeployExclusion:
-    """`automated_deploy: false` in app.yaml must drop the push trigger from
-    the rendered deploy workflow, leaving only the manual workflow_dispatch.
+    """`automated_deploy: false` in app.yaml must drop the auto-deploy trigger
+    from the rendered deploy workflow, leaving only the manual workflow_dispatch.
 
     Same shape as TestPostDeployCommands: a reviewed opt-out set enforced in
-    both directions so neither (a) an excluded app silently regains a push
+    both directions so neither (a) an excluded app silently regains an auto
     trigger nor (b) a normal app silently loses one can slip through review.
     """
 
     @pytest.mark.parametrize("app", sorted(_NO_AUTO_DEPLOY))
     def test_excluded_app_is_manual_dispatch_only(self, app: str) -> None:
-        wf = _read(".github", "workflows", f"deploy-{app}.yml")
-        assert "workflow_dispatch:" in wf, (
-            f"deploy-{app}.yml must keep the manual `workflow_dispatch:` "
-            f"trigger so the app can still be deployed on demand. Re-run "
-            f"`python -m platform_shared.infra.render --app {app}`."
-        )
-        assert "branches: [main]" not in wf, (
-            f"deploy-{app}.yml still has a `push: branches: [main]` trigger but "
-            f"{app} is in _NO_AUTO_DEPLOY. To keep it manual-dispatch-only, set "
-            f"`automated_deploy: false` in apps/{app}/app.yaml and re-render. "
-            f"To RE-ENABLE auto-deploy, set `automated_deploy: true` (or remove "
-            f"the key) in apps/{app}/app.yaml, re-render, and drop {app} from "
-            f"_NO_AUTO_DEPLOY."
+        assert set(_workflow(f"deploy-{app}")["on"]) == {"workflow_dispatch"}, (
+            f"deploy-{app}.yml must have only the manual `workflow_dispatch:` trigger because "
+            f"{app} is in _NO_AUTO_DEPLOY. Set `automated_deploy: false` in apps/{app}/app.yaml "
+            f"and re-render. To RE-ENABLE auto-deploy, set `automated_deploy: true` (or remove "
+            f"the key), re-render, and drop {app} from _NO_AUTO_DEPLOY."
         )
         ay = _read("apps", app, "app.yaml")
         assert "automated_deploy: false" in ay, (
             f"apps/{app}/app.yaml must declare `automated_deploy: false` — it is "
-            f"the source of truth the template gates the push trigger on. To "
+            f"the source of truth the template gates the auto-deploy trigger on. To "
             f"re-enable auto-deploy, set it to true (or remove the key), "
             f"re-render, and drop {app} from _NO_AUTO_DEPLOY."
         )
 
-    @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
-    def test_normal_app_keeps_push_trigger(self, app: str) -> None:
-        wf = _read(".github", "workflows", f"deploy-{app}.yml")
-        assert "branches: [main]" in wf, (
-            f"deploy-{app}.yml lost its `push: branches: [main]` trigger but "
-            f"{app} is not in _NO_AUTO_DEPLOY. If this app should stop "
-            f"auto-deploying, add it to _NO_AUTO_DEPLOY and set "
+    @pytest.mark.parametrize("app", _AUTO_DEPLOY_APPS)
+    def test_normal_app_keeps_auto_deploy(self, app: str) -> None:
+        assert set(_workflow(f"deploy-{app}")["on"]) == {"workflow_dispatch", "workflow_run"}, (
+            f"deploy-{app}.yml lost its auto-deploy (workflow_run) trigger or its manual "
+            f"`workflow_dispatch:` button, but {app} is not in _NO_AUTO_DEPLOY. If this app "
+            f"should stop auto-deploying, add it to _NO_AUTO_DEPLOY and set "
             f"`automated_deploy: false` in apps/{app}/app.yaml; otherwise set "
             f"`automated_deploy: true` (or remove the key) and re-render."
-        )
-        assert "workflow_dispatch:" in wf, (
-            f"deploy-{app}.yml must also expose the manual `workflow_dispatch:` "
-            f"trigger (every app gets a Run-workflow button). Re-run "
-            f"`python -m platform_shared.infra.render --app {app}`."
         )
 
 

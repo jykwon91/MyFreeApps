@@ -11,13 +11,14 @@ name: Deploy landing page
 
 on:
   workflow_dispatch:
-  push:
+  # Auto-deploy only after Landing CI passes on main, never straight off a
+  # push: PRs merge without being rebased on the latest main, so the main run
+  # is the first to test the combination. Landing CI's push `paths:` decide
+  # which commits get here.
+  workflow_run:
+    workflows: ["Landing CI"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'sites/landing/**'
-      - 'infra/Caddyfile'
-      - 'infra/sync-host-caddyfile.sh'
-      - '.github/workflows/deploy-landing.yml'
 
 permissions:
   contents: read
@@ -29,6 +30,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Only a CI run for a push to main that SUCCEEDED.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5

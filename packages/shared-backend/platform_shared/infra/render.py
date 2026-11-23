@@ -34,7 +34,8 @@ Boolean flags (optional, all default false/disabled when absent):
   joins_minio_network     bool   True when docker-compose joins the shared minio network.
   block_api_docs          bool   True to serve 404 for /api/docs* in the Caddyfile.
   include_bundle_tripwire bool   True to enable the post-deploy bundle freshness check.
-  automated_deploy        bool   True (default) to add push trigger to deploy workflow.
+  automated_deploy        bool   True (default) to deploy automatically once the app's
+                                 CI passes on main (workflow_run trigger).
   registry_images         bool   True to build images in CI (GHCR) instead of on-VPS.
   serve_only_build_arg    bool   True (MGA only) to wire the VITE_SERVE_ONLY build arg.
   discord_activity        bool   True to let Discord iframe the SPA as an Activity.
