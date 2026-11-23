@@ -36,6 +36,8 @@ export { describeAuthError } from "./utils/describeAuthError";
 export { isAlreadyVerifiedError } from "./utils/isAlreadyVerifiedError";
 export { isRateLimitedError } from "./utils/isRateLimitedError";
 export { isUnverifiedLoginError } from "./utils/isUnverifiedLoginError";
+export { safeReturnPath } from "./utils/safeReturnPath";
+export { withReturnTo } from "./utils/withReturnTo";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent } from "./types/toast-event";
 export type { ToastVariant } from "./types/toast-variant";
@@ -123,10 +125,15 @@ export type { CenteredCardProps } from "./types/centered-card-props";
 
 // Auth components
 export { default as RequireAuth } from "./components/auth/RequireAuth";
+export type { RequireAuthLocationState } from "./types/require-auth-location-state";
 export { default as AuthRequired } from "./components/auth/AuthRequired";
 export type { AuthRequiredProps } from "./components/auth/AuthRequired";
 export { default as LoginForm } from "./components/auth/LoginForm";
-export type { LoginFormProps } from "./components/auth/LoginForm";
+export type { LoginFormProps } from "./types/login-form-props";
+export type { LoginFormTabRegistration } from "./types/login-form-tab-registration";
+export type { LoginFormLinkRegistration } from "./types/login-form-link-registration";
+export { default as TwoFactorStep } from "./components/auth/TwoFactorStep";
+export type { TwoFactorStepProps } from "./types/two-factor-step-props";
 export { default as PasswordPair } from "./components/auth/PasswordPair";
 export type { PasswordPairProps } from "./components/auth/PasswordPair";
 export { default as ResendStatusAlert } from "./components/auth/ResendStatusAlert";

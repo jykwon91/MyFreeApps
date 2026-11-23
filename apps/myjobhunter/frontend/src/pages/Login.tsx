@@ -4,20 +4,15 @@ import { Briefcase } from "lucide-react";
 import {
   AuthPageFooter,
   LoginForm,
-  LoadingButton,
   TurnstileWidget,
+  TwoFactorStep,
   useTurnstileToken,
-  describeAuthError,
   isUnverifiedLoginError,
   useIsAuthenticated,
   ResendStatusAlert,
 } from "@platform/ui";
-import type { ResendStatus } from "@platform/ui";
+import type { RequireAuthLocationState, ResendStatus } from "@platform/ui";
 import { register, requestVerifyToken, signIn } from "@/lib/auth";
-
-interface LocationState {
-  from?: string;
-}
 
 /**
  * Login page with three layered flows:
@@ -25,8 +20,8 @@ interface LocationState {
  *   1. **Email verification (PR C4)** — when login returns
  *      `LOGIN_USER_NOT_VERIFIED`, surface a "Resend verification email" CTA.
  *   2. **TOTP challenge (PR C5)** — when `signIn` returns
- *      `{ status: "totp_required" }`, hide LoginForm and render the inline
- *      TOTP challenge step (accepts both 6-digit codes and recovery codes).
+ *      `{ status: "totp_required" }`, hide LoginForm and render the shared
+ *      TwoFactorStep (accepts both 6-digit codes and recovery codes).
  *   3. **Registration confirmation (PR C4)** — after register, show
  *      "check your inbox" banner instead of auto-signing-in.
  */
@@ -45,9 +40,6 @@ export default function Login() {
   const [pendingCredentials, setPendingCredentials] = useState<
     { email: string; password: string } | null
   >(null);
-  const [totpCode, setTotpCode] = useState("");
-  const [totpError, setTotpError] = useState("");
-  const [isVerifyingTotp, setIsVerifyingTotp] = useState(false);
 
   // Turnstile token captured from the widget on the register tab.
   // Submitted to the backend as the X-Turnstile-Token header during
@@ -59,13 +51,13 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const state = location.state as LocationState | null;
+      const state = location.state as RequireAuthLocationState | null;
       navigate(state?.from ?? "/dashboard", { replace: true });
     }
   }, [isAuthenticated, navigate, location.state]);
 
   function navigateAfterLogin(): void {
-    const state = location.state as LocationState | null;
+    const state = location.state as RequireAuthLocationState | null;
     navigate(state?.from ?? "/dashboard", { replace: true });
   }
 
@@ -76,8 +68,6 @@ export default function Login() {
       const result = await signIn(email, password);
       if (result.status === "totp_required") {
         setPendingCredentials({ email, password });
-        setTotpCode("");
-        setTotpError("");
         return;
       }
       navigateAfterLogin();
@@ -112,34 +102,12 @@ export default function Login() {
     }
   }
 
-  async function onTotpSubmit(e: React.FormEvent): Promise<void> {
-    e.preventDefault();
-    if (!pendingCredentials || totpCode.length < 6) return;
-
-    setTotpError("");
-    setIsVerifyingTotp(true);
-    try {
-      const result = await signIn(
-        pendingCredentials.email,
-        pendingCredentials.password,
-        totpCode,
-      );
-      if (result.status === "ok") {
-        navigateAfterLogin();
-      } else {
-        setTotpError("Authentication code didn't go through. Please try again.");
-      }
-    } catch (err) {
-      setTotpError(describeAuthError(err));
-    } finally {
-      setIsVerifyingTotp(false);
-    }
-  }
-
-  function handleTotpBack(): void {
-    setPendingCredentials(null);
-    setTotpCode("");
-    setTotpError("");
+  async function onVerifyTotp(code: string): Promise<boolean> {
+    if (!pendingCredentials) return false;
+    const result = await signIn(pendingCredentials.email, pendingCredentials.password, code);
+    if (result.status !== "ok") return false;
+    navigateAfterLogin();
+    return true;
   }
 
   return (
@@ -153,53 +121,7 @@ export default function Login() {
 
       <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-xs">
         {pendingCredentials ? (
-          <form onSubmit={onTotpSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="totp-code" className="block text-sm font-medium mb-1">
-                Authentication code
-              </label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Enter the 6-digit code from your authenticator app, or a recovery code.
-              </p>
-              <input
-                id="totp-code"
-                type="text"
-                inputMode="text"
-                autoComplete="one-time-code"
-                value={totpCode}
-                onChange={(e) =>
-                  setTotpCode(
-                    e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 8),
-                  )
-                }
-                className="w-full border rounded-md px-3 py-2 text-sm font-mono text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-                placeholder="000000"
-                maxLength={8}
-                autoFocus
-              />
-            </div>
-            {totpError ? (
-              <p className="text-destructive text-sm" role="alert">
-                {totpError}
-              </p>
-            ) : null}
-            <LoadingButton
-              type="submit"
-              isLoading={isVerifyingTotp}
-              loadingText="Verifying..."
-              className="w-full"
-              disabled={totpCode.length < 6}
-            >
-              Verify
-            </LoadingButton>
-            <button
-              type="button"
-              onClick={handleTotpBack}
-              className="w-full text-sm text-muted-foreground hover:underline min-h-[44px]"
-            >
-              Back to login
-            </button>
-          </form>
+          <TwoFactorStep onVerify={onVerifyTotp} onBack={() => setPendingCredentials(null)} />
         ) : (
           <>
             {registeredEmail ? (
