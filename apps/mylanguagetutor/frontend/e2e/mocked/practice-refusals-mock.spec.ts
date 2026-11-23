@@ -291,7 +291,7 @@ test("a 503 tutor_unavailable on a turn blocks the conversation, keeps the answe
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await page.getByRole("button", { name: "Try again" }).click();
 
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByText(UNAVAILABLE_COPY)).toHaveCount(0);
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);

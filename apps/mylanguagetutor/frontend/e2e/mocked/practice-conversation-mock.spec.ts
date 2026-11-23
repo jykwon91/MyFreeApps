@@ -112,12 +112,12 @@ test("typing two turns in a row never needs the field focused again, and Enter m
     await expect(field).toHaveValue(LEARNER_FOLLOW_UP);
 
     gate.release();
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByRole("status", { name: TUTOR_THINKING })).toHaveCount(0);
     await expect(field).toBeFocused();
     await page.keyboard.press("Enter");
 
-    await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_NAME_REPLY)).toBeVisible();
     await expect(field).toBeFocused();
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_FOLLOW_UP }]);
   } finally {
