@@ -1,3 +1,4 @@
+import { RECIPE_BYLINE } from "@myrecipes/api-client/constants/recipeByline";
 import { Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 
@@ -25,7 +26,9 @@ export default function RecipeTitleBlock({
         <Skeleton height={fontSize.xl} testID="recipe-title-skeleton" width="70%" />
       ) : null}
       {owner ? (
-        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>by {owner}</Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
+          {RECIPE_BYLINE.byOwner(owner)}
+        </Text>
       ) : null}
     </View>
   );

@@ -6,7 +6,6 @@ export const RECIPES_MESSAGES = {
   notCooked: "Not cooked yet",
   lastCooked: (date: string) => `Last cooked ${date}`,
   noRating: "No rating",
-  byOwner: (name: string) => `by ${name}`,
 } as const;
 
 /** Under the recipe list while more recipes are left to load. */
