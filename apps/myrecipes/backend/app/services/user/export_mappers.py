@@ -24,16 +24,6 @@ def _str(value: object | None) -> str | None:
     return str(value) if value is not None else None
 
 
-def user_to_export_dict(user: Any) -> dict[str, Any]:
-    return {
-        "id": str(user.id),
-        "email": user.email,
-        "display_name": user.display_name,
-        "is_verified": user.is_verified,
-        "totp_enabled": user.totp_enabled,
-    }
-
-
 def ingredient_to_export_dict(ingredient: RecipeIngredient) -> dict[str, Any]:
     return {
         "id": str(ingredient.id),

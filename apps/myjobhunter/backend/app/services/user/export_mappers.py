@@ -13,6 +13,8 @@ secret and recovery codes) are excluded as credentials.
 from collections.abc import Callable
 from datetime import date, datetime
 
+from platform_shared.core.user_export import user_to_export_dict as shared_user_to_export_dict
+
 from app.models.application.application import Application
 from app.models.application.application_contact import ApplicationContact
 from app.models.application.application_event import ApplicationEvent
@@ -46,17 +48,8 @@ def _opt_str(value: object | None) -> str | None:
 
 
 def user_to_export_dict(user: User) -> dict:
-    return {
-        "id": str(user.id),
-        "email": user.email,
-        "display_name": user.display_name,
-        "is_active": user.is_active,
-        "is_verified": user.is_verified,
-        "is_superuser": user.is_superuser,
-        "is_demo": user.is_demo,
-        "role": user.role,
-        "totp_enabled": user.totp_enabled,
-    }
+    """The shared user section plus MyJobHunter's demo-account flag."""
+    return {**shared_user_to_export_dict(user), "is_demo": user.is_demo}
 
 
 def profile_to_export_dict(profile: Profile) -> dict:
