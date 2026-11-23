@@ -43,6 +43,7 @@ from app.models.user.user import User
 from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate  # noqa: F401
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.system.admin_user_service_factory import shared_admin_user_service
+from app.services.user import account_deletion_service
 
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -161,6 +162,7 @@ app.include_router(
         user_read=UserRead,
         user_update=UserUpdate,
         current_strict_superuser=current_strict_superuser,
+        prepare_deletion=account_deletion_service.prepare_deletion,
     ),
     prefix="/users",
     tags=["users"],

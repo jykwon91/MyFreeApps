@@ -22,7 +22,9 @@ def test_user_row_is_locked_before_prepare_deletion_runs() -> None:
     calls: list[str] = []
 
     db = AsyncMock()
-    db.get = AsyncMock(side_effect=lambda *a, **k: calls.append(f"lock:{k.get('with_for_update')}"))
+
+    async def lock_by_id(_db: Any, user_id: Any, *, user_model: Any) -> None:
+        calls.append(f"lock:{user_id == user.id}")
 
     async def prepare_deletion(_db: Any, _user: Any) -> Any:
         calls.append("prepare")
@@ -68,9 +70,10 @@ def test_user_row_is_locked_before_prepare_deletion_runs() -> None:
     app.include_router(router)
 
     with (
-        patch("platform_shared.api.account_deletion_router.delete_account", delete_account),
-        patch("platform_shared.api.account_deletion_router.capture_deletion_scope", capture_deletion_scope),
-        patch("platform_shared.api.account_deletion_router.erase_audit_history", erase_audit_history),
+        patch("platform_shared.services.account_deletion.user_repo.lock_by_id", lock_by_id),
+        patch("platform_shared.services.account_deletion.delete_account", delete_account),
+        patch("platform_shared.services.account_deletion.capture_deletion_scope", capture_deletion_scope),
+        patch("platform_shared.services.account_deletion.erase_audit_history", erase_audit_history),
         patch("platform_shared.auth.released_current_user.release_connection", AsyncMock()),
     ):
         response = TestClient(app).request(

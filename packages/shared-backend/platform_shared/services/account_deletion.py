@@ -1,9 +1,10 @@
-"""Hard-delete service for ``DELETE /users/me`` — emits audit event + cascade.
+"""Hard-delete service for ``DELETE /users/me`` and ``DELETE /users/{id}``.
 
-The route in :mod:`platform_shared.api.account_deletion_router` calls
-this after the password / email / TOTP gates pass.
-
-Order matters:
+:func:`delete_account_and_erase_history` is the whole deletion both routes run:
+the user's own (:mod:`platform_shared.api.account_deletion_router`, after its
+password / email / TOTP gates) and the admin's
+(:mod:`platform_shared.api.users_router`). :func:`delete_account` is its
+user-row step, where order matters:
 
 1. ``log_auth_event(ACCOUNT_DELETED)`` writes the audit row in the same
    transaction. The ``auth_events.user_id`` column has NO foreign key
@@ -16,7 +17,7 @@ Order matters:
    the single statement wipes all the user's rows atomically.
 
 The caller (the route handler) is responsible for committing the
-surrounding transaction. This function does not flush or commit.
+surrounding transaction. Neither function commits.
 """
 from __future__ import annotations
 
@@ -26,7 +27,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.repositories import user_repo
+from platform_shared.services.audit_erasure import (
+    capture_deletion_scope,
+    erase_audit_history,
+)
 from platform_shared.services.auth_event_service import log_auth_event
+from platform_shared.services.prepare_deletion import AfterCommit, PrepareDeletion
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +67,24 @@ async def delete_account(db: AsyncSession, user: Any) -> None:
         succeeded=True,
     )
     await db.delete(loaded_user)
+
+
+async def delete_account_and_erase_history(
+    db: AsyncSession, user: Any, prepare_deletion: PrepareDeletion | None,
+) -> AfterCommit | None:
+    """Delete ``user`` with the app's ``prepare_deletion`` and erase their audit history.
+
+    Runs in ``db``'s transaction, which the caller commits. Returns the work
+    ``prepare_deletion`` left for after the commit, or None.
+
+    Raises:
+        AccountDeletionBlockedError: ``prepare_deletion`` refused.
+    """
+    # Serialise concurrent deletes of one account, so the second one can't
+    # collect keys the first has already removed.
+    await user_repo.lock_by_id(db, user.id, user_model=type(user))
+    scope = await capture_deletion_scope(db, user)
+    after_commit = await prepare_deletion(db, user) if prepare_deletion else None
+    await delete_account(db, user)
+    await erase_audit_history(db, user, scope)
+    return after_commit

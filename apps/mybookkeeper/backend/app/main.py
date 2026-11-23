@@ -34,6 +34,7 @@ from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
 from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, exports, frontend_errors, health_dashboard, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, organizations, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
 from app.services.system.admin_service import shared_admin_user_service
+from app.services.user import account_deletion_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -150,6 +151,7 @@ app.include_router(
         user_read=UserRead,
         user_update=UserUpdate,
         current_strict_superuser=current_strict_superuser,
+        prepare_deletion=account_deletion_service.prepare_deletion,
     ),
     prefix="/users",
     tags=["users"],

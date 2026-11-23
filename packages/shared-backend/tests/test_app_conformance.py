@@ -1642,6 +1642,20 @@ class TestTotpRoutesAreShared:
         [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
         ids="/".join,
     )
+    def test_admin_delete_prepares_like_self_delete(self, backend: tuple[str, ...]) -> None:
+        hook = "prepare_deletion=account_deletion_service.prepare_deletion,"
+        self_delete = hook in _read(*backend, "app", "api", "account.py")
+        admin_delete = hook in _read(*backend, "app", "main.py")
+        assert self_delete == admin_delete, (
+            "build_users_router must get the same prepare_deletion as build_account_deletion_router, "
+            "or an admin's delete skips what the user's own clears."
+        )
+
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
     def test_refresh_sessions_are_registered_and_never_audited(self, backend: tuple[str, ...]) -> None:
         assert "RefreshSession" in _read(*backend, "app", "models", "__init__.py")
         assert '"refresh_sessions"' in _read(*backend, "app", "core", "audit.py"), (
