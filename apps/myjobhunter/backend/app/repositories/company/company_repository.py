@@ -17,7 +17,6 @@ from typing import Any
 from platform_shared.repositories.audited_writes import lock_rows
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.company.company import Company
 
@@ -220,11 +219,10 @@ async def _set_research_claim(
 ) -> bool:
     """Set the research claim on the locked ``companies``; True if there was one.
 
-    ``updated_at`` is kept: a claim isn't an edit to the company. Marking it
-    modified writes its current value, so its ``onupdate`` doesn't fire.
+    ``updated_at`` is kept: a claim isn't an edit to the company (see
+    ``Company._stamp_updated_at``).
     """
     for company in companies:
         company.research_started_at = research_started_at
-        flag_modified(company, "updated_at")
     await db.flush()
     return bool(companies)

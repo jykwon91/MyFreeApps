@@ -8,13 +8,16 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    event,
     func,
+    inspect,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.company_domain import normalize_company_domain
+from app.core.company_research_constants import COMPANY_NON_EDIT_COLUMNS
 from app.db.base import Base
 
 
@@ -57,7 +60,8 @@ class Company(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         server_default=func.now(),
-        onupdate=lambda: datetime.now(timezone.utc),
+        # Stamped by ``_stamp_updated_at`` below, not ``onupdate``: a research
+        # claim must leave it alone, and an ORM flush can't skip an onupdate.
     )
 
     research: Mapped["CompanyResearch | None"] = relationship("CompanyResearch", back_populates="company", uselist=False, cascade="all, delete-orphan")
@@ -91,3 +95,22 @@ class Company(Base):
             postgresql_where=text("primary_domain IS NOT NULL"),
         ),
     )
+
+
+@event.listens_for(Company, "before_update")
+def _stamp_updated_at(_mapper: object, _connection: object, company: Company) -> None:
+    """Stamp ``updated_at`` when a flush edits the company.
+
+    A flush that only takes, renews or releases the research claim is not an
+    edit, so ``updated_at`` (and its audit history) stays as it was. A caller
+    that sets ``updated_at`` itself keeps its value.
+    """
+    state = inspect(company)
+    if state.attrs.updated_at.history.has_changes():
+        return
+    if any(
+        state.attrs[attr.key].history.has_changes()
+        for attr in inspect(Company).column_attrs
+        if attr.key not in COMPANY_NON_EDIT_COLUMNS
+    ):
+        company.updated_at = datetime.now(timezone.utc)

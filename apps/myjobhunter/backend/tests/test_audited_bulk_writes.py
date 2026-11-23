@@ -171,6 +171,7 @@ async def test_deleting_an_application_audits_its_events_too(db: AsyncSession) -
 @pytest.mark.usefixtures("audit_listener")
 async def test_a_research_claim_keeps_the_companys_updated_at(db: AsyncSession) -> None:
     company = await seeds.company(db)
+    await _clear_audit_rows(db)
 
     assert await company_repository.try_claim_research(
         db, company.id, company.user_id, claimed_at=NOW, stale_before=NOW,
@@ -179,6 +180,22 @@ async def test_a_research_claim_keeps_the_companys_updated_at(db: AsyncSession) 
     await db.refresh(company)
     assert company.research_started_at == NOW
     assert company.updated_at == LONG_AGO
+    fields = {row.field_name for row in await _audit_rows(db, "companies", company.id)}
+    assert fields == {"research_started_at"}
+
+
+@pytest.mark.usefixtures("audit_listener")
+async def test_editing_a_company_still_bumps_and_audits_its_updated_at(db: AsyncSession) -> None:
+    company = await seeds.company(db)
+    await _clear_audit_rows(db)
+
+    company.industry = "Robotics"
+    await db.flush()
+
+    await db.refresh(company)
+    assert company.updated_at > LONG_AGO
+    fields = {row.field_name for row in await _audit_rows(db, "companies", company.id)}
+    assert fields == {"industry", "updated_at"}
 
 
 # --- Guards: a row someone else already changed is left alone ---------------
