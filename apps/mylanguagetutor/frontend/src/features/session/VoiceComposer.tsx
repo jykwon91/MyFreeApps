@@ -3,7 +3,10 @@ import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { recognitionFailureHint } from "@mylanguagetutor/api-client/utils/recognitionFailureHint";
 import type { VoiceComposerProps } from "@/types/session/voice-composer-props";
 
-/** Microphone control, the live transcript while listening, and a way to switch to typing. */
+/**
+ * Microphone control, what's been heard while listening, and a way to switch to typing. What's heard
+ * isn't a live region: a screen reader would read it aloud into the open microphone.
+ */
 export default function VoiceComposer({
   phase,
   interim,
@@ -17,7 +20,7 @@ export default function VoiceComposer({
   return (
     <div className="flex flex-col items-center gap-3">
       {phase === "listening" && (
-        <p className="min-h-[1.5rem] text-center text-sm italic text-muted-foreground" aria-live="polite">
+        <p className="min-h-[1.5rem] text-center text-sm italic text-muted-foreground">
           {interim || VOICE_COPY.listening}
         </p>
       )}

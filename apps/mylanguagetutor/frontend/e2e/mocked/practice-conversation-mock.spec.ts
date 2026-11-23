@@ -40,7 +40,7 @@ import {
 } from "./constants/practiceLabels";
 import { FREE_TALK, GREETINGS } from "./fixtures/catalogFixtures";
 import { sessionIdAt } from "./fixtures/fixtureIds";
-import { goal, openPractice, sendTyped } from "./fixtures/practiceScreen";
+import { goal, openPractice, sendTyped, shownText } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { recognitionStarts, spokenUtterances } from "./fixtures/speechFakes";
 import { completeTurn } from "./fixtures/turnEvents";
@@ -71,7 +71,7 @@ test("the first typed answer starts a session, streams the reply, and speaks it 
     await expect(page.getByRole("button", { name: /Sending/ })).toBeDisabled();
     gate.release();
 
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByRole("status", { name: TUTOR_THINKING })).toHaveCount(0);
     await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
     await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
@@ -112,12 +112,12 @@ test("typing two turns in a row never needs the field focused again, and Enter m
     await expect(field).toHaveValue(LEARNER_FOLLOW_UP);
 
     gate.release();
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByRole("status", { name: TUTOR_THINKING })).toHaveCount(0);
     await expect(field).toBeFocused();
     await page.keyboard.press("Enter");
 
-    await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_NAME_REPLY)).toBeVisible();
     await expect(field).toBeFocused();
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_FOLLOW_UP }]);
   } finally {
@@ -130,7 +130,7 @@ test("a reply can be replayed at the normal pace and slowly, and its translation
 
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect.poll(async () => (await spokenUtterances(page)).length).toBe(TUTOR_GREETING_SENTENCES.length);
 
   const translation = page.getByText(TUTOR_GREETING_TRANSLATION, { exact: true });
@@ -160,7 +160,7 @@ test("Replay is off while the next reply is on its way, and back on once the tut
   try {
     await openPractice(page, GREETINGS.title);
     await sendTyped(page, LEARNER_GREETING);
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByRole("button", { name: "Replay", exact: true })).toBeEnabled();
 
     held = new Promise<void>((resolve) => {
@@ -172,7 +172,7 @@ test("Replay is off while the next reply is on its way, and back on once the tut
     await expect(page.getByRole("button", { name: "Slow", exact: true })).toBeDisabled();
 
     release();
-    await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_NAME_REPLY)).toBeVisible();
     await expect(page.getByRole("button", { name: "Replay", exact: true })).toHaveCount(2);
     await expect(page.getByRole("button", { name: "Replay", exact: true }).first()).toBeEnabled();
     await expect(page.getByRole("button", { name: "Replay", exact: true }).last()).toBeEnabled();
@@ -204,10 +204,10 @@ test("corrections and the say-it-again prompt follow the reply; later turns reus
   await expect(page.getByText(RETRY_PROMPT)).toHaveCount(0);
 
   await sendTyped(page, LEARNER_FOLLOW_UP);
-  await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_NAME_REPLY)).toBeVisible();
   await expect(goal(page, GREETINGS.goals[1])).toContainText(GOAL_MET);
   // The first exchange stays in the transcript above the new one.
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
 
   expect(api.writes.filter((write) => write.path === "/sessions")).toHaveLength(1);
   expect(api.turnRequests.map((turn) => [turn.sessionId, turn.body])).toEqual([
@@ -244,7 +244,7 @@ test("a scenario with no goals shows none and still converses", async ({ page })
   await openPractice(page, FREE_TALK.title);
   await expect(page.getByRole("list", { name: GOALS_LABEL })).toHaveCount(0);
   await sendTyped(page, LEARNER_GREETING);
-  await expect(page.getByText(DEFAULT_REPLY, { exact: true })).toBeVisible();
+  await expect(shownText(page, DEFAULT_REPLY)).toBeVisible();
 });
 
 test.describe("in a browser that can recognise speech", () => {
@@ -259,7 +259,7 @@ test.describe("in a browser that can recognise speech", () => {
     await expect(page.getByRole("heading", { name: PRIVACY_HEADING })).toHaveCount(0);
     await expect(page.getByText(TYPING_ONLY_NOTICE, { exact: false })).toHaveCount(0);
     await sendTyped(page, LEARNER_GREETING, TYPE_YOUR_ANSWER_LABEL);
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }]);
 
     // Back to voice: the notice shows again (it hasn't been accepted), and nothing has listened.

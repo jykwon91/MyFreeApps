@@ -15,10 +15,10 @@ const ENTRY: TranscriptEntry = {
   correctionsMissing: false,
 };
 
-function list(canReplay: boolean) {
+function list(canReplay: boolean, entry: TranscriptEntry = ENTRY) {
   return (
     <TranscriptList
-      entries={[ENTRY]}
+      entries={[entry]}
       languageName="Spanish"
       canSpeak
       canReplay={canReplay}
@@ -31,26 +31,22 @@ function list(canReplay: boolean) {
   );
 }
 
-/** Everything the live region holds that a screen reader could announce, as text. */
-function liveRegionText(container: HTMLElement): string {
-  return container.querySelector('[aria-live="polite"]')?.textContent ?? "";
-}
+describe("TranscriptList", () => {
+  it("isn't a live region, so a streaming reply isn't read chunk by chunk over the tutor's voice", () => {
+    const { container } = render(list(true, { ...ENTRY, replyText: "¡Hola! ¿Qu", status: "pending" }));
 
-describe("TranscriptList live region", () => {
-  it("doesn't change any text when replay is switched off, so the reader says nothing into the open microphone", () => {
-    const { container, rerender } = render(list(true));
-    expect(container.querySelector('[aria-live="polite"]')).not.toBeNull();
-    const before = liveRegionText(container);
+    expect(container.querySelector("[aria-live]")).toBeNull();
+    expect(screen.getByText("¡Hola! ¿Qu")).toBeInTheDocument();
+  });
 
-    rerender(list(false));
+  it("explains why Replay is switched off while the microphone is open, and drops that once it closes", () => {
+    const { rerender } = render(list(false));
 
-    expect(liveRegionText(container)).toBe(before);
     expect(screen.getByRole("button", { name: PRACTICE_COPY.replay })).toBeDisabled();
     expect(screen.getByRole("button", { name: PRACTICE_COPY.replay })).toHaveAccessibleDescription(PRACTICE_COPY.replayUnavailableHint);
 
     rerender(list(true));
 
-    expect(liveRegionText(container)).toBe(before);
     expect(screen.getByRole("button", { name: PRACTICE_COPY.replay })).toHaveAccessibleDescription(PRACTICE_COPY.replayHint);
     expect(screen.getByRole("button", { name: PRACTICE_COPY.replaySlow })).toHaveAccessibleDescription(PRACTICE_COPY.replaySlowHint);
   });

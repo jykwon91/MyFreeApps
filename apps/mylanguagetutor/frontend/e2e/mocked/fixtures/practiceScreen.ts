@@ -23,3 +23,11 @@ export async function sendTyped(page: Page, text: string, label = TYPING_ONLY_LA
 export function goal(page: Page, text: string): Locator {
   return page.getByRole("list", { name: GOALS_LABEL }).getByRole("listitem").filter({ hasText: text });
 }
+
+/**
+ * Text the conversation shows, leaving out the screen reader's copy of the finished reply in the
+ * practice screen's live region, which holds the same words.
+ */
+export function shownText(page: Page, text: string, exact = true): Locator {
+  return page.getByText(text, { exact }).and(page.locator(':not([data-testid="practice-announcer"])'));
+}

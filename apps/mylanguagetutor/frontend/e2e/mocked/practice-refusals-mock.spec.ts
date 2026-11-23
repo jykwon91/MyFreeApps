@@ -40,7 +40,7 @@ import {
 } from "./constants/turnErrorCopy";
 import { GREETINGS } from "./fixtures/catalogFixtures";
 import { sessionIdAt } from "./fixtures/fixtureIds";
-import { goal, openPractice, sendTyped } from "./fixtures/practiceScreen";
+import { goal, openPractice, sendTyped, shownText } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { completeTurn, cutAfterCorrections, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn, unansweredTurn } from "./fixtures/turnEvents";
 import { PLENTY_LEFT, SESSION_FULL, TUTOR_OFF, correctionOf } from "./fixtures/tutorFixtures";
@@ -61,7 +61,7 @@ test("a session that couldn't start says so, and Try again starts it and sends t
   api.stopFailing(CREATE_SESSION);
   await page.getByRole("button", { name: "Try again" }).click();
 
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(api.writes.filter((write) => write.path === "/sessions")).toHaveLength(2);
   expect(api.turnRequests.map((turn) => [turn.sessionId, turn.body])).toEqual([[sessionIdAt(1), { text: LEARNER_GREETING }]]);
@@ -75,12 +75,12 @@ test("a tutor that fails mid-reply keeps what arrived, marks it cut off, and Try
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(PARTIAL_REPLY, { exact: false })).toBeVisible();
+  await expect(shownText(page, PARTIAL_REPLY, false)).toBeVisible();
   await expect(page.getByText(REPLY_CUT_OFF)).toBeVisible();
   await expect(page.getByRole("alert")).toContainText(TUTOR_BUSY_COPY);
 
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByText(REPLY_CUT_OFF)).toHaveCount(0);
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
@@ -97,7 +97,7 @@ test("a tutor that fails before any reply shows no reply, and Try again sends th
   await expect(page.getByRole("button", { name: "Replay", exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests.map((turn) => [turn.sessionId, turn.body])).toEqual([
     [sessionIdAt(1), { text: LEARNER_GREETING }],
@@ -118,7 +118,7 @@ test("a turn the server never answers says the connection dropped, and Try again
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
 
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
@@ -144,7 +144,7 @@ test("a stream cut after the whole reply keeps the reply, notes the missing sugg
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByText(CORRECTIONS_MISSING)).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
@@ -164,7 +164,7 @@ test("a goal met in a turn whose stream was cut after the reply is ticked once t
   await expect(goal(page, GREETINGS.goals[0])).not.toContainText(GOAL_MET);
 
   await sendTyped(page, LEARNER_FOLLOW_UP);
-  await expect(page.getByText(TUTOR_NAME_REPLY, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_NAME_REPLY)).toBeVisible();
   await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
   await expect(goal(page, GREETINGS.goals[1])).toContainText(GOAL_MET);
   await expect(goal(page, GREETINGS.goals[2])).not.toContainText(GOAL_MET);
@@ -180,7 +180,7 @@ test("a stream cut after the suggestions arrived shows them, with no missing-sug
   await openPractice(page, GREETINGS.title);
   await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByRole("list", { name: SUGGESTIONS_LABEL })).toContainText(RECAST_LINE);
   await expect(goal(page, GREETINGS.goals[0])).toContainText(GOAL_MET);
   await expect(page.getByText(CORRECTIONS_MISSING)).toHaveCount(0);
@@ -239,7 +239,7 @@ test("a conversation that used its last turn says so before the learner speaks a
 
   await expect(page.getByText(SESSION_LIMIT_COPY)).toBeVisible();
   // The finished turn stays, and nothing is left to answer with.
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(api.turnRequests).toHaveLength(1);
@@ -291,7 +291,7 @@ test("a 503 tutor_unavailable on a turn blocks the conversation, keeps the answe
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await page.getByRole("button", { name: "Try again" }).click();
 
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     await expect(page.getByText(UNAVAILABLE_COPY)).toHaveCount(0);
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
     expect(api.turnRequests.map((turn) => turn.body)).toEqual([{ text: LEARNER_GREETING }, { text: LEARNER_GREETING }]);
@@ -314,7 +314,7 @@ for (const [detail, copy] of [
     await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Try again" }).click();
 
-    await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+    await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
     expect(api.turnRequests.map((turn) => [turn.sessionId, turn.body])).toEqual([
       [sessionIdAt(1), { text: LEARNER_GREETING }],
       [sessionIdAt(1), { text: LEARNER_GREETING }],
@@ -331,7 +331,7 @@ test("a session deleted elsewhere (404) says so, and Try again starts a new sess
   await expect(page.getByRole("alert")).toContainText(SESSION_NOT_FOUND_COPY);
   await page.getByRole("button", { name: "Try again" }).click();
 
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   expect(api.writes.filter((write) => write.path === "/sessions")).toHaveLength(2);
   expect(api.turnRequests.map((turn) => turn.sessionId)).toEqual([sessionIdAt(1), sessionIdAt(2)]);
 });

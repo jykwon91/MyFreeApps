@@ -2,11 +2,12 @@
  * Replaces the browser's Web Speech API before the app loads, so specs run the
  * same on every machine. Text-to-speech records each sentence (text, locale,
  * rate) and finishes at once instead of playing audio. Recognition is either
- * absent (Firefox: typed practice only) or a recogniser that is never fed
- * audio -- these specs have no microphone -- which counts how often the app
- * starts it.
+ * absent (Firefox: typed practice only) or a recogniser that hears nothing
+ * unless a spec hands it words (`hearSpeech`) -- these specs have no
+ * microphone -- and counts how often the app starts it.
  */
 import type { Page } from "@playwright/test";
+import type { FakeRecognizer } from "../types/FakeRecognizer";
 import type { SpeechFakeOptions } from "../types/SpeechFakeOptions";
 import type { SpeechFakeWindow } from "../types/SpeechFakeWindow";
 import type { SpokenUtterance } from "../types/SpokenUtterance";
@@ -16,6 +17,7 @@ export async function installSpeechFakes(page: Page, { recognition }: SpeechFake
     const fakeWindow = window as unknown as SpeechFakeWindow & Record<string, unknown>;
     fakeWindow.__spoken = [];
     fakeWindow.__recognitionStarts = 0;
+    fakeWindow.__recognizer = null;
 
     class FakeUtterance {
       text: string;
@@ -52,12 +54,13 @@ export async function installSpeechFakes(page: Page, { recognition }: SpeechFake
       continuous = false;
       interimResults = false;
       maxAlternatives = 1;
-      onresult = null;
+      onresult: FakeRecognizer["onresult"] = null;
       onerror = null;
       onend: (() => void) | null = null;
       onstart = null;
       start() {
         fakeWindow.__recognitionStarts += 1;
+        fakeWindow.__recognizer = this;
       }
       stop() {
         this.onend?.();
@@ -80,4 +83,15 @@ export function spokenUtterances(page: Page): Promise<SpokenUtterance[]> {
 /** How often the app started speech recognition. */
 export function recognitionStarts(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as SpeechFakeWindow).__recognitionStarts);
+}
+
+/** Has the recogniser the app started hear `text`: still being said, or the final result. */
+export async function hearSpeech(page: Page, text: string, isFinal: boolean): Promise<void> {
+  await page.evaluate(
+    ([heard, final]) => {
+      const result = Object.assign([{ transcript: heard }], { isFinal: final });
+      (window as unknown as SpeechFakeWindow).__recognizer?.onresult?.({ results: [result] });
+    },
+    [text, isFinal] as const,
+  );
 }

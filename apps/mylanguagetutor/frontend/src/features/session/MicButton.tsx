@@ -36,7 +36,7 @@ export default function MicButton({ phase, disabled, onStart, onStop }: MicButto
       >
         {listening ? <Square className="h-6 w-6" aria-hidden="true" /> : <Mic className="h-7 w-7" aria-hidden="true" />}
       </button>
-      <span className="text-xs text-muted-foreground" aria-live="polite">
+      <span className="text-xs text-muted-foreground" aria-hidden="true">
         {label}
       </span>
     </div>

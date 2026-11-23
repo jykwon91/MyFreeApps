@@ -14,11 +14,14 @@ import SessionBlockNotice from "@/features/session/SessionBlockNotice";
 import TurnErrorAlert from "@/features/session/TurnErrorAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
+import PracticeAnnouncer from "@/features/session/PracticeAnnouncer";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
+import { latestReply } from "@mylanguagetutor/api-client/utils/latestReply";
+import { phaseAnnouncement } from "@mylanguagetutor/api-client/utils/phaseAnnouncement";
 import type { PracticeSessionProps } from "@/types/session/practice-session-props";
 
 /**
@@ -55,6 +58,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     },
   });
   const busy = session.requestPhase !== "idle";
+  const announcement = phaseAnnouncement(voice.phase, voice.view) ?? latestReply(session.entries);
 
   const replay = (text: string, slow: boolean) => {
     synthesis.speakAll(text, replayRate(slow));
@@ -67,6 +71,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
 
   return (
     <div className="flex min-h-[60vh] flex-col gap-4">
+      <PracticeAnnouncer message={announcement} />
       <header className="space-y-2">
         <h1 className="text-xl font-semibold">{scenario.title}</h1>
         <p className="text-sm text-muted-foreground">{scenario.goal}</p>

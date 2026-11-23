@@ -15,7 +15,7 @@ import { sessionIdAt } from "./fixtures/fixtureIds";
 import { LEARNER_GREETING, TUTOR_GREETING } from "./constants/practiceText";
 import { TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { GREETINGS } from "./fixtures/catalogFixtures";
-import { openPractice, sendTyped } from "./fixtures/practiceScreen";
+import { openPractice, sendTyped, shownText } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { completeTurn, refusedTurn } from "./fixtures/turnEvents";
 import { CAP_REACHED } from "./fixtures/tutorFixtures";
@@ -57,7 +57,7 @@ test("the daily-cap block lifts when the learner comes back after the reset and 
   await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   await expect(page.getByText(LEARNER_GREETING, { exact: true })).toHaveCount(1);
   expect(api.turnRequests).toHaveLength(2);
   expect(api.turnRequests[1].body).toEqual({ text: LEARNER_GREETING });
@@ -83,7 +83,7 @@ test("the daily-cap block lifts by itself when the reset passes with the page le
   await expect(page.getByText(DAILY_LIMIT_COPY, { exact: true })).toHaveCount(0);
   await expect(page.getByLabel(TYPING_ONLY_LABEL)).toBeEnabled();
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(TUTOR_GREETING, { exact: true })).toBeVisible();
+  await expect(shownText(page, TUTOR_GREETING)).toBeVisible();
   expect(api.turnRequests).toHaveLength(2);
 });
 
