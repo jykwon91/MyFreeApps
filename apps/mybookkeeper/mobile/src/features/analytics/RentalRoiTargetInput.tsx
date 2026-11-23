@@ -3,10 +3,10 @@ import {
   RENTAL_ROI_TARGET_DEBOUNCE_MS,
 } from "@mybookkeeper/api-client/constants/rentalRoi";
 import { parseTargetReturnPct } from "@mybookkeeper/api-client/utils/rentalRoi";
-import { FIELD_PRESETS, LoadingRegion, useTheme } from "@platform/mobile";
+import { FIELD_PRESETS, FieldLabel, LoadingRegion, useTheme } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Text, TextInput, View } from "react-native";
-import { RENTAL_ROI_MESSAGES as MESSAGES } from "../../constants/rentalRoi";
+import { ActivityIndicator, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { RENTAL_ROI_MESSAGES as MESSAGES, RENTAL_ROI_TARGET_INPUT_MIN_WIDTH } from "../../constants/rentalRoi";
 
 export interface RentalRoiTargetInputProps {
   value: number;
@@ -20,6 +20,7 @@ export interface RentalRoiTargetInputProps {
  */
 export default function RentalRoiTargetInput({ value, onChange, isUpdating }: RentalRoiTargetInputProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const { fontScale } = useWindowDimensions();
   const [draft, setDraft] = useState(String(value));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,12 +51,7 @@ export default function RentalRoiTargetInput({ value, onChange, isUpdating }: Re
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm }}>
-        <Text
-          accessibilityRole="text"
-          style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}
-        >
-          {MESSAGES.targetLabel}
-        </Text>
+        <FieldLabel label={MESSAGES.targetLabel} size="sm" />
         <TextInput
           {...FIELD_PRESETS.decimal}
           accessibilityLabel={MESSAGES.targetLabel}
@@ -75,7 +71,7 @@ export default function RentalRoiTargetInput({ value, onChange, isUpdating }: Re
             fontSize: fontSize.sm,
             minHeight: 44,
             paddingHorizontal: spacing.sm,
-            width: 72,
+            minWidth: RENTAL_ROI_TARGET_INPUT_MIN_WIDTH * fontScale,
           }}
           testID="rental-roi-target-input"
           value={draft}
