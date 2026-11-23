@@ -1,8 +1,8 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_upload_or_reject
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.listings.channel_listing_create_request import (
@@ -134,7 +134,10 @@ async def upload_photos(
     payloads: list[tuple[bytes, str | None, str | None]] = []
     for f in files:
         content = await read_upload_or_reject(
-            f, image_processor.MAX_IMAGE_BYTES, detail=image_processor.image_too_large_reason(),
+            f,
+            image_processor.MAX_IMAGE_BYTES,
+            status_code=413,
+            detail=image_processor.image_too_large_reason(),
         )
         payloads.append((content, f.filename, f.content_type))
     try:

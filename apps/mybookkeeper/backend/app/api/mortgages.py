@@ -16,12 +16,14 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_document_upload
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import mortgage_statement_extract_limiter
 from app.core.upload_errors import upload_error_status
+from app.core.upload_size_messages import document_too_large_message
 from app.schemas.mortgage.mortgage_create_request import MortgageCreateRequest
 from app.schemas.mortgage.mortgage_draft import MortgageDraft
 from app.schemas.mortgage.mortgage_extract_request import MortgageExtractRequest
@@ -107,7 +109,9 @@ async def extract_mortgage_from_upload(
     invented from the payment printed on it.
     """
     mortgage_statement_extract_limiter.check(f"mortgage-extract:{ctx.user_id}")
-    content = await read_document_upload(file)
+    content = await read_upload_or_reject(
+        file, settings.max_upload_size_bytes, status_code=413, detail=document_too_large_message(),
+    )
     try:
         return await mortgage_statement_extraction_service.extract_mortgage_from_upload(
             ctx=ctx,

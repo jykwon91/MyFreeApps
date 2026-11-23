@@ -7,14 +7,16 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_document_upload
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.document_constants import DOCUMENT_BEING_READ_DETAIL
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import document_re_extract_limiter
 from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.core.upload_errors import upload_error_status
+from app.core.upload_size_messages import document_too_large_message
 from app.models.responses.upload_response import (
     AcceptUploadResponse,
     BatchStatusResponse,
@@ -98,7 +100,9 @@ async def upload_document(
     property_id: Optional[uuid.UUID] = None,
     ctx: RequestContext = Depends(require_write_access),
 ) -> AcceptUploadResponse:
-    content = await read_document_upload(file)
+    content = await read_upload_or_reject(
+        file, settings.max_upload_size_bytes, status_code=413, detail=document_too_large_message(),
+    )
     try:
         result = await document_upload_service.accept_upload(
             ctx, content, file.filename or "", file.content_type or "", property_id,
@@ -173,7 +177,9 @@ async def replace_file(
     ctx: RequestContext = Depends(require_write_access),
 ) -> ReplaceFileResponse:
     # A too-large replacement has always been a 422 here, unlike upload's 413.
-    content = await read_document_upload(file, status_code=422)
+    content = await read_upload_or_reject(
+        file, settings.max_upload_size_bytes, status_code=422, detail=document_too_large_message(),
+    )
     try:
         await document_service.replace_file(
             ctx, document_id, content, file.filename or "", file.content_type or "",

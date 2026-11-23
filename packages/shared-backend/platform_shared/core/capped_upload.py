@@ -1,7 +1,7 @@
 """Read an uploaded file without holding more than its size limit in memory."""
 from __future__ import annotations
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 from platform_shared.core.capped_upload_constants import UPLOAD_READ_CHUNK_BYTES
 from platform_shared.core.upload_too_large_error import UploadTooLargeError
@@ -30,3 +30,22 @@ async def read_upload_capped(upload: UploadFile, max_bytes: int) -> bytes:
             raise UploadTooLargeError(max_bytes)
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+async def read_upload_or_reject(
+    upload: UploadFile,
+    max_bytes: int,
+    *,
+    status_code: int,
+    detail: str,
+) -> bytes:
+    """Read the upload like :func:`read_upload_capped`, but answer HTTP for an oversized file.
+
+    For routes: an upload past ``max_bytes`` raises ``HTTPException`` with
+    ``status_code`` and ``detail``, so each endpoint keeps the exact status and
+    message it answers for a file that is too large.
+    """
+    try:
+        return await read_upload_capped(upload, max_bytes)
+    except UploadTooLargeError as exc:
+        raise HTTPException(status_code=status_code, detail=detail) from exc

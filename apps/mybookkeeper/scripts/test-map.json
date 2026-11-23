@@ -1650,7 +1650,8 @@
         "backend/app/core/commit_outcome_constants.py",
         "backend/app/core/lease_render_constants.py",
         "backend/app/repositories/lock_timeout_repo.py",
-        "backend/app/api/lease_render_error_mapping.py"
+        "backend/app/api/lease_render_error_mapping.py",
+        "backend/app/api/signed_lease_import_files.py"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -2414,7 +2415,6 @@
         "backend/app/core/tags.py",
         "backend/app/core/tax_form_fields.py",
         "backend/app/core/vendors.py",
-        "backend/app/core/capped_upload_read.py",
         "backend/app/core/upload_size_messages.py",
         "backend/tests/upload_cap_case.py",
         "backend/tests/upload_cap_cases.py"

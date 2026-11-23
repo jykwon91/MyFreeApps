@@ -9,12 +9,14 @@ import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_attachment_upload, read_document_upload
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import insurance_policy_extract_limiter
 from app.core.upload_errors import upload_error_status
+from app.core.upload_size_messages import attachment_too_large_message, document_too_large_message
 from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
@@ -113,7 +115,9 @@ async def extract_policy_from_upload(
     the literal path is not swallowed by the UUID route.
     """
     insurance_policy_extract_limiter.check(f"insurance-policy-extract:{ctx.user_id}")
-    content = await read_document_upload(file)
+    content = await read_upload_or_reject(
+        file, settings.max_upload_size_bytes, status_code=413, detail=document_too_large_message(),
+    )
     try:
         return await insurance_policy_extraction_service.extract_policy_from_upload(
             ctx=ctx,
@@ -246,7 +250,12 @@ async def upload_attachment(
     file: UploadFile = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> InsurancePolicyAttachmentResponse:
-    content = await read_attachment_upload(file)
+    content = await read_upload_or_reject(
+        file,
+        settings.max_blackout_attachment_size_bytes,
+        status_code=413,
+        detail=attachment_too_large_message(),
+    )
     try:
         return await insurance_policy_service.upload_attachment(
             user_id=ctx.user_id,

@@ -22,8 +22,8 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_upload_or_reject
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
@@ -75,6 +75,7 @@ async def _read_upload_files(files: list[UploadFile]) -> list[TemplateUploadFile
         content = await read_upload_or_reject(
             f,
             settings.max_lease_template_file_size_bytes,
+            status_code=413,
             detail=lease_template_upload_service.file_too_large_message(filename),
         )
         payload.append((filename, content, f.content_type))

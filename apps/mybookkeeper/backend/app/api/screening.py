@@ -22,8 +22,8 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_upload_or_reject
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.applicants.screening_eligibility_response import (
@@ -149,7 +149,7 @@ async def upload_screening_result(
     """
     cap = report_processor.max_report_bytes()
     content = await read_upload_or_reject(
-        file, cap, detail=report_processor.report_too_large_reason(cap),
+        file, cap, status_code=413, detail=report_processor.report_too_large_reason(cap),
     )
 
     try:

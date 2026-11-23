@@ -4,9 +4,9 @@ from __future__ import annotations
 import io
 
 import pytest
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
-from platform_shared.core.capped_upload import read_upload_capped
+from platform_shared.core.capped_upload import read_upload_capped, read_upload_or_reject
 from platform_shared.core.capped_upload_constants import UPLOAD_READ_CHUNK_BYTES
 from platform_shared.core.upload_too_large_error import UploadTooLargeError
 
@@ -57,3 +57,24 @@ async def test_one_byte_over_cap_raises() -> None:
     upload, _ = _upload(b"x" * 11)
     with pytest.raises(UploadTooLargeError):
         await read_upload_capped(upload, max_bytes=10)
+
+
+@pytest.mark.asyncio
+async def test_reject_returns_whole_file_under_cap() -> None:
+    data = b"y" * (UPLOAD_READ_CHUNK_BYTES * 2 + 3)
+    upload, _ = _upload(data)
+    content = await read_upload_or_reject(upload, len(data), status_code=413, detail="too big")
+    assert content == data
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("status_code", "detail"), [(413, "File exceeds 1MB limit"), (422, "nope")])
+async def test_reject_raises_the_callers_status_and_detail(status_code: int, detail: str) -> None:
+    cap = UPLOAD_READ_CHUNK_BYTES
+    upload, raw = _upload(b"x" * (cap * 20))
+    with pytest.raises(HTTPException) as info:
+        await read_upload_or_reject(upload, cap, status_code=status_code, detail=detail)
+    assert info.value.status_code == status_code
+    assert info.value.detail == detail
+    assert isinstance(info.value.__cause__, UploadTooLargeError)
+    assert raw.bytes_read <= cap + UPLOAD_READ_CHUNK_BYTES

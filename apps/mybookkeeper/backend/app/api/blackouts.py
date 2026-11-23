@@ -13,10 +13,12 @@ All endpoints require org-member auth and are tenant-scoped:
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from platform_shared.core.capped_upload import read_upload_or_reject
 
-from app.core.capped_upload_read import read_attachment_upload
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.upload_size_messages import attachment_too_large_message
 from app.schemas.listings.blackout_response import BlackoutResponse
 from app.schemas.listings.blackout_update_request import BlackoutUpdateRequest
 from app.schemas.listings.listing_blackout_attachment_response import (
@@ -66,7 +68,12 @@ async def upload_attachment(
     - JPEG/PNG/WebP images have metadata stripped before storage; one that
       can't be re-encoded is rejected (415), never stored as-is.
     """
-    content = await read_attachment_upload(file)
+    content = await read_upload_or_reject(
+        file,
+        settings.max_blackout_attachment_size_bytes,
+        status_code=413,
+        detail=attachment_too_large_message(),
+    )
     try:
         return await blackout_service.upload_attachment(
             organization_id=ctx.organization_id,
