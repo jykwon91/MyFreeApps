@@ -15,7 +15,7 @@ export interface RentReminderCardProps {
 
 /**
  * Rent reminders for one tenant: a heads-up before rent is due, by email
- * and/or a text from the host's own phone.
+ * and/or a text from the host's Twilio number.
  *
  * Reminders only — nothing here knows whether rent was paid. The amount quoted
  * comes from the rent schedule above (split across pay days for a weekly
@@ -52,8 +52,8 @@ export default function RentReminderCard({ applicantId }: RentReminderCardProps)
     return (
       <div className="space-y-3" data-testid="rent-reminder-empty">
         <p className="text-sm text-muted-foreground">
-          Send this tenant a friendly heads-up before rent is due — by email, or
-          by text from your own phone.
+          Send this tenant a friendly heads-up before rent is due — by email or
+          by text.
         </p>
         {canWrite ? (
           <Button

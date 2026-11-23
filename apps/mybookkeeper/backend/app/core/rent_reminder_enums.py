@@ -24,13 +24,13 @@ RENT_REMINDER_CHANNELS: tuple[RentReminderChannel, ...] = get_args(RentReminderC
 #   queued         claimed by a tick (or "send now"), not yet handed off. A row
 #                  that never leaves this state means the process died mid-send;
 #                  the watchdog fails it rather than risk a duplicate.
-#   sent           email accepted by SMTP / sms confirmed sent by the phone
-#   sent_to_phone  sms accepted by httpSMS, waiting for the phone to report
-#   delivered      sms delivery report received from the carrier
-#   failed         gave up — ``error_code`` says why
+#   sent              email accepted by SMTP / sms handed to the carrier by Twilio
+#   sent_to_provider  sms accepted by Twilio, waiting for its status callback
+#   delivered         sms delivery report received from the carrier
+#   failed            gave up — ``error_code`` says why
 RENT_REMINDER_SEND_STATUSES: tuple[str, ...] = (
     "queued",
-    "sent_to_phone",
+    "sent_to_provider",
     "sent",
     "delivered",
     "failed",
@@ -39,7 +39,7 @@ RENT_REMINDER_SEND_STATUSES: tuple[str, ...] = (
 RENT_REMINDER_EMAIL_STATUSES: tuple[str, ...] = ("queued", "sent", "failed")
 
 # Statuses the watchdog still owes an outcome for.
-RENT_REMINDER_PENDING_STATUSES: tuple[str, ...] = ("queued", "sent_to_phone")
+RENT_REMINDER_PENDING_STATUSES: tuple[str, ...] = ("queued", "sent_to_provider")
 
 
 RENT_REMINDER_FREQUENCIES_SQL = sql_in_list(RENT_REMINDER_FREQUENCIES)

@@ -68,8 +68,8 @@ export function sendReadiness(overview: RentReminderOverview, plan: RentReminder
   };
 }
 
-/** A send that didn't fail: a text the phone hasn't reported on yet is still
- *  with the phone, so only the rest are said to have gone out. */
+/** A send that didn't fail: a text Twilio hasn't reported on yet is still
+ *  with Twilio, so only the rest are said to have gone out. */
 function wentOrHandedOff(row: RentReminderSend): string {
   if (isTextHandedOff(row)) return REMINDER_MESSAGES.textHandedOff;
   return channelWent(rentReminderChannelWord(row.channel));

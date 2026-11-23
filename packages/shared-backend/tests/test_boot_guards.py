@@ -266,42 +266,6 @@ class TestCheckEmailConfigured:
         assert issubclass(EmailNotConfiguredError, RuntimeError)
 
 
-class TestCheckSmsConfiguredHttpSms:
-    def test_production_with_full_httpsms_config_passes(self) -> None:
-        check_sms_configured(
-            sms_backend="httpsms",
-            twilio_account_sid="",
-            twilio_auth_token="",
-            twilio_from_number="",
-            environment="production",
-            httpsms_api_key="k",
-            httpsms_from_number="+15551234567",
-            httpsms_webhook_signing_key="s",
-        )
-
-    def test_production_with_httpsms_and_no_signing_key_raises(self) -> None:
-        with pytest.raises(SmsNotConfiguredError) as exc:
-            check_sms_configured(
-                sms_backend="httpsms",
-                twilio_account_sid="",
-                twilio_auth_token="",
-                twilio_from_number="",
-                environment="production",
-                httpsms_api_key="k",
-                httpsms_from_number="+15551234567",
-            )
-        assert "HTTPSMS_WEBHOOK_SIGNING_KEY" in str(exc.value)
-
-    def test_dev_with_httpsms_and_empty_creds_passes(self) -> None:
-        check_sms_configured(
-            sms_backend="httpsms",
-            twilio_account_sid="",
-            twilio_auth_token="",
-            twilio_from_number="",
-            environment="development",
-        )
-
-
 class TestCheckSmsConfigured:
     def test_dev_with_console_passes(self) -> None:
         check_sms_configured(
@@ -391,6 +355,51 @@ class TestCheckSmsConfigured:
             twilio_from_number="+15551234567",
             environment="production",
         )
+
+    def test_production_with_an_unknown_backend_raises(self) -> None:
+        """A backend left over from a removed provider must not boot as "texts off"."""
+        with pytest.raises(SmsNotConfiguredError) as exc:
+            check_sms_configured(
+                sms_backend="httpsms",
+                twilio_account_sid="",
+                twilio_auth_token="",
+                twilio_from_number="",
+                environment="production",
+                console_allowed=True,
+            )
+        assert "'httpsms'" in str(exc.value)
+        assert "SMS_BACKEND=console" in str(exc.value)
+
+    def test_dev_with_an_unknown_backend_passes(self) -> None:
+        check_sms_configured(
+            sms_backend="httpsms",
+            twilio_account_sid="",
+            twilio_auth_token="",
+            twilio_from_number="",
+            environment="development",
+        )
+
+    def test_production_with_console_passes_when_texts_are_optional(self) -> None:
+        check_sms_configured(
+            sms_backend="console",
+            twilio_account_sid="",
+            twilio_auth_token="",
+            twilio_from_number="",
+            environment="production",
+            console_allowed=True,
+        )
+
+    def test_optional_texts_still_need_every_twilio_credential(self) -> None:
+        with pytest.raises(SmsNotConfiguredError) as exc:
+            check_sms_configured(
+                sms_backend="twilio",
+                twilio_account_sid="AC1",
+                twilio_auth_token="",
+                twilio_from_number="+15551234567",
+                environment="production",
+                console_allowed=True,
+            )
+        assert "TWILIO_AUTH_TOKEN" in str(exc.value)
 
     def test_inherits_from_runtime_error(self) -> None:
         assert issubclass(SmsNotConfiguredError, RuntimeError)
@@ -570,7 +579,7 @@ _SMS_UNSET = {"twilio_account_sid": "", "twilio_auth_token": "", "twilio_from_nu
         (SentryNotConfiguredError, lambda: init_sentry(dsn="", environment="production")),
     ],
     ids=[
-        "turnstile", "sms_console", "sms_twilio", "sms_httpsms", "kofi",
+        "turnstile", "sms_console", "sms_twilio", "sms_unknown_backend", "kofi",
         "transparency_sync", "extraction", "sentry",
     ],
 )

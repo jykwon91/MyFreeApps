@@ -21,35 +21,30 @@ SEND_WINDOW_END = _dt.time(20, 0)
 # How often the scheduler checks for due reminders.
 REMINDER_TICK_MINUTES = 60
 
-# A text not confirmed by the phone within this long of being handed off is
-# marked failed and the operator is told — the phone is off, offline, or the
-# httpSMS app has been battery-optimized to sleep.
+# A text Twilio hasn't confirmed within this long of accepting it is marked
+# failed and the operator is told. Twilio normally reports ``sent`` within
+# seconds, so an hour of silence means its status callbacks aren't reaching
+# us (or Twilio is stuck); the text may still have gone out.
 SMS_CONFIRMATION_TIMEOUT_MINUTES = 60
 
 # How far ahead the next due date is searched for. A schedule that starts more
 # than a year out simply has no "next reminder" yet.
 NEXT_DUE_SEARCH_DAYS = 400
 
-ERROR_NO_PHONE_CONFIRMATION = "no_phone_confirmation"
+ERROR_NO_SMS_CONFIRMATION = "no_sms_confirmation"
 ERROR_SEND_INTERRUPTED = "send_interrupted"
 ERROR_NO_RECIPIENT = "no_recipient"
 ERROR_INVALID_PHONE = "invalid_phone"
 ERROR_SMS_NOT_CONFIGURED = "sms_not_configured"
-ERROR_SMS_EXPIRED = "expired"
-# A text httpSMS answered with an error is stored as ``sms_<provider code>``
-# (e.g. ``sms_http_422``), and the phone's own error as
-# ``phone_failed: <its words>``. A few ``sms_`` codes have a fixed spelling
-# below, with words of their own.
-SMS_RELAY_CODE_PREFIX = "sms_"
-PHONE_FAILED_CODE_PREFIX = "phone_failed: "
-# The server couldn't reach httpSMS at all, so the text was not sent.
-ERROR_SMS_NETWORK = f"{SMS_RELAY_CODE_PREFIX}{SMS_PROVIDER_CODE_NETWORK_ERROR}"
-# httpSMS answered 401: it didn't accept the server's API key, so every text
-# fails the same way until the key on the server is fixed.
-ERROR_SMS_KEY_REJECTED = f"{SMS_RELAY_CODE_PREFIX}http_401"
-# httpSMS may have taken the text but never confirmed it (a timeout or broken
-# connection after the request went out, a 5xx, an unreadable reply). It may
-# already be on its way, so it is never retried automatically.
+# A text Twilio refused when it was sent is stored as ``sms_<code>``
+# (``sms_21211``). A few ``sms_`` codes have a fixed spelling below, with words
+# of their own.
+SMS_REFUSED_CODE_PREFIX = "sms_"
+# The server couldn't reach Twilio at all, so the text was not sent.
+ERROR_SMS_NETWORK = f"{SMS_REFUSED_CODE_PREFIX}{SMS_PROVIDER_CODE_NETWORK_ERROR}"
+# Twilio may have taken the text but never confirmed it (a timeout or broken
+# connection after the request went out, a 5xx). It may already be on its
+# way, so it is never retried automatically.
 ERROR_SMS_OUTCOME_UNKNOWN = "sms_outcome_unknown"
 ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 ERROR_EMAIL_SEND_FAILED = "email_send_failed"
@@ -59,17 +54,16 @@ ERROR_EMAIL_SEND_FAILED = "email_send_failed"
 ERROR_EMAIL_OUTCOME_UNKNOWN = "email_outcome_unknown"
 ERROR_UNEXPECTED = "unexpected_error"
 # Codes with a fixed spelling, each of which the apps describe in words
-# (api-client ``rentReminderError.ts``). The others carry one of the two
-# prefixes above.
+# (api-client ``rentReminderError.ts``). The others are prefixed: ``sms_<code>``
+# when Twilio refused the send (``sms_21211``), and ``sms_failed: <code>`` when
+# Twilio reported afterwards that it couldn't deliver it (``sms_failed: 30007``).
 REMINDER_ERROR_CODES: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_NO_SMS_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     ERROR_NO_RECIPIENT,
     ERROR_INVALID_PHONE,
     ERROR_SMS_NOT_CONFIGURED,
-    ERROR_SMS_EXPIRED,
     ERROR_SMS_NETWORK,
-    ERROR_SMS_KEY_REJECTED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_NOT_CONFIGURED,
     ERROR_EMAIL_SEND_FAILED,
@@ -80,7 +74,7 @@ REMINDER_ERROR_CODES: frozenset[str] = frozenset({
 # are never retried automatically, the operator is told to check first, and
 # Send now asks them to confirm (api-client ``rentReminderErrorCodes.ts``).
 MAY_STILL_ARRIVE_ERRORS: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_NO_SMS_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_OUTCOME_UNKNOWN,
@@ -94,9 +88,23 @@ REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE = (
     "Check first, then confirm to send it again."
 )
 MAX_ERROR_CODE_LENGTH = 120
+# Room for a Twilio Message SID (34 characters today).
+MAX_PROVIDER_MESSAGE_ID_LENGTH = 64
 
-# Webhook route as mounted behind the frontend origin. The httpSMS JWT's
-# audience is the exact URL the operator registered, so it is rebuilt from
-# ``settings.frontend_url`` + this path rather than from the request (which,
-# behind two reverse proxies, arrives as plain http on an internal host).
+# Prefix of the code for a text Twilio reported it couldn't deliver, followed
+# by Twilio's ``ErrorCode`` (``sms_failed: 30007``), or ``unknown`` without one.
+SMS_FAILED_CODE_PREFIX = "sms_failed: "
+# Where the operator checks whether a text went out (Twilio console →
+# Monitor → Logs → Messaging), linked from the alert emails. The apps name the
+# page in words rather than linking it.
+TWILIO_MESSAGE_LOG_URL = "https://console.twilio.com/us1/monitor/logs/sms"
+SMS_FAILED_UNKNOWN_DETAIL = "unknown"
+
+# Status-callback route as mounted behind the frontend origin. Twilio signs the
+# exact URL it was given, so it is rebuilt from ``settings.frontend_url`` + this
+# path rather than from the request (which, behind two reverse proxies, arrives
+# as plain http on an internal host).
 SMS_WEBHOOK_PUBLIC_PATH = "/api/rent-reminders/sms/webhook"
+# The query parameter on each text's status-callback URL naming the send row
+# and try (``<send id>:<attempt>``, ``rent_reminder_request_id``).
+SMS_WEBHOOK_REQUEST_ID_PARAM = "request_id"

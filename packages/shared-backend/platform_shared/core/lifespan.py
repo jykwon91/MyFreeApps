@@ -117,9 +117,6 @@ class _SettingsProtocol(Protocol):
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_from_number: str
-    httpsms_api_key: str
-    httpsms_from_number: str
-    httpsms_webhook_signing_key: str
     transparency_primary: bool
     kofi_verification_token: str
 
@@ -142,6 +139,7 @@ def create_app_lifespan(
     turnstile_required: bool = True,
     email_required: bool = True,
     sms_required: bool = False,
+    sms_optional: bool = False,
     seed_admin: LifecycleHook | None = None,
     on_startup: LifecycleHook | None = None,
     on_shutdown: LifecycleHook | None = None,
@@ -189,8 +187,14 @@ def create_app_lifespan(
             login email). MBK / MJH leave this True.
         sms_required: When True, the lifespan also runs
             ``check_sms_configured()`` so the app fails loud in
-            production if Twilio credentials are missing. Apps that
-            never text users (MBK, MJH) leave this False.
+            production if Twilio credentials are missing or console mode
+            is set (mypizzatracker's ready-texts). Apps that never text
+            users leave this False.
+        sms_optional: For an app whose texts are a feature the
+            deployment may leave off (MBK's rent reminders): the guard
+            accepts ``SMS_BACKEND=console`` (texts off) but still fails
+            loud on an unknown backend or an incomplete Twilio setup.
+            Ignored when ``sms_required`` is True.
         seed_admin: Optional async or sync callable that seeds the
             platform-admin account for multi-user apps — build it with
             ``platform_shared.services.seed_admin_service.build_seed_admin_hook``.
@@ -236,16 +240,14 @@ def create_app_lifespan(
                 smtp_password=settings.smtp_password,
                 environment=settings.environment,
             )
-        if sms_required:
+        if sms_required or sms_optional:
             check_sms_configured(
                 sms_backend=settings.sms_backend,
                 twilio_account_sid=settings.twilio_account_sid,
                 twilio_auth_token=settings.twilio_auth_token,
                 twilio_from_number=settings.twilio_from_number,
                 environment=settings.environment,
-                httpsms_api_key=settings.httpsms_api_key,
-                httpsms_from_number=settings.httpsms_from_number,
-                httpsms_webhook_signing_key=settings.httpsms_webhook_signing_key,
+                console_allowed=not sms_required,
             )
         # Transparency writer guard — self-gating: a no-op unless this app is
         # the primary (the single Ko-fi webhook receiver) in a non-dev env.

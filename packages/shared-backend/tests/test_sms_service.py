@@ -107,6 +107,22 @@ class TestSendOrRaise:
         )
         assert sid == "SM-fake-sid-1234"
 
+    def test_passes_the_status_callback_to_twilio(self) -> None:
+        service = _configured_service()
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = MagicMock(sid="SM-1")
+        callback = "https://app.example/api/sms/webhook?request_id=abc%3A1"
+
+        with patch("twilio.rest.Client", return_value=mock_client):
+            service.send_or_raise("+15559876543", "Rent is due.", status_callback=callback)
+
+        mock_client.messages.create.assert_called_once_with(
+            to="+15559876543",
+            from_=service.from_number,
+            body="Rent is due.",
+            status_callback=callback,
+        )
+
     def test_raises_send_error_on_twilio_rejection(self) -> None:
         service = _configured_service()
         underlying = TwilioRestException(

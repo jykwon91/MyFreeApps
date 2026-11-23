@@ -63,6 +63,8 @@ dependencies = [
     "linkify-it-py>=2.1.0",
     "requests==2.34.2",
     "pillow-heif==1.8.1",
+    # Rent-reminder texts (platform_shared.services.sms_service + twilio_webhook).
+    "twilio==9.11.2",
 ]
 
 [tool.uv]

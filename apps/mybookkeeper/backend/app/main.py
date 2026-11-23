@@ -97,6 +97,9 @@ lifespan = create_app_lifespan(
     audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
+    # Rent-reminder texts are optional (console = texts off), but a Twilio
+    # setup must be complete or the deploy fails.
+    sms_optional=True,
     on_startup=_on_startup,
     on_shutdown=_on_shutdown,
 )

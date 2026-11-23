@@ -7,7 +7,7 @@ import { isTextHandedOff } from "../utils/isTextHandedOff";
 const STATUSES = Object.keys(RENT_REMINDER_STATUS_LABEL) as RentReminderSendStatus[];
 
 describe("isTextHandedOff", () => {
-  it("is true only while the phone has the text and hasn't reported on it", () => {
-    expect(STATUSES.filter((status) => isTextHandedOff({ status }))).toEqual(["sent_to_phone"]);
+  it("is true only while Twilio has the text and hasn't reported on it", () => {
+    expect(STATUSES.filter((status) => isTextHandedOff({ status }))).toEqual(["sent_to_provider"]);
   });
 });

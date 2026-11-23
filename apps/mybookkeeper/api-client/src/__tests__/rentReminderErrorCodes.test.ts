@@ -5,7 +5,7 @@ import { reminderMayStillArrive } from "../utils/reminderMayStillArrive";
 describe("reminderMayStillArrive", () => {
   it("is true only for a failure that may still have reached the tenant", () => {
     expect(reminderMayStillArrive("sms_outcome_unknown")).toBe(true);
-    expect(reminderMayStillArrive("no_phone_confirmation")).toBe(true);
+    expect(reminderMayStillArrive("no_sms_confirmation")).toBe(true);
     expect(reminderMayStillArrive("send_interrupted")).toBe(true);
     expect(reminderMayStillArrive("email_outcome_unknown")).toBe(true);
     expect(reminderMayStillArrive("sms_network_error")).toBe(false);

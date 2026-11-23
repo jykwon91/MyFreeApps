@@ -14,8 +14,8 @@ went out on the other one waits for the next due date instead of trailing
 behind on its own, and "send now" sends every enabled channel at once.
 
 **Delivery.** Email goes straight to the tenant with ``Reply-To`` set to the
-operator. SMS is handed to the operator's Android phone via httpSMS; the row
-sits at ``sent_to_phone`` until the phone confirms through the signed webhook
+operator. SMS goes out from the operator's Twilio number; the row sits at
+``sent_to_provider`` until Twilio confirms through its signed status callback
 (``rent_reminder_webhook_service``), or the watchdog
 (``rent_reminder_watchdog_service``) fails it.
 
@@ -51,7 +51,7 @@ from app.core.rent_reminder_constants import (
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
-    SMS_RELAY_CODE_PREFIX,
+    SMS_REFUSED_CODE_PREFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
@@ -121,7 +121,7 @@ def _now() -> _dt.datetime:
 
 
 async def _send(outbound: ReminderOutbound) -> str | None:
-    """Push one reminder out. Returns the httpSMS id for SMS, else ``None``."""
+    """Push one reminder out. Returns the Twilio Message SID for SMS, else ``None``."""
     if outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
         recipient = (outbound.tenant_email or "").strip()
         if not recipient:
@@ -154,7 +154,7 @@ def _failure_code(exc: Exception) -> str:
     if isinstance(exc, SmsSendError):
         if exc.outcome_unknown:
             return ERROR_SMS_OUTCOME_UNKNOWN
-        return f"{SMS_RELAY_CODE_PREFIX}{exc.provider_code or 'send_failed'}"
+        return f"{SMS_REFUSED_CODE_PREFIX}{exc.provider_code or exc.code or 'send_failed'}"
     if isinstance(exc, SmsNotConfiguredError):
         return ERROR_SMS_NOT_CONFIGURED
     if isinstance(exc, EmailNotConfiguredError):
@@ -191,8 +191,8 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
         row = await rent_reminder_send_repo.get(db, send_id=outbound.send_id)
         if row is None:  # pragma: no cover — the claim committed this row
             raise LookupError(str(outbound.send_id))
-        # Each write only applies to this try while it is still queued: the
-        # phone's webhook, the watchdog or a retry may have settled it first,
+        # Each write only applies to this try while it is still queued:
+        # Twilio's callback, the watchdog or a retry may have settled it first,
         # and their news is kept (no alert, no "may have been sent").
         if error_code is not None:
             recorded = await rent_reminder_send_repo.mark_failed(
@@ -204,9 +204,16 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
                 db, row=row, attempt=outbound.attempt,
             )
         else:
-            recorded = await rent_reminder_send_repo.mark_sent_to_phone(
+            recorded = await rent_reminder_send_repo.mark_sent_to_provider(
                 db, row=row, attempt=outbound.attempt, provider_message_id=provider_id or "",
             )
+            if not recorded and provider_id:
+                # Twilio's callback got there first. Its status stands, but
+                # when Twilio took the text, and as which message, is ours to
+                # record.
+                await rent_reminder_send_repo.record_handoff(
+                    db, row=row, attempt=outbound.attempt, provider_message_id=provider_id,
+                )
         if not recorded:
             logger.info(
                 "Rent reminder try already settled elsewhere: send_id=%s attempt=%s "
@@ -249,7 +256,11 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
         if due is None or not math.is_due_to_send(terms, due.due_date, now):
             return 0
         rendered = planner.render(
-            plan, due=due, tenant_legal_name=applicant.legal_name, now=now,
+            plan,
+            due=due,
+            tenant_legal_name=applicant.legal_name,
+            sender_name=await alerts.operator_name(db, plan.user_id),
+            now=now,
         )
         # A row that failed BEFORE the scheduled moment came from an early
         # manual "Send now" (e.g. before the tenant's email was on file). It
@@ -433,7 +444,11 @@ async def send_now(
         if RENT_REMINDER_CHANNEL_SMS in channels and not sms_service.is_configured():
             raise SmsUnavailableError(SMS_UNAVAILABLE_MESSAGE)
         rendered = planner.render_for_send_now(
-            plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
+            plan,
+            due=due,
+            tenant_legal_name=applicant.legal_name,
+            sender_name=await alerts.operator_name(db, plan.user_id),
+            now=moment,
         )
         if (
             due.due_date != expected_due_date

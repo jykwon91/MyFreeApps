@@ -1,6 +1,6 @@
-"""The ``request_id`` a rent reminder text carries through httpSMS.
+"""The ``request_id`` a rent reminder text carries on its Twilio status callback URL.
 
-``<send id>:<attempt>``, so the phone's webhooks name the try they are about:
+``<send id>:<attempt>``, so Twilio's callbacks name the try they are about:
 a retry reuses the send row, and news about an earlier try must not land on
 it. A bare ``<send id>`` was sent before tries were numbered and means try 1.
 """

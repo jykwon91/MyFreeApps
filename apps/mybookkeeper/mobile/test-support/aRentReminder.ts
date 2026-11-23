@@ -26,7 +26,7 @@ export function aReminderPlan(overrides: Partial<RentReminderPlan> = {}): RentRe
 export function aReminderOverview(overrides: Partial<RentReminderOverview> = {}): RentReminderOverview {
   return {
     plan: aReminderPlan(),
-    sms: { available: true, from_number: "+15550000000", encrypted: true, webhook_url: "https://example.test/hook" },
+    sms: { available: true, from_number: "+15550000000" },
     tenant_has_email: true,
     tenant_has_phone: true,
     ...overrides,

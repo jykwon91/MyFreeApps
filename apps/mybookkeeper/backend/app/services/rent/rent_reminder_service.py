@@ -17,6 +17,7 @@ from app.schemas.rent.rent_reminder_plan_response import RentReminderPlanRespons
 from app.schemas.rent.rent_reminder_preview_response import RentReminderPreviewResponse
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
+from app.services.rent import rent_reminder_alert_service as alerts
 from app.services.rent import rent_reminder_math as math
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent import rent_reminder_send_state as send_state
@@ -54,8 +55,6 @@ def sms_status() -> RentReminderSmsStatus:
     return RentReminderSmsStatus(
         available=sms_service.is_configured(),
         from_number=sms_service.from_number(),
-        encrypted=sms_service.encrypts_messages(),
-        webhook_url=sms_service.webhook_url(),
     )
 
 
@@ -179,8 +178,13 @@ async def get_preview(
         existing = await send_state.existing_rows(db, plan_id=plan.id, due_date=due.due_date)
         # A failed send stays retryable, so it does not count as sent.
         sent_channels = [channel for channel, row in existing.items() if row.status != "failed"]
+        sender_name = await alerts.operator_name(db, plan.user_id)
         rendered = planner.render(
-            plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
+            plan,
+            due=due,
+            tenant_legal_name=applicant.legal_name,
+            sender_name=sender_name,
+            now=moment,
         )
         return RentReminderPreviewResponse(
             due_date=due.due_date,
@@ -190,7 +194,11 @@ async def get_preview(
             period_end=due.period.period_end,
             message=rendered.body,
             send_now_message=planner.render_for_send_now(
-                plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
+                plan,
+                due=due,
+                tenant_legal_name=applicant.legal_name,
+                sender_name=sender_name,
+                now=moment,
             ).body,
             sent_channels=sent_channels,
             possibly_sent=send_state.possibly_sent(

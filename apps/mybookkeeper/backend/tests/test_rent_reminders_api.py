@@ -4,20 +4,22 @@ Services are mocked where the route is only mapping results; the arithmetic and
 sending are covered by ``test_rent_reminder_math`` and
 ``test_rent_reminder_dispatch``. What is checked here is the HTTP contract:
 happy-path shapes, validation, refusing text reminders when SMS is not set up,
-and that the public webhook rejects anything httpSMS did not sign.
+and that the public webhook rejects anything Twilio did not sign.
 """
 from __future__ import annotations
 
 import datetime as _dt
-import time
 import uuid
+from contextlib import ExitStack
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
+from urllib.parse import urlsplit
 
-import jwt
 import pytest
 from fastapi.testclient import TestClient
+from twilio.request_validator import RequestValidator
 
+from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.main import app
@@ -29,8 +31,9 @@ from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
 from app.services.rent import rent_reminder_dispatch_service
 from app.services.system import sms_service
 
-_SIGNING_KEY = "test-signing-key-0123456789abcdefghij"
-_WEBHOOK_URL = "https://mybookkeeper.example/api/rent-reminders/sms/webhook"
+_AUTH_TOKEN = "test-twilio-auth-token-0123456789"
+_PUBLIC_ORIGIN = "https://mybookkeeper.example"
+_WEBHOOK_URL = f"{_PUBLIC_ORIGIN}/api/rent-reminders/sms/webhook"
 _SUNDAY_PLAN = {
     "frequency": "weekly",
     "due_weekday": 6,
@@ -61,9 +64,7 @@ class TestOverview:
         try:
             overview = RentReminderOverviewResponse(
                 plan=None,
-                sms=RentReminderSmsStatus(
-                    available=False, encrypted=False, webhook_url=_WEBHOOK_URL,
-                ),
+                sms=RentReminderSmsStatus(available=False),
                 tenant_has_email=True,
                 tenant_has_phone=True,
             )
@@ -130,7 +131,7 @@ class TestSendNow:
             )
             with patch(
                 "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
-                AsyncMock(return_value=[sent, sent.model_copy(update={"channel": "sms", "status": "sent_to_phone"})]),
+                AsyncMock(return_value=[sent, sent.model_copy(update={"channel": "sms", "status": "sent_to_provider"})]),
             ) as send_now:
                 response = TestClient(app).post(
                     f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
@@ -138,7 +139,7 @@ class TestSendNow:
                 )
             assert response.status_code == 200
             assert [(r["channel"], r["status"]) for r in response.json()] == [
-                ("email", "sent"), ("sms", "sent_to_phone"),
+                ("email", "sent"), ("sms", "sent_to_provider"),
             ]
             assert "channel" not in send_now.call_args.kwargs
             assert send_now.call_args.kwargs["expected_due_date"] == _dt.date(2026, 11, 1)
@@ -272,48 +273,137 @@ _SHOWN = {
 }
 
 
-def _token(*, key: str = _SIGNING_KEY, audience: str = _WEBHOOK_URL) -> str:
-    now = int(time.time())
-    return jwt.encode(
-        {"iss": "api.httpsms.com", "aud": [audience], "iat": now, "nbf": now - 600, "exp": now + 600},
-        key,
-        algorithm="HS256",
-    )
-
-
 class TestWebhook:
-    _event = {"type": "message.phone.delivered", "data": {"id": "m-1", "request_id": str(uuid.uuid4())}}
+    _request_id = f"{uuid.uuid4()}:1"
+    _params = {
+        "MessageSid": "SM" + "1" * 32,
+        "MessageStatus": "delivered",
+        "AccountSid": "AC" + "f" * 32,
+    }
 
-    def _post(self, headers: dict[str, str]):
-        with patch.object(sms_service, "webhook_signing_key", lambda: _SIGNING_KEY), \
-                patch.object(sms_service, "webhook_url", lambda: _WEBHOOK_URL), \
-                patch(
-                    "app.api.rent_reminders.rent_reminder_webhook_service.handle_event",
-                    AsyncMock(return_value=True),
-                ) as handle:
+    def _signature(self, *, token: str = _AUTH_TOKEN, url: str | None = None, params: dict | None = None) -> str:
+        url = url or f"{_WEBHOOK_URL}?request_id={self._request_id.replace(':', '%3A')}"
+        return RequestValidator(token).compute_signature(url, params or self._params)
+
+    def _post(
+        self, headers: dict[str, str], *, params: dict | None = None, configured: bool = True,
+        real_handler: bool = False, path: str | None = None, body: dict[str, object] | None = None,
+    ):
+        """POST a callback. ``path`` replaces the route and its query; ``body``
+        replaces the signed form with other request content."""
+        with ExitStack() as stack:
+            for name, value in (
+                ("sms_backend", "twilio" if configured else "console"),
+                ("twilio_account_sid", "AC" + "f" * 32),
+                ("twilio_auth_token", _AUTH_TOKEN),
+                ("twilio_from_number", "+18885550100"),
+                ("frontend_url", f"{_PUBLIC_ORIGIN}/"),
+            ):
+                stack.enter_context(patch.object(settings, name, value))
+            handle = None if real_handler else stack.enter_context(patch(
+                "app.api.rent_reminders.rent_reminder_webhook_service.handle_event",
+                AsyncMock(return_value=True),
+            ))
             response = TestClient(app).post(
-                "/rent-reminders/sms/webhook", json=self._event, headers=headers,
+                path or "/rent-reminders/sms/webhook",
+                params=None if path else {"request_id": self._request_id},
+                headers=headers,
+                **(body if body is not None else {"data": params or self._params}),
             )
         return response, handle
 
-    def test_signed_event_accepted(self) -> None:
-        response, handle = self._post({"Authorization": f"Bearer {_token()}"})
+    def test_signed_callback_accepted(self) -> None:
+        response, handle = self._post({"X-Twilio-Signature": self._signature()})
         assert response.status_code == 204
-        handle.assert_awaited_once()
+        handle.assert_awaited_once_with(self._params, request_id=self._request_id)
 
-    def test_unsigned_event_rejected(self) -> None:
-        response, handle = self._post({})
-        assert response.status_code == 401
-        handle.assert_not_awaited()
+    def test_verified_against_the_exact_url_given_to_twilio(self) -> None:
+        """Twilio signs the callback URL a text was sent with, byte for byte.
+        The ``:`` in the request_id goes out encoded as ``%3A``."""
+        with patch.object(settings, "frontend_url", f"{_PUBLIC_ORIGIN}/"):
+            callback_url = sms_service.status_callback_url(self._request_id)
+        query = urlsplit(callback_url).query
+        assert query == f"request_id={self._request_id.replace(':', '%3A')}"
 
-    def test_wrong_key_rejected(self) -> None:
-        response, handle = self._post({"Authorization": f"Bearer {_token(key="attacker-key-0123456789abcdefghijklmn")}"})
-        assert response.status_code == 401
-        handle.assert_not_awaited()
-
-    def test_wrong_audience_rejected(self) -> None:
         response, handle = self._post(
-            {"Authorization": f"Bearer {_token(audience='https://evil.example/hook')}"},
+            {"X-Twilio-Signature": self._signature(url=callback_url)},
+            path=f"/rent-reminders/sms/webhook?{query}",
         )
-        assert response.status_code == 401
+        assert response.status_code == 204
+        handle.assert_awaited_once_with(self._params, request_id=self._request_id)
+
+    def test_a_signature_over_the_internal_url_is_rejected(self) -> None:
+        """Behind the proxies a callback arrives on an internal host over http.
+        Only the public URL Twilio was given is accepted."""
+        internal = f"http://testserver/rent-reminders/sms/webhook?request_id={self._request_id.replace(':', '%3A')}"
+        response, handle = self._post({"X-Twilio-Signature": self._signature(url=internal)})
+        assert response.status_code == 403
         handle.assert_not_awaited()
+
+    def test_the_query_is_checked_as_received(self) -> None:
+        """Twilio signed ``%3A``. A query that reaches us spelled any other way
+        no longer matches, rather than being re-encoded until it does."""
+        response, handle = self._post(
+            {"X-Twilio-Signature": self._signature()},
+            path=f"/rent-reminders/sms/webhook?request_id={self._request_id}",
+        )
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_unsigned_callback_rejected_without_reading_the_body(self) -> None:
+        with patch("starlette.requests.Request.form", side_effect=AssertionError("body was read")):
+            response, handle = self._post({})
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {"json": {"MessageSid": "SM" + "1" * 32, "MessageStatus": "delivered"}},
+            {"files": {"MessageStatus": (None, "delivered")}},
+        ],
+        ids=["json", "multipart"],
+    )
+    def test_a_body_twilio_never_sends_is_rejected_unread(self, body: dict[str, object]) -> None:
+        with patch("starlette.requests.Request.form", side_effect=AssertionError("body was read")):
+            response, handle = self._post({"X-Twilio-Signature": self._signature()}, body=body)
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_wrong_auth_token_rejected(self) -> None:
+        response, handle = self._post({"X-Twilio-Signature": self._signature(token="attacker-token-0123456789")})
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_signature_for_another_try_rejected(self) -> None:
+        """The request_id is part of what Twilio signed, so it can't be moved onto another try."""
+        other_try = f"{_WEBHOOK_URL}?request_id={self._request_id[:-1]}2"
+        response, handle = self._post({"X-Twilio-Signature": self._signature(url=other_try)})
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_tampered_status_rejected(self) -> None:
+        signature = self._signature()
+        response, handle = self._post(
+            {"X-Twilio-Signature": signature}, params={**self._params, "MessageStatus": "failed"},
+        )
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_rejected_when_twilio_isnt_configured(self) -> None:
+        response, handle = self._post({"X-Twilio-Signature": self._signature()}, configured=False)
+        assert response.status_code == 403
+        handle.assert_not_awaited()
+
+    def test_a_status_we_dont_act_on_is_still_acknowledged(self) -> None:
+        """Twilio logs any answer but a 2xx as an error in its debugger, so an
+        ignored status still gets 204."""
+        params = {**self._params, "MessageStatus": "queued"}
+        with patch(
+            "app.services.rent.rent_reminder_webhook_service.unit_of_work",
+            side_effect=AssertionError("an ignored status must not touch the database"),
+        ):
+            response, _ = self._post(
+                {"X-Twilio-Signature": self._signature(params=params)}, params=params, real_handler=True,
+            )
+        assert response.status_code == 204

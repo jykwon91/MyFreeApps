@@ -248,7 +248,7 @@ describe("setting reminders up", () => {
   });
 
   it("can't turn texts on when the server can't send them", async () => {
-    await start(aReminderOverview({ plan: null, sms: { available: false, from_number: "", encrypted: false, webhook_url: "" } }));
+    await start(aReminderOverview({ plan: null, sms: { available: false, from_number: null } }));
     await openSheet(S.titleNew, S.setUp);
 
     const sms = screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) });

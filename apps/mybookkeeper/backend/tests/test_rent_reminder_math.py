@@ -18,6 +18,12 @@ from app.services.rent import rent_reminder_message as message
 SCHEDULE_ID = uuid.uuid4()
 SUNDAY = 6
 UTC = _dt.timezone.utc
+# GSM 03.38's basic character set, less the escape into its extension table
+# (whose ``^{}\[~]|€`` take two characters each).
+_GSM7_BASIC = frozenset(
+    "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?"
+    "¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
+)
 
 
 def _schedule(
@@ -211,11 +217,48 @@ class TestMessage:
             due_date=_dt.date(2026, 10, 18),
             sent_on=_dt.date(2026, 10, 17),
             payment_instructions="Zelle to jason@example.com",
+            sender_name="Jason Kwon",
         )
         assert text == (
             "Hi Sonu, reminder: rent of $375 is due tomorrow (Sunday). "
-            "Pay via Zelle to jason@example.com."
+            "Pay via Zelle to jason@example.com. - Jason, your landlord"
         )
+
+    @pytest.mark.parametrize(
+        ("sender_name", "sign_off"),
+        [
+            ("Jason Kwon", " - Jason, your landlord"),
+            ("  Jason  ", " - Jason, your landlord"),
+            (None, " - Your landlord"),
+            ("", " - Your landlord"),
+        ],
+    )
+    def test_signed_with_the_operators_first_name(self, sender_name, sign_off) -> None:
+        assert message.sign_off(sender_name) == sign_off
+
+    def test_the_gsm_alphabet_is_complete(self) -> None:
+        assert len(_GSM7_BASIC) == 127
+
+    @pytest.mark.parametrize(
+        "sent_on", [_dt.date(2026, 10, 18), _dt.date(2026, 10, 17), _dt.date(2026, 10, 12)],
+    )
+    @pytest.mark.parametrize("amount", [Decimal("375.00"), Decimal("1411.29")])
+    @pytest.mark.parametrize("instructions", [None, "Zelle to jason@example.com"])
+    @pytest.mark.parametrize("sender_name", ["Jason Kwon", None])
+    def test_the_text_stays_in_the_gsm_alphabet(
+        self, sent_on: _dt.date, amount: Decimal, instructions: str | None, sender_name: str | None,
+    ) -> None:
+        """One character outside GSM-7 (a typographic dash, say) sends the whole
+        text as UCS-2: 70 characters a segment instead of 160."""
+        text = message.render_reminder(
+            tenant_legal_name="Sonu Patel",
+            amount=amount,
+            due_date=_dt.date(2026, 10, 18),
+            sent_on=sent_on,
+            payment_instructions=instructions,
+            sender_name=sender_name,
+        )
+        assert set(text) <= _GSM7_BASIC, sorted(set(text) - _GSM7_BASIC)
 
     def test_cents_and_thousands(self) -> None:
         assert message.format_amount(Decimal("411.29")) == "$411.29"

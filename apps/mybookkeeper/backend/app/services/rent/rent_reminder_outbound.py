@@ -12,7 +12,7 @@ class ReminderOutbound:
     """Everything delivery needs, snapshotted so no session stays open."""
 
     send_id: uuid.UUID
-    # The row's try number, sent to httpSMS in the request id.
+    # The row's try number, carried on the text's status-callback URL.
     attempt: int
     channel: RentReminderChannel
     subject: str

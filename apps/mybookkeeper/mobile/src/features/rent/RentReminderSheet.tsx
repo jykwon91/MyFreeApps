@@ -121,7 +121,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
         label={REMINDER_SETUP_MESSAGES.sms}
         note={
           sms.available
-            ? [smsFrom(sms.from_number ?? "", sms.encrypted), overview.tenant_has_phone ? null : REMINDER_SETUP_MESSAGES.noPhone].filter(Boolean).join(" ")
+            ? [smsFrom(sms.from_number), overview.tenant_has_phone ? null : REMINDER_SETUP_MESSAGES.noPhone].filter(Boolean).join(" ")
             : REMINDER_SETUP_MESSAGES.smsUnavailable
         }
         onValueChange={(on) => change("smsEnabled", on)}

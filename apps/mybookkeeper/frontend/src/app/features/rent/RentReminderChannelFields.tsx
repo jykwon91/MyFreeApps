@@ -13,7 +13,7 @@ const ROW_CLASS = "flex items-start gap-2 min-h-[44px] text-sm";
 
 /**
  * Email and text toggles. Text is disabled — with the reason shown — when the
- * server has no httpSMS setup, rather than letting the host switch on a
+ * server has no Twilio setup, rather than letting the host switch on a
  * channel that would only ever fail.
  */
 export default function RentReminderChannelFields({
@@ -63,8 +63,8 @@ export default function RentReminderChannelFields({
             data-testid="rent-reminder-sms-status"
           >
             {sms.available
-              ? `From your phone, ${sms.from_number ?? ""}${sms.encrypted ? " (encrypted)" : ""}.`
-              : "Not set up on this server yet — texts need the httpSMS phone relay."}
+              ? `From ${sms.from_number ?? "your Twilio number"}.`
+              : "Not set up on this server yet — texts need a Twilio number."}
           </span>
           {sms.available && !overview.tenant_has_phone ? (
             <span className="block text-xs text-muted-foreground">

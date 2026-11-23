@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export const PRIVACY_LAST_UPDATED = "2026-11-25";
+export const PRIVACY_LAST_UPDATED = "2026-11-27";
 
 export default function PrivacyPolicy() {
   return (
@@ -275,7 +275,9 @@ export default function PrivacyPolicy() {
                 <h3 className="font-semibold mb-1">Twilio (text messages)</h3>
                 <p>
                   When a landlord turns on text reminders for a tenant, the tenant's mobile number
-                  and the message text are sent to Twilio, which delivers the text. Twilio's{" "}
+                  and the whole message are sent to Twilio, which delivers the text. The message
+                  holds the tenant's first name, the amount and due date, the landlord's payment
+                  instructions and the landlord's first name. Twilio's{" "}
                   <a
                     href="https://www.twilio.com/legal/privacy"
                     target="_blank"

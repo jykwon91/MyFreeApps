@@ -34,6 +34,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.encrypted_string_type import EncryptedString
 from app.core.rent_reminder_channel import RentReminderChannel
+from app.core.rent_reminder_constants import (
+    MAX_ERROR_CODE_LENGTH,
+    MAX_PROVIDER_MESSAGE_ID_LENGTH,
+)
 from app.core.rent_reminder_enums import (
     RENT_REMINDER_CHANNEL_SMS,
     RENT_REMINDER_CHANNELS_SQL,
@@ -80,16 +84,18 @@ class RentReminderSend(Base):
         SmallInteger, nullable=False, default=1, server_default="1",
     )
 
-    # Which try this row is on: a retry reuses the row and adds one. Sent to
-    # httpSMS in the ``request_id`` (``<id>:<attempt>``) so the phone's news
-    # about an earlier try is told apart and ignored.
+    # Which try this row is on: a retry reuses the row and adds one. Carried on
+    # the text's Twilio status-callback URL as ``request_id``
+    # (``<id>:<attempt>``) so news about an earlier try is told apart and ignored.
     attempt: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=1, server_default="1",
     )
-    # httpSMS message id (sms only) for the current try. Webhooks are matched
+    # Twilio Message SID (sms only) for the current try. Callbacks are matched
     # on our own ``request_id``; this is the fallback and the audit link.
-    provider_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    provider_message_id: Mapped[str | None] = mapped_column(
+        String(MAX_PROVIDER_MESSAGE_ID_LENGTH), nullable=True,
+    )
+    error_code: Mapped[str | None] = mapped_column(String(MAX_ERROR_CODE_LENGTH), nullable=True)
 
     created_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -97,11 +103,11 @@ class RentReminderSend(Base):
         default=lambda: _dt.datetime.now(_dt.timezone.utc),
         server_default=func.now(),
     )
-    # When the message left MBK (SMTP accepted / httpSMS accepted).
+    # When the message left MBK (SMTP accepted / Twilio accepted).
     sent_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
-    # When the phone confirmed the text went out (or was delivered).
+    # When Twilio confirmed the text went out (or was delivered).
     confirmed_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
@@ -130,7 +136,7 @@ class RentReminderSend(Base):
             f"status IN {RENT_REMINDER_SEND_STATUSES_SQL}",
             name="chk_rent_reminder_send_status",
         ),
-        # Phone-only states never appear on an email row.
+        # Text-only states never appear on an email row.
         CheckConstraint(
             f"channel = '{RENT_REMINDER_CHANNEL_SMS}' OR status IN {RENT_REMINDER_EMAIL_STATUSES_SQL}",
             name="chk_rent_reminder_send_status_matches_channel",

@@ -76,10 +76,9 @@ class SmsSendError(RuntimeError):
     this is a transient or addressee-specific failure, not a deploy
     misconfiguration. The provider error code is embedded in the message.
 
-    ``code`` is Twilio's numeric error code; ``provider_code`` is the string
-    form used by providers whose codes are not numeric (httpSMS reports
-    ``http_<status>`` for API rejections). Every sender sets ``status`` to the
-    provider's HTTP status when one exists.
+    ``code`` is Twilio's numeric error code; ``provider_code`` is a string code
+    for failures Twilio didn't number (``network_error``, ``outcome_unknown``).
+    ``status`` is Twilio's HTTP status when one exists.
 
     ``outcome_unknown`` is True when the provider may have accepted the text
     even though the send failed (a provider 5xx, a timeout or broken
@@ -131,8 +130,13 @@ class SmsService:
     def is_configured(self) -> bool:
         return bool(self.account_sid and self.auth_token and self.from_number)
 
-    def send_or_raise(self, to: str, body: str) -> str:
+    def send_or_raise(self, to: str, body: str, *, status_callback: str | None = None) -> str:
         """Send the SMS, raising on any failure.
+
+        ``status_callback`` is the URL Twilio POSTs this message's status
+        changes to (sent, delivered, undelivered, failed). It is set per
+        message, so nothing has to be registered in the Twilio console; verify
+        each callback with ``platform_shared.services.twilio_webhook``.
 
         Returns:
             Twilio message SID on success.
@@ -162,17 +166,16 @@ class SmsService:
         from twilio.http.http_client import TwilioHttpClient
         from twilio.rest import Client
 
+        create_kwargs: dict[str, str] = {"to": to, "from_": self.from_number, "body": body}
+        if status_callback:
+            create_kwargs["status_callback"] = status_callback
         client: _TwilioClient = Client(
             self.account_sid,
             self.auth_token,
             http_client=TwilioHttpClient(timeout=TWILIO_HTTP_TIMEOUT_SECONDS),
         )
         try:
-            msg = client.messages.create(
-                to=to,
-                from_=self.from_number,
-                body=body,
-            )
+            msg = client.messages.create(**create_kwargs)
         except TwilioRestException as e:
             # A 5xx means Twilio failed while handling the request, possibly
             # after creating the message; a 4xx is a definite rejection.

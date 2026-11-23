@@ -43,9 +43,6 @@ def _settings(
     twilio_account_sid: str = "",
     twilio_auth_token: str = "",
     twilio_from_number: str = "",
-    httpsms_api_key: str = "",
-    httpsms_from_number: str = "",
-    httpsms_webhook_signing_key: str = "",
     transparency_primary: bool = False,
     kofi_verification_token: str = "",
 ) -> SimpleNamespace:
@@ -62,9 +59,6 @@ def _settings(
         twilio_account_sid=twilio_account_sid,
         twilio_auth_token=twilio_auth_token,
         twilio_from_number=twilio_from_number,
-        httpsms_api_key=httpsms_api_key,
-        httpsms_from_number=httpsms_from_number,
-        httpsms_webhook_signing_key=httpsms_webhook_signing_key,
         transparency_primary=transparency_primary,
         kofi_verification_token=kofi_verification_token,
     )
@@ -567,6 +561,82 @@ class TestSmsRequired:
         )
         async with lifespan(app):
             pass
+
+
+class TestSmsOptional:
+    """sms_optional=True: console means texts are off, but Twilio must be complete."""
+
+    @staticmethod
+    def _prod(**sms) -> SimpleNamespace:
+        return _settings(
+            environment="production",
+            sentry_dsn="https://x@y/1",
+            turnstile_secret_key="present",
+            email_backend="smtp",
+            smtp_user="u",
+            smtp_password="p" * 16,
+            **sms,
+        )
+
+    @pytest.mark.asyncio
+    async def test_console_boots_in_prod(self, app: FastAPI, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
+            settings=self._prod(sms_backend="console"),
+            init_sentry=MagicMock(),
+            sms_optional=True,
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_incomplete_twilio_fails_in_prod(self, app: FastAPI, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
+            settings=self._prod(sms_backend="twilio", twilio_account_sid="AC1"),
+            init_sentry=MagicMock(),
+            sms_optional=True,
+        )
+        with pytest.raises(SmsNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_unknown_backend_fails_in_prod(self, app: FastAPI, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
+            settings=self._prod(sms_backend="httpsms"),
+            init_sentry=MagicMock(),
+            sms_optional=True,
+        )
+        with pytest.raises(SmsNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_required_wins_over_optional(self, app: FastAPI, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners", MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
+            settings=self._prod(sms_backend="console"),
+            init_sentry=MagicMock(),
+            sms_required=True,
+            sms_optional=True,
+        )
+        with pytest.raises(SmsNotConfiguredError):
+            async with lifespan(app):
+                pass
 
 
 class TestTurnstileEmailRequiredFlags:

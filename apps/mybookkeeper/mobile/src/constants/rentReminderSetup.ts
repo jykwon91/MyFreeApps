@@ -1,7 +1,7 @@
 export const REMINDER_SETUP_MESSAGES = {
   setUp: "Set up reminders",
   edit: "Edit reminders",
-  setUpIntro: "Send this tenant a friendly heads-up before rent is due, by email or by text from your own phone.",
+  setUpIntro: "Send this tenant a friendly heads-up before rent is due, by email or by text.",
   titleNew: "Set up reminders",
   titleEdit: "Edit reminders",
   tenantPays: "Tenant pays",
@@ -18,7 +18,7 @@ export const REMINDER_SETUP_MESSAGES = {
   email: "Email",
   noEmail: "No email on this tenant's record yet.",
   sms: "Text message",
-  smsUnavailable: "Not set up on this server yet. Texts need the httpSMS phone relay.",
+  smsUnavailable: "Not set up on this server yet. Texts need a Twilio number.",
   noPhone: "No phone number on this tenant's record yet.",
   needChannel: "Turn on email or text so the reminder has somewhere to go.",
   howToPay: "How to pay",
@@ -42,6 +42,6 @@ export function daysHintBad(max: number): string {
   return `Pick 0 to ${max} days.`;
 }
 
-export function smsFrom(number: string, isEncrypted: boolean): string {
-  return `From your phone, ${number}${isEncrypted ? " (encrypted)" : ""}.`;
+export function smsFrom(number: string | null): string {
+  return `From ${number ?? "your Twilio number"}.`;
 }
