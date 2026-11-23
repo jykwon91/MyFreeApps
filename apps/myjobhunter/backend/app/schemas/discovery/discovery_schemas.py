@@ -5,11 +5,12 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from platform_shared.schemas.pagination import ListResponse
 
 from app.core.discovered_job_state import DiscoveredJobState
+from app.core.discovery_source_failure_display import displayable_failure_message
 from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
@@ -207,6 +208,12 @@ class DiscoverySourceResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("last_error_message")
+    @classmethod
+    def _hide_legacy_raw_error_text(cls, value: str | None) -> str | None:
+        """Rows stored before fixed copy may hold an adapter's raw text."""
+        return displayable_failure_message(value)
 
 
 class DiscoveryFetchResultResponse(BaseModel):
