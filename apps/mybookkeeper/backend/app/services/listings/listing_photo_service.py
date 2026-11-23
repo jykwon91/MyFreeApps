@@ -28,7 +28,6 @@ from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.services.listings.listing_not_found_error import ListingNotFoundError
 from app.services.listings.photo_response_builder import attach_presigned_urls
 from app.services.storage.image_processor import (
-    ImageRejected,
     filename_for_content_type,
     process_image,
 )
