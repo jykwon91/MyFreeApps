@@ -111,6 +111,11 @@ export function neitherWent(reason: string): string {
   return `Neither the email nor the text went out. ${reason}. You can try again once that's fixed.`;
 }
 
+/** Both failed for different reasons: naming only one would leave the other to fail again. */
+export function neitherWentEach(emailReason: string, textReason: string): string {
+  return `Neither the email nor the text went out. Email: ${emailReason}. Text: ${textReason}. You can try again once those are fixed.`;
+}
+
 export function oneFailed(channel: string, reason: string): string {
   return `The ${channel} didn't go out. ${reason}. You can try again once that's fixed.`;
 }

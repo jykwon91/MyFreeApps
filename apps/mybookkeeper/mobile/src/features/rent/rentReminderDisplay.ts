@@ -19,6 +19,7 @@ import {
   goesOut,
   moneyDue,
   neitherWent,
+  neitherWentEach,
   noEmailWontGo,
   noPhoneWontGo,
   oneFailed,
@@ -95,7 +96,11 @@ export function sendOutcome(rows: readonly RentReminderSend[], name: string | nu
 
   if (rows.some((row) => row.status === "failed" && reminderMayStillArrive(row.error_code))) return unsureOutcome(rows);
 
-  if (failed(email) && failed(text)) return { message: neitherWent(reason(text)), isProblem: true };
+  if (failed(email) && failed(text)) {
+    // Compare the words, not the codes: different codes can read the same.
+    if (reason(email) === reason(text)) return { message: neitherWent(reason(email)), isProblem: true };
+    return { message: neitherWentEach(reason(email), reason(text)), isProblem: true };
+  }
   if (email && failed(text)) return { message: emailOnlyWent(reason(text), name), isProblem: true };
   if (text && failed(email)) return { message: textOnlyWent(reason(email)), isProblem: true };
   if (failed(email)) return { message: oneFailed(rentReminderChannelWord("email"), reason(email)), isProblem: true };

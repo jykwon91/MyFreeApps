@@ -12,12 +12,14 @@ import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import {
   addEmailFirst,
+  channelDidntGo,
   channelMayHaveGone,
   channelWent,
   emailOnlyWent,
   goesOut,
   LOST_SEND_HOLD_MS,
   neitherWent,
+  neitherWentEach,
   noEmailWontGo,
   REMINDER_MESSAGES,
   sentBoth,
@@ -296,7 +298,7 @@ describe("Send now", () => {
     await sendAndConfirm();
 
     const message = emailOnlyWent("The phone number couldn't be read", "Dana Reed");
-    await waitFor(() => expect(screen.getAllByText(message).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
   });
 
   it("keeps that note after the reminder reloads as already sent", async () => {
@@ -323,13 +325,15 @@ describe("Send now", () => {
     expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: true })).toBeTruthy();
   });
 
-  it("lets a send that failed on every channel be tried again", async () => {
-    const failed = aReminderSend({ status: "failed", error_code: "email_send_failed" });
-    await renderReminders(startServer({ sendAnswer: [failed, { ...failed, id: "send2", channel: "sms" }] }));
+  it("lets a send that failed on every channel be tried again, and says why each failed", async () => {
+    const email = aReminderSend({ status: "failed", error_code: "email_send_failed" });
+    const text = aReminderSend({ id: "send2", channel: "sms", status: "failed", error_code: "sms_network_error" });
+    await renderReminders(startServer({ sendAnswer: [email, text] }));
 
     await sendAndConfirm();
 
-    await waitFor(() => expect(screen.getAllByText(neitherWent("The mail server didn't take it")).length).toBeGreaterThan(0));
+    const message = neitherWentEach("The mail server didn't take it", "The server couldn't reach the text relay, so it wasn't sent");
+    await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
 
@@ -509,7 +513,32 @@ describe("reminder wording", () => {
     expect(sendOutcome([text], "Dana")).toEqual({ message: REMINDER_MESSAGES.textWithPhone, isProblem: false });
     expect(sendOutcome([email, text], "Dana")).toEqual({ message: sentBoth(), isProblem: false });
     expect(sendOutcome([{ ...email, ...failed }, text], "Dana")).toEqual({ message: textOnlyWent(reason), isProblem: true });
-    expect(sendOutcome([{ ...email, ...failed }, { ...text, ...failed }], "Dana")).toEqual({ message: neitherWent(reason), isProblem: true });
+  });
+
+  it("gives each channel's reason when both failed for different ones", () => {
+    const email = aReminderSend({ status: "failed", error_code: "email_send_failed" });
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_http_422" });
+
+    expect(sendOutcome([email, text], "Dana")).toEqual({
+      message:
+        "Neither the email nor the text went out. Email: The mail server didn't take it. Text: The text relay refused it. You can try again once those are fixed.",
+      isProblem: true,
+    });
+  });
+
+  it("says a reason both channels failed for only once", () => {
+    const email = aReminderSend({ status: "failed", error_code: "no_recipient" });
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "no_recipient" });
+    expect(sendOutcome([email, text], "Dana")).toEqual({
+      message: "Neither the email nor the text went out. No contact details on file. You can try again once that's fixed.",
+      isProblem: true,
+    });
+
+    // A code this app doesn't know yet reads the same as unexpected_error, so
+    // the words match though the codes don't.
+    const unexpected = { ...email, error_code: "unexpected_error" };
+    const newer = { ...text, error_code: "a_code_from_a_newer_server" };
+    expect(sendOutcome([unexpected, newer], "Dana").message).toBe(neitherWent("Something went wrong sending it"));
   });
 
   it("never says a text that may have gone out didn't, or to try again", () => {
@@ -525,6 +554,19 @@ describe("reminder wording", () => {
       expect(outcome.message).not.toContain("try again");
     }
     expect(sendOutcome([email, unsure], "Dana").message).toBe(`${channelWent("email")} ${channelMayHaveGone("text", reason)}`);
+  });
+
+  it("says a text may have gone out even when the email failed too", () => {
+    const email = aReminderSend({ status: "failed", error_code: "email_send_failed" });
+    const unsure = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_outcome_unknown" });
+    const reason = "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again";
+
+    const outcome = sendOutcome([email, unsure], "Dana");
+    expect(outcome).toEqual({
+      message: `${channelDidntGo("email", "The mail server didn't take it")} ${channelMayHaveGone("text", reason)}`,
+      isProblem: true,
+    });
+    expect(outcome.message).not.toContain("try again");
   });
 
   it("never says an email the mail server never confirmed didn't go out, or to try again", () => {
