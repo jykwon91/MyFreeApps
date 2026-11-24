@@ -37,11 +37,13 @@ from app.services.properties.property_not_found_error import PropertyNotFoundErr
 
 pytestmark = pytest.mark.asyncio
 
-_TODAY = _dt.date.today()
+def _today() -> _dt.date:
+    """Read at call time, the date the service writes with."""
+    return _dt.date.today()
 
 
 def _days_ago(n: int) -> _dt.date:
-    return _TODAY - _dt.timedelta(days=n)
+    return _today() - _dt.timedelta(days=n)
 
 
 @contextmanager
@@ -68,7 +70,7 @@ async def _account(db: AsyncSession, org: Organization, user: User, **overrides:
     values: dict[str, object] = {
         "id": uuid.uuid4(), "organization_id": org.id, "user_id": user.id,
         "name": "Chase Checking", "account_type": "checking",
-        "current_balance_cents": 1_000_00, "balance_as_of": _TODAY,
+        "current_balance_cents": 1_000_00, "balance_as_of": _today(),
     }
     values.update(overrides)
     account = FinancialAccount(**values)
@@ -89,7 +91,8 @@ async def _property(db: AsyncSession, org: Organization, user: User, **overrides
     return prop
 
 
-async def _record(db: AsyncSession, org: Organization, user_id: uuid.UUID, day: _dt.date = _TODAY) -> None:
+async def _record(db: AsyncSession, org: Organization, user_id: uuid.UUID, day: _dt.date | None = None) -> None:
+    day = day or _today()
     await net_worth_service.record_today(db, organization_id=org.id, user_id=user_id, today=day)
     await db.commit()
 
@@ -113,12 +116,12 @@ class TestOneSnapshotPerSourcePerDay:
         await _account(db, test_org, test_user)
         await _record(db, test_org, test_user.id, _days_ago(1))
         await _record(db, test_org, test_user.id)
-        assert [r.snapshot_date for r in await _snapshots(db)] == [_days_ago(1), _TODAY]
+        assert [r.snapshot_date for r in await _snapshots(db)] == [_days_ago(1), _today()]
 
     async def test_a_workspace_property_gets_one_row_per_person(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        await _property(db, test_org, test_user, estimated_value_cents=400_000_00, estimated_value_as_of=_TODAY)
+        await _property(db, test_org, test_user, estimated_value_cents=400_000_00, estimated_value_as_of=_today())
         teammate = uuid.uuid4()
         await _record(db, test_org, test_user.id)
         await _record(db, test_org, teammate)
@@ -144,15 +147,15 @@ class TestWritesRecordToday:
                 user_id=test_user.id, organization_id=test_org.id,
                 payload=FinancialAccountCreateRequest(
                     name="Savings", account_type="savings",
-                    current_balance_cents=500_00, balance_as_of=_TODAY,
+                    current_balance_cents=500_00, balance_as_of=_today(),
                 ),
             )
             await financial_account_service.update_account(
                 account_id=created.id, user_id=test_user.id, organization_id=test_org.id,
-                fields={"current_balance_cents": 750_00, "balance_as_of": _TODAY},
+                fields={"current_balance_cents": 750_00, "balance_as_of": _today()},
             )
         [row] = await _snapshots(db)
-        assert (row.financial_account_id, row.snapshot_date, row.balance_cents) == (created.id, _TODAY, 750_00)
+        assert (row.financial_account_id, row.snapshot_date, row.balance_cents) == (created.id, _today(), 750_00)
 
     async def test_a_property_value_counts_and_is_snapshotted_and_clearing_asks_again(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -161,21 +164,21 @@ class TestWritesRecordToday:
         with _session(db):
             saved = await property_value_service.set_estimated_value(
                 property_id=prop.id, organization_id=test_org.id, user_id=test_user.id,
-                value_cents=350_000_00, today=_TODAY,
+                value_cents=350_000_00, today=_today(),
             )
             worth = await net_worth_service.get_net_worth(
-                organization_id=test_org.id, user_id=test_user.id, today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, today=_today(),
             )
-            assert saved.estimated_value_as_of == _TODAY
+            assert saved.estimated_value_as_of == _today()
             assert worth.assets_cents == 350_000_00
             assert [r.property_id for r in await _snapshots(db)] == [prop.id]
 
             cleared = await property_value_service.set_estimated_value(
                 property_id=prop.id, organization_id=test_org.id, user_id=test_user.id,
-                value_cents=None, today=_TODAY,
+                value_cents=None, today=_today(),
             )
             worth = await net_worth_service.get_net_worth(
-                organization_id=test_org.id, user_id=test_user.id, today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, today=_today(),
             )
         assert cleared.estimated_value_as_of is None
         [group] = worth.groups
@@ -189,7 +192,7 @@ class TestWritesRecordToday:
         with _session(db), pytest.raises(PropertyNotFoundError):
             await property_value_service.set_estimated_value(
                 property_id=prop.id, organization_id=uuid.uuid4(), user_id=test_user.id,
-                value_cents=1, today=_TODAY,
+                value_cents=1, today=_today(),
             )
 
 
@@ -205,12 +208,12 @@ class TestHistory:
         await db.commit()
         with _session(db):
             history = await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_today(),
             )
             worth = await net_worth_service.get_net_worth(
-                organization_id=test_org.id, user_id=test_user.id, today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, today=_today(),
             )
-        assert [p.day for p in history.points] == [_days_ago(3), _days_ago(2), _days_ago(1), _TODAY]
+        assert [p.day for p in history.points] == [_days_ago(3), _days_ago(2), _days_ago(1), _today()]
         assert [p.net_cents for p in history.points] == [100_00, 100_00, 100_00, 900_00]
         assert history.points[-1].net_cents == worth.net_cents
 
@@ -225,7 +228,7 @@ class TestHistory:
         await db.commit()
         with _session(db):
             history = await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_today(),
             )
         assert history.points[0].day == _days_ago(30)
         assert history.points[0].net_cents == 42
@@ -246,7 +249,7 @@ class TestHistory:
         await db.commit()
         with _session(db):
             history = await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="all", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="all", today=_today(),
             )
         assert [p.net_cents for p in history.points] == [10, 10]
 
@@ -262,10 +265,10 @@ class TestHistory:
         await _record(db, test_org, test_user.id, _days_ago(1))
         with _session(db):
             worth = await net_worth_service.get_net_worth(
-                organization_id=test_org.id, user_id=test_user.id, today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, today=_today(),
             )
             history = await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="1m", today=_today(),
             )
         assert worth.liabilities_cents == 200_000_00
         loan_line = worth.groups[-1].lines[0]
@@ -277,14 +280,14 @@ class TestHistory:
     ) -> None:
         with _session(db):
             history = await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="all", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="all", today=_today(),
             )
         assert history.points == []
 
     async def test_an_unknown_range_is_refused(self, test_user: User, test_org: Organization) -> None:
         with pytest.raises(net_worth_service.InvalidNetWorthRangeError):
             await net_worth_service.get_history(
-                organization_id=test_org.id, user_id=test_user.id, range_key="5y", today=_TODAY,
+                organization_id=test_org.id, user_id=test_user.id, range_key="5y", today=_today(),
             )
 
 
@@ -296,7 +299,7 @@ class TestDailyRun:
         property_owner = uuid.uuid4()
         await _property(
             db, test_org, test_user, user_id=property_owner,
-            estimated_value_cents=1, estimated_value_as_of=_TODAY,
+            estimated_value_cents=1, estimated_value_as_of=_today(),
         )
         real_record = net_worth_service.record_today
         calls: list[uuid.UUID] = []
@@ -308,7 +311,7 @@ class TestDailyRun:
             await real_record(session, organization_id=organization_id, user_id=user_id, today=today)
 
         with _session(db), patch.object(net_worth_service, "record_today", _flaky):
-            recorded = await net_worth_service.record_all_today(today=_TODAY)
+            recorded = await net_worth_service.record_all_today(today=_today())
 
         assert sorted(map(str, calls)) == sorted([str(test_user.id), str(property_owner)])
         assert recorded == 1
