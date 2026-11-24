@@ -111,6 +111,13 @@ services:
     networks:
       - default
       - myfreeapps
+    # The deploy workflow waits for this to report healthy before finishing.
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.resume_parser_healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   scheduler:
     image: ghcr.io/jykwon91/myfreeapps-myjobhunter-backend:${IMAGE_TAG:-latest}
