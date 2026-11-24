@@ -4,13 +4,12 @@ import smtplib
 from collections.abc import Mapping
 
 from platform_shared.core.smtp_replies import (
-    is_bare_smtp_exception,
+    is_config_fault,
     is_refusal,
     is_smtplib_line_too_long,
     reply_code_text,
 )
 from platform_shared.core.smtp_reply_constants import (
-    CONFIG_ERRORS,
     CONFIG_REPLY_ERRORS,
     FIRST_PERMANENT_REPLY_CODE,
 )
@@ -174,16 +173,17 @@ def error_from_smtp_exception(
             failed_before_handover=failed_before_handover,
         )
 
-    if isinstance(exc, CONFIG_ERRORS) or is_bare_smtp_exception(exc):
+    if is_config_fault(exc):
         return EmailSendError(
-            f"SMTP is misconfigured (unknown host, or no TLS / AUTH method we can use): {exc!r}",
+            "SMTP is misconfigured (unknown host, untrusted certificate, or no TLS / AUTH "
+            f"method we can use): {exc!r}",
             kind="misconfigured",
             failed_before_handover=failed_before_handover,
         )
 
-    # Timeouts, refused or dropped connections, replies that aren't a clear
-    # refusal (e.g. a connect greeting of -1, or a code from 600 up), and
-    # smtplib's own "Line too long.".
+    # Timeouts, refused or dropped connections, a host lookup that failed only
+    # for now, replies that aren't a clear refusal (e.g. a connect greeting of
+    # -1, or a code from 600 up), and smtplib's own "Line too long.".
     return EmailSendError(
         f"SMTP connection failed: {exc!r}",
         kind="transient",

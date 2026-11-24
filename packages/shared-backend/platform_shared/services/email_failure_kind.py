@@ -4,8 +4,9 @@ from typing import Literal
 #   "misconfigured"      — our side is wrong (bad credentials, sender not allowed,
 #                          STARTTLS/AUTH unsupported or STARTTLS permanently
 #                          refused, TLS certificate rejected, a host or login
-#                          smtplib can't encode). Retrying won't help; an
-#                          operator must fix the config.
+#                          smtplib can't encode, an SMTP host that doesn't
+#                          resolve). Retrying won't help; an operator must fix
+#                          the config.
 #   "recipient_rejected" — the server permanently refused one or more recipients.
 #                          It is "transient" instead when another recipient's
 #                          reply wasn't a clear refusal (if the rest got the
@@ -20,8 +21,9 @@ from typing import Literal
 #                          or the message can't be sent as written (a header or
 #                          address smtplib can't encode). Retrying the same
 #                          message won't help.
-#   "transient"          — timeout, dropped connection, a 4xx reply, or a reply
-#                          that was unreadable or wasn't a clear refusal. A retry
+#   "transient"          — timeout, dropped connection, a host lookup that
+#                          failed only for now, a 4xx reply, or a reply that
+#                          was unreadable or wasn't a clear refusal. A retry
 #                          later may succeed, unless ``delivery_unconfirmed``
 #                          says the email may already have arrived. When the
 #                          server took it for the other recipients, retry only
