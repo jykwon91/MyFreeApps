@@ -9,8 +9,8 @@ import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/
 import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
 import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
 import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
+import { rentReminderPlanChannels } from "@mybookkeeper/api-client/utils/rentReminderPlanChannels";
 import { possiblySentAdvice } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
-import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
@@ -21,13 +21,6 @@ export interface RentReminderPreviewBoxProps {
   applicantId: string;
   plan: RentReminderPlan;
   canWrite: boolean;
-}
-
-function enabledChannels(plan: RentReminderPlan): RentReminderChannel[] {
-  const channels: RentReminderChannel[] = [];
-  if (plan.email_enabled) channels.push("email");
-  if (plan.sms_enabled) channels.push("sms");
-  return channels;
 }
 
 function reportResults(results: RentReminderSend[]) {
@@ -74,7 +67,7 @@ export default function RentReminderPreviewBox({
           due_date: shown.due_date,
           amount: shown.amount,
           message: shown.send_now_message,
-          channels: enabledChannels(plan),
+          channels: rentReminderPlanChannels(plan),
           confirmed_possibly_sent: confirmed,
         }).unwrap(),
       );
@@ -105,7 +98,7 @@ export default function RentReminderPreviewBox({
     );
   }
 
-  const channels = enabledChannels(plan);
+  const channels = rentReminderPlanChannels(plan);
   const alreadySent = preview.sent_channels.length > 0;
   const possiblySentChannels = preview.possibly_sent.map((p) => p.channel);
   const possiblySent = !alreadySent && possiblySentChannels.length > 0;

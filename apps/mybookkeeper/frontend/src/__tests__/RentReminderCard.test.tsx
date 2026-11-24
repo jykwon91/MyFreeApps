@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentReminderCard from "@/app/features/rent/RentReminderCard";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
+import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 
@@ -48,25 +49,27 @@ const NO_PLAN: RentReminderOverview = {
 };
 
 /** Sonu: $1,500/month, pays every Sunday, reminded Saturday at 6pm. */
+const SONU_REMINDER_PLAN: RentReminderPlan = {
+  id: "plan-1",
+  applicant_id: "app-1",
+  frequency: "weekly",
+  due_weekday: 6,
+  send_days_before: 1,
+  send_time: "18:00:00",
+  timezone: "America/Chicago",
+  email_enabled: true,
+  sms_enabled: true,
+  amount_override: null,
+  payment_instructions: "Zelle to jason@example.com",
+  is_active: true,
+  created_at: "2026-10-15T00:00:00Z",
+  updated_at: "2026-10-15T00:00:00Z",
+};
+
 const SONU_PLAN: RentReminderOverview = {
   ...NO_PLAN,
   sms: { ...SMS_OFF, available: true, from_number: "+17135550199", encrypted: true },
-  plan: {
-    id: "plan-1",
-    applicant_id: "app-1",
-    frequency: "weekly",
-    due_weekday: 6,
-    send_days_before: 1,
-    send_time: "18:00:00",
-    timezone: "America/Chicago",
-    email_enabled: true,
-    sms_enabled: true,
-    amount_override: null,
-    payment_instructions: "Zelle to jason@example.com",
-    is_active: true,
-    created_at: "2026-10-15T00:00:00Z",
-    updated_at: "2026-10-15T00:00:00Z",
-  },
+  plan: SONU_REMINDER_PLAN,
 };
 
 const PREVIEW: RentReminderPreview = {
@@ -240,6 +243,23 @@ describe("RentReminderCard", () => {
       channels: ["email", "sms"],
       confirmed_possibly_sent: [],
     });
+  });
+
+  it("sends only the email when the plan's texts are off", () => {
+    mockOverview.mockReturnValue({
+      data: { ...SONU_PLAN, plan: { ...SONU_REMINDER_PLAN, sms_enabled: false } },
+      isLoading: false,
+      isError: false,
+    });
+    mockPreview.mockReturnValue({ data: { ...PREVIEW, sent_channels: [] }, isLoading: false, isError: false });
+    mockSendNow.mockReturnValue({
+      unwrap: () => Promise.resolve([{ ...FAILED_TEXT, channel: "email", status: "sent" }]),
+    });
+    renderCard();
+    const button = screen.getByTestId("rent-reminder-send-now");
+    expect(button).toHaveTextContent("Send email now");
+    fireEvent.click(button);
+    expect(mockSendNow).toHaveBeenCalledWith(expect.objectContaining({ channels: ["email"] }));
   });
 
   it("says a text the relay never confirmed may already have been sent", async () => {

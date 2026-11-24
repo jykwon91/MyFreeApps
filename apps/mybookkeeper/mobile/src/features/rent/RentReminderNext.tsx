@@ -4,10 +4,11 @@ import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/r
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
 import { formatDueDate } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+import { rentReminderPlanChannels } from "@mybookkeeper/api-client/utils/rentReminderPlanChannels";
 import { Banner, LoadingButton, LoadingRegion, Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { goesBy, REMINDER_MESSAGES, sentFor } from "../../constants/rentReminders";
-import { dueLine, firstNameOf, planChannels, sendMoment, sendReadiness } from "./rentReminderDisplay";
+import { dueLine, firstNameOf, sendMoment, sendReadiness } from "./rentReminderDisplay";
 import RentReminderSendButton from "./RentReminderSendButton";
 import { useSendRentReminder } from "./useSendRentReminder";
 
@@ -64,7 +65,7 @@ export default function RentReminderNext({ applicantId, name, overview, plan, sh
     );
   }
 
-  const channels = planChannels(plan);
+  const channels = rentReminderPlanChannels(plan);
   const alreadySent = preview.sent_channels.length > 0;
   const { canSend, notes } = sendReadiness(overview, plan, firstNameOf(name));
 

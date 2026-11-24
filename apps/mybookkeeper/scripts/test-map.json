@@ -1139,6 +1139,7 @@
         "api-client/src/utils/rentReminderError.ts",
         "api-client/src/utils/rentReminderChannelWords.ts",
         "api-client/src/utils/rentReminderPossiblySent.ts",
+        "api-client/src/utils/rentReminderPlanChannels.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [
