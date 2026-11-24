@@ -12,17 +12,21 @@ Covers:
 """
 from __future__ import annotations
 
+import inspect
 import io
 import logging
+import typing
 import uuid
+import zipfile
 from datetime import date
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anthropic
 import httpx2
+import pypdf
 import pytest
-
+from platform_shared.core.logging_safety import CRLFSafeLogFilter
 from platform_shared.extraction.files import LEGACY_DOC_MESSAGE
 
 from app.core.ai_failure_messages import (
@@ -33,11 +37,16 @@ from app.core.ai_failure_messages import (
 )
 from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
+from app.repositories.profile.skill_repository import add_if_absent
+from app.services.discovery import discovery_embedding_service
+from app.services.discovery.discovery_embedding_service import EmbeddingModelLoadError
+from app.services.extraction import claude_service
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
 )
-
+from app.workers import resume_parser_worker
+from app.workers.resume_parser_worker import process_one
 
 # ---------------------------------------------------------------------------
 # Text extractor unit tests (no DB required)
@@ -48,7 +57,6 @@ async def test_extract_text_pdf_happy_path():
     """PDF with real text content returns (text, char_count)."""
     # Minimal valid PDF that pypdf can parse — just use a simple PDF structure
     # with embedded text. For unit tests we patch at the caller level.
-    import pypdf
 
     # Build a tiny single-page PDF with text using pypdf's writer.
     writer = pypdf.PdfWriter()
@@ -79,8 +87,6 @@ async def test_extract_text_txt_empty_raises():
 async def test_extract_text_docx_minimal():
     """DOCX bytes with no readable text raise ResumeTextExtractionFailed."""
     # Minimal DOCX magic bytes — mammoth will parse it but find no text.
-    import zipfile
-
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         # Word/document.xml with no real text
@@ -340,8 +346,6 @@ _MINIMAL_CLAUDE_RESPONSE = {
 @pytest.mark.asyncio
 async def test_process_one_happy_path(user_factory, as_user, caplog):
     """Happy path: queued job → complete with parsed rows in DB."""
-    from app.workers.resume_parser_worker import process_one
-
     user = await user_factory()
 
     # Use any bytes — the storage download and text extraction are both mocked.
@@ -394,9 +398,6 @@ async def test_process_one_happy_path(user_factory, as_user, caplog):
 @pytest.mark.asyncio
 async def test_process_one_text_extraction_failure(user_factory, as_user):
     """Text extraction failure (e.g. image-only PDF) → job marked failed."""
-    from app.workers.resume_parser_worker import process_one
-    from app.services.jobs.resume_text_extractor import ResumeTextExtractionFailed
-
     user = await user_factory()
 
     pdf_bytes = b"%PDF-1.4 placeholder"
@@ -446,8 +447,6 @@ def _anthropic_status_error(
 async def _process_with_claude_raising(as_user: Any, user: dict, sdk_error: Exception) -> dict:
     """Upload a resume, run the worker once with the real ``extract_resume``
     (only the Anthropic SDK client faked to raise ``sdk_error``), return the job."""
-    from app.services.extraction import claude_service
-    from app.workers.resume_parser_worker import process_one
 
     pdf_bytes = b"%PDF-1.4 placeholder"
     resume_text = "Jane Doe Engineer\n"
@@ -518,8 +517,6 @@ async def test_process_one_permanent_claude_failure_fails_with_our_copy(user_fac
 @pytest.mark.asyncio
 async def test_transient_failure_after_the_retry_budget_fails(user_factory, as_user, monkeypatch):
     """Once the retry budget is spent, a transient failure is final."""
-    from app.workers import resume_parser_worker
-
     monkeypatch.setattr(resume_parser_worker, "RESUME_PARSE_MAX_RETRIES", 0)
     user = await user_factory()
     data = await _process_with_claude_raising(
@@ -533,7 +530,6 @@ async def test_transient_failure_after_the_retry_budget_fails(user_factory, as_u
 async def _process_with_worker_raising(as_user: Any, user: dict, target: str, error: Exception) -> dict:
     """Upload a resume, run the worker once with ``target`` (a name in the
     worker module) raising ``error``, and return the job as the API shows it."""
-    from app.workers.resume_parser_worker import process_one
 
     pdf_bytes = b"%PDF-1.4 placeholder"
     fake_storage = _make_fake_storage(pdf_bytes)
@@ -589,8 +585,6 @@ async def test_internal_error_fails_with_generic_copy(user_factory, as_user):
 @pytest.mark.asyncio
 async def test_process_one_idempotency(user_factory, as_user):
     """Calling process_one twice only processes a job once; second call returns False."""
-    from app.workers.resume_parser_worker import process_one
-
     user = await user_factory()
     pdf_bytes = b"%PDF-1.4 placeholder"
     resume_text = "Jane Doe\n"
@@ -626,8 +620,6 @@ async def test_process_one_idempotency(user_factory, as_user):
 
 async def _upload_and_process(as_user: Any, user: dict, claude_response: dict) -> str:
     """Upload a resume through the API, run the worker once, return the job id."""
-    from app.workers.resume_parser_worker import process_one
-
     pdf_bytes = b"%PDF-1.4 placeholder"
     resume_text = "Jane Doe\nEngineer\n"
     fake_storage = _make_fake_storage(pdf_bytes)
@@ -659,7 +651,6 @@ async def _upload_and_process(as_user: Any, user: dict, claude_response: dict) -
 def refresh_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     """Replace the profile-embedding computation (the same boundary the
     conftest no-ops) with a mock the test can assert on."""
-    from app.services.discovery import discovery_embedding_service
 
     mock = AsyncMock(return_value=True)
     monkeypatch.setattr(discovery_embedding_service, "refresh_profile_embedding", mock)
@@ -716,9 +707,6 @@ async def test_embedding_model_failure_keeps_job_complete(
     user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
 ):
     """A model-load failure is logged; the parse stays complete and its rows stay."""
-    from app.services.discovery import discovery_embedding_service
-    from app.services.discovery.discovery_embedding_service import EmbeddingModelLoadError
-
     monkeypatch.setattr(
         discovery_embedding_service,
         "refresh_profile_embedding",
@@ -743,10 +731,6 @@ async def test_embedding_model_failure_keeps_job_complete(
 
 def test_add_skill_if_absent_accepts_skill_orm_type():
     """skill_repository.add_if_absent signature must use typed annotations, not Any."""
-    import inspect
-    import typing
-    from app.repositories.profile.skill_repository import add_if_absent
-
     sig = inspect.signature(add_if_absent)
     db_annotation = sig.parameters["db"].annotation
     skill_annotation = sig.parameters["skill"].annotation
@@ -766,3 +750,38 @@ def test_add_skill_if_absent_accepts_skill_orm_type():
     assert "Skill" in str(skill_annotation), (
         f"skill annotation should reference Skill, got: {skill_annotation!r}"
     )
+
+
+def test_run_escapes_control_characters_in_log_lines(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A resume's filename or parsed text can carry a CR/LF that would forge a log line.
+    async def _no_op_main() -> None:
+        return None
+
+    monkeypatch.setattr(resume_parser_worker, "main", _no_op_main)
+    root = logging.getLogger()
+    level = root.level
+    before = {h: list(h.filters) for h in root.handlers}
+    try:
+        resume_parser_worker.run()
+        assert root.handlers
+        assert all(
+            any(isinstance(f, CRLFSafeLogFilter) for f in h.filters) for h in root.handlers
+        )
+    finally:
+        for handler in list(root.handlers):
+            if handler in before:
+                handler.filters = before[handler]
+            else:
+                root.removeHandler(handler)
+        root.setLevel(level)
+
+
+def test_run_propagates_fatal_errors_so_the_process_exits_non_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _failing_main() -> None:
+        raise RuntimeError("embedding model missing")
+
+    monkeypatch.setattr(resume_parser_worker, "main", _failing_main)
+    with pytest.raises(RuntimeError):
+        resume_parser_worker.run()
