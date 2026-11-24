@@ -16,10 +16,16 @@ optional — ``init_sentry()`` exits silently when the DSN is empty.
 """
 
 import logging
-from typing import Any
 
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.types import Event, Hint
+
+from platform_shared.core.sentry_database_scrubbing import (
+    scrub_breadcrumb,
+    scrub_event,
+    scrub_log,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +49,7 @@ _NOISE_LOGGER_PREFIXES = (
 )
 
 
-def _drop_known_noise(
-    event: dict[str, Any], _hint: dict[str, Any],
-) -> dict[str, Any] | None:
+def _drop_known_noise(event: Event, _hint: Hint) -> Event | None:
     """Sentry ``before_send`` hook — drop events from known-noisy loggers.
 
     Returning ``None`` causes the SDK to discard the event before transport.
@@ -56,6 +60,18 @@ def _drop_known_noise(
     if any(logger_name.startswith(prefix) for prefix in _NOISE_LOGGER_PREFIXES):
         return None
     return event
+
+
+def _before_send(event: Event, hint: Hint) -> Event | None:
+    """The ``before_send`` chain: drop known noise, then summarise database errors.
+
+    The noise filter is deleted when the Sentry plan is upgraded; the database
+    scrubber stays. Keep the scrubber the last step, whatever filters are added
+    or removed above it, so no event reaches Sentry without passing through it.
+    """
+    if _drop_known_noise(event, hint) is None:
+        return None
+    return scrub_event(event, hint)
 
 
 class SentryNotConfiguredError(RuntimeError):
@@ -120,7 +136,11 @@ def init_sentry(*, dsn: str, environment: str) -> None:
             traces_sample_rate=0.1,
             environment=environment,
             integrations=[logging_integration],
-            before_send=_drop_known_noise,
+            # Database error messages carry row values and bound parameters:
+            # every event, breadcrumb and Sentry log is scrubbed of them.
+            before_send=_before_send,
+            before_breadcrumb=scrub_breadcrumb,
+            before_send_log=scrub_log,
         )
     except Exception:
         logger.warning(

@@ -25,7 +25,9 @@ def build_scheduler_jobstore(database_url_sync: str) -> SQLAlchemyJobStore:
         SchedulerJobstoreMissingError: ``apscheduler_jobs`` is absent.
         sqlalchemy.exc.OperationalError: Postgres is unreachable.
     """
-    engine = create_engine(database_url_sync, pool_pre_ping=True)
+    # hide_parameters keeps the pickled job state (job args) out of every
+    # database error's message; this process reports to Sentry.
+    engine = create_engine(database_url_sync, pool_pre_ping=True, hide_parameters=True)
     if not inspect(engine).has_table(JOBSTORE_TABLE_NAME):
         engine.dispose()
         raise SchedulerJobstoreMissingError(

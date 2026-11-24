@@ -58,12 +58,17 @@ def create_session_factory(
     # SQLite (used in unit tests) doesn't support pool sizing — its async driver
     # pairs with StaticPool, and passing pool_size/max_overflow/pool_timeout
     # raises TypeError at engine creation. Skip pool kwargs for SQLite URLs.
+    #
+    # hide_parameters keeps bound values (user data) out of every database
+    # error's message and SQL log line. Both branches set it, so tests raise
+    # the same messages production does.
     if database_url.startswith("sqlite"):
-        engine = create_async_engine(database_url, echo=echo)
+        engine = create_async_engine(database_url, echo=echo, hide_parameters=True)
     else:
         engine = create_async_engine(
             database_url,
             echo=echo,
+            hide_parameters=True,
             pool_size=pool_size,
             max_overflow=max_overflow,
             pool_timeout=pool_timeout,
