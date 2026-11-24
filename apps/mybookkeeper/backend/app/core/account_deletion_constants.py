@@ -18,6 +18,7 @@ TABLES_NOT_HOLDING_SHARED_RECORDS = frozenset({
     "integrations",
     "organization_invites",
     "organization_members",
+    "plaid_items",
     "processed_emails",
     "refresh_sessions",
     "reply_templates",

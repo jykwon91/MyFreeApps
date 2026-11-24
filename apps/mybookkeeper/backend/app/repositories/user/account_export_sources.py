@@ -47,6 +47,7 @@ from app.models.insurance.insurance_benchmark import InsuranceBenchmark
 from app.models.insurance.insurance_policy import InsurancePolicy
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
 from app.models.integrations.integration import Integration
+from app.models.integrations.plaid_item import PlaidItem
 from app.models.leases.lease_template import LeaseTemplate
 from app.models.leases.lease_template_file import LeaseTemplateFile
 from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholder
@@ -195,6 +196,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(InsuranceBenchmark, Scope.WORKSPACE),
     Source(Mortgage, Scope.WORKSPACE_MEMBER),
     Source(FinancialAccount, Scope.WORKSPACE_MEMBER),
+    Source(PlaidItem, Scope.WORKSPACE_MEMBER),
     Source(SpendingCategory, Scope.WORKSPACE),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),

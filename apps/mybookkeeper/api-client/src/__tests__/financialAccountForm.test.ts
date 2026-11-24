@@ -18,6 +18,7 @@ function account(overrides: Partial<FinancialAccount>): FinancialAccount {
     id: "a1", organization_id: "o", user_id: "u", name: "Chase Checking", institution_name: null,
     account_type: "checking", classification: "asset", mask: null, currency: "USD",
     current_balance_cents: null, balance_as_of: null, closed_on: null, mortgage_id: null,
+    default_transaction_scope: "personal", plaid_item_id: null,
     created_at: "", updated_at: "", ...overrides,
   };
 }

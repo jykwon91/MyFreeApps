@@ -129,6 +129,11 @@ class Transaction(Base):
 
     external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # The source's own category for the row, as the source named it (for
+    # Plaid, the personal_finance_category ``primary``). Kept apart from
+    # ``category`` so re-mapping or pairing transfer legs never depends on what
+    # the person later filed the row under.
+    external_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     duplicate_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

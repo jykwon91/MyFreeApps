@@ -103,3 +103,42 @@ async def soft_delete(
         FinancialAccount.deleted_at.is_(None),
         values={"deleted_at": _dt.datetime.now(_dt.timezone.utc)},
     ))
+
+
+async def list_by_plaid_item(
+    db: AsyncSession, plaid_item_id: uuid.UUID,
+) -> list[FinancialAccount]:
+    """The live accounts a bank connection feeds."""
+    result = await db.execute(select(FinancialAccount).where(
+        FinancialAccount.plaid_item_id == plaid_item_id,
+        FinancialAccount.deleted_at.is_(None),
+    ))
+    return list(result.scalars().all())
+
+
+async def list_plaid_linked_ids(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> list[uuid.UUID]:
+    """Every live account of the person's that a bank connection feeds — the
+    accounts a transfer's other leg can arrive on."""
+    result = await db.execute(select(FinancialAccount.id).where(
+        FinancialAccount.user_id == user_id,
+        FinancialAccount.organization_id == organization_id,
+        FinancialAccount.plaid_item_id.is_not(None),
+        FinancialAccount.deleted_at.is_(None),
+    ))
+    return list(result.scalars().all())
+
+
+async def unlink_plaid_item(db: AsyncSession, plaid_item_id: uuid.UUID) -> int:
+    """Detach every account (live or deleted) from a connection, keeping the
+    accounts. Done through the ORM so the audit log records each one."""
+    return len(await update_rows(
+        db,
+        FinancialAccount,
+        FinancialAccount.plaid_item_id == plaid_item_id,
+        values={"plaid_item_id": None, "plaid_account_id": None},
+    ))

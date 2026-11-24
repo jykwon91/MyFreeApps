@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from app.core.financial_account_enums import ACCOUNT_TYPES
+from app.core.spending_category_enums import TRANSACTION_SCOPES
 
 _MASK_PATTERN = re.compile(r"^[A-Za-z0-9]{2,4}$")
 _CURRENCY_PATTERN = re.compile(r"^[A-Z]{3}$")
@@ -31,6 +32,12 @@ def clean_optional_text(value: str | None) -> str | None:
 def check_account_type(value: str) -> str:
     if value not in ACCOUNT_TYPES:
         raise ValueError(f"account_type must be one of: {', '.join(ACCOUNT_TYPES)}")
+    return value
+
+
+def check_transaction_scope(value: str) -> str:
+    if value not in TRANSACTION_SCOPES:
+        raise ValueError(f"scope must be one of: {', '.join(TRANSACTION_SCOPES)}")
     return value
 
 

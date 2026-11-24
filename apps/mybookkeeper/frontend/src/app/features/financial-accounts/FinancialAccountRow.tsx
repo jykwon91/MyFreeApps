@@ -19,7 +19,11 @@ function balanceNote(account: FinancialAccount): string {
 
 /** One account: what it is on the left, what it holds and since when on the right. */
 export default function FinancialAccountRow({ account, onEdit, onUpdateBalance }: FinancialAccountRowProps) {
-  const details = [FINANCIAL_ACCOUNT_TYPE_LABELS[account.account_type], account.institution_name].filter(Boolean).join(" · ");
+  const details = [
+    FINANCIAL_ACCOUNT_TYPE_LABELS[account.account_type],
+    account.institution_name,
+    account.plaid_item_id !== null ? MSG.syncedFromBank : null,
+  ].filter(Boolean).join(" · ");
   const isOpen = account.closed_on === null;
 
   return (

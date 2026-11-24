@@ -83,6 +83,7 @@ from platform_shared.workers.wait_or_stop import wait_or_stop
 
 from app.core.config import settings
 from app.core.observability import init_sentry
+from app.core.plaid_boot_guard import check_plaid_configured
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
 from app.core.scheduler_worker_constants import (
     GMAIL_SYNC_CANCEL_GRACE_SECONDS,
@@ -95,6 +96,7 @@ from app.models.integrations.gmail_sync_run import GmailSyncRun
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import integration_repo
 from app.services.leases import lease_handover_service
+from app.services.plaid import plaid_sync_service
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.services.properties import utility_plan_service
 from app.services.rent import rent_reminder_dispatch_service
@@ -251,6 +253,20 @@ async def stop_gmail_sync(running: GmailSyncRun | None) -> None:
     logger.info("Cancelled the running Gmail sync at shutdown")
 
 
+async def sync_plaid_items() -> int:
+    """The daily bank sync: pull every connected bank that isn't waiting on
+    its owner to sign in again. Returns how many were attempted.
+
+    Never raises: each connection contains its own failure, and a failure to
+    even list them must not stop the steps after it in the same tick.
+    """
+    try:
+        return await plaid_sync_service.sync_all_active()
+    except Exception:  # noqa: BLE001 — must not skip the steps after it
+        logger.exception("Daily Plaid sync failed")
+        return 0
+
+
 async def run_sync_cycle() -> None:
     """Run the in-tick part of a full sync cycle (Gmail runs as its own task).
 
@@ -259,6 +275,7 @@ async def run_sync_cycle() -> None:
     """
     await sync_all_channel_calendars()
     await flag_expiring_utility_plans()
+    await sync_plaid_items()
 
 
 async def send_due_rent_reminders() -> None:
@@ -344,6 +361,12 @@ async def run_scheduler(stop: asyncio.Event) -> None:
         minio_secret_key=settings.minio_secret_key,
         transparency_shared_bucket=settings.transparency_shared_bucket,
         environment=settings.environment,
+    )
+    check_plaid_configured(
+        environment=settings.environment,
+        plaid_client_id=settings.plaid_client_id,
+        plaid_secret=settings.plaid_secret,
+        frontend_url=settings.frontend_url,
     )
     full_interval = settings.gmail_poll_interval_minutes * 60
     tick = min(REMINDER_TICK_MINUTES * 60, full_interval)

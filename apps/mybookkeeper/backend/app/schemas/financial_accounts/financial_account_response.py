@@ -6,6 +6,8 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
+
 
 class FinancialAccountResponse(BaseModel):
     id: uuid.UUID
@@ -22,6 +24,10 @@ class FinancialAccountResponse(BaseModel):
     balance_as_of: _dt.date | None = None
     closed_on: _dt.date | None = None
     mortgage_id: uuid.UUID | None = None
+    # The scope bank-synced transactions for this account start with.
+    default_transaction_scope: str = TRANSACTION_SCOPE_PERSONAL
+    # The bank connection the account syncs from; None when kept by hand.
+    plaid_item_id: uuid.UUID | None = None
     created_at: _dt.datetime
     updated_at: _dt.datetime
 

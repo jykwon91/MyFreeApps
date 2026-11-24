@@ -18,7 +18,7 @@ Inheritance shape:
 
     class Settings(BaseAppSettings):
         anthropic_api_key: str = ""        # MJH-app-specific
-        plaid_client_id: str = ""           # MBK-app-specific
+        gmail_poll_interval_minutes: int = 15   # MBK-app-specific
         ...
 
     settings = Settings()

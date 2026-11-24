@@ -106,7 +106,7 @@
 | Backend | FastAPI, Python, SQLAlchemy 2.0 (async), PostgreSQL, Alembic, Pydantic 2 |
 | Auth | fastapi-users, JWT (Bearer token) |
 | AI | Anthropic Claude SDK (`backend/app/services/extraction/claude_service.py`) |
-| Background jobs | Two worker containers: `upload-processor` (document extraction) and `scheduler` (Gmail sync every `GMAIL_POLL_INTERVAL_MINUTES`, default daily; hourly rent reminders; transparency cost sync). Both heartbeat-healthchecked; the deploy waits for them |
+| Background jobs | Two worker containers: `upload-processor` (document extraction) and `scheduler` (Gmail sync every `GMAIL_POLL_INTERVAL_MINUTES`, default daily; hourly rent reminders; transparency cost sync; daily Plaid bank sync). Both heartbeat-healthchecked; the deploy waits for them |
 | File parsing | pypdf (PDF), mammoth (DOCX), openpyxl (XLSX/CSV) |
 
 ## Directory Map
@@ -248,6 +248,7 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Gmail OAuth tokens are encrypted at rest using Fernet symmetric encryption derived from `ENCRYPTION_KEY` via HKDF (see `backend/app/core/security.py`)
 - The `Integration` model exposes `access_token` and `refresh_token` as hybrid properties that transparently encrypt on write and decrypt on read — callers interact with plaintext, the database stores ciphertext
 - Raw encrypted values live in `access_token_encrypted` and `refresh_token_encrypted` (both `Text` columns)
+- Plaid access tokens on `PlaidItem` (`plaid_items`) use the same pattern: `access_token` is a hybrid property over `access_token_encrypted`. Never log one, never return one from an API
 - `key_version` (SmallInteger) tracks which key generation encrypted each row — currently always `1`
 - Key rotation procedure: bump `key_version`, derive a new key with a new HKDF salt, re-encrypt lazily on the next read+write cycle, then drop the old key after all rows have been migrated
 - The application will fail to start if `ENCRYPTION_KEY` is missing from the environment
@@ -315,6 +316,7 @@ Conflicts between top-level pins and transitive requirements (the `python-multip
 - `SECRET_KEY` — JWT signing
 - `ENCRYPTION_KEY` — OAuth token encryption
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Gmail OAuth
+- `PLAID_ENV` / `PLAID_CLIENT_ID` / `PLAID_SECRET` — bank sync. `app/core/plaid_boot_guard.py` fails the api and scheduler at boot when any is missing (or `FRONTEND_URL` isn't https) outside `ENVIRONMENT=development|test`. OAuth banks return to `<FRONTEND_URL>/plaid-oauth`, which must be registered in the Plaid dashboard; it is the page that resumes Link after an OAuth bank. Bank sync runs on Sync now, on Plaid's `SYNC_UPDATES_AVAILABLE` webhook (`POST /plaid/webhook`, JWT-verified), and once a day from the scheduler
 
 ## Testing
 

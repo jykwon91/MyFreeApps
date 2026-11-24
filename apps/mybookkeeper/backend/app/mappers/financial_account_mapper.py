@@ -38,6 +38,8 @@ def to_response(account: FinancialAccount) -> FinancialAccountResponse:
         balance_as_of=account.balance_as_of,
         closed_on=account.closed_on,
         mortgage_id=account.mortgage_id,
+        default_transaction_scope=account.default_transaction_scope,
+        plaid_item_id=account.plaid_item_id,
         created_at=account.created_at,
         updated_at=account.updated_at,
     )
